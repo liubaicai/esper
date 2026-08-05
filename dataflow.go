@@ -330,7 +330,7 @@ func dataflowOperatorPrettyPorts(operator DataflowOperator, output bool) []strin
 	}
 	if output {
 		switch operator.Kind {
-		case BeaconSourceKind, CustomSourceKind, EventBusSourceKind, EPStatementSourceKind, EmitterKind, FilterKind, SelectKind, CustomKind, EventBusSinkKind:
+		case BeaconSourceKind, CustomSourceKind, EventBusSourceKind, EPStatementSourceKind, EmitterKind, FilterKind, SelectKind, CustomKind:
 			return []string{"out"}
 		}
 		return nil
@@ -1231,8 +1231,8 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 	}
 	if len(b.edges) == 0 {
 		for index, operator := range operators {
-			if operator.Kind == LogSinkKind && index != len(operators)-1 {
-				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow log sink %q does not provide an output stream", operator.Name))
+			if (operator.Kind == LogSinkKind || operator.Kind == EventBusSinkKind) && index != len(operators)-1 {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow %s sink %q does not provide an output stream", strings.ToLower(string(operator.Kind)), operator.Name))
 			}
 		}
 	}
@@ -1274,8 +1274,8 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 			if _, ok := seen[edge.To]; !ok {
 				return DataflowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("dataflow edge references unknown target operator %q", edge.To))
 			}
-			if operatorsByName[edge.From].Kind == LogSinkKind {
-				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow log sink %q does not provide an output stream", edge.From))
+			if operatorsByName[edge.From].Kind == LogSinkKind || operatorsByName[edge.From].Kind == EventBusSinkKind {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow %s sink %q does not provide an output stream", strings.ToLower(string(operatorsByName[edge.From].Kind)), edge.From))
 			}
 			if !dataflowPortAllowed(operatorsByName[edge.From], true, edge.FromPort) {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow edge references unknown output port %q on operator %q", edge.FromPort, edge.From))
@@ -1710,7 +1710,7 @@ func dataflowFilterOutputPorts(operator DataflowOperator) (string, string) {
 }
 
 func dataflowPortAllowed(operator DataflowOperator, output bool, port string) bool {
-	if output && operator.Kind == LogSinkKind {
+	if output && (operator.Kind == LogSinkKind || operator.Kind == EventBusSinkKind) {
 		return false
 	}
 	ports := operator.InputPorts
@@ -4151,7 +4151,7 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		if err := d.sendDataflowEventBusValue(ctx, operator, value); err != nil {
 			return nil, err
 		}
-		return []DataflowEmission{Emit(value)}, nil
+		return nil, nil
 	default:
 		return []DataflowEmission{Emit(value)}, nil
 	}
