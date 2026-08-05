@@ -253,10 +253,10 @@
       "level": "S",
       "summary": "Fluent dataflow definitions, graph ports, source lifecycle, signal-marker propagation and instance control plane",
       "javaRefs": ["EPLDataflowOpEventBusSource", "EPLDataflowOpFilter", "EPLDataflowOpSelect"],
-      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go"],
+      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go", "dataflow_source_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["custom source/operator port lifecycle and built-in event/row port inference", "concurrent delivery/backpressure", "persisted cross-process saved instances/configuration", "complete multi-port captive/join and exception recovery parity"]
+      "remaining": ["built-in event/row port inference", "concurrent delivery/backpressure", "persisted cross-process saved instances/configuration", "complete multi-port captive/join and exception recovery parity"]
     },
     {
       "id": "join.basic",
@@ -520,6 +520,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
       "difference": "The Go fluent CustomTypedPorts API declares generic input/output value types, validates assignability at graph Build time and rejects a wrong runtime value at an edge. The mapped fan-in/fan-out trace routes two typed input families through four named ports and emits them to separate output ports. Java's larger custom operator lifecycle, factorial feedback, deep graph, concurrency/backpressure and cross-process configuration matrix remain open."
+    },
+    {
+      "id": "case.dataflow-lifecycle",
+      "javaRuntimeIds": ["java-runtime-893c8283ee90019f37fa", "java-runtime-e1bdb19779e28fa49bc2", "java-runtime-69dbb4e0d879421b52f7", "java-runtime-3bdb22d6cdef39f0336c", "java-runtime-91a5f5421ce63806e2c4", "java-runtime-f053fbdc01fad03ba5a6", "java-runtime-7e40b511fb6b6db584fd", "java-runtime-827b0af4ea14c59da2bc", "java-runtime-955a5d67e2668f50f0f5", "java-runtime-a9a21d69ccb78f9fd152", "java-runtime-42082e1062bebbe49a0a", "java-runtime-bcc34451f5417d84e6fa", "java-runtime-de4fc2179a2cb72a97e6", "java-runtime-e13449306814341577ad"],
+      "javaNames": ["EPLDataflowNonBlockingJoinCancel", "EPLDataflowNonBlockingJoinException", "EPLDataflowNonBlockingException", "EPLDataflowBlockingException", "EPLDataflowBlockingCancel", "EPLDataflowNonBlockingCancel", "EPLDataflowInvalidJoinRun", "EPLDataflowNonBlockingJoinMultipleRunnable", "EPLDataflowBlockingMultipleRunnable", "EPLDataflowNonBlockingJoinSingleRunnable", "EPLDataflowFastCompleteBlocking", "EPLDataflowRunBlocking", "EPLDataflowFastCompleteNonBlocking", "EPLDataflowBlockingRunJoin"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIRunStartCancelJoin.java"],
+      "goTests": ["TestDataflowCustomSourceRunAndJoinMatchesEsper", "TestDataflowCustomSourceCancelAndJoin", "TestDataflowCustomSourceErrorPropagatesThroughRun", "TestDataflowCustomSourceRejectsWrongOutputType", "TestDataflowJoinRequiresStart"],
+      "tags": ["correctness", "dataflow", "lifecycle", "cancellation", "concurrency"],
+      "status": "mapped",
+      "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
+      "difference": "Go now provides blocking Run/Join over Start, terminal completion signaling, context-driven cancellation, idempotent Cancel, custom source factories with raw/typed output ports, Build/runtime output type validation, per-instance source lifecycle callbacks, finite-source completion and structured source error propagation. The Java matrix additionally covers multiple concurrent runnable source branches, blocking/non-blocking exception delivery, deep join timing, full cancellation exception text and built-in source/operator backpressure; those remain open."
     },
     {
       "id": "case.expr-enum-aggregate",

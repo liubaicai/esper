@@ -92,6 +92,7 @@ type DataflowInput struct {
 type DataflowEmitter struct {
 	instance *DataflowInstance
 	name     string
+	allowRaw bool
 }
 
 // Submit injects one event value into the captive emitter's outgoing graph.
@@ -100,6 +101,9 @@ type DataflowEmitter struct {
 func (e *DataflowEmitter) Submit(ctx context.Context, value any) error {
 	if e == nil || e.instance == nil {
 		return NewError(ErrorState, "nil dataflow emitter")
+	}
+	if e.allowRaw {
+		return e.instance.submitSourceValue(ctx, e.name, value)
 	}
 	return e.instance.submitEmitter(ctx, e.name, value)
 }
@@ -111,6 +115,9 @@ func (e *DataflowEmitter) SubmitSignal(ctx context.Context, signal DataflowSigna
 	}
 	if signal == nil {
 		return NewError(ErrorInvalidRule, "dataflow signal is nil")
+	}
+	if e.allowRaw {
+		return e.instance.submitSourceValue(ctx, e.name, signal)
 	}
 	return e.instance.submitEmitter(ctx, e.name, signal)
 }
@@ -134,6 +141,17 @@ type DataflowOperatorLifecycle interface {
 	Open(context.Context) error
 	Close(context.Context) error
 }
+
+// DataflowSourceRuntime produces values into a graph. A source receives its
+// per-instance emitter at run time, so it can emit both registered Event
+// values and raw values declared by typed output ports.
+type DataflowSourceRuntime interface {
+	Run(context.Context, *DataflowEmitter) error
+}
+
+// DataflowSourceFactory creates one source runtime for every dataflow
+// instance. Source runtimes may also implement DataflowOperatorLifecycle.
+type DataflowSourceFactory func(DataflowOperatorContext) (DataflowSourceRuntime, error)
 
 // DataflowOperatorFactory creates one runtime operator instance.
 type DataflowOperatorFactory func(DataflowOperatorContext) (DataflowOperatorRuntime, error)
@@ -202,6 +220,7 @@ const (
 	SelectKind            DataflowOperatorKind = "Select"
 	LogSinkKind           DataflowOperatorKind = "LogSink"
 	CustomKind            DataflowOperatorKind = "Custom"
+	CustomSourceKind      DataflowOperatorKind = "CustomSource"
 )
 
 // DataflowPort declares a named operator port and, optionally, the Go value
@@ -233,6 +252,7 @@ type DataflowOperator struct {
 	OutputPorts     []string
 	InputPortTypes  map[string]reflect.Type
 	OutputPortTypes map[string]reflect.Type
+	SourceFactory   DataflowSourceFactory
 }
 
 // DataflowEdge connects an operator output port to an operator input port.
@@ -371,6 +391,28 @@ func (b DataflowBuilder) CustomTypedPorts(name string, factory DataflowOperatorF
 	})
 }
 
+// CustomSource adds an idiomatic Go source operator. The source runs once per
+// instantiated dataflow and emits into the graph through the supplied
+// DataflowEmitter. Unlike a captive Emitter, a custom source can own its
+// lifecycle and complete the graph when Run returns.
+func (b DataflowBuilder) CustomSource(name string, factory DataflowSourceFactory) DataflowBuilder {
+	return b.CustomTypedSource(name, factory, []DataflowPort{{Name: "out"}})
+}
+
+// CustomTypedSource is the typed counterpart to CustomSource. Source outputs
+// are validated against downstream input ports at Build time and against
+// actual values while the graph is running.
+func (b DataflowBuilder) CustomTypedSource(name string, factory DataflowSourceFactory, outputs []DataflowPort) DataflowBuilder {
+	outputNames, outputTypes := dataflowPortSpecs(outputs)
+	return b.add(DataflowOperator{
+		Name:            name,
+		Kind:            CustomSourceKind,
+		OutputPorts:     outputNames,
+		OutputPortTypes: outputTypes,
+		SourceFactory:   factory,
+	})
+}
+
 // OnSignal registers a control-plane handler for a named operator.  Signals
 // still continue along the operator's outgoing edges after the handler runs,
 // allowing one operator to observe a marker while downstream operators flush
@@ -444,6 +486,10 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 		case CustomKind:
 			if operator.Factory == nil {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow custom operator %q requires a factory", operator.Name))
+			}
+		case CustomSourceKind:
+			if operator.SourceFactory == nil {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow custom source %q requires a factory", operator.Name))
 			}
 		}
 	}
@@ -755,8 +801,15 @@ type DataflowInstance struct {
 	graph                  bool
 	statementSubscriptions []*Subscription
 	runtimes               map[string]DataflowOperatorRuntime
+	sources                map[string]DataflowSourceRuntime
 	subqueryRegistries     map[string]*subqueryRuntimeRegistry
 	runtimesClosed         bool
+	done                   chan struct{}
+	doneOnce               sync.Once
+	runCancel              context.CancelFunc
+	sourceWG               sync.WaitGroup
+	persistentSource       bool
+	runErr                 error
 	processed              atomic.Uint64
 	emitted                atomic.Uint64
 	errors                 atomic.Uint64
@@ -798,7 +851,9 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 		outgoing:           make(map[string][]DataflowEdge),
 		graph:              len(registered.edges) > 0,
 		runtimes:           make(map[string]DataflowOperatorRuntime),
+		sources:            make(map[string]DataflowSourceRuntime),
 		subqueryRegistries: make(map[string]*subqueryRuntimeRegistry),
+		done:               make(chan struct{}),
 	}
 	for operatorNumber, operator := range registered.operators {
 		instance.operators[operator.Name] = operator
@@ -825,6 +880,41 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 			}
 			instance.runtimes[operator.Name] = runtime
 		}
+		if operator.Kind == CustomSourceKind {
+			source, err := operator.SourceFactory(DataflowOperatorContext{
+				DataflowName: registered.name,
+				InstanceID:   options.InstanceID,
+				OperatorName: operator.Name,
+				OperatorNum:  operatorNumber,
+			})
+			if err != nil {
+				for _, created := range instance.runtimes {
+					if lifecycle, ok := created.(DataflowOperatorLifecycle); ok {
+						_ = lifecycle.Close(context.Background())
+					}
+				}
+				for _, created := range instance.sources {
+					if lifecycle, ok := created.(DataflowOperatorLifecycle); ok {
+						_ = lifecycle.Close(context.Background())
+					}
+				}
+				return nil, err
+			}
+			if source == nil {
+				for _, created := range instance.runtimes {
+					if lifecycle, ok := created.(DataflowOperatorLifecycle); ok {
+						_ = lifecycle.Close(context.Background())
+					}
+				}
+				for _, created := range instance.sources {
+					if lifecycle, ok := created.(DataflowOperatorLifecycle); ok {
+						_ = lifecycle.Close(context.Background())
+					}
+				}
+				return nil, NewError(ErrorDependency, fmt.Sprintf("dataflow custom source %q factory returned nil runtime", operator.Name))
+			}
+			instance.sources[operator.Name] = source
+		}
 		var expressions []Selection
 		switch operator.Kind {
 		case FilterKind:
@@ -843,6 +933,16 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 	}
 	for _, edge := range registered.edges {
 		instance.outgoing[edge.From] = append(instance.outgoing[edge.From], edge)
+	}
+	for _, operator := range registered.operators {
+		if operator.Kind == EventBusSourceKind || operator.Kind == EPStatementSourceKind {
+			instance.persistentSource = true
+			break
+		}
+		if operator.Kind == EmitterKind && len(instance.outgoing[operator.Name]) > 0 {
+			instance.persistentSource = true
+			break
+		}
 	}
 	e.mu.Lock()
 	if e.closed {
@@ -1016,6 +1116,34 @@ func (d *DataflowInstance) submitEmitter(ctx context.Context, name string, value
 	return d.processGraphFrom(ctx, event, name)
 }
 
+func (d *DataflowInstance) submitSourceValue(ctx context.Context, name string, value any) error {
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if d == nil {
+		return NewError(ErrorState, "nil dataflow instance")
+	}
+	d.mu.Lock()
+	running := d.state == DataflowRunning
+	operator, ok := d.operators[name]
+	hasOutgoing := len(d.outgoing[name]) > 0
+	d.mu.Unlock()
+	if !running {
+		return NewError(ErrorState, "dataflow is not running")
+	}
+	if !ok || operator.Kind != CustomSourceKind || !hasOutgoing {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q is not a custom source", name))
+	}
+	if signal, ok := value.(DataflowSignal); ok {
+		return d.processGraphFrom(ctx, signal, name)
+	}
+	if expected := dataflowPortType(operator, true, "out"); expected != nil && !dataflowValueAssignable(value, expected) {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow source %q output port %q emitted %T, want %s", name, "out", value, expected))
+	}
+	d.processed.Add(1)
+	return d.processGraphFrom(ctx, value, name)
+}
+
 func (d *DataflowInstance) materializeDataflowEvent(value any) (Event, error) {
 	if event, ok := value.(Event); ok {
 		return event, nil
@@ -1081,12 +1209,19 @@ func (d *DataflowInstance) handleDataflowError(ctx context.Context, operator str
 func (d *DataflowInstance) openRuntimes(ctx context.Context) error {
 	for _, operator := range d.definition.operators {
 		runtime := d.runtimes[operator.Name]
-		if runtime == nil {
-			continue
+		if runtime != nil {
+			if lifecycle, ok := runtime.(DataflowOperatorLifecycle); ok {
+				if err := lifecycle.Open(ctx); err != nil {
+					return fmt.Errorf("dataflow operator %q open: %w", operator.Name, err)
+				}
+			}
 		}
-		if lifecycle, ok := runtime.(DataflowOperatorLifecycle); ok {
-			if err := lifecycle.Open(ctx); err != nil {
-				return fmt.Errorf("dataflow operator %q open: %w", operator.Name, err)
+		source := d.sources[operator.Name]
+		if source != nil {
+			if lifecycle, ok := source.(DataflowOperatorLifecycle); ok {
+				if err := lifecycle.Open(ctx); err != nil {
+					return fmt.Errorf("dataflow source %q open: %w", operator.Name, err)
+				}
 			}
 		}
 	}
@@ -1103,12 +1238,97 @@ func (d *DataflowInstance) closeRuntimes(ctx context.Context) {
 	d.mu.Unlock()
 	for _, operator := range d.definition.operators {
 		runtime := d.runtimes[operator.Name]
-		if runtime == nil {
-			continue
+		if runtime != nil {
+			if lifecycle, ok := runtime.(DataflowOperatorLifecycle); ok {
+				_ = lifecycle.Close(ctx)
+			}
 		}
-		if lifecycle, ok := runtime.(DataflowOperatorLifecycle); ok {
-			_ = lifecycle.Close(ctx)
+		source := d.sources[operator.Name]
+		if source != nil {
+			if lifecycle, ok := source.(DataflowOperatorLifecycle); ok {
+				_ = lifecycle.Close(ctx)
+			}
 		}
+	}
+}
+
+func (d *DataflowInstance) closeDone() {
+	if d == nil || d.done == nil {
+		return
+	}
+	d.doneOnce.Do(func() { close(d.done) })
+}
+
+func (d *DataflowInstance) complete(err error) {
+	if d == nil {
+		return
+	}
+	d.mu.Lock()
+	if d.state == DataflowCanceled {
+		d.mu.Unlock()
+		return
+	}
+	if d.state == DataflowComplete {
+		if d.runErr == nil && err != nil {
+			d.runErr = err
+		}
+		d.mu.Unlock()
+		return
+	}
+	d.state = DataflowComplete
+	if err != nil {
+		d.runErr = err
+	}
+	cancel := d.runCancel
+	subscriptions := append([]*Subscription(nil), d.statementSubscriptions...)
+	d.statementSubscriptions = nil
+	d.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	for _, subscription := range subscriptions {
+		if subscription != nil {
+			_ = subscription.Close()
+		}
+	}
+	d.closeRuntimes(context.Background())
+	d.closeDone()
+}
+
+func (d *DataflowInstance) watchRunContext(runCtx context.Context) {
+	if runCtx == nil || runCtx.Done() == nil {
+		return
+	}
+	go func() {
+		<-runCtx.Done()
+		d.mu.Lock()
+		running := d.state == DataflowRunning
+		d.mu.Unlock()
+		if running {
+			_ = d.Cancel(context.Background())
+		}
+	}()
+}
+
+func (d *DataflowInstance) runSource(runCtx context.Context, operator DataflowOperator, source DataflowSourceRuntime) {
+	defer d.sourceWG.Done()
+	emitter := &DataflowEmitter{instance: d, name: operator.Name, allowRaw: true}
+	err := source.Run(runCtx, emitter)
+	if err == nil || runCtx.Err() != nil {
+		return
+	}
+	if handled := d.handleDataflowError(context.Background(), operator.Name, err); handled != nil {
+		d.complete(handled)
+	}
+}
+
+func (d *DataflowInstance) waitSources() {
+	d.sourceWG.Wait()
+	d.mu.Lock()
+	complete := d.state == DataflowRunning && !d.persistentSource
+	d.mu.Unlock()
+	if complete {
+		d.complete(nil)
 	}
 }
 
@@ -1119,26 +1339,25 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 	if d == nil {
 		return NewError(ErrorState, "nil dataflow instance")
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	runCtx, runCancel := context.WithCancel(ctx)
 	d.mu.Lock()
 	if d.state != DataflowInstantiated {
 		d.mu.Unlock()
+		runCancel()
 		return NewError(ErrorState, "dataflow can only start from instantiated state")
 	}
 	d.state = DataflowRunning
+	d.runCancel = runCancel
 	d.mu.Unlock()
+	d.watchRunContext(runCtx)
 	if err := d.openRuntimes(ctx); err != nil {
 		_ = d.Cancel(context.Background())
 		return err
 	}
-	hasEventSource := len(d.eventTypes) > 0
-	if !hasEventSource {
-		for _, operator := range d.definition.operators {
-			if operator.Kind == EmitterKind && len(d.outgoing[operator.Name]) > 0 {
-				hasEventSource = true
-				break
-			}
-		}
-	}
+	hasEventSource := d.persistentSource
 	for _, operator := range d.definition.operators {
 		if operator.Kind != EPStatementSourceKind {
 			continue
@@ -1199,16 +1418,80 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 			}
 		}
 	}
-	d.mu.Lock()
-	if d.state == DataflowRunning && !hasEventSource {
-		d.state = DataflowComplete
+	sourceCount := 0
+	for _, operator := range d.definition.operators {
+		if operator.Kind != CustomSourceKind {
+			continue
+		}
+		source := d.sources[operator.Name]
+		if source == nil {
+			continue
+		}
+		sourceCount++
+		d.sourceWG.Add(1)
+		go d.runSource(runCtx, operator, source)
 	}
-	completed := d.state == DataflowComplete
+	if sourceCount > 0 {
+		go d.waitSources()
+	}
+	d.mu.Lock()
+	complete := d.state == DataflowRunning && !hasEventSource && sourceCount == 0
 	d.mu.Unlock()
-	if completed {
-		d.closeRuntimes(context.Background())
+	if complete {
+		d.complete(nil)
 	}
 	return nil
+}
+
+// Run starts a dataflow and waits until it completes or is canceled. It is
+// the blocking counterpart to Start, mirroring Esper's run API while keeping
+// cancellation and deadlines idiomatic through context.Context.
+func (d *DataflowInstance) Run(ctx context.Context) error {
+	if d == nil {
+		return NewError(ErrorState, "nil dataflow instance")
+	}
+	if err := d.Start(ctx); err != nil {
+		return err
+	}
+	return d.Join(ctx)
+}
+
+// Join waits for a previously started dataflow. A normal finite completion
+// returns nil; an external Cancel is reported as ErrorCanceled so callers can
+// distinguish it from a completed graph.
+func (d *DataflowInstance) Join(ctx context.Context) error {
+	if d == nil {
+		return NewError(ErrorState, "nil dataflow instance")
+	}
+	d.mu.Lock()
+	state := d.state
+	done := d.done
+	d.mu.Unlock()
+	if state == DataflowInstantiated {
+		return NewError(ErrorState, "dataflow has not been started")
+	}
+	if done == nil {
+		return NewError(ErrorState, "dataflow has no completion signal")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	select {
+	case <-done:
+		d.mu.Lock()
+		state = d.state
+		err := d.runErr
+		d.mu.Unlock()
+		if err != nil {
+			return err
+		}
+		if state == DataflowCanceled {
+			return NewError(ErrorCanceled, "dataflow was canceled")
+		}
+		return nil
+	case <-ctx.Done():
+		return contextErr(ctx)
+	}
 }
 
 func (d *DataflowInstance) Cancel(ctx context.Context) error {
@@ -1223,17 +1506,26 @@ func (d *DataflowInstance) Cancel(ctx context.Context) error {
 		d.mu.Unlock()
 		return NewError(ErrorState, "completed dataflow cannot be canceled")
 	}
+	if d.state == DataflowCanceled {
+		d.mu.Unlock()
+		return nil
+	}
 	d.state = DataflowCanceled
+	cancel := d.runCancel
 	engine := d.engine
 	subscriptions := append([]*Subscription(nil), d.statementSubscriptions...)
 	d.statementSubscriptions = nil
 	d.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
 	for _, subscription := range subscriptions {
 		if subscription != nil {
 			_ = subscription.Close()
 		}
 	}
 	d.closeRuntimes(context.Background())
+	d.closeDone()
 	if engine != nil {
 		engine.mu.Lock()
 		delete(engine.dataflows, d)
@@ -1578,6 +1870,10 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		return []DataflowEmission{Emit(signal)}, nil
 	}
 	switch operator.Kind {
+	case CustomSourceKind:
+		// A custom source enters the graph through DataflowEmitter. The source
+		// node itself only forwards the submitted value to its outgoing edges.
+		return []DataflowEmission{Emit(value)}, nil
 	case CustomKind:
 		runtime := d.runtimes[operator.Name]
 		return runtime.Process(ctx, DataflowInput{Port: inputPort, Value: value})
