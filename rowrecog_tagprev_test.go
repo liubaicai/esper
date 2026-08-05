@@ -72,3 +72,45 @@ func TestRowRecogTagAwarePrevAndPriorEvaluateAgainstPreviousEvent(t *testing.T) 
 		t.Fatalf("unknown tag-aware previous error = %v", err)
 	}
 }
+
+func TestRowRecogTagAwarePrevBindsRepeatedCapture(t *testing.T) {
+	env, engine := newRowRecogRepetitionTest(t)
+	stream := From[rowRecogRepetitionEvent](env, "RowRecogRepetitionEvent").Window(KeepAll())
+	value := Field[rowRecogRepetitionEvent, int]("value")
+	query := stream.MatchRecognize(RowVar("A").Repeat(3, 3)).
+		Define("A", Greater[int](value, PrevTag[int](1, "A", "value"))).
+		Measures(
+			Alias("first", TagFieldAt[string]("A", 0, "name")),
+			Alias("last", TagField[string]("A", "name")),
+			Alias("count", TagCount("A")),
+		).
+		Query(StatementName("rowrecog-tag-aware-prev-repeated"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := collectRowRecogRows(t, deployment)
+	for _, event := range []rowRecogRepetitionEvent{
+		{Name: "A1", Value: 1},
+		{Name: "A2", Value: 4},
+		{Name: "A3", Value: 2},
+		{Name: "A4", Value: 6},
+		{Name: "A5", Value: 5},
+		{Name: "A6", Value: 6},
+		{Name: "A7", Value: 7},
+		{Name: "A9", Value: 8},
+	} {
+		sendRowRecogRepetition(t, engine, event)
+	}
+	if len(*rows) != 1 {
+		t.Fatalf("repeated tag-aware PREV rows = %#v", *rows)
+	}
+	row := (*rows)[0]
+	if row.Get("first").Any() != "A6" || row.Get("last").Any() != "A9" || row.Get("count").Any() != int64(3) {
+		t.Fatalf("repeated tag-aware PREV row = %#v, want A6..A9 count 3", *rows)
+	}
+}
