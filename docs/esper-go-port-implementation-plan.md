@@ -1171,6 +1171,8 @@ CI 分别报告 capability coverage、source-test disposition coverage 和 case 
 
 本轮又补齐 Java `ContextKeySegmentedSubqueryFiltered` 的基础 event-stream subquery：Context 每个分区持有独立的 `LastEvent` 子查询状态，内层事件只广播到已存在分区，新分区不回放创建前的内层事件；`TestContextEventStreamSubqueryKeepsPartitionLocalLastEvent` 固定 G1/G2/G3 分区的 null、更新和复用序列。Named Window index-sharing、Pattern Context/Dataflow 子查询及完整 context/subquery trace 仍保持部分对等。
 
+随后对照 Java `ContextStartEndSubselect` 与 `ContextStartEndSubselectCorrelated`，补充日历 Context 的 event-stream subquery 生命周期：09:00 打开分区时不回放非活动期的 `LastEvent`，17:00 关闭时释放状态，次日 09:00 新分区重新从 Null 开始，活动期内仍支持按 outer field 关联内层事件。`TestTemporalContextEventStreamSubqueryResetsAtCalendarBoundary` 覆盖首日/跨日边界和 inactive 期间事件；Pattern/initiated-context、Named Window index-sharing、复杂 temporal 组合和完整 Java/Go trace 仍未完成。
+
 ### 17.3 后续每次提交的强制核对项
 
 每实现一个 capability，提交必须同时更新四类证据：

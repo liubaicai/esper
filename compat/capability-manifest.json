@@ -278,7 +278,7 @@
       "goRefs": ["subquery.go", "subquery_test.go", "plan.go", "runtime.go", "faf.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["multi-column/multi-row result contracts and grouped/having aggregate matrix", "context/pattern subquery sources and Dataflow graph propagation", "scalar iterator/error semantics and Java cardinality diagnostics", "full Java invalid-rule and execution trace parity"]
+      "remaining": ["multi-column/multi-row result contracts and grouped/having aggregate matrix", "pattern/initiated-context and advanced temporal subquery combinations beyond the mapped segmented/daily LastEvent cases", "typed/multi-port Dataflow subquery propagation", "scalar iterator/error semantics and Java cardinality diagnostics", "full Java invalid-rule and execution trace parity"]
     },
     {
       "id": "rowrecog.match-recognize",
@@ -446,14 +446,14 @@
     },
     {
       "id": "case.subquery-context",
-      "javaRuntimeIds": ["java-runtime-9aa54450b89fbc94ab73"],
-      "javaNames": ["ContextKeySegmentedSubqueryFiltered"],
-      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"],
-      "goTests": ["TestContextEventStreamSubqueryKeepsPartitionLocalLastEvent"],
+      "javaRuntimeIds": ["java-runtime-9aa54450b89fbc94ab73", "java-runtime-e3411928ba9ce94dbc4a", "java-runtime-44dde7e956b308834da6"],
+      "javaNames": ["ContextKeySegmentedSubqueryFiltered", "ContextStartEndSubselect", "ContextStartEndSubselectCorrelated"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermTemporalFixed.java"],
+      "goTests": ["TestContextEventStreamSubqueryKeepsPartitionLocalLastEvent", "TestTemporalContextEventStreamSubqueryResetsAtCalendarBoundary"],
       "tags": ["correctness", "context", "subquery", "partition"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "Context partitions now own independent event-stream subquery registries: inner LastEvent updates broadcast only to active partitions, while a newly created partition starts empty and later outer events reuse its local state. Named-window index-sharing, pattern-context subqueries and the wider Java context/subquery matrix remain open."
+      "difference": "Context partitions now own independent event-stream subquery registries: inner LastEvent updates broadcast only to active partitions, while a newly created partition starts empty and later outer events reuse its local state. Daily temporal Context termination and next-calendar-window recreation reset the same state, including events received while inactive. Named-window index-sharing, pattern/initiated-context subqueries and the wider Java context/subquery matrix remain open."
     },
     {
       "id": "case.expr-enum-aggregate",
