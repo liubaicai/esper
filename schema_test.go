@@ -526,6 +526,71 @@ func TestJSONParseOptionsRejectUnknownTrailingAndDeepInput(t *testing.T) {
 	}
 }
 
+func TestJSONParserLaxScalarArrayAndShapeMatrix(t *testing.T) {
+	schema, err := NewJSONSchema("JSONLaxMatrix", []FieldSpec{
+		FieldDef("text", reflect.TypeOf("")),
+		FieldDef("boolean", reflect.TypeOf(false)),
+		FieldDef("booleanArray", reflect.TypeOf([]bool{})),
+		FieldDef("integer", reflect.TypeOf(int64(0))),
+		FieldDef("integerArray", reflect.TypeOf([]int64{})),
+		FieldDef("object", reflect.TypeOf(map[string]int64{})),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	event, err := ParseJSON(schema, []byte(`{
+		"text":true,
+		"boolean":"true",
+		"booleanArray":["false",true],
+		"integer":"12",
+		"integerArray":["1",2],
+		"object":{"x":"7"}
+	}`), time.Unix(0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := As[string](event.Get("text")); err != nil || got != "true" {
+		t.Fatalf("lax string conversion = %q, %v", got, err)
+	}
+	if got, err := As[bool](event.Get("boolean")); err != nil || !got {
+		t.Fatalf("lax bool conversion = %v, %v", got, err)
+	}
+	if got, err := As[[]bool](event.Get("booleanArray")); err != nil || !reflect.DeepEqual(got, []bool{false, true}) {
+		t.Fatalf("lax bool array conversion = %#v, %v", got, err)
+	}
+	if got, err := As[int64](event.Get("integer")); err != nil || got != 12 {
+		t.Fatalf("lax integer conversion = %v, %v", got, err)
+	}
+	if got, err := As[[]int64](event.Get("integerArray")); err != nil || !reflect.DeepEqual(got, []int64{1, 2}) {
+		t.Fatalf("lax integer array conversion = %#v, %v", got, err)
+	}
+	if got, err := As[map[string]int64](event.Get("object")); err != nil || got["x"] != 7 {
+		t.Fatalf("lax object conversion = %#v, %v", got, err)
+	}
+
+	shapeEvent, err := ParseJSON(schema, []byte(`{"text":["not-a-string"],"boolean":{},"integer":[],"integerArray":{},"object":"not-an-object"}`), time.Unix(0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"text", "boolean", "integer", "integerArray", "object"} {
+		if !shapeEvent.Get(name).IsNull() {
+			t.Fatalf("incompatible JSON shape %q = %#v, want null", name, shapeEvent.Get(name).Any())
+		}
+	}
+
+	invalid := []string{
+		`{"integer":"x"}`,
+		`{"boolean":"x"}`,
+		`{"integerArray":["x"]}`,
+		`{"object":{"x":"x"}}`,
+	}
+	for _, payload := range invalid {
+		if _, err := ParseJSON(schema, []byte(payload), time.Unix(0, 0)); err == nil {
+			t.Fatalf("invalid JSON conversion %s unexpectedly succeeded", payload)
+		}
+	}
+}
+
 func TestSchemaAndEventPropertyMetadata(t *testing.T) {
 	schema, err := StructSchema[schemaTestIndexedMapped]("Metadata")
 	if err != nil {

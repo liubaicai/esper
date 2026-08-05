@@ -2183,7 +2183,11 @@ func ParseJSONWithOptions(schema Schema, data []byte, receivedAt time.Time, opti
 	}
 	for _, field := range schema.fields {
 		if key, exists := findJSONField(object, schema, field.Name); exists {
-			object[key] = coerceJSONValue(object[key], field.Type)
+			converted, err := coerceJSONField(object[key], field.Type)
+			if err != nil {
+				return Event{}, fmt.Errorf("esper: JSON event %q field %q: %w", schema.Name(), field.Name, err)
+			}
+			object[key] = converted
 		}
 	}
 	return newEvent(schema, object, receivedAt)
@@ -2522,6 +2526,53 @@ func coerceJSONValue(value any, target reflect.Type) any {
 	return value
 }
 
+func coerceJSONField(value any, target reflect.Type) (any, error) {
+	if value == nil || target == nil || target.Kind() == reflect.Interface {
+		return value, nil
+	}
+	converted, ok := coerceJSONReflect(value, target)
+	if ok && converted.IsValid() && converted.CanInterface() {
+		return converted.Interface(), nil
+	}
+	if jsonInputShapeMatchesTarget(value, target) {
+		return nil, fmt.Errorf("cannot convert JSON value %q to %s", jsonValueText(value), target)
+	}
+	// A scalar declaration receiving an object/array is the Java JSON
+	// parser's lax null case. Keep the property declared but clear its value.
+	return nil, nil
+}
+
+func jsonInputShapeMatchesTarget(value any, target reflect.Type) bool {
+	if target == nil || value == nil {
+		return false
+	}
+	for target.Kind() == reflect.Pointer {
+		target = target.Elem()
+	}
+	if target == reflect.TypeOf(time.Time{}) || target == reflect.TypeOf(big.Int{}) || target == reflect.TypeOf(big.Rat{}) {
+		return false
+	}
+	source := reflect.ValueOf(value)
+	if !source.IsValid() {
+		return false
+	}
+	switch target.Kind() {
+	case reflect.Slice, reflect.Array:
+		return source.Kind() == reflect.Slice || source.Kind() == reflect.Array
+	case reflect.Map, reflect.Struct:
+		return source.Kind() == reflect.Map
+	default:
+		return source.Kind() != reflect.Map && source.Kind() != reflect.Slice && source.Kind() != reflect.Array
+	}
+}
+
+func jsonValueText(value any) string {
+	if text, ok := jsonText(value); ok {
+		return text
+	}
+	return fmt.Sprintf("%T", value)
+}
+
 func coerceJSONReflect(value any, target reflect.Type) (reflect.Value, bool) {
 	if value == nil {
 		return reflect.Zero(target), true
@@ -2699,6 +2750,8 @@ func jsonText(value any) (string, bool) {
 		return typed.String(), true
 	case string:
 		return typed, true
+	case bool:
+		return strconv.FormatBool(typed), true
 	case int:
 		return strconv.Itoa(typed), true
 	case int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
