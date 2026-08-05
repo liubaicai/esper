@@ -130,7 +130,8 @@ func (c *VirtualClock) Advance(at time.Time) error {
 }
 
 type engineConfig struct {
-	clock *VirtualClock
+	clock          *VirtualClock
+	matchRecognize MatchRecognizeRuntimeConfig
 }
 
 type EngineOption func(*engineConfig)
@@ -145,38 +146,47 @@ func WithStartTime(start time.Time) EngineOption {
 
 // Engine owns deployed statements and the explicit processing clock.
 type Engine struct {
-	mu                              sync.Mutex
-	env                             *Environment
-	clock                           *VirtualClock
-	variables                       map[string]Value
-	contextVariables                map[string]map[string]map[string]Value
-	contextPartitionRefs            map[string]map[string]int
-	contextPartitionIDs             map[string]map[string]int
-	contextPartitionNextIDs         map[string]int
-	contextPartitionInstanceNextIDs map[string]uint64
-	contextPartitionDescriptors     map[string]map[string]ContextPartitionDescriptor
-	contextPartitionListeners       map[string][]ContextPartitionStateListener
-	contextTemporalOrigins          map[string]time.Time
-	contextStateListeners           []ContextStateListener
-	contextCreated                  map[string]bool
-	contextStatementRefs            map[string]int
-	pendingContextEvents            []contextNotification
-	variableChangeListeners         map[string][]VariableChangeListener
-	pendingVariableChanges          []VariableChangeEvent
-	tables                          map[string]*Table
-	namedWindows                    map[string]*NamedWindow
-	statements                      map[string]*Statement
-	deployments                     map[string]*Deployment
-	dataflows                       map[*DataflowInstance]struct{}
-	pendingStatementDispatches      []statementDispatch
-	pendingNamedWindowDispatches    []namedWindowDispatch
-	pendingRoutedEvents             []Event
-	closed                          bool
-	nextID                          uint64
+	mu                                sync.Mutex
+	env                               *Environment
+	clock                             *VirtualClock
+	matchRecognizeStatePool           *rowRecogStatePool
+	matchRecognizeStateLimitListeners []MatchRecognizeStateLimitListener
+	pendingMatchRecognizeStateLimits  []MatchRecognizeStateLimitEvent
+	variables                         map[string]Value
+	contextVariables                  map[string]map[string]map[string]Value
+	contextPartitionRefs              map[string]map[string]int
+	contextPartitionIDs               map[string]map[string]int
+	contextPartitionNextIDs           map[string]int
+	contextPartitionInstanceNextIDs   map[string]uint64
+	contextPartitionDescriptors       map[string]map[string]ContextPartitionDescriptor
+	contextPartitionListeners         map[string][]ContextPartitionStateListener
+	contextTemporalOrigins            map[string]time.Time
+	contextStateListeners             []ContextStateListener
+	contextCreated                    map[string]bool
+	contextStatementRefs              map[string]int
+	pendingContextEvents              []contextNotification
+	variableChangeListeners           map[string][]VariableChangeListener
+	pendingVariableChanges            []VariableChangeEvent
+	tables                            map[string]*Table
+	namedWindows                      map[string]*NamedWindow
+	statements                        map[string]*Statement
+	deployments                       map[string]*Deployment
+	dataflows                         map[*DataflowInstance]struct{}
+	pendingStatementDispatches        []statementDispatch
+	pendingNamedWindowDispatches      []namedWindowDispatch
+	pendingRoutedEvents               []Event
+	closed                            bool
+	nextID                            uint64
 }
 
 func NewEngine(env *Environment, options ...EngineOption) *Engine {
-	cfg := engineConfig{clock: NewVirtualClock(time.Unix(0, 0).UTC())}
+	cfg := engineConfig{
+		clock: NewVirtualClock(time.Unix(0, 0).UTC()),
+		matchRecognize: MatchRecognizeRuntimeConfig{
+			MaxStates:    -1,
+			PreventStart: true,
+		},
+	}
 	for _, option := range options {
 		if option != nil {
 			option(&cfg)
@@ -188,6 +198,7 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 	engine := &Engine{
 		env:                             env,
 		clock:                           cfg.clock,
+		matchRecognizeStatePool:         newRowRecogStatePool(cfg.matchRecognize),
 		variables:                       make(map[string]Value),
 		contextVariables:                make(map[string]map[string]map[string]Value),
 		contextPartitionRefs:            make(map[string]map[string]int),
@@ -460,6 +471,9 @@ func (e *Engine) retainContextPartitionLocked(contextName, partitionKey string, 
 func (e *Engine) releaseContextPartitionLocked(contextName, partitionKey string, runtime ...*statementRuntime) {
 	if e == nil || contextName == "" || partitionKey == "" {
 		return
+	}
+	if len(runtime) > 0 && runtime[0] != nil {
+		e.releaseRowRecogRuntimeLocked(runtime[0])
 	}
 	byContext := e.contextPartitionRefs[contextName]
 	if byContext == nil {
@@ -1027,6 +1041,7 @@ func (e *Engine) InsertNamedWindow(ctx context.Context, name string, underlying 
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
+	e.pendingMatchRecognizeStateLimits = nil
 	dispatches := make([]statementDispatch, 0, len(statements))
 	for _, statement := range statements {
 		batch, changed, processErr := statement.processNamedWindow(ctx, now, delta, variables)
@@ -1060,6 +1075,7 @@ func (e *Engine) InsertNamedWindow(ctx context.Context, name string, underlying 
 	e.mu.Unlock()
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
+	e.dispatchMatchRecognizeStateLimitEvents()
 	if err := dispatchAll(ctx, dispatches); err != nil {
 		return err
 	}
@@ -1508,6 +1524,10 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 		runtime:    newStatementRuntime(plan.query),
 	}
 	statement.runtime.engine = e
+	statement.runtime.rowRecogOwner = statement.id
+	if plan.query.rowRecog != nil {
+		e.matchRecognizeStatePool.register(statement.id)
+	}
 	e.refreshVariablesLocked()
 	statement.runtime.variables = statementVariables(e.variables, statement.parameters)
 	statement.runtime.initializeAt(e.clock.Now())
@@ -1619,6 +1639,10 @@ func (s *Statement) markClosedLocked() {
 			lastContextStatement = s.engine.queueContextStatementRemovedLocked(s)
 		}
 		s.releaseContextPartitionsLocked()
+		if s.engine != nil {
+			s.engine.releaseRowRecogRuntimeLocked(&s.runtime)
+			s.engine.matchRecognizeStatePool.removeOwner(s.id)
+		}
 		if lastContextStatement {
 			s.engine.queueContextDeactivatedLocked(s.plan.query.contextName)
 		}
@@ -1673,6 +1697,7 @@ func (e *Engine) Send(ctx context.Context, eventType string, underlying any) err
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
+	e.pendingMatchRecognizeStateLimits = nil
 	dispatches := make([]statementDispatch, 0)
 	routedQueue := []Event{event}
 	processedEvents := make([]Event, 0, 1)
@@ -1723,6 +1748,7 @@ func (e *Engine) Send(ctx context.Context, eventType string, underlying any) err
 	e.mu.Unlock()
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
+	e.dispatchMatchRecognizeStateLimitEvents()
 	if err := dispatchAll(ctx, dispatches); err != nil {
 		return err
 	}
@@ -1903,6 +1929,7 @@ func (e *Engine) AdvanceTime(ctx context.Context, at time.Time) error {
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
+	e.pendingMatchRecognizeStateLimits = nil
 	dispatches := make([]statementDispatch, 0, len(statements))
 	namedWindowDispatches := make([]namedWindowDispatch, 0, len(e.namedWindows))
 	for _, name := range sortedNamedWindowNames(e.namedWindows) {
@@ -1957,6 +1984,7 @@ func (e *Engine) AdvanceTime(ctx context.Context, at time.Time) error {
 	e.mu.Unlock()
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
+	e.dispatchMatchRecognizeStateLimitEvents()
 	if err := dispatchAll(ctx, dispatches); err != nil {
 		return err
 	}
@@ -2346,6 +2374,7 @@ type windowRuntimeState struct {
 type statementRuntime struct {
 	query                    Query
 	engine                   *Engine
+	rowRecogOwner            string
 	ctx                      context.Context
 	windows                  map[*streamNode]*windowRuntimeState
 	joinState                *joinRuntimeState
@@ -2472,6 +2501,8 @@ type rowRecogPartitionState struct {
 	emitted        map[string]struct{}
 	intervalClosed map[string]struct{}
 	intervalFinal  map[string][]rowRecogMatch
+	activeStarts   map[string]struct{}
+	blockedStarts  map[string]struct{}
 }
 
 // patternProgress is the runtime state of one pattern expression tree. It is
@@ -2783,6 +2814,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		query.contextName = ""
 		partitionRuntime := newStatementRuntime(query)
 		partitionRuntime.engine = s.engine
+		partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
 		partitionRuntime.partitionContextName = s.plan.query.contextName
 		partitionRuntime.partitionKey = allocationKey
 		partitionRuntime.partitionID = s.allocateContextPartitionID(allocationKey)
@@ -3263,6 +3295,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		query.contextName = ""
 		partitionRuntime := newStatementRuntime(query)
 		partitionRuntime.engine = s.engine
+		partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
 		partitionRuntime.partitionContextName = s.plan.query.contextName
 		partitionRuntime.partitionKey = allocationKey
 		partitionRuntime.partitionID = s.allocateContextPartitionID(allocationKey)
@@ -3354,6 +3387,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 		query.contextName = ""
 		partitionRuntime := newStatementRuntime(query)
 		partitionRuntime.engine = s.engine
+		partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
 		partitionRuntime.partitionContextName = s.plan.query.contextName
 		partitionRuntime.partitionKey = allocationKey
 		partitionRuntime.partitionID = s.allocateContextPartitionID(allocationKey)
@@ -3533,6 +3567,7 @@ func (s *Statement) syncTemporalContextLocked(now time.Time) (ResultBatch, bool)
 			query.contextName = ""
 			partitionRuntime := newStatementRuntime(query)
 			partitionRuntime.engine = s.engine
+			partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
 			partitionRuntime.partitionContextName = s.plan.query.contextName
 			partitionRuntime.partitionKey = activeKey
 			partitionRuntime.partitionID = s.allocateContextPartitionID(activeKey)
@@ -3587,6 +3622,7 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 		query.contextName = ""
 		partitionRuntime := newStatementRuntime(query)
 		partitionRuntime.engine = s.engine
+		partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
 		partitionRuntime.partitionContextName = s.plan.query.contextName
 		partitionRuntime.partitionKey = key
 		partitionRuntime.partitionID = s.allocateContextPartitionID(key)
@@ -4684,6 +4720,7 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 			query.contextName = ""
 			partitionRuntime := newStatementRuntime(query)
 			partitionRuntime.engine = s.engine
+			partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
 			partitionRuntime.partitionContextName = s.plan.query.contextName
 			partitionRuntime.partitionKey = key
 			partitionRuntime.partitionID = s.allocateContextPartitionID(key)

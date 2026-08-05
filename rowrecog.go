@@ -550,6 +550,7 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 			partition = newRowRecogPartitionState()
 			r.rowRecogState.partitions[key] = partition
 		}
+		r.admitRowRecogStart(definition, partition, event, now)
 		partition.events = append(partition.events, event)
 		if !rowRecogHasInterval(definition) {
 			r.emitRowRecogMatchesAtEnd(definition, partition, len(partition.events)-1, plan, now, &batch)
@@ -578,16 +579,139 @@ func newRowRecogPartitionState() *rowRecogPartitionState {
 		emitted:        make(map[string]struct{}),
 		intervalClosed: make(map[string]struct{}),
 		intervalFinal:  make(map[string][]rowRecogMatch),
+		activeStarts:   make(map[string]struct{}),
+		blockedStarts:  make(map[string]struct{}),
 	}
+}
+
+func (r *statementRuntime) admitRowRecogStart(definition *rowRecogDefinition, partition *rowRecogPartitionState, event Event, now time.Time) {
+	if r == nil || definition == nil || partition == nil || !rowRecogEventCanStart(definition, partition, event, now, r.variables) {
+		return
+	}
+	if partition.activeStarts == nil {
+		partition.activeStarts = make(map[string]struct{})
+	}
+	if partition.blockedStarts == nil {
+		partition.blockedStarts = make(map[string]struct{})
+	}
+	key := rowRecogStartKey(len(partition.events), event)
+	allowed := true
+	if r.engine != nil && r.rowRecogOwner != "" && r.engine.matchRecognizeStatePool != nil {
+		allowed = r.engine.matchRecognizeStatePool.tryIncrease(r.engine, r.rowRecogOwner)
+	}
+	if allowed {
+		partition.activeStarts[key] = struct{}{}
+	} else {
+		partition.blockedStarts[key] = struct{}{}
+	}
+}
+
+func rowRecogEventCanStart(definition *rowRecogDefinition, partition *rowRecogPartitionState, event Event, now time.Time, variables map[string]Value) bool {
+	if definition == nil || partition == nil {
+		return false
+	}
+	names := rowPatternStartVariables(definition.pattern)
+	if len(names) == 0 {
+		return false
+	}
+	history := append([]Event(nil), partition.events...)
+	history = append(history, event)
+	for _, name := range names {
+		predicate := definition.defines[name]
+		if predicate == nil {
+			return true
+		}
+		value := predicate.eval(EvalContext{
+			Event:     event,
+			History:   history,
+			Now:       now,
+			Variables: variables,
+		})
+		matched, ok := boolValue(value)
+		if ok && matched {
+			return true
+		}
+	}
+	return false
+}
+
+func rowPatternStartVariables(pattern RowPattern) []string {
+	minimum, maximum := rowPatternBounds(pattern)
+	base := pattern
+	if pattern.quantified && !(minimum == 1 && maximum == 1) {
+		base.quantified = false
+		base.minimum = 1
+		base.maximum = 1
+	}
+	var names []string
+	switch base.kind {
+	case rowPatternVariable:
+		if base.name != "" {
+			names = append(names, base.name)
+		}
+	case rowPatternSequence:
+		for _, part := range base.parts {
+			names = append(names, rowPatternStartVariables(part)...)
+			if !rowPatternNullable(part) {
+				break
+			}
+		}
+	case rowPatternAlternation, rowPatternPermutation:
+		for _, part := range base.parts {
+			names = append(names, rowPatternStartVariables(part)...)
+		}
+	}
+	seen := make(map[string]struct{}, len(names))
+	result := make([]string, 0, len(names))
+	for _, name := range names {
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		result = append(result, name)
+	}
+	return result
+}
+
+func rowPatternNullable(pattern RowPattern) bool {
+	minimum, _ := rowPatternBounds(pattern)
+	if minimum == 0 {
+		return true
+	}
+	base := pattern
+	if pattern.quantified && !(pattern.minimum == 1 && pattern.maximum == 1) {
+		base.quantified = false
+		base.minimum = 1
+		base.maximum = 1
+	}
+	switch base.kind {
+	case rowPatternVariable:
+		return false
+	case rowPatternSequence, rowPatternPermutation:
+		for _, part := range base.parts {
+			if !rowPatternNullable(part) {
+				return false
+			}
+		}
+		return true
+	case rowPatternAlternation:
+		for _, part := range base.parts {
+			if rowPatternNullable(part) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefinition, partition *rowRecogPartitionState, end int, plan Plan, now time.Time, batch *ResultBatch) {
 	if definition == nil || partition == nil || batch == nil || end < 0 {
 		return
 	}
-	// skipStart controls which matches may be emitted, not which branches are
-	// retained. Java can keep updating a skipped branch for iterator results.
 	for start := 0; start <= end; start++ {
+		if rowRecogStartBlocked(partition, start) {
+			continue
+		}
 		matches := rowRecogMatches(definition, partition.events, start, end, now, r.variables)
 		emittedForStart := false
 		for _, match := range matches {
@@ -603,7 +727,7 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 				batch.New = append(batch.New, resultRow(row))
 			}
 			emittedForStart = true
-			advanceRowRecogSkip(definition, partition, match)
+			r.advanceRowRecogSkip(definition, partition, match)
 			if !definition.allMatches {
 				break
 			}
@@ -614,7 +738,7 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 	}
 }
 
-func advanceRowRecogSkip(definition *rowRecogDefinition, partition *rowRecogPartitionState, match rowRecogMatch) {
+func (r *statementRuntime) advanceRowRecogSkip(definition *rowRecogDefinition, partition *rowRecogPartitionState, match rowRecogMatch) {
 	if definition == nil || partition == nil {
 		return
 	}
@@ -628,6 +752,19 @@ func advanceRowRecogSkip(definition *rowRecogDefinition, partition *rowRecogPart
 	}
 	if partition.skipStart < 0 {
 		partition.skipStart = 0
+	}
+	threshold := partition.skipStart
+	for index, event := range partition.events {
+		if index >= threshold {
+			break
+		}
+		key := rowRecogStartKey(index, event)
+		if _, active := partition.activeStarts[key]; active {
+			delete(partition.activeStarts, key)
+			if r != nil && r.engine != nil && r.engine.matchRecognizeStatePool != nil {
+				r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, 1)
+			}
+		}
 	}
 }
 
@@ -653,6 +790,9 @@ func (r *statementRuntime) flushRowRecogIntervals(definition *rowRecogDefinition
 		}
 		for start := 0; start < len(partition.events); start++ {
 			startEvent := partition.events[start]
+			if rowRecogStartBlocked(partition, start) {
+				continue
+			}
 			startKey := rowRecogStartKey(start, startEvent)
 			if _, closed := partition.intervalClosed[startKey]; closed {
 				continue
@@ -686,7 +826,7 @@ func (r *statementRuntime) flushRowRecogIntervals(definition *rowRecogDefinition
 				if row, visible := evaluateRowRecogMatch(match, partition.events, plan, now, r.variables); visible {
 					batch.New = append(batch.New, resultRow(row))
 				}
-				advanceRowRecogSkip(definition, partition, match)
+				r.advanceRowRecogSkip(definition, partition, match)
 				if !definition.allMatches {
 					break
 				}
@@ -720,6 +860,9 @@ func (r *statementRuntime) emitRowRecogTerminated(definition *rowRecogDefinition
 		return
 	}
 	for start := 0; start <= end; start++ {
+		if rowRecogStartBlocked(partition, start) {
+			continue
+		}
 		startKey := rowRecogStartKey(start, partition.events[start])
 		if _, closed := partition.intervalClosed[startKey]; closed {
 			continue
@@ -762,7 +905,7 @@ func (r *statementRuntime) emitRowRecogIntervalMatches(definition *rowRecogDefin
 		if row, visible := evaluateRowRecogMatch(match, partition.events, plan, now, r.variables); visible {
 			batch.New = append(batch.New, resultRow(row))
 		}
-		advanceRowRecogSkip(definition, partition, match)
+		r.advanceRowRecogSkip(definition, partition, match)
 		if !definition.allMatches {
 			break
 		}
@@ -831,6 +974,14 @@ func rowRecogStartKey(index int, event Event) string {
 	return fmt.Sprintf("%d:%s:%d", index, eventIdentity(event), event.ReceivedAt().UnixNano())
 }
 
+func rowRecogStartBlocked(partition *rowRecogPartitionState, index int) bool {
+	if partition == nil || index < 0 || index >= len(partition.events) {
+		return false
+	}
+	_, blocked := partition.blockedStarts[rowRecogStartKey(index, partition.events[index])]
+	return blocked
+}
+
 func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, event Event, now time.Time) {
 	if r == nil || r.rowRecogState == nil || definition == nil {
 		return
@@ -844,7 +995,30 @@ func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, e
 		if !sameEvent(retained, event) {
 			continue
 		}
+		oldActive := partition.activeStarts
+		oldBlocked := partition.blockedStarts
+		if _, active := oldActive[rowRecogStartKey(index, retained)]; active {
+			if r.engine != nil && r.engine.matchRecognizeStatePool != nil {
+				r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, 1)
+			}
+		}
 		partition.events = append(partition.events[:index], partition.events[index+1:]...)
+		partition.activeStarts = make(map[string]struct{})
+		partition.blockedStarts = make(map[string]struct{})
+		for newIndex, candidate := range partition.events {
+			oldIndex := newIndex
+			if newIndex >= index {
+				oldIndex++
+			}
+			oldKey := rowRecogStartKey(oldIndex, candidate)
+			newKey := rowRecogStartKey(newIndex, candidate)
+			if _, active := oldActive[oldKey]; active {
+				partition.activeStarts[newKey] = struct{}{}
+			}
+			if _, blocked := oldBlocked[oldKey]; blocked {
+				partition.blockedStarts[newKey] = struct{}{}
+			}
+		}
 		if index < partition.skipStart {
 			partition.skipStart--
 		}
@@ -1281,6 +1455,9 @@ func rowRecogCurrentMatches(definition *rowRecogDefinition, partition *rowRecogP
 	result := make([]rowRecogMatch, 0)
 	seen := make(map[string]struct{})
 	for start := 0; start < len(partition.events); start++ {
+		if rowRecogStartBlocked(partition, start) {
+			continue
+		}
 		startKey := rowRecogStartKey(start, partition.events[start])
 		if rowRecogHasInterval(definition) {
 			if finals, closed := partition.intervalFinal[startKey]; closed {
