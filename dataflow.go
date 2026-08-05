@@ -665,6 +665,7 @@ type DataflowOperator struct {
 	Selections              []Selection
 	Log                     func(context.Context, any) error
 	Statement               *Statement
+	StatementName           string
 	Signal                  DataflowSignalHandler
 	Factory                 DataflowOperatorFactory
 	InputPorts              []string
@@ -815,6 +816,17 @@ func (b DataflowBuilder) EPStatementSource(name string, statement *Statement) Da
 	return b.add(DataflowOperator{Name: name, Kind: EPStatementSourceKind, Statement: statement})
 }
 
+// EPStatementSourceByName creates a statement source that follows a named
+// statement in the engine. The source may be started before the statement is
+// deployed; a later deployment with the same name is attached automatically.
+func (b DataflowBuilder) EPStatementSourceByName(name, statementName string) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:          name,
+		Kind:          EPStatementSourceKind,
+		StatementName: statementName,
+	})
+}
+
 // EPStatementSourceWithFilter adds an EP statement source with a structured
 // source-side predicate. The predicate is evaluated against Event or Row
 // results before they enter the dataflow graph.
@@ -824,6 +836,17 @@ func (b DataflowBuilder) EPStatementSourceWithFilter(name string, statement *Sta
 		Kind:         EPStatementSourceKind,
 		Statement:    statement,
 		SourceFilter: predicate,
+	})
+}
+
+// EPStatementSourceByNameWithFilter follows a named statement and evaluates
+// predicate at the statement-source boundary before values enter the graph.
+func (b DataflowBuilder) EPStatementSourceByNameWithFilter(name, statementName string, predicate Expr) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:          name,
+		Kind:          EPStatementSourceKind,
+		StatementName: statementName,
+		SourceFilter:  predicate,
 	})
 }
 
@@ -1213,8 +1236,11 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 				}
 			}
 		case EPStatementSourceKind:
-			if operator.Statement == nil {
-				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q requires statement", operator.Name))
+			if operator.Statement == nil && operator.StatementName == "" {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q requires statement or statement name", operator.Name))
+			}
+			if operator.Statement != nil && operator.StatementName != "" {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q cannot combine statement and statement name", operator.Name))
 			}
 			if operator.SourceFilter != nil && operator.SourceFilter.Type() != typeOf[bool]() {
 				return DataflowDefinition{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow statement source %q requires bool filter", operator.Name))
@@ -1842,7 +1868,7 @@ type DataflowInstance struct {
 	operatorStats          map[string]*dataflowOperatorStatState
 	outgoing               map[string][]DataflowEdge
 	graph                  bool
-	statementSubscriptions []*Subscription
+	statementSubscriptions map[string]*Subscription
 	runtimes               map[string]DataflowOperatorRuntime
 	sources                map[string]DataflowSourceRuntime
 	subqueryRegistries     map[string]*subqueryRuntimeRegistry
@@ -1905,6 +1931,45 @@ func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowO
 	}
 }
 
+func (e *Engine) dataflowFindStatement(name string) *Statement {
+	if e == nil || name == "" {
+		return nil
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.statements[name]
+}
+
+func (e *Engine) notifyDataflowStatementDeployed(statement *Statement) {
+	if e == nil || statement == nil {
+		return
+	}
+	e.mu.Lock()
+	instances := make([]*DataflowInstance, 0, len(e.dataflows))
+	for instance := range e.dataflows {
+		instances = append(instances, instance)
+	}
+	e.mu.Unlock()
+	for _, instance := range instances {
+		instance.onStatementDeployed(statement)
+	}
+}
+
+func (e *Engine) notifyDataflowStatementUndeployed(statement *Statement) {
+	if e == nil || statement == nil {
+		return
+	}
+	e.mu.Lock()
+	instances := make([]*DataflowInstance, 0, len(e.dataflows))
+	for instance := range e.dataflows {
+		instances = append(instances, instance)
+	}
+	e.mu.Unlock()
+	for _, instance := range instances {
+		instance.onStatementUndeployed(statement)
+	}
+}
+
 func (e *Engine) InstantiateDataflow(ctx context.Context, definition DataflowDefinition) (*DataflowInstance, error) {
 	return e.InstantiateDataflowWithOptions(ctx, definition, DataflowOptions{})
 }
@@ -1930,20 +1995,21 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 		options.InstanceID = registered.name
 	}
 	instance := &DataflowInstance{
-		engine:             e,
-		definition:         registered,
-		options:            options,
-		state:              DataflowInstantiated,
-		eventTypes:         make(map[string]struct{}),
-		operators:          make(map[string]DataflowOperator, len(registered.operators)),
-		operatorStats:      make(map[string]*dataflowOperatorStatState, len(registered.operators)),
-		outgoing:           make(map[string][]DataflowEdge),
-		graph:              len(registered.edges) > 0,
-		runtimes:           make(map[string]DataflowOperatorRuntime),
-		sources:            make(map[string]DataflowSourceRuntime),
-		subqueryRegistries: make(map[string]*subqueryRuntimeRegistry),
-		selectStates:       make(map[string]*dataflowSelectState),
-		done:               make(chan struct{}),
+		engine:                 e,
+		definition:             registered,
+		options:                options,
+		state:                  DataflowInstantiated,
+		eventTypes:             make(map[string]struct{}),
+		operators:              make(map[string]DataflowOperator, len(registered.operators)),
+		operatorStats:          make(map[string]*dataflowOperatorStatState, len(registered.operators)),
+		outgoing:               make(map[string][]DataflowEdge),
+		graph:                  len(registered.edges) > 0,
+		runtimes:               make(map[string]DataflowOperatorRuntime),
+		sources:                make(map[string]DataflowSourceRuntime),
+		subqueryRegistries:     make(map[string]*subqueryRuntimeRegistry),
+		selectStates:           make(map[string]*dataflowSelectState),
+		statementSubscriptions: make(map[string]*Subscription),
+		done:                   make(chan struct{}),
 	}
 	for operatorNumber, operator := range registered.operators {
 		instance.operators[operator.Name] = operator
@@ -2622,8 +2688,7 @@ func (d *DataflowInstance) complete(err error) {
 		d.runErr = err
 	}
 	cancel := d.runCancel
-	subscriptions := append([]*Subscription(nil), d.statementSubscriptions...)
-	d.statementSubscriptions = nil
+	subscriptions := d.takeStatementSubscriptionsLocked()
 	d.mu.Unlock()
 	if cancel != nil {
 		cancel()
@@ -2635,6 +2700,19 @@ func (d *DataflowInstance) complete(err error) {
 	}
 	d.closeRuntimes(context.Background())
 	d.closeDone()
+}
+
+func (d *DataflowInstance) takeStatementSubscriptionsLocked() []*Subscription {
+	if len(d.statementSubscriptions) == 0 {
+		d.statementSubscriptions = nil
+		return nil
+	}
+	result := make([]*Subscription, 0, len(d.statementSubscriptions))
+	for _, subscription := range d.statementSubscriptions {
+		result = append(result, subscription)
+	}
+	d.statementSubscriptions = nil
+	return result
 }
 
 func (d *DataflowInstance) watchRunContext(runCtx context.Context) {
@@ -2763,6 +2841,140 @@ func (d *DataflowInstance) waitSources() {
 	}
 }
 
+func (d *DataflowInstance) resolveStatementSource(operator DataflowOperator) *Statement {
+	if operator.Statement != nil {
+		return operator.Statement
+	}
+	if d == nil || d.engine == nil || operator.StatementName == "" {
+		return nil
+	}
+	return d.engine.dataflowFindStatement(operator.StatementName)
+}
+
+func (d *DataflowInstance) statementSourceListener(operator DataflowOperator) Listener {
+	return func(callbackCtx context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			var value any
+			if event, ok := result.Event(); ok {
+				value = event
+			} else if row, ok := result.Row(); ok {
+				value = row
+			} else {
+				continue
+			}
+			accepted, filterErr := d.dataflowSourceFilterAccepts(operator, value)
+			if filterErr != nil {
+				return filterErr
+			}
+			if !accepted {
+				continue
+			}
+			var processErr error
+			if d.graph {
+				d.processed.Add(1)
+				processErr = d.processGraphFrom(callbackCtx, value, operator.Name)
+			} else {
+				processErr = d.process(callbackCtx, value)
+			}
+			if processErr != nil {
+				return d.completeDataflowFailure(processErr)
+			}
+			if err := contextErr(callbackCtx); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+func (d *DataflowInstance) attachStatementSource(operator DataflowOperator, statement *Statement) error {
+	if d == nil || statement == nil {
+		return nil
+	}
+	d.mu.Lock()
+	if d.state != DataflowRunning {
+		d.mu.Unlock()
+		return nil
+	}
+	existing := d.statementSubscriptions[operator.Name]
+	if existing != nil {
+		if existing.statement == statement {
+			d.mu.Unlock()
+			return nil
+		}
+		delete(d.statementSubscriptions, operator.Name)
+	}
+	d.mu.Unlock()
+	if existing != nil {
+		_ = existing.Close()
+	}
+
+	subscription, err := statement.Subscribe(d.statementSourceListener(operator))
+	if err != nil {
+		return err
+	}
+	d.mu.Lock()
+	if d.state != DataflowRunning {
+		d.mu.Unlock()
+		return subscription.Close()
+	}
+	existing = d.statementSubscriptions[operator.Name]
+	if existing != nil {
+		if existing.statement == statement {
+			d.mu.Unlock()
+			return subscription.Close()
+		}
+		delete(d.statementSubscriptions, operator.Name)
+	}
+	d.statementSubscriptions[operator.Name] = &subscription
+	d.mu.Unlock()
+	if existing != nil {
+		_ = existing.Close()
+	}
+	return nil
+}
+
+func (d *DataflowInstance) detachStatementSource(operatorName string, statement *Statement) {
+	if d == nil {
+		return
+	}
+	d.mu.Lock()
+	subscription := d.statementSubscriptions[operatorName]
+	if subscription == nil || (statement != nil && subscription.statement != statement) {
+		d.mu.Unlock()
+		return
+	}
+	delete(d.statementSubscriptions, operatorName)
+	d.mu.Unlock()
+	_ = subscription.Close()
+}
+
+func (d *DataflowInstance) onStatementDeployed(statement *Statement) {
+	if d == nil || statement == nil {
+		return
+	}
+	for _, operator := range d.definition.operators {
+		if operator.Kind != EPStatementSourceKind || operator.StatementName == "" || operator.StatementName != statement.Name() {
+			continue
+		}
+		if err := d.attachStatementSource(operator, statement); err != nil {
+			d.completeDataflowFailure(err)
+		}
+	}
+}
+
+func (d *DataflowInstance) onStatementUndeployed(statement *Statement) {
+	if d == nil || statement == nil {
+		return
+	}
+	for _, operator := range d.definition.operators {
+		if operator.Kind != EPStatementSourceKind || operator.StatementName == "" || operator.StatementName != statement.Name() {
+			continue
+		}
+		d.detachStatementSource(operator.Name, statement)
+	}
+}
+
 func (d *DataflowInstance) Start(ctx context.Context) error {
 	if err := contextErr(ctx); err != nil {
 		return err
@@ -2795,46 +3007,18 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 			continue
 		}
 		hasEventSource = true
-		subscription, err := operator.Statement.Subscribe(func(callbackCtx context.Context, batch ResultBatch) error {
-			for _, result := range batch.New {
-				var value any
-				if event, ok := result.Event(); ok {
-					value = event
-				} else if row, ok := result.Row(); ok {
-					value = row
-				} else {
-					continue
-				}
-				accepted, filterErr := d.dataflowSourceFilterAccepts(operator, value)
-				if filterErr != nil {
-					return filterErr
-				}
-				if !accepted {
-					continue
-				}
-				var processErr error
-				if d.graph {
-					d.processed.Add(1)
-					processErr = d.processGraphFrom(callbackCtx, value, operator.Name)
-				} else {
-					processErr = d.process(callbackCtx, value)
-				}
-				if processErr != nil {
-					return d.completeDataflowFailure(processErr)
-				}
-				if err := contextErr(callbackCtx); err != nil {
-					return err
-				}
+		statement := d.resolveStatementSource(operator)
+		if statement == nil {
+			if operator.Statement != nil {
+				_ = d.Cancel(context.Background())
+				return NewError(ErrorDependency, fmt.Sprintf("dataflow statement source %q statement is unavailable", operator.Name))
 			}
-			return nil
-		})
-		if err != nil {
+			continue
+		}
+		if err := d.attachStatementSource(operator, statement); err != nil {
 			_ = d.Cancel(context.Background())
 			return err
 		}
-		d.mu.Lock()
-		d.statementSubscriptions = append(d.statementSubscriptions, &subscription)
-		d.mu.Unlock()
 	}
 	for _, operator := range d.definition.operators {
 		if operator.Kind != BeaconSourceKind {
@@ -2985,8 +3169,7 @@ func (d *DataflowInstance) Cancel(ctx context.Context) error {
 	d.state = DataflowCanceled
 	cancel := d.runCancel
 	engine := d.engine
-	subscriptions := append([]*Subscription(nil), d.statementSubscriptions...)
-	d.statementSubscriptions = nil
+	subscriptions := d.takeStatementSubscriptionsLocked()
 	d.mu.Unlock()
 	if cancel != nil {
 		cancel()
