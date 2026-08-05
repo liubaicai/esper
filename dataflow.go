@@ -276,12 +276,18 @@ const (
 // OutputSnapshotEvery emits the current projection on each virtual-clock
 // interval instead of on every input. IterateOnFinalMarker retains a finite
 // Event batch and emits one row per GroupBy key when FinalMarker arrives.
+// PreserveInput returns the input DataflowRecord unchanged when no output
+// event type is configured, or uses it as the base for an event projection
+// when OutputEventType is set. This models Esper's select-star and wrapper
+// output without exposing EPL or Java EventBean internals.
 type DataflowSelectOptions struct {
 	TimeWindow           time.Duration
 	OutputSnapshotEvery  time.Duration
 	IterateOnFinalMarker bool
 	GroupBy              []Expr
 	OrderBy              []SortKey
+	OutputEventType      string
+	PreserveInput        bool
 }
 
 func (o DataflowSelectOptions) validate() error {
@@ -306,6 +312,9 @@ func (o DataflowSelectOptions) validate() error {
 	}
 	if o.IterateOnFinalMarker && (o.TimeWindow > 0 || o.OutputSnapshotEvery > 0) {
 		return NewError(ErrorInvalidRule, "dataflow select iterate-on-final-marker cannot combine with time or output snapshots")
+	}
+	if (o.OutputEventType != "" || o.PreserveInput) && (o.TimeWindow > 0 || o.OutputSnapshotEvery > 0 || o.IterateOnFinalMarker) {
+		return NewError(ErrorInvalidRule, "dataflow event output cannot combine with time, snapshot, or final-marker state")
 	}
 	if o.TimeWindow == 0 && o.OutputSnapshotEvery == 0 {
 		return nil
@@ -598,6 +607,24 @@ func (b DataflowBuilder) SelectWithOptions(name string, options DataflowSelectOp
 	})
 }
 
+// SelectPassThrough forwards the input Event or Row unchanged. It is the
+// fluent equivalent of a select-star projection when the graph should retain
+// the existing DataflowRecord representation.
+func (b DataflowBuilder) SelectPassThrough(name string) DataflowBuilder {
+	return b.SelectWithOptions(name, DataflowSelectOptions{PreserveInput: true})
+}
+
+// SelectEvent emits a registered event schema, preserving fields from the
+// input Event/Row and overlaying any named selections. With no selections it
+// is a typed select-star projection; selections model additional wrapper
+// properties such as `hello` while retaining the source fields.
+func (b DataflowBuilder) SelectEvent(name, eventType string, selections ...Selection) DataflowBuilder {
+	return b.SelectWithOptions(name, DataflowSelectOptions{
+		OutputEventType: eventType,
+		PreserveInput:   true,
+	}, selections...)
+}
+
 // SelectTimeWindow is the concise chain form for a Select retaining Event
 // inputs for duration and emitting a projection on input and expiry changes.
 func (b DataflowBuilder) SelectTimeWindow(name string, duration time.Duration, selections ...Selection) DataflowBuilder {
@@ -760,6 +787,17 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 			if err := operator.SelectOptions.validate(); err != nil {
 				return DataflowDefinition{}, WrapError(ErrorInvalidRule, "dataflow select "+operator.Name, err)
 			}
+			if operator.SelectOptions.OutputEventType != "" {
+				schema, ok := b.env.Schema(operator.SelectOptions.OutputEventType)
+				if !ok {
+					return DataflowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("dataflow select %q references unknown output event type %q", operator.Name, operator.SelectOptions.OutputEventType))
+				}
+				for index, selection := range operator.Selections {
+					if _, exists := schema.Field(selection.Name); !exists && !schema.AllowsDynamicProperties() {
+						return DataflowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("dataflow select %q projection %d references unknown output event field %q", operator.Name, index, selection.Name))
+					}
+				}
+			}
 			if operator.JoinConfigured {
 				if err := operator.JoinOptions.validate(); err != nil {
 					return DataflowDefinition{}, WrapError(ErrorInvalidRule, "dataflow select join "+operator.Name, err)
@@ -768,8 +806,11 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 					return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join %q requires graph input edges", operator.Name))
 				}
 			}
-			if len(operator.Selections) == 0 {
+			if len(operator.Selections) == 0 && !operator.SelectOptions.PreserveInput {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select %q requires projections", operator.Name))
+			}
+			if operator.SelectOptions.PreserveInput && operator.SelectOptions.OutputEventType == "" && len(operator.Selections) > 0 {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select %q pass-through cannot combine selections without an output event type", operator.Name))
 			}
 			for index, selection := range operator.Selections {
 				if selection.Name == "" || selection.Expr == nil {
@@ -1108,8 +1149,9 @@ func inferDataflowBuiltinPorts(operator DataflowOperator) DataflowOperator {
 		setDataflowBuiltinPortType(&operator.InputPortTypes, "in", dataflowRecordType())
 		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", dataflowRecordType())
 	case SelectKind:
-		// Select accepts either an Event or a projection Row and always emits a
-		// new Row projection.
+		// Select accepts either an Event or a projection Row. Ordinary Select
+		// emits a new Row; SelectEvent emits Event and SelectPassThrough keeps
+		// the input DataflowRecord representation.
 		if operator.JoinConfigured {
 			for _, port := range operator.InputPorts {
 				setDataflowBuiltinPortType(&operator.InputPortTypes, port, dataflowRecordType())
@@ -1117,7 +1159,13 @@ func inferDataflowBuiltinPorts(operator DataflowOperator) DataflowOperator {
 		} else {
 			setDataflowBuiltinPortType(&operator.InputPortTypes, "in", dataflowRecordType())
 		}
-		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", rowType)
+		if operator.SelectOptions.OutputEventType != "" {
+			setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", eventType)
+		} else if operator.SelectOptions.PreserveInput {
+			setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", dataflowRecordType())
+		} else {
+			setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", rowType)
+		}
 	case EPStatementSourceKind:
 		if operator.Statement != nil {
 			if _, projected := operator.Statement.Plan().ResultSchema(); projected {
@@ -1282,6 +1330,44 @@ type DataflowStats struct {
 	Dropped   uint64
 }
 
+// DataflowOperatorStat is a point-in-time snapshot of one operator's graph
+// activity. Submitted counts values emitted to at least one connected
+// downstream port; terminal operators therefore report zero submissions.
+// Elapsed values are monotonic wall-clock durations and are intended for
+// diagnostics rather than latency SLAs.
+type DataflowOperatorStat struct {
+	Name            string
+	Number          int
+	PrettyPrint     string
+	Submitted       uint64
+	SubmittedByPort []uint64
+	Elapsed         time.Duration
+	ElapsedByPort   []time.Duration
+}
+
+type dataflowOperatorStatState struct {
+	submitted       atomic.Uint64
+	submittedByPort []atomic.Uint64
+	elapsed         atomic.Int64
+	elapsedByPort   []atomic.Int64
+	portIndexes     map[string]int
+}
+
+func newDataflowOperatorStatState(operator DataflowOperator) *dataflowOperatorStatState {
+	state := &dataflowOperatorStatState{
+		portIndexes: make(map[string]int, len(operator.OutputPorts)),
+	}
+	if len(operator.OutputPorts) == 0 {
+		return state
+	}
+	state.submittedByPort = make([]atomic.Uint64, len(operator.OutputPorts))
+	state.elapsedByPort = make([]atomic.Int64, len(operator.OutputPorts))
+	for index, port := range operator.OutputPorts {
+		state.portIndexes[port] = index
+	}
+	return state
+}
+
 type dataflowSelectEvent struct {
 	event Event
 	at    time.Time
@@ -1324,6 +1410,7 @@ type DataflowInstance struct {
 	signals                []DataflowSignal
 	eventTypes             map[string]struct{}
 	operators              map[string]DataflowOperator
+	operatorStats          map[string]*dataflowOperatorStatState
 	outgoing               map[string][]DataflowEdge
 	graph                  bool
 	statementSubscriptions []*Subscription
@@ -1376,6 +1463,7 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 		state:              DataflowInstantiated,
 		eventTypes:         make(map[string]struct{}),
 		operators:          make(map[string]DataflowOperator, len(registered.operators)),
+		operatorStats:      make(map[string]*dataflowOperatorStatState, len(registered.operators)),
 		outgoing:           make(map[string][]DataflowEdge),
 		graph:              len(registered.edges) > 0,
 		runtimes:           make(map[string]DataflowOperatorRuntime),
@@ -1386,6 +1474,7 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 	}
 	for operatorNumber, operator := range registered.operators {
 		instance.operators[operator.Name] = operator
+		instance.operatorStats[operator.Name] = newDataflowOperatorStatState(operator)
 		if operator.Kind == EventBusSourceKind {
 			instance.eventTypes[operator.EventType] = struct{}{}
 		}
@@ -1633,6 +1722,64 @@ func (d *DataflowInstance) Stats() DataflowStats {
 	}
 }
 
+// OperatorStats returns deterministic per-operator activity snapshots in
+// definition order. The returned slices are independent copies and can be
+// retained by callers while the dataflow continues running.
+func (d *DataflowInstance) OperatorStats() []DataflowOperatorStat {
+	if d == nil {
+		return nil
+	}
+	result := make([]DataflowOperatorStat, 0, len(d.definition.operators))
+	for number, operator := range d.definition.operators {
+		state := d.operatorStats[operator.Name]
+		stat := DataflowOperatorStat{
+			Name:        operator.Name,
+			Number:      number,
+			PrettyPrint: fmt.Sprintf("%s#%d", operator.Name, number),
+		}
+		if state != nil {
+			stat.Submitted = state.submitted.Load()
+			stat.Elapsed = time.Duration(state.elapsed.Load())
+			if len(state.submittedByPort) > 0 {
+				stat.SubmittedByPort = make([]uint64, len(state.submittedByPort))
+				stat.ElapsedByPort = make([]time.Duration, len(state.elapsedByPort))
+				for index := range state.submittedByPort {
+					stat.SubmittedByPort[index] = state.submittedByPort[index].Load()
+					stat.ElapsedByPort[index] = time.Duration(state.elapsedByPort[index].Load())
+				}
+			}
+		}
+		result = append(result, stat)
+	}
+	return result
+}
+
+func (d *DataflowInstance) recordOperatorElapsed(name string, elapsed time.Duration) {
+	if d == nil || elapsed < 0 {
+		return
+	}
+	if state := d.operatorStats[name]; state != nil {
+		state.elapsed.Add(int64(elapsed))
+	}
+}
+
+func (d *DataflowInstance) recordOperatorSubmission(name, port string, elapsed time.Duration) {
+	if d == nil {
+		return
+	}
+	state := d.operatorStats[name]
+	if state == nil {
+		return
+	}
+	state.submitted.Add(1)
+	if index, ok := state.portIndexes[port]; ok {
+		state.submittedByPort[index].Add(1)
+		if elapsed > 0 {
+			state.elapsedByPort[index].Add(int64(elapsed))
+		}
+	}
+}
+
 func (d *DataflowInstance) InstanceID() string {
 	if d == nil {
 		return ""
@@ -1751,7 +1898,13 @@ func (d *DataflowInstance) submitSourcePort(ctx context.Context, name, port stri
 	d.mu.Lock()
 	running := d.state == DataflowRunning
 	operator, ok := d.operators[name]
-	hasOutgoing := len(d.outgoing[name]) > 0
+	hasOutgoing := false
+	for _, edge := range d.outgoing[name] {
+		if edge.FromPort == port {
+			hasOutgoing = true
+			break
+		}
+	}
 	d.mu.Unlock()
 	if !running {
 		return NewError(ErrorState, "dataflow is not running")
@@ -1768,7 +1921,14 @@ func (d *DataflowInstance) submitSourcePort(ctx context.Context, name, port stri
 		}
 	}
 	d.processed.Add(1)
-	return d.processSourceEmission(ctx, name, port, value)
+	started := time.Now()
+	err := d.processSourceEmission(ctx, name, port, value)
+	if err == nil {
+		if _, signal := value.(DataflowSignal); !signal {
+			d.recordOperatorSubmission(name, port, time.Since(started))
+		}
+	}
+	return err
 }
 
 func (d *DataflowInstance) materializeDataflowEvent(value any) (Event, error) {
@@ -1940,7 +2100,9 @@ func (d *DataflowInstance) watchRunContext(runCtx context.Context) {
 func (d *DataflowInstance) runSource(runCtx context.Context, operator DataflowOperator, source DataflowSourceRuntime) {
 	defer d.sourceWG.Done()
 	emitter := &DataflowEmitter{instance: d, name: operator.Name, allowRaw: true}
+	started := time.Now()
 	err := source.Run(runCtx, emitter)
+	d.recordOperatorElapsed(operator.Name, time.Since(started))
 	if err == nil || runCtx.Err() != nil {
 		return
 	}
@@ -2298,6 +2460,85 @@ func (d *DataflowInstance) evaluateDataflowSelect(operator DataflowOperator, val
 	return d.evaluateDataflowSelectWithGroups(operator, value, nil, nil, true)
 }
 
+// evaluateDataflowSelectOutput evaluates a projection when present and then
+// materializes the configured Dataflow Select output representation. Keeping
+// this boundary separate lets select-star preserve an Event without inventing
+// an empty Row schema.
+func (d *DataflowInstance) evaluateDataflowSelectOutput(operator DataflowOperator, value any, group, everGroup []Event, acceptSubquery bool) (any, error) {
+	if len(operator.Selections) == 0 {
+		return d.materializeDataflowSelectOutput(operator, value, nil)
+	}
+	row, err := d.evaluateDataflowSelectWithGroups(operator, value, group, everGroup, acceptSubquery)
+	if err != nil {
+		return nil, err
+	}
+	return d.materializeDataflowSelectOutput(operator, value, &row)
+}
+
+func (d *DataflowInstance) materializeDataflowSelectOutput(operator DataflowOperator, value any, row *Row) (any, error) {
+	options := operator.SelectOptions
+	if options.OutputEventType == "" {
+		if options.PreserveInput {
+			switch value.(type) {
+			case Event, Row:
+				return value, nil
+			default:
+				return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow select %q pass-through requires Event or Row input, got %T", operator.Name, value))
+			}
+		}
+		if row == nil {
+			return nil, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select %q requires a projection row", operator.Name))
+		}
+		return *row, nil
+	}
+
+	if d == nil || d.engine == nil || d.engine.env == nil {
+		return nil, NewError(ErrorDependency, "dataflow select event output has no environment")
+	}
+	schema, ok := d.engine.env.Schema(options.OutputEventType)
+	if !ok {
+		return nil, NewError(ErrorUnknownName, fmt.Sprintf("dataflow select %q output event type %q is not registered", operator.Name, options.OutputEventType))
+	}
+	updates := make(map[string]any, len(schema.Fields()))
+	if options.PreserveInput {
+		for _, field := range schema.Fields() {
+			var property Value
+			switch input := value.(type) {
+			case Event:
+				property = input.Get(field.Name)
+			case Row:
+				property = input.Get(field.Name)
+			default:
+				return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow select %q event output requires Event or Row input, got %T", operator.Name, value))
+			}
+			if property.IsPresent() || property.IsNull() {
+				updates[field.Name] = property.Any()
+			}
+		}
+	}
+	if row != nil {
+		for _, field := range row.Schema().Fields() {
+			property := row.Get(field.Name)
+			if property.IsPresent() || property.IsNull() {
+				updates[field.Name] = property.Any()
+			}
+		}
+	}
+	underlying, err := mergeSchemaUnderlying(schema, nil, updates)
+	if err != nil {
+		return nil, WrapError(ErrorTypeMismatch, fmt.Sprintf("dataflow select %q output event", operator.Name), err)
+	}
+	receivedAt := d.engine.Now()
+	if event, ok := value.(Event); ok {
+		receivedAt = event.ReceivedAt()
+	}
+	event, err := newEvent(schema, underlying, receivedAt)
+	if err != nil {
+		return nil, WrapError(ErrorTypeMismatch, fmt.Sprintf("dataflow select %q output event", operator.Name), err)
+	}
+	return event, nil
+}
+
 func (d *DataflowInstance) evaluateDataflowSelectWithGroups(operator DataflowOperator, value any, group, everGroup []Event, acceptSubquery bool) (Row, error) {
 	evaluation, err := d.dataflowEvaluationWithGroups(operator, value, group, everGroup, acceptSubquery)
 	if err != nil {
@@ -2426,11 +2667,11 @@ func (d *DataflowInstance) processDataflowSelectFinalMarker(operator DataflowOpe
 func (d *DataflowInstance) processDataflowSelect(operator DataflowOperator, value any) ([]any, error) {
 	state := d.selectStates[operator.Name]
 	if state == nil {
-		row, err := d.evaluateDataflowSelect(operator, value)
+		output, err := d.evaluateDataflowSelectOutput(operator, value, nil, nil, true)
 		if err != nil {
 			return nil, err
 		}
-		return []any{row}, nil
+		return []any{output}, nil
 	}
 	if state.options.IterateOnFinalMarker {
 		return d.processDataflowSelectIterate(operator, value)
@@ -2447,15 +2688,24 @@ func (d *DataflowInstance) processDataflowSelect(operator DataflowOperator, valu
 	}
 	group := state.currentEvents()
 	everGroup := append([]Event(nil), state.ever...)
-	row, err := d.evaluateDataflowSelectWithGroups(operator, value, group, everGroup, true)
+	var row *Row
+	if len(operator.Selections) > 0 {
+		projected, err := d.evaluateDataflowSelectWithGroups(operator, value, group, everGroup, true)
+		if err != nil {
+			state.mu.Unlock()
+			return nil, err
+		}
+		row = &projected
+	}
 	state.mu.Unlock()
+	output, err := d.materializeDataflowSelectOutput(operator, value, row)
 	if err != nil {
 		return nil, err
 	}
 	if state.options.OutputSnapshotEvery > 0 {
 		return nil, nil
 	}
-	return []any{row}, nil
+	return []any{output}, nil
 }
 
 func (d *DataflowInstance) processDataflowSelectJoin(operator DataflowOperator, inputPort string, value any) ([]any, error) {
@@ -2504,12 +2754,12 @@ func (d *DataflowInstance) processDataflowSelectJoin(operator DataflowOperator, 
 	rows := make([]any, 0, len(tuples))
 	for _, tuple := range tuples {
 		joinEvent := newJoinTupleEvent(tuple, now)
-		row, err := d.evaluateDataflowSelectWithGroups(operator, joinEvent, nil, nil, true)
+		output, err := d.evaluateDataflowSelectOutput(operator, joinEvent, nil, nil, true)
 		if err != nil {
 			state.mu.Unlock()
 			return nil, err
 		}
-		rows = append(rows, row)
+		rows = append(rows, output)
 	}
 	state.mu.Unlock()
 	return rows, nil
@@ -2778,6 +3028,7 @@ func (d *DataflowInstance) processLinearValues(ctx context.Context, current []an
 	}
 	for index := start; index < len(d.definition.operators); index++ {
 		operator := d.definition.operators[index]
+		started := time.Now()
 		switch operator.Kind {
 		case BeaconSourceKind, EPStatementSourceKind:
 			continue
@@ -2861,6 +3112,15 @@ func (d *DataflowInstance) processLinearValues(ctx context.Context, current []an
 				}
 			}
 			current = processed
+		}
+		elapsed := time.Since(started)
+		d.recordOperatorElapsed(operator.Name, elapsed)
+		if index+1 < len(d.definition.operators) {
+			for _, candidate := range current {
+				if _, signal := candidate.(DataflowSignal); !signal {
+					d.recordOperatorSubmission(operator.Name, "out", elapsed)
+				}
+			}
 		}
 	}
 	if countProcessed {
@@ -2999,7 +3259,10 @@ func (d *DataflowInstance) processGraphQueueLocked(ctx context.Context, queue []
 				return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow operator %q input port %q received %T, want %s", operator.Name, item.port, item.value, expected))
 			}
 		}
+		started := time.Now()
 		emissions, err := d.applyGraphOperator(ctx, operator, item.port, item.value)
+		elapsed := time.Since(started)
+		d.recordOperatorElapsed(operator.Name, elapsed)
 		if err != nil {
 			if handled := d.handleDataflowError(ctx, operator.Name, err); handled != nil {
 				return handled
@@ -3015,10 +3278,24 @@ func (d *DataflowInstance) processGraphQueueLocked(ctx context.Context, queue []
 		}
 		for _, edge := range d.outgoing[operator.Name] {
 			for _, emission := range normalized {
-				if emission.Port != edge.FromPort {
-					continue
+				if emission.Port == edge.FromPort {
+					queue = append(queue, dataflowWorkItem{operator: edge.To, port: edge.ToPort, value: emission.Value})
 				}
-				queue = append(queue, dataflowWorkItem{operator: edge.To, port: edge.ToPort, value: emission.Value})
+			}
+		}
+		for _, emission := range normalized {
+			if _, signal := emission.Value.(DataflowSignal); signal {
+				continue
+			}
+			connected := false
+			for _, edge := range d.outgoing[operator.Name] {
+				if edge.FromPort == emission.Port {
+					connected = true
+					break
+				}
+			}
+			if connected {
+				d.recordOperatorSubmission(operator.Name, emission.Port, elapsed)
 			}
 		}
 	}
