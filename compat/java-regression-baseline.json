@@ -1,0 +1,81 @@
+{
+  "version": "esper-java-regression-baseline/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaHome": "C:\\Program Files\\Microsoft\\jdk-17.0.20.8-hotspot",
+  "mavenVersion": "3.9.16",
+  "encoding": "UTF-8",
+  "timezone": "UTC",
+  "runner": "regression-run",
+  "suiteCount": 78,
+  "junitEntryCount": 860,
+  "noFailureOrErrorCount": 857,
+  "failureCount": 2,
+  "errorCount": 1,
+  "skippedCount": 0,
+  "environmentErrorCount": 0,
+  "flakyFirstRunCount": 1,
+  "isolatedRerunPassCount": 1,
+  "environment": {
+    "database": "MySQL on localhost:3306/test",
+    "databaseResult": "available",
+    "mysqlImage": "mysql@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b",
+    "mysqlVersion": "8.0.46",
+    "databaseFixture": "D:\\Code\\soc\\esper\\common\\etc\\regression\\create_testdb.sql",
+    "databaseFixtureRows": {
+      "mytesttable": 10,
+      "mytesttable_large": 1000,
+      "mytestupsert": 0
+    },
+    "databaseError": null,
+    "mysqlCasesRequireContainerRerun": false,
+    "approvedEnvironmentDifferences": [
+      {
+        "junitEntry": "testEPLDatabaseJoin",
+        "category": "database-version-diagnostic",
+        "status": "approved-difference",
+        "observed": "MySQL 8.0.46 reports the syntax error location as ', from mytesttable where' while the Java assertion expects ' from mytesttable where'.",
+        "interpretation": "The invalid-SQL behavior is exercised; only the vendor diagnostic text differs."
+      },
+      {
+        "junitEntry": "testEPLDatabaseJoinPerfNoCache",
+        "category": "performance-environment",
+        "status": "not-comparable",
+        "observed": "Java performance assertion measured delta=1044ms for a threshold below 1000ms in the Docker/JDBC environment.",
+        "interpretation": "Record as a performance disposition; do not use this timing as Go semantic parity evidence."
+      }
+    ]
+  },
+  "isolatedReruns": [
+    {
+      "suite": "com.espertech.esper.regressionrun.suite.multithread.TestSuiteMultithread",
+      "junitEntry": "testMultithreadContextCountSimple",
+      "initialStatus": "error",
+      "initialMessage": "expected true but was false",
+      "rerunCommand": "mvn -Dtest=TestSuiteMultithread test",
+      "rerunStatus": "pass",
+      "interpretation": "With the official MySQL fixture available, the isolated TestSuiteMultithread rerun completed 41/41 with no failure or error. Preserve the first-run observation as a flaky-diagnostic record, not as a semantic failure."
+    }
+  ],
+  "databaseRegressionCases": [
+    "testContextInitTermTemporalFixed",
+    "testEPLDatabaseJoinOptions",
+    "testEPLDatabaseJoinOptionLowercase",
+    "testEPLDatabaseJoin",
+    "testEPLDatabaseJoinOptionUppercase",
+    "testEPLDatabaseJoinPerfWithCache",
+    "testEPLDatabaseHintHook",
+    "testEPLDatabaseOuterJoinWCache",
+    "testEPLDatabase3StreamOuterJoin",
+    "testEPLDatabaseJoinPerfNoCache",
+    "testEPLDatabaseFAF",
+    "testEPLDatabaseDataSourceFactory",
+    "testEPLDatabaseJoinInsertInto",
+    "testEPLDatabaseNoJoinIteratePerf",
+    "testEPLDatabase2StreamOuterJoin",
+    "testEPLDatabaseNoJoinIterate",
+    "testEPLDatabaseQueryResultCache",
+    "testMultithreadStmtDatabaseJoin",
+    "testMultithreadContextDBAccess"
+  ],
+  "interpretation": "This is a Java oracle baseline, not Go parity evidence. The official Esper SQL fixture is loaded in Docker and all 19 database-related entries execute; two approved environment/performance dispositions remain. The first full run also observed one multithread context-count fluctuation; the isolated TestSuiteMultithread rerun passed 41/41."
+}

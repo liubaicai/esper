@@ -1,0 +1,9 @@
+{
+  "version": "esper-parity/v1",
+  "id": "stage1-length-window",
+  "steps": [
+    {"op": "send", "eventType": "Trade", "payload": {"symbol": "A", "price": 11}},
+    {"op": "send", "eventType": "Trade", "payload": {"symbol": "B", "price": 12}},
+    {"op": "send", "eventType": "Trade", "payload": {"symbol": "C", "price": 13}}
+  ]
+}

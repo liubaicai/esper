@@ -1,0 +1,4025 @@
+package esper
+
+import (
+	"fmt"
+	"hash/fnv"
+	"math"
+	"reflect"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+)
+
+// Expr is the analyzable expression contract used by the Builder and runtime.
+// Implementations are intentionally created by the package constructors so a
+// Plan never has to inspect an arbitrary closure to discover its fields.
+type Expr interface {
+	Type() reflect.Type
+	Description() string
+	eval(EvalContext) Value
+	node() *exprNode
+}
+
+// Expression[T] carries the expected result type through Go's type checker.
+// Type-changing expression combinators are top-level functions, not methods,
+// because Go does not support method-level type parameters.
+type Expression[T any] interface {
+	Expr
+	expressionMarker()
+}
+
+type exprNode struct {
+	kind              string
+	typ               reflect.Type
+	description       string
+	fieldName         string
+	tagName           string
+	variableName      string
+	parameterName     string
+	pluginName        string
+	pluginReady       bool
+	pluginFactory     aggregatePluginFactory
+	pluginEnvironment *Environment
+	methodName        string
+	joinSource        int
+	children          []*exprNode
+	subquery          *subqueryDefinition
+}
+
+type typedExpr[T any] struct {
+	n  *exprNode
+	fn func(EvalContext) Value
+}
+
+func (e typedExpr[T]) Type() reflect.Type         { return e.n.typ }
+func (e typedExpr[T]) Description() string        { return e.n.description }
+func (e typedExpr[T]) eval(ctx EvalContext) Value { return e.fn(ctx) }
+func (e typedExpr[T]) node() *exprNode            { return e.n }
+func (e typedExpr[T]) expressionMarker()          {}
+
+func typeOf[T any]() reflect.Type {
+	var zero T
+	typ := reflect.TypeOf(zero)
+	if typ == nil {
+		return reflect.TypeOf((*any)(nil)).Elem()
+	}
+	return typ
+}
+
+func makeExpr[T any](kind, description string, children []*exprNode, fn func(EvalContext) Value) Expression[T] {
+	return typedExpr[T]{
+		n:  &exprNode{kind: kind, typ: typeOf[T](), description: description, children: children},
+		fn: fn,
+	}
+}
+
+// ContextField reads a stable property of the current context partition.
+// Built-in names include name, id, label (category contexts) and key1/key2...
+// for segmented or initiated-terminated key expressions. Parent context
+// properties in nested contexts are available as parent.<name>.
+func ContextField[T any](name string) Expression[T] {
+	name = strings.TrimSpace(name)
+	description := "context.<invalid>"
+	if name != "" {
+		description = "context." + name
+	}
+	node := &exprNode{kind: "context-field", typ: typeOf[T](), description: description}
+	return typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		if name == "" || ctx.Variables == nil {
+			return Missing()
+		}
+		value, ok := ctx.Variables[contextVariableName(name)]
+		if !ok {
+			return Missing()
+		}
+		return value
+	}}
+}
+
+// ContextName, ContextID and ContextLabel are typed conveniences for the
+// built-in context properties exposed by ContextField.
+func ContextName() Expression[string]  { return ContextField[string]("name") }
+func ContextID() Expression[int]       { return ContextField[int]("id") }
+func ContextLabel() Expression[string] { return ContextField[string]("label") }
+
+// ContextStartTime and ContextEndTime expose the active temporal interval.
+// They evaluate to Missing for non-temporal context kinds.
+func ContextStartTime() Expression[time.Time] { return ContextField[time.Time]("startTime") }
+func ContextEndTime() Expression[time.Time]   { return ContextField[time.Time]("endTime") }
+
+// ContextInitiatingEvent and ContextTerminatingEvent expose the boundary
+// events of an initiated-terminated context. They evaluate to Missing for
+// context kinds that do not have the corresponding lifecycle event. Use
+// Property or Method to continue with a typed event field/method.
+func ContextInitiatingEvent() Expression[Event] {
+	return ContextField[Event]("initiating_event")
+}
+
+func ContextTerminatingEvent() Expression[Event] {
+	return ContextField[Event]("terminating_event")
+}
+
+// ContextPatternEvent returns the event captured by a named tag in the
+// pattern that initiated or terminated the current context partition. Missing
+// optional tags evaluate to Null, matching PatternStream tag semantics.
+func ContextPatternEvent(tag string) Expression[Event] {
+	tag = strings.TrimSpace(tag)
+	if tag == "" {
+		return makeExpr[Event]("context-pattern-event", "context.<invalid-pattern-tag>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "context-pattern-event", typ: typeOf[Event](), description: "context.pattern." + tag, tagName: tag}
+	return typedExpr[Event]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.Variables == nil {
+			return Null()
+		}
+		value, ok := ctx.Variables[contextVariableName("pattern."+tag)]
+		if !ok || !value.IsPresent() {
+			return Null()
+		}
+		return value
+	}}
+}
+
+// ContextPatternField reads a property from a captured context pattern tag.
+// It is the typed chain-API counterpart of a context tag path such as
+// context.a.symbol in Esper's object model.
+func ContextPatternField[V any](tag, name string) Expression[V] {
+	tag = strings.TrimSpace(tag)
+	name = strings.TrimSpace(name)
+	if tag == "" || name == "" {
+		return makeExpr[V]("context-pattern-field", "context.<invalid-pattern-field>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "context-pattern-field", typ: typeOf[V](), description: "context." + tag + "." + name, tagName: tag, fieldName: name}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.Variables == nil {
+			return Null()
+		}
+		value, ok := ctx.Variables[contextVariableName("pattern."+tag)]
+		if !ok || !value.IsPresent() {
+			return Null()
+		}
+		return propertyValue(value.Any(), name)
+	}}
+}
+
+func ContextKeyValue[T any](index int) Expression[T] {
+	if index < 0 {
+		return ContextField[T]("")
+	}
+	return ContextField[T](fmt.Sprintf("key%d", index+1))
+}
+
+// EvalContext contains the event and logical time visible to an expression.
+type EvalContext struct {
+	Event Event
+	// OuterEvent is the event from the enclosing statement while evaluating a
+	// correlated subquery. Ordinary expressions leave it empty.
+	OuterEvent Event
+	// Engine is populated by deployed statement evaluation. It is intentionally
+	// absent from the public builder API; subquery expressions use it to obtain
+	// a consistent named-window/table snapshot.
+	Engine    *Engine
+	Group     []Event
+	EverGroup []Event
+	// LeavingEvents contains events that have left the current aggregate
+	// window. Aggregate leaving expressions retain this history for the
+	// lifetime of the aggregate group, matching Esper's stateful leaving().
+	LeavingEvents []Event
+	// History is the current data-window view in insertion order. When an
+	// expression is evaluated for a newly arriving event, the current event is
+	// included as the last item. It is primarily consumed by Prev and Prior.
+	History    []Event
+	IsLeaving  bool
+	Tags       map[string]Event
+	TagValues  map[string][]Event
+	Now        time.Time
+	Variables  map[string]Value
+	Parameters map[string]Value
+
+	// Output counters are populated only while an output-when expression is
+	// evaluated. They model Esper's count_insert/count_remove and total forms
+	// without exposing mutable runtime state to ordinary expressions.
+	OutputInsertCount    int64
+	OutputRemoveCount    int64
+	OutputInsertTotal    int64
+	OutputRemoveTotal    int64
+	OutputLastOutputTime time.Time
+
+	// resultRow is populated only while a projected result is being ordered.
+	// It lets analyzable result-field expressions sort Row projections without
+	// exposing an untyped callback to the planner.
+	resultRow *Row
+
+	// enumValue/enumIndex/enumSize are populated only while an enumerable
+	// expression evaluates its analyzable element expression. They are kept
+	// private so callers cannot smuggle arbitrary runtime state into a Plan;
+	// EnumElement, EnumIndex and EnumSize are the public AST constructors.
+	enumValue  Value
+	enumIndex  int64
+	enumSize   int64
+	enumActive bool
+
+	enumAccumulator       Value
+	enumAccumulatorActive bool
+	// groupingValues and groupingPresent are populated only while a
+	// dimensional aggregate result is evaluated. They let a grouped key
+	// evaluate to Null at subtotal levels without exposing runtime state to
+	// ordinary expressions.
+	groupingValues  map[string]Value
+	groupingPresent map[string]bool
+
+	// aggregatePluginStates is private runtime state for registered aggregate
+	// factories. It is set only while evaluating a result row and is keyed by
+	// expression node so each aggregate group owns an independent state.
+	aggregatePluginStates map[*exprNode]aggregatePluginState
+}
+
+const parameterValuesVariable = "\x00esper.parameters"
+
+// Leaving reports whether the current result is being emitted on the remove
+// stream. It is false for insert-stream evaluation and for contexts that do
+// not have a stream transition (such as a direct expression check).
+func Leaving(predicate ...Expression[bool]) Expression[bool] {
+	children := make([]*exprNode, 0, len(predicate))
+	description := "leaving()"
+	if len(predicate) == 1 && predicate[0] != nil {
+		description = "leaving(filter:" + predicate[0].Description() + ")"
+	}
+	for _, item := range predicate {
+		if item == nil {
+			children = append(children, nil)
+			continue
+		}
+		children = append(children, item.node())
+	}
+	return makeExpr[bool]("leaving", description, children, func(ctx EvalContext) Value {
+		if len(predicate) > 1 || (len(predicate) == 1 && predicate[0] == nil) {
+			return Missing()
+		}
+		if len(predicate) == 0 {
+			return Present(ctx.IsLeaving)
+		}
+		for _, event := range ctx.LeavingEvents {
+			value := predicate[0].eval(EvalContext{
+				Event:      event,
+				OuterEvent: ctx.OuterEvent,
+				Engine:     ctx.Engine,
+				Now:        ctx.Now,
+				Variables:  ctx.Variables,
+				Parameters: ctx.Parameters,
+			})
+			matched, ok := boolValue(value)
+			if ok && matched {
+				return Present(true)
+			}
+		}
+		return Present(false)
+	})
+}
+
+// Field creates an analyzable property expression. The source event type T is
+// a compile-time marker; V is the expected property result type.
+func Field[T, V any](name string) Expression[V] {
+	if strings.TrimSpace(name) == "" {
+		return makeExpr[V]("field", "<invalid-field>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "field", typ: typeOf[V](), description: name, fieldName: name}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.groupingValues != nil {
+			if value, ok := ctx.groupingValues[groupingNodeKey(node, name)]; ok {
+				return value
+			}
+		}
+		return ctx.Event.Get(name)
+	}}
+}
+
+// JoinField reads a field from one source of a join tuple. It is intentionally
+// source-indexed instead of relying on aliases or an implicit current side so
+// the same expression remains analyzable when a two-way join is expanded to a
+// multi-way join aggregate.
+func JoinField[V any](source int, name string) Expression[V] {
+	name = strings.TrimSpace(name)
+	description := fmt.Sprintf("join[%d].<invalid>", source)
+	if source >= 0 && name != "" {
+		description = fmt.Sprintf("join[%d].%s", source, name)
+	}
+	node := &exprNode{kind: "join-field", typ: typeOf[V](), description: description, fieldName: name, joinSource: source}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if source < 0 || name == "" {
+			return Missing()
+		}
+		tuple, ok := ctx.Event.Underlying().(joinTuple)
+		if !ok || source >= len(tuple.events) {
+			return Missing()
+		}
+		event := tuple.events[source]
+		if !event.Schema().valid() {
+			return Null()
+		}
+		return event.Get(name)
+	}}
+}
+
+// JoinEventValue returns the typed event value from one source of a join
+// tuple. It is useful for access aggregates such as First/Last/Window and for
+// continuing with Property or Method after an aggregate access operation.
+func JoinEventValue[T any](source int) Expression[T] {
+	description := fmt.Sprintf("join[%d].event()", source)
+	node := &exprNode{kind: "join-event", typ: typeOf[T](), description: description, joinSource: source}
+	return typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		if source < 0 {
+			return Missing()
+		}
+		tuple, ok := ctx.Event.Underlying().(joinTuple)
+		if !ok || source >= len(tuple.events) {
+			return Missing()
+		}
+		event := tuple.events[source]
+		if !event.Schema().valid() {
+			return Null()
+		}
+		if typeOf[T]() == reflect.TypeOf(Event{}) {
+			var value T
+			reflect.ValueOf(&value).Elem().Set(reflect.ValueOf(event))
+			return Present(value)
+		}
+		underlying := event.Underlying()
+		if underlying == nil {
+			return Null()
+		}
+		value, ok := underlying.(T)
+		if !ok {
+			return Missing()
+		}
+		return Present(value)
+	}}
+}
+
+// EventValue exposes the current event as a typed expression. It is useful for
+// Go callers that need access aggregates to return the selected event itself,
+// for example MinBy[Trade, float64](EventValue[Trade](), price).
+func EventValue[T any]() Expression[T] {
+	return makeExpr[T]("event-value", "event()", nil, func(ctx EvalContext) Value {
+		if ctx.Event.Schema().Name() == "" {
+			return Missing()
+		}
+		if reflect.TypeOf(Event{}) == typeOf[T]() {
+			var value T
+			reflect.ValueOf(&value).Elem().Set(reflect.ValueOf(ctx.Event))
+			return Present(value)
+		}
+		underlying := ctx.Event.Underlying()
+		if underlying == nil {
+			return Null()
+		}
+		value, ok := underlying.(T)
+		if !ok {
+			return Missing()
+		}
+		return Present(value)
+	})
+}
+
+// OuterField reads a property from the event of the enclosing statement while
+// a correlated subquery evaluates. It is deliberately explicit so a rule's
+// inner and outer scopes remain visible in Go code.
+func OuterField[V any](name string) Expression[V] {
+	if strings.TrimSpace(name) == "" {
+		return makeExpr[V]("outer-field", "<invalid-outer-field>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "outer-field", typ: typeOf[V](), description: "outer." + name, fieldName: name}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value { return ctx.OuterEvent.Get(name) }}
+}
+
+// ResultField reads a named column from a projected Row. It is primarily
+// useful for Match Recognize order-by clauses, where Esper orders by measure
+// aliases after pattern evaluation rather than by the input event.
+func ResultField[V any](name string) Expression[V] {
+	if strings.TrimSpace(name) == "" {
+		return makeExpr[V]("result-field", "<invalid-result-field>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "result-field", typ: typeOf[V](), description: name, fieldName: name}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.resultRow == nil {
+			return Missing()
+		}
+		return ctx.resultRow.Get(name)
+	}}
+}
+
+// Property resolves one named property from a value expression. It is the
+// Go-style equivalent of a nested event/map/bean property path and is useful
+// after ArrayAt when an object-array field contains nested values.
+func Property[T any](object Expr, name string) Expression[T] {
+	if object == nil || strings.TrimSpace(name) == "" {
+		return makeExpr[T]("property", "property(<invalid>)", nil, func(EvalContext) Value { return Missing() })
+	}
+	description := "property(" + object.Description() + "." + name + ")"
+	return makeExpr[T]("property", description, []*exprNode{object.node()}, func(ctx EvalContext) Value {
+		value := object.eval(ctx)
+		if !value.IsPresent() {
+			return value
+		}
+		return propertyValue(value.Any(), name)
+	})
+}
+
+// Method invokes a zero- or multi-argument exported Go method on a value
+// expression. It is the explicit Go counterpart of chained event-method
+// access such as first().myMethod(), while keeping the receiver and argument
+// expressions visible in the AST. A missing method, incompatible argument or
+// non-nil error return evaluates to Missing.
+func Method[T any](object Expr, name string, arguments ...Expr) Expression[T] {
+	name = strings.TrimSpace(name)
+	children := make([]*exprNode, 0, 1+len(arguments))
+	if object != nil {
+		children = append(children, object.node())
+	}
+	for _, argument := range arguments {
+		if argument != nil {
+			children = append(children, argument.node())
+		}
+	}
+	description := "method(<invalid>)"
+	if object != nil && name != "" {
+		parts := make([]string, 0, len(arguments))
+		for _, argument := range arguments {
+			parts = append(parts, expressionDescription(argument))
+		}
+		description = "method(" + object.Description() + "." + name + "(" + strings.Join(parts, ",") + "))"
+	}
+	node := &exprNode{kind: "method", typ: typeOf[T](), description: description, methodName: name, children: children}
+	return typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		if object == nil || name == "" {
+			return Missing()
+		}
+		target := object.eval(ctx)
+		if !target.IsPresent() {
+			return target
+		}
+		values := make([]Value, 0, len(arguments))
+		for _, argument := range arguments {
+			if argument == nil {
+				return Missing()
+			}
+			values = append(values, argument.eval(ctx))
+		}
+		return invokeMethod[T](target.Any(), name, values)
+	}}
+}
+
+func invokeMethod[T any](underlying any, name string, arguments []Value) (result Value) {
+	defer func() {
+		if recover() != nil {
+			result = Missing()
+		}
+	}()
+	targets := []any{underlying}
+	if event, ok := underlying.(Event); ok {
+		targets = append([]any{event.Underlying()}, targets...)
+	}
+	for _, target := range targets {
+		value, ok := invokeReflectMethod(target, name, arguments)
+		if !ok {
+			continue
+		}
+		return reflectMethodResult[T](value)
+	}
+	return Missing()
+}
+
+func invokeReflectMethod(underlying any, name string, arguments []Value) (reflect.Value, bool) {
+	if underlying == nil {
+		return reflect.Value{}, false
+	}
+	target := reflect.ValueOf(underlying)
+	method := target.MethodByName(name)
+	if !method.IsValid() && target.Kind() != reflect.Pointer {
+		address := reflect.New(target.Type())
+		address.Elem().Set(target)
+		method = address.MethodByName(name)
+	}
+	if !method.IsValid() {
+		return reflect.Value{}, false
+	}
+	methodType := method.Type()
+	if !methodType.IsVariadic() && methodType.NumIn() != len(arguments) {
+		return reflect.Value{}, false
+	}
+	callArguments := make([]reflect.Value, 0, len(arguments))
+	for index, argument := range arguments {
+		parameterIndex := index
+		if methodType.IsVariadic() && index >= methodType.NumIn()-1 {
+			parameterIndex = methodType.NumIn() - 1
+		}
+		parameterType := methodType.In(parameterIndex)
+		if methodType.IsVariadic() && parameterIndex == methodType.NumIn()-1 {
+			parameterType = parameterType.Elem()
+		}
+		if !argument.IsPresent() {
+			if isNilableType(parameterType) {
+				callArguments = append(callArguments, reflect.Zero(parameterType))
+				continue
+			}
+			return reflect.Value{}, false
+		}
+		value := reflect.ValueOf(argument.Any())
+		if value.Type().AssignableTo(parameterType) {
+			callArguments = append(callArguments, value)
+			continue
+		}
+		if value.Type().ConvertibleTo(parameterType) && (numericTypes(value.Type(), parameterType) || parameterType.Kind() == reflect.Interface) {
+			callArguments = append(callArguments, value.Convert(parameterType))
+			continue
+		}
+		return reflect.Value{}, false
+	}
+	results := method.Call(callArguments)
+	if len(results) == 0 {
+		return reflect.Value{}, false
+	}
+	if len(results) > 1 {
+		errorType := reflect.TypeOf((*error)(nil)).Elem()
+		if results[1].Type().Implements(errorType) {
+			if isNilableType(results[1].Type()) {
+				if !results[1].IsNil() {
+					return reflect.Value{}, false
+				}
+			} else if !results[1].IsZero() {
+				return reflect.Value{}, false
+			}
+		}
+	}
+	return results[0], true
+}
+
+func reflectMethodResult[T any](value reflect.Value) Value {
+	if !value.IsValid() {
+		return Missing()
+	}
+	if isNilableType(value.Type()) && value.IsNil() {
+		return Null()
+	}
+	expected := typeOf[T]()
+	if value.Type().AssignableTo(expected) {
+		return Present(value.Interface())
+	}
+	if value.Type().ConvertibleTo(expected) && (numericTypes(value.Type(), expected) || expected.Kind() == reflect.Interface) {
+		return Present(value.Convert(expected).Interface())
+	}
+	return Missing()
+}
+
+func isNilableType(typ reflect.Type) bool {
+	if typ == nil {
+		return false
+	}
+	switch typ.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return true
+	default:
+		return false
+	}
+}
+
+func propertyValue(underlying any, name string) Value {
+	if underlying == nil {
+		return Null()
+	}
+	if value, ok := underlying.(Value); ok {
+		return value
+	}
+	if event, ok := underlying.(Event); ok {
+		return event.Get(name)
+	}
+	if row, ok := underlying.(Row); ok {
+		return row.Get(name)
+	}
+	return getPropertyPath(underlying, name, func(value any, property string) Value {
+		return (Schema{resolution: PropertyCaseSensitive}).getOne(value, property)
+	})
+}
+
+// TableField reads a property from the target table row during a table
+// on-trigger predicate or assignment. The current trigger event remains
+// available through Field, so expressions can compare both sides without a
+// closure that would be invisible to the planner.
+func TableField[V any](name string) Expression[V] {
+	return targetField[V]("table-field", "table."+name, name)
+}
+
+// NamedWindowField is the equivalent target-row expression for a named-window
+// on-trigger operation. It is kept distinct from TableField so validation can
+// reject accidentally mixing state targets.
+func NamedWindowField[V any](name string) Expression[V] {
+	return targetField[V]("named-window-field", "named-window."+name, name)
+}
+
+func targetField[V any](kind, description, name string) Expression[V] {
+	if strings.TrimSpace(name) == "" {
+		return makeExpr[V](kind, "<invalid-target-field>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: kind, typ: typeOf[V](), description: description, fieldName: name}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if len(ctx.Group) == 0 {
+			return Missing()
+		}
+		return ctx.Group[0].Get(name)
+	}}
+}
+
+// Prev evaluates expression against an event at a relative position in the
+// current data window. Offset zero addresses the newest event (normally the
+// current event), offset one addresses the preceding event, and so on. When
+// the requested position is not retained, Prev returns Null.
+//
+// This mirrors Esper's view-relative previous-value family while keeping the
+// input expression fully analyzable by the Go planner.
+func Prev[V any](offset int, expression Expression[V]) Expression[V] {
+	return previousExpression[V]("prev", offset, expression, false)
+}
+
+// Prior evaluates expression against an event before the current event. A
+// zero offset is the immediately preceding event, a one offset is two events
+// back, and so on. Prior returns Null when no such event is retained.
+func Prior[V any](offset int, expression Expression[V]) Expression[V] {
+	return previousExpression[V]("prior", offset, expression, true)
+}
+
+func previousExpression[V any](kind string, offset int, expression Expression[V], prior bool) Expression[V] {
+	if expression == nil {
+		return makeExpr[V](kind, fmt.Sprintf("%s(%d,<nil>)", kind, offset), nil, func(EvalContext) Value { return Null() })
+	}
+	description := fmt.Sprintf("%s(%d,%s)", kind, offset, expression.Description())
+	return makeExpr[V](kind, description, []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		if offset < 0 || len(ctx.History) == 0 {
+			return Null()
+		}
+		index := len(ctx.History) - 1 - offset
+		if prior {
+			index--
+		}
+		if index < 0 || index >= len(ctx.History) {
+			return Null()
+		}
+		nested := ctx
+		nested.Event = ctx.History[index]
+		nested.History = append([]Event(nil), ctx.History[:index+1]...)
+		return expression.eval(nested)
+	})
+}
+
+// TagField reads a property from a named Pattern or Match Recognize tag. A
+// valid tag that is absent from an optional match evaluates to Null, matching
+// Esper's measure semantics; an unknown event property remains Missing.
+func TagField[V any](tag, name string) Expression[V] {
+	if strings.TrimSpace(tag) == "" || strings.TrimSpace(name) == "" {
+		return makeExpr[V]("tag-field", "<invalid-tag-field>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "tag-field", typ: typeOf[V](), description: tag + "." + name, fieldName: name, tagName: tag}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.Tags != nil {
+			if event, ok := ctx.Tags[tag]; ok {
+				return event.Get(name)
+			}
+		}
+		if ctx.TagValues != nil {
+			events := ctx.TagValues[tag]
+			if len(events) > 0 {
+				return events[len(events)-1].Get(name)
+			}
+		}
+		return Null()
+	}}
+}
+
+// TagFieldAt reads a zero-based event from a repeated pattern tag and then
+// resolves one of its properties. A negative or out-of-range index evaluates
+// to Null, matching optional/repeated Match Recognize measures.
+func TagFieldAt[V any](tag string, index int, name string) Expression[V] {
+	if strings.TrimSpace(tag) == "" || strings.TrimSpace(name) == "" || index < 0 {
+		return makeExpr[V]("tag-field-at", "<invalid-tag-field-at>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "tag-field-at", typ: typeOf[V](), description: fmt.Sprintf("%s[%d].%s", tag, index, name), fieldName: name, tagName: tag}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.TagValues == nil || index >= len(ctx.TagValues[tag]) {
+			return Null()
+		}
+		return ctx.TagValues[tag][index].Get(name)
+	}}
+}
+
+// TagCount returns the number of events captured by a repeated pattern tag.
+// For non-repeating tags the count is either zero or one. It is intentionally
+// a normal expression so it can be used in PatternStream projections and
+// downstream result expressions without introducing EPL syntax.
+func TagCount(tag string) Expression[int64] {
+	if strings.TrimSpace(tag) == "" {
+		return makeExpr[int64]("tag-count", "<invalid-tag-count>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "tag-count", typ: typeOf[int64](), description: "count(" + tag + ")", fieldName: tag, tagName: tag}
+	return typedExpr[int64]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.TagValues != nil {
+			return Present(int64(len(ctx.TagValues[tag])))
+		}
+		if ctx.Tags != nil {
+			if _, ok := ctx.Tags[tag]; ok {
+				return Present(int64(1))
+			}
+		}
+		return Present(int64(0))
+	}}
+}
+
+// VariableRef creates an analyzable reference to a registered runtime
+// variable. The reference is deliberately named in the expression tree so a
+// Plan can validate and serialize the dependency without inspecting a
+// closure.
+func VariableRef[T any](name string) Expression[T] {
+	if strings.TrimSpace(name) == "" {
+		return makeExpr[T]("variable", "<invalid-variable>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{
+		kind:         "variable",
+		typ:          typeOf[T](),
+		description:  name,
+		variableName: name,
+	}
+	return typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.Variables == nil {
+			return Missing()
+		}
+		value, ok := ctx.Variables[name]
+		if !ok {
+			return Missing()
+		}
+		return value
+	}}
+}
+
+// Parameter creates a named, type-carrying substitution parameter. Parameters
+// are resolved only at execution time, which keeps a Plan immutable and lets a
+// PreparedQuery be executed repeatedly with different values.
+func Parameter[T any](name string) Expression[T] {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return makeExpr[T]("parameter", "<invalid-parameter>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{
+		kind:          "parameter",
+		typ:           typeOf[T](),
+		description:   "param(" + name + ":" + typeOf[T]().String() + ")",
+		parameterName: name,
+	}
+	return typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.Parameters != nil {
+			if value, ok := ctx.Parameters[name]; ok {
+				return value
+			}
+		}
+		// Runtime evaluation historically carries only Variables. The reserved
+		// entry is an internal bridge so old evaluator paths and nested
+		// aggregate/window helpers retain parameter bindings without a second
+		// mutable state channel.
+		if ctx.Variables != nil {
+			if bound, ok := ctx.Variables[parameterValuesVariable]; ok && bound.IsPresent() {
+				if values, ok := bound.Any().(map[string]Value); ok {
+					if value, exists := values[name]; exists {
+						return value
+					}
+				}
+			}
+		}
+		return Missing()
+	}}
+}
+
+// Param is a concise alias for Parameter for fluent rules that prefer the
+// shorter spelling.
+func Param[T any](name string) Expression[T] { return Parameter[T](name) }
+
+// Literal creates a constant expression.
+func Literal[T any](value T) Expression[T] {
+	description := fmt.Sprintf("%v", value)
+	return makeExpr[T]("literal", description, nil, func(EvalContext) Value { return Present(value) })
+}
+
+// DurationSeconds converts an analyzable numeric expression to a duration.
+// It is useful for timer guards whose duration is carried by an event tag or
+// substitution parameter, for example:
+//
+//	pattern.WithinExpr(DurationSeconds(TagField[int64]("a", "seconds")))
+//
+// Non-positive, non-finite, and overflowing values evaluate to Null so the
+// owning timer guard can terminate that branch deterministically.
+func DurationSeconds[T Numeric](value Expression[T]) Expression[time.Duration] {
+	return durationExpression[T]("duration-seconds", value, float64(time.Second))
+}
+
+// DurationDays converts an analyzable numeric expression to a duration in
+// 24-hour days. Calendar months and years deliberately use DurationSum only
+// for fixed-duration components; use WithinCalendar or TimerIntervalCalendar
+// when month/year boundaries must be preserved.
+func DurationDays[T Numeric](value Expression[T]) Expression[time.Duration] {
+	return durationExpression[T]("duration-days", value, float64(24*time.Hour))
+}
+
+// DurationHours converts an analyzable numeric expression to a duration in
+// hours.
+func DurationHours[T Numeric](value Expression[T]) Expression[time.Duration] {
+	return durationExpression[T]("duration-hours", value, float64(time.Hour))
+}
+
+// DurationMinutes converts an analyzable numeric expression to a duration in
+// minutes.
+func DurationMinutes[T Numeric](value Expression[T]) Expression[time.Duration] {
+	return durationExpression[T]("duration-minutes", value, float64(time.Minute))
+}
+
+// DurationMilliseconds is the millisecond counterpart of DurationSeconds.
+func DurationMilliseconds[T Numeric](value Expression[T]) Expression[time.Duration] {
+	return durationExpression[T]("duration-milliseconds", value, float64(time.Millisecond))
+}
+
+// DurationMicroseconds converts an analyzable numeric expression to a
+// duration in microseconds.
+func DurationMicroseconds[T Numeric](value Expression[T]) Expression[time.Duration] {
+	return durationExpression[T]("duration-microseconds", value, float64(time.Microsecond))
+}
+
+// DurationNanoseconds converts an analyzable numeric expression to a duration
+// in nanoseconds.
+func DurationNanoseconds[T Numeric](value Expression[T]) Expression[time.Duration] {
+	return durationExpression[T]("duration-nanoseconds", value, 1)
+}
+
+// DurationSum combines component durations while retaining an analyzable
+// expression tree. It is the Go-style counterpart of Esper's component-wise
+// duration forms such as "D days H hours M minutes S seconds MS milliseconds".
+func DurationSum(parts ...Expression[time.Duration]) Expression[time.Duration] {
+	children := make([]*exprNode, 0, len(parts))
+	for _, part := range parts {
+		if part == nil {
+			return makeExpr[time.Duration]("duration-sum", "<invalid-duration-sum>", nil, func(EvalContext) Value { return Null() })
+		}
+		children = append(children, part.node())
+	}
+	if len(parts) == 0 {
+		return makeExpr[time.Duration]("duration-sum", "<invalid-duration-sum>", nil, func(EvalContext) Value { return Null() })
+	}
+	descriptions := make([]string, 0, len(parts))
+	for _, part := range parts {
+		descriptions = append(descriptions, part.Description())
+	}
+	return makeExpr[time.Duration]("duration-sum", "duration-sum("+strings.Join(descriptions, ",")+")", children, func(ctx EvalContext) Value {
+		var total int64
+		for _, part := range parts {
+			value := part.eval(ctx)
+			duration, ok := value.Any().(time.Duration)
+			if !value.IsPresent() || !ok {
+				return Null()
+			}
+			next := int64(duration)
+			if next > 0 && total > int64(^uint64(0)>>1)-next {
+				return Null()
+			}
+			if next < 0 && total < -int64(^uint64(0)>>1)-1-next {
+				return Null()
+			}
+			total += next
+		}
+		return Present(time.Duration(total))
+	})
+}
+
+func durationExpression[T Numeric](kind string, value Expression[T], multiplier float64) Expression[time.Duration] {
+	if value == nil {
+		return makeExpr[time.Duration](kind, "<invalid-duration>", nil, func(EvalContext) Value { return Null() })
+	}
+	return makeExpr[time.Duration](kind, kind+"("+value.Description()+")", []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		number, ok := numericValue(value.eval(ctx))
+		if !ok || math.IsNaN(number) || math.IsInf(number, 0) || number <= 0 {
+			return Null()
+		}
+		nanos := number * multiplier
+		if math.IsInf(nanos, 0) || nanos > float64((1<<63)-1) {
+			return Null()
+		}
+		rounded := math.Round(nanos)
+		if rounded <= 0 {
+			return Null()
+		}
+		return Present(time.Duration(rounded))
+	})
+}
+
+func NullLiteral[T any]() Expression[T] {
+	return makeExpr[T]("null", "null", nil, func(EvalContext) Value { return Null() })
+}
+
+func Equal[T comparable](left, right Expression[T]) Expression[bool] {
+	return makeBinaryBool("eq", "("+left.Description()+" = "+right.Description()+")", left, right, EqualValues)
+}
+
+func NotEqual[T comparable](left, right Expression[T]) Expression[bool] {
+	return makeBinaryBool("neq", "("+left.Description()+" != "+right.Description()+")", left, right, func(l, r Value) Value {
+		result := EqualValues(l, r)
+		if !result.IsPresent() {
+			return result
+		}
+		return Present(!result.Any().(bool))
+	})
+}
+
+type Ordered interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+		~float32 | ~float64 | ~string
+}
+
+type Numeric interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+		~float32 | ~float64
+}
+
+func Greater[T Ordered](left, right Expression[T]) Expression[bool] {
+	return compareExpression[T]("gt", ">", left, right, func(c int) bool { return c > 0 })
+}
+
+func GreaterOrEqual[T Ordered](left, right Expression[T]) Expression[bool] {
+	return compareExpression[T]("gte", ">=", left, right, func(c int) bool { return c >= 0 })
+}
+
+func Less[T Ordered](left, right Expression[T]) Expression[bool] {
+	return compareExpression[T]("lt", "<", left, right, func(c int) bool { return c < 0 })
+}
+
+func LessOrEqual[T Ordered](left, right Expression[T]) Expression[bool] {
+	return compareExpression[T]("lte", "<=", left, right, func(c int) bool { return c <= 0 })
+}
+
+func Between[T Ordered](value, lower, upper Expression[T]) Expression[bool] {
+	description := "(" + value.Description() + " between " + lower.Description() + " and " + upper.Description() + ")"
+	return makeExpr[bool]("between", description, []*exprNode{value.node(), lower.node(), upper.node()}, func(ctx EvalContext) Value {
+		current := value.eval(ctx)
+		low := lower.eval(ctx)
+		high := upper.eval(ctx)
+		lowerComparison, lowerOK := compareValues(current, low)
+		upperComparison, upperOK := compareValues(current, high)
+		if !lowerOK || !upperOK {
+			return Null()
+		}
+		return Present(lowerComparison >= 0 && upperComparison <= 0)
+	})
+}
+
+func In[T comparable](value Expression[T], candidates ...Expression[T]) Expression[bool] {
+	descriptionParts := make([]string, 0, len(candidates))
+	children := []*exprNode{value.node()}
+	for _, candidate := range candidates {
+		descriptionParts = append(descriptionParts, candidate.Description())
+		children = append(children, candidate.node())
+	}
+	description := value.Description() + " in (" + strings.Join(descriptionParts, ",") + ")"
+	return makeExpr[bool]("in", description, children, func(ctx EvalContext) Value {
+		current := value.eval(ctx)
+		if !current.IsPresent() {
+			return Null()
+		}
+		hasNull := false
+		for _, candidate := range candidates {
+			other := candidate.eval(ctx)
+			if !other.IsPresent() {
+				hasNull = true
+				continue
+			}
+			if current.Equal(other) {
+				return Present(true)
+			}
+		}
+		if hasNull {
+			return Null()
+		}
+		return Present(false)
+	})
+}
+
+// InSlice checks whether a scalar expression is contained in a slice-valued
+// expression. It is the typed Go equivalent of an Esper substitution
+// parameter such as "value in (?::string[])" and keeps the slice immutable
+// for the duration of one evaluation.
+func InSlice[T comparable](value Expression[T], candidates Expression[[]T]) Expression[bool] {
+	description := value.Description() + " in " + candidates.Description()
+	return makeExpr[bool]("in-slice", description, []*exprNode{value.node(), candidates.node()}, func(ctx EvalContext) Value {
+		current := value.eval(ctx)
+		if !current.IsPresent() {
+			return Null()
+		}
+		candidateValue := candidates.eval(ctx)
+		if !candidateValue.IsPresent() {
+			return Null()
+		}
+		values, err := As[[]T](candidateValue)
+		if err != nil {
+			return Null()
+		}
+		for _, candidate := range values {
+			if current.Equal(Present(candidate)) {
+				return Present(true)
+			}
+		}
+		return Present(false)
+	})
+}
+
+func Coalesce[T any](values ...Expression[T]) Expression[T] {
+	descriptionParts := make([]string, 0, len(values))
+	children := make([]*exprNode, 0, len(values))
+	for _, value := range values {
+		descriptionParts = append(descriptionParts, value.Description())
+		children = append(children, value.node())
+	}
+	return makeExpr[T]("coalesce", "coalesce("+strings.Join(descriptionParts, ",")+")", children, func(ctx EvalContext) Value {
+		for _, value := range values {
+			result := value.eval(ctx)
+			if result.IsPresent() {
+				return result
+			}
+		}
+		return Null()
+	})
+}
+
+func Like(value, pattern Expression[string]) Expression[bool] {
+	return makeExpr[bool]("like", "("+value.Description()+" like "+pattern.Description()+")", []*exprNode{value.node(), pattern.node()}, func(ctx EvalContext) Value {
+		leftValue := value.eval(ctx)
+		patternValue := pattern.eval(ctx)
+		if !leftValue.IsPresent() || !patternValue.IsPresent() {
+			return Null()
+		}
+		left, leftErr := As[string](leftValue)
+		text, patternErr := As[string](patternValue)
+		if leftErr != nil || patternErr != nil {
+			return Null()
+		}
+		compiled, err := regexp.Compile(likePattern(patternToRegexp(text)))
+		if err != nil {
+			return Null()
+		}
+		return Present(compiled.MatchString(left))
+	})
+}
+
+func RegexpMatch(value, pattern Expression[string]) Expression[bool] {
+	return makeExpr[bool]("regexp", "regexp("+value.Description()+","+pattern.Description()+")", []*exprNode{value.node(), pattern.node()}, func(ctx EvalContext) Value {
+		leftValue := value.eval(ctx)
+		patternValue := pattern.eval(ctx)
+		if !leftValue.IsPresent() || !patternValue.IsPresent() {
+			return Null()
+		}
+		left, leftErr := As[string](leftValue)
+		text, patternErr := As[string](patternValue)
+		if leftErr != nil || patternErr != nil {
+			return Null()
+		}
+		compiled, err := regexp.Compile(text)
+		if err != nil {
+			return Null()
+		}
+		return Present(compiled.MatchString(left))
+	})
+}
+
+func Lower(value Expression[string]) Expression[string] {
+	return Func1[string, string]("lower", strings.ToLower, value)
+}
+
+func Upper(value Expression[string]) Expression[string] {
+	return Func1[string, string]("upper", strings.ToUpper, value)
+}
+
+func Trim(value Expression[string]) Expression[string] {
+	return Func1[string, string]("trim", strings.TrimSpace, value)
+}
+
+func StringLength(value Expression[string]) Expression[int64] {
+	return Func1[string, int64]("length", func(input string) int64 { return int64(len([]rune(input))) }, value)
+}
+
+func Contains(value, fragment Expression[string]) Expression[bool] {
+	return makeBinaryBool("contains", "contains("+value.Description()+","+fragment.Description()+")", value, fragment, func(left, right Value) Value {
+		l, lok := As[string](left)
+		r, rok := As[string](right)
+		if lok != nil || rok != nil {
+			return Null()
+		}
+		return Present(strings.Contains(l, r))
+	})
+}
+
+func StartsWith(value, prefix Expression[string]) Expression[bool] {
+	return makeBinaryBool("starts-with", "starts-with("+value.Description()+","+prefix.Description()+")", value, prefix, func(left, right Value) Value {
+		l, lok := As[string](left)
+		p, pok := As[string](right)
+		if lok != nil || pok != nil {
+			return Null()
+		}
+		return Present(strings.HasPrefix(l, p))
+	})
+}
+
+func EndsWith(value, suffix Expression[string]) Expression[bool] {
+	return makeBinaryBool("ends-with", "ends-with("+value.Description()+","+suffix.Description()+")", value, suffix, func(left, right Value) Value {
+		l, lok := As[string](left)
+		s, sok := As[string](right)
+		if lok != nil || sok != nil {
+			return Null()
+		}
+		return Present(strings.HasSuffix(l, s))
+	})
+}
+
+func patternToRegexp(pattern string) string {
+	var builder strings.Builder
+	for _, runeValue := range pattern {
+		switch runeValue {
+		case '%':
+			builder.WriteString(".*")
+		case '_':
+			builder.WriteByte('.')
+		default:
+			builder.WriteString(regexp.QuoteMeta(string(runeValue)))
+		}
+	}
+	return builder.String()
+}
+
+func likePattern(pattern string) string { return "^(?:" + pattern + ")$" }
+
+func compareExpression[T any](kind, symbol string, left, right Expression[T], predicate func(int) bool) Expression[bool] {
+	description := "(" + left.Description() + " " + symbol + " " + right.Description() + ")"
+	return makeBinaryBool(kind, description, left, right, func(l, r Value) Value {
+		comparison, ok := compareValues(l, r)
+		if !ok {
+			return Null()
+		}
+		return Present(predicate(comparison))
+	})
+}
+
+func And(left, right Expression[bool]) Expression[bool] {
+	return makeBinaryBool("and", "("+left.Description()+" and "+right.Description()+")", left, right, andValues)
+}
+
+func Or(left, right Expression[bool]) Expression[bool] {
+	return makeBinaryBool("or", "("+left.Description()+" or "+right.Description()+")", left, right, orValues)
+}
+
+func Not(value Expression[bool]) Expression[bool] {
+	return makeExpr[bool]("not", "(not "+value.Description()+")", []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		result := value.eval(ctx)
+		if !result.IsPresent() {
+			return Null()
+		}
+		b, ok := result.Any().(bool)
+		if !ok {
+			return Null()
+		}
+		return Present(!b)
+	})
+}
+
+func IsNull[T any](value Expression[T]) Expression[bool] {
+	return makeExpr[bool]("is-null", "("+value.Description()+" is null)", []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		return Present(value.eval(ctx).IsNull())
+	})
+}
+
+func IsMissing[T any](value Expression[T]) Expression[bool] {
+	return makeExpr[bool]("is-missing", "("+value.Description()+" is missing)", []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		return Present(value.eval(ctx).IsMissing())
+	})
+}
+
+func Add[T Numeric](left, right Expression[T]) Expression[T] {
+	return arithmeticExpression[T]("add", "+", left, right, func(l, r float64) float64 { return l + r })
+}
+
+func Subtract[T Numeric](left, right Expression[T]) Expression[T] {
+	return arithmeticExpression[T]("subtract", "-", left, right, func(l, r float64) float64 { return l - r })
+}
+
+func Multiply[T Numeric](left, right Expression[T]) Expression[T] {
+	return arithmeticExpression[T]("multiply", "*", left, right, func(l, r float64) float64 { return l * r })
+}
+
+func Divide[T Numeric](left, right Expression[T]) Expression[T] {
+	return arithmeticExpression[T]("divide", "/", left, right, func(l, r float64) float64 {
+		if r == 0 {
+			return 0
+		}
+		return l / r
+	})
+}
+
+func Modulo[T Numeric](left, right Expression[T]) Expression[T] {
+	return arithmeticExpression[T]("modulo", "%", left, right, func(l, r float64) float64 {
+		if r == 0 {
+			return 0
+		}
+		return math.Mod(l, r)
+	})
+}
+
+func Negate[T Numeric](value Expression[T]) Expression[T] {
+	return makeExpr[T]("negate", "(-"+value.Description()+")", []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		number, ok := numericValue(value.eval(ctx))
+		if !ok {
+			return Null()
+		}
+		return Present(convertNumeric[T](-number))
+	})
+}
+
+func Concat(values ...Expression[string]) Expression[string] {
+	descriptions := make([]string, 0, len(values))
+	children := make([]*exprNode, 0, len(values))
+	for _, value := range values {
+		if value == nil {
+			continue
+		}
+		descriptions = append(descriptions, value.Description())
+		children = append(children, value.node())
+	}
+	return makeExpr[string]("concat", "concat("+strings.Join(descriptions, ",")+")", children, func(ctx EvalContext) Value {
+		var builder strings.Builder
+		for _, value := range values {
+			if value == nil {
+				continue
+			}
+			current := value.eval(ctx)
+			if !current.IsPresent() {
+				return Null()
+			}
+			text, err := As[string](current)
+			if err != nil {
+				return Null()
+			}
+			builder.WriteString(text)
+		}
+		return Present(builder.String())
+	})
+}
+
+func IfThenElse[T any](condition Expression[bool], whenTrue, whenFalse Expression[T]) Expression[T] {
+	return makeExpr[T]("if", "if("+condition.Description()+","+whenTrue.Description()+","+whenFalse.Description()+")", []*exprNode{condition.node(), whenTrue.node(), whenFalse.node()}, func(ctx EvalContext) Value {
+		matched, ok := boolValue(condition.eval(ctx))
+		if !ok {
+			return Null()
+		}
+		if matched {
+			return whenTrue.eval(ctx)
+		}
+		return whenFalse.eval(ctx)
+	})
+}
+
+// Cast converts a present expression value to the requested Go type while
+// preserving Missing and Null. Numeric conversions use reflect's checked
+// conversion rules; string-to-number conversions accept the standard decimal
+// representation.
+func Cast[A, B any](value Expression[A]) Expression[B] {
+	if value == nil {
+		return makeExpr[B]("cast", "cast<invalid>", nil, func(EvalContext) Value { return Null() })
+	}
+	return makeExpr[B]("cast", fmt.Sprintf("cast<%s>(%s)", typeOf[B](), value.Description()), []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		return castValue[B](value.eval(ctx))
+	})
+}
+
+// Exists reports whether the expression resolves to an existing property.
+// An explicit Null is therefore true while Missing is false.
+func Exists(value Expr) Expression[bool] {
+	if value == nil {
+		return makeExpr[bool]("exists", "exists(<nil>)", nil, func(EvalContext) Value { return Present(false) })
+	}
+	return makeExpr[bool]("exists", "exists("+value.Description()+")", []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		return Present(!value.eval(ctx).IsMissing())
+	})
+}
+
+// TypeName returns the runtime Go type name for a present value.
+func TypeName(value Expr) Expression[string] {
+	if value == nil {
+		return makeExpr[string]("type-of", "type-of(<nil>)", nil, func(EvalContext) Value { return Null() })
+	}
+	return makeExpr[string]("type-of", "type-of("+value.Description()+")", []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		current := value.eval(ctx)
+		if !current.IsPresent() {
+			return Null()
+		}
+		return Present(reflect.TypeOf(current.Any()).String())
+	})
+}
+
+// InstanceOf reports whether a present value is assignable to T.
+func InstanceOf[T any](value Expr) Expression[bool] {
+	if value == nil {
+		return makeExpr[bool]("instance-of", "instance-of(<nil>)", nil, func(EvalContext) Value { return Present(false) })
+	}
+	return makeExpr[bool]("instance-of", fmt.Sprintf("instance-of<%s>(%s)", typeOf[T](), value.Description()), []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		current := value.eval(ctx)
+		if !current.IsPresent() {
+			return Present(false)
+		}
+		candidate := reflect.TypeOf(current.Any())
+		target := typeOf[T]()
+		matches := candidate.AssignableTo(target)
+		if !matches && target.Kind() == reflect.Interface {
+			matches = candidate.Implements(target)
+		}
+		return Present(matches)
+	})
+}
+
+// ArrayAt safely indexes a slice expression. Missing, Null and out-of-range
+// access return Null rather than panicking.
+func ArrayAt[T any](values Expression[[]T], index Expression[int64]) Expression[T] {
+	if values == nil || index == nil {
+		return makeExpr[T]("array-at", "array-at(<invalid>)", nil, func(EvalContext) Value { return Null() })
+	}
+	return makeExpr[T]("array-at", "array-at("+values.Description()+","+index.Description()+")", []*exprNode{values.node(), index.node()}, func(ctx EvalContext) Value {
+		items, itemsErr := As[[]T](values.eval(ctx))
+		position, positionErr := As[int64](index.eval(ctx))
+		if itemsErr != nil || positionErr != nil || position < 0 || position >= int64(len(items)) {
+			return Null()
+		}
+		return Present(items[position])
+	})
+}
+
+func castValue[T any](value Value) Value {
+	if !value.IsPresent() {
+		return value
+	}
+	target := typeOf[T]()
+	source := reflect.ValueOf(value.Any())
+	if source.Type().AssignableTo(target) {
+		return Present(source.Interface())
+	}
+	if source.Type().ConvertibleTo(target) && !(target.Kind() == reflect.String && source.Kind() != reflect.String) {
+		return Present(source.Convert(target).Interface())
+	}
+	if target.Kind() == reflect.String {
+		return Present(fmt.Sprint(value.Any()))
+	}
+	if source.Kind() == reflect.String && isNumericType(target) {
+		parsed, err := strconv.ParseFloat(source.String(), 64)
+		if err == nil {
+			converted := reflect.ValueOf(parsed)
+			if converted.Type().ConvertibleTo(target) {
+				return Present(converted.Convert(target).Interface())
+			}
+		}
+	}
+	return Null()
+}
+
+func CurrentTime() Expression[time.Time] {
+	return makeExpr[time.Time]("current-time", "current-time()", nil, func(ctx EvalContext) Value {
+		return Present(ctx.Now)
+	})
+}
+
+func OutputCountInsert() Expression[int64] {
+	return makeExpr[int64]("output-count-insert", "count_insert", nil, func(ctx EvalContext) Value {
+		return Present(ctx.OutputInsertCount)
+	})
+}
+
+func OutputCountRemove() Expression[int64] {
+	return makeExpr[int64]("output-count-remove", "count_remove", nil, func(ctx EvalContext) Value {
+		return Present(ctx.OutputRemoveCount)
+	})
+}
+
+func OutputCountInsertTotal() Expression[int64] {
+	return makeExpr[int64]("output-count-insert-total", "count_insert_total", nil, func(ctx EvalContext) Value {
+		return Present(ctx.OutputInsertTotal)
+	})
+}
+
+func OutputCountRemoveTotal() Expression[int64] {
+	return makeExpr[int64]("output-count-remove-total", "count_remove_total", nil, func(ctx EvalContext) Value {
+		return Present(ctx.OutputRemoveTotal)
+	})
+}
+
+func OutputLastOutputTime() Expression[time.Time] {
+	return makeExpr[time.Time]("output-last-time", "last_output_timestamp", nil, func(ctx EvalContext) Value {
+		if ctx.OutputLastOutputTime.IsZero() {
+			return Null()
+		}
+		return Present(ctx.OutputLastOutputTime)
+	})
+}
+
+func Year(value Expression[time.Time]) Expression[int64] {
+	return Func1[time.Time, int64]("year", func(input time.Time) int64 { return int64(input.Year()) }, value)
+}
+
+func Month(value Expression[time.Time]) Expression[int64] {
+	return Func1[time.Time, int64]("month", func(input time.Time) int64 { return int64(input.Month()) }, value)
+}
+
+func DayOfMonth(value Expression[time.Time]) Expression[int64] {
+	return Func1[time.Time, int64]("day-of-month", func(input time.Time) int64 { return int64(input.Day()) }, value)
+}
+
+func UnixMillis(value Expression[time.Time]) Expression[int64] {
+	return Func1[time.Time, int64]("unix-millis", func(input time.Time) int64 { return input.UnixNano() / int64(time.Millisecond) }, value)
+}
+
+func arithmeticExpression[T Numeric](kind, symbol string, left, right Expression[T], operation func(float64, float64) float64) Expression[T] {
+	description := "(" + left.Description() + " " + symbol + " " + right.Description() + ")"
+	return makeExpr[T](kind, description, []*exprNode{left.node(), right.node()}, func(ctx EvalContext) Value {
+		lv, lok := numericValue(left.eval(ctx))
+		rv, rok := numericValue(right.eval(ctx))
+		if !lok || !rok {
+			return Null()
+		}
+		result := operation(lv, rv)
+		if kind == "divide" && rv == 0 {
+			return Null()
+		}
+		return Present(convertNumeric[T](result))
+	})
+}
+
+func convertNumeric[T Numeric](value float64) T {
+	var zero T
+	typ := reflect.TypeOf(zero)
+	converted := reflect.ValueOf(value).Convert(typ)
+	return converted.Interface().(T)
+}
+
+func makeBinaryBool(kind, description string, left, right Expr, operation func(Value, Value) Value) Expression[bool] {
+	return makeExpr[bool](kind, description, []*exprNode{left.node(), right.node()}, func(ctx EvalContext) Value {
+		return operation(left.eval(ctx), right.eval(ctx))
+	})
+}
+
+// Func1 registers a named unary function. The function is intentionally an
+// explicit top-level UDF instead of an opaque field callback, so the Plan can
+// retain its stable name and dependency metadata.
+func Func1[A, B any](name string, function func(A) B, argument Expression[A]) Expression[B] {
+	description := name + "(" + argument.Description() + ")"
+	return makeExpr[B]("udf", description, []*exprNode{argument.node()}, func(ctx EvalContext) Value {
+		input := argument.eval(ctx)
+		if !input.IsPresent() {
+			return Null()
+		}
+		value, err := As[A](input)
+		if err != nil {
+			return Null()
+		}
+		return Present(function(value))
+	})
+}
+
+// AggregateExpression is evaluated over EvalContext.Group by an aggregate
+// stream. It remains an Expr so field and variable dependencies are visible
+// to Build validation.
+type AggregateExpression[T any] interface {
+	Expression[T]
+	aggregateMarker()
+}
+
+// Grouping reports whether a dimension is rolled up for the current result.
+// It returns 1 for an omitted dimension and 0 for a present dimension; for a
+// regular GroupBy result all dimensions are present.
+func Grouping(expression Expr) Expression[int64] {
+	if expression == nil {
+		return makeExpr[int64]("grouping", "grouping(<nil>)", nil, func(EvalContext) Value { return Missing() })
+	}
+	description := "grouping(" + expression.Description() + ")"
+	return makeExpr[int64]("grouping", description, []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		if ctx.groupingPresent == nil {
+			return Present(int64(0))
+		}
+		present, ok := ctx.groupingPresent[groupingExpressionKey(expression)]
+		if !ok || present {
+			return Present(int64(0))
+		}
+		return Present(int64(1))
+	})
+}
+
+// GroupingID returns the bit-packed rollup state for the supplied dimensions.
+// The first expression is the most significant bit, matching the ordering
+// used by Esper's grouping_id expression.
+func GroupingID(expressions ...Expr) Expression[int64] {
+	children := make([]*exprNode, 0, len(expressions))
+	parts := make([]string, 0, len(expressions))
+	for _, expression := range expressions {
+		if expression == nil {
+			parts = append(parts, "<nil>")
+			continue
+		}
+		children = append(children, expression.node())
+		parts = append(parts, expression.Description())
+	}
+	description := "grouping-id(" + strings.Join(parts, ",") + ")"
+	return makeExpr[int64]("grouping-id", description, children, func(ctx EvalContext) Value {
+		var result int64
+		for _, expression := range expressions {
+			result <<= 1
+			if expression == nil || ctx.groupingPresent == nil {
+				continue
+			}
+			if present, ok := ctx.groupingPresent[groupingExpressionKey(expression)]; ok && !present {
+				result |= 1
+			}
+		}
+		return Present(result)
+	})
+}
+
+// FilterAggregate evaluates any aggregate over only the group rows for which
+// predicate is true. Null and non-boolean predicate results are excluded,
+// matching Esper's filtered-aggregate behavior while keeping the aggregate
+// itself reusable and analyzable.
+func FilterAggregate[T any](aggregate AggregateExpression[T], predicate Expression[bool]) AggregateExpression[T] {
+	if aggregate == nil || predicate == nil {
+		return makeAggregateExpr[T]("aggregate-filter", "aggregate-filter(<invalid>)", nil, func(EvalContext) Value { return Missing() })
+	}
+	description := "filter(" + aggregate.Description() + "," + predicate.Description() + ")"
+	return makeAggregateExpr[T]("aggregate-filter", description, []*exprNode{aggregate.node(), predicate.node()}, func(ctx EvalContext) Value {
+		filterEvents := func(events []Event) []Event {
+			filtered := make([]Event, 0, len(events))
+			for _, event := range events {
+				predicateContext := EvalContext{
+					Event:      event,
+					OuterEvent: ctx.OuterEvent,
+					Engine:     ctx.Engine,
+					Now:        ctx.Now,
+					Variables:  ctx.Variables,
+					Parameters: ctx.Parameters,
+				}
+				value := predicate.eval(predicateContext)
+				ok, isBool := boolValue(value)
+				if isBool && ok {
+					filtered = append(filtered, event)
+				}
+			}
+			return filtered
+		}
+		nested := ctx
+		nested.Group = filterEvents(ctx.Group)
+		nested.EverGroup = filterEvents(ctx.EverGroup)
+		return aggregate.eval(nested)
+	})
+}
+
+// LocalGroupBy evaluates an aggregate against the subset of the outer
+// aggregate group matching the current event's local key values. It is the
+// analyzable Go equivalent of Esper's aggregate(..., group_by: (...))
+// parameter and can be combined with ordinary outer GroupBy.
+func LocalGroupBy[T any](aggregate AggregateExpression[T], keys ...Expr) AggregateExpression[T] {
+	if aggregate == nil {
+		return invalidAggregate[T]("aggregate-local-group", nil, "local-group(<invalid>)")
+	}
+	children := make([]*exprNode, 0, 1+len(keys))
+	children = append(children, aggregate.node())
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		if key == nil {
+			children = append(children, nil)
+			parts = append(parts, "<nil>")
+			continue
+		}
+		children = append(children, key.node())
+		parts = append(parts, key.Description())
+	}
+	description := aggregate.Description() + ",group_by:(" + strings.Join(parts, ",") + ")"
+	return makeAggregateExpr[T]("aggregate-local-group", description, children, func(ctx EvalContext) Value {
+		if len(keys) == 0 {
+			return aggregate.eval(ctx)
+		}
+		current := ctx.Event
+		if current.Schema().Name() == "" {
+			if len(ctx.Group) > 0 {
+				current = ctx.Group[len(ctx.Group)-1]
+			} else if len(ctx.EverGroup) > 0 {
+				current = ctx.EverGroup[len(ctx.EverGroup)-1]
+			}
+		}
+		target := evaluateLocalGroupKeys(keys, current, ctx)
+		filter := func(events []Event) []Event {
+			filtered := make([]Event, 0, len(events))
+			for _, event := range events {
+				if localGroupKeysEqual(keys, target, event, ctx) {
+					filtered = append(filtered, event)
+				}
+			}
+			return filtered
+		}
+		nested := ctx
+		nested.Group = filter(ctx.Group)
+		nested.EverGroup = filter(ctx.EverGroup)
+		return aggregate.eval(nested)
+	})
+}
+
+func evaluateLocalGroupKeys(keys []Expr, event Event, ctx EvalContext) []Value {
+	values := make([]Value, 0, len(keys))
+	for _, key := range keys {
+		if key == nil {
+			values = append(values, Missing())
+			continue
+		}
+		values = append(values, key.eval(localGroupContext(ctx, event)))
+	}
+	return values
+}
+
+func localGroupKeysEqual(keys []Expr, target []Value, event Event, ctx EvalContext) bool {
+	if len(keys) != len(target) {
+		return false
+	}
+	current := localGroupContext(ctx, event)
+	for index, key := range keys {
+		if key == nil {
+			return false
+		}
+		value := key.eval(current)
+		if !localGroupValueEqual(value, target[index]) {
+			return false
+		}
+	}
+	return true
+}
+
+func localGroupContext(ctx EvalContext, event Event) EvalContext {
+	return EvalContext{
+		Event:      event,
+		OuterEvent: ctx.OuterEvent,
+		Engine:     ctx.Engine,
+		Now:        ctx.Now,
+		Variables:  ctx.Variables,
+		Parameters: ctx.Parameters,
+	}
+}
+
+func localGroupValueEqual(left, right Value) bool {
+	if !left.IsPresent() || !right.IsPresent() {
+		return left.State() == right.State()
+	}
+	if comparison, ok := compareValues(left, right); ok {
+		return comparison == 0
+	}
+	return left.Equal(right)
+}
+
+func CountIf(predicate Expression[bool]) AggregateExpression[int64] {
+	return FilterAggregate[int64](CountAll(), predicate)
+}
+
+func SumIf[T Numeric](expression Expression[T], predicate Expression[bool]) AggregateExpression[T] {
+	return FilterAggregate[T](Sum[T](expression), predicate)
+}
+
+func AvgIf[T Numeric](expression Expression[T], predicate Expression[bool]) AggregateExpression[float64] {
+	return FilterAggregate[float64](Avg[T](expression), predicate)
+}
+
+func MinIf[T Ordered](expression Expression[T], predicate Expression[bool]) AggregateExpression[T] {
+	return FilterAggregate[T](Min[T](expression), predicate)
+}
+
+func MaxIf[T Ordered](expression Expression[T], predicate Expression[bool]) AggregateExpression[T] {
+	return FilterAggregate[T](Max[T](expression), predicate)
+}
+
+type aggregateExpr[T any] struct {
+	typedExpr[T]
+}
+
+type aggregatePluginDefinition struct {
+	resultType reflect.Type
+	evaluate   func(EvalContext) (Value, bool)
+	factory    aggregatePluginFactory
+}
+
+// AggregatePluginState is the Go lifecycle contract for a stateful aggregate
+// extension. Values are passed as Value so a plugin can distinguish Missing,
+// Null and Present without relying on a Java-style nullable interface.
+type AggregatePluginState[T any] interface {
+	Enter(value Value)
+	Leave(value Value)
+	Value() (T, bool)
+	Clear()
+}
+
+// AggregatePluginFactoryContext contains immutable information available when
+// a new per-group plugin state is created. The factory itself is deliberately
+// an explicit Go registration point; it is not loaded by class name.
+type AggregatePluginFactoryContext struct {
+	Name       string
+	Event      Event
+	Engine     *Engine
+	Now        time.Time
+	Variables  map[string]Value
+	Parameters map[string]Value
+}
+
+// AggregatePluginFactory creates an independent state holder for one
+// aggregate group. The runtime replays the current group into that state on
+// each result transition, which keeps the state deterministic for nested
+// filtered/local-group expressions while preserving group isolation.
+type AggregatePluginFactory[T any] func(AggregatePluginFactoryContext) AggregatePluginState[T]
+
+type aggregatePluginState interface {
+	enter(Value)
+	leave(Value)
+	value() (Value, bool)
+	clear()
+	sync([]Value)
+}
+
+type aggregatePluginFactory func(AggregatePluginFactoryContext) aggregatePluginState
+
+type aggregatePluginStateAdapter[T any] struct {
+	state       AggregatePluginState[T]
+	inputs      []Value
+	initialized bool
+}
+
+func (a *aggregatePluginStateAdapter[T]) enter(value Value) { a.state.Enter(value) }
+func (a *aggregatePluginStateAdapter[T]) leave(value Value) { a.state.Leave(value) }
+func (a *aggregatePluginStateAdapter[T]) clear() {
+	a.state.Clear()
+	a.inputs = nil
+	a.initialized = false
+}
+func (a *aggregatePluginStateAdapter[T]) sync(inputs []Value) {
+	if a.initialized {
+		for _, value := range a.inputs {
+			a.state.Leave(value)
+		}
+	} else {
+		a.state.Clear()
+	}
+	for _, value := range inputs {
+		a.state.Enter(value)
+	}
+	a.inputs = append(a.inputs[:0], inputs...)
+	a.initialized = true
+}
+func (a *aggregatePluginStateAdapter[T]) value() (Value, bool) {
+	if a.state == nil {
+		return Missing(), false
+	}
+	value, present := a.state.Value()
+	if !present {
+		return Null(), false
+	}
+	return Present(value), true
+}
+
+func adaptAggregatePluginFactory[T any](factory AggregatePluginFactory[T]) aggregatePluginFactory {
+	if factory == nil {
+		return nil
+	}
+	return func(ctx AggregatePluginFactoryContext) aggregatePluginState {
+		state := factory(ctx)
+		if state == nil {
+			return nil
+		}
+		return &aggregatePluginStateAdapter[T]{state: state}
+	}
+}
+
+func (aggregateExpr[T]) aggregateMarker() {}
+
+func makeAggregateExpr[T any](kind, description string, children []*exprNode, fn func(EvalContext) Value) AggregateExpression[T] {
+	return aggregateExpr[T]{typedExpr: typedExpr[T]{
+		n:  &exprNode{kind: kind, typ: typeOf[T](), description: description, children: children},
+		fn: fn,
+	}}
+}
+
+// PluginAggregate exposes a named Go aggregate extension without hiding its
+// position in the analyzable expression tree. The evaluator receives the
+// current and ever-retained group in EvalContext and returns (value, true) for
+// a present result or (zero, false) for an aggregate null result.
+//
+// The runtime evaluates the plugin against the current group on every state
+// transition. This keeps the extension deterministic and makes it work for
+// both insert and remove-stream updates without requiring an unsafe mutable
+// callback object in a Plan.
+func PluginAggregate[T any](name string, evaluate func(EvalContext) (T, bool)) AggregateExpression[T] {
+	name = strings.TrimSpace(name)
+	description := "plugin-aggregate(<invalid>)"
+	if name != "" {
+		description = "plugin-aggregate(" + name + ")"
+	}
+	return aggregateExpr[T]{typedExpr: typedExpr[T]{
+		n: &exprNode{kind: "aggregate-plugin", typ: typeOf[T](), description: description, pluginName: name, pluginReady: evaluate != nil},
+		fn: func(ctx EvalContext) Value {
+			if evaluate == nil {
+				return Missing()
+			}
+			value, present := evaluate(ctx)
+			if !present {
+				return Null()
+			}
+			return Present(value)
+		},
+	}}
+}
+
+// PluginAggregateWithFactory creates a stateful aggregate extension. The
+// optional input expression is evaluated once for every event in the current
+// aggregate group and passed to AggregatePluginState.Enter. A nil expression
+// passes the event itself as a Present Value, which is useful for event-aware
+// plugins. FilterAggregate can be composed with this constructor for the
+// named-filter behavior exposed by Esper's plug-in aggregate API.
+func PluginAggregateWithFactory[T any](name string, input Expr, factory AggregatePluginFactory[T]) AggregateExpression[T] {
+	name = strings.TrimSpace(name)
+	description := "plugin-aggregate-factory(<invalid>)"
+	if name != "" {
+		description = "plugin-aggregate-factory(" + name + ")"
+	}
+	var children []*exprNode
+	if input != nil {
+		children = []*exprNode{input.node()}
+	}
+	node := &exprNode{
+		kind:          "aggregate-plugin-factory",
+		typ:           typeOf[T](),
+		description:   description,
+		pluginName:    name,
+		pluginReady:   factory != nil,
+		pluginFactory: adaptAggregatePluginFactory(factory),
+		children:      children,
+	}
+	return aggregateExpr[T]{typedExpr: typedExpr[T]{
+		n: node,
+		fn: func(ctx EvalContext) Value {
+			return evaluateAggregatePluginFactory(ctx, node, input, node.pluginFactory)
+		},
+	}}
+}
+
+// RegisterAggregatePlugin registers a named, typed aggregate extension in an
+// Environment. It is the configuration-backed counterpart to PluginAggregate
+// and lets multiple plans refer to the same extension by stable name.
+func RegisterAggregatePlugin[T any](env *Environment, name string, evaluate func(EvalContext) (T, bool)) error {
+	if env == nil {
+		return NewError(ErrorDependency, "nil environment")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return NewError(ErrorInvalidRule, "aggregate plugin name is required")
+	}
+	if evaluate == nil {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("aggregate plugin %q has no evaluator", name))
+	}
+	env.mu.Lock()
+	defer env.mu.Unlock()
+	if _, exists := env.aggregatePlugins[name]; exists {
+		return NewError(ErrorDependency, fmt.Sprintf("aggregate plugin %q is already registered", name))
+	}
+	env.aggregatePlugins[name] = aggregatePluginDefinition{
+		resultType: typeOf[T](),
+		evaluate: func(ctx EvalContext) (Value, bool) {
+			value, present := evaluate(ctx)
+			if !present {
+				return Null(), false
+			}
+			return Present(value), true
+		},
+	}
+	return nil
+}
+
+// RegisterAggregatePluginFactory registers a stateful aggregate factory in an
+// Environment. Each aggregate group receives a separate state instance.
+func RegisterAggregatePluginFactory[T any](env *Environment, name string, factory AggregatePluginFactory[T]) error {
+	if env == nil {
+		return NewError(ErrorDependency, "nil environment")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return NewError(ErrorInvalidRule, "aggregate plugin factory name is required")
+	}
+	if factory == nil {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("aggregate plugin factory %q has no factory", name))
+	}
+	env.mu.Lock()
+	defer env.mu.Unlock()
+	if _, exists := env.aggregatePlugins[name]; exists {
+		return NewError(ErrorDependency, fmt.Sprintf("aggregate plugin %q is already registered", name))
+	}
+	env.aggregatePlugins[name] = aggregatePluginDefinition{
+		resultType: typeOf[T](),
+		factory:    adaptAggregatePluginFactory(factory),
+	}
+	return nil
+}
+
+// PluginAggregateRef creates a typed aggregate expression backed by a plugin
+// registered in env. Build validates that the name exists and that its result
+// type is compatible with T before the plan can be deployed.
+func PluginAggregateRef[T any](env *Environment, name string) AggregateExpression[T] {
+	name = strings.TrimSpace(name)
+	description := "plugin-aggregate(<invalid>)"
+	if name != "" {
+		description = "plugin-aggregate(" + name + ")"
+	}
+	return aggregateExpr[T]{typedExpr: typedExpr[T]{
+		n: &exprNode{kind: "aggregate-plugin-ref", typ: typeOf[T](), description: description, pluginName: name, pluginEnvironment: env},
+		fn: func(ctx EvalContext) Value {
+			if env == nil {
+				return Missing()
+			}
+			env.mu.RLock()
+			definition, ok := env.aggregatePlugins[name]
+			env.mu.RUnlock()
+			if !ok || definition.evaluate == nil {
+				return Missing()
+			}
+			value, present := definition.evaluate(ctx)
+			if !present {
+				return Null()
+			}
+			return value
+		},
+	}}
+}
+
+// PluginAggregateFactoryRef creates a typed aggregate expression backed by a
+// registered stateful factory. The input expression may be nil, matching
+// PluginAggregateWithFactory's event-aware mode.
+func PluginAggregateFactoryRef[T any](env *Environment, name string, input Expr) AggregateExpression[T] {
+	name = strings.TrimSpace(name)
+	description := "plugin-aggregate-factory(<invalid>)"
+	if name != "" {
+		description = "plugin-aggregate-factory(" + name + ")"
+	}
+	var children []*exprNode
+	if input != nil {
+		children = []*exprNode{input.node()}
+	}
+	node := &exprNode{
+		kind:              "aggregate-plugin-factory-ref",
+		typ:               typeOf[T](),
+		description:       description,
+		pluginName:        name,
+		pluginEnvironment: env,
+		children:          children,
+	}
+	return aggregateExpr[T]{typedExpr: typedExpr[T]{
+		n: node,
+		fn: func(ctx EvalContext) Value {
+			if env == nil {
+				return Missing()
+			}
+			env.mu.RLock()
+			definition, ok := env.aggregatePlugins[name]
+			env.mu.RUnlock()
+			if !ok || definition.factory == nil {
+				return Missing()
+			}
+			return evaluateAggregatePluginFactory(ctx, node, input, definition.factory)
+		},
+	}}
+}
+
+func evaluateAggregatePluginFactory(ctx EvalContext, node *exprNode, input Expr, factory aggregatePluginFactory) Value {
+	if node == nil || factory == nil {
+		return Missing()
+	}
+	state := aggregatePluginState(nil)
+	if ctx.aggregatePluginStates != nil {
+		state = ctx.aggregatePluginStates[node]
+	}
+	if state == nil {
+		state = factory(AggregatePluginFactoryContext{
+			Name:       node.pluginName,
+			Event:      ctx.Event,
+			Engine:     ctx.Engine,
+			Now:        ctx.Now,
+			Variables:  ctx.Variables,
+			Parameters: ctx.Parameters,
+		})
+		if state == nil {
+			return Missing()
+		}
+		if ctx.aggregatePluginStates != nil {
+			ctx.aggregatePluginStates[node] = state
+		}
+	}
+	inputs := make([]Value, 0, len(ctx.Group))
+	for _, event := range ctx.Group {
+		value := Present(event)
+		if input != nil {
+			value = input.eval(EvalContext{
+				Event:      event,
+				OuterEvent: ctx.OuterEvent,
+				Engine:     ctx.Engine,
+				Now:        ctx.Now,
+				Variables:  ctx.Variables,
+				Parameters: ctx.Parameters,
+			})
+		}
+		inputs = append(inputs, value)
+	}
+	state.sync(inputs)
+	value, present := state.value()
+	if !present {
+		return Null()
+	}
+	return value
+}
+
+// CountMinSketchValue is a compact frequency estimator. The implementation
+// uses deterministic FNV-1a rows and preserves the Count-Min Sketch contract:
+// estimates never under-count, while collisions may over-count.
+type CountMinSketchValue[T comparable] struct {
+	width    uint32
+	depth    uint32
+	counters []uint64
+	total    int64
+}
+
+const (
+	defaultCountMinSketchWidth = 256
+	defaultCountMinSketchDepth = 5
+)
+
+func newCountMinSketch[T comparable]() CountMinSketchValue[T] {
+	return CountMinSketchValue[T]{
+		width:    defaultCountMinSketchWidth,
+		depth:    defaultCountMinSketchDepth,
+		counters: make([]uint64, defaultCountMinSketchWidth*defaultCountMinSketchDepth),
+	}
+}
+
+func (s *CountMinSketchValue[T]) add(key T) {
+	if s == nil || s.width == 0 || s.depth == 0 {
+		return
+	}
+	for row := uint32(0); row < s.depth; row++ {
+		index := row*s.width + uint32(countMinSketchHash(key, uint64(row))%uint64(s.width))
+		s.counters[index]++
+	}
+	s.total++
+}
+
+func (s CountMinSketchValue[T]) Frequency(key T) int64 {
+	if s.width == 0 || s.depth == 0 || len(s.counters) == 0 {
+		return 0
+	}
+	minimum := ^uint64(0)
+	for row := uint32(0); row < s.depth; row++ {
+		index := row*s.width + uint32(countMinSketchHash(key, uint64(row))%uint64(s.width))
+		if s.counters[index] < minimum {
+			minimum = s.counters[index]
+		}
+	}
+	if minimum > uint64(^uint64(0)>>1) {
+		return int64(^uint64(0) >> 1)
+	}
+	return int64(minimum)
+}
+
+func (s CountMinSketchValue[T]) Total() int64 { return s.total }
+
+func countMinSketchHash[T comparable](key T, seed uint64) uint64 {
+	hasher := fnv.New64a()
+	_, _ = fmt.Fprintf(hasher, "%d:%#v", seed, key)
+	return hasher.Sum64()
+}
+
+// CountMinSketchExpression is a chainable aggregate that adds each present
+// expression value, optionally gated by one boolean predicate.
+type CountMinSketchExpression[T comparable] struct {
+	aggregateExpr[CountMinSketchValue[T]]
+	expression Expression[T]
+	predicate  Expression[bool]
+}
+
+func CountMinSketchAdd[T comparable](expression Expression[T], predicate ...Expression[bool]) CountMinSketchExpression[T] {
+	var filter Expression[bool]
+	if len(predicate) == 1 {
+		filter = predicate[0]
+	}
+	children := make([]*exprNode, 0, 1+len(predicate))
+	if expression != nil {
+		children = append(children, expression.node())
+	}
+	for _, item := range predicate {
+		if item != nil {
+			children = append(children, item.node())
+		}
+	}
+	description := "count-min-sketch(<invalid>)"
+	if expression != nil && len(predicate) <= 1 {
+		description = "count-min-sketch(" + expression.Description() + ")"
+	}
+	return CountMinSketchExpression[T]{
+		aggregateExpr: aggregateExpr[CountMinSketchValue[T]]{typedExpr: typedExpr[CountMinSketchValue[T]]{
+			n: &exprNode{kind: "count-min-sketch", typ: typeOf[CountMinSketchValue[T]](), description: description, children: children},
+			fn: func(ctx EvalContext) Value {
+				if expression == nil || len(predicate) > 1 || (len(predicate) == 1 && filter == nil) {
+					return Missing()
+				}
+				sketch := newCountMinSketch[T]()
+				for _, event := range ctx.Group {
+					eventContext := EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+					if filter != nil {
+						allowed, ok := boolValue(filter.eval(eventContext))
+						if !ok || !allowed {
+							continue
+						}
+					}
+					value := expression.eval(eventContext)
+					if !value.IsPresent() {
+						continue
+					}
+					converted, ok := value.Any().(T)
+					if ok {
+						sketch.add(converted)
+					}
+				}
+				return Present(sketch)
+			},
+		}},
+		expression: expression,
+		predicate:  filter,
+	}
+}
+
+func (s CountMinSketchExpression[T]) Frequency(key Expression[T]) AggregateExpression[int64] {
+	children := []*exprNode{s.node()}
+	if key != nil {
+		children = append(children, key.node())
+	}
+	return makeAggregateExpr[int64]("count-min-frequency", "count-min-frequency("+expressionDescription(key)+")", children, func(ctx EvalContext) Value {
+		if key == nil {
+			return Missing()
+		}
+		value := s.eval(ctx)
+		if !value.IsPresent() {
+			return value
+		}
+		sketch, ok := value.Any().(CountMinSketchValue[T])
+		if !ok {
+			return Missing()
+		}
+		keyValue, ok := key.eval(ctx).Any().(T)
+		if !ok {
+			return Null()
+		}
+		return Present(sketch.Frequency(keyValue))
+	})
+}
+
+func (s CountMinSketchExpression[T]) Total() AggregateExpression[int64] {
+	return makeAggregateExpr[int64]("count-min-total", "count-min-total()", []*exprNode{s.node()}, func(ctx EvalContext) Value {
+		value := s.eval(ctx)
+		if !value.IsPresent() {
+			return value
+		}
+		sketch, ok := value.Any().(CountMinSketchValue[T])
+		if !ok {
+			return Missing()
+		}
+		return Present(sketch.Total())
+	})
+}
+
+// CountMinSketchFrequency reads a sketch-valued expression, including a
+// TableField or another target-row expression, for a runtime key.
+func CountMinSketchFrequency[T comparable](sketch Expression[CountMinSketchValue[T]], key Expression[T]) Expression[int64] {
+	children := make([]*exprNode, 0, 2)
+	if sketch != nil {
+		children = append(children, sketch.node())
+	}
+	if key != nil {
+		children = append(children, key.node())
+	}
+	return makeExpr[int64]("count-min-frequency-ref", "count-min-frequency("+expressionDescription(key)+")", children, func(ctx EvalContext) Value {
+		if sketch == nil || key == nil {
+			return Missing()
+		}
+		value := sketch.eval(ctx)
+		if !value.IsPresent() {
+			return value
+		}
+		countSketch, ok := value.Any().(CountMinSketchValue[T])
+		if !ok {
+			return Missing()
+		}
+		keyValue, ok := key.eval(ctx).Any().(T)
+		if !ok {
+			return Null()
+		}
+		return Present(countSketch.Frequency(keyValue))
+	})
+}
+
+func CountAll() AggregateExpression[int64] {
+	return makeAggregateExpr[int64]("count", "count(*)", nil, func(ctx EvalContext) Value {
+		return Present(int64(len(ctx.Group)))
+	})
+}
+
+func Count[T any](expression Expression[T]) AggregateExpression[int64] {
+	return makeAggregateExpr[int64]("count", "count("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		var count int64
+		for _, event := range ctx.Group {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			if value.IsPresent() {
+				count++
+			}
+		}
+		return Present(count)
+	})
+}
+
+func Sum[T Numeric](expression Expression[T]) AggregateExpression[T] {
+	return makeAggregateExpr[T]("sum", "sum("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		var total float64
+		found := false
+		for _, event := range ctx.Group {
+			value, ok := numericValue(expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+			if !ok {
+				continue
+			}
+			total += value
+			found = true
+		}
+		if !found {
+			return Null()
+		}
+		return Present(convertNumeric[T](total))
+	})
+}
+
+func Avg[T Numeric](expression Expression[T]) AggregateExpression[float64] {
+	return makeAggregateExpr[float64]("avg", "avg("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		var total float64
+		var count int64
+		for _, event := range ctx.Group {
+			value, ok := numericValue(expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+			if !ok {
+				continue
+			}
+			total += value
+			count++
+		}
+		if count == 0 {
+			return Null()
+		}
+		return Present(total / float64(count))
+	})
+}
+
+func Min[T Ordered](expression Expression[T]) AggregateExpression[T] {
+	return aggregateExtreme[T]("min", expression, true)
+}
+
+func Max[T Ordered](expression Expression[T]) AggregateExpression[T] {
+	return aggregateExtreme[T]("max", expression, false)
+}
+
+// First returns the first non-null value in insertion order. An optional
+// zero-based index mirrors Esper's first(value, index) form while keeping the
+// one-argument Go call concise.
+func First[T any](expression Expression[T], indexes ...int) AggregateExpression[T] {
+	index, valid := aggregateIndex(indexes)
+	if !valid {
+		return invalidAggregate[T]("first", expression, "first(<invalid>)")
+	}
+	description := "first(" + expressionDescription(expression) + ")"
+	if len(indexes) == 1 {
+		description = fmt.Sprintf("first(%s,%d)", expressionDescription(expression), index)
+	}
+	return aggregatePosition[T]("first", expression, index, false, description)
+}
+
+// Last returns the last non-null value in reverse insertion order. An optional
+// zero-based index mirrors Esper's last(value, index) form.
+func Last[T any](expression Expression[T], indexes ...int) AggregateExpression[T] {
+	index, valid := aggregateIndex(indexes)
+	if !valid {
+		return invalidAggregate[T]("last", expression, "last(<invalid>)")
+	}
+	description := "last(" + expressionDescription(expression) + ")"
+	if len(indexes) == 1 {
+		description = fmt.Sprintf("last(%s,%d)", expressionDescription(expression), index)
+	}
+	return aggregatePosition[T]("last", expression, index, true, description)
+}
+
+// FirstEventValue and LastEventValue are the Go names for no-argument
+// first()/last() access aggregation. They retain the Event identity, so
+// callers can continue with Property or inspect the underlying value.
+func FirstEventValue() AggregateExpression[Event] {
+	return First[Event](EventValue[Event]())
+}
+
+func LastEventValue() AggregateExpression[Event] {
+	return Last[Event](EventValue[Event]())
+}
+
+// FirstEver returns the first non-null value seen by the aggregate group,
+// including events that have since left the current data window.
+func FirstEver[T any](expression Expression[T]) AggregateExpression[T] {
+	return aggregateEverPosition[T]("first-ever", expression, false)
+}
+
+// LastEver returns the latest non-null value ever seen by the aggregate group.
+func LastEver[T any](expression Expression[T]) AggregateExpression[T] {
+	return aggregateEverPosition[T]("last-ever", expression, true)
+}
+
+func aggregateEverPosition[T any](kind string, expression Expression[T], last bool) AggregateExpression[T] {
+	if expression == nil {
+		return makeAggregateExpr[T](kind, kind+"(<nil>)", nil, func(EvalContext) Value { return Missing() })
+	}
+	return makeAggregateExpr[T](kind, kind+"("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		var result Value
+		for _, event := range ctx.EverGroup {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			if !value.IsPresent() {
+				continue
+			}
+			if !last {
+				return value
+			}
+			result = value
+		}
+		if !result.IsPresent() {
+			return Null()
+		}
+		return result
+	})
+}
+
+// CountEver counts all events ever accepted by the group. With one
+// expression it counts non-null values, mirroring Count; with no expression
+// it counts every event.
+func CountEver(expressions ...Expr) AggregateExpression[int64] {
+	if len(expressions) > 1 {
+		return makeAggregateExpr[int64]("count-ever", "count-ever(<invalid>)", nil, func(EvalContext) Value { return Missing() })
+	}
+	var expression Expr
+	if len(expressions) == 1 {
+		expression = expressions[0]
+	}
+	children := []*exprNode(nil)
+	description := "count-ever(*)"
+	if expression != nil {
+		children = []*exprNode{expression.node()}
+		description = "count-ever(" + expression.Description() + ")"
+	}
+	return makeAggregateExpr[int64]("count-ever", description, children, func(ctx EvalContext) Value {
+		if expression == nil {
+			return Present(int64(len(ctx.EverGroup)))
+		}
+		var count int64
+		for _, event := range ctx.EverGroup {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			if value.IsPresent() {
+				count++
+			}
+		}
+		return Present(count)
+	})
+}
+
+// Nth returns the zero-based nth non-null value in current group order.
+// Negative indexes are invalid at evaluation time and produce Null.
+func Nth[T any](expression Expression[T], index int) AggregateExpression[T] {
+	return aggregatePosition[T](fmt.Sprintf("nth(%d)", index), expression, index, false, "")
+}
+
+func aggregatePosition[T any](kind string, expression Expression[T], index int, last bool, description string) AggregateExpression[T] {
+	if expression == nil {
+		return invalidAggregate[T](kind, expression, description)
+	}
+	if description == "" {
+		description = kind + "(" + expression.Description() + ")"
+	}
+	return makeAggregateExpr[T](kind, description, []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		if index < 0 {
+			return Null()
+		}
+		values := make([]Value, 0, len(ctx.Group))
+		for _, event := range ctx.Group {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			if value.IsPresent() {
+				values = append(values, value)
+			}
+		}
+		if len(values) == 0 {
+			return Null()
+		}
+		if last {
+			position := len(values) - 1 - index
+			if position < 0 {
+				return Null()
+			}
+			return values[position]
+		}
+		if index >= len(values) {
+			return Null()
+		}
+		return values[index]
+	})
+}
+
+func aggregateIndex(indexes []int) (int, bool) {
+	if len(indexes) > 1 {
+		return 0, false
+	}
+	if len(indexes) == 0 {
+		return 0, true
+	}
+	return indexes[0], true
+}
+
+func invalidAggregate[T any](kind string, expression Expr, description string) AggregateExpression[T] {
+	if description == "" {
+		description = kind + "(<invalid>)"
+	}
+	var children []*exprNode
+	if expression != nil {
+		children = []*exprNode{expression.node()}
+	}
+	return makeAggregateExpr[T](kind, description, children, func(EvalContext) Value { return Missing() })
+}
+
+func CountDistinct[T comparable](expression Expression[T]) AggregateExpression[int64] {
+	return makeAggregateExpr[int64]("count-distinct", "count-distinct("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		seen := make(map[any]struct{})
+		fallback := make(map[string]struct{})
+		for _, event := range ctx.Group {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			if !value.IsPresent() {
+				continue
+			}
+			candidate := value.Any()
+			if reflect.ValueOf(candidate).IsValid() && reflect.ValueOf(candidate).Comparable() {
+				seen[candidate] = struct{}{}
+				continue
+			}
+			fallback[fmt.Sprintf("%T:%#v", candidate, candidate)] = struct{}{}
+		}
+		return Present(int64(len(seen) + len(fallback)))
+	})
+}
+
+func Median[T Numeric](expression Expression[T]) AggregateExpression[float64] {
+	return makeAggregateExpr[float64]("median", "median("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		values := numericAggregateValues[T](expression, ctx)
+		if len(values) == 0 {
+			return Null()
+		}
+		sort.Float64s(values)
+		middle := len(values) / 2
+		if len(values)%2 == 1 {
+			return Present(values[middle])
+		}
+		return Present((values[middle-1] + values[middle]) / 2)
+	})
+}
+
+// StdDev uses the sample standard-deviation convention used by Esper's
+// stddev aggregate. A singleton group has deviation zero.
+func StdDev[T Numeric](expression Expression[T]) AggregateExpression[float64] {
+	return makeAggregateExpr[float64]("stddev", "stddev("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		values := numericAggregateValues[T](expression, ctx)
+		if len(values) == 0 {
+			return Null()
+		}
+		if len(values) == 1 {
+			return Present(float64(0))
+		}
+		var total float64
+		for _, value := range values {
+			total += value
+		}
+		mean := total / float64(len(values))
+		var squared float64
+		for _, value := range values {
+			delta := value - mean
+			squared += delta * delta
+		}
+		return Present(math.Sqrt(squared / float64(len(values)-1)))
+	})
+}
+
+// StdDevPop computes population standard deviation. It is kept separate from
+// StdDev because Esper exposes both sample and population conventions.
+func StdDevPop[T Numeric](expression Expression[T]) AggregateExpression[float64] {
+	return makeAggregateExpr[float64]("stddev-pop", "stddev-pop("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		values := numericAggregateValues[T](expression, ctx)
+		if len(values) == 0 {
+			return Null()
+		}
+		return Present(math.Sqrt(populationVariance(values)))
+	})
+}
+
+// Variance computes sample variance. A singleton group has variance zero,
+// matching the sample convention used by StdDev in this package.
+func Variance[T Numeric](expression Expression[T]) AggregateExpression[float64] {
+	return makeAggregateExpr[float64]("variance", "variance("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		values := numericAggregateValues[T](expression, ctx)
+		if len(values) == 0 {
+			return Null()
+		}
+		if len(values) == 1 {
+			return Present(float64(0))
+		}
+		return Present(sampleVariance(values))
+	})
+}
+
+// Avedev computes the mean absolute deviation from the group mean.
+func Avedev[T Numeric](expression Expression[T]) AggregateExpression[float64] {
+	return makeAggregateExpr[float64]("avedev", "avedev("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		values := numericAggregateValues[T](expression, ctx)
+		if len(values) == 0 {
+			return Null()
+		}
+		var total float64
+		for _, value := range values {
+			total += value
+		}
+		mean := total / float64(len(values))
+		var deviation float64
+		for _, value := range values {
+			deviation += math.Abs(value - mean)
+		}
+		return Present(deviation / float64(len(values)))
+	})
+}
+
+// WeightedAvg computes sum(value*weight)/sum(weight), ignoring rows where
+// either expression is not numeric or where the total weight is zero.
+func WeightedAvg[V Numeric, W Numeric](value Expression[V], weight Expression[W]) AggregateExpression[float64] {
+	return makeAggregateExpr[float64]("weighted-avg", "weighted-avg("+value.Description()+","+weight.Description()+")", []*exprNode{value.node(), weight.node()}, func(ctx EvalContext) Value {
+		var weighted, totalWeight float64
+		for _, event := range ctx.Group {
+			evalContext := EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+			candidate, valueOK := numericValue(value.eval(evalContext))
+			factor, weightOK := numericValue(weight.eval(evalContext))
+			if !valueOK || !weightOK {
+				continue
+			}
+			weighted += candidate * factor
+			totalWeight += factor
+		}
+		if totalWeight == 0 {
+			return Null()
+		}
+		return Present(weighted / totalWeight)
+	})
+}
+
+// Correlation computes Pearson's correlation coefficient over the current
+// aggregate group. Rows for which either input is missing, null or nonnumeric
+// are ignored. Fewer than two usable pairs, or a zero-variance input, produce
+// NaN, matching Esper's correl view contract for an undefined coefficient.
+func Correlation[X Numeric, Y Numeric](left Expression[X], right Expression[Y]) AggregateExpression[float64] {
+	children := []*exprNode(nil)
+	if left != nil {
+		children = append(children, left.node())
+	}
+	if right != nil {
+		children = append(children, right.node())
+	}
+	description := "correlation(<invalid>)"
+	if left != nil && right != nil {
+		description = "correlation(" + left.Description() + "," + right.Description() + ")"
+	}
+	return makeAggregateExpr[float64]("correlation", description, children, func(ctx EvalContext) Value {
+		if left == nil || right == nil {
+			return Missing()
+		}
+		xs, ys := numericPairs[X, Y](left, right, ctx)
+		if len(xs) < 2 {
+			return Present(math.NaN())
+		}
+		var sumX, sumY float64
+		for index := range xs {
+			sumX += xs[index]
+			sumY += ys[index]
+		}
+		meanX := sumX / float64(len(xs))
+		meanY := sumY / float64(len(ys))
+		var numerator, sumXX, sumYY float64
+		for index := range xs {
+			deltaX := xs[index] - meanX
+			deltaY := ys[index] - meanY
+			numerator += deltaX * deltaY
+			sumXX += deltaX * deltaX
+			sumYY += deltaY * deltaY
+		}
+		denominator := math.Sqrt(sumXX * sumYY)
+		if denominator == 0 {
+			return Present(math.NaN())
+		}
+		return Present(numerator / denominator)
+	})
+}
+
+// Correl is the short name used by Esper's correl view. Correlation is the
+// more descriptive Go spelling; both constructors produce the same AST.
+func Correl[X Numeric, Y Numeric](left Expression[X], right Expression[Y]) AggregateExpression[float64] {
+	return Correlation[X, Y](left, right)
+}
+
+// LinearRegressionValue is the immutable result of LinearRegression. The
+// accessors intentionally expose both the Go spelling Intercept and Esper's
+// YIntercept terminology.
+type LinearRegressionValue struct {
+	slope     float64
+	intercept float64
+}
+
+func (v LinearRegressionValue) Slope() float64      { return v.slope }
+func (v LinearRegressionValue) Intercept() float64  { return v.intercept }
+func (v LinearRegressionValue) YIntercept() float64 { return v.intercept }
+
+// LinearRegressionExpression is the chainable Go representation of Esper's
+// linest view. Use .Slope() and .YIntercept()/.Intercept() as aggregate
+// selections, for example:
+//
+//	stream.Window(LengthWindow(3)).Aggregate(
+//	    Alias("slope", LinearRegression(price, volume).Slope()),
+//	    Alias("YIntercept", LinearRegression(price, volume).YIntercept()),
+//	)
+//
+// The calculation is recomputed from the current group on every transition,
+// so length/time window removals have the same observable behavior as Java's
+// derived view.
+type LinearRegressionExpression[X Numeric, Y Numeric] struct {
+	aggregateExpr[LinearRegressionValue]
+}
+
+func LinearRegression[X Numeric, Y Numeric](x Expression[X], y Expression[Y]) LinearRegressionExpression[X, Y] {
+	children := []*exprNode(nil)
+	if x != nil {
+		children = append(children, x.node())
+	}
+	if y != nil {
+		children = append(children, y.node())
+	}
+	description := "linear-regression(<invalid>)"
+	if x != nil && y != nil {
+		description = "linear-regression(" + x.Description() + "," + y.Description() + ")"
+	}
+	return LinearRegressionExpression[X, Y]{aggregateExpr: aggregateExpr[LinearRegressionValue]{typedExpr: typedExpr[LinearRegressionValue]{
+		n: &exprNode{kind: "linear-regression", typ: typeOf[LinearRegressionValue](), description: description, children: children},
+		fn: func(ctx EvalContext) Value {
+			if x == nil || y == nil {
+				return Missing()
+			}
+			xs, ys := numericPairs[X, Y](x, y, ctx)
+			if len(xs) < 2 {
+				return Present(LinearRegressionValue{slope: math.NaN(), intercept: math.NaN()})
+			}
+			var sumX, sumY float64
+			for index := range xs {
+				sumX += xs[index]
+				sumY += ys[index]
+			}
+			meanX := sumX / float64(len(xs))
+			meanY := sumY / float64(len(ys))
+			var covariance, varianceX float64
+			for index := range xs {
+				deltaX := xs[index] - meanX
+				covariance += deltaX * (ys[index] - meanY)
+				varianceX += deltaX * deltaX
+			}
+			if varianceX == 0 {
+				return Present(LinearRegressionValue{slope: math.NaN(), intercept: math.NaN()})
+			}
+			slope := covariance / varianceX
+			return Present(LinearRegressionValue{slope: slope, intercept: meanY - slope*meanX})
+		},
+	}}}
+}
+
+func (r LinearRegressionExpression[X, Y]) Slope() AggregateExpression[float64] {
+	return linearRegressionValueExpression(r, "slope", func(value LinearRegressionValue) float64 { return value.Slope() })
+}
+
+func (r LinearRegressionExpression[X, Y]) Intercept() AggregateExpression[float64] {
+	return linearRegressionValueExpression(r, "intercept", func(value LinearRegressionValue) float64 { return value.Intercept() })
+}
+
+func (r LinearRegressionExpression[X, Y]) YIntercept() AggregateExpression[float64] {
+	return linearRegressionValueExpression(r, "YIntercept", func(value LinearRegressionValue) float64 { return value.YIntercept() })
+}
+
+// Linest is the short name used by Esper's linest view.
+func Linest[X Numeric, Y Numeric](x Expression[X], y Expression[Y]) LinearRegressionExpression[X, Y] {
+	return LinearRegression[X, Y](x, y)
+}
+
+func linearRegressionValueExpression[X Numeric, Y Numeric](regression LinearRegressionExpression[X, Y], name string, selectValue func(LinearRegressionValue) float64) AggregateExpression[float64] {
+	return makeAggregateExpr[float64]("linear-regression-"+strings.ToLower(name), strings.ToLower(name)+"("+regression.Description()+")", []*exprNode{regression.node()}, func(ctx EvalContext) Value {
+		value := regression.eval(ctx)
+		if !value.IsPresent() {
+			return value
+		}
+		result, ok := value.Any().(LinearRegressionValue)
+		if !ok {
+			return Missing()
+		}
+		return Present(selectValue(result))
+	})
+}
+
+func numericPairs[X Numeric, Y Numeric](left Expression[X], right Expression[Y], ctx EvalContext) ([]float64, []float64) {
+	xs := make([]float64, 0, len(ctx.Group))
+	ys := make([]float64, 0, len(ctx.Group))
+	for _, event := range ctx.Group {
+		eventContext := EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+		x, xOK := numericValue(left.eval(eventContext))
+		y, yOK := numericValue(right.eval(eventContext))
+		if !xOK || !yOK {
+			continue
+		}
+		xs = append(xs, x)
+		ys = append(ys, y)
+	}
+	return xs, ys
+}
+
+// UnivariateStatisticsValue is the immutable value behind the Java #uni
+// derived view. Variance and StdDev use the sample convention and therefore
+// are NaN until two data points exist; StdDevPop is zero for one data point and
+// NaN for an empty group.
+type UnivariateStatisticsValue struct {
+	total    float64
+	count    int64
+	average  float64
+	variance float64
+	stddev   float64
+	stddevpa float64
+}
+
+func (v UnivariateStatisticsValue) Total() float64     { return v.total }
+func (v UnivariateStatisticsValue) Datapoints() int64  { return v.count }
+func (v UnivariateStatisticsValue) Count() int64       { return v.count }
+func (v UnivariateStatisticsValue) Average() float64   { return v.average }
+func (v UnivariateStatisticsValue) Variance() float64  { return v.variance }
+func (v UnivariateStatisticsValue) StdDev() float64    { return v.stddev }
+func (v UnivariateStatisticsValue) StdDevPop() float64 { return v.stddevpa }
+func (v UnivariateStatisticsValue) StdDevPA() float64  { return v.stddevpa }
+
+// UnivariateStatistics is the chainable Go representation of Esper's uni
+// derived view. Its field methods are aggregate expressions and can be
+// selected individually, which keeps the result schema explicit and idiomatic
+// for Go while preserving the Java field semantics.
+type UnivariateStatisticsExpression[T Numeric] struct {
+	aggregateExpr[UnivariateStatisticsValue]
+}
+
+func UnivariateStatistics[T Numeric](expression Expression[T]) UnivariateStatisticsExpression[T] {
+	children := []*exprNode(nil)
+	description := "univariate-statistics(<invalid>)"
+	if expression != nil {
+		children = []*exprNode{expression.node()}
+		description = "univariate-statistics(" + expression.Description() + ")"
+	}
+	return UnivariateStatisticsExpression[T]{aggregateExpr: aggregateExpr[UnivariateStatisticsValue]{typedExpr: typedExpr[UnivariateStatisticsValue]{
+		n: &exprNode{kind: "univariate-statistics", typ: typeOf[UnivariateStatisticsValue](), description: description, children: children},
+		fn: func(ctx EvalContext) Value {
+			if expression == nil {
+				return Missing()
+			}
+			values := numericAggregateValues[T](expression, ctx)
+			result := UnivariateStatisticsValue{count: int64(len(values)), total: 0, average: math.NaN(), variance: math.NaN(), stddev: math.NaN(), stddevpa: math.NaN()}
+			for _, value := range values {
+				result.total += value
+			}
+			if len(values) == 0 {
+				return Present(result)
+			}
+			result.average = result.total / float64(len(values))
+			result.stddevpa = math.Sqrt(populationVariance(values))
+			if len(values) == 1 {
+				return Present(result)
+			}
+			result.variance = sampleVariance(values)
+			result.stddev = math.Sqrt(result.variance)
+			return Present(result)
+		},
+	}}}
+}
+
+func (s UnivariateStatisticsExpression[T]) Total() AggregateExpression[float64] {
+	return univariateStatisticsValueExpression(s, "total", func(value UnivariateStatisticsValue) float64 { return value.Total() })
+}
+
+func (s UnivariateStatisticsExpression[T]) Datapoints() AggregateExpression[int64] {
+	return univariateStatisticsIntExpression(s, "datapoints", func(value UnivariateStatisticsValue) int64 { return value.Datapoints() })
+}
+
+func (s UnivariateStatisticsExpression[T]) Count() AggregateExpression[int64] {
+	return s.Datapoints()
+}
+
+func (s UnivariateStatisticsExpression[T]) Average() AggregateExpression[float64] {
+	return univariateStatisticsValueExpression(s, "average", func(value UnivariateStatisticsValue) float64 { return value.Average() })
+}
+
+func (s UnivariateStatisticsExpression[T]) Variance() AggregateExpression[float64] {
+	return univariateStatisticsValueExpression(s, "variance", func(value UnivariateStatisticsValue) float64 { return value.Variance() })
+}
+
+func (s UnivariateStatisticsExpression[T]) StdDev() AggregateExpression[float64] {
+	return univariateStatisticsValueExpression(s, "stddev", func(value UnivariateStatisticsValue) float64 { return value.StdDev() })
+}
+
+func (s UnivariateStatisticsExpression[T]) StdDevPop() AggregateExpression[float64] {
+	return univariateStatisticsValueExpression(s, "stddev-pop", func(value UnivariateStatisticsValue) float64 { return value.StdDevPop() })
+}
+
+func (s UnivariateStatisticsExpression[T]) StdDevPA() AggregateExpression[float64] {
+	return s.StdDevPop()
+}
+
+func univariateStatisticsValueExpression[T Numeric](statistics UnivariateStatisticsExpression[T], name string, selectValue func(UnivariateStatisticsValue) float64) AggregateExpression[float64] {
+	return makeAggregateExpr[float64]("univariate-statistics-"+name, name+"("+statistics.Description()+")", []*exprNode{statistics.node()}, func(ctx EvalContext) Value {
+		value := statistics.eval(ctx)
+		if !value.IsPresent() {
+			return value
+		}
+		result, ok := value.Any().(UnivariateStatisticsValue)
+		if !ok {
+			return Missing()
+		}
+		return Present(selectValue(result))
+	})
+}
+
+func univariateStatisticsIntExpression[T Numeric](statistics UnivariateStatisticsExpression[T], name string, selectValue func(UnivariateStatisticsValue) int64) AggregateExpression[int64] {
+	return makeAggregateExpr[int64]("univariate-statistics-"+name, name+"("+statistics.Description()+")", []*exprNode{statistics.node()}, func(ctx EvalContext) Value {
+		value := statistics.eval(ctx)
+		if !value.IsPresent() {
+			return value
+		}
+		result, ok := value.Any().(UnivariateStatisticsValue)
+		if !ok {
+			return Missing()
+		}
+		return Present(selectValue(result))
+	})
+}
+
+// Rate returns the number of events per second observed during the supplied
+// interval. It uses the aggregate's ever-seen event points, which keeps the
+// constant-interval form correct even when the source also has a data window.
+// An optional predicate is applied to the event points, matching Esper's
+// named-filter form. Event timestamps come from the engine's injected clock,
+// so the result is deterministic in virtual-time tests.
+func Rate(interval time.Duration, predicate ...Expression[bool]) AggregateExpression[float64] {
+	children := make([]*exprNode, 0, len(predicate))
+	for _, item := range predicate {
+		if item == nil {
+			children = append(children, nil)
+		} else {
+			children = append(children, item.node())
+		}
+	}
+	description := fmt.Sprintf("rate(%s)", interval)
+	if len(predicate) == 1 && predicate[0] != nil {
+		description += ",filter:" + predicate[0].Description()
+	}
+	return makeAggregateExpr[float64]("rate", description, children, func(ctx EvalContext) Value {
+		if interval <= 0 || len(predicate) > 1 || (len(predicate) == 1 && predicate[0] == nil) {
+			return Missing()
+		}
+		cutoff := ctx.Now.Add(-interval)
+		events := ctx.EverGroup
+		if events == nil {
+			events = ctx.Group
+		}
+		var count int64
+		hasLeave := false
+		for _, event := range events {
+			if !ratePredicateMatches(predicate, event, ctx) {
+				continue
+			}
+			if event.ReceivedAt().After(cutoff) {
+				count++
+			} else {
+				hasLeave = true
+			}
+		}
+		if !hasLeave {
+			return Null()
+		}
+		return Present(float64(count) / interval.Seconds())
+	})
+}
+
+func ratePredicateMatches(predicate []Expression[bool], event Event, ctx EvalContext) bool {
+	if len(predicate) == 0 {
+		return true
+	}
+	value := predicate[0].eval(EvalContext{
+		Event:      event,
+		OuterEvent: ctx.OuterEvent,
+		Engine:     ctx.Engine,
+		Now:        ctx.Now,
+		Variables:  ctx.Variables,
+		Parameters: ctx.Parameters,
+	})
+	matched, ok := boolValue(value)
+	return ok && matched
+}
+
+// RateByTimestamp computes an arrival rate from a numeric event timestamp in
+// the current data window. The rate becomes available after the first
+// matching event leaves the window, which avoids presenting a zero-width
+// interval as a meaningful rate. An optional predicate limits both the
+// retained quantity and the leaving timestamp, matching Esper's filter form.
+func RateByTimestamp[T Numeric](timestamp Expression[T], predicate ...Expression[bool]) AggregateExpression[float64] {
+	var filter Expression[bool]
+	if len(predicate) == 1 {
+		filter = predicate[0]
+	}
+	return rateByTimestampAggregate("rate-timestamp", timestamp, nil, filter, len(predicate), false)
+}
+
+// RateQuantityByTimestamp computes a quantity-per-second rate using the
+// supplied numeric quantity expression and event timestamp expression.
+func RateQuantityByTimestamp[T Numeric, Q Numeric](timestamp Expression[T], quantity Expression[Q], predicate ...Expression[bool]) AggregateExpression[float64] {
+	var filter Expression[bool]
+	if len(predicate) == 1 {
+		filter = predicate[0]
+	}
+	return rateByTimestampAggregate("rate-quantity-timestamp", timestamp, quantity, filter, len(predicate), true)
+}
+
+func rateByTimestampAggregate(kind string, timestamp, quantity Expr, predicate Expression[bool], predicateCount int, quantityRequired bool) AggregateExpression[float64] {
+	children := make([]*exprNode, 0, 3)
+	if timestamp != nil {
+		children = append(children, timestamp.node())
+	} else {
+		children = append(children, nil)
+	}
+	if quantityRequired {
+		if quantity != nil {
+			children = append(children, quantity.node())
+		} else {
+			children = append(children, nil)
+		}
+	}
+	for index := 0; index < predicateCount; index++ {
+		if index == 0 && predicate != nil {
+			children = append(children, predicate.node())
+		} else {
+			children = append(children, nil)
+		}
+	}
+	description := kind + "(<invalid>)"
+	valid := timestamp != nil && (!quantityRequired || quantity != nil) && predicateCount <= 1 && (predicateCount == 0 || predicate != nil)
+	if valid {
+		description = kind + "(" + timestamp.Description()
+		if quantity != nil {
+			description += "," + quantity.Description()
+		}
+		if predicate != nil {
+			description += ",filter:" + predicate.Description()
+		}
+		description += ")"
+	}
+	return makeAggregateExpr[float64](kind, description, children, func(ctx EvalContext) Value {
+		if !valid {
+			return Missing()
+		}
+		matches := func(event Event) bool {
+			if predicate == nil {
+				return true
+			}
+			value := predicate.eval(EvalContext{
+				Event:      event,
+				OuterEvent: ctx.OuterEvent,
+				Engine:     ctx.Engine,
+				Now:        ctx.Now,
+				Variables:  ctx.Variables,
+				Parameters: ctx.Parameters,
+			})
+			matched, ok := boolValue(value)
+			return ok && matched
+		}
+		numericTimestamp := func(event Event) (int64, bool) {
+			value, ok := numericValue(timestamp.eval(EvalContext{
+				Event:      event,
+				OuterEvent: ctx.OuterEvent,
+				Engine:     ctx.Engine,
+				Now:        ctx.Now,
+				Variables:  ctx.Variables,
+				Parameters: ctx.Parameters,
+			}))
+			return int64(value), ok
+		}
+		var latest int64
+		var total float64
+		latestSet := false
+		for _, event := range ctx.Group {
+			if !matches(event) {
+				continue
+			}
+			timestampValue, ok := numericTimestamp(event)
+			if !ok {
+				continue
+			}
+			if quantity == nil {
+				total++
+			} else {
+				value, numeric := numericValue(quantity.eval(EvalContext{
+					Event:      event,
+					OuterEvent: ctx.OuterEvent,
+					Engine:     ctx.Engine,
+					Now:        ctx.Now,
+					Variables:  ctx.Variables,
+					Parameters: ctx.Parameters,
+				}))
+				if !numeric {
+					continue
+				}
+				total += value
+			}
+			latest = timestampValue
+			latestSet = true
+		}
+		if !latestSet {
+			return Null()
+		}
+		var oldest int64
+		oldestSet := false
+		for _, event := range ctx.LeavingEvents {
+			if !matches(event) {
+				continue
+			}
+			timestampValue, ok := numericTimestamp(event)
+			if !ok {
+				continue
+			}
+			oldest = timestampValue
+			oldestSet = true
+		}
+		if !oldestSet || latest <= oldest {
+			return Null()
+		}
+		return Present(total * 1000 / float64(latest-oldest))
+	})
+}
+
+// MinBy returns the value expression from the row with the smallest key.
+func MinBy[V any, K Ordered](value Expression[V], key Expression[K]) AggregateExpression[V] {
+	return aggregateBy[V, K]("min-by", value, key, true)
+}
+
+// MaxBy returns the value expression from the row with the largest key.
+func MaxBy[V any, K Ordered](value Expression[V], key Expression[K]) AggregateExpression[V] {
+	return aggregateBy[V, K]("max-by", value, key, false)
+}
+
+// MinByEver and MaxByEver keep the selected value over all events accepted by
+// the group, including events that have left the current data window.
+func MinByEver[V any, K Ordered](value Expression[V], key Expression[K]) AggregateExpression[V] {
+	return aggregateByEver[V, K]("min-by-ever", value, key, true)
+}
+
+func MaxByEver[V any, K Ordered](value Expression[V], key Expression[K]) AggregateExpression[V] {
+	return aggregateByEver[V, K]("max-by-ever", value, key, false)
+}
+
+func aggregateBy[V any, K Ordered](kind string, value Expression[V], key Expression[K], minimum bool) AggregateExpression[V] {
+	return aggregateBySource[V, K](kind, value, key, minimum, false)
+}
+
+func aggregateByEver[V any, K Ordered](kind string, value Expression[V], key Expression[K], minimum bool) AggregateExpression[V] {
+	return aggregateBySource[V, K](kind, value, key, minimum, true)
+}
+
+func aggregateBySource[V any, K Ordered](kind string, value Expression[V], key Expression[K], minimum, ever bool) AggregateExpression[V] {
+	if value == nil || key == nil {
+		return invalidAggregate[V](kind, value, kind+"(<invalid>)")
+	}
+	return makeAggregateExpr[V](kind, kind+"("+value.Description()+","+key.Description()+")", []*exprNode{value.node(), key.node()}, func(ctx EvalContext) Value {
+		var selected Value
+		var selectedKey Value
+		events := ctx.Group
+		if ever {
+			events = ctx.EverGroup
+		}
+		for _, event := range events {
+			evalContext := EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+			candidate := value.eval(evalContext)
+			candidateKey := key.eval(evalContext)
+			if !candidate.IsPresent() || !candidateKey.IsPresent() {
+				continue
+			}
+			if !selected.IsPresent() {
+				selected, selectedKey = candidate, candidateKey
+				continue
+			}
+			comparison, ok := compareValues(candidateKey, selectedKey)
+			if !ok {
+				continue
+			}
+			if (minimum && comparison < 0) || (!minimum && comparison > 0) {
+				selected, selectedKey = candidate, candidateKey
+			}
+		}
+		if !selected.IsPresent() {
+			return Null()
+		}
+		return selected
+	})
+}
+
+// WindowValues returns the non-null values in current group order.
+func WindowValues[T any](expression Expression[T]) AggregateExpression[[]T] {
+	return makeAggregateExpr[[]T]("window", "window("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		if len(ctx.Group) == 0 {
+			return Null()
+		}
+		values := make([]T, 0, len(ctx.Group))
+		for _, event := range ctx.Group {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			if !value.IsPresent() {
+				continue
+			}
+			converted, err := As[T](value)
+			if err == nil {
+				values = append(values, converted)
+			}
+		}
+		return Present(values)
+	})
+}
+
+// WindowEvents returns the retained Event values in insertion order. It is
+// the explicit Go form of Esper's window(*) access aggregation.
+func WindowEvents() AggregateExpression[[]Event] {
+	return makeAggregateExpr[[]Event]("window", "window(*)", nil, func(ctx EvalContext) Value {
+		if len(ctx.Group) == 0 {
+			return Null()
+		}
+		return Present(append([]Event(nil), ctx.Group...))
+	})
+}
+
+// SortedEvents returns current group events ordered by one or more analyzable
+// sort keys. It is the Go counterpart of sorted(*) with multi-criteria order.
+func SortedEvents(keys ...SortKey) AggregateExpression[[]Event] {
+	children := make([]*exprNode, 0, len(keys))
+	for _, key := range keys {
+		if key.Expr != nil {
+			children = append(children, key.Expr.node())
+		}
+	}
+	return makeAggregateExpr[[]Event]("sorted", "sorted(*)", children, func(ctx EvalContext) Value {
+		if len(ctx.Group) == 0 {
+			return Null()
+		}
+		events := append([]Event(nil), ctx.Group...)
+		if len(events) < 2 || len(keys) == 0 {
+			return Present(events)
+		}
+		sort.SliceStable(events, func(left, right int) bool {
+			for _, key := range keys {
+				if key.Expr == nil {
+					continue
+				}
+				comparison, ok := compareOrderValues(
+					key.Expr.eval(EvalContext{Event: events[left], Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}),
+					key.Expr.eval(EvalContext{Event: events[right], Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}),
+				)
+				if !ok || comparison == 0 {
+					continue
+				}
+				if key.Descending {
+					return comparison > 0
+				}
+				return comparison < 0
+			}
+			return false
+		})
+		return Present(events)
+	})
+}
+
+// SortedAccessEntry is one key bucket in a SortedAccessValue. Values sharing
+// a key retain their input insertion order.
+type SortedAccessEntry[K Ordered, V any] struct {
+	Key    K
+	Values []V
+}
+
+// SortedAccessValue is the immutable, navigable result of SortedAccessBy.
+// It intentionally exposes copies so callers cannot mutate aggregate state
+// held by a deployed statement.
+type SortedAccessValue[K Ordered, V any] struct {
+	entries []SortedAccessEntry[K, V]
+}
+
+func (s SortedAccessValue[K, V]) Entries() []SortedAccessEntry[K, V] {
+	entries := make([]SortedAccessEntry[K, V], len(s.entries))
+	for index, entry := range s.entries {
+		entries[index] = SortedAccessEntry[K, V]{Key: entry.Key, Values: append([]V(nil), entry.Values...)}
+	}
+	return entries
+}
+
+func (s SortedAccessValue[K, V]) Values() []V {
+	values := make([]V, 0, s.CountEvents())
+	for _, entry := range s.entries {
+		values = append(values, entry.Values...)
+	}
+	return values
+}
+
+func (s SortedAccessValue[K, V]) CountEvents() int64 {
+	var count int64
+	for _, entry := range s.entries {
+		count += int64(len(entry.Values))
+	}
+	return count
+}
+
+func (s SortedAccessValue[K, V]) CountKeys() int64 { return int64(len(s.entries)) }
+
+func (s SortedAccessValue[K, V]) FirstKey() (K, bool) {
+	if len(s.entries) == 0 {
+		var zero K
+		return zero, false
+	}
+	return s.entries[0].Key, true
+}
+
+func (s SortedAccessValue[K, V]) LastKey() (K, bool) {
+	if len(s.entries) == 0 {
+		var zero K
+		return zero, false
+	}
+	return s.entries[len(s.entries)-1].Key, true
+}
+
+func (s SortedAccessValue[K, V]) FirstEvent() (V, bool) {
+	if len(s.entries) == 0 || len(s.entries[0].Values) == 0 {
+		var zero V
+		return zero, false
+	}
+	return s.entries[0].Values[0], true
+}
+
+func (s SortedAccessValue[K, V]) LastEvent() (V, bool) {
+	if len(s.entries) == 0 {
+		var zero V
+		return zero, false
+	}
+	values := s.entries[len(s.entries)-1].Values
+	if len(values) == 0 {
+		var zero V
+		return zero, false
+	}
+	return values[len(values)-1], true
+}
+
+func (s SortedAccessValue[K, V]) FirstEvents() []V {
+	if len(s.entries) == 0 {
+		return nil
+	}
+	return append([]V(nil), s.entries[0].Values...)
+}
+
+func (s SortedAccessValue[K, V]) LastEvents() []V {
+	if len(s.entries) == 0 {
+		return nil
+	}
+	return append([]V(nil), s.entries[len(s.entries)-1].Values...)
+}
+
+func (s SortedAccessValue[K, V]) ValuesForKey(key K) []V {
+	index, ok := s.findKey(key, sortedAccessExact)
+	if !ok {
+		return nil
+	}
+	return append([]V(nil), s.entries[index].Values...)
+}
+
+func (s SortedAccessValue[K, V]) ContainsKey(key K) bool {
+	_, ok := s.findKey(key, sortedAccessExact)
+	return ok
+}
+
+func (s SortedAccessValue[K, V]) SubMap(from K, fromInclusive bool, to K, toInclusive bool) SortedAccessValue[K, V] {
+	result := SortedAccessValue[K, V]{entries: make([]SortedAccessEntry[K, V], 0, len(s.entries))}
+	for _, entry := range s.entries {
+		lower, lowerOK := compareValues(Present(entry.Key), Present(from))
+		upper, upperOK := compareValues(Present(entry.Key), Present(to))
+		if !lowerOK || !upperOK {
+			continue
+		}
+		if lower < 0 || (lower == 0 && !fromInclusive) || upper > 0 || (upper == 0 && !toInclusive) {
+			continue
+		}
+		result.entries = append(result.entries, SortedAccessEntry[K, V]{Key: entry.Key, Values: append([]V(nil), entry.Values...)})
+	}
+	return result
+}
+
+func (s SortedAccessValue[K, V]) findKey(key K, mode sortedAccessKeyMode) (int, bool) {
+	best := -1
+	for index, entry := range s.entries {
+		comparison, ok := compareValues(Present(entry.Key), Present(key))
+		if !ok {
+			continue
+		}
+		switch mode {
+		case sortedAccessExact:
+			if comparison == 0 {
+				return index, true
+			}
+		case sortedAccessLower:
+			if comparison < 0 {
+				best = index
+			}
+		case sortedAccessFloor:
+			if comparison <= 0 {
+				best = index
+			}
+		case sortedAccessHigher:
+			if comparison > 0 {
+				return index, true
+			}
+		case sortedAccessCeiling:
+			if comparison >= 0 {
+				return index, true
+			}
+		}
+	}
+	return best, best >= 0
+}
+
+type sortedAccessKeyMode uint8
+
+const (
+	sortedAccessExact sortedAccessKeyMode = iota
+	sortedAccessLower
+	sortedAccessFloor
+	sortedAccessHigher
+	sortedAccessCeiling
+)
+
+// SortedAccessExpression is the chainable Go representation of Esper's
+// sorted(...) access aggregation. Its methods return analyzable aggregate
+// expressions, so access operations can be selected, filtered by HAVING, or
+// composed with other result expressions without EPL strings.
+type SortedAccessExpression[V any, K Ordered] struct {
+	aggregateExpr[SortedAccessValue[K, V]]
+}
+
+// SortedAccessBy creates a sorted access aggregate over value and key. The
+// key is ordered ascending and duplicate keys form insertion-ordered buckets.
+func SortedAccessBy[V any, K Ordered](value Expression[V], key Expression[K]) SortedAccessExpression[V, K] {
+	children := make([]*exprNode, 0, 2)
+	description := "sorted-access(<invalid>)"
+	if value != nil {
+		children = append(children, value.node())
+	}
+	if key != nil {
+		children = append(children, key.node())
+	}
+	if value != nil && key != nil {
+		description = "sorted-access(" + value.Description() + "," + key.Description() + ")"
+	}
+	return SortedAccessExpression[V, K]{aggregateExpr: aggregateExpr[SortedAccessValue[K, V]]{typedExpr: typedExpr[SortedAccessValue[K, V]]{
+		n: &exprNode{kind: "sorted-access", typ: typeOf[SortedAccessValue[K, V]](), description: description, children: children},
+		fn: func(ctx EvalContext) Value {
+			if value == nil || key == nil {
+				return Missing()
+			}
+			return Present(buildSortedAccessValue[V, K](ctx, value, key))
+		},
+	}}}
+}
+
+func buildSortedAccessValue[V any, K Ordered](ctx EvalContext, value Expression[V], key Expression[K]) SortedAccessValue[K, V] {
+	entries := make([]SortedAccessEntry[K, V], 0)
+	for _, event := range ctx.Group {
+		evalContext := EvalContext{Event: event, OuterEvent: ctx.OuterEvent, Engine: ctx.Engine, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+		keyValue := key.eval(evalContext)
+		valueValue := value.eval(evalContext)
+		if !keyValue.IsPresent() || !valueValue.IsPresent() {
+			continue
+		}
+		convertedKey, keyErr := As[K](keyValue)
+		convertedValue, valueErr := As[V](valueValue)
+		if keyErr != nil || valueErr != nil {
+			continue
+		}
+		found := false
+		for index := range entries {
+			comparison, ok := compareValues(Present(entries[index].Key), Present(convertedKey))
+			if ok && comparison == 0 {
+				entries[index].Values = append(entries[index].Values, convertedValue)
+				found = true
+				break
+			}
+		}
+		if !found {
+			entries = append(entries, SortedAccessEntry[K, V]{Key: convertedKey, Values: []V{convertedValue}})
+		}
+	}
+	sort.SliceStable(entries, func(left, right int) bool {
+		comparison, ok := compareValues(Present(entries[left].Key), Present(entries[right].Key))
+		return ok && comparison < 0
+	})
+	return SortedAccessValue[K, V]{entries: entries}
+}
+
+func (s SortedAccessExpression[V, K]) access(ctx EvalContext) (SortedAccessValue[K, V], bool) {
+	value := s.eval(ctx)
+	if !value.IsPresent() {
+		return SortedAccessValue[K, V]{}, false
+	}
+	result, ok := value.Any().(SortedAccessValue[K, V])
+	return result, ok
+}
+
+func sortedAccessMethod[V any, K Ordered, T any](access SortedAccessExpression[V, K], kind, description string, lookups []Expr, fn func(SortedAccessValue[K, V], []Value) Value) AggregateExpression[T] {
+	children := []*exprNode{access.node()}
+	for _, lookup := range lookups {
+		if lookup == nil {
+			return invalidAggregate[T](kind, access, description)
+		}
+		children = append(children, lookup.node())
+	}
+	return makeAggregateExpr[T](kind, description, children, func(ctx EvalContext) Value {
+		value, ok := access.access(ctx)
+		if !ok {
+			return Null()
+		}
+		lookupValues := make([]Value, 0, len(lookups))
+		for _, lookup := range lookups {
+			lookupValues = append(lookupValues, lookup.eval(ctx))
+		}
+		return fn(value, lookupValues)
+	})
+}
+
+func sortedAccessKey[T any, K Ordered](values []Value) (K, bool) {
+	if len(values) == 0 || !values[0].IsPresent() {
+		var zero K
+		return zero, false
+	}
+	key, err := As[K](values[0])
+	return key, err == nil
+}
+
+func sortedAccessValueAt[V any, K Ordered](access SortedAccessValue[K, V], values []Value, mode sortedAccessKeyMode, last bool) Value {
+	key, ok := sortedAccessKey[V, K](values)
+	if !ok {
+		return Null()
+	}
+	index, ok := access.findKey(key, mode)
+	if !ok || index < 0 || index >= len(access.entries) || len(access.entries[index].Values) == 0 {
+		return Null()
+	}
+	items := access.entries[index].Values
+	if last {
+		return Present(items[len(items)-1])
+	}
+	return Present(items[0])
+}
+
+func sortedAccessEventsAt[V any, K Ordered](access SortedAccessValue[K, V], values []Value, mode sortedAccessKeyMode) Value {
+	key, ok := sortedAccessKey[V, K](values)
+	if !ok {
+		return Present([]V(nil))
+	}
+	index, ok := access.findKey(key, mode)
+	if !ok || index < 0 || index >= len(access.entries) {
+		return Present([]V(nil))
+	}
+	return Present(append([]V(nil), access.entries[index].Values...))
+}
+
+func (s SortedAccessExpression[V, K]) Sorted() AggregateExpression[[]V] {
+	return sortedAccessMethod[V, K, []V](s, "sorted-access-values", "sorted-access.values()", nil, func(access SortedAccessValue[K, V], _ []Value) Value {
+		return Present(access.Values())
+	})
+}
+
+func (s SortedAccessExpression[V, K]) ListReference() AggregateExpression[[]V] {
+	return s.Sorted()
+}
+
+func (s SortedAccessExpression[V, K]) NavigableMapReference() AggregateExpression[SortedAccessValue[K, V]] {
+	return sortedAccessMethod[V, K, SortedAccessValue[K, V]](s, "sorted-access-map", "sorted-access.navigable-map()", nil, func(access SortedAccessValue[K, V], _ []Value) Value {
+		return Present(SortedAccessValue[K, V]{entries: access.Entries()})
+	})
+}
+
+func (s SortedAccessExpression[V, K]) FirstKey() AggregateExpression[K] {
+	return sortedAccessMethod[V, K, K](s, "sorted-access-first-key", "sorted-access.first-key()", nil, func(access SortedAccessValue[K, V], _ []Value) Value {
+		key, ok := access.FirstKey()
+		if !ok {
+			return Null()
+		}
+		return Present(key)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) LastKey() AggregateExpression[K] {
+	return sortedAccessMethod[V, K, K](s, "sorted-access-last-key", "sorted-access.last-key()", nil, func(access SortedAccessValue[K, V], _ []Value) Value {
+		key, ok := access.LastKey()
+		if !ok {
+			return Null()
+		}
+		return Present(key)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) FirstEvent() AggregateExpression[V] {
+	return sortedAccessMethod[V, K, V](s, "sorted-access-first-event", "sorted-access.first-event()", nil, func(access SortedAccessValue[K, V], _ []Value) Value {
+		value, ok := access.FirstEvent()
+		if !ok {
+			return Null()
+		}
+		return Present(value)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) LastEvent() AggregateExpression[V] {
+	return sortedAccessMethod[V, K, V](s, "sorted-access-last-event", "sorted-access.last-event()", nil, func(access SortedAccessValue[K, V], _ []Value) Value {
+		value, ok := access.LastEvent()
+		if !ok {
+			return Null()
+		}
+		return Present(value)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) FirstEvents() AggregateExpression[[]V] {
+	return sortedAccessMethod[V, K, []V](s, "sorted-access-first-events", "sorted-access.first-events()", nil, func(access SortedAccessValue[K, V], _ []Value) Value {
+		return Present(access.FirstEvents())
+	})
+}
+
+func (s SortedAccessExpression[V, K]) LastEvents() AggregateExpression[[]V] {
+	return sortedAccessMethod[V, K, []V](s, "sorted-access-last-events", "sorted-access.last-events()", nil, func(access SortedAccessValue[K, V], _ []Value) Value {
+		return Present(access.LastEvents())
+	})
+}
+
+func (s SortedAccessExpression[V, K]) MinBy() AggregateExpression[V] { return s.FirstEvent() }
+func (s SortedAccessExpression[V, K]) MaxBy() AggregateExpression[V] { return s.LastEvent() }
+
+func (s SortedAccessExpression[V, K]) GetEvent(key Expression[K]) AggregateExpression[V] {
+	return sortedAccessMethod[V, K, V](s, "sorted-access-get-event", "sorted-access.get-event()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessValueAt[V, K](access, values, sortedAccessExact, false)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) GetEvents(key Expression[K]) AggregateExpression[[]V] {
+	return sortedAccessMethod[V, K, []V](s, "sorted-access-get-events", "sorted-access.get-events()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessEventsAt[V, K](access, values, sortedAccessExact)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) Contains(key Expression[K]) AggregateExpression[bool] {
+	return sortedAccessMethod[V, K, bool](s, "sorted-access-contains-key", "sorted-access.contains-key()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		key, ok := sortedAccessKey[V, K](values)
+		return Present(ok && access.ContainsKey(key))
+	})
+}
+
+func (s SortedAccessExpression[V, K]) CountEvents() AggregateExpression[int64] {
+	return sortedAccessMethod[V, K, int64](s, "sorted-access-count-events", "sorted-access.count-events()", nil, func(access SortedAccessValue[K, V], _ []Value) Value {
+		return Present(access.CountEvents())
+	})
+}
+
+func (s SortedAccessExpression[V, K]) CountKeys() AggregateExpression[int64] {
+	return sortedAccessMethod[V, K, int64](s, "sorted-access-count-keys", "sorted-access.count-keys()", nil, func(access SortedAccessValue[K, V], _ []Value) Value {
+		return Present(access.CountKeys())
+	})
+}
+
+func (s SortedAccessExpression[V, K]) LowerKey(key Expression[K]) AggregateExpression[K] {
+	return sortedAccessMethod[V, K, K](s, "sorted-access-lower-key", "sorted-access.lower-key()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessNearestKey(access, values, sortedAccessLower)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) FloorKey(key Expression[K]) AggregateExpression[K] {
+	return sortedAccessMethod[V, K, K](s, "sorted-access-floor-key", "sorted-access.floor-key()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessNearestKey(access, values, sortedAccessFloor)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) HigherKey(key Expression[K]) AggregateExpression[K] {
+	return sortedAccessMethod[V, K, K](s, "sorted-access-higher-key", "sorted-access.higher-key()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessNearestKey(access, values, sortedAccessHigher)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) CeilingKey(key Expression[K]) AggregateExpression[K] {
+	return sortedAccessMethod[V, K, K](s, "sorted-access-ceiling-key", "sorted-access.ceiling-key()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessNearestKey(access, values, sortedAccessCeiling)
+	})
+}
+
+func sortedAccessNearestKey[V any, K Ordered](access SortedAccessValue[K, V], values []Value, mode sortedAccessKeyMode) Value {
+	key, ok := sortedAccessKey[V, K](values)
+	if !ok {
+		return Null()
+	}
+	index, ok := access.findKey(key, mode)
+	if !ok {
+		return Null()
+	}
+	return Present(access.entries[index].Key)
+}
+
+func (s SortedAccessExpression[V, K]) LowerEvent(key Expression[K]) AggregateExpression[V] {
+	return sortedAccessMethod[V, K, V](s, "sorted-access-lower-event", "sorted-access.lower-event()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessValueAt[V, K](access, values, sortedAccessLower, false)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) FloorEvent(key Expression[K]) AggregateExpression[V] {
+	return sortedAccessMethod[V, K, V](s, "sorted-access-floor-event", "sorted-access.floor-event()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessValueAt[V, K](access, values, sortedAccessFloor, false)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) HigherEvent(key Expression[K]) AggregateExpression[V] {
+	return sortedAccessMethod[V, K, V](s, "sorted-access-higher-event", "sorted-access.higher-event()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessValueAt[V, K](access, values, sortedAccessHigher, false)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) CeilingEvent(key Expression[K]) AggregateExpression[V] {
+	return sortedAccessMethod[V, K, V](s, "sorted-access-ceiling-event", "sorted-access.ceiling-event()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessValueAt[V, K](access, values, sortedAccessCeiling, false)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) EventsBetween(from Expression[K], fromInclusive bool, to Expression[K], toInclusive bool) AggregateExpression[[]V] {
+	return sortedAccessMethod[V, K, []V](s, "sorted-access-events-between", "sorted-access.events-between()", []Expr{from, to}, func(access SortedAccessValue[K, V], values []Value) Value {
+		fromKey, fromOK := sortedAccessKey[V, K]([]Value{values[0]})
+		toKey, toOK := sortedAccessKey[V, K]([]Value{values[1]})
+		if !fromOK || !toOK {
+			return Present([]V(nil))
+		}
+		return Present(access.SubMap(fromKey, fromInclusive, toKey, toInclusive).Values())
+	})
+}
+
+func (s SortedAccessExpression[V, K]) SubMap(from Expression[K], fromInclusive bool, to Expression[K], toInclusive bool) AggregateExpression[SortedAccessValue[K, V]] {
+	return sortedAccessMethod[V, K, SortedAccessValue[K, V]](s, "sorted-access-submap", "sorted-access.submap()", []Expr{from, to}, func(access SortedAccessValue[K, V], values []Value) Value {
+		fromKey, fromOK := sortedAccessKey[V, K]([]Value{values[0]})
+		toKey, toOK := sortedAccessKey[V, K]([]Value{values[1]})
+		if !fromOK || !toOK {
+			return Present(SortedAccessValue[K, V]{})
+		}
+		return Present(access.SubMap(fromKey, fromInclusive, toKey, toInclusive))
+	})
+}
+
+// WindowAccessValue is the immutable insertion-ordered value produced by
+// WindowAccessBy. It is useful when a window access aggregate is persisted in
+// a Go Table or passed through a sink.
+type WindowAccessValue[V any] struct {
+	values []V
+}
+
+func (w WindowAccessValue[V]) Values() []V { return append([]V(nil), w.values...) }
+func (w WindowAccessValue[V]) CountEvents() int64 {
+	return int64(len(w.values))
+}
+func (w WindowAccessValue[V]) First() (V, bool) {
+	if len(w.values) == 0 {
+		var zero V
+		return zero, false
+	}
+	return w.values[0], true
+}
+func (w WindowAccessValue[V]) Last() (V, bool) {
+	if len(w.values) == 0 {
+		var zero V
+		return zero, false
+	}
+	return w.values[len(w.values)-1], true
+}
+
+// WindowAccessExpression is the chainable Go representation of window(*).
+// Its methods return analyzable aggregate expressions and preserve insertion
+// order after filter/window eviction.
+type WindowAccessExpression[V any] struct {
+	aggregateExpr[WindowAccessValue[V]]
+}
+
+func WindowAccessBy[V any](expression Expression[V]) WindowAccessExpression[V] {
+	children := []*exprNode(nil)
+	description := "window-access(<invalid>)"
+	if expression != nil {
+		children = []*exprNode{expression.node()}
+		description = "window-access(" + expression.Description() + ")"
+	}
+	return WindowAccessExpression[V]{aggregateExpr: aggregateExpr[WindowAccessValue[V]]{typedExpr: typedExpr[WindowAccessValue[V]]{
+		n: &exprNode{kind: "window-access", typ: typeOf[WindowAccessValue[V]](), description: description, children: children},
+		fn: func(ctx EvalContext) Value {
+			if expression == nil {
+				return Missing()
+			}
+			values := make([]V, 0, len(ctx.Group))
+			for _, event := range ctx.Group {
+				evalContext := EvalContext{Event: event, OuterEvent: ctx.OuterEvent, Engine: ctx.Engine, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+				value := expression.eval(evalContext)
+				if !value.IsPresent() {
+					continue
+				}
+				converted, err := As[V](value)
+				if err == nil {
+					values = append(values, converted)
+				}
+			}
+			return Present(WindowAccessValue[V]{values: values})
+		},
+	}}}
+}
+
+func (w WindowAccessExpression[V]) access(ctx EvalContext) (WindowAccessValue[V], bool) {
+	value := w.eval(ctx)
+	if !value.IsPresent() {
+		return WindowAccessValue[V]{}, false
+	}
+	result, ok := value.Any().(WindowAccessValue[V])
+	return result, ok
+}
+
+func windowAccessMethod[V any, T any](access WindowAccessExpression[V], kind, description string, fn func(WindowAccessValue[V]) Value) AggregateExpression[T] {
+	return makeAggregateExpr[T](kind, description, []*exprNode{access.node()}, func(ctx EvalContext) Value {
+		value, ok := access.access(ctx)
+		if !ok {
+			return Null()
+		}
+		return fn(value)
+	})
+}
+
+func (w WindowAccessExpression[V]) Values() AggregateExpression[[]V] {
+	return windowAccessMethod[V, []V](w, "window-access-values", "window-access.values()", func(value WindowAccessValue[V]) Value {
+		return Present(value.Values())
+	})
+}
+
+func (w WindowAccessExpression[V]) ListReference() AggregateExpression[[]V] { return w.Values() }
+
+func (w WindowAccessExpression[V]) First() AggregateExpression[V] {
+	return windowAccessMethod[V, V](w, "window-access-first", "window-access.first()", func(value WindowAccessValue[V]) Value {
+		item, ok := value.First()
+		if !ok {
+			return Null()
+		}
+		return Present(item)
+	})
+}
+
+func (w WindowAccessExpression[V]) Last() AggregateExpression[V] {
+	return windowAccessMethod[V, V](w, "window-access-last", "window-access.last()", func(value WindowAccessValue[V]) Value {
+		item, ok := value.Last()
+		if !ok {
+			return Null()
+		}
+		return Present(item)
+	})
+}
+
+func (w WindowAccessExpression[V]) CountEvents() AggregateExpression[int64] {
+	return windowAccessMethod[V, int64](w, "window-access-count", "window-access.count-events()", func(value WindowAccessValue[V]) Value {
+		return Present(value.CountEvents())
+	})
+}
+
+// SetOfValues returns distinct non-null values in first-seen order.
+func SetOfValues[T comparable](expression Expression[T]) AggregateExpression[[]T] {
+	return makeAggregateExpr[[]T]("set", "set("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		values := make([]T, 0, len(ctx.Group))
+		seen := make(map[T]struct{})
+		for _, event := range ctx.Group {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			if !value.IsPresent() {
+				continue
+			}
+			converted, err := As[T](value)
+			if err != nil {
+				continue
+			}
+			if _, exists := seen[converted]; exists {
+				continue
+			}
+			seen[converted] = struct{}{}
+			values = append(values, converted)
+		}
+		return Present(values)
+	})
+}
+
+// SortedValues returns non-null values ordered by their natural Go ordering.
+func SortedValues[T Ordered](expression Expression[T], descending bool) AggregateExpression[[]T] {
+	return makeAggregateExpr[[]T]("sorted", fmt.Sprintf("sorted(%s,%t)", expression.Description(), descending), []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		values := make([]T, 0, len(ctx.Group))
+		for _, event := range ctx.Group {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			if !value.IsPresent() {
+				continue
+			}
+			converted, err := As[T](value)
+			if err == nil {
+				values = append(values, converted)
+			}
+		}
+		sort.SliceStable(values, func(left, right int) bool {
+			if descending {
+				return values[left] > values[right]
+			}
+			return values[left] < values[right]
+		})
+		return Present(values)
+	})
+}
+
+func sampleVariance(values []float64) float64 {
+	if len(values) <= 1 {
+		return 0
+	}
+	var total float64
+	for _, value := range values {
+		total += value
+	}
+	mean := total / float64(len(values))
+	var squared float64
+	for _, value := range values {
+		delta := value - mean
+		squared += delta * delta
+	}
+	return squared / float64(len(values)-1)
+}
+
+func populationVariance(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	var total float64
+	for _, value := range values {
+		total += value
+	}
+	mean := total / float64(len(values))
+	var squared float64
+	for _, value := range values {
+		delta := value - mean
+		squared += delta * delta
+	}
+	return squared / float64(len(values))
+}
+
+func numericAggregateValues[T Numeric](expression Expression[T], ctx EvalContext) []float64 {
+	values := make([]float64, 0, len(ctx.Group))
+	for _, event := range ctx.Group {
+		value, ok := numericValue(expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+		if ok {
+			values = append(values, value)
+		}
+	}
+	return values
+}
+
+func aggregateExtreme[T Ordered](kind string, expression Expression[T], minimum bool) AggregateExpression[T] {
+	return makeAggregateExpr[T](kind, kind+"("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		var result Value
+		for _, event := range ctx.Group {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			if !value.IsPresent() {
+				continue
+			}
+			if !result.IsPresent() {
+				result = value
+				continue
+			}
+			comparison, ok := compareValues(value, result)
+			if ok && ((minimum && comparison < 0) || (!minimum && comparison > 0)) {
+				result = value
+			}
+		}
+		if !result.IsPresent() {
+			return Null()
+		}
+		return result
+	})
+}
+
+// Selection is a named projection expression.
+type Selection struct {
+	Name string
+	Expr Expr
+}
+
+func Alias(name string, expression Expr) Selection {
+	return Selection{Name: name, Expr: expression}
+}
+
+func (s Selection) description() string {
+	if s.Expr == nil {
+		return s.Name + "=<nil>"
+	}
+	return s.Name + "=" + s.Expr.Description()
+}
+
+func (n *exprNode) referencedFields(result *[]string) {
+	if n == nil {
+		return
+	}
+	if n.kind == "field" || n.kind == "tag-field" || n.kind == "tag-field-at" {
+		*result = append(*result, n.fieldName)
+	}
+	for _, child := range n.children {
+		child.referencedFields(result)
+	}
+}
+
+func (n *exprNode) referencedTags(result *[]string) {
+	if n == nil {
+		return
+	}
+	if n.kind == "tag-field" || n.kind == "tag-field-at" || n.kind == "tag-count" {
+		if n.tagName != "" {
+			*result = append(*result, n.tagName)
+		}
+	}
+	for _, child := range n.children {
+		child.referencedTags(result)
+	}
+}
+
+func (n *exprNode) referencedTargetFields(kind string, result *[]string) {
+	if n == nil {
+		return
+	}
+	if n.kind == kind {
+		*result = append(*result, n.fieldName)
+	}
+	for _, child := range n.children {
+		child.referencedTargetFields(kind, result)
+	}
+}
+
+func (n *exprNode) referencedVariables(result *[]string) {
+	if n == nil {
+		return
+	}
+	if n.kind == "variable" {
+		*result = append(*result, n.variableName)
+	}
+	for _, child := range n.children {
+		child.referencedVariables(result)
+	}
+}
+
+func (n *exprNode) referencedParameters(result *[]string) {
+	if n == nil {
+		return
+	}
+	if n.kind == "parameter" {
+		*result = append(*result, n.parameterName)
+	}
+	for _, child := range n.children {
+		child.referencedParameters(result)
+	}
+}

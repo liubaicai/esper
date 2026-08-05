@@ -1,0 +1,2694 @@
+package esper
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"reflect"
+	"sort"
+	"strings"
+	"sync"
+)
+
+const planSchemaVersion = "esper-go-plan/v1"
+
+// Environment is the compile-time catalog for schemas and future extension
+// registrations. It is safe to share for concurrent Plan construction.
+type Environment struct {
+	mu               sync.RWMutex
+	schemas          map[string]Schema
+	typeToName       map[reflect.Type]string
+	variables        map[string]VariableDefinition
+	aggregatePlugins map[string]aggregatePluginDefinition
+	tables           map[string]TableDefinition
+	namedWindows     map[string]NamedWindowDefinition
+	contexts         map[string]ContextDefinition
+	dataflows        map[string]DataflowDefinition
+	savedDataflows   map[string]DataflowDefinition
+}
+
+func NewEnvironment() *Environment {
+	return &Environment{
+		schemas:          make(map[string]Schema),
+		typeToName:       make(map[reflect.Type]string),
+		variables:        make(map[string]VariableDefinition),
+		aggregatePlugins: make(map[string]aggregatePluginDefinition),
+		tables:           make(map[string]TableDefinition),
+		namedWindows:     make(map[string]NamedWindowDefinition),
+		contexts:         make(map[string]ContextDefinition),
+		dataflows:        make(map[string]DataflowDefinition),
+		savedDataflows:   make(map[string]DataflowDefinition),
+	}
+}
+
+func (e *Environment) RegisterSchema(schema Schema) error {
+	if e == nil {
+		return fmt.Errorf("esper: nil environment")
+	}
+	if !schema.valid() {
+		return fmt.Errorf("esper: cannot register an empty schema")
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if _, exists := e.schemas[schema.Name()]; exists {
+		return fmt.Errorf("esper: schema %q is already registered", schema.Name())
+	}
+	if schema.kind == SchemaVariant && schema.variantMode == VariantPredefined {
+		for _, member := range schema.variantMembers {
+			if _, exists := e.schemas[member]; !exists {
+				return fmt.Errorf("esper: variant schema %q references unregistered member schema %q", schema.Name(), member)
+			}
+		}
+	}
+	e.schemas[schema.Name()] = schema
+	if schema.GoType() != nil {
+		e.typeToName[schema.GoType()] = schema.Name()
+	}
+	return nil
+}
+
+func (e *Environment) Schema(name string) (Schema, bool) {
+	if e == nil {
+		return Schema{}, false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	schema, ok := e.schemas[name]
+	return schema, ok
+}
+
+func (e *Environment) Schemas() []Schema {
+	if e == nil {
+		return nil
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	result := make([]Schema, 0, len(e.schemas))
+	for _, schema := range e.schemas {
+		result = append(result, schema)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Name() < result[j].Name() })
+	return result
+}
+
+func (e *Environment) RegisterVariable(name string, initial any, options ...VariableOption) error {
+	if e == nil {
+		return NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := newVariableDefinition(name, initial, options...)
+	if err != nil {
+		return err
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if _, exists := e.variables[name]; exists {
+		return fmt.Errorf("esper: variable %q is already registered", name)
+	}
+	e.variables[name] = definition
+	return nil
+}
+
+// RegisterContextVariable declares a variable whose value is maintained
+// independently for every materialized partition of contextName. The
+// variable is visible only from statements using that context.
+func (e *Environment) RegisterContextVariable(contextName, name string, initial any, options ...VariableOption) error {
+	if e == nil {
+		return NewError(ErrorDependency, "nil environment")
+	}
+	contextName = strings.TrimSpace(contextName)
+	if contextName == "" {
+		return NewError(ErrorInvalidRule, "context variable requires a context name")
+	}
+	if _, ok := e.Context(contextName); !ok {
+		return NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", contextName))
+	}
+	definition, err := newVariableDefinitionForContext(contextName, name, initial, options...)
+	if err != nil {
+		return err
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if _, exists := e.variables[name]; exists {
+		return fmt.Errorf("esper: variable %q is already registered", name)
+	}
+	e.variables[name] = definition
+	return nil
+}
+
+// RegisterVariableInContext is an expressive alias for RegisterContextVariable.
+func (e *Environment) RegisterVariableInContext(contextName, name string, initial any, options ...VariableOption) error {
+	return e.RegisterContextVariable(contextName, name, initial, options...)
+}
+
+func (e *Environment) Variable(name string) (VariableDefinition, bool) {
+	if e == nil {
+		return VariableDefinition{}, false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	definition, ok := e.variables[name]
+	return definition, ok
+}
+
+func (e *Environment) Variables() []VariableDefinition {
+	if e == nil {
+		return nil
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	result := make([]VariableDefinition, 0, len(e.variables))
+	for _, definition := range e.variables {
+		result = append(result, definition)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].name < result[j].name })
+	return result
+}
+
+func (e *Environment) Tables() []TableDefinition {
+	if e == nil {
+		return nil
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	result := make([]TableDefinition, 0, len(e.tables))
+	for _, definition := range e.tables {
+		result = append(result, definition)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].name < result[j].name })
+	return result
+}
+
+func (e *Environment) NamedWindows() []NamedWindowDefinition {
+	if e == nil {
+		return nil
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	result := make([]NamedWindowDefinition, 0, len(e.namedWindows))
+	for _, definition := range e.namedWindows {
+		result = append(result, definition)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].name < result[j].name })
+	return result
+}
+
+func RegisterStruct[T any](env *Environment, name string, opts ...SchemaOption) (Schema, error) {
+	schema, err := StructSchema[T](name, opts...)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := env.RegisterSchema(schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
+}
+
+func RegisterMap(env *Environment, name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
+	schema, err := NewMapSchema(name, fields, opts...)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := env.RegisterSchema(schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
+}
+
+func RegisterJSON(env *Environment, name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
+	schema, err := NewJSONSchema(name, fields, opts...)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := env.RegisterSchema(schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
+}
+
+func RegisterXML(env *Environment, name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
+	schema, err := NewXMLSchema(name, fields, opts...)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := env.RegisterSchema(schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
+}
+
+func RegisterAvro(env *Environment, name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
+	schema, err := NewAvroSchema(name, fields, opts...)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := env.RegisterSchema(schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
+}
+
+// RegisterObjectArray registers a positional object-array event schema.
+func RegisterObjectArray(env *Environment, name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
+	schema, err := NewObjectArraySchema(name, fields, opts...)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := env.RegisterSchema(schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
+}
+
+// RegisterVariant registers a PREDEFINED variant whose members must already
+// be present in the caller's schema catalog.
+func RegisterVariant(env *Environment, name string, members ...Schema) (Schema, error) {
+	schema, err := NewVariantSchema(name, members...)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := env.RegisterSchema(schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
+}
+
+// RegisterVariantAny registers an ANY variant. Runtime routing accepts every
+// event type known to the environment at the time it is sent.
+func RegisterVariantAny(env *Environment, name string, opts ...SchemaOption) (Schema, error) {
+	schema, err := NewAnyVariantSchema(name, opts...)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := env.RegisterSchema(schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
+}
+
+// Plan is an immutable, canonicalized logical statement. It contains no raw
+// function pointer and can later be extended with versioned serde metadata.
+type Plan struct {
+	schemaVersion string
+	canonical     []byte
+	hash          string
+	query         Query
+	resultSchema  Schema
+}
+
+func (p Plan) SchemaVersion() string { return p.schemaVersion }
+func (p Plan) Hash() string          { return p.hash }
+func (p Plan) Canonical() []byte     { return append([]byte(nil), p.canonical...) }
+func (p Plan) Query() Query          { return p.query }
+func (p Plan) ResultSchema() (Schema, bool) {
+	return p.resultSchema, p.resultSchema.valid()
+}
+
+func (e *Environment) Build(query Query) (Plan, error) {
+	if e == nil {
+		return Plan{}, NewError(ErrorInvalidRule, "nil environment")
+	}
+	if query.env == nil || query.env != e {
+		return Plan{}, NewError(ErrorDependency, "query belongs to a different or nil environment")
+	}
+	if query.input == nil && query.join == nil && !query.sourceLess {
+		return Plan{}, NewError(ErrorInvalidRule, "query has no source")
+	}
+	if query.sourceLess {
+		if err := e.validateSourceLess(query.selections); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "select-once", err)
+		}
+	} else if query.trigger != nil {
+		if err := e.validateTrigger(query.trigger); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "trigger", err)
+		}
+	} else if query.rowRecog != nil {
+		if err := e.validateRowRecog(query.rowRecog, query.patternSelections); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "match-recognize", err)
+		}
+	} else if query.pattern != nil {
+		if err := e.validatePattern(query.pattern, query.patternSelections); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "pattern", err)
+		}
+	} else if query.aggregate != nil {
+		if err := e.validateAggregate(query.aggregate); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "aggregate", err)
+		}
+	} else if query.join != nil {
+		if err := e.validateJoin(query.join, query.joinSelections); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "join", err)
+		}
+	} else if err := e.validateNode(query.input); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "stream", err)
+	}
+	if query.contextName != "" {
+		definition, ok := e.Context(query.contextName)
+		if !ok {
+			return Plan{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", query.contextName))
+		}
+		if query.output.Termination != OutputNoTermination && definition.kind != ContextInitiatedTerminated && !definition.isTemporal() {
+			return Plan{}, NewError(ErrorInvalidRule, "context-termination output requires an initiated or temporal context")
+		}
+		if query.join != nil {
+			for index, source := range joinDefinitionSources(query.join) {
+				if err := e.validateContext(definition, source); err != nil {
+					return Plan{}, WrapError(ErrorInvalidRule, fmt.Sprintf("context source %d", index), err)
+				}
+			}
+		} else if err := e.validateContext(definition, query.input); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "context", err)
+		}
+	} else if err := validateContextFieldScope(query); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "context", err)
+	}
+	if err := e.validateContextVariableScope(query); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "context-variable", err)
+	}
+	if err := e.validateRoute(query); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "route", err)
+	}
+	if _, err := queryParameterTypes(e, query); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "parameters", err)
+	}
+	if err := validateOutputPolicy(query.output); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "output", err)
+	}
+	if err := e.validateOutputExpressions(query.output); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "output", err)
+	}
+	if err := e.validateQueryModifiers(query); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "result-set", err)
+	}
+	resultSchema, err := e.resultSchema(query)
+	if err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "projection", err)
+	}
+	if err := e.validateIntoTable(query); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "into-table", err)
+	}
+	if query.name != "" && strings.TrimSpace(query.name) == "" {
+		return Plan{}, fmt.Errorf("esper: statement name cannot be blank")
+	}
+
+	description := query.description()
+	if query.routeTarget != "" {
+		description += " -> route(" + query.routeTarget + ")"
+	}
+	canonicalParts := []string{planSchemaVersion, description}
+	for _, schema := range e.Schemas() {
+		fields := make([]string, 0, len(schema.fields))
+		for _, field := range schema.fields {
+			fields = append(fields, fmt.Sprintf("%s:%s:%t:%t:%t", field.Name, field.Type, field.Optional, field.StartTimestamp, field.EndTimestamp))
+		}
+		getterNames := make([]string, 0, len(schema.getters))
+		for name := range schema.getters {
+			getterNames = append(getterNames, name)
+		}
+		sort.Strings(getterNames)
+		getters := make([]string, 0, len(getterNames))
+		for _, name := range getterNames {
+			getter := schema.getters[name]
+			source := "callback"
+			if getter.method != "" {
+				source = "method:" + getter.method
+			} else if getter.path != "" {
+				source = "path:" + getter.path
+			}
+			getters = append(getters, fmt.Sprintf("%s:%s:%t:%s", getter.name, getter.typ, getter.optional, source))
+		}
+		nestedNames := make([]string, 0, len(schema.nested))
+		for name, nested := range schema.nested {
+			nestedNames = append(nestedNames, name+"="+nested.Name())
+		}
+		sort.Strings(nestedNames)
+		members := strings.Join(schema.variantMembers, ",")
+		parents := strings.Join(schema.parentNames, ",")
+		canonicalParts = append(canonicalParts, fmt.Sprintf("schema(%s:%d:%d:%d:%t:variant=%d:parents=%s:%s:fields=%s:getters=%s:nested=%s)", schema.Name(), schema.kind, schema.resolution, schema.accessor, schema.allowDynamic, schema.variantMode, parents, members, strings.Join(fields, ","), strings.Join(getters, ","), strings.Join(nestedNames, ",")))
+	}
+	for _, variable := range e.Variables() {
+		canonicalParts = append(canonicalParts, fmt.Sprintf("variable(%s:%s:%s:%s:%t)", variable.name, variable.context, variable.typ, variable.initial.String(), variable.constant))
+	}
+	e.mu.RLock()
+	pluginNames := make([]string, 0, len(e.aggregatePlugins))
+	pluginTypes := make(map[string]reflect.Type, len(e.aggregatePlugins))
+	pluginFactoryFlags := make(map[string]bool, len(e.aggregatePlugins))
+	for name, plugin := range e.aggregatePlugins {
+		pluginNames = append(pluginNames, name)
+		pluginTypes[name] = plugin.resultType
+		pluginFactoryFlags[name] = plugin.factory != nil
+	}
+	e.mu.RUnlock()
+	sort.Strings(pluginNames)
+	for _, name := range pluginNames {
+		canonicalParts = append(canonicalParts, fmt.Sprintf("aggregate-plugin(%s:%s:factory=%t)", name, pluginTypes[name], pluginFactoryFlags[name]))
+	}
+	for _, table := range e.Tables() {
+		columns := make([]string, 0, len(table.columns))
+		for _, column := range table.columns {
+			columns = append(columns, fmt.Sprintf("%s:%s:%t:%t", column.Name, column.Type, column.Optional, column.PrimaryKey))
+		}
+		indexes := make([]string, 0, len(table.indexes))
+		for _, index := range table.indexes {
+			indexes = append(indexes, fmt.Sprintf("%s:%s:%t", index.Name, strings.Join(index.Columns, ","), index.Unique))
+		}
+		canonicalParts = append(canonicalParts, "table("+table.name+":"+strings.Join(columns, ",")+":"+strings.Join(indexes, ",")+")")
+	}
+	for _, window := range e.NamedWindows() {
+		fields := make([]string, 0, len(window.schema.fields))
+		for _, field := range window.schema.fields {
+			fields = append(fields, fmt.Sprintf("%s:%s:%t:%t:%t", field.Name, field.Type, field.Optional, field.StartTimestamp, field.EndTimestamp))
+		}
+		canonicalParts = append(canonicalParts, "named-window("+window.name+":"+window.schema.Name()+":"+window.retention.description()+":"+strings.Join(fields, ",")+")")
+	}
+	for _, context := range e.Contexts() {
+		canonicalParts = append(canonicalParts, "context("+context.name+":"+context.description()+")")
+	}
+	for _, dataflow := range e.Dataflows() {
+		operators := make([]string, 0, len(dataflow.operators))
+		for _, operator := range dataflow.operators {
+			predicate := ""
+			if operator.Predicate != nil {
+				predicate = operator.Predicate.Description()
+			}
+			selections := make([]string, 0, len(operator.Selections))
+			for _, selection := range operator.Selections {
+				selections = append(selections, selection.description())
+			}
+			statement := ""
+			if operator.Statement != nil {
+				statement = operator.Statement.Name()
+			}
+			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s", operator.Name, operator.Kind, operator.EventType, predicate, strings.Join(selections, ","), statement))
+		}
+		edges := make([]string, 0, len(dataflow.edges))
+		for _, edge := range dataflow.edges {
+			edges = append(edges, fmt.Sprintf("%s:%s>%s:%s", edge.From, edge.FromPort, edge.To, edge.ToPort))
+		}
+		canonicalParts = append(canonicalParts, "dataflow("+dataflow.name+":"+strings.Join(operators, ",")+":edges("+strings.Join(edges, ",")+"))")
+	}
+	canonical := []byte(strings.Join(canonicalParts, "\n"))
+	digest := sha256.Sum256(canonical)
+	return Plan{
+		schemaVersion: planSchemaVersion,
+		canonical:     canonical,
+		hash:          hex.EncodeToString(digest[:]),
+		query:         query,
+		resultSchema:  resultSchema,
+	}, nil
+}
+
+func validateContextFieldScope(query Query) error {
+	return visitQueryExpressions(nil, query, func(expression Expr) error {
+		if expression != nil && (expressionContainsKind(expression.node(), "context-field") ||
+			expressionContainsKind(expression.node(), "context-pattern-event") ||
+			expressionContainsKind(expression.node(), "context-pattern-field")) {
+			return NewError(ErrorInvalidRule, "context fields require a statement context")
+		}
+		return nil
+	})
+}
+
+func (e *Environment) validateContextVariableScope(query Query) error {
+	return visitQueryExpressions(e, query, func(expression Expr) error {
+		if expression == nil || expression.node() == nil {
+			return nil
+		}
+		var names []string
+		expression.node().referencedVariables(&names)
+		for _, name := range names {
+			definition, ok := e.Variable(name)
+			if !ok || definition.context == "" {
+				continue
+			}
+			if query.contextName == "" {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("context variable %q can only be accessed within context %q", name, definition.context))
+			}
+			if query.contextName != definition.context {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("context variable %q belongs to context %q, not %q", name, definition.context, query.contextName))
+			}
+		}
+		return nil
+	})
+}
+
+func expressionContainsKind(node *exprNode, kind string) bool {
+	if node == nil {
+		return false
+	}
+	if node.kind == kind {
+		return true
+	}
+	for _, child := range node.children {
+		if expressionContainsKind(child, kind) {
+			return true
+		}
+	}
+	if node.subquery != nil {
+		if node.subquery.predicate != nil && expressionContainsKind(node.subquery.predicate.node(), kind) {
+			return true
+		}
+		if node.subquery.projection != nil && expressionContainsKind(node.subquery.projection.node(), kind) {
+			return true
+		}
+		for _, order := range node.subquery.orderBy {
+			if order.Expression != nil && expressionContainsKind(order.Expression.node(), kind) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (e *Environment) validateRoute(query Query) error {
+	if query.routeTarget == "" {
+		return nil
+	}
+	target, ok := e.Schema(query.routeTarget)
+	if !ok {
+		return NewError(ErrorUnknownName, fmt.Sprintf("route target %q is not registered", query.routeTarget))
+	}
+	if query.sourceLess || query.trigger != nil {
+		return fmt.Errorf("route target %q requires a stream or projection source", query.routeTarget)
+	}
+	if query.rowRecog != nil {
+		return fmt.Errorf("route target %q is not supported for match-recognize queries", query.routeTarget)
+	}
+	selections := append([]Selection(nil), query.selections...)
+	switch {
+	case query.aggregate != nil:
+		selections = append(selections, query.aggregate.selections...)
+	case query.join != nil:
+		for _, selection := range query.joinSelections {
+			selections = append(selections, Selection{Name: selection.Name, Expr: selection.Expr})
+		}
+	case query.pattern != nil:
+		selections = append(selections, query.patternSelections...)
+	}
+	if len(selections) == 0 {
+		if query.input == nil {
+			return fmt.Errorf("route target %q has no input source", query.routeTarget)
+		}
+		source, err := sourceNode(query.input)
+		if err != nil {
+			return err
+		}
+		sourceSchema, err := e.sourceSchema(source)
+		if err != nil {
+			return err
+		}
+		if target.kind == SchemaVariant && target.variantMode == VariantPredefined && sourceSchema.kind != SchemaVariant {
+			if !target.acceptsEventType(sourceSchema.Name()) {
+				return fmt.Errorf("source event type %q is not a member of predefined variant %q", sourceSchema.Name(), target.Name())
+			}
+		}
+		return nil
+	}
+	if target.kind == SchemaVariant && target.variantMode == VariantPredefined {
+		return fmt.Errorf("projected rows cannot route to predefined variant %q without a member identity", target.Name())
+	}
+	for index, selection := range selections {
+		if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+			return fmt.Errorf("route projection %d requires a name and expression", index)
+		}
+		field, exists := target.Field(selection.Name)
+		if !exists {
+			if target.kind == SchemaMap || target.kind == SchemaJSON || target.kind == SchemaXML || target.kind == SchemaAvro || target.IsVariantAny() {
+				continue
+			}
+			return fmt.Errorf("route projection %q is not a field of target schema %q", selection.Name, target.Name())
+		}
+		if field.Type != nil && field.Type != typeOf[any]() && selection.Expr.Type() != nil &&
+			!field.Type.AssignableTo(selection.Expr.Type()) && !selection.Expr.Type().AssignableTo(field.Type) && !numericTypes(field.Type, selection.Expr.Type()) {
+			return fmt.Errorf("route projection %q has type %s, target expects %s", selection.Name, selection.Expr.Type(), field.Type)
+		}
+	}
+	if target.kind == SchemaObjectArray && len(selections) != len(target.fields) {
+		return fmt.Errorf("object-array route target %q requires %d projections, got %d", target.Name(), len(target.fields), len(selections))
+	}
+	return nil
+}
+
+func (e *Environment) validateContext(definition ContextDefinition, node *streamNode) error {
+	if node == nil {
+		return fmt.Errorf("context requires a source stream")
+	}
+	if definition.parent != nil {
+		if definition.parent.kind == ContextInitiatedTerminated {
+			return fmt.Errorf("initiated-terminated parent contexts cannot be nested")
+		}
+		if definition.kind == ContextInitiatedTerminated && definition.startPattern != nil {
+			return fmt.Errorf("pattern initiated children are not supported in nested contexts")
+		}
+		if definition.isTemporal() || definition.parent.isTemporal() {
+			return fmt.Errorf("temporal contexts cannot be nested")
+		}
+		if err := e.validateContext(*definition.parent, node); err != nil {
+			return fmt.Errorf("parent context: %w", err)
+		}
+	}
+	switch definition.kind {
+	case ContextKeySegmented, ContextHashSegmented, ContextInitiatedTerminated:
+		if definition.kind == ContextInitiatedTerminated && definition.startPattern != nil {
+			if definition.patternEnvironment != nil && definition.patternEnvironment != e {
+				return NewError(ErrorDependency, "pattern context belongs to a different environment")
+			}
+			if err := e.validateContextPattern(definition.startPattern, "start"); err != nil {
+				return err
+			}
+			if definition.endPattern != nil {
+				if err := e.validateContextPattern(definition.endPattern, "end"); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		keys := definition.contextKeys()
+		if len(keys) == 0 {
+			return fmt.Errorf("context key expression is required")
+		}
+		for index, key := range keys {
+			var err error
+			if definition.kind == ContextInitiatedTerminated {
+				err = e.validateContextLifecycleExpression(key)
+			} else {
+				err = e.validateExprFields(node, key)
+			}
+			if err != nil {
+				return fmt.Errorf("context key %d: %w", index+1, err)
+			}
+		}
+		if definition.kind == ContextInitiatedTerminated {
+			if definition.start == nil || definition.start.Type() != typeOf[bool]() {
+				return fmt.Errorf("initiated-terminated context requires a bool start expression")
+			}
+			if err := e.validateContextLifecycleExpression(definition.start); err != nil {
+				return fmt.Errorf("context start: %w", err)
+			}
+			if definition.end != nil {
+				if definition.end.Type() != typeOf[bool]() {
+					return fmt.Errorf("initiated-terminated context requires a bool end expression")
+				}
+				if err := e.validateContextLifecycleExpression(definition.end); err != nil {
+					return fmt.Errorf("context end: %w", err)
+				}
+			}
+		}
+		if definition.kind == ContextHashSegmented && definition.partitions <= 0 {
+			return fmt.Errorf("hash context partitions must be positive")
+		}
+	case ContextCategorySegmented:
+		if len(definition.categories) == 0 {
+			return fmt.Errorf("category context requires categories")
+		}
+		for _, category := range definition.categories {
+			if category.predicate == nil || category.predicate.Type() != typeOf[bool]() {
+				return fmt.Errorf("category %q requires a bool predicate", category.name)
+			}
+			if err := e.validateExprFields(node, category.predicate); err != nil {
+				return fmt.Errorf("category %q: %w", category.name, err)
+			}
+		}
+	case ContextTimePeriod:
+		if definition.temporalStartAfter < 0 || definition.temporalActiveFor <= 0 {
+			return fmt.Errorf("temporal context requires non-negative start delay and positive active duration")
+		}
+	case ContextDailyTime:
+		if !definition.dailyStart.valid() || !definition.dailyEnd.valid() || definition.dailyStart.duration() == definition.dailyEnd.duration() {
+			return fmt.Errorf("daily temporal context requires distinct valid start and end times")
+		}
+	case ContextCronTime:
+		if definition.cronStart == nil || definition.cronEnd == nil || definition.cronStartResolved == nil || definition.cronEndResolved == nil {
+			return fmt.Errorf("cron temporal context requires valid start and end schedules")
+		}
+	default:
+		return fmt.Errorf("unknown context kind %d", definition.kind)
+	}
+	return nil
+}
+
+func (e *Environment) validateContextPattern(definition *patternDefinition, label string) error {
+	if definition == nil {
+		return fmt.Errorf("context %s pattern is required", label)
+	}
+	if err := validatePattern(definition); err != nil {
+		return fmt.Errorf("context %s pattern: %w", label, err)
+	}
+	if err := e.validateNode(definition.input); err != nil {
+		return fmt.Errorf("context %s pattern source: %w", label, err)
+	}
+	if definition.guard != nil {
+		if err := e.validateExprFields(definition.input, definition.guard); err != nil {
+			return fmt.Errorf("context %s pattern guard: %w", label, err)
+		}
+	}
+	if err := e.validatePatternNodeFields(definition.input, definition.root); err != nil {
+		return fmt.Errorf("context %s pattern: %w", label, err)
+	}
+	return nil
+}
+
+// validateContextLifecycleExpression validates the expression tree without
+// binding its event fields to the statement source. Initiated-terminated
+// contexts may be started and terminated by event types different from the
+// stream consumed by a context statement; runtime evaluation supplies the
+// incoming lifecycle event and the partition's captured context properties.
+func (e *Environment) validateContextLifecycleExpression(expression Expr) error {
+	if expression == nil {
+		return fmt.Errorf("esper: nil expression")
+	}
+	if err := validateMethodNodes(expression.node()); err != nil {
+		return err
+	}
+	if err := e.validateExprVariables(expression); err != nil {
+		return err
+	}
+	return e.validateExpressionSubqueries(expression.node())
+}
+
+func (e *Environment) validateQueryModifiers(query Query) error {
+	if query.limit < 0 || query.offset < 0 {
+		return fmt.Errorf("limit and offset cannot be negative")
+	}
+	if query.rowRecog != nil && query.output.Kind == OutputSnapshotPolicy {
+		return fmt.Errorf("snapshot output is not yet supported for match-recognize queries")
+	}
+	if query.rowRecog != nil && query.selector != SelectIStream {
+		return fmt.Errorf("remove-stream selection is not yet supported for match-recognize queries")
+	}
+	for index, key := range query.orderBy {
+		if key.Expr == nil {
+			return fmt.Errorf("order-by key %d is nil", index)
+		}
+		if query.rowRecog != nil {
+			node := key.Expr.node()
+			if node == nil || node.kind != "result-field" {
+				return fmt.Errorf("order-by key %d for match-recognize must use ResultField", index)
+			}
+			known := false
+			for _, selection := range query.patternSelections {
+				if selection.Name == node.fieldName {
+					known = true
+					break
+				}
+			}
+			if !known {
+				return NewError(ErrorUnknownName, fmt.Sprintf("order-by key %d references unknown match-recognize measure %q", index, node.fieldName))
+			}
+			continue
+		}
+		if query.sourceLess || (query.join != nil && query.aggregate == nil) || query.pattern != nil {
+			return fmt.Errorf("order-by is not yet supported for source-less, join, or pattern queries")
+		}
+		if query.aggregate != nil && key.Expr.node() != nil && key.Expr.node().kind == "result-field" {
+			known := false
+			for _, selection := range query.aggregate.selections {
+				if selection.Name == key.Expr.node().fieldName {
+					known = true
+					break
+				}
+			}
+			if !known {
+				return NewError(ErrorUnknownName, fmt.Sprintf("order-by key %d references unknown aggregate result %q", index, key.Expr.node().fieldName))
+			}
+			continue
+		}
+		input := query.input
+		if query.aggregate != nil {
+			input = query.aggregate.input
+		}
+		var err error
+		if query.aggregate != nil && query.aggregate.join != nil {
+			err = e.validateJoinAggregateFields(query.aggregate.join, key.Expr)
+		} else {
+			err = e.validateExprFields(input, key.Expr)
+		}
+		if err != nil {
+			return fmt.Errorf("order-by key %d: %w", index, err)
+		}
+	}
+	return nil
+}
+
+func (e *Environment) validateNode(node *streamNode) error {
+	if node == nil {
+		return fmt.Errorf("esper: nil stream node")
+	}
+	switch node.kind {
+	case streamSource:
+		schema, ok := e.Schema(node.sourceName)
+		if !ok {
+			return fmt.Errorf("esper: source %q has no registered schema", node.sourceName)
+		}
+		if node.sourceType != nil && node.sourceType != typeOf[any]() && schema.GoType() != nil {
+			if !node.sourceType.AssignableTo(schema.GoType()) && !schema.GoType().AssignableTo(node.sourceType) {
+				return fmt.Errorf("esper: source %q expects Go type %s, schema exposes %s", node.sourceName, node.sourceType, schema.GoType())
+			}
+		}
+		return nil
+	case streamNamedWindow:
+		definition, ok := e.NamedWindow(node.sourceName)
+		if !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", node.sourceName))
+		}
+		if node.sourceType != nil && node.sourceType != typeOf[any]() && definition.schema.GoType() != nil {
+			if !node.sourceType.AssignableTo(definition.schema.GoType()) && !definition.schema.GoType().AssignableTo(node.sourceType) {
+				return NewError(ErrorTypeMismatch, fmt.Sprintf("named window %q expects Go type %s, schema exposes %s", node.sourceName, node.sourceType, definition.schema.GoType()))
+			}
+		}
+		return nil
+	case streamTable:
+		definition, ok := e.Table(node.sourceName)
+		if !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", node.sourceName))
+		}
+		if node.sourceType != nil && node.sourceType != typeOf[any]() && definition.schema.GoType() != nil {
+			if !node.sourceType.AssignableTo(definition.schema.GoType()) && !definition.schema.GoType().AssignableTo(node.sourceType) {
+				return NewError(ErrorTypeMismatch, fmt.Sprintf("table %q expects Go type %s, schema exposes %s", node.sourceName, node.sourceType, definition.schema.GoType()))
+			}
+		}
+		return nil
+	case streamHistorical:
+		if node.historical == nil || node.historical.provider == nil {
+			return NewError(ErrorDependency, fmt.Sprintf("historical source %q has no provider", node.sourceName))
+		}
+		if !node.historical.schema.valid() {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("historical source %q has no schema", node.sourceName))
+		}
+		if node.historical.trigger != "" {
+			if _, ok := e.Schema(node.historical.trigger); !ok {
+				return NewError(ErrorUnknownName, fmt.Sprintf("historical source %q references unknown trigger type %q", node.sourceName, node.historical.trigger))
+			}
+		}
+		if node.sourceType != nil && node.sourceType != typeOf[any]() && node.historical.schema.GoType() != nil {
+			if !node.sourceType.AssignableTo(node.historical.schema.GoType()) && !node.historical.schema.GoType().AssignableTo(node.sourceType) {
+				return NewError(ErrorTypeMismatch, fmt.Sprintf("historical source %q expects Go type %s, schema exposes %s", node.sourceName, node.sourceType, node.historical.schema.GoType()))
+			}
+		}
+		return nil
+	case streamFilter:
+		if node.predicate == nil {
+			return fmt.Errorf("esper: filter predicate is required")
+		}
+		if node.predicate.Type() != typeOf[bool]() {
+			return fmt.Errorf("esper: filter predicate must return bool, got %s", node.predicate.Type())
+		}
+		if err := e.validateNode(node.input); err != nil {
+			return err
+		}
+		return e.validateExprFields(node.input, node.predicate)
+	case streamWindow:
+		if node.window == nil {
+			return fmt.Errorf("esper: window specification is required")
+		}
+		if err := node.window.validate(); err != nil {
+			return err
+		}
+		if unique, ok := node.window.(UniqueWindowSpec); ok {
+			if err := e.validateNode(node.input); err != nil {
+				return err
+			}
+			for _, key := range unique.keyExpressions() {
+				if err := e.validateExprFields(node.input, key); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		if external, ok := node.window.(ExternallyTimedWindowSpec); ok {
+			if err := e.validateNode(node.input); err != nil {
+				return err
+			}
+			return e.validateExprFields(node.input, external.Timestamp)
+		}
+		if ordered, ok := node.window.(TimeOrderWindowSpec); ok {
+			if err := e.validateNode(node.input); err != nil {
+				return err
+			}
+			return e.validateExprFields(node.input, ordered.Timestamp)
+		}
+		if sortedWindow, ok := node.window.(SortedWindowSpec); ok {
+			if err := e.validateNode(node.input); err != nil {
+				return err
+			}
+			for _, key := range sortedWindow.UniqueKeys {
+				if err := e.validateExprFields(node.input, key); err != nil {
+					return err
+				}
+			}
+			for _, key := range sortedWindow.Keys {
+				if err := e.validateExprFields(node.input, key.Expr); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		return e.validateNode(node.input)
+	default:
+		return fmt.Errorf("esper: unknown stream node kind %d", node.kind)
+	}
+}
+
+func (e *Environment) validateExprFields(input *streamNode, expression Expr) error {
+	if expression == nil {
+		return fmt.Errorf("esper: nil expression")
+	}
+	if err := validateMethodNodes(expression.node()); err != nil {
+		return err
+	}
+	if err := e.validateExprVariables(expression); err != nil {
+		return err
+	}
+	var fields []string
+	expression.node().referencedFields(&fields)
+	source, err := sourceNode(input)
+	if err != nil {
+		return err
+	}
+	schema, err := e.sourceSchema(source)
+	if err != nil {
+		return err
+	}
+	for _, name := range fields {
+		field, exists := schema.Field(name)
+		if !exists {
+			return fmt.Errorf("esper: expression references unknown field %q on schema %q", name, schema.Name())
+		}
+		expressionType := expressionFieldType(expression.node(), name)
+		if expressionType != nil && field.Type != nil && field.Type != typeOf[any]() {
+			if !field.Type.AssignableTo(expressionType) && !expressionType.AssignableTo(field.Type) && !numericTypes(field.Type, expressionType) {
+				return fmt.Errorf("esper: field %q has type %s, expression expects %s", name, field.Type, expressionType)
+			}
+		}
+	}
+	return e.validateExpressionSubqueries(expression.node())
+}
+
+func validateMethodNodes(node *exprNode) error {
+	if node == nil {
+		return nil
+	}
+	if node.kind == "method" && strings.TrimSpace(node.methodName) == "" {
+		return NewError(ErrorInvalidRule, "method name is required")
+	}
+	for _, child := range node.children {
+		if err := validateMethodNodes(child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e *Environment) validateExpressionSubqueries(node *exprNode) error {
+	if node == nil {
+		return nil
+	}
+	if node.subquery != nil {
+		if err := e.validateSubquery(node.subquery); err != nil {
+			return err
+		}
+	}
+	for _, child := range node.children {
+		if err := e.validateExpressionSubqueries(child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
+	if definition == nil || definition.source == nil {
+		return NewError(ErrorInvalidRule, "subquery source is required")
+	}
+	if definition.quantified && definition.comparison > SubqueryLessOrEqual {
+		return NewError(ErrorInvalidRule, "subquery comparison operator is invalid")
+	}
+	if definition.cardinality > SubqueryRequireSingle {
+		return NewError(ErrorInvalidRule, "subquery cardinality mode is invalid")
+	}
+	if definition.offset < 0 {
+		return NewError(ErrorInvalidRule, "subquery offset cannot be negative")
+	}
+	if definition.limitSet && definition.limit < 0 {
+		return NewError(ErrorInvalidRule, "subquery limit cannot be negative")
+	}
+	base, err := sourceNode(definition.source)
+	if err != nil {
+		return err
+	}
+	if base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical {
+		return NewError(ErrorInvalidRule, "subquery source must be a named window, table, or historical source")
+	}
+	if err := e.validateNode(definition.source); err != nil {
+		return err
+	}
+	if definition.predicate != nil {
+		if definition.predicate.Type() != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "subquery predicate must return bool")
+		}
+		if err := e.validateExprFields(definition.source, definition.predicate); err != nil {
+			return WrapError(ErrorInvalidRule, "subquery predicate", err)
+		}
+	}
+	if definition.projection != nil {
+		if err := e.validateExprFields(definition.source, definition.projection); err != nil {
+			return WrapError(ErrorInvalidRule, "subquery projection", err)
+		}
+	}
+	for index, order := range definition.orderBy {
+		if order.Expression == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("subquery order key %d is nil", index))
+		}
+		if err := e.validateExprFields(definition.source, order.Expression); err != nil {
+			return WrapError(ErrorInvalidRule, fmt.Sprintf("subquery order key %d", index), err)
+		}
+	}
+	return nil
+}
+
+// validateTriggerTargetExpression validates an expression that may read both
+// the incoming trigger event and one candidate state row. Ordinary Field
+// nodes resolve against input; targetKind nodes resolve against targetSchema.
+func (e *Environment) validateTriggerTargetExpression(input *streamNode, targetSchema Schema, expression Expr, targetKind string) error {
+	if expression == nil {
+		return NewError(ErrorInvalidRule, "trigger expression is nil")
+	}
+	if err := e.validateExprVariables(expression); err != nil {
+		return err
+	}
+	if err := e.validateExprFields(input, expression); err != nil {
+		return err
+	}
+	var fields []string
+	expression.node().referencedTargetFields(targetKind, &fields)
+	for _, name := range fields {
+		field, exists := targetSchema.Field(name)
+		if !exists {
+			return fmt.Errorf("expression references unknown target field %q on schema %q", name, targetSchema.Name())
+		}
+		expressionType := expressionTargetFieldType(expression.node(), targetKind, name)
+		if expressionType != nil && field.Type != nil && field.Type != typeOf[any]() {
+			if !field.Type.AssignableTo(expressionType) && !expressionType.AssignableTo(field.Type) && !numericTypes(field.Type, expressionType) {
+				return fmt.Errorf("target field %q has type %s, expression expects %s", name, field.Type, expressionType)
+			}
+		}
+	}
+	return nil
+}
+
+func (e *Environment) sourceSchema(source *streamNode) (Schema, error) {
+	if source == nil {
+		return Schema{}, NewError(ErrorDependency, "nil source")
+	}
+	if source.kind == streamNamedWindow {
+		definition, ok := e.NamedWindow(source.sourceName)
+		if !ok {
+			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
+		}
+		return definition.schema, nil
+	}
+	if source.kind == streamTable {
+		definition, ok := e.Table(source.sourceName)
+		if !ok {
+			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", source.sourceName))
+		}
+		return definition.schema, nil
+	}
+	if source.kind == streamHistorical {
+		if source.historical == nil || !source.historical.schema.valid() {
+			return Schema{}, NewError(ErrorDependency, fmt.Sprintf("historical source %q has no schema", source.sourceName))
+		}
+		return source.historical.schema, nil
+	}
+	schema, ok := e.Schema(source.sourceName)
+	if !ok {
+		return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("source %q has no registered schema", source.sourceName))
+	}
+	return schema, nil
+}
+
+func (e *Environment) validateExprVariables(expression Expr) error {
+	if expression == nil || expression.node() == nil {
+		return fmt.Errorf("esper: nil expression")
+	}
+	var variables []string
+	expression.node().referencedVariables(&variables)
+	for _, name := range variables {
+		definition, exists := e.Variable(name)
+		if !exists {
+			return NewError(ErrorUnknownName, fmt.Sprintf("expression references unknown variable %q", name))
+		}
+		expressionType := expressionVariableType(expression.node(), name)
+		if expressionType == nil || definition.typ == nil || definition.typ == typeOf[any]() || expressionType == typeOf[any]() {
+			continue
+		}
+		if !definition.typ.AssignableTo(expressionType) && !expressionType.AssignableTo(definition.typ) && !numericTypes(definition.typ, expressionType) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("variable %q has type %s, expression expects %s", name, definition.typ, expressionType))
+		}
+	}
+	return nil
+}
+
+func requiredQueryParameters(environment *Environment, query Query) []string {
+	parameterTypes, err := queryParameterTypes(environment, query)
+	if err != nil {
+		return nil
+	}
+	result := make([]string, 0, len(parameterTypes))
+	for name := range parameterTypes {
+		result = append(result, name)
+	}
+	sort.Strings(result)
+	return result
+}
+
+func queryParameterTypes(environment *Environment, query Query) (map[string]reflect.Type, error) {
+	parameterTypes := make(map[string]reflect.Type)
+	visit := func(expression Expr) error {
+		return collectExpressionParameterTypes(expression, parameterTypes)
+	}
+	if err := visitQueryExpressions(environment, query, visit); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(query.contextName) != "" && environment != nil {
+		if definition, ok := environment.Context(query.contextName); ok {
+			definitionCopy := definition
+			if err := visitContextDefinitionExpressions(&definitionCopy, visit, make(map[*ContextDefinition]struct{})); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return parameterTypes, nil
+}
+
+func visitContextDefinitionExpressions(definition *ContextDefinition, visit func(Expr) error, visited map[*ContextDefinition]struct{}) error {
+	if definition == nil {
+		return nil
+	}
+	if _, exists := visited[definition]; exists {
+		return nil
+	}
+	visited[definition] = struct{}{}
+	for _, key := range definition.keys {
+		if err := visit(key); err != nil {
+			return err
+		}
+	}
+	if len(definition.keys) == 0 {
+		if err := visit(definition.key); err != nil {
+			return err
+		}
+	}
+	for _, category := range definition.categories {
+		if err := visit(category.predicate); err != nil {
+			return err
+		}
+	}
+	if err := visit(definition.start); err != nil {
+		return err
+	}
+	if err := visit(definition.end); err != nil {
+		return err
+	}
+	if err := visitCronScheduleExpressions(definition.cronStart, visit); err != nil {
+		return err
+	}
+	if err := visitCronScheduleExpressions(definition.cronEnd, visit); err != nil {
+		return err
+	}
+	for _, pattern := range []*patternDefinition{definition.startPattern, definition.endPattern} {
+		if err := visitPatternDefinitionExpressions(pattern, visit); err != nil {
+			return err
+		}
+	}
+	return visitContextDefinitionExpressions(definition.parent, visit, visited)
+}
+
+func visitPatternDefinitionExpressions(definition *patternDefinition, visit func(Expr) error) error {
+	if definition == nil {
+		return nil
+	}
+	if err := visitStreamNodeExpressions(definition.input, visit); err != nil {
+		return err
+	}
+	for _, step := range definition.steps {
+		if err := visit(step.predicate); err != nil {
+			return err
+		}
+	}
+	if err := visit(definition.everyDistinct); err != nil {
+		return err
+	}
+	if err := visit(definition.guard); err != nil {
+		return err
+	}
+	return visitPatternNodeExpressions(definition.root, visit)
+}
+
+func visitQueryExpressions(environment *Environment, query Query, visit func(Expr) error) error {
+	if err := visitCronScheduleExpressions(query.output.Cron, visit); err != nil {
+		return err
+	}
+	if err := visit(query.output.When); err != nil {
+		return err
+	}
+	for _, assignment := range query.output.Then {
+		if err := visit(assignment.Expr); err != nil {
+			return err
+		}
+	}
+	if err := visitStreamNodeExpressions(query.input, visit); err != nil {
+		return err
+	}
+	if err := visitSelectionsExpressions(query.selections, visit); err != nil {
+		return err
+	}
+	if err := visitSortExpressions(query.orderBy, visit); err != nil {
+		return err
+	}
+	if query.aggregate != nil {
+		if err := visitStreamNodeExpressions(query.aggregate.input, visit); err != nil {
+			return err
+		}
+		for _, expression := range query.aggregate.groupBy {
+			if err := visit(expression); err != nil {
+				return err
+			}
+		}
+		if err := visitSelectionsExpressions(query.aggregate.selections, visit); err != nil {
+			return err
+		}
+		if err := visit(query.aggregate.having); err != nil {
+			return err
+		}
+	}
+	if query.join != nil {
+		for _, source := range joinDefinitionSources(query.join) {
+			if err := visitStreamNodeExpressions(source, visit); err != nil {
+				return err
+			}
+		}
+		for _, condition := range joinDefinitionConditions(query.join) {
+			if err := visitJoinConditionExpressions(condition, visit); err != nil {
+				return err
+			}
+		}
+		for _, selection := range query.joinSelections {
+			if err := visit(selection.Expr); err != nil {
+				return err
+			}
+		}
+	}
+	if query.pattern != nil {
+		if err := visitStreamNodeExpressions(query.pattern.input, visit); err != nil {
+			return err
+		}
+		for _, step := range query.pattern.steps {
+			if err := visit(step.predicate); err != nil {
+				return err
+			}
+		}
+		if err := visit(query.pattern.everyDistinct); err != nil {
+			return err
+		}
+		if err := visit(query.pattern.guard); err != nil {
+			return err
+		}
+		if err := visitPatternNodeExpressions(query.pattern.root, visit); err != nil {
+			return err
+		}
+		if err := visitSelectionsExpressions(query.patternSelections, visit); err != nil {
+			return err
+		}
+	}
+	if query.rowRecog != nil {
+		if err := visitStreamNodeExpressions(query.rowRecog.input, visit); err != nil {
+			return err
+		}
+		names := make([]string, 0, len(query.rowRecog.defines))
+		for name := range query.rowRecog.defines {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			if err := visit(query.rowRecog.defines[name]); err != nil {
+				return err
+			}
+		}
+		for _, expression := range query.rowRecog.partition {
+			if err := visit(expression); err != nil {
+				return err
+			}
+		}
+		if err := visitSelectionsExpressions(query.patternSelections, visit); err != nil {
+			return err
+		}
+	}
+	if query.trigger != nil {
+		if err := visitStreamNodeExpressions(query.trigger.input, visit); err != nil {
+			return err
+		}
+		if err := visit(query.trigger.where); err != nil {
+			return err
+		}
+		for _, expression := range query.trigger.keys {
+			if err := visit(expression); err != nil {
+				return err
+			}
+		}
+		for _, assignment := range query.trigger.assignments {
+			if err := visit(assignment.Expr); err != nil {
+				return err
+			}
+		}
+		for _, assignment := range query.trigger.variableAssignments {
+			if err := visit(assignment.Expr); err != nil {
+				return err
+			}
+		}
+		for _, clause := range query.trigger.merge {
+			if err := visit(clause.Condition); err != nil {
+				return err
+			}
+			for _, assignment := range clause.Assignments {
+				if err := visit(assignment.Expr); err != nil {
+					return err
+				}
+			}
+		}
+		if err := visitSelectionsExpressions(query.trigger.selections, visit); err != nil {
+			return err
+		}
+	}
+	if environment != nil && query.contextName != "" {
+		if definition, ok := environment.Context(query.contextName); ok {
+			for current := &definition; current != nil; current = current.parent {
+				for _, key := range current.contextKeys() {
+					if err := visit(key); err != nil {
+						return err
+					}
+				}
+				if err := visit(current.start); err != nil {
+					return err
+				}
+				if err := visit(current.end); err != nil {
+					return err
+				}
+				for _, category := range current.categories {
+					if err := visit(category.predicate); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func visitSelectionsExpressions(selections []Selection, visit func(Expr) error) error {
+	for _, selection := range selections {
+		if err := visit(selection.Expr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func visitSortExpressions(keys []SortKey, visit func(Expr) error) error {
+	for _, key := range keys {
+		if err := visit(key.Expr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func visitJoinConditionExpressions(condition JoinCondition, visit func(Expr) error) error {
+	for _, child := range condition.all {
+		if err := visitJoinConditionExpressions(child, visit); err != nil {
+			return err
+		}
+	}
+	for _, child := range condition.any {
+		if err := visitJoinConditionExpressions(child, visit); err != nil {
+			return err
+		}
+	}
+	if err := visit(condition.Left); err != nil {
+		return err
+	}
+	return visit(condition.Right)
+}
+
+func visitPatternNodeExpressions(node *patternNode, visit func(Expr) error) error {
+	if node == nil {
+		return nil
+	}
+	if err := visit(node.predicate); err != nil {
+		return err
+	}
+	if err := visit(node.everyExpr); err != nil {
+		return err
+	}
+	if err := visit(node.durationExpr); err != nil {
+		return err
+	}
+	if err := visitCronScheduleExpressions(node.cron, visit); err != nil {
+		return err
+	}
+	if err := visitPatternNodeExpressions(node.left, visit); err != nil {
+		return err
+	}
+	if err := visitPatternNodeExpressions(node.right, visit); err != nil {
+		return err
+	}
+	return visitPatternNodeExpressions(node.child, visit)
+}
+
+func visitStreamNodeExpressions(node *streamNode, visit func(Expr) error) error {
+	if node == nil {
+		return nil
+	}
+	if err := visit(node.predicate); err != nil {
+		return err
+	}
+	if err := visitWindowExpressions(node.window, visit); err != nil {
+		return err
+	}
+	return visitStreamNodeExpressions(node.input, visit)
+}
+
+func visitWindowExpressions(window WindowSpec, visit func(Expr) error) error {
+	switch value := window.(type) {
+	case ExpressionWindowSpec:
+		return visit(value.Keep)
+	case ExpressionBatchWindowSpec:
+		return visit(value.Trigger)
+	case GroupWindowSpec:
+		if err := visit(value.Key); err != nil {
+			return err
+		}
+		return visitWindowExpressions(value.Inner, visit)
+	case CompositeWindowSpec:
+		for _, child := range value.Windows {
+			if err := visitWindowExpressions(child, visit); err != nil {
+				return err
+			}
+		}
+	case ExternallyTimedWindowSpec:
+		return visit(value.Timestamp)
+	case TimeOrderWindowSpec:
+		return visit(value.Timestamp)
+	case SortedWindowSpec:
+		for _, key := range value.UniqueKeys {
+			if err := visit(key); err != nil {
+				return err
+			}
+		}
+		return visitSortExpressions(value.Keys, visit)
+	case UniqueWindowSpec:
+		for _, key := range value.keyExpressions() {
+			if err := visit(key); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func collectExpressionParameterTypes(expression Expr, parameterTypes map[string]reflect.Type) error {
+	if expression == nil || expression.node() == nil {
+		return nil
+	}
+	var visit func(*exprNode) error
+	visit = func(node *exprNode) error {
+		if node == nil {
+			return nil
+		}
+		if node.kind == "parameter" {
+			name := strings.TrimSpace(node.parameterName)
+			if name == "" {
+				return fmt.Errorf("substitution parameter name cannot be blank")
+			}
+			if previous, exists := parameterTypes[name]; exists {
+				if !parameterTypesCompatible(previous, node.typ) {
+					return fmt.Errorf("parameter %q has incompatible type assignment between %s and %s", name, parameterTypeDescription(previous), parameterTypeDescription(node.typ))
+				}
+				if previous == typeOf[any]() && node.typ != typeOf[any]() {
+					parameterTypes[name] = node.typ
+				}
+			} else {
+				parameterTypes[name] = node.typ
+			}
+		}
+		for _, child := range node.children {
+			if err := visit(child); err != nil {
+				return err
+			}
+		}
+		if node.subquery != nil {
+			if err := collectExpressionParameterTypes(node.subquery.predicate, parameterTypes); err != nil {
+				return err
+			}
+			if err := collectExpressionParameterTypes(node.subquery.projection, parameterTypes); err != nil {
+				return err
+			}
+			for _, order := range node.subquery.orderBy {
+				if err := collectExpressionParameterTypes(order.Expression, parameterTypes); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	return visit(expression.node())
+}
+
+func parameterTypesCompatible(left, right reflect.Type) bool {
+	if left == nil || right == nil || left == typeOf[any]() || right == typeOf[any]() {
+		return true
+	}
+	return left == right
+}
+
+func parameterTypeDescription(typ reflect.Type) string {
+	if typ == nil || typ == typeOf[any]() {
+		return "any"
+	}
+	return typ.String()
+}
+
+func expressionFieldType(node *exprNode, fieldName string) reflect.Type {
+	if node == nil {
+		return nil
+	}
+	if (node.kind == "field" || node.kind == "tag-field" || node.kind == "tag-field-at") && node.fieldName == fieldName {
+		return node.typ
+	}
+	for _, child := range node.children {
+		if typ := expressionFieldType(child, fieldName); typ != nil {
+			return typ
+		}
+	}
+	return nil
+}
+
+func expressionTargetFieldType(node *exprNode, kind, fieldName string) reflect.Type {
+	if node == nil {
+		return nil
+	}
+	if node.kind == kind && node.fieldName == fieldName {
+		return node.typ
+	}
+	for _, child := range node.children {
+		if typ := expressionTargetFieldType(child, kind, fieldName); typ != nil {
+			return typ
+		}
+	}
+	return nil
+}
+
+func expressionVariableType(node *exprNode, variableName string) reflect.Type {
+	if node == nil {
+		return nil
+	}
+	if node.kind == "variable" && node.variableName == variableName {
+		return node.typ
+	}
+	for _, child := range node.children {
+		if typ := expressionVariableType(child, variableName); typ != nil {
+			return typ
+		}
+	}
+	return nil
+}
+
+func numericTypes(left, right reflect.Type) bool {
+	return isNumericType(left) && isNumericType(right)
+}
+
+func isNumericType(typ reflect.Type) bool {
+	if typ == nil {
+		return false
+	}
+	switch typ.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return false
+	}
+}
+
+func isIntegralType(typ reflect.Type) bool {
+	if typ == nil {
+		return false
+	}
+	switch typ.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	default:
+		return false
+	}
+}
+
+func sourceNode(node *streamNode) (*streamNode, error) {
+	for node != nil {
+		if node.kind == streamSource || node.kind == streamNamedWindow || node.kind == streamTable || node.kind == streamHistorical {
+			return node, nil
+		}
+		node = node.input
+	}
+	return nil, fmt.Errorf("esper: stream has no source")
+}
+
+func (e *Environment) resultSchema(query Query) (Schema, error) {
+	if query.trigger != nil && query.trigger.target == triggerTargetNamedWindow && query.trigger.action == triggerSelectTable {
+		window, ok := e.NamedWindow(query.trigger.table)
+		if !ok {
+			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown named window %q", query.trigger.table))
+		}
+		if len(query.selections) == 0 {
+			return window.schema, nil
+		}
+		fields := make([]FieldSpec, 0, len(query.selections))
+		seen := make(map[string]struct{}, len(query.selections))
+		for _, selection := range query.selections {
+			if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+				return Schema{}, NewError(ErrorInvalidRule, "named-window select requires a name and expression")
+			}
+			if _, exists := seen[selection.Name]; exists {
+				return Schema{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window select duplicates alias %q", selection.Name))
+			}
+			seen[selection.Name] = struct{}{}
+			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
+		}
+		return NewSchema("result:"+query.name, fields...)
+	}
+	if query.trigger != nil && query.trigger.target == triggerTargetNamedWindow && query.trigger.action != triggerSetVariables {
+		window, ok := e.NamedWindow(query.trigger.table)
+		if !ok {
+			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown named window %q", query.trigger.table))
+		}
+		return window.schema, nil
+	}
+	if query.trigger != nil && query.trigger.action == triggerSelectTable {
+		if len(query.selections) == 0 {
+			return Schema{}, NewError(ErrorInvalidRule, "table select requires at least one projection")
+		}
+		fields := make([]FieldSpec, 0, len(query.selections))
+		seen := make(map[string]struct{}, len(query.selections))
+		for _, selection := range query.selections {
+			if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+				return Schema{}, NewError(ErrorInvalidRule, "table select projection requires a name and expression")
+			}
+			if _, exists := seen[selection.Name]; exists {
+				return Schema{}, NewError(ErrorInvalidRule, fmt.Sprintf("table select duplicates alias %q", selection.Name))
+			}
+			seen[selection.Name] = struct{}{}
+			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
+		}
+		return NewSchema("result:"+query.name, fields...)
+	}
+	if query.trigger != nil && query.trigger.action != triggerSetVariables {
+		table, ok := e.Table(query.trigger.table)
+		if !ok {
+			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown table %q", query.trigger.table))
+		}
+		return table.schema, nil
+	}
+	if query.sourceLess {
+		fields := make([]FieldSpec, 0, len(query.selections))
+		for _, selection := range query.selections {
+			if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+				return Schema{}, NewError(ErrorInvalidRule, "source-less projection requires a name and expression")
+			}
+			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
+		}
+		return NewSchema("result:"+query.name, fields...)
+	}
+	if query.rowRecog != nil {
+		if len(query.patternSelections) == 0 {
+			return Schema{}, NewError(ErrorInvalidRule, "match-recognize requires at least one measure")
+		}
+		fields := make([]FieldSpec, 0, len(query.patternSelections))
+		seen := make(map[string]struct{}, len(query.patternSelections))
+		for _, selection := range query.patternSelections {
+			if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+				return Schema{}, NewError(ErrorInvalidRule, "match-recognize measure requires a name and expression")
+			}
+			if _, exists := seen[selection.Name]; exists {
+				return Schema{}, NewError(ErrorInvalidRule, fmt.Sprintf("match-recognize measure duplicates alias %q", selection.Name))
+			}
+			seen[selection.Name] = struct{}{}
+			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
+		}
+		return NewSchema("result:"+query.name, fields...)
+	}
+	if query.pattern != nil {
+		if len(query.patternSelections) == 0 {
+			return Schema{}, NewError(ErrorInvalidRule, "pattern requires at least one projection")
+		}
+		fields := make([]FieldSpec, 0, len(query.patternSelections))
+		seen := make(map[string]struct{}, len(query.patternSelections))
+		for _, selection := range query.patternSelections {
+			if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+				return Schema{}, NewError(ErrorInvalidRule, "pattern projection requires a name and expression")
+			}
+			if _, exists := seen[selection.Name]; exists {
+				return Schema{}, NewError(ErrorInvalidRule, fmt.Sprintf("pattern projection duplicates alias %q", selection.Name))
+			}
+			seen[selection.Name] = struct{}{}
+			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
+		}
+		return NewSchema("result:"+query.name, fields...)
+	}
+	if query.aggregate != nil {
+		if len(query.aggregate.selections) == 0 {
+			return Schema{}, NewError(ErrorInvalidRule, "aggregate requires at least one projection")
+		}
+		fields := make([]FieldSpec, 0, len(query.aggregate.selections))
+		seen := make(map[string]struct{}, len(query.aggregate.selections))
+		for _, selection := range query.aggregate.selections {
+			if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+				return Schema{}, NewError(ErrorInvalidRule, "aggregate projection requires a name and expression")
+			}
+			if _, exists := seen[selection.Name]; exists {
+				return Schema{}, NewError(ErrorInvalidRule, fmt.Sprintf("aggregate projection duplicates alias %q", selection.Name))
+			}
+			seen[selection.Name] = struct{}{}
+			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
+		}
+		return NewSchema("result:"+query.name, fields...)
+	}
+	if query.join != nil {
+		if len(query.joinSelections) == 0 {
+			return Schema{}, fmt.Errorf("esper: join requires at least one projection")
+		}
+		fields := make([]FieldSpec, 0, len(query.joinSelections))
+		seen := make(map[string]struct{}, len(query.joinSelections))
+		for _, selection := range query.joinSelections {
+			if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+				return Schema{}, fmt.Errorf("esper: join projection requires a name and expression")
+			}
+			if _, exists := seen[selection.Name]; exists {
+				return Schema{}, fmt.Errorf("esper: join projection duplicates alias %q", selection.Name)
+			}
+			seen[selection.Name] = struct{}{}
+			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
+		}
+		return NewSchema("result:"+query.name, fields...)
+	}
+	if len(query.selections) == 0 {
+		return Schema{}, nil
+	}
+	fields := make([]FieldSpec, 0, len(query.selections))
+	seen := make(map[string]struct{}, len(query.selections))
+	for _, selection := range query.selections {
+		if strings.TrimSpace(selection.Name) == "" {
+			return Schema{}, fmt.Errorf("esper: projection alias cannot be blank")
+		}
+		if selection.Expr == nil {
+			return Schema{}, fmt.Errorf("esper: projection %q has nil expression", selection.Name)
+		}
+		if _, exists := seen[selection.Name]; exists {
+			return Schema{}, fmt.Errorf("esper: projection duplicates alias %q", selection.Name)
+		}
+		seen[selection.Name] = struct{}{}
+		if err := e.validateExprFields(query.input, selection.Expr); err != nil {
+			return Schema{}, err
+		}
+		fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
+	}
+	return NewSchema("result:"+query.name, fields...)
+}
+
+func (e *Environment) validateJoin(definition *joinDefinition, selections []JoinSelection) error {
+	if definition == nil {
+		return fmt.Errorf("join definition is required")
+	}
+	sources := joinDefinitionSources(definition)
+	if len(sources) < 2 {
+		return fmt.Errorf("join requires at least two streams")
+	}
+	for index, source := range sources {
+		if source == nil {
+			return fmt.Errorf("join source %d is nil", index)
+		}
+		if err := e.validateNode(source); err != nil {
+			return fmt.Errorf("join source %d: %w", index, err)
+		}
+	}
+	conditions := joinDefinitionConditions(definition)
+	if len(conditions) == 0 {
+		return fmt.Errorf("join requires at least one condition")
+	}
+	for index, condition := range conditions {
+		if err := e.validateJoinCondition(condition, sources); err != nil {
+			return fmt.Errorf("join condition %d: %w", index, err)
+		}
+	}
+	for _, selection := range selections {
+		if selection.Expr == nil {
+			return fmt.Errorf("join projection %q has nil expression", selection.Name)
+		}
+		source := selection.sourceIndex()
+		if source < 0 || source >= len(sources) {
+			return fmt.Errorf("join projection %q references source %d, have %d sources", selection.Name, source, len(sources))
+		}
+		if err := e.validateExprFields(sources[source], selection.Expr); err != nil {
+			return fmt.Errorf("join source %d projection %q: %w", source, selection.Name, err)
+		}
+	}
+	return nil
+}
+
+func (e *Environment) validateJoinCondition(condition JoinCondition, sources []*streamNode) error {
+	if len(condition.all) > 0 && len(condition.any) > 0 {
+		return fmt.Errorf("condition cannot combine all and any")
+	}
+	if len(condition.all) > 0 || len(condition.any) > 0 {
+		children := condition.all
+		logic := "all"
+		if len(condition.any) > 0 {
+			children = condition.any
+			logic = "any"
+		}
+		if len(children) == 0 {
+			return fmt.Errorf("%s condition requires at least one child", logic)
+		}
+		for index, child := range children {
+			if err := e.validateJoinCondition(child, sources); err != nil {
+				return fmt.Errorf("%s child %d: %w", logic, index, err)
+			}
+		}
+		return nil
+	}
+	if condition.Left == nil || condition.Right == nil {
+		return fmt.Errorf("condition requires left and right expressions")
+	}
+	leftSource, rightSource := joinConditionSources(condition)
+	if leftSource < 0 || leftSource >= len(sources) || rightSource < 0 || rightSource >= len(sources) {
+		return fmt.Errorf("condition source indexes (%d,%d) are outside %d sources", leftSource, rightSource, len(sources))
+	}
+	if condition.Comparison > JoinGreaterOrEqual {
+		return fmt.Errorf("unknown join comparison %d", condition.Comparison)
+	}
+	if err := e.validateExprFields(sources[leftSource], condition.Left); err != nil {
+		return fmt.Errorf("left source %d: %w", leftSource, err)
+	}
+	if err := e.validateExprFields(sources[rightSource], condition.Right); err != nil {
+		return fmt.Errorf("right source %d: %w", rightSource, err)
+	}
+	return nil
+}
+
+func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
+	if definition == nil || (definition.input == nil && definition.join == nil) {
+		return NewError(ErrorInvalidRule, "aggregate requires a source")
+	}
+	if definition.join != nil {
+		if err := e.validateJoin(definition.join, nil); err != nil {
+			return err
+		}
+	} else if err := e.validateNode(definition.input); err != nil {
+		return err
+	}
+	validateFields := e.validateExprFields
+	if definition.join != nil {
+		validateFields = func(input *streamNode, expression Expr) error {
+			return e.validateJoinAggregateFields(definition.join, expression)
+		}
+	}
+	if err := validateAggregateGrouping(definition); err != nil {
+		return err
+	}
+	if definition.grouping != aggregateGroupingPlain {
+		for _, selection := range definition.selections {
+			if expressionTreeContainsLocalGroup(selection.Expr) {
+				return NewError(ErrorInvalidRule, "dimensional grouping cannot be combined with local group-by aggregate parameters")
+			}
+		}
+		if expressionTreeContainsLocalGroup(definition.having) {
+			return NewError(ErrorInvalidRule, "dimensional grouping cannot be combined with local group-by aggregate parameters")
+		}
+	}
+	for _, key := range definition.groupBy {
+		if key == nil {
+			return NewError(ErrorInvalidRule, "group-by expression is required")
+		}
+		if err := validateFields(definition.input, key); err != nil {
+			return err
+		}
+	}
+	if len(definition.selections) == 0 {
+		return NewError(ErrorInvalidRule, "aggregate requires at least one projection")
+	}
+	seen := make(map[string]struct{}, len(definition.selections))
+	for _, selection := range definition.selections {
+		if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+			return NewError(ErrorInvalidRule, "aggregate projection requires a name and expression")
+		}
+		if _, exists := seen[selection.Name]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("aggregate projection duplicates alias %q", selection.Name))
+		}
+		seen[selection.Name] = struct{}{}
+		if err := validateAggregateExpressionNodes(selection.Expr.node()); err != nil {
+			return err
+		}
+		if err := e.validateAggregatePluginNodes(selection.Expr.node()); err != nil {
+			return err
+		}
+		if err := validateFields(definition.input, selection.Expr); err != nil {
+			return err
+		}
+	}
+	if definition.having != nil {
+		if definition.having.Type() != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "having expression must return bool")
+		}
+		if err := validateAggregateExpressionNodes(definition.having.node()); err != nil {
+			return err
+		}
+		if err := e.validateAggregatePluginNodes(definition.having.node()); err != nil {
+			return err
+		}
+		if err := validateFields(definition.input, definition.having); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e *Environment) validateJoinAggregateFields(definition *joinDefinition, expression Expr) error {
+	if definition == nil || expression == nil {
+		return NewError(ErrorInvalidRule, "join aggregate expression is required")
+	}
+	if err := validateMethodNodes(expression.node()); err != nil {
+		return err
+	}
+	if err := e.validateExprVariables(expression); err != nil {
+		return err
+	}
+	sources := joinDefinitionSources(definition)
+	var visit func(*exprNode) error
+	visit = func(node *exprNode) error {
+		if node == nil {
+			return NewError(ErrorInvalidRule, "join aggregate expression contains a nil node")
+		}
+		switch node.kind {
+		case "join-field":
+			if node.joinSource < 0 || node.joinSource >= len(sources) {
+				return fmt.Errorf("join aggregate field %q references source %d, have %d sources", node.fieldName, node.joinSource, len(sources))
+			}
+			source, err := sourceNode(sources[node.joinSource])
+			if err != nil {
+				return err
+			}
+			schema, err := e.sourceSchema(source)
+			if err != nil {
+				return err
+			}
+			field, exists := schema.Field(node.fieldName)
+			if !exists {
+				return fmt.Errorf("join aggregate references unknown field %q on schema %q", node.fieldName, schema.Name())
+			}
+			if node.typ != nil && field.Type != nil && field.Type != typeOf[any]() &&
+				!field.Type.AssignableTo(node.typ) && !node.typ.AssignableTo(field.Type) && !numericTypes(field.Type, node.typ) {
+				return fmt.Errorf("join field %q has type %s, expression expects %s", node.fieldName, field.Type, node.typ)
+			}
+		case "join-event":
+			if node.joinSource < 0 || node.joinSource >= len(sources) {
+				return fmt.Errorf("join aggregate event references source %d, have %d sources", node.joinSource, len(sources))
+			}
+		case "field":
+			return NewError(ErrorInvalidRule, "join aggregate fields must use JoinField(source, name)")
+		}
+		for _, child := range node.children {
+			if err := visit(child); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := visit(expression.node()); err != nil {
+		return err
+	}
+	return e.validateExpressionSubqueries(expression.node())
+}
+
+func (e *Environment) validateIntoTable(query Query) error {
+	if strings.TrimSpace(query.tableTarget) == "" {
+		return nil
+	}
+	if query.aggregate == nil {
+		return NewError(ErrorInvalidRule, "into-table requires an aggregate query")
+	}
+	if query.contextName != "" {
+		return NewError(ErrorInvalidRule, "into-table does not yet support context-partitioned aggregate state")
+	}
+	definition, ok := e.Table(query.tableTarget)
+	if !ok {
+		return NewError(ErrorUnknownName, fmt.Sprintf("into-table target %q is not registered", query.tableTarget))
+	}
+	columns := definition.Columns()
+	columnByName := make(map[string]TableColumn, len(columns))
+	for _, column := range columns {
+		columnByName[column.Name] = column
+	}
+	selected := make(map[string]struct{}, len(query.aggregate.selections))
+	for _, selection := range query.aggregate.selections {
+		selected[selection.Name] = struct{}{}
+		column, exists := columnByName[selection.Name]
+		if !exists {
+			return NewError(ErrorUnknownName, fmt.Sprintf("aggregate projection %q is not a column of table %q", selection.Name, query.tableTarget))
+		}
+		if column.Type != nil && column.Type != typeOf[any]() && selection.Expr.Type() != nil &&
+			!column.Type.AssignableTo(selection.Expr.Type()) && !selection.Expr.Type().AssignableTo(column.Type) && !numericTypes(column.Type, selection.Expr.Type()) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("into-table column %q expects %s, aggregate returns %s", selection.Name, column.Type, selection.Expr.Type()))
+		}
+	}
+	for _, column := range columns {
+		if column.PrimaryKey || !column.Optional {
+			if _, exists := selected[column.Name]; !exists {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("into-table projection must provide required column %q", column.Name))
+			}
+		}
+	}
+	if len(query.aggregate.groupBy) > 0 && len(definition.PrimaryKey()) == 0 {
+		return NewError(ErrorInvalidRule, "grouped into-table aggregation requires a primary-key column")
+	}
+	return nil
+}
+
+func (e *Environment) validateAggregatePluginNodes(node *exprNode) error {
+	if node == nil {
+		return nil
+	}
+	if node.kind == "aggregate-plugin-ref" || node.kind == "aggregate-plugin-factory-ref" {
+		if node.pluginEnvironment == nil || node.pluginEnvironment != e {
+			return NewError(ErrorDependency, fmt.Sprintf("aggregate plugin %q belongs to a different environment", node.pluginName))
+		}
+		e.mu.RLock()
+		definition, ok := e.aggregatePlugins[node.pluginName]
+		e.mu.RUnlock()
+		if !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("aggregate plugin %q is not registered", node.pluginName))
+		}
+		if definition.resultType != nil && node.typ != nil && definition.resultType != node.typ &&
+			!definition.resultType.AssignableTo(node.typ) && !node.typ.AssignableTo(definition.resultType) && !numericTypes(definition.resultType, node.typ) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("aggregate plugin %q returns %s, expression expects %s", node.pluginName, definition.resultType, node.typ))
+		}
+		if node.kind == "aggregate-plugin-factory-ref" && definition.factory == nil {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("aggregate plugin %q is not a stateful factory", node.pluginName))
+		}
+		if node.kind == "aggregate-plugin-ref" && definition.evaluate == nil {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("aggregate plugin %q is not a callback evaluator", node.pluginName))
+		}
+	}
+	for _, child := range node.children {
+		if err := e.validateAggregatePluginNodes(child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateAggregateExpressionNodes(node *exprNode) error {
+	if node == nil {
+		return NewError(ErrorInvalidRule, "aggregate expression node is required")
+	}
+	if node.kind == "sorted-access" && (len(node.children) != 2 || node.children[0] == nil || node.children[1] == nil) {
+		return NewError(ErrorInvalidRule, "sorted access aggregate requires value and key expressions")
+	}
+	if strings.HasPrefix(node.kind, "sorted-access-") && (len(node.children) == 0 || node.children[0] == nil) {
+		return NewError(ErrorInvalidRule, "sorted access method requires a sorted access aggregate")
+	}
+	if node.kind == "window-access" && (len(node.children) != 1 || node.children[0] == nil) {
+		return NewError(ErrorInvalidRule, "window access aggregate requires a value expression")
+	}
+	if strings.HasPrefix(node.kind, "window-access-") && (len(node.children) == 0 || node.children[0] == nil) {
+		return NewError(ErrorInvalidRule, "window access method requires a window access aggregate")
+	}
+	if node.kind == "count-min-sketch" && (len(node.children) < 1 || len(node.children) > 2 || node.children[0] == nil || (len(node.children) == 2 && node.children[1] == nil)) {
+		return NewError(ErrorInvalidRule, "count-min-sketch requires a value and optional predicate")
+	}
+	if node.kind == "count-min-frequency" && (len(node.children) != 2 || node.children[0] == nil || node.children[1] == nil) {
+		return NewError(ErrorInvalidRule, "count-min-sketch frequency requires a sketch and key")
+	}
+	if node.kind == "count-min-total" && (len(node.children) != 1 || node.children[0] == nil) {
+		return NewError(ErrorInvalidRule, "count-min-sketch total requires a sketch")
+	}
+	if node.kind == "rate-timestamp" {
+		if len(node.children) < 1 || len(node.children) > 2 || node.children[0] == nil {
+			return NewError(ErrorInvalidRule, "timestamp rate requires a timestamp and optional predicate")
+		}
+		if node.children[0].typ != typeOf[any]() && !isIntegralType(node.children[0].typ) {
+			return NewError(ErrorTypeMismatch, "timestamp rate requires an integral timestamp expression")
+		}
+		if len(node.children) == 2 && (node.children[1] == nil || node.children[1].typ != typeOf[bool]()) {
+			return NewError(ErrorTypeMismatch, "timestamp rate filter predicate must return bool")
+		}
+	}
+	if node.kind == "rate" {
+		if len(node.children) > 1 || (len(node.children) == 1 && node.children[0] == nil) {
+			return NewError(ErrorInvalidRule, "rate accepts at most one boolean filter predicate")
+		}
+		if len(node.children) == 1 && node.children[0].typ != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "rate filter predicate must return bool")
+		}
+	}
+	if node.kind == "rate-quantity-timestamp" {
+		if len(node.children) < 2 || len(node.children) > 3 || node.children[0] == nil || node.children[1] == nil {
+			return NewError(ErrorInvalidRule, "quantity rate requires timestamp and quantity expressions")
+		}
+		if node.children[0].typ != typeOf[any]() && !isIntegralType(node.children[0].typ) {
+			return NewError(ErrorTypeMismatch, "quantity rate requires an integral timestamp expression")
+		}
+		if node.children[1].typ != typeOf[any]() && !isNumericType(node.children[1].typ) {
+			return NewError(ErrorTypeMismatch, "quantity rate requires a numeric quantity expression")
+		}
+		if len(node.children) == 3 && (node.children[2] == nil || node.children[2].typ != typeOf[bool]()) {
+			return NewError(ErrorTypeMismatch, "quantity rate filter predicate must return bool")
+		}
+	}
+	if node.kind == "leaving" {
+		if len(node.children) > 1 || (len(node.children) == 1 && node.children[0] == nil) {
+			return NewError(ErrorInvalidRule, "leaving accepts at most one boolean filter predicate")
+		}
+		if len(node.children) == 1 && node.children[0].typ != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "leaving filter predicate must return bool")
+		}
+	}
+	if node.kind == "aggregate-plugin" || node.kind == "aggregate-plugin-ref" || node.kind == "aggregate-plugin-factory" || node.kind == "aggregate-plugin-factory-ref" {
+		if strings.TrimSpace(node.pluginName) == "" {
+			return NewError(ErrorInvalidRule, "plugin aggregate name is required")
+		}
+		if (node.kind == "aggregate-plugin" || node.kind == "aggregate-plugin-factory") && !node.pluginReady {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("plugin aggregate %q has no evaluator", node.pluginName))
+		}
+		if (node.kind == "aggregate-plugin-factory" || node.kind == "aggregate-plugin-factory-ref") && len(node.children) > 1 {
+			return NewError(ErrorInvalidRule, "plugin aggregate factory accepts at most one input expression")
+		}
+	}
+	if node.kind == "aggregate-filter" {
+		if len(node.children) != 2 || node.children[0] == nil || node.children[1] == nil {
+			return NewError(ErrorInvalidRule, "filtered aggregate requires an aggregate and predicate")
+		}
+		if node.children[1].typ != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "filtered aggregate predicate must return bool")
+		}
+	}
+	if node.kind == "aggregate-local-group" {
+		if len(node.children) == 0 || node.children[0] == nil {
+			return NewError(ErrorInvalidRule, "local group aggregate requires an aggregate expression")
+		}
+		for index, child := range node.children[1:] {
+			if child == nil {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("local group key %d is nil", index))
+			}
+			if expressionNodeContainsAggregate(child) {
+				return NewError(ErrorInvalidRule, "local group key cannot contain an aggregate expression")
+			}
+		}
+	}
+	for _, child := range node.children {
+		if err := validateAggregateExpressionNodes(child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func expressionNodeContainsAggregate(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.kind == "sorted-access" || strings.HasPrefix(node.kind, "sorted-access-") || node.kind == "window-access" || strings.HasPrefix(node.kind, "window-access-") {
+		return true
+	}
+	switch node.kind {
+	case "aggregate-filter", "aggregate-local-group", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "sum", "avg", "min", "max", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
+		return true
+	}
+	for _, child := range node.children {
+		if expressionNodeContainsAggregate(child) {
+			return true
+		}
+	}
+	return false
+}
+
+func expressionTreeContainsLocalGroup(expression Expr) bool {
+	if expression == nil || expression.node() == nil {
+		return false
+	}
+	var visit func(*exprNode) bool
+	visit = func(node *exprNode) bool {
+		if node == nil {
+			return false
+		}
+		if node.kind == "aggregate-local-group" {
+			return true
+		}
+		for _, child := range node.children {
+			if visit(child) {
+				return true
+			}
+		}
+		return false
+	}
+	return visit(expression.node())
+}
+
+func validateAggregateGrouping(definition *aggregateDefinition) error {
+	if definition == nil {
+		return NewError(ErrorInvalidRule, "aggregate grouping is required")
+	}
+	if definition.grouping < aggregateGroupingPlain || definition.grouping > aggregateGroupingSets {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("unknown aggregate grouping mode %d", definition.grouping))
+	}
+	seenDimensions := make(map[string]struct{}, len(definition.groupBy))
+	for _, expression := range definition.groupBy {
+		if expression == nil {
+			continue
+		}
+		key := groupingExpressionKey(expression)
+		if _, exists := seenDimensions[key]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("aggregate grouping duplicates expression %q", expression.Description()))
+		}
+		seenDimensions[key] = struct{}{}
+	}
+	if definition.grouping == aggregateGroupingPlain {
+		if len(definition.groupingSets) != 0 {
+			return NewError(ErrorInvalidRule, "plain aggregate grouping cannot carry grouping sets")
+		}
+		return nil
+	}
+	if len(definition.groupBy) > 20 {
+		return NewError(ErrorInvalidRule, "aggregate grouping has too many dimensions")
+	}
+	if definition.grouping == aggregateGroupingSets && len(definition.groupingSets) == 0 {
+		return NewError(ErrorInvalidRule, "grouping sets requires at least one set")
+	}
+	if definition.grouping != aggregateGroupingSets && len(definition.groupingSets) != 0 {
+		return NewError(ErrorInvalidRule, "rollup/cube cannot carry explicit grouping sets")
+	}
+	if len(definition.groupBy) == 0 {
+		if definition.grouping == aggregateGroupingSets && len(definition.groupingSets) == 1 && len(definition.groupingSets[0]) == 0 {
+			return NewError(ErrorInvalidRule, "overall grouping cannot be the only grouping set")
+		}
+		return NewError(ErrorInvalidRule, "dimensional grouping requires at least one expression")
+	}
+	if definition.grouping != aggregateGroupingSets {
+		return nil
+	}
+	seenSets := make(map[string]struct{}, len(definition.groupingSets))
+	for setIndex, set := range definition.groupingSets {
+		canonical := append([]int(nil), set...)
+		sort.Ints(canonical)
+		parts := make([]string, 0, len(canonical))
+		seenInSet := make(map[int]struct{}, len(canonical))
+		for _, dimension := range canonical {
+			if dimension < 0 || dimension >= len(definition.groupBy) {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("grouping set %d references dimension %d outside %d dimensions", setIndex, dimension, len(definition.groupBy)))
+			}
+			if _, exists := seenInSet[dimension]; exists {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("grouping set %d duplicates dimension %d", setIndex, dimension))
+			}
+			seenInSet[dimension] = struct{}{}
+			parts = append(parts, fmt.Sprintf("%d", dimension))
+		}
+		key := strings.Join(parts, ",")
+		if _, exists := seenSets[key]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("grouping sets duplicates set %q", key))
+		}
+		seenSets[key] = struct{}{}
+	}
+	return nil
+}
+
+func (e *Environment) validateRowRecog(definition *rowRecogDefinition, selections []Selection) error {
+	if definition == nil || definition.input == nil {
+		return NewError(ErrorInvalidRule, "match-recognize requires a source")
+	}
+	if err := e.validateNode(definition.input); err != nil {
+		return err
+	}
+	if err := definition.pattern.validate("pattern"); err != nil {
+		return NewError(ErrorInvalidRule, err.Error())
+	}
+	variables := make(map[string]struct{})
+	rowPatternVariables(definition.pattern, variables)
+	if len(variables) == 0 {
+		return NewError(ErrorInvalidRule, "match-recognize pattern requires at least one variable")
+	}
+	for name, predicate := range definition.defines {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return NewError(ErrorInvalidRule, "match-recognize DEFINE name cannot be blank")
+		}
+		if _, exists := variables[name]; !exists {
+			return NewError(ErrorUnknownName, fmt.Sprintf("DEFINE references variable %q that is not present in the pattern", name))
+		}
+		if predicate == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("DEFINE %q has a nil predicate", name))
+		}
+		if predicate.Type() != nil && predicate.Type() != typeOf[bool]() && predicate.Type() != typeOf[any]() {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("DEFINE %q predicate must return bool", name))
+		}
+		if err := e.validateExprFields(definition.input, predicate); err != nil {
+			return fmt.Errorf("DEFINE %q: %w", name, err)
+		}
+		if err := validateRowRecogTags(predicate, variables); err != nil {
+			return fmt.Errorf("DEFINE %q: %w", name, err)
+		}
+	}
+	for index, key := range definition.partition {
+		if key == nil {
+			return fmt.Errorf("partition-by expression %d is nil", index)
+		}
+		if err := e.validateExprFields(definition.input, key); err != nil {
+			return fmt.Errorf("partition-by expression %d: %w", index, err)
+		}
+	}
+	if definition.maxStates < 0 {
+		return NewError(ErrorInvalidRule, "match-recognize max states cannot be negative")
+	}
+	if definition.interval < 0 {
+		return NewError(ErrorInvalidRule, "match-recognize interval cannot be negative")
+	}
+	if definition.intervalCalendar != nil {
+		period := definition.intervalCalendar
+		if period.Years < 0 || period.Months < 0 || period.Days < 0 {
+			return NewError(ErrorInvalidRule, "match-recognize calendar interval cannot be negative")
+		}
+		if period.Years == 0 && period.Months == 0 && period.Days == 0 {
+			return NewError(ErrorInvalidRule, "match-recognize calendar interval must be positive")
+		}
+	}
+	if definition.skip > RowRecogSkipToCurrentRow {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("unknown match-recognize skip strategy %d", definition.skip))
+	}
+	if len(selections) == 0 {
+		return NewError(ErrorInvalidRule, "match-recognize requires at least one measure")
+	}
+	seen := make(map[string]struct{}, len(selections))
+	for _, selection := range selections {
+		name := strings.TrimSpace(selection.Name)
+		if name == "" || selection.Expr == nil {
+			return NewError(ErrorInvalidRule, "match-recognize measure requires a name and expression")
+		}
+		if _, exists := seen[name]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("match-recognize measure duplicates alias %q", name))
+		}
+		seen[name] = struct{}{}
+		if err := e.validateExprFields(definition.input, selection.Expr); err != nil {
+			return fmt.Errorf("measure %q: %w", name, err)
+		}
+		if err := validateRowRecogTags(selection.Expr, variables); err != nil {
+			return fmt.Errorf("measure %q: %w", name, err)
+		}
+	}
+	return nil
+}
+
+func validateRowRecogTags(expression Expr, variables map[string]struct{}) error {
+	if expression == nil || expression.node() == nil {
+		return NewError(ErrorInvalidRule, "match-recognize expression is nil")
+	}
+	var tags []string
+	expression.node().referencedTags(&tags)
+	for _, tag := range tags {
+		if _, ok := variables[tag]; !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("match-recognize expression references unknown variable tag %q", tag))
+		}
+	}
+	return nil
+}
+
+func (e *Environment) validatePattern(definition *patternDefinition, selections []Selection) error {
+	if err := validatePattern(definition); err != nil {
+		return err
+	}
+	if err := e.validateNode(definition.input); err != nil {
+		return err
+	}
+	if definition.guard != nil {
+		if err := e.validateExprFields(definition.input, definition.guard); err != nil {
+			return fmt.Errorf("pattern while guard: %w", err)
+		}
+	}
+	if definition.root != nil {
+		if err := e.validatePatternNodeFields(definition.input, definition.root); err != nil {
+			return err
+		}
+	} else {
+		for _, step := range definition.steps {
+			if err := e.validateExprFields(definition.input, step.predicate); err != nil {
+				return err
+			}
+		}
+	}
+	if len(selections) == 0 {
+		return NewError(ErrorInvalidRule, "pattern requires at least one projection")
+	}
+	seen := make(map[string]struct{}, len(selections))
+	for _, selection := range selections {
+		if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+			return NewError(ErrorInvalidRule, "pattern projection requires a name and expression")
+		}
+		if _, exists := seen[selection.Name]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("pattern projection duplicates alias %q", selection.Name))
+		}
+		seen[selection.Name] = struct{}{}
+		if err := e.validateExprFields(definition.input, selection.Expr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e *Environment) validatePatternNodeFields(input *streamNode, node *patternNode) error {
+	if node == nil {
+		return NewError(ErrorInvalidRule, "pattern expression cannot be nil")
+	}
+	switch node.kind {
+	case patternEventNode:
+		return e.validateExprFields(input, node.predicate)
+	case patternSequenceNode, patternAndNode, patternOrNode:
+		if err := e.validatePatternNodeFields(input, node.left); err != nil {
+			return err
+		}
+		return e.validatePatternNodeFields(input, node.right)
+	case patternNotNode, patternMatchUntilNode:
+		return e.validatePatternNodeFields(input, node.child)
+	case patternUntilNode:
+		if err := e.validatePatternNodeFields(input, node.child); err != nil {
+			return err
+		}
+		return e.validatePatternNodeFields(input, node.right)
+	case patternEveryNode:
+		if node.everyExpr != nil {
+			if err := e.validateExprFields(input, node.everyExpr); err != nil {
+				return err
+			}
+		}
+		return e.validatePatternNodeFields(input, node.child)
+	case patternWithinNode:
+		if node.durationExpr != nil {
+			if err := e.validateExprFields(input, node.durationExpr); err != nil {
+				return err
+			}
+		}
+		return e.validatePatternNodeFields(input, node.child)
+	case patternTimerIntervalNode:
+		if node.durationExpr != nil {
+			return e.validateExprFields(input, node.durationExpr)
+		}
+		return nil
+	case patternTimerAtNode, patternTimerScheduleNode:
+		return nil
+	case patternTimerCronNode:
+		return e.validateCronSchedule(node.cron)
+	default:
+		return NewError(ErrorInvalidRule, "unknown pattern expression kind")
+	}
+}
+
+func (e *Environment) validateSourceLess(selections []Selection) error {
+	if len(selections) == 0 {
+		return NewError(ErrorInvalidRule, "source-less query requires at least one projection")
+	}
+	seen := make(map[string]struct{}, len(selections))
+	for _, selection := range selections {
+		if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
+			return NewError(ErrorInvalidRule, "source-less projection requires a name and expression")
+		}
+		if _, exists := seen[selection.Name]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("source-less projection duplicates alias %q", selection.Name))
+		}
+		seen[selection.Name] = struct{}{}
+		if err := e.validateExprVariables(selection.Expr); err != nil {
+			return err
+		}
+		var fields []string
+		selection.Expr.node().referencedFields(&fields)
+		if len(fields) > 0 {
+			return NewError(ErrorDependency, "source-less query cannot reference event fields")
+		}
+	}
+	return nil
+}
+
+func validateOutputPolicy(policy OutputPolicy) error {
+	if policy.Snapshot && policy.Kind != OutputEveryPolicy && policy.Kind != OutputEveryTimePolicy {
+		return NewError(ErrorInvalidRule, "snapshot flag is only valid for every-count or every-time output")
+	}
+	if policy.Snapshot && policy.When != nil {
+		return NewError(ErrorInvalidRule, "snapshot-every output cannot be combined with a when condition")
+	}
+	if policy.Snapshot && policy.Cron != nil {
+		return NewError(ErrorInvalidRule, "snapshot-every output cannot be combined with a calendar schedule")
+	}
+	if (policy.Kind == OutputFirstPolicy || policy.Kind == OutputEveryPolicy) && policy.Count <= 0 {
+		return NewError(ErrorInvalidRule, "output count must be positive")
+	}
+	if policy.Kind == OutputEveryTimePolicy && policy.Interval <= 0 {
+		return NewError(ErrorInvalidRule, "time-based output interval must be positive")
+	}
+	if policy.Kind > OutputEveryTimePolicy {
+		return NewError(ErrorInvalidRule, "unknown output policy")
+	}
+	switch policy.Termination {
+	case OutputNoTermination, OutputAndOnTermination, OutputOnlyOnTermination:
+	default:
+		return NewError(ErrorInvalidRule, "unknown context-termination output mode")
+	}
+	if policy.Termination == OutputNoTermination && (policy.TerminationWhen != nil || len(policy.TerminationThen) > 0) {
+		return NewError(ErrorInvalidRule, "termination condition and assignments require context-termination output")
+	}
+	if len(policy.TerminationThen) > 0 && policy.TerminationWhen == nil {
+		return NewError(ErrorInvalidRule, "termination assignments require a termination condition")
+	}
+	switch policy.After {
+	case OutputAfterNone:
+	case OutputAfterEventCount:
+		if policy.AfterCount < 0 {
+			return NewError(ErrorInvalidRule, "output-after event count cannot be negative")
+		}
+	case OutputAfterDuration:
+		if policy.AfterDuration < 0 {
+			return NewError(ErrorInvalidRule, "output-after duration cannot be negative")
+		}
+	case OutputAfterCalendarKind:
+		period := policy.AfterCalendar
+		if period.Years < 0 || period.Months < 0 || period.Days < 0 {
+			return NewError(ErrorInvalidRule, "output-after calendar period cannot be negative")
+		}
+		if period.Years == 0 && period.Months == 0 && period.Days == 0 {
+			return NewError(ErrorInvalidRule, "output-after calendar period must be positive")
+		}
+	default:
+		return NewError(ErrorInvalidRule, "unknown output-after condition")
+	}
+	return nil
+}
+
+func (e *Environment) validateOutputExpressions(policy OutputPolicy) error {
+	if err := e.validateCronSchedule(policy.Cron); err != nil {
+		return err
+	}
+	if policy.When == nil && len(policy.Then) > 0 {
+		return NewError(ErrorInvalidRule, "output assignments require a when condition")
+	}
+	if policy.When != nil {
+		if err := e.validateExprVariables(policy.When); err != nil {
+			return err
+		}
+		if typ := policy.When.Type(); typ != nil && typ != typeOf[any]() && typ != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("output when condition must be boolean, got %s", typ))
+		}
+		var fields []string
+		policy.When.node().referencedFields(&fields)
+		if len(fields) > 0 {
+			return NewError(ErrorInvalidRule, "output when condition can reference variables only")
+		}
+	}
+	seen := make(map[string]struct{}, len(policy.Then))
+	for index, assignment := range policy.Then {
+		name := strings.TrimSpace(assignment.Name)
+		if name == "" || assignment.Expr == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("output assignment %d is invalid", index))
+		}
+		if _, exists := seen[name]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("output variable %q is assigned more than once", name))
+		}
+		seen[name] = struct{}{}
+		definition, ok := e.Variable(name)
+		if !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("output assignment references unknown variable %q", name))
+		}
+		if definition.constant {
+			return NewError(ErrorState, fmt.Sprintf("output assignment cannot update constant variable %q", name))
+		}
+		if err := e.validateExprVariables(assignment.Expr); err != nil {
+			return err
+		}
+		var fields []string
+		assignment.Expr.node().referencedFields(&fields)
+		if len(fields) > 0 {
+			return NewError(ErrorInvalidRule, "output assignments can reference variables only")
+		}
+		if expressionType := assignment.Expr.Type(); definition.typ != nil && definition.typ != typeOf[any]() && expressionType != nil && expressionType != typeOf[any]() {
+			if !definition.typ.AssignableTo(expressionType) && !expressionType.AssignableTo(definition.typ) && !numericTypes(definition.typ, expressionType) {
+				return NewError(ErrorTypeMismatch, fmt.Sprintf("output variable %q has type %s, assignment expression has type %s", name, definition.typ, expressionType))
+			}
+		}
+	}
+	if policy.TerminationWhen != nil {
+		if err := e.validateExprVariables(policy.TerminationWhen); err != nil {
+			return err
+		}
+		if typ := policy.TerminationWhen.Type(); typ != nil && typ != typeOf[any]() && typ != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("termination output condition must be boolean, got %s", typ))
+		}
+		var fields []string
+		policy.TerminationWhen.node().referencedFields(&fields)
+		if len(fields) > 0 {
+			return NewError(ErrorInvalidRule, "termination output condition can reference variables only")
+		}
+	}
+	seen = make(map[string]struct{}, len(policy.TerminationThen))
+	for index, assignment := range policy.TerminationThen {
+		name := strings.TrimSpace(assignment.Name)
+		if name == "" || assignment.Expr == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("termination output assignment %d is invalid", index))
+		}
+		if _, exists := seen[name]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("termination output variable %q is assigned more than once", name))
+		}
+		seen[name] = struct{}{}
+		definition, ok := e.Variable(name)
+		if !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("termination output assignment references unknown variable %q", name))
+		}
+		if definition.constant {
+			return NewError(ErrorState, fmt.Sprintf("termination output assignment cannot update constant variable %q", name))
+		}
+		if err := e.validateExprVariables(assignment.Expr); err != nil {
+			return err
+		}
+		var fields []string
+		assignment.Expr.node().referencedFields(&fields)
+		if len(fields) > 0 {
+			return NewError(ErrorInvalidRule, "termination output assignments can reference variables only")
+		}
+		if expressionType := assignment.Expr.Type(); definition.typ != nil && definition.typ != typeOf[any]() && expressionType != nil && expressionType != typeOf[any]() {
+			if !definition.typ.AssignableTo(expressionType) && !expressionType.AssignableTo(definition.typ) && !numericTypes(definition.typ, expressionType) {
+				return NewError(ErrorTypeMismatch, fmt.Sprintf("termination output variable %q has type %s, assignment expression has type %s", name, definition.typ, expressionType))
+			}
+		}
+	}
+	return nil
+}
