@@ -3273,6 +3273,11 @@ func advanceContextPatternTime(state **patternRuntimeState, definition *patternD
 				tags:      clonePatternTags(seedTags),
 				tagValues: clonePatternTagValues(seedTagValues),
 			})
+			if root.cronOneShot {
+				runtimeState.cronNext = time.Time{}
+				runtimeState.timerEmitted = true
+				break
+			}
 			runtimeState.cronNext, _ = runtimeState.cronSchedule.nextAfter(dueAt)
 		}
 	}
@@ -7196,6 +7201,11 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 				if row, visible := evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
 					batch.New = append(batch.New, resultRow(row))
 				}
+			}
+			if root.cronOneShot {
+				r.patternState.cronNext = time.Time{}
+				r.patternState.timerEmitted = true
+				break
 			}
 			r.patternState.cronNext, _ = r.patternState.cronSchedule.nextAfter(dueAt)
 		}

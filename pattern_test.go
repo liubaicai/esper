@@ -938,6 +938,111 @@ func TestPatternTimerScheduleEmitsAllDueInstantsInOrder(t *testing.T) {
 	}
 }
 
+func TestPatternTimerAtScheduleEmitsNextCalendarOccurrenceOnly(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	schedule := CronSchedule{
+		Minute:     CronRange(20, 20),
+		Hour:       CronValues(17),
+		DayOfMonth: CronWildcard(),
+		Month:      CronWildcard(),
+		Weekday:    CronWildcard(),
+	}
+	start := time.Date(2008, time.February, 1, 17, 10, 0, 0, time.UTC)
+	plan, err := env.Build(TimerAtSchedule(base, schedule).Select(
+		Alias("scheduled", CurrentTime()),
+	).Query(StatementName("pattern-timer-at-schedule")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := env.NewEngine(WithStartTime(start))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	want := time.Date(2008, time.February, 1, 17, 20, 0, 0, time.UTC)
+	if err := engine.AdvanceTime(context.Background(), want.Add(-time.Millisecond)); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("timer-at schedule fired before occurrence: %#v", rows)
+	}
+	if err := engine.AdvanceTime(context.Background(), want); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("scheduled").Any() != want {
+		t.Fatalf("timer-at schedule rows = %#v, want one row at %s", rows, want)
+	}
+	if err := engine.AdvanceTime(context.Background(), want.AddDate(0, 0, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("one-shot timer-at schedule fired again: %#v", rows)
+	}
+}
+
+func TestPatternTimerAtScheduleSupportsStepAndMilliseconds(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	schedule := NewCronScheduleWithMilliseconds(
+		CronValues(200), CronValues(0), CronEvery(5), CronValues(8),
+		CronWildcard(), CronWildcard(), CronWildcard(),
+	)
+	start := time.Date(2013, time.August, 23, 8, 5, 0, 0, time.UTC)
+	plan, err := env.Build(TimerAtSchedule(base, schedule).Select(
+		Alias("scheduled", CurrentTime()),
+	).Query(StatementName("pattern-timer-at-schedule-precision")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := env.NewEngine(WithStartTime(start))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	want := start.Add(200 * time.Millisecond)
+	if err := engine.AdvanceTime(context.Background(), want.Add(-time.Nanosecond)); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("millisecond timer fired before occurrence: %#v", rows)
+	}
+	if err := engine.AdvanceTime(context.Background(), want); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("scheduled").Any() != want {
+		t.Fatalf("precision timer rows = %#v, want one row at %s", rows, want)
+	}
+	if err := engine.AdvanceTime(context.Background(), want.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("precision one-shot timer fired again: %#v", rows)
+	}
+}
+
 func TestPatternTimerCronEmitsCalendarOccurrences(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")

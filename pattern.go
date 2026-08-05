@@ -51,6 +51,7 @@ type patternNode struct {
 	at                time.Time
 	schedule          []time.Time
 	cron              *CronSchedule
+	cronOneShot       bool
 	distinctExpiry    time.Duration
 	distinctExpirySet bool
 }
@@ -113,6 +114,9 @@ func (n *patternNode) description() string {
 	case patternTimerCronNode:
 		if n.cron == nil {
 			return "timer-cron(<nil>)"
+		}
+		if n.cronOneShot {
+			return "timer-at-schedule(" + n.cron.description() + ")"
 		}
 		return "timer-cron(" + n.cron.description() + ")"
 	default:
@@ -235,6 +239,21 @@ func TimerCron[T any](stream Stream[T], schedule CronSchedule) PatternStream {
 		def: &patternDefinition{
 			input: stream.node,
 			root:  &patternNode{kind: patternTimerCronNode, cron: &copySchedule},
+		},
+	}
+}
+
+// TimerAtSchedule creates a one-shot calendar observer. It resolves the
+// first CronSchedule occurrence strictly after the statement/context start
+// time, then stops after that occurrence. This is the chainable counterpart
+// of Esper's timer:at calendar form; use TimerCron for recurring occurrences.
+func TimerAtSchedule[T any](stream Stream[T], schedule CronSchedule) PatternStream {
+	copySchedule := schedule
+	return PatternStream{
+		env: stream.env,
+		def: &patternDefinition{
+			input: stream.node,
+			root:  &patternNode{kind: patternTimerCronNode, cron: &copySchedule, cronOneShot: true},
 		},
 	}
 }

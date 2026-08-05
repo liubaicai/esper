@@ -3292,6 +3292,52 @@ func TestPatternTimerScheduleContextCreatesRecurringOverlappingPartitions(t *tes
 	}
 }
 
+func TestPatternTimerAtScheduleContextCreatesOnePartition(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	start := time.Date(2008, time.February, 1, 17, 10, 0, 0, time.UTC)
+	schedule := CronSchedule{
+		Minute:     CronValues(20),
+		Hour:       CronValues(17),
+		DayOfMonth: CronWildcard(),
+		Month:      CronWildcard(),
+		Weekday:    CronWildcard(),
+	}
+	if _, err := CreatePatternInitiatedContext(env, "pattern-at-schedule-context", TimerAtSchedule(base, schedule)); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(FromAny(env, "Trade").Select(
+		Alias("symbol", Field[runtimeTestTrade, string]("symbol")),
+	).Query(StatementName("pattern-at-schedule-context-statement"), WithContext("pattern-at-schedule-context")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(start))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), start.Add(10*time.Minute-time.Nanosecond)); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("pattern-at-schedule-context"); err != nil || count != 0 {
+		t.Fatalf("one-shot schedule context started early: count=%d err=%v", count, err)
+	}
+	if err := engine.AdvanceTime(context.Background(), start.Add(10*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("pattern-at-schedule-context"); err != nil || count != 1 {
+		t.Fatalf("one-shot schedule context count=%d err=%v, want 1", count, err)
+	}
+	if err := engine.AdvanceTime(context.Background(), start.AddDate(0, 0, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("pattern-at-schedule-context"); err != nil || count != 1 {
+		t.Fatalf("one-shot schedule context fired again: count=%d err=%v", count, err)
+	}
+	_ = deployment
+}
+
 func TestPatternTimerIntervalCalendarContextCreatesMonthlyPartitions(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")

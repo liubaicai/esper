@@ -208,11 +208,11 @@
       "domain": "pattern",
       "level": "S",
       "summary": "Calendar TimerCron pattern observer using the shared schedule kernel",
-      "javaRefs": ["PatternMicrosecondResolutionCrontab", "PatternObserverTimerSchedule"],
+      "javaRefs": ["PatternMicrosecondResolutionCrontab", "PatternObserverTimerAt", "PatternObserverTimerSchedule"],
       "goRefs": ["pattern.go", "pattern_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["microsecond/ISO period schedule forms and special operators", "DST and dynamic schedule matrix"]
+      "remaining": ["microsecond/ISO period schedule forms and special operators", "DST and dynamic schedule matrix", "full timer:at timezone/property/SODA variants"]
     },
     {
       "id": "query.historical-sql",
@@ -586,14 +586,14 @@
     },
     {
       "id": "case.pattern-timer-cron",
-      "javaRuntimeIds": ["java-runtime-2ebf6d23390f9296e7b1", "java-runtime-15b8c1050cdf38920faa"],
-      "javaNames": ["PatternMicrosecondResolutionCrontab", "PatternTimerScheduleDateWithPeriod"],
-      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternMicrosecondResolutionCrontab.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerSchedule.java"],
-      "goTests": ["TestPatternTimerCronEmitsCalendarOccurrences", "TestCronSchedulePrecisionFlowsThroughOutputAtAndTimerCron", "TestPatternTimerScheduleEmitsAllDueInstantsInOrder"],
+      "javaRuntimeIds": ["java-runtime-2ebf6d23390f9296e7b1", "java-runtime-15b8c1050cdf38920faa", "java-runtime-198e29697d770d74a050", "java-runtime-87905b2cf25801c7702d", "java-runtime-5d93878f1402d6f74201"],
+      "javaNames": ["PatternMicrosecondResolutionCrontab", "PatternTimerScheduleDateWithPeriod", "PatternTimerAtSimple", "PatternOp", "PatternWMilliseconds"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternMicrosecondResolutionCrontab.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerAt.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerSchedule.java"],
+      "goTests": ["TestPatternTimerCronEmitsCalendarOccurrences", "TestCronSchedulePrecisionFlowsThroughOutputAtAndTimerCron", "TestPatternTimerScheduleEmitsAllDueInstantsInOrder", "TestPatternTimerAtScheduleEmitsNextCalendarOccurrenceOnly", "TestPatternTimerAtScheduleSupportsStepAndMilliseconds", "TestPatternTimerAtScheduleContextCreatesOnePartition"],
       "tags": ["correctness", "pattern", "calendar", "virtual-time"],
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
-      "difference": "Go TimerCron now shares opt-in second/millisecond precision with OutputAt; Java microsecond, ISO period and special schedule variants are not yet equivalent."
+      "difference": "Go TimerCron now shares opt-in second/millisecond precision with OutputAt, and TimerAtSchedule resolves the next wildcard/range/step calendar occurrence once for ordinary Pattern and Pattern Context. Java microsecond, ISO period, timezone/property/SODA and special schedule variants are not yet equivalent."
     },
     {
       "id": "case.historical-sql",
