@@ -1,0 +1,118 @@
+package esper
+
+import (
+	"context"
+	"testing"
+)
+
+func newRowRecogRepeatedStatePoolPlan(t *testing.T, env *Environment, name string) Plan {
+	t.Helper()
+	stream := From[rowRecogStatePoolEvent](env, "RowRecogStatePoolEvent").Window(KeepAll())
+	query := stream.MatchRecognize(RowSequence(
+		RowVar("A").ZeroOrMore(),
+		RowVar("B"),
+	)).
+		Define("A", Equal[int](Field[rowRecogStatePoolEvent, int]("phase"), Literal(1))).
+		Define("B", Equal[int](Field[rowRecogStatePoolEvent, int]("phase"), Literal(2))).
+		Measures(Alias("id", TagField[int64]("A", "id"))).
+		Query(StatementName(name))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return plan
+}
+
+func newRowRecogAlternatingStatePoolPlan(t *testing.T, env *Environment, name string) Plan {
+	t.Helper()
+	stream := From[rowRecogStatePoolEvent](env, "RowRecogStatePoolEvent").Window(KeepAll())
+	query := stream.MatchRecognize(RowSequence(
+		RowAlternation(RowVar("A"), RowVar("B")).ZeroOrMore(),
+		RowVar("C"),
+	)).
+		Define("A", Equal[int](Field[rowRecogStatePoolEvent, int]("phase"), Literal(1))).
+		Define("B", Equal[int](Field[rowRecogStatePoolEvent, int]("phase"), Literal(1))).
+		Define("C", Equal[int](Field[rowRecogStatePoolEvent, int]("phase"), Literal(2))).
+		Measures(Alias("id", TagField[int64]("A", "id"))).
+		Query(StatementName(name))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return plan
+}
+
+func TestRowRecogStatePoolCountsRepeatedNFAStates(t *testing.T) {
+	env, engine := newRowRecogStatePoolTest(t, WithMatchRecognizeStateLimit(3, false))
+	plan := newRowRecogRepeatedStatePoolPlan(t, env, "rowrecog-nfa-repeat")
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var limits []MatchRecognizeStateLimitEvent
+	if err := engine.AddMatchRecognizeStateLimitListener(MatchRecognizeStateLimitListenerFunc(func(event MatchRecognizeStateLimitEvent) {
+		limits = append(limits, event)
+	})); err != nil {
+		t.Fatal(err)
+	}
+
+	sendRowRecogStatePoolEvent(t, engine, "A", 1, 1)
+	if len(limits) != 0 {
+		t.Fatalf("first repeated event overflow = %#v", limits)
+	}
+	sendRowRecogStatePoolEvent(t, engine, "A", 1, 2)
+	if len(limits) != 1 || limits[0].Counts[deployment.Statements()[0].ID()] != 3 {
+		t.Fatalf("repeated NFA overflow = %#v, want one event at count 3", limits)
+	}
+
+	// B consumes all A* successor states and releases the full fan-out. A
+	// later A therefore starts without another pool overflow.
+	sendRowRecogStatePoolEvent(t, engine, "A", 2, 3)
+	sendRowRecogStatePoolEvent(t, engine, "A", 1, 4)
+	if len(limits) != 1 {
+		t.Fatalf("repeated NFA state release did not free pool = %#v", limits)
+	}
+}
+
+func TestRowRecogStatePoolCountsAlternatingNFAStates(t *testing.T) {
+	env, engine := newRowRecogStatePoolTest(t, WithMatchRecognizeStateLimit(5, false))
+	plan := newRowRecogAlternatingStatePoolPlan(t, env, "rowrecog-nfa-alternation")
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var limits []MatchRecognizeStateLimitEvent
+	if err := engine.AddMatchRecognizeStateLimitListener(MatchRecognizeStateLimitListenerFunc(func(event MatchRecognizeStateLimitEvent) {
+		limits = append(limits, event)
+	})); err != nil {
+		t.Fatal(err)
+	}
+
+	sendRowRecogStatePoolEvent(t, engine, "A", 1, 1)
+	if len(limits) != 1 || limits[0].Counts[deployment.Statements()[0].ID()] != 5 {
+		t.Fatalf("first alternating NFA overflow = %#v, want one event at count 5", limits)
+	}
+	sendRowRecogStatePoolEvent(t, engine, "A", 1, 2)
+	statement := deployment.Statements()[0]
+	partition := statement.runtime.rowRecogState.partitions["<all>"]
+	if len(limits) != 19 {
+		t.Fatalf("alternating NFA overflow events = %d, want 19 Java-style successor overflows: %#v", len(limits), limits)
+	}
+	total := int64(0)
+	for _, count := range partition.activeStateCounts {
+		total += count
+	}
+	if total != 18 {
+		t.Fatalf("alternating NFA active state total = %d, want 18", total)
+	}
+	for index, event := range limits {
+		if event.MaxStates != 5 || event.Counts[deployment.Statements()[0].ID()] < 5 {
+			t.Fatalf("alternating NFA overflow[%d] = %#v, want max 5 and an over-limit count", index, event)
+		}
+	}
+
+	sendRowRecogStatePoolEvent(t, engine, "A", 2, 3)
+	if len(limits) != 19 {
+		t.Fatalf("alternating NFA state release produced extra overflow = %#v", limits)
+	}
+}

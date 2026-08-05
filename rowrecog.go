@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -129,6 +130,8 @@ type rowRecogDefinition struct {
 	interval             time.Duration
 	intervalCalendar     *OutputCalendarPeriod
 	intervalOrTerminated bool
+	statePoolNFAOnce     sync.Once
+	statePoolNFA         *rowRecogStatePoolNFA
 }
 
 // MatchRecognize starts a row-pattern query from a typed stream.
@@ -576,6 +579,12 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 	}
 	batch := ResultBatch{Time: now, outputCountsSet: true, outputInserted: int64(len(delta.newEvents)), outputRemoved: int64(len(delta.oldEvents))}
 	fastDefinition, fastPath := rowRecogFastABStarCDefinitionFor(definition)
+	if r.rowRecogStatePoolTracking(definition) {
+		// The fast AB* C representation intentionally keeps one path per
+		// start. A configured engine-wide pool needs every NFA successor, so
+		// use the general result matcher together with the NFA accounting path.
+		fastPath = false
+	}
 
 	// Retention changes must be applied before new rows are matched. This is
 	// observable for length/time windows where one arrival can remove an older
@@ -601,6 +610,7 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 			// history above are sufficient for snapshot-time evaluation.
 			continue
 		}
+		r.reconcileRowRecogStatePool(definition, partition, len(partition.events)-1, now)
 		if !rowRecogHasInterval(definition) {
 			if fastPath {
 				r.emitRowRecogFastABStarC(definition, partition, len(partition.events)-1, plan, now, &batch, fastDefinition)
@@ -639,16 +649,19 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 
 func newRowRecogPartitionState() *rowRecogPartitionState {
 	return &rowRecogPartitionState{
-		previousByEvent:   make(map[string][]Event),
-		emitted:           make(map[string]struct{}),
-		emittedMatches:    make(map[string]rowRecogMatch),
-		intervalClosed:    make(map[string]struct{}),
-		closedBranches:    make(map[string]struct{}),
-		alternateNotified: make(map[string]struct{}),
-		intervalNotified:  make(map[string]struct{}),
-		intervalFinal:     make(map[string][]rowRecogMatch),
-		activeStarts:      make(map[string]struct{}),
-		blockedStarts:     make(map[string]struct{}),
+		previousByEvent:    make(map[string][]Event),
+		emitted:            make(map[string]struct{}),
+		emittedMatches:     make(map[string]rowRecogMatch),
+		intervalClosed:     make(map[string]struct{}),
+		closedBranches:     make(map[string]struct{}),
+		alternateNotified:  make(map[string]struct{}),
+		intervalNotified:   make(map[string]struct{}),
+		intervalFinal:      make(map[string][]rowRecogMatch),
+		activeStarts:       make(map[string]struct{}),
+		activeStateCounts:  make(map[string]int64),
+		activePaths:        make(map[string][]rowRecogNFAPath),
+		allowedMatchStarts: make(map[string]struct{}),
+		blockedStarts:      make(map[string]struct{}),
 	}
 }
 
@@ -739,6 +752,12 @@ func (r *statementRuntime) admitRowRecogStart(definition *rowRecogDefinition, pa
 	if partition.blockedStarts == nil {
 		partition.blockedStarts = make(map[string]struct{})
 	}
+	if r.rowRecogStatePoolTracking(definition) {
+		// The state-pool NFA admits the start and charges each successor after
+		// the event has been consumed. Charging here would count a synthetic
+		// one-state approximation before branches are known.
+		return
+	}
 	key := rowRecogStartKey(len(partition.events), event)
 	allowed := true
 	if r.engine != nil && r.rowRecogOwner != "" && r.engine.matchRecognizeStatePool != nil {
@@ -749,6 +768,180 @@ func (r *statementRuntime) admitRowRecogStart(definition *rowRecogDefinition, pa
 	} else {
 		partition.blockedStarts[key] = struct{}{}
 	}
+}
+
+func (r *statementRuntime) rowRecogStatePoolTracking(definition *rowRecogDefinition) bool {
+	if r == nil || definition == nil || r.engine == nil || r.rowRecogOwner == "" || r.engine.matchRecognizeStatePool == nil {
+		return false
+	}
+	return rowRecogStatePoolNFAFor(definition) != nil && r.engine.matchRecognizeStatePool.maxStates >= 0
+}
+
+// reconcileRowRecogStatePool advances each active NFA entry exactly once for
+// the current event. Esper releases the consumed entry before charging every
+// successor edge; doing the same here matters when PreventStart is enabled
+// and a single repeated/alternating state fans out to more than one node.
+func (r *statementRuntime) reconcileRowRecogStatePool(definition *rowRecogDefinition, partition *rowRecogPartitionState, end int, now time.Time) {
+	if r == nil || partition == nil || end < 0 || !r.rowRecogStatePoolTracking(definition) {
+		return
+	}
+	nfa := rowRecogStatePoolNFAFor(definition)
+	pool := r.engine.matchRecognizeStatePool
+	if nfa == nil || pool == nil || end >= len(partition.events) {
+		return
+	}
+	if partition.activePaths == nil {
+		partition.activePaths = make(map[string][]rowRecogNFAPath)
+	}
+	if partition.activeStateCounts == nil {
+		partition.activeStateCounts = make(map[string]int64)
+	}
+	if partition.blockedStarts == nil {
+		partition.blockedStarts = make(map[string]struct{})
+	}
+	oldPaths := partition.activePaths
+	oldCounts := partition.activeStateCounts
+	nextPaths := make(map[string][]rowRecogNFAPath)
+	nextCounts := make(map[string]int64)
+	nextActive := make(map[string]struct{})
+	nextBlocked := make(map[string]struct{}, len(partition.blockedStarts))
+	for key := range partition.blockedStarts {
+		nextBlocked[key] = struct{}{}
+	}
+	allowedMatches := make(map[string]struct{})
+
+	type activeEntry struct {
+		key   string
+		start int
+		paths []rowRecogNFAPath
+	}
+	entries := make([]activeEntry, 0, len(oldPaths))
+	for key, paths := range oldPaths {
+		if len(paths) == 0 {
+			continue
+		}
+		start, found := rowRecogActiveStartIndex(partition, key)
+		if !found {
+			if count := oldCounts[key]; count > 0 {
+				pool.decrease(r.rowRecogOwner, count)
+			}
+			continue
+		}
+		entries = append(entries, activeEntry{key: key, start: start, paths: paths})
+	}
+	sort.SliceStable(entries, func(left, right int) bool { return entries[left].start < entries[right].start })
+
+	for _, entry := range entries {
+		accepted := make([]rowRecogNFAPath, 0, len(entry.paths))
+		activeCandidate := false
+		activeDenied := false
+		for _, path := range entry.paths {
+			pool.decrease(r.rowRecogOwner, 1)
+			captures, matched := rowRecogNFAPathMatches(definition, partition, path, end, now, r.variables)
+			if !matched || path.node == nil {
+				continue
+			}
+			if path.node.terminal {
+				allowedMatches[entry.key] = struct{}{}
+			}
+			for _, next := range path.node.next {
+				activeCandidate = true
+				candidate := rowRecogNFAPath{node: next, captures: captures}
+				if pool.tryIncrease(r.engine, r.rowRecogOwner) {
+					accepted = append(accepted, candidate)
+				} else {
+					activeDenied = true
+				}
+			}
+		}
+		if len(accepted) > 0 {
+			nextPaths[entry.key] = accepted
+			nextCounts[entry.key] = int64(len(accepted))
+			nextActive[entry.key] = struct{}{}
+			delete(nextBlocked, entry.key)
+		} else if activeCandidate && activeDenied {
+			// No successor survived the pool. Marking the start blocked keeps
+			// the result matcher from recreating an NFA branch on a later row.
+			nextBlocked[entry.key] = struct{}{}
+		}
+	}
+
+	// New starts are evaluated after existing states, matching RowRecogNFAView
+	// step(): current entries are consumed first, then factory start states are
+	// offered for the same event.
+	startKey := rowRecogStartKey(end, partition.events[end])
+	startAccepted := make([]rowRecogNFAPath, 0, len(nfa.starts))
+	startCandidate := false
+	startDenied := false
+	for _, start := range nfa.starts {
+		captures, matched := rowRecogNFAStartMatches(definition, partition, start, end, now, r.variables)
+		if !matched || start == nil {
+			continue
+		}
+		if start.terminal {
+			allowedMatches[startKey] = struct{}{}
+		}
+		for _, next := range start.next {
+			startCandidate = true
+			candidate := rowRecogNFAPath{node: next, captures: captures}
+			if pool.tryIncrease(r.engine, r.rowRecogOwner) {
+				startAccepted = append(startAccepted, candidate)
+			} else {
+				startDenied = true
+			}
+		}
+	}
+	if len(startAccepted) > 0 {
+		nextPaths[startKey] = startAccepted
+		nextCounts[startKey] = int64(len(startAccepted))
+		nextActive[startKey] = struct{}{}
+		delete(nextBlocked, startKey)
+	} else if startCandidate && startDenied {
+		nextBlocked[startKey] = struct{}{}
+	}
+
+	partition.activePaths = nextPaths
+	partition.activeStateCounts = nextCounts
+	partition.activeStarts = nextActive
+	partition.blockedStarts = nextBlocked
+	partition.allowedMatchStarts = allowedMatches
+}
+
+func rowRecogNFAPathMatches(definition *rowRecogDefinition, partition *rowRecogPartitionState, path rowRecogNFAPath, end int, now time.Time, variables map[string]Value) (map[string][]Event, bool) {
+	if path.node == nil {
+		return nil, false
+	}
+	return rowRecogNFANodeMatches(definition, partition, path.node, path.captures, end, now, variables)
+}
+
+func rowRecogNFAStartMatches(definition *rowRecogDefinition, partition *rowRecogPartitionState, node *rowRecogStatePoolNFANode, end int, now time.Time, variables map[string]Value) (map[string][]Event, bool) {
+	return rowRecogNFANodeMatches(definition, partition, node, nil, end, now, variables)
+}
+
+func rowRecogNFANodeMatches(definition *rowRecogDefinition, partition *rowRecogPartitionState, node *rowRecogStatePoolNFANode, captures map[string][]Event, end int, now time.Time, variables map[string]Value) (map[string][]Event, bool) {
+	if definition == nil || partition == nil || node == nil || end < 0 || end >= len(partition.events) {
+		return nil, false
+	}
+	event := partition.events[end]
+	next := cloneRowRecogCaptures(captures)
+	next[node.variable] = append(next[node.variable], event)
+	if predicate := definition.defines[node.variable]; predicate != nil {
+		history := partition.events[:end+1]
+		value := predicate.eval(EvalContext{
+			Event:           event,
+			History:         append([]Event(nil), history...),
+			PreviousHistory: rowRecogPreviousHistoryByMap(partition.previousByEvent, event, history),
+			Tags:            rowRecogLastTags(next),
+			TagValues:       cloneRowRecogCaptures(next),
+			Now:             now,
+			Variables:       variables,
+		})
+		matched, ok := boolValue(value)
+		if !ok || !matched {
+			return nil, false
+		}
+	}
+	return next, true
 }
 
 // pruneRowRecogFixedSequenceStarts releases starts that have no NFA state
@@ -772,10 +965,7 @@ func (r *statementRuntime) pruneRowRecogFixedSequenceStarts(definition *rowRecog
 	for key := range partition.activeStarts {
 		start, found := rowRecogActiveStartIndex(partition, key)
 		if !found || !rowRecogFixedSequenceHasOpenPath(definition, parts, partition, start, end, now, r.variables) {
-			delete(partition.activeStarts, key)
-			if r.engine != nil && r.engine.matchRecognizeStatePool != nil {
-				r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, 1)
-			}
+			r.releaseRowRecogStart(partition, key)
 		}
 	}
 }
@@ -848,6 +1038,35 @@ func rowRecogFixedSequenceHasOpenPath(definition *rowRecogDefinition, parts []Ro
 		}
 	}
 	return true
+}
+
+func (r *statementRuntime) releaseRowRecogStart(partition *rowRecogPartitionState, key string) {
+	if r == nil || partition == nil || key == "" {
+		return
+	}
+	count := int64(0)
+	if partition.activeStateCounts != nil {
+		count = partition.activeStateCounts[key]
+		delete(partition.activeStateCounts, key)
+	}
+	if _, active := partition.activeStarts[key]; active {
+		if count == 0 {
+			// Legacy accounting admits one state per start. This fallback also
+			// keeps the lifecycle safe for state created before the NFA map was
+			// initialized.
+			count = 1
+		}
+		delete(partition.activeStarts, key)
+	}
+	if partition.activePaths != nil {
+		delete(partition.activePaths, key)
+	}
+	if partition.allowedMatchStarts != nil {
+		delete(partition.allowedMatchStarts, key)
+	}
+	if r.engine != nil && r.engine.matchRecognizeStatePool != nil && count > 0 {
+		r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, count)
+	}
 }
 
 func rowRecogEventCanStart(definition *rowRecogDefinition, partition *rowRecogPartitionState, event Event, now time.Time, variables map[string]Value) bool {
@@ -986,8 +1205,15 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 		return
 	}
 	for start := 0; start <= end; start++ {
-		if rowRecogStartBlocked(partition, start) {
+		key := rowRecogStartKey(start, partition.events[start])
+		_, allowedByStatePool := partition.allowedMatchStarts[key]
+		if rowRecogStartBlocked(partition, start) && (!r.rowRecogStatePoolTracking(definition) || !allowedByStatePool) {
 			continue
+		}
+		if r.rowRecogStatePoolTracking(definition) {
+			if !allowedByStatePool {
+				continue
+			}
 		}
 		matches := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, r.variables)
 		emittedForStart := false
@@ -1049,10 +1275,7 @@ func (r *statementRuntime) advanceRowRecogSkip(definition *rowRecogDefinition, p
 		}
 		key := rowRecogStartKey(index, event)
 		if _, active := partition.activeStarts[key]; active {
-			delete(partition.activeStarts, key)
-			if r != nil && r.engine != nil && r.engine.matchRecognizeStatePool != nil {
-				r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, 1)
-			}
+			r.releaseRowRecogStart(partition, key)
 		}
 	}
 }
@@ -1266,10 +1489,11 @@ func (r *statementRuntime) emitRowRecogTerminated(definition *rowRecogDefinition
 		if !rowRecogStartAllowed(definition, partition, start) {
 			continue
 		}
-		if rowRecogStartBlocked(partition, start) {
+		startKey := rowRecogStartKey(start, partition.events[start])
+		_, allowedByStatePool := partition.allowedMatchStarts[startKey]
+		if rowRecogStartBlocked(partition, start) && (!r.rowRecogStatePoolTracking(definition) || !allowedByStatePool) {
 			continue
 		}
-		startKey := rowRecogStartKey(start, partition.events[start])
 		if !definition.intervalOrTerminated {
 			if _, closed := partition.intervalClosed[startKey]; closed {
 				continue
@@ -1646,10 +1870,17 @@ func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, e
 		oldEvents := append([]Event(nil), partition.events...)
 		oldEmittedMatches := partition.emittedMatches
 		oldActive := partition.activeStarts
+		oldActiveCounts := partition.activeStateCounts
+		oldActivePaths := partition.activePaths
 		oldBlocked := partition.blockedStarts
-		if _, active := oldActive[rowRecogStartKey(index, retained)]; active {
+		removedKey := rowRecogStartKey(index, retained)
+		if _, active := oldActive[removedKey]; active {
+			amount := int64(1)
+			if oldActiveCounts != nil && oldActiveCounts[removedKey] > 0 {
+				amount = oldActiveCounts[removedKey]
+			}
 			if r.engine != nil && r.engine.matchRecognizeStatePool != nil {
-				r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, 1)
+				r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, amount)
 			}
 		}
 		if partition.previousByEvent != nil {
@@ -1657,6 +1888,9 @@ func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, e
 		}
 		partition.events = append(partition.events[:index], partition.events[index+1:]...)
 		partition.activeStarts = make(map[string]struct{})
+		partition.activeStateCounts = make(map[string]int64)
+		partition.activePaths = make(map[string][]rowRecogNFAPath)
+		partition.allowedMatchStarts = make(map[string]struct{})
 		partition.blockedStarts = make(map[string]struct{})
 		for newIndex, candidate := range partition.events {
 			oldIndex := newIndex
@@ -1667,6 +1901,12 @@ func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, e
 			newKey := rowRecogStartKey(newIndex, candidate)
 			if _, active := oldActive[oldKey]; active {
 				partition.activeStarts[newKey] = struct{}{}
+				if oldActiveCounts != nil {
+					partition.activeStateCounts[newKey] = oldActiveCounts[oldKey]
+				}
+				if oldActivePaths != nil {
+					partition.activePaths[newKey] = append([]rowRecogNFAPath(nil), oldActivePaths[oldKey]...)
+				}
 			}
 			if _, blocked := oldBlocked[oldKey]; blocked {
 				partition.blockedStarts[newKey] = struct{}{}
@@ -1821,10 +2061,7 @@ func (r *statementRuntime) dropRowRecogFastABStarCPath(partition *rowRecogPartit
 	if _, active := partition.activeStarts[key]; !active {
 		return
 	}
-	delete(partition.activeStarts, key)
-	if r.engine != nil && r.engine.matchRecognizeStatePool != nil {
-		r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, 1)
-	}
+	r.releaseRowRecogStart(partition, key)
 }
 
 func (r *statementRuntime) emitRowRecogFastABStarC(definition *rowRecogDefinition, partition *rowRecogPartitionState, end int, plan Plan, now time.Time, batch *ResultBatch, fast rowRecogFastABStarCDefinition) {

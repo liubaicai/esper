@@ -2857,15 +2857,13 @@ func Median[T Numeric](expression Expression[T]) AggregateExpression[float64] {
 }
 
 // StdDev uses the sample standard-deviation convention used by Esper's
-// stddev aggregate. A singleton group has deviation zero.
+// stddev aggregate. A singleton group has no defined sample deviation and
+// therefore evaluates to Null, matching Esper's aggregate result semantics.
 func StdDev[T Numeric](expression Expression[T]) AggregateExpression[float64] {
 	return makeAggregateExpr[float64]("stddev", "stddev("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		values := numericAggregateValues[T](expression, ctx)
-		if len(values) == 0 {
+		if len(values) < 2 {
 			return Null()
-		}
-		if len(values) == 1 {
-			return Present(float64(0))
 		}
 		var total float64
 		for _, value := range values {

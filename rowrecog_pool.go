@@ -289,11 +289,24 @@ func (e *Engine) releaseRowRecogRuntimeLocked(runtime *statementRuntime) {
 	}
 	if state := runtime.rowRecogState; state != nil {
 		for _, partition := range state.partitions {
-			if partition == nil || len(partition.activeStarts) == 0 {
+			if partition == nil {
 				continue
 			}
-			e.matchRecognizeStatePool.decrease(runtime.rowRecogOwner, int64(len(partition.activeStarts)))
+			amount := int64(0)
+			if len(partition.activeStateCounts) > 0 {
+				for _, count := range partition.activeStateCounts {
+					amount += count
+				}
+			} else {
+				amount = int64(len(partition.activeStarts))
+			}
+			if amount > 0 {
+				e.matchRecognizeStatePool.decrease(runtime.rowRecogOwner, amount)
+			}
 			partition.activeStarts = make(map[string]struct{})
+			partition.activeStateCounts = make(map[string]int64)
+			partition.activePaths = make(map[string][]rowRecogNFAPath)
+			partition.allowedMatchStarts = make(map[string]struct{})
 		}
 	}
 	for _, partition := range runtime.partitions {
