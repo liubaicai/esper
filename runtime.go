@@ -483,6 +483,11 @@ func (e *Engine) releaseContextPartitionLocked(contextName, partitionKey string,
 	if byContext[partitionKey] > 0 {
 		return
 	}
+	for _, window := range e.namedWindows {
+		if window != nil {
+			window.releaseContextPartition(contextName, partitionKey)
+		}
+	}
 	descriptor := e.contextPartitionDescriptors[contextName][partitionKey]
 	if len(runtime) > 0 && runtime[0] != nil {
 		descriptor = newContextPartitionDescriptor(contextName, partitionKey, runtime[0])
@@ -1717,7 +1722,7 @@ func (e *Engine) Send(ctx context.Context, eventType string, underlying any) err
 			e.mu.Unlock()
 			return NewError(ErrorTypeMismatch, fmt.Sprintf("variant event type %q requires a routed member Event", eventType))
 		}
-		if !schema.acceptsEventType(routed.TypeName()) {
+		if !e.env.variantAcceptsEventType(schema, routed.TypeName()) {
 			e.mu.Unlock()
 			return NewError(ErrorTypeMismatch, fmt.Sprintf("event type %q is not a valid member of variant schema %q", routed.TypeName(), eventType))
 		}
@@ -2232,6 +2237,9 @@ func (e *Engine) routeResultLocked(statement *Statement, result Result, now time
 	}
 	if source, ok := result.Event(); ok {
 		if target.kind == SchemaVariant {
+			if !e.env.variantAcceptsEventType(target, source.TypeName()) {
+				return Event{}, NewError(ErrorTypeMismatch, fmt.Sprintf("event type %q is not a valid member of variant schema %q", source.TypeName(), target.Name()))
+			}
 			routed, err := newEvent(target, source, now)
 			if err != nil {
 				return Event{}, WrapError(ErrorTypeMismatch, "route."+targetName, err)
@@ -2891,7 +2899,7 @@ func sourceNodeAcceptsEvent(env *Environment, node *streamNode, event Event) boo
 		return false
 	}
 	if schema.kind == SchemaVariant {
-		return schema.acceptsEventType(event.TypeName())
+		return env.variantAcceptsEventType(schema, event.TypeName())
 	}
 	if source.kind != streamSource {
 		return false
@@ -4855,9 +4863,6 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 	if !ok {
 		return ResultBatch{}, false, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", s.plan.query.contextName))
 	}
-	if definition.kind == ContextInitiatedTerminated {
-		return ResultBatch{}, false, NewError(ErrorInvalidRule, "named-window context processing does not support initiated-terminated lifecycle")
-	}
 	type partitionDelta struct {
 		newEvents []Event
 		oldEvents []Event
@@ -4867,12 +4872,21 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 		if !statementAcceptsEvent(s.plan.query, event) {
 			return nil
 		}
-		key, active, err := definition.partition(event, now, variables)
-		if err != nil {
-			return err
-		}
-		if !active {
-			return nil
+		key := ""
+		if definition.isTemporal() {
+			key = activeTemporalContextPartitionKey(s.engine, definition, now)
+			if key == "" {
+				return nil
+			}
+		} else {
+			partitionKey, active, err := definition.partition(event, now, variables)
+			if err != nil {
+				return err
+			}
+			if !active {
+				return nil
+			}
+			key = partitionKey
 		}
 		group := grouped[key]
 		if group == nil {
@@ -4906,6 +4920,9 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 		group := grouped[key]
 		partition := s.runtime.partitions[key]
 		if partition == nil {
+			if definition.isTemporal() || definition.kind == ContextInitiatedTerminated {
+				continue
+			}
 			if len(group.newEvents) == 0 {
 				continue
 			}

@@ -1812,7 +1812,7 @@ func dataflowEventTypeAccepts(engine *Engine, eventType string, event Event) boo
 	}
 	if engine != nil && engine.env != nil {
 		if schema, ok := engine.env.Schema(eventType); ok && schema.kind == SchemaVariant {
-			return false
+			return engine.env.variantAcceptsEventType(schema, event.TypeName())
 		}
 	}
 	if eventType == event.TypeName() {
@@ -1822,7 +1822,13 @@ func dataflowEventTypeAccepts(engine *Engine, eventType string, event Event) boo
 		return false
 	}
 	schema, ok := engine.env.Schema(eventType)
-	return ok && schema.acceptsEventType(event.TypeName())
+	if !ok {
+		return false
+	}
+	if schema.kind == SchemaVariant {
+		return engine.env.variantAcceptsEventType(schema, event.TypeName())
+	}
+	return schema.acceptsEventType(event.TypeName())
 }
 
 func (d *DataflowInstance) processGraphFrom(ctx context.Context, event any, start string) error {

@@ -217,6 +217,8 @@ type Schema struct {
 	allowDynamic   bool
 	variantMode    VariantMode
 	variantMembers []string
+	parents        []Schema
+	variantSchemas []Schema
 	parentNames    []string
 }
 
@@ -278,6 +280,7 @@ func NewVariantSchema(name string, members ...Schema) (Schema, error) {
 	}
 	schema.variantMode = VariantPredefined
 	schema.variantMembers = variantMemberNames(members)
+	schema.variantSchemas = append([]Schema(nil), members...)
 	return schema, nil
 }
 
@@ -508,6 +511,7 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		resolution:   cfg.resolution,
 		accessor:     cfg.accessor,
 		allowDynamic: cfg.allowDynamic,
+		parents:      append([]Schema(nil), cfg.parents...),
 		parentNames:  parentNames,
 	}, nil
 }
@@ -954,6 +958,43 @@ func (s Schema) acceptsEventType(eventType string) bool {
 	}
 	for _, member := range s.variantMembers {
 		if member == eventType {
+			return true
+		}
+	}
+	return false
+}
+
+func (s Schema) acceptsEventSchema(event Schema) bool {
+	if s.kind != SchemaVariant || !event.valid() {
+		return false
+	}
+	if s.variantMode == VariantAny {
+		return true
+	}
+	for _, member := range s.variantSchemas {
+		if schemaDescendsFrom(event, member.Name(), make(map[string]struct{})) {
+			return true
+		}
+	}
+	return false
+}
+
+func schemaDescendsFrom(event Schema, targetName string, visited map[string]struct{}) bool {
+	if !event.valid() || strings.TrimSpace(targetName) == "" {
+		return false
+	}
+	if event.Name() == targetName {
+		return true
+	}
+	if visited == nil {
+		visited = make(map[string]struct{})
+	}
+	if _, seen := visited[event.Name()]; seen {
+		return false
+	}
+	visited[event.Name()] = struct{}{}
+	for _, parent := range event.parents {
+		if schemaDescendsFrom(parent, targetName, visited) {
 			return true
 		}
 	}
@@ -1799,7 +1840,7 @@ func newEvent(schema Schema, underlying any, receivedAt time.Time) (Event, error
 		if !ok || !routed.Schema().valid() {
 			return Event{}, fmt.Errorf("esper: variant event %q requires a routed member Event underlying", schema.name)
 		}
-		if !schema.acceptsEventType(routed.TypeName()) {
+		if !schema.acceptsEventSchema(routed.Schema()) {
 			return Event{}, fmt.Errorf("esper: event type %q is not a valid member of variant schema %q", routed.TypeName(), schema.name)
 		}
 		return Event{typeName: routed.TypeName(), streamType: schema.name, schema: routed.Schema(), underlying: routed.Underlying(), receivedAt: receivedAt}, nil

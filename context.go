@@ -772,6 +772,22 @@ func temporalPartitionKey(start time.Time) string {
 	return fmt.Sprintf("temporal:%d", start.UnixNano())
 }
 
+func activeTemporalContextPartitionKey(engine *Engine, definition ContextDefinition, now time.Time) string {
+	if engine == nil || !definition.isTemporal() {
+		return ""
+	}
+	origin, ok := engine.contextTemporalOrigins[definition.name]
+	if !ok || origin.IsZero() {
+		origin = now
+		engine.contextTemporalOrigins[definition.name] = origin
+	}
+	start, _, active := definition.temporalWindow(origin, now)
+	if !active {
+		return ""
+	}
+	return temporalPartitionKey(start)
+}
+
 // contextPropertyValues materializes the stable properties visible to a
 // statement running inside one context partition. The internal map is merged
 // into EvalContext variables by statementRuntime; callers use ContextField and

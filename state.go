@@ -938,6 +938,27 @@ func (w *NamedWindow) partitionState(key string, create bool) (*namedWindowRunti
 	return partition, nil
 }
 
+// releaseContextPartition drops the storage owned by one lifecycle-managed
+// context partition. Key/hash/category contexts intentionally keep their
+// partition state while the Environment remains alive; temporal and
+// initiated contexts call this only after their last statement reference is
+// released.
+func (w *NamedWindow) releaseContextPartition(contextName, partitionKey string) {
+	if w == nil || w.state == nil || partitionKey == "" || w.state.contextKey != "" || w.state.def.contextName != contextName {
+		return
+	}
+	if w.engine == nil || w.engine.env == nil {
+		return
+	}
+	definition, ok := w.engine.env.Context(contextName)
+	if !ok || (!definition.isTemporal() && definition.kind != ContextInitiatedTerminated) {
+		return
+	}
+	w.state.mu.Lock()
+	delete(w.state.partitions, partitionKey)
+	w.state.mu.Unlock()
+}
+
 // scopedForVariables returns the context partition represented by the
 // reserved context variables attached to a statement evaluation.  A
 // context-bound named window is still exposed as a root object for public
@@ -1536,10 +1557,40 @@ func (w *NamedWindow) expire(at time.Time) NamedWindowDelta {
 	if w.state.def.contextName != "" && w.state.contextKey == "" {
 		w.state.mu.RLock()
 		partitions := make([]*namedWindowRuntime, 0, len(w.state.partitions))
+		partitionKeys := make([]string, 0, len(w.state.partitions))
 		for _, partition := range w.state.partitions {
 			partitions = append(partitions, partition)
 		}
+		for key := range w.state.partitions {
+			partitionKeys = append(partitionKeys, key)
+		}
 		w.state.mu.RUnlock()
+		if definition, ok := w.engineContextDefinition(); ok && definition.isTemporal() {
+			activeKey := w.activeTemporalPartitionKey(definition, at)
+			stale := make(map[string]struct{})
+			for _, key := range partitionKeys {
+				if key != activeKey {
+					stale[key] = struct{}{}
+				}
+			}
+			if len(stale) > 0 {
+				w.state.mu.Lock()
+				for key := range stale {
+					delete(w.state.partitions, key)
+				}
+				w.state.mu.Unlock()
+			}
+			result := NamedWindowDelta{Time: at}
+			for _, partition := range partitions {
+				if partition == nil || partition.contextKey != activeKey {
+					continue
+				}
+				delta := expireNamedWindowState(partition, at)
+				result.New = append(result.New, delta.New...)
+				result.Old = append(result.Old, delta.Old...)
+			}
+			return result
+		}
 		result := NamedWindowDelta{Time: at}
 		for _, partition := range partitions {
 			delta := expireNamedWindowState(partition, at)
@@ -1549,6 +1600,20 @@ func (w *NamedWindow) expire(at time.Time) NamedWindowDelta {
 		return result
 	}
 	return expireNamedWindowState(w.state, at)
+}
+
+func (w *NamedWindow) engineContextDefinition() (ContextDefinition, bool) {
+	if w == nil || w.engine == nil || w.engine.env == nil || w.state == nil || w.state.def.contextName == "" {
+		return ContextDefinition{}, false
+	}
+	return w.engine.env.Context(w.state.def.contextName)
+}
+
+func (w *NamedWindow) activeTemporalPartitionKey(definition ContextDefinition, now time.Time) string {
+	if w == nil || w.engine == nil {
+		return ""
+	}
+	return activeTemporalContextPartitionKey(w.engine, definition, now)
 }
 
 func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindowDelta {

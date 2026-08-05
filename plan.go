@@ -88,6 +88,9 @@ func (e *Environment) acceptsEventType(targetType, eventType string) bool {
 	if targetType == eventType {
 		return true
 	}
+	if target, ok := e.Schema(targetType); ok && target.kind == SchemaVariant {
+		return e.variantAcceptsEventType(target, eventType)
+	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	visited := make(map[string]struct{})
@@ -112,6 +115,21 @@ func (e *Environment) acceptsEventType(targetType, eventType string) bool {
 		return false
 	}
 	return visit(eventType)
+}
+
+func (e *Environment) variantAcceptsEventType(variant Schema, eventType string) bool {
+	if e == nil || variant.kind != SchemaVariant || strings.TrimSpace(eventType) == "" {
+		return false
+	}
+	if variant.variantMode == VariantAny {
+		return true
+	}
+	for _, member := range variant.variantMembers {
+		if e.acceptsEventType(member, eventType) {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *Environment) Schemas() []Schema {
@@ -663,7 +681,7 @@ func (e *Environment) validateRoute(query Query) error {
 			return err
 		}
 		if target.kind == SchemaVariant && target.variantMode == VariantPredefined && sourceSchema.kind != SchemaVariant {
-			if !target.acceptsEventType(sourceSchema.Name()) {
+			if !e.variantAcceptsEventType(target, sourceSchema.Name()) {
 				return fmt.Errorf("source event type %q is not a member of predefined variant %q", sourceSchema.Name(), target.Name())
 			}
 		}
