@@ -45,6 +45,7 @@ type patternNode struct {
 	child             *patternNode
 	sequenceMax       int
 	sequenceMaxSet    bool
+	sequenceMaxExpr   Expr
 	minimum           int
 	maximum           int
 	dynamicBounds     bool
@@ -135,7 +136,9 @@ func (n *patternNode) description() string {
 		return description
 	case patternSequenceNode:
 		operator := "->"
-		if n.sequenceMaxSet {
+		if n.sequenceMaxExpr != nil {
+			operator = fmt.Sprintf("-[%s]>", n.sequenceMaxExpr.Description())
+		} else if n.sequenceMaxSet {
 			operator = fmt.Sprintf("-[%d]>", n.sequenceMax)
 		}
 		return "(" + n.left.description() + operator + n.right.description() + ")"
@@ -361,6 +364,15 @@ func (p PatternStream) FollowedByMax(maximum int, tag string, predicate Expressi
 	return p.followedBy(maximum, true, tag, predicate)
 }
 
+// FollowedByMaxExpr applies a deployment/variable expression as the maximum
+// number of active matches waiting on this followed-by edge. The expression
+// is evaluated when the left side completes and must resolve to a positive
+// integer. This is the Go-style counterpart of Esper's variable-backed
+// followed-by maximum.
+func (p PatternStream) FollowedByMaxExpr(maximum Expression[int], tag string, predicate Expression[bool]) PatternStream {
+	return p.followedByExpression(maximum, tag, predicate)
+}
+
 // Consume marks the most recently appended event filter with an event-level
 // consumption priority. When multiple filters in the same Pattern query match
 // one input Event, only consuming filters at the highest level receive that
@@ -393,17 +405,31 @@ func (p PatternStream) Consume(levels ...int) PatternStream {
 }
 
 func (p PatternStream) followedBy(maximum int, maximumSet bool, tag string, predicate Expression[bool]) PatternStream {
+	var maximumExpr Expr
+	return p.followedByWithMaximum(maximum, maximumSet, maximumExpr, tag, predicate)
+}
+
+func (p PatternStream) followedByExpression(maximum Expression[int], tag string, predicate Expression[bool]) PatternStream {
+	var maximumExpr Expr
+	if maximum != nil {
+		maximumExpr = maximum
+	}
+	return p.followedByWithMaximum(0, true, maximumExpr, tag, predicate)
+}
+
+func (p PatternStream) followedByWithMaximum(maximum int, maximumSet bool, maximumExpr Expr, tag string, predicate Expression[bool]) PatternStream {
 	if p.def == nil {
 		return p
 	}
 	copyDefinition := *p.def
 	copyDefinition.steps = append(append([]patternStep(nil), p.def.steps...), patternStep{tag: tag, predicate: predicate})
 	copyDefinition.root = &patternNode{
-		kind:           patternSequenceNode,
-		left:           p.def.root,
-		right:          patternEvent(tag, predicate),
-		sequenceMax:    maximum,
-		sequenceMaxSet: maximumSet,
+		kind:            patternSequenceNode,
+		left:            p.def.root,
+		right:           patternEvent(tag, predicate),
+		sequenceMax:     maximum,
+		sequenceMaxSet:  maximumSet,
+		sequenceMaxExpr: maximumExpr,
 	}
 	p.def = &copyDefinition
 	return p
@@ -902,7 +928,10 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		}
 		seen[node.tag] = struct{}{}
 	case patternSequenceNode:
-		if node.sequenceMaxSet && node.sequenceMax <= 0 {
+		if node.sequenceMaxExpr != nil && node.sequenceMaxExpr.Type() != typeOf[int]() {
+			return NewError(ErrorTypeMismatch, "followed-by maximum expression must return int")
+		}
+		if node.sequenceMaxExpr == nil && node.sequenceMaxSet && node.sequenceMax <= 0 {
 			return NewError(ErrorInvalidRule, "followed-by maximum must be positive")
 		}
 		if err := validatePatternNodeScope(node.left, seen, false); err != nil {

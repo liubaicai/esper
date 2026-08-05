@@ -1577,6 +1577,9 @@ func visitPatternNodeExpressions(node *patternNode, visit func(Expr) error) erro
 	if err := visit(node.predicate); err != nil {
 		return err
 	}
+	if err := visit(node.sequenceMaxExpr); err != nil {
+		return err
+	}
 	if err := visit(node.everyExpr); err != nil {
 		return err
 	}
@@ -2829,6 +2832,18 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 	case patternEventNode:
 		return e.validateExprFields(input, node.predicate)
 	case patternSequenceNode, patternAndNode, patternOrNode:
+		if node.kind == patternSequenceNode && node.sequenceMaxExpr != nil {
+			if err := e.validateExprFields(input, node.sequenceMaxExpr); err != nil {
+				return fmt.Errorf("followed-by maximum: %w", err)
+			}
+			var fields []string
+			node.sequenceMaxExpr.node().referencedFields(&fields)
+			var tags []string
+			node.sequenceMaxExpr.node().referencedTags(&tags)
+			if len(fields) > 0 || len(tags) > 0 {
+				return NewError(ErrorInvalidRule, "followed-by maximum expression cannot reference event fields or pattern tags")
+			}
+		}
 		if err := e.validatePatternNodeFields(input, node.left); err != nil {
 			return err
 		}

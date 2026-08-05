@@ -2629,29 +2629,31 @@ type rowRecogPartitionState struct {
 // deliberately separate from the public builder AST: the same pattern tree
 // can have many independent in-flight matches when Every is enabled.
 type patternProgress struct {
-	node           *patternNode
-	phase          uint8
-	count          int
-	done           bool
-	blocked        bool
-	started        bool
-	expired        bool
-	minimum        int
-	maximum        int
-	boundsResolved bool
-	timerStarted   bool
-	timerNext      time.Time
-	timerEmitted   bool
-	scheduleIndex  int
-	cronSchedule   resolvedCronSchedule
-	cronNext       time.Time
-	left           *patternProgress
-	right          *patternProgress
-	child          *patternProgress
-	tags           map[string]Event
-	tagValues      map[string][]Event
-	distinct       map[string]struct{}
-	distinctAt     map[string]time.Time
+	node                    *patternNode
+	phase                   uint8
+	count                   int
+	done                    bool
+	blocked                 bool
+	started                 bool
+	expired                 bool
+	minimum                 int
+	maximum                 int
+	boundsResolved          bool
+	sequenceMaximum         int
+	sequenceMaximumResolved bool
+	timerStarted            bool
+	timerNext               time.Time
+	timerEmitted            bool
+	scheduleIndex           int
+	cronSchedule            resolvedCronSchedule
+	cronNext                time.Time
+	left                    *patternProgress
+	right                   *patternProgress
+	child                   *patternProgress
+	tags                    map[string]Event
+	tagValues               map[string][]Event
+	distinct                map[string]struct{}
+	distinctAt              map[string]time.Time
 }
 
 type patternTransition struct {
@@ -6712,10 +6714,12 @@ func newPatternProgress(node *patternNode) *patternProgress {
 		return nil
 	}
 	progress := &patternProgress{
-		node:           node,
-		minimum:        node.minimum,
-		maximum:        node.maximum,
-		boundsResolved: !node.dynamicBounds || (node.minimumExpr == nil && node.maximumExpr == nil),
+		node:                    node,
+		minimum:                 node.minimum,
+		maximum:                 node.maximum,
+		boundsResolved:          !node.dynamicBounds || (node.minimumExpr == nil && node.maximumExpr == nil),
+		sequenceMaximum:         node.sequenceMax,
+		sequenceMaximumResolved: node.sequenceMaxExpr == nil,
 	}
 	switch node.kind {
 	case patternSequenceNode, patternAndNode, patternOrNode:
@@ -6921,6 +6925,35 @@ func resolvePatternMatchUntilBounds(progress *patternProgress, trigger patternTr
 	progress.minimum = minimum
 	progress.maximum = maximum
 	progress.boundsResolved = true
+	return true
+}
+
+func resolvePatternSequenceMaximum(progress *patternProgress, trigger patternTrigger, variables map[string]Value) bool {
+	if progress == nil || progress.node == nil || progress.node.kind != patternSequenceNode || progress.sequenceMaximumResolved {
+		return progress != nil && progress.sequenceMaximumResolved
+	}
+	if progress.node.sequenceMaxExpr == nil {
+		progress.sequenceMaximum = progress.node.sequenceMax
+		progress.sequenceMaximumResolved = true
+		return progress.sequenceMaximum > 0
+	}
+	value := progress.node.sequenceMaxExpr.eval(EvalContext{
+		Event:      trigger.event,
+		Tags:       progress.tags,
+		TagValues:  progress.tagValues,
+		Now:        trigger.now,
+		Variables:  variables,
+		Parameters: parameterValuesFromVariables(variables),
+	})
+	if !value.IsPresent() {
+		return false
+	}
+	maximum, err := As[int](value)
+	if err != nil || maximum <= 0 {
+		return false
+	}
+	progress.sequenceMaximum = maximum
+	progress.sequenceMaximumResolved = true
 	return true
 }
 
@@ -7204,25 +7237,39 @@ func patternMatchWithinLimits(active []patternMatch, candidate patternMatch, def
 	if definition.maxStates > 0 && len(active) >= definition.maxStates {
 		return false
 	}
-	counts := make(map[*patternNode]int)
+	counts := make(map[*patternNode]patternSequenceMaxCount)
 	for _, match := range active {
 		addPatternSequenceMaxCounts(counts, match.state)
 	}
 	addPatternSequenceMaxCounts(counts, candidate.state)
-	for node, count := range counts {
-		if node.sequenceMaxSet && count > node.sequenceMax {
+	for _, count := range counts {
+		if count.maximum <= 0 || count.count > count.maximum {
 			return false
 		}
 	}
 	return true
 }
 
-func addPatternSequenceMaxCounts(counts map[*patternNode]int, progress *patternProgress) {
+type patternSequenceMaxCount struct {
+	count   int
+	maximum int
+}
+
+func addPatternSequenceMaxCounts(counts map[*patternNode]patternSequenceMaxCount, progress *patternProgress) {
 	if progress == nil || progress.node == nil {
 		return
 	}
 	if progress.node.kind == patternSequenceNode && progress.node.sequenceMaxSet && progress.phase == 1 && !progress.done && !progress.expired {
-		counts[progress.node]++
+		if !progress.sequenceMaximumResolved {
+			counts[progress.node] = patternSequenceMaxCount{maximum: 0}
+		} else {
+			count := counts[progress.node]
+			count.count++
+			if count.maximum == 0 || progress.sequenceMaximum < count.maximum {
+				count.maximum = progress.sequenceMaximum
+			}
+			counts[progress.node] = count
+		}
 	}
 	addPatternSequenceMaxCounts(counts, progress.left)
 	addPatternSequenceMaxCounts(counts, progress.right)
@@ -7366,6 +7413,11 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					next.expired = true
 				}
 				if patternSatisfied(leftTransition.state) {
+					if next.node.sequenceMaxExpr != nil && !resolvePatternSequenceMaximum(next, trigger, variables) {
+						next.expired = true
+						result = append(result, patternTransitionFrom(next, false, leftTransition))
+						continue
+					}
 					next.phase = 1
 					next.right = newPatternProgress(progress.node.right)
 					inheritPatternProgressTags(next, next.right)
