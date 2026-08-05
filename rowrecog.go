@@ -798,7 +798,7 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 		matches := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, r.variables)
 		emittedForStart := false
 		for _, match := range matches {
-			if match.start < partition.skipStart {
+			if !rowRecogMatchAllowed(definition, partition, match) {
 				continue
 			}
 			matchKey := rowRecogMatchKey(match)
@@ -825,6 +825,14 @@ func (r *statementRuntime) advanceRowRecogSkip(definition *rowRecogDefinition, p
 	if definition == nil || partition == nil {
 		return
 	}
+	// SKIP TO CURRENT ROW keeps already-admitted recognition branches that
+	// started before the current match. They can extend on subsequent events
+	// and are required for overlapping ALL MATCHES results such as the
+	// financial DataSet pattern. The other skip modes deliberately prune
+	// branches before their target start position.
+	if definition.skip == RowRecogSkipToCurrentRow {
+		return
+	}
 	switch definition.skip {
 	case RowRecogSkipToNextRow:
 		partition.skipStart = match.start + 1
@@ -849,6 +857,16 @@ func (r *statementRuntime) advanceRowRecogSkip(definition *rowRecogDefinition, p
 			}
 		}
 	}
+}
+
+func rowRecogMatchAllowed(definition *rowRecogDefinition, partition *rowRecogPartitionState, match rowRecogMatch) bool {
+	if definition == nil || partition == nil {
+		return false
+	}
+	if definition.skip == RowRecogSkipToCurrentRow {
+		return true
+	}
+	return match.start >= partition.skipStart
 }
 
 func (r *statementRuntime) flushRowRecogIntervals(definition *rowRecogDefinition, plan Plan, now time.Time, batch *ResultBatch) {
@@ -897,7 +915,7 @@ func (r *statementRuntime) flushRowRecogIntervals(definition *rowRecogDefinition
 			}
 			matches := rowRecogMatchesAtOrBeforeWithPrevious(definition, partition.events, partition.previousByEvent, start, last, now, r.variables)
 			for _, match := range matches {
-				if match.start < partition.skipStart {
+				if !rowRecogMatchAllowed(definition, partition, match) {
 					continue
 				}
 				matchKey := rowRecogMatchKey(match)
@@ -1002,7 +1020,7 @@ func (r *statementRuntime) emitRowRecogIntervalMatches(definition *rowRecogDefin
 	}
 	partition.intervalClosed[startKey] = struct{}{}
 	for _, match := range matches {
-		if match.start < partition.skipStart {
+		if !rowRecogMatchAllowed(definition, partition, match) {
 			continue
 		}
 		matchKey := rowRecogMatchKey(match)
