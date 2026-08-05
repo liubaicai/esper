@@ -1215,6 +1215,8 @@ RowRecog 入口拆分如下，后续必须以此表逐项消项，不能以 `Tes
 
 本轮针对 `RowRecogDataWin` 增加了 Go 链式 API 对照场景：`TestRowRecogTimeWindowIteratorAndExpiry` 覆盖虚拟时钟下的 time window 到期、匹配后 iterator 视图和到期后的重算；`TestRowRecogTimeBatchWindowPendingIteratorAndBoundary` 覆盖 partition-by、pending batch 的 iterator、边界 listener 发射、边界后识别状态清空和下一批重新识别。实现将 time-batch 窗口保留的上一批与 match-recognize 当前识别状态分离，Java 的 unbound stream、PREV 到达顺序、Named Window time-batch 变体和完整输出顺序仍需继续对照。
 
+本轮补充对照 Java `RowRecogOps.RowRecogUnlimitedPartition`：`TestRowRecogUnlimitedPartitionLifecycle` 使用 Go 链式 `PartitionBy`/`AllMatches` 在 64 个独立分区中先完成一批 `A B`，再批量建立 pending `A` 并逐分区完成 `B`，验证分区状态不会串扰、重复完成或丢失；512 分区试跑显示当前通用 NFA 路径复杂度明显上升，因此不把该规模作为默认单测门禁，后续仍需专门的高分区性能/回收优化与 Java 级阈值对照。
+
 本轮继续对照 Java `RowRecogPrev`：Go 新增 `TestRowRecogPreviousHistorySurvivesTimeWindowEviction`、`TestRowRecogPreviousHistoryIsPartitionLocal`、`TestRowRecogPreviousHistoryForPartitionedSequence`、`TestRowRecogPreviousHistorySupportsMultiFieldPartitions` 和 `TestRowRecogPreviousHistoryOnUnpartitionedKeepAll`。实现对应 Java 的 `RowRecogStateRandomAccess`：新事件保存受最大偏移约束的滚动历史，旧事件从当前匹配输入移除时不回写滚动到达历史；因此匹配状态仍受窗口淘汰控制，而 DEFINE 中的 PREV 可复现 Java 的到达顺序语义。`PRIOR`、tag-aware previous access 和完整 Java/Go trace 仍待继续拆解。
 
 随后补齐 Java `PREV(A.property, n)`/`PRIOR(A.property, n)` 的基础 tag-aware field 语义：Go 新增 `PrevTag` 与 `PriorTag` 链式构造器，并在 previous evaluator 中为嵌套 `TagField`/tag enumeration 重绑定被选中的到达顺序事件，而不是继续读取当前 match tag。`TestRowRecogTagAwarePrevAndPriorEvaluateAgainstPreviousEvent` 在 DEFINE 和 MEASURES 中验证 `PrevTag(1)` 与 `PriorTag(0)`、keep-all 的监听器/快照结果及未知 tag 构建期错误；新增 `TestRowRecogTagAwarePrevBindsRepeatedCapture` 对照 `A{3}` 重复捕获，在 DEFINE 中用 `PrevTag` 绑定前一个 A 事件，同时检查重复标签的首项、末项和 count。动态 offset、复杂嵌套 NFA、更多 tag-aware PRIOR/PREV 组合与完整 Java/Go trace 仍未完成。

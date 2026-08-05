@@ -734,6 +734,16 @@
       "difference": "Go now compares the runtime-wide state-pool successor counts for optional bypasses (A? B? C), permuted repeated branches (permute(A,B)* C), nested repeated groups ((A B)* C), and Java finite range expansion (A{2,3} B). The assertions follow Java RowRecogNFAView.step: consume each current state, charge every successor before the next event evaluates it, and release terminal successors. Full Java plan introspection, dynamic quantifiers, branch ordering and all interval/termination compositions remain open."
     },
     {
+      "id": "case.rowrecog-unlimited-partition",
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogOps.java"],
+      "javaNames": ["RowRecogOps.RowRecogUnlimitedPartition"],
+      "goTests": ["TestRowRecogUnlimitedPartitionLifecycle"],
+      "tags": ["rowrecog", "partition", "lifecycle", "partial"],
+      "status": "mapped",
+      "evidence": ["source-inventory", "go-unit"],
+      "difference": "Go covers a bounded high-partition lifecycle trace with chainable PartitionBy/AllMatches, completed A-B pairs, and a second wave of pending A states followed by partition-local B completion. The Java stress cardinality and runtime-specific partition repository thresholds still require a dedicated performance/reclamation harness."
+    },
+    {
       "id": "case.esperio-csv-file",
       "javaSourceFiles": [
         "esperio/esperio-csv/src/main/java/com/espertech/esperio/csv/CSVInputAdapter.java",
