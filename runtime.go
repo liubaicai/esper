@@ -2501,6 +2501,7 @@ type rowRecogPartitionState struct {
 	previousRolling []Event
 	skipStart       int
 	emitted         map[string]struct{}
+	emittedMatches  map[string]rowRecogMatch
 	intervalClosed  map[string]struct{}
 	intervalFinal   map[string][]rowRecogMatch
 	activeStarts    map[string]struct{}

@@ -582,6 +582,7 @@ func newRowRecogPartitionState() *rowRecogPartitionState {
 	return &rowRecogPartitionState{
 		previousByEvent: make(map[string][]Event),
 		emitted:         make(map[string]struct{}),
+		emittedMatches:  make(map[string]rowRecogMatch),
 		intervalClosed:  make(map[string]struct{}),
 		intervalFinal:   make(map[string][]rowRecogMatch),
 		activeStarts:    make(map[string]struct{}),
@@ -806,6 +807,10 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 				continue
 			}
 			partition.emitted[matchKey] = struct{}{}
+			if partition.emittedMatches == nil {
+				partition.emittedMatches = make(map[string]rowRecogMatch)
+			}
+			partition.emittedMatches[matchKey] = match
 			if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, r.variables); visible {
 				batch.New = append(batch.New, resultRow(row))
 			}
@@ -923,6 +928,10 @@ func (r *statementRuntime) flushRowRecogIntervals(definition *rowRecogDefinition
 					continue
 				}
 				partition.emitted[matchKey] = struct{}{}
+				if partition.emittedMatches == nil {
+					partition.emittedMatches = make(map[string]rowRecogMatch)
+				}
+				partition.emittedMatches[matchKey] = match
 				partition.intervalFinal[startKey] = append(partition.intervalFinal[startKey], match)
 				if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, r.variables); visible {
 					batch.New = append(batch.New, resultRow(row))
@@ -1028,6 +1037,10 @@ func (r *statementRuntime) emitRowRecogIntervalMatches(definition *rowRecogDefin
 			continue
 		}
 		partition.emitted[matchKey] = struct{}{}
+		if partition.emittedMatches == nil {
+			partition.emittedMatches = make(map[string]rowRecogMatch)
+		}
+		partition.emittedMatches[matchKey] = match
 		partition.intervalFinal[startKey] = append(partition.intervalFinal[startKey], match)
 		if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, r.variables); visible {
 			batch.New = append(batch.New, resultRow(row))
@@ -1105,6 +1118,60 @@ func rowRecogStartKey(index int, event Event) string {
 	return fmt.Sprintf("%d:%s:%d", index, eventIdentity(event), event.ReceivedAt().UnixNano())
 }
 
+func rowRecogMatchContainsEvent(match rowRecogMatch, event Event) bool {
+	for _, captured := range match.captures {
+		for _, candidate := range captured {
+			if sameEvent(candidate, event) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func remapRowRecogEmittedMatches(matches map[string]rowRecogMatch, oldEvents []Event, removed Event, retained []Event) map[string]rowRecogMatch {
+	result := make(map[string]rowRecogMatch)
+	for _, match := range matches {
+		if match.start < 0 || match.end < match.start || match.end >= len(oldEvents) || rowRecogMatchContainsEvent(match, removed) {
+			continue
+		}
+		startEvent := oldEvents[match.start]
+		endEvent := oldEvents[match.end]
+		newStart, newEnd := -1, -1
+		for index, candidate := range retained {
+			if newStart < 0 && sameEvent(candidate, startEvent) {
+				newStart = index
+			}
+			if sameEvent(candidate, endEvent) {
+				newEnd = index
+			}
+		}
+		if newStart < 0 || newEnd < newStart {
+			continue
+		}
+		match.start = newStart
+		match.end = newEnd
+		result[rowRecogMatchKey(match)] = match
+	}
+	return result
+}
+
+func rowRecogSkipPastLastSnapshotStartExcluded(partition *rowRecogPartitionState, match rowRecogMatch) bool {
+	if partition == nil || match.start < 0 || match.start >= len(partition.events) {
+		return false
+	}
+	startEvent := partition.events[match.start]
+	for _, emitted := range partition.emittedMatches {
+		if emitted.end < 0 || emitted.end >= len(partition.events) {
+			continue
+		}
+		if sameEvent(startEvent, partition.events[emitted.end]) {
+			return true
+		}
+	}
+	return false
+}
+
 func rowRecogStartBlocked(partition *rowRecogPartitionState, index int) bool {
 	if partition == nil || index < 0 || index >= len(partition.events) {
 		return false
@@ -1126,6 +1193,8 @@ func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, e
 		if !sameEvent(retained, event) {
 			continue
 		}
+		oldEvents := append([]Event(nil), partition.events...)
+		oldEmittedMatches := partition.emittedMatches
 		oldActive := partition.activeStarts
 		oldBlocked := partition.blockedStarts
 		if _, active := oldActive[rowRecogStartKey(index, retained)]; active {
@@ -1163,9 +1232,12 @@ func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, e
 			partition.skipStart = len(partition.events)
 		}
 		// Match keys contain positional information. A retention change can
-		// shift later rows, so discard stale keys and let future arrivals be
-		// recognized against the current retained view.
+		// shift later rows, so rebuild the emitted-match history against the
+		// current retained view. Matches containing the removed event disappear,
+		// while already-emitted matches whose events remain stay visible to the
+		// SKIP PAST LAST ROW iterator.
 		partition.emitted = make(map[string]struct{})
+		partition.emittedMatches = remapRowRecogEmittedMatches(oldEmittedMatches, oldEvents, retained, partition.events)
 		partition.intervalClosed = make(map[string]struct{})
 		partition.intervalFinal = make(map[string][]rowRecogMatch)
 		if len(partition.events) == 0 && len(partition.previousRolling) == 0 {
@@ -1677,6 +1749,30 @@ func rowRecogCurrentMatches(definition *rowRecogDefinition, partition *rowRecogP
 	}
 	result := make([]rowRecogMatch, 0)
 	seen := make(map[string]struct{})
+	// SKIP PAST LAST ROW removes a completed match's start branch after the
+	// listener notification, but Esper's iterator keeps that already-emitted
+	// row visible. Preserve the emitted history first, then only discover new
+	// matches from starts that remain eligible under the current skip boundary.
+	if definition.skip == RowRecogSkipPastLastRow && len(partition.emittedMatches) > 0 {
+		emitted := make([]rowRecogMatch, 0, len(partition.emittedMatches))
+		for _, match := range partition.emittedMatches {
+			emitted = append(emitted, match)
+		}
+		sort.SliceStable(emitted, func(left, right int) bool {
+			if emitted[left].start != emitted[right].start {
+				return emitted[left].start < emitted[right].start
+			}
+			if emitted[left].end != emitted[right].end {
+				return emitted[left].end < emitted[right].end
+			}
+			return rowRecogMatchKey(emitted[left]) < rowRecogMatchKey(emitted[right])
+		})
+		for _, match := range emitted {
+			key := rowRecogMatchKey(match)
+			seen[key] = struct{}{}
+			result = append(result, match)
+		}
+	}
 	for start := 0; start < len(partition.events); start++ {
 		if rowRecogStartBlocked(partition, start) {
 			continue
@@ -1717,6 +1813,9 @@ func rowRecogCurrentMatches(definition *rowRecogDefinition, partition *rowRecogP
 			for _, match := range matches {
 				key := rowRecogMatchKey(match)
 				if _, exists := seen[key]; exists {
+					continue
+				}
+				if definition.skip == RowRecogSkipPastLastRow && rowRecogSkipPastLastSnapshotStartExcluded(partition, match) {
 					continue
 				}
 				seen[key] = struct{}{}
