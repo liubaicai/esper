@@ -253,10 +253,10 @@
       "level": "S",
       "summary": "Fluent dataflow definitions, graph ports, source lifecycle, signal-marker propagation and instance control plane",
       "javaRefs": ["EPLDataflowOpEventBusSource", "EPLDataflowOpFilter", "EPLDataflowOpSelect"],
-      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_pattern_test.go", "dataflow_port_inference_test.go", "dataflow_select_test.go", "dataflow_select_iterate_test.go", "dataflow_join_test.go", "dataflow_join_condition_test.go", "dataflow_join_captive_test.go", "dataflow_representation_test.go", "dataflow_saved_test.go", "dataflow_reentrant_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go", "dataflow_source_test.go"],
+      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_pattern_test.go", "dataflow_port_inference_test.go", "dataflow_select_test.go", "dataflow_select_iterate_test.go", "dataflow_join_test.go", "dataflow_join_outer_test.go", "dataflow_join_order_test.go", "dataflow_join_condition_test.go", "dataflow_join_captive_test.go", "dataflow_representation_test.go", "dataflow_saved_test.go", "dataflow_reentrant_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go", "dataflow_source_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["EventBean/Map/ObjectArray/XML representation coercion and complete Dataflow join condition/left-right/multi-row lifecycle", "external serialization and cross-process restoration of saved definitions/instances", "complete multi-port captive/join and exception recovery parity"]
+      "remaining": ["complete EventBean/Map/ObjectArray/XML representation coercion and Dataflow join condition/left-right/multi-row lifecycle", "external serialization and cross-process restoration of saved definitions/instances", "complete multi-port captive/join and exception recovery parity"]
     },
     {
       "id": "join.basic",
@@ -592,11 +592,11 @@
       "javaRuntimeIds": ["java-runtime-323dd1ec14f5ed5c0586", "java-runtime-21dcd981de8124bf387c"],
       "javaNames": ["EPLDataflowFromClauseJoinOrder", "EPLDataflowOuterJoinMultirow"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpSelect.java"],
-      "goTests": ["TestDataflowSelectInnerLastEventJoinWaitsForAllInputsMatchesEsper", "TestDataflowSelectFullOuterJoinEmitsMissingInputMatchesEsper", "TestDataflowSelectJoinCaptiveEmittersMatchEsper", "TestDataflowSelectJoinRejectsInvalidShape", "TestDataflowSelectInnerJoinConditionFiltersAndComparesMatchesEsper", "TestDataflowSelectInnerJoinAnyConditionMatchesEsper", "TestDataflowSelectJoinConditionRejectsInvalidSource", "TestDataflowSelectJoinConditionsMatchEsper", "TestDataflowSelectFullOuterJoinConditionEmitsUnmatchedInput", "TestDataflowSelectJoinRejectsInvalidCondition"],
+      "goTests": ["TestDataflowSelectInnerLastEventJoinWaitsForAllInputsMatchesEsper", "TestDataflowSelectFullOuterJoinEmitsMissingInputMatchesEsper", "TestDataflowSelectLeftOuterJoinEmitsOnlyLeftUnmatchedRowsMatchesEsper", "TestDataflowSelectRightOuterJoinEmitsOnlyRightUnmatchedRowsMatchesEsper", "TestDataflowSelectLeftAndRightOuterLastEventJoinsMatchEsper", "TestDataflowSelectLeftAndRightOuterKeepAllJoinsMatchEsper", "TestDataflowSelectJoinOrderPermutationsMatchEsper", "TestDataflowSelectJoinCaptiveEmittersMatchEsper", "TestDataflowSelectJoinRejectsInvalidShape", "TestDataflowSelectInnerJoinConditionFiltersAndComparesMatchesEsper", "TestDataflowSelectInnerJoinAnyConditionMatchesEsper", "TestDataflowSelectJoinConditionRejectsInvalidSource", "TestDataflowSelectJoinConditionsMatchEsper", "TestDataflowSelectFullOuterJoinConditionEmitsUnmatchedInput", "TestDataflowSelectJoinRejectsInvalidCondition"],
       "tags": ["correctness", "dataflow", "select", "join", "multi-input", "outer-join"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "The Go fluent SelectJoin/DataflowJoinOptions/ConnectInput API supports explicit indexed input ports, three-way inner latest-event joins, analyzable OnSourcesEqual/OnSourcesCompare predicates with AllJoin/AnyJoin composition, conditional inner filtering, and two-way full-outer keep-all Cartesian or current-unmatched rows with Null missing-side fields through JoinField. Java additionally covers join-order permutations, left/right variants, multi-row old/new lifecycle, time/length views and complete representation/invalid matrices; those remain open."
+      "difference": "The Go fluent SelectJoin/DataflowJoinOptions/ConnectInput API supports explicit indexed input ports, basic source-order permutations, three-way inner latest-event joins, LeftOuter/RightOuter/FullOuter row availability for latest-event and keep-all retention, analyzable OnSourcesEqual/OnSourcesCompare predicates with AllJoin/AnyJoin composition, conditional filtering, and Null missing-side fields through JoinField. Java additionally covers multi-row old/new lifecycle, time/length views and complete representation/invalid matrices; those remain open."
     },
     {
       "id": "case.expr-enum-aggregate",

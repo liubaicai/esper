@@ -142,6 +142,112 @@ func TestDataflowSelectFullOuterJoinEmitsMissingInputMatchesEsper(t *testing.T) 
 	assertDataflowJoinRow(t, outputs, 3, 2, 10)
 }
 
+func TestDataflowSelectLeftOuterJoinEmitsOnlyLeftUnmatchedRowsMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[dataflowJoinLeft](env, "JoinLeft"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[dataflowJoinRight](env, "JoinRight"); err != nil {
+		t.Fatal(err)
+	}
+	definition, err := DefineDataflow(env, "dataflow-select-left-outer").
+		EventBusSource("left", "JoinLeft").
+		EventBusSource("right", "JoinRight").
+		SelectJoin("select", DataflowJoinOptions{Inputs: 2, Kind: DataflowJoinLeftOuter},
+			Alias("leftID", JoinField[int](0, "id")),
+			Alias("rightID", JoinField[int](1, "id")),
+		).
+		Emitter("sink").
+		ConnectInput("left", "select", 0).
+		ConnectInput("right", "select", 1).
+		Connect("select", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	instance, err := engine.InstantiateDataflow(context.Background(), definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := instance.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer instance.Cancel(context.Background())
+
+	if err := engine.SendEvent(context.Background(), dataflowJoinLeft{ID: 1}); err != nil {
+		t.Fatal(err)
+	}
+	assertDataflowJoinRow(t, instance.Outputs(), 0, 1, 0)
+	if err := engine.SendEvent(context.Background(), dataflowJoinRight{ID: 10}); err != nil {
+		t.Fatal(err)
+	}
+	assertDataflowJoinRow(t, instance.Outputs(), 1, 1, 10)
+	if err := engine.SendEvent(context.Background(), dataflowJoinRight{ID: 20}); err != nil {
+		t.Fatal(err)
+	}
+	assertDataflowJoinRow(t, instance.Outputs(), 2, 1, 20)
+	if len(instance.Outputs()) != 3 {
+		t.Fatalf("left outer emitted a right-only row = %#v", instance.Outputs())
+	}
+}
+
+func TestDataflowSelectRightOuterJoinEmitsOnlyRightUnmatchedRowsMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[dataflowJoinLeft](env, "JoinLeft"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[dataflowJoinRight](env, "JoinRight"); err != nil {
+		t.Fatal(err)
+	}
+	definition, err := DefineDataflow(env, "dataflow-select-right-outer").
+		EventBusSource("left", "JoinLeft").
+		EventBusSource("right", "JoinRight").
+		SelectJoin("select", DataflowJoinOptions{Inputs: 2, Kind: DataflowJoinRightOuter},
+			Alias("leftID", JoinField[int](0, "id")),
+			Alias("rightID", JoinField[int](1, "id")),
+		).
+		Emitter("sink").
+		ConnectInput("left", "select", 0).
+		ConnectInput("right", "select", 1).
+		Connect("select", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	instance, err := engine.InstantiateDataflow(context.Background(), definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := instance.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer instance.Cancel(context.Background())
+
+	if err := engine.SendEvent(context.Background(), dataflowJoinRight{ID: 10}); err != nil {
+		t.Fatal(err)
+	}
+	outputs := instance.Outputs()
+	if len(outputs) != 1 {
+		t.Fatalf("right outer unmatched output count = %d, want 1: %#v", len(outputs), outputs)
+	}
+	if row, ok := outputs[0].(Row); !ok || !row.Get("leftID").IsNull() || row.Get("rightID").Any() != 10 {
+		t.Fatalf("right outer unmatched row = %#v", outputs[0])
+	}
+	if err := engine.SendEvent(context.Background(), dataflowJoinLeft{ID: 1}); err != nil {
+		t.Fatal(err)
+	}
+	assertDataflowJoinRow(t, instance.Outputs(), 1, 1, 10)
+	if err := engine.SendEvent(context.Background(), dataflowJoinLeft{ID: 2}); err != nil {
+		t.Fatal(err)
+	}
+	assertDataflowJoinRow(t, instance.Outputs(), 2, 2, 10)
+	if len(instance.Outputs()) != 3 {
+		t.Fatalf("right outer emitted a left-only row = %#v", instance.Outputs())
+	}
+}
+
 func TestDataflowSelectJoinRejectsInvalidShape(t *testing.T) {
 	env := NewEnvironment()
 	_, err := DefineDataflow(env, "dataflow-select-join-invalid").

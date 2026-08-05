@@ -326,13 +326,16 @@ func cloneDataflowSelectOptions(options DataflowSelectOptions) DataflowSelectOpt
 }
 
 // DataflowJoinKind selects the row-availability policy for a multi-input
-// SelectJoin. Inner joins wait until every input has a value; FullOuter emits
-// a tuple with Null-valued missing inputs as soon as any input arrives.
+// SelectJoin. Inner joins wait until every input has a value; the outer forms
+// retain a Null-valued tuple for the selected edge when the other inputs are
+// not available.
 type DataflowJoinKind uint8
 
 const (
 	DataflowJoinInner DataflowJoinKind = iota
 	DataflowJoinFullOuter
+	DataflowJoinLeftOuter
+	DataflowJoinRightOuter
 )
 
 // DataflowJoinRetention controls whether each input keeps only its latest
@@ -365,7 +368,7 @@ func (o DataflowJoinOptions) validate() error {
 	if o.Inputs < 2 {
 		return NewError(ErrorInvalidRule, "dataflow select join requires at least two inputs")
 	}
-	if o.Kind != DataflowJoinInner && o.Kind != DataflowJoinFullOuter {
+	if o.Kind != DataflowJoinInner && o.Kind != DataflowJoinFullOuter && o.Kind != DataflowJoinLeftOuter && o.Kind != DataflowJoinRightOuter {
 		return NewError(ErrorInvalidRule, "unknown dataflow select join kind")
 	}
 	if o.Retention != DataflowJoinLastEvent && o.Retention != DataflowJoinKeepAll {
@@ -2485,10 +2488,13 @@ func (d *DataflowInstance) processDataflowSelectJoin(operator DataflowOperator, 
 				matched = append(matched, tuple)
 			}
 		}
-		// SelectJoin is insert-stream oriented. If a full-outer input has no
-		// matching combination, emit its unmatched tuple once; rows emitted
-		// for earlier inputs are not replayed when a later side arrives.
-		if len(matched) == 0 && state.join.Kind == DataflowJoinFullOuter {
+		// SelectJoin is insert-stream oriented. If an outer-edge input has no
+		// matching combination, emit its unmatched tuple once; rows emitted for
+		// earlier inputs are not replayed when a later side arrives.
+		outerEdge := state.join.Kind == DataflowJoinFullOuter ||
+			(state.join.Kind == DataflowJoinLeftOuter && input == 0) ||
+			(state.join.Kind == DataflowJoinRightOuter && input == state.join.Inputs-1)
+		if len(matched) == 0 && outerEdge {
 			unmatched := make([]Event, state.join.Inputs)
 			unmatched[input] = event
 			matched = append(matched, unmatched)
@@ -2525,6 +2531,12 @@ func (s *dataflowSelectState) joinTuples(input int, event Event) [][]Event {
 		if s.join.Kind == DataflowJoinInner && !complete {
 			return nil
 		}
+		if s.join.Kind == DataflowJoinLeftOuter && len(s.joinAll[0]) == 0 {
+			return nil
+		}
+		if s.join.Kind == DataflowJoinRightOuter && len(s.joinAll[len(s.joinAll)-1]) == 0 {
+			return nil
+		}
 		lists := make([][]Event, len(s.joinAll))
 		for index, events := range s.joinAll {
 			if index == input {
@@ -2544,11 +2556,20 @@ func (s *dataflowSelectState) joinTuples(input int, event Event) [][]Event {
 
 	copyEvent := event
 	s.joinLatest[input] = &copyEvent
-	if s.join.Kind == DataflowJoinInner {
+	switch s.join.Kind {
+	case DataflowJoinInner:
 		for _, latest := range s.joinLatest {
 			if latest == nil {
 				return nil
 			}
+		}
+	case DataflowJoinLeftOuter:
+		if s.joinLatest[0] == nil {
+			return nil
+		}
+	case DataflowJoinRightOuter:
+		if s.joinLatest[len(s.joinLatest)-1] == nil {
+			return nil
 		}
 	}
 	tuple := make([]Event, len(s.joinLatest))
