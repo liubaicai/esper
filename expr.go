@@ -203,6 +203,17 @@ type EvalContext struct {
 	// uses this to preserve arrival-order PREV values after a data window has
 	// evicted the referenced event.
 	PreviousHistory []Event
+	// PreviousWindowAccess marks PreviousHistory as an absolute window-access
+	// sequence (index zero is the access head) rather than the default
+	// newest-relative history. Sorted and time-order views use this mode.
+	PreviousWindowAccess bool
+	// PriorHistory is the arrival-order history used by Prior when a view has
+	// a separate previous-access ordering, such as TimeOrder or Sort.
+	PriorHistory []Event
+	// PriorHistorySet distinguishes an explicitly empty prior history from an
+	// absent view-specific history. This matters for old-stream rows after the
+	// referenced event has left a sorted/time-order view.
+	PriorHistorySet bool
 	// PreviousTagEvents supplies the event selected by a tag-aware Prev/Prior
 	// expression to nested TagField/TagFieldAt and tag enumeration expressions.
 	// It is private-in-practice runtime context: fluent callers normally use
@@ -679,6 +690,132 @@ func PriorTag[V any](offset int, tag, name string) Expression[V] {
 	return Prior[V](offset, TagField[V](tag, name))
 }
 
+// PrevTail evaluates expression from the oldest end of the current window.
+// Offset zero addresses the tail event, offset one the next event, and so on.
+// For sorted/time-order windows the tail follows the view's sorted access
+// order; for ordinary windows it follows insertion order.
+func PrevTail[V any](offset int, expression Expression[V]) Expression[V] {
+	if expression == nil {
+		return makeExpr[V]("prev-tail", fmt.Sprintf("prev-tail(%d,<nil>)", offset), nil, func(EvalContext) Value { return Null() })
+	}
+	description := fmt.Sprintf("prev-tail(%d,%s)", offset, expression.Description())
+	return makeExpr[V]("prev-tail", description, []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		history := previousWindowHistory(ctx)
+		if offset < 0 || len(history) == 0 {
+			return Null()
+		}
+		index := offset
+		if ctx.PreviousWindowAccess {
+			index = len(history) - 1 - offset
+		}
+		if ctx.PreviousWindowAccess {
+			nested := ctx
+			nested.History = history
+			nested.PreviousHistory = history
+			return evaluatePreviousAt[V](expression, nested, index)
+		}
+		return evaluatePreviousAt[V](expression, ctx, index)
+	})
+}
+
+// PrevCount returns the number of events currently visible to previous-value
+// access. A zero-sized active window returns zero; a leaving row without a
+// retained history returns Null.
+func PrevCount[V any](expression Expression[V]) Expression[int64] {
+	children := []*exprNode(nil)
+	description := "prev-count(<nil>)"
+	if expression != nil {
+		children = []*exprNode{expression.node()}
+		description = "prev-count(" + expression.Description() + ")"
+	}
+	return makeExpr[int64]("prev-count", description, children, func(ctx EvalContext) Value {
+		history := previousWindowHistory(ctx)
+		if expression == nil || (ctx.IsLeaving && history == nil) {
+			return Null()
+		}
+		return Present(int64(len(history)))
+	})
+}
+
+// PrevWindow evaluates expression for every event visible to previous-value
+// access. Ordinary windows return newest-to-oldest; sorted/time-order windows
+// retain their view access order.
+func PrevWindow[V any](expression Expression[V]) Expression[[]V] {
+	children := []*exprNode(nil)
+	description := "prev-window(<nil>)"
+	if expression != nil {
+		children = []*exprNode{expression.node()}
+		description = "prev-window(" + expression.Description() + ")"
+	}
+	return makeExpr[[]V]("prev-window", description, children, func(ctx EvalContext) Value {
+		history := previousWindowHistory(ctx)
+		if expression == nil || len(history) == 0 || (ctx.IsLeaving && history == nil) {
+			return Null()
+		}
+		events := append([]Event(nil), history...)
+		if !ctx.PreviousWindowAccess {
+			reverseEvents(events)
+		}
+		values := make([]V, len(events))
+		for index, event := range events {
+			nested := ctx
+			nested.Event = event
+			if ctx.PreviousWindowAccess {
+				nested.History = append([]Event(nil), events...)
+				nested.PreviousHistory = append([]Event(nil), events...)
+				nested.PreviousWindowAccess = true
+			} else {
+				nested.History = append([]Event(nil), events[:index+1]...)
+				nested.PreviousHistory = nil
+				nested.PreviousWindowAccess = false
+			}
+			nested.PriorHistory = nil
+			nested.PriorHistorySet = false
+			value := expression.eval(nested)
+			if !value.IsPresent() {
+				continue
+			}
+			converted, err := As[V](value)
+			if err != nil {
+				return Missing()
+			}
+			values[index] = converted
+		}
+		return Present(values)
+	})
+}
+
+func evaluatePreviousAt[V any](expression Expression[V], ctx EvalContext, index int) Value {
+	if index < 0 || index >= len(ctx.History) {
+		return Null()
+	}
+	nested := ctx
+	nested.Event = ctx.History[index]
+	if ctx.PreviousWindowAccess {
+		nested.History = append([]Event(nil), ctx.History...)
+	} else {
+		nested.History = append([]Event(nil), ctx.History[:index+1]...)
+	}
+	nested.PreviousHistory = append([]Event(nil), ctx.PreviousHistory...)
+	nested.PreviousWindowAccess = ctx.PreviousWindowAccess
+	nested.PriorHistory = append([]Event(nil), ctx.PriorHistory...)
+	nested.PriorHistorySet = ctx.PriorHistorySet
+	return expression.eval(nested)
+}
+
+func reverseEvents(events []Event) {
+	for left, right := 0, len(events)-1; left < right; left, right = left+1, right-1 {
+		events[left], events[right] = events[right], events[left]
+	}
+}
+
+func previousWindowHistory(ctx EvalContext) []Event {
+	if ctx.PreviousWindowAccess {
+		return ctx.PreviousHistory
+	}
+	return ctx.History
+}
+
 func previousExpression[V any](kind string, offset int, expression Expression[V], prior bool) Expression[V] {
 	if expression == nil {
 		return makeExpr[V](kind, fmt.Sprintf("%s(%d,<nil>)", kind, offset), nil, func(EvalContext) Value { return Null() })
@@ -687,11 +824,25 @@ func previousExpression[V any](kind string, offset int, expression Expression[V]
 	node := &exprNode{kind: kind, typ: typeOf[V](), description: description, previousOffset: offset, children: []*exprNode{expression.node()}}
 	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
 		history := ctx.PreviousHistory
-		if history == nil {
+		windowAccess := ctx.PreviousWindowAccess && !prior
+		if prior && (ctx.PriorHistorySet || ctx.PriorHistory != nil) {
+			history = ctx.PriorHistory
+			windowAccess = false
+		} else if history == nil && !ctx.PreviousWindowAccess {
 			history = ctx.History
 		}
 		if offset < 0 || len(history) == 0 {
 			return Null()
+		}
+		if windowAccess {
+			if offset >= len(history) {
+				return Null()
+			}
+			nested := ctx
+			nested.History = history
+			nested.PreviousHistory = history
+			nested.PreviousWindowAccess = true
+			return evaluatePreviousAt[V](expression, nested, offset)
 		}
 		index := len(history) - 1 - offset
 		if prior {
@@ -704,6 +855,9 @@ func previousExpression[V any](kind string, offset int, expression Expression[V]
 		nested.Event = history[index]
 		nested.History = append([]Event(nil), history[:index+1]...)
 		nested.PreviousHistory = append([]Event(nil), history[:index+1]...)
+		nested.PreviousWindowAccess = ctx.PreviousWindowAccess
+		nested.PriorHistory = append([]Event(nil), ctx.PriorHistory...)
+		nested.PriorHistorySet = ctx.PriorHistorySet
 		var tags []string
 		expression.node().referencedTags(&tags)
 		if len(tags) > 0 || len(ctx.PreviousTagEvents) > 0 {

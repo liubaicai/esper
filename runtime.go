@@ -2363,6 +2363,7 @@ func joinDeltaEvents(delta joinDelta, receivedAt time.Time) eventDelta {
 type windowRuntimeState struct {
 	entries    []storedEvent
 	pendingNew []storedEvent
+	arrival    []Event
 	started    bool
 	start      time.Time
 	externalAt time.Time
@@ -2687,10 +2688,12 @@ func (r *statementRuntime) initializeAt(at time.Time) {
 }
 
 type eventDelta struct {
-	newEvents      []Event
-	oldEvents      []Event
-	history        []Event
-	historyByEvent map[string][]Event
+	newEvents       []Event
+	oldEvents       []Event
+	history         []Event
+	historyByEvent  map[string][]Event
+	previousByEvent map[string][]Event
+	priorByEvent    map[string][]Event
 }
 
 func (s *Statement) process(ctx context.Context, now time.Time, event Event, variables map[string]Value) (ResultBatch, bool, error) {
@@ -4073,7 +4076,9 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 	}
 	result := ResultBatch{Time: now}
 	history := append([]Event(nil), events...)
-	result.New = projectResults(events, plan.query, plan.resultSchema, now, r.variables, history, nil, false)
+	previousByEvent := r.currentPreviousAccess(plan.query.input)
+	priorByEvent := r.currentPriorAccess(plan.query.input)
+	result.New = projectResults(events, plan.query, plan.resultSchema, now, r.variables, history, nil, previousByEvent, priorByEvent, false)
 	result.New = applyResultWindow(result.New, plan.query)
 	if !result.empty() {
 		result.Sequence = r.seq.Add(1)
@@ -4243,6 +4248,40 @@ func (r *statementRuntime) currentStreamEvents(node *streamNode, now time.Time) 
 			}
 		}
 		return filtered
+	default:
+		return nil
+	}
+}
+
+func (r *statementRuntime) currentPreviousAccess(node *streamNode) map[string][]Event {
+	if r == nil || node == nil {
+		return nil
+	}
+	switch node.kind {
+	case streamWindow:
+		if !windowUsesPreviousAccess(node.window) {
+			return nil
+		}
+		return windowPreviousAccessByEvent(node.window, r.windows[node])
+	case streamFilter:
+		return r.currentPreviousAccess(node.input)
+	default:
+		return nil
+	}
+}
+
+func (r *statementRuntime) currentPriorAccess(node *streamNode) map[string][]Event {
+	if r == nil || node == nil {
+		return nil
+	}
+	switch node.kind {
+	case streamWindow:
+		if !windowUsesPreviousAccess(node.window) {
+			return nil
+		}
+		return windowPriorAccessByEvent(node.window, r.windows[node])
+	case streamFilter:
+		return r.currentPriorAccess(node.input)
 	default:
 		return nil
 	}
@@ -5268,7 +5307,12 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		if err != nil {
 			return eventDelta{}, err
 		}
-		filtered := eventDelta{history: append([]Event(nil), inputDelta.history...), historyByEvent: cloneEventHistories(inputDelta.historyByEvent)}
+		filtered := eventDelta{
+			history:         append([]Event(nil), inputDelta.history...),
+			historyByEvent:  cloneEventHistories(inputDelta.historyByEvent),
+			previousByEvent: cloneEventHistories(inputDelta.previousByEvent),
+			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
+		}
 		for _, candidate := range inputDelta.newEvents {
 			value := node.predicate.eval(EvalContext{Event: candidate, History: historyForEvent(inputDelta, candidate), Now: now, Variables: r.variables})
 			if ok, isBool := boolValue(value); isBool && ok {
@@ -5291,18 +5335,47 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		if state == nil {
 			state = &windowRuntimeState{}
 		}
-		result := eventDelta{oldEvents: append([]Event(nil), inputDelta.oldEvents...)}
+		result := eventDelta{
+			oldEvents:       append([]Event(nil), inputDelta.oldEvents...),
+			history:         append([]Event(nil), inputDelta.history...),
+			historyByEvent:  cloneEventHistories(inputDelta.historyByEvent),
+			previousByEvent: cloneEventHistories(inputDelta.previousByEvent),
+			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
+		}
 		for _, candidate := range inputDelta.newEvents {
 			delta, addErr := r.addToWindow(node.window, state, candidate, now)
 			if addErr != nil {
 				return eventDelta{}, addErr
 			}
-			result.newEvents = append(result.newEvents, delta.newEvents...)
-			result.oldEvents = append(result.oldEvents, delta.oldEvents...)
+			result = mergeDelta(result, delta)
 		}
 		r.windows[node] = state
 		result.history = windowHistory(node.window, state)
 		result.historyByEvent = windowHistoryByEvent(node.window, state)
+		if windowUsesPreviousAccess(node.window) {
+			result.previousByEvent = windowPreviousAccessByEvent(node.window, state)
+			if result.previousByEvent == nil {
+				result.previousByEvent = make(map[string][]Event)
+			}
+			newIdentities := make(map[string]struct{}, len(result.newEvents))
+			for _, current := range result.newEvents {
+				identity := eventIdentity(current)
+				newIdentities[identity] = struct{}{}
+				if _, exists := result.previousByEvent[identity]; exists {
+					continue
+				}
+				result.previousByEvent[identity] = append([]Event(nil), windowPreviousAccessHistoryForEvent(node.window, state, current, now, r.variables)...)
+			}
+			for _, old := range result.oldEvents {
+				if _, isNew := newIdentities[eventIdentity(old)]; isNew {
+					continue
+				}
+				if result.historyByEvent == nil {
+					result.historyByEvent = make(map[string][]Event)
+				}
+				result.historyByEvent[eventIdentity(old)] = nil
+			}
+		}
 		return result, nil
 	default:
 		return eventDelta{}, fmt.Errorf("esper: runtime encountered unknown stream node kind %d", node.kind)
@@ -5326,7 +5399,12 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 		if err != nil {
 			return eventDelta{}, err
 		}
-		filtered := eventDelta{history: append([]Event(nil), inputDelta.history...), historyByEvent: cloneEventHistories(inputDelta.historyByEvent)}
+		filtered := eventDelta{
+			history:         append([]Event(nil), inputDelta.history...),
+			historyByEvent:  cloneEventHistories(inputDelta.historyByEvent),
+			previousByEvent: cloneEventHistories(inputDelta.previousByEvent),
+			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
+		}
 		for _, candidate := range inputDelta.oldEvents {
 			value := node.predicate.eval(EvalContext{Event: candidate, History: historyForEvent(inputDelta, candidate), Now: now, Variables: r.variables})
 			if ok, isBool := boolValue(value); isBool && ok {
@@ -5346,12 +5424,33 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 		}
 		result := eventDelta{}
 		for _, candidate := range inputDelta.oldEvents {
+			if windowUsesPreviousAccess(node.window) {
+				if history := windowPriorHistoryForEvent(node.window, state, candidate); history != nil {
+					if result.priorByEvent == nil {
+						result.priorByEvent = make(map[string][]Event)
+					}
+					result.priorByEvent[eventIdentity(candidate)] = history
+				}
+			}
 			if removeFromWindowState(node.window, state, candidate, now, r.variables) {
 				result.oldEvents = append(result.oldEvents, candidate)
 			}
 		}
 		result.history = windowHistory(node.window, state)
 		result.historyByEvent = windowHistoryByEvent(node.window, state)
+		result.previousByEvent = windowPreviousAccessByEvent(node.window, state)
+		if windowUsesPreviousAccess(node.window) {
+			if result.previousByEvent == nil {
+				result.previousByEvent = make(map[string][]Event)
+			}
+			for _, old := range result.oldEvents {
+				result.previousByEvent[eventIdentity(old)] = nil
+				if result.historyByEvent == nil {
+					result.historyByEvent = make(map[string][]Event)
+				}
+				result.historyByEvent[eventIdentity(old)] = nil
+			}
+		}
 		if windowStateEmpty(state) {
 			delete(r.windows, node)
 		}
@@ -5396,6 +5495,9 @@ func removeFromWindowState(spec WindowSpec, state *windowRuntimeState, event Eve
 	for index, stored := range state.entries {
 		if sameEvent(stored.event, event) {
 			state.entries = append(state.entries[:index], state.entries[index+1:]...)
+			if windowUsesArrivalPrior(spec) {
+				removeArrivalEvents(&state.arrival, []Event{event})
+			}
 			if sorted, ok := spec.(SortedWindowSpec); ok && sorted.Rank && len(sorted.UniqueKeys) > 0 && state.keyed != nil {
 				key := sortedWindowKey(sorted, event, now, variables)
 				if current, exists := state.keyed[key]; exists && sameEvent(current.event, event) {
@@ -5494,6 +5596,8 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		if err != nil {
 			return eventDelta{}, err
 		}
+		priorHistory := append(append([]Event(nil), state.arrival...), event)
+		state.arrival = append(state.arrival, event)
 		if len(state.entries) == 0 || externalAt.After(state.externalAt) {
 			state.externalAt = externalAt
 		}
@@ -5515,9 +5619,20 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 			}
 		}
 		state.entries = kept
+		if len(result.oldEvents) > 0 {
+			if result.priorByEvent == nil {
+				result.priorByEvent = make(map[string][]Event)
+			}
+			addPriorHistories(result.priorByEvent, state.arrival, result.oldEvents)
+		}
+		removeArrivalEvents(&state.arrival, result.oldEvents)
 		if len(state.entries) == 0 {
 			state.externalAt = time.Time{}
 		}
+		if result.priorByEvent == nil {
+			result.priorByEvent = make(map[string][]Event)
+		}
+		result.priorByEvent[eventIdentity(event)] = priorHistory
 		return result, nil
 	case LengthBatchWindowSpec:
 		state.pendingNew = append(state.pendingNew, stored)
@@ -5654,6 +5769,8 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		return eventDelta{newEvents: []Event{event}}, nil
 	case SortedWindowSpec:
 		result := eventDelta{newEvents: []Event{event}}
+		priorHistory := append(append([]Event(nil), state.arrival...), event)
+		state.arrival = append(state.arrival, event)
 		var uniqueKey string
 		if window.Rank && len(window.UniqueKeys) > 0 {
 			if state.keyed == nil {
@@ -5699,6 +5816,17 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 				}
 			}
 		}
+		if len(result.oldEvents) > 0 {
+			if result.priorByEvent == nil {
+				result.priorByEvent = make(map[string][]Event)
+			}
+			addPriorHistories(result.priorByEvent, state.arrival, result.oldEvents)
+		}
+		removeArrivalEvents(&state.arrival, result.oldEvents)
+		if result.priorByEvent == nil {
+			result.priorByEvent = make(map[string][]Event)
+		}
+		result.priorByEvent[eventIdentity(event)] = priorHistory
 		return result, nil
 	default:
 		return eventDelta{}, fmt.Errorf("esper: unsupported window %T", spec)
@@ -5797,6 +5925,19 @@ func (r *statementRuntime) expire(now time.Time) eventDelta {
 		delta := r.expireWindowState(node.window, state, now)
 		delta.history = windowHistory(node.window, state)
 		delta.historyByEvent = windowHistoryByEvent(node.window, state)
+		if windowUsesPreviousAccess(node.window) {
+			delta.previousByEvent = windowPreviousAccessByEvent(node.window, state)
+			if delta.previousByEvent == nil {
+				delta.previousByEvent = make(map[string][]Event)
+			}
+			for _, old := range delta.oldEvents {
+				delta.previousByEvent[eventIdentity(old)] = nil
+				if delta.historyByEvent == nil {
+					delta.historyByEvent = make(map[string][]Event)
+				}
+				delta.historyByEvent[eventIdentity(old)] = nil
+			}
+		}
 		result = mergeDelta(result, delta)
 		if windowStateEmpty(state) {
 			delete(r.windows, node)
@@ -5876,6 +6017,13 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 			kept = append(kept, stored)
 		}
 		state.entries = kept
+		if len(result.oldEvents) > 0 {
+			if result.priorByEvent == nil {
+				result.priorByEvent = make(map[string][]Event)
+			}
+			addPriorHistories(result.priorByEvent, state.arrival, result.oldEvents)
+		}
+		removeArrivalEvents(&state.arrival, result.oldEvents)
 		if len(state.entries) == 0 {
 			state.externalAt = time.Time{}
 		} else {
@@ -5919,7 +6067,7 @@ func windowStateEmpty(state *windowRuntimeState) bool {
 	if state == nil {
 		return true
 	}
-	if len(state.entries) != 0 || len(state.pendingNew) != 0 || len(state.keyed) != 0 || !state.externalAt.IsZero() {
+	if len(state.entries) != 0 || len(state.pendingNew) != 0 || len(state.arrival) != 0 || len(state.keyed) != 0 || !state.externalAt.IsZero() {
 		return false
 	}
 	for _, child := range state.groups {
@@ -6283,6 +6431,22 @@ func mergeDelta(left, right eventDelta) eventDelta {
 		}
 		for key, history := range right.historyByEvent {
 			left.historyByEvent[key] = append([]Event(nil), history...)
+		}
+	}
+	if right.previousByEvent != nil {
+		if left.previousByEvent == nil {
+			left.previousByEvent = make(map[string][]Event)
+		}
+		for key, history := range right.previousByEvent {
+			left.previousByEvent[key] = append([]Event(nil), history...)
+		}
+	}
+	if right.priorByEvent != nil {
+		if left.priorByEvent == nil {
+			left.priorByEvent = make(map[string][]Event)
+		}
+		for key, history := range right.priorByEvent {
+			left.priorByEvent[key] = append([]Event(nil), history...)
 		}
 	}
 	return left
@@ -7821,10 +7985,28 @@ func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) Res
 	newResults := []Result(nil)
 	oldResults := []Result(nil)
 	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream || plan.query.distinct {
-		newResults = projectResults(delta.newEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, delta.historyByEvent, false)
+		newResults = projectResults(delta.newEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, delta.historyByEvent, delta.previousByEvent, delta.priorByEvent, false)
 	}
 	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream || plan.query.distinct {
-		oldResults = projectResults(delta.oldEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, delta.historyByEvent, true)
+		oldPreviousByEvent := cloneEventHistories(delta.previousByEvent)
+		if len(delta.oldEvents) > 0 {
+			if oldPreviousByEvent == nil {
+				oldPreviousByEvent = make(map[string][]Event)
+			}
+			for _, old := range delta.oldEvents {
+				oldPreviousByEvent[eventIdentity(old)] = nil
+			}
+		}
+		oldHistoryByEvent := cloneEventHistories(delta.historyByEvent)
+		if len(delta.oldEvents) > 0 {
+			if oldHistoryByEvent == nil {
+				oldHistoryByEvent = make(map[string][]Event)
+			}
+			for _, old := range delta.oldEvents {
+				oldHistoryByEvent[eventIdentity(old)] = nil
+			}
+		}
+		oldResults = projectResults(delta.oldEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, oldHistoryByEvent, oldPreviousByEvent, delta.priorByEvent, true)
 	}
 	if plan.query.distinct {
 		newResults, oldResults = r.applyDistinct(plan.query, newResults, oldResults)
@@ -7869,11 +8051,11 @@ func (r *statementRuntime) joinBatch(delta joinDelta, plan Plan, now time.Time) 
 	return batch
 }
 
-func projectResults(events []Event, query Query, resultSchema Schema, now time.Time, variables map[string]Value, history []Event, historyByEvent map[string][]Event, leaving bool) []Result {
+func projectResults(events []Event, query Query, resultSchema Schema, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool) []Result {
 	if len(events) == 0 {
 		return nil
 	}
-	events = orderEvents(events, query.orderBy, now, variables, history, historyByEvent, leaving)
+	events = orderEvents(events, query.orderBy, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving)
 	results := make([]Result, 0, len(events))
 	for _, event := range events {
 		if len(query.selections) == 0 {
@@ -7882,11 +8064,7 @@ func projectResults(events []Event, query Query, resultSchema Schema, now time.T
 		}
 		values := make([]Value, 0, len(query.selections))
 		for _, selection := range query.selections {
-			eventHistory := history
-			if historyByEvent != nil {
-				eventHistory = historyByEvent[eventIdentity(event)]
-			}
-			values = append(values, selection.Expr.eval(EvalContext{Event: event, History: eventHistory, IsLeaving: leaving, Now: now, Variables: variables}))
+			values = append(values, selection.Expr.eval(projectionEvalContext(event, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving)))
 		}
 		row := newRow(resultSchema, values)
 		results = append(results, resultRow(row))
@@ -7894,22 +8072,14 @@ func projectResults(events []Event, query Query, resultSchema Schema, now time.T
 	return results
 }
 
-func orderEvents(events []Event, keys []SortKey, now time.Time, variables map[string]Value, history []Event, historyByEvent map[string][]Event, leaving bool) []Event {
+func orderEvents(events []Event, keys []SortKey, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool) []Event {
 	if len(keys) == 0 || len(events) < 2 {
 		return events
 	}
 	ordered := append([]Event(nil), events...)
 	sort.SliceStable(ordered, func(left, right int) bool {
 		for _, key := range keys {
-			leftHistory := history
-			if historyByEvent != nil {
-				leftHistory = historyByEvent[eventIdentity(ordered[left])]
-			}
-			rightHistory := history
-			if historyByEvent != nil {
-				rightHistory = historyByEvent[eventIdentity(ordered[right])]
-			}
-			comparison, ok := compareValues(key.Expr.eval(EvalContext{Event: ordered[left], History: leftHistory, IsLeaving: leaving, Now: now, Variables: variables}), key.Expr.eval(EvalContext{Event: ordered[right], History: rightHistory, IsLeaving: leaving, Now: now, Variables: variables}))
+			comparison, ok := compareValues(key.Expr.eval(projectionEvalContext(ordered[left], now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving)), key.Expr.eval(projectionEvalContext(ordered[right], now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving)))
 			if !ok || comparison == 0 {
 				continue
 			}
@@ -7921,6 +8091,28 @@ func orderEvents(events []Event, keys []SortKey, now time.Time, variables map[st
 		return false
 	})
 	return ordered
+}
+
+func projectionEvalContext(event Event, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool) EvalContext {
+	eventHistory := history
+	identity := eventIdentity(event)
+	if historyByEvent != nil {
+		eventHistory = historyByEvent[identity]
+	}
+	ctx := EvalContext{Event: event, History: append([]Event(nil), eventHistory...), IsLeaving: leaving, Now: now, Variables: variables}
+	if previousByEvent != nil {
+		if previous, ok := previousByEvent[identity]; ok {
+			ctx.PreviousWindowAccess = true
+			ctx.PreviousHistory = append([]Event(nil), previous...)
+		}
+	}
+	if priorByEvent != nil {
+		if prior, ok := priorByEvent[identity]; ok {
+			ctx.PriorHistorySet = true
+			ctx.PriorHistory = append([]Event(nil), prior...)
+		}
+	}
+	return ctx
 }
 
 func (r *statementRuntime) applyDistinct(query Query, newResults, oldResults []Result) ([]Result, []Result) {
