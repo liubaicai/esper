@@ -734,6 +734,251 @@ func TagCount(tag string) Expression[int64] {
 	}}
 }
 
+// TagSize is the expressive alias for TagCount used by Match Recognize
+// enumeration-style measures. It keeps the API about the captured tag rather
+// than exposing a string aggregate spelling.
+func TagSize(tag string) Expression[int64] { return TagCount(tag) }
+
+// TagEvents exposes a defensive copy of all events captured by a repeated
+// row-recognition tag. Optional tags evaluate to Null; a present tag with no
+// events is represented by an empty slice. Callers can combine it with
+// ArrayAt, Property and other typed Go expressions without mutating runtime
+// recognition state.
+func TagEvents(tag string) Expression[[]Event] {
+	tag = strings.TrimSpace(tag)
+	if tag == "" {
+		return makeExpr[[]Event]("tag-events", "<invalid-tag-events>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "tag-events", typ: typeOf[[]Event](), description: "events(" + tag + ")", tagName: tag}
+	return typedExpr[[]Event]{n: node, fn: func(ctx EvalContext) Value {
+		events := rowRecogTagEvents(ctx, tag)
+		if events == nil {
+			return Null()
+		}
+		return Present(append([]Event(nil), events...))
+	}}
+}
+
+// TagSum evaluates a numeric expression over the events captured by a named
+// tag. It is the Go-style counterpart of Esper's repeated-tag sumOf
+// enumeration and is useful in DEFINE predicates as well as measures.
+func TagSum[T Numeric](tag string, expression Expression[T]) AggregateExpression[T] {
+	return tagNumericAggregate[T]("tag-sum", "sum", tag, expression, func(values []float64) float64 {
+		var total float64
+		for _, value := range values {
+			total += value
+		}
+		return total
+	})
+}
+
+// TagAvg evaluates a numeric expression over a named repeated tag.
+func TagAvg[T Numeric](tag string, expression Expression[T]) AggregateExpression[float64] {
+	return tagNumericAggregateFloat("tag-avg", "avg", tag, expression, func(values []float64) float64 {
+		if len(values) == 0 {
+			return 0
+		}
+		var total float64
+		for _, value := range values {
+			total += value
+		}
+		return total / float64(len(values))
+	})
+}
+
+// TagMin and TagMax evaluate an ordered expression over a named repeated
+// tag. Null and Missing element values are ignored, matching the ordinary
+// aggregate contract.
+func TagMin[T Ordered](tag string, expression Expression[T]) AggregateExpression[T] {
+	return tagExtremeAggregate[T]("tag-min", "min", tag, expression, true)
+}
+
+func TagMax[T Ordered](tag string, expression Expression[T]) AggregateExpression[T] {
+	return tagExtremeAggregate[T]("tag-max", "max", tag, expression, false)
+}
+
+// TagFirst and TagLast return the first/last present value captured by a tag.
+func TagFirst[T any](tag string, expression Expression[T]) AggregateExpression[T] {
+	return tagPositionAggregate[T]("tag-first", "first", tag, expression, false)
+}
+
+func TagLast[T any](tag string, expression Expression[T]) AggregateExpression[T] {
+	return tagPositionAggregate[T]("tag-last", "last", tag, expression, true)
+}
+
+// TagAny and TagAll are enumeration predicates evaluated against each event
+// captured by a tag. TagAll follows Go's vacuous-truth convention and returns
+// true for an absent/empty tag, while TagAny returns false.
+func TagAny(tag string, predicate Expression[bool]) Expression[bool] {
+	return tagEnumerationPredicate("tag-any", "any", tag, predicate, false)
+}
+
+func TagAll(tag string, predicate Expression[bool]) Expression[bool] {
+	return tagEnumerationPredicate("tag-all", "all", tag, predicate, true)
+}
+
+func rowRecogTagEvents(ctx EvalContext, tag string) []Event {
+	if ctx.TagValues != nil {
+		if events, ok := ctx.TagValues[tag]; ok {
+			return events
+		}
+	}
+	if ctx.Tags != nil {
+		if event, ok := ctx.Tags[tag]; ok {
+			return []Event{event}
+		}
+	}
+	return nil
+}
+
+func rowRecogTagElementContext(ctx EvalContext, events []Event, index int) EvalContext {
+	nested := ctx
+	if index < 0 || index >= len(events) {
+		return nested
+	}
+	nested.Event = events[index]
+	nested.Group = append([]Event(nil), events...)
+	nested.History = append([]Event(nil), events[:index+1]...)
+	return nested
+}
+
+func tagAggregateNode(kind, name, tag string, expression Expr) (*exprNode, string, bool) {
+	tag = strings.TrimSpace(tag)
+	if tag == "" || expression == nil || expression.node() == nil {
+		return &exprNode{kind: kind, typ: typeOf[any](), description: kind + "(<invalid>)", tagName: tag}, kind + "(<invalid>)", false
+	}
+	description := name + "(" + tag + "." + expression.Description() + ")"
+	return &exprNode{kind: kind, typ: expression.Type(), description: description, tagName: tag, children: []*exprNode{expression.node()}}, description, true
+}
+
+func tagNumericAggregate[T Numeric](kind, name, tag string, expression Expression[T], combine func([]float64) float64) AggregateExpression[T] {
+	node, _, valid := tagAggregateNode(kind, name, tag, expression)
+	if !valid {
+		node.typ = typeOf[T]()
+		return aggregateExpr[T]{typedExpr: typedExpr[T]{n: node, fn: func(EvalContext) Value { return Missing() }}}
+	}
+	return aggregateExpr[T]{typedExpr: typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		events := rowRecogTagEvents(ctx, tag)
+		values := make([]float64, 0, len(events))
+		for index := range events {
+			value, ok := numericValue(expression.eval(rowRecogTagElementContext(ctx, events, index)))
+			if ok {
+				values = append(values, value)
+			}
+		}
+		if len(values) == 0 {
+			return Null()
+		}
+		return Present(convertNumeric[T](combine(values)))
+	}}}
+}
+
+func tagNumericAggregateFloat(kind, name, tag string, expression Expr, combine func([]float64) float64) AggregateExpression[float64] {
+	node, _, valid := tagAggregateNode(kind, name, tag, expression)
+	if !valid {
+		node.typ = typeOf[float64]()
+		return aggregateExpr[float64]{typedExpr: typedExpr[float64]{n: node, fn: func(EvalContext) Value { return Missing() }}}
+	}
+	return aggregateExpr[float64]{typedExpr: typedExpr[float64]{n: node, fn: func(ctx EvalContext) Value {
+		events := rowRecogTagEvents(ctx, tag)
+		values := make([]float64, 0, len(events))
+		for index := range events {
+			value, ok := numericValue(expression.eval(rowRecogTagElementContext(ctx, events, index)))
+			if ok {
+				values = append(values, value)
+			}
+		}
+		if len(values) == 0 {
+			return Null()
+		}
+		return Present(combine(values))
+	}}}
+}
+
+func tagExtremeAggregate[T Ordered](kind, name, tag string, expression Expression[T], minimum bool) AggregateExpression[T] {
+	node, _, valid := tagAggregateNode(kind, name, tag, expression)
+	if !valid {
+		node.typ = typeOf[T]()
+		return aggregateExpr[T]{typedExpr: typedExpr[T]{n: node, fn: func(EvalContext) Value { return Missing() }}}
+	}
+	return aggregateExpr[T]{typedExpr: typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		events := rowRecogTagEvents(ctx, tag)
+		var result Value
+		for index := range events {
+			value := expression.eval(rowRecogTagElementContext(ctx, events, index))
+			if !value.IsPresent() {
+				continue
+			}
+			if !result.IsPresent() {
+				result = value
+				continue
+			}
+			comparison, ok := compareValues(value, result)
+			if ok && ((minimum && comparison < 0) || (!minimum && comparison > 0)) {
+				result = value
+			}
+		}
+		if !result.IsPresent() {
+			return Null()
+		}
+		return result
+	}}}
+}
+
+func tagPositionAggregate[T any](kind, name, tag string, expression Expression[T], last bool) AggregateExpression[T] {
+	node, _, valid := tagAggregateNode(kind, name, tag, expression)
+	if !valid {
+		node.typ = typeOf[T]()
+		return aggregateExpr[T]{typedExpr: typedExpr[T]{n: node, fn: func(EvalContext) Value { return Missing() }}}
+	}
+	return aggregateExpr[T]{typedExpr: typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		events := rowRecogTagEvents(ctx, tag)
+		if last {
+			for index := len(events) - 1; index >= 0; index-- {
+				value := expression.eval(rowRecogTagElementContext(ctx, events, index))
+				if value.IsPresent() {
+					return value
+				}
+			}
+		} else {
+			for index := range events {
+				value := expression.eval(rowRecogTagElementContext(ctx, events, index))
+				if value.IsPresent() {
+					return value
+				}
+			}
+		}
+		return Null()
+	}}}
+}
+
+func tagEnumerationPredicate(kind, name, tag string, predicate Expression[bool], all bool) Expression[bool] {
+	tag = strings.TrimSpace(tag)
+	if tag == "" || predicate == nil || predicate.node() == nil {
+		return makeExpr[bool](kind, kind+"(<invalid>)", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: kind, typ: typeOf[bool](), description: name + "(" + tag + ")", tagName: tag, children: []*exprNode{predicate.node()}}
+	return typedExpr[bool]{n: node, fn: func(ctx EvalContext) Value {
+		events := rowRecogTagEvents(ctx, tag)
+		if len(events) == 0 {
+			return Present(all)
+		}
+		for index := range events {
+			value, ok := boolValue(predicate.eval(rowRecogTagElementContext(ctx, events, index)))
+			if !ok {
+				return Present(false)
+			}
+			if all && !value {
+				return Present(false)
+			}
+			if !all && value {
+				return Present(true)
+			}
+		}
+		return Present(all)
+	}}
+}
+
 // VariableRef creates an analyzable reference to a registered runtime
 // variable. The reference is deliberately named in the expression tree so a
 // Plan can validate and serialize the dependency without inspecting a
@@ -3978,7 +4223,7 @@ func (n *exprNode) referencedTags(result *[]string) {
 	if n == nil {
 		return
 	}
-	if n.kind == "tag-field" || n.kind == "tag-field-at" || n.kind == "tag-count" {
+	if strings.HasPrefix(n.kind, "tag-") {
 		if n.tagName != "" {
 			*result = append(*result, n.tagName)
 		}

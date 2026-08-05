@@ -285,8 +285,8 @@
       "domain": "rowrecog",
       "level": "S",
       "summary": "MATCH_RECOGNIZE row pattern recognition and NFA state repository",
-      "javaRefs": ["TestSuiteRowRecog", "RowRecogOps", "RowRecogDataSet", "RowRecogRepetition"],
-      "goRefs": ["rowrecog.go", "plan.go", "runtime.go", "rowrecog_test.go"],
+      "javaRefs": ["TestSuiteRowRecog", "RowRecogOps", "RowRecogArrayAccess", "RowRecogClausePresence", "RowRecogDataSet", "RowRecogRegex", "RowRecogRepetition"],
+      "goRefs": ["rowrecog.go", "expr.go", "plan.go", "runtime.go", "rowrecog_test.go"],
       "phase": 5,
       "status": "partial",
       "remaining": ["advanced nested/complex NFA semantics", "row-recognize tag-aware prior/prev-reference and advanced aggregate measures", "calendar interval termination matrix and full after/termination parity", "full NFA state repository and prevent-start limits", "full out-of-sequence delete matrix and complete iterator/order-by semantics", "full Java mapping and trace parity"]
@@ -677,12 +677,20 @@
     },
     {
       "id": "case.rowrecog-inventory",
-      "javaSourceFiles": ["regression-run/src/test/java/com/espertech/esper/regressionrun/suite/rowrecog/TestSuiteRowRecog.java"],
+      "javaRuntimeIds": ["java-runtime-4218efffe652a86fc0de", "java-runtime-5a8696e6c905be60e32b", "java-runtime-e080d886b12d6636c514", "java-runtime-e608cad5abe81efea8a9", "java-runtime-e3c5ff615a7a95ce2df6"],
+      "javaSourceFiles": [
+        "regression-run/src/test/java/com/espertech/esper/regressionrun/suite/rowrecog/TestSuiteRowRecog.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogArrayAccess.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogClausePresence.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogDataSet.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogRegex.java"
+      ],
       "javaNames": ["TestSuiteRowRecog.testRowRecogOps", "TestSuiteRowRecog.testRowRecogAfter", "TestSuiteRowRecog.testRowRecogInvalid", "TestSuiteRowRecog.testRowRecogClausePresence", "TestSuiteRowRecog.testRowRecogGreedyness", "TestSuiteRowRecog.testRowRecogEmptyPartition", "TestSuiteRowRecog.testRowRecogEnumMethod", "TestSuiteRowRecog.testRowRecogIntervalResolution", "TestSuiteRowRecog.testRowRecogIterateOnly", "TestSuiteRowRecog.testRowRecogPerf", "TestSuiteRowRecog.testRowRecogPermute", "TestSuiteRowRecog.testRowRecogRegex", "TestSuiteRowRecog.testRowRecogPrev", "TestSuiteRowRecog.testRowRecogDataWin", "TestSuiteRowRecog.testRowRecogDelete", "TestSuiteRowRecog.testRowRecogRepetition", "TestSuiteRowRecog.testRowRecogAggregation", "TestSuiteRowRecog.testRowRecogInterval", "TestSuiteRowRecog.testRowRecogIntervalOrTerminated", "TestSuiteRowRecog.testRowRecogVariantStream", "TestSuiteRowRecog.testRowRecogArrayAccess", "TestSuiteRowRecog.testRowRecogDataSet", "TestSuiteRowRecog.testRowRecogMultikeyWArray"],
-      "goTests": [],
-      "tags": ["rowrecog", "unmapped"],
-      "status": "unmapped",
-      "evidence": ["source-inventory"]
+      "goTests": ["TestRowRecogTagAggregatesAndEnumeration", "TestRowRecogBasicSequenceAndJavaStyleMeasures", "TestRowRecogOptionalAndRepeatedMeasures", "TestRowRecogReluctantQuantifiers", "TestRowRecogPermutationExpandsFiniteAlternatives", "TestRowRecogIntervalAndSnapshot", "TestRowRecogIntervalOrTerminated", "TestRowRecogPreviousExpressionInDefine", "TestRowRecogLengthWindowEvictionRecomputesSnapshot", "TestRowRecogNamedWindowDeleteRecomputesSnapshot"],
+      "tags": ["rowrecog", "java-suite", "tag-aggregate", "enumeration", "partial"],
+      "status": "mapped",
+      "evidence": ["source-inventory", "java-suite-rowrecog-23-23", "go-unit"],
+      "difference": "Go now has a chainable tag-aware aggregate/enumeration slice: TagSum/TagAvg/TagMin/TagMax/TagFirst/TagLast, TagAny/TagAll, TagEvents and TagSize preserve tag names and child expressions in the AST, run in DEFINE and MEASURES, and reject unknown tags during Build; TestRowRecogTagAggregatesAndEnumeration compares optional/repeated captures against RowRecogArrayAccess and RowRecogClausePresence patterns. Java TestSuiteRowRecog ran 23/23 in the selected Maven run. Full Java/Go trace parity remains open for AFTER MATCH SKIP variants, time/time-batch row windows, engine-wide max-states/prevent-start, variant/multikey array, regex inventory, iterate-only, invalid diagnostics, full PREV/tag-prior semantics and performance behavior."
     },
     {
       "id": "case.esperio-csv-file",

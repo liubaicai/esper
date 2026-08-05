@@ -2118,6 +2118,15 @@ func validateAggregateExpressionNodes(node *exprNode) error {
 	if node == nil {
 		return NewError(ErrorInvalidRule, "aggregate expression node is required")
 	}
+	switch node.kind {
+	case "tag-sum", "tag-avg", "tag-min", "tag-max", "tag-first", "tag-last":
+		if strings.TrimSpace(node.tagName) == "" {
+			return NewError(ErrorInvalidRule, "tag aggregate requires a tag name")
+		}
+		if len(node.children) != 1 || node.children[0] == nil {
+			return NewError(ErrorInvalidRule, "tag aggregate requires an element expression")
+		}
+	}
 	if node.kind == "sorted-access" && (len(node.children) != 2 || node.children[0] == nil || node.children[1] == nil) {
 		return NewError(ErrorInvalidRule, "sorted access aggregate requires value and key expressions")
 	}
@@ -2225,6 +2234,10 @@ func expressionNodeContainsAggregate(node *exprNode) bool {
 		return false
 	}
 	if node.kind == "sorted-access" || strings.HasPrefix(node.kind, "sorted-access-") || node.kind == "window-access" || strings.HasPrefix(node.kind, "window-access-") {
+		return true
+	}
+	switch node.kind {
+	case "tag-sum", "tag-avg", "tag-min", "tag-max", "tag-first", "tag-last":
 		return true
 	}
 	switch node.kind {

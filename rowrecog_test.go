@@ -976,3 +976,85 @@ func TestRowRecogCanonicalAndValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestRowRecogTagAggregatesAndEnumeration(t *testing.T) {
+	env, engine := newRowRecogTest(t)
+	stream := From[rowRecogTestEvent](env, "RowRecogEvent").Window(KeepAll())
+	price := Field[rowRecogTestEvent, float64]("price")
+	symbol := Field[rowRecogTestEvent, string]("symbol")
+	tagPrice := TagSum[float64]("A", price)
+	query := stream.MatchRecognize(RowSequence(RowVar("A").ZeroOrMore(), RowVar("B"))).
+		Define("A", Like(symbol, Literal("A%"))).
+		Define("B", And(
+			Like(symbol, Literal("B%")),
+			Greater[float64](Add[float64](Coalesce[float64](tagPrice, Literal(0.0)), price), Literal(100.0)),
+		)).
+		Measures(
+			Alias("a0", TagFieldAt[string]("A", 0, "symbol")),
+			Alias("a1", TagFieldAt[string]("A", 1, "symbol")),
+			Alias("b", TagField[string]("B", "symbol")),
+			Alias("size", TagSize("A")),
+			Alias("sum", tagPrice),
+			Alias("avg", TagAvg[float64]("A", price)),
+			Alias("min", TagMin[float64]("A", price)),
+			Alias("max", TagMax[float64]("A", price)),
+			Alias("first", TagFirst[float64]("A", price)),
+			Alias("last", TagLast[float64]("A", price)),
+			Alias("hasA2", TagAny("A", Equal[string](symbol, Literal("A2")))),
+			Alias("allAtLeast49", TagAll("A", GreaterOrEqual[float64](price, Literal(49.0)))),
+			Alias("events", TagEvents("A")),
+		).
+		Query(StatementName("rowrecog-tag-aggregate"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := collectRowRecogRows(t, deployment)
+	for _, event := range []rowRecogTestEvent{
+		{Symbol: "A1", Price: 50},
+		{Symbol: "A2", Price: 49},
+		{Symbol: "B1", Price: 2},
+		{Symbol: "B2", Price: 101},
+		{Symbol: "A3", Price: 50},
+		{Symbol: "B3", Price: 51},
+	} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(*rows) != 3 {
+		t.Fatalf("tag aggregate rows = %#v", *rows)
+	}
+	first := (*rows)[0]
+	if first.Get("a0").Any() != "A1" || first.Get("a1").Any() != "A2" || first.Get("b").Any() != "B1" ||
+		first.Get("size").Any() != int64(2) || first.Get("sum").Any() != float64(99) ||
+		first.Get("avg").Any() != 49.5 || first.Get("min").Any() != float64(49) || first.Get("max").Any() != float64(50) ||
+		first.Get("first").Any() != float64(50) || first.Get("last").Any() != float64(49) ||
+		first.Get("hasA2").Any() != true || first.Get("allAtLeast49").Any() != true {
+		t.Fatalf("tag aggregate first row = %#v", first)
+	}
+	events, ok := first.Get("events").Any().([]Event)
+	if !ok || len(events) != 2 || events[0].Underlying().(rowRecogTestEvent).Symbol != "A1" || events[1].Underlying().(rowRecogTestEvent).Symbol != "A2" {
+		t.Fatalf("tag events = %#v", first.Get("events").Any())
+	}
+	if (*rows)[1].Get("a0").IsPresent() || (*rows)[1].Get("a1").IsPresent() || (*rows)[1].Get("b").Any() != "B2" ||
+		(*rows)[1].Get("size").Any() != int64(0) || (*rows)[1].Get("sum").IsPresent() || (*rows)[1].Get("hasA2").Any() != false ||
+		(*rows)[1].Get("allAtLeast49").Any() != true {
+		t.Fatalf("optional tag aggregate row = %#v", (*rows)[1])
+	}
+	if (*rows)[2].Get("a0").Any() != "A3" || (*rows)[2].Get("a1").IsPresent() || (*rows)[2].Get("b").Any() != "B3" ||
+		(*rows)[2].Get("sum").Any() != float64(50) || (*rows)[2].Get("hasA2").Any() != false {
+		t.Fatalf("second repeated tag aggregate row = %#v", (*rows)[2])
+	}
+
+	invalid := stream.MatchRecognize(RowSequence(RowVar("A"))).
+		Measures(Alias("sum", TagSum[float64]("Unknown", price))).
+		Query(StatementName("rowrecog-unknown-tag-aggregate"))
+	if _, err := env.Build(invalid); err == nil || !errors.Is(err, ErrorUnknownName) {
+		t.Fatalf("unknown tag aggregate error = %v", err)
+	}
+}
