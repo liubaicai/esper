@@ -280,6 +280,18 @@ func RegisterJSON(env *Environment, name string, fields []FieldSpec, opts ...Sch
 	return schema, nil
 }
 
+// RegisterJSONFor registers a JSON schema backed by a typed Go struct.
+func RegisterJSONFor[T any](env *Environment, name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
+	schema, err := NewJSONSchemaFor[T](name, fields, opts...)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := env.RegisterSchema(schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
+}
+
 func RegisterXML(env *Environment, name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
 	schema, err := NewXMLSchema(name, fields, opts...)
 	if err != nil {

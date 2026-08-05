@@ -245,6 +245,30 @@ func NewJSONSchema(name string, fields []FieldSpec, opts ...SchemaOption) (Schem
 	return newSchema(name, SchemaJSON, nil, fields, opts)
 }
 
+// NewJSONSchemaFor constructs a JSON event schema whose underlying value is a
+// typed Go struct. When fields is empty, exported struct fields (including
+// esper/json tags) provide the schema metadata, just like StructSchema. The
+// JSON kind is retained for parser/renderer behavior while property access
+// uses the typed underlying value.
+func NewJSONSchemaFor[T any](name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
+	typ := typeOf[T]()
+	base := typ
+	for base.Kind() == reflect.Pointer {
+		base = base.Elem()
+	}
+	if base.Kind() != reflect.Struct {
+		return Schema{}, fmt.Errorf("esper: typed JSON schema %q requires a struct type, got %s", name, typ)
+	}
+	if len(fields) == 0 && schemaConfigFromOptions(opts).accessor != AccessorExplicit {
+		inferred, err := structFields(base, nil)
+		if err != nil {
+			return Schema{}, err
+		}
+		fields = inferred
+	}
+	return newSchema(name, SchemaJSON, typ, fields, opts)
+}
+
 func NewXMLSchema(name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
 	return newSchema(name, SchemaXML, nil, fields, opts)
 }
@@ -2239,6 +2263,7 @@ func ParseJSONWithOptions(schema Schema, data []byte, receivedAt time.Time, opti
 			}
 		}
 	}
+	updates := make(map[string]any, len(schema.fields))
 	for _, field := range schema.fields {
 		if key, exists := findJSONField(object, schema, field.Name); exists {
 			converted, err := coerceJSONField(object[key], field.Type)
@@ -2246,7 +2271,17 @@ func ParseJSONWithOptions(schema Schema, data []byte, receivedAt time.Time, opti
 				return Event{}, fmt.Errorf("esper: JSON event %q field %q: %w", schema.Name(), field.Name, err)
 			}
 			object[key] = converted
+			if schema.goType != nil {
+				updates[field.Name] = converted
+			}
 		}
+	}
+	if schema.goType != nil {
+		underlying, err := mergeSchemaUnderlying(schema, nil, updates)
+		if err != nil {
+			return Event{}, fmt.Errorf("esper: materialize typed JSON event %q: %w", schema.Name(), err)
+		}
+		return newEvent(schema, underlying, receivedAt)
 	}
 	return newEvent(schema, object, receivedAt)
 }
