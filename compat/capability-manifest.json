@@ -541,7 +541,7 @@
       "tags": ["correctness", "dataflow", "lifecycle", "cancellation", "concurrency"],
       "status": "mapped",
       "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
-      "difference": "Go now provides blocking Run/Join over Start, terminal completion signaling, context-driven cancellation, idempotent Cancel, custom source factories with raw/typed output ports, Build/runtime output type validation, independent per-instance Open/Close hooks, finite-source completion, structured source error propagation, deterministic per-operator submission/time snapshots, definition properties with per-instance parameter providers, operator/source runtime injection callbacks and multiple concurrent source branches whose Join waits for every source. Graph delivery is serialized per instance with synchronous backpressure, while same-instance EventBusSink re-entry bypasses only the already-held delivery gate to avoid self-deadlock. Saved configurations support an independent configuration name, duplicate rejection and instantiation; saved in-process instances support deterministic listing, lookup and deletion. The Java matrix additionally covers blocking/non-blocking exception delivery, deep join timing, full cancellation exception text and built-in source/operator backpressure; external serialization/cross-process restoration and those remaining runtime combinations stay open."
+      "difference": "Go now provides blocking Run/Join over Start, terminal completion signaling, context-driven cancellation, idempotent Cancel, custom source factories with raw/typed output ports, Build/runtime output type validation, independent per-instance Open/Close hooks, finite-source completion, structured source error propagation, deterministic per-operator submission/time snapshots, definition properties with per-instance parameter providers, operator/source runtime injection callbacks, user-object and input/output-port metadata in factory context, and multiple concurrent source branches whose Join waits for every source. Graph delivery is serialized per instance with synchronous backpressure, while same-instance EventBusSink re-entry bypasses only the already-held delivery gate to avoid self-deadlock. Saved configurations support an independent configuration name, duplicate rejection and instantiation; saved in-process instances support deterministic listing, lookup and deletion. The Java matrix additionally covers blocking/non-blocking exception delivery, deep join timing, full cancellation exception text and built-in source/operator backpressure; external serialization/cross-process restoration and those remaining runtime combinations stay open."
     },
     {
       "id": "case.dataflow-exceptions",
@@ -791,6 +791,17 @@
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
       "difference": "Go covers outer Within versus inner Within().EveryDistinct() scope, distinct suppression with an AST-owned Every state, virtual-clock expiry via Within and explicit EveryDistinctFor, ordinary Pattern and Pattern Context lifecycle, scoped WithinOrMax guards, dynamic duration from captured tags, variables, deployment parameters and component expressions, repeated-tag property access, component-wise fixed-duration parameters, microsecond precision, recurring month-calendar boundaries, exact-deadline tests, edge-scoped FollowedByMax capacity for nested/composed followed-by branches, and MatchUntil expression bounds resolved from variables, deployment parameters, null open bounds and captured outer tags. Bounded-until additionally preserves a capped repeated branch while waiting for a terminator, gives the terminator priority on the same event, and expires without output below the lower bound. Java additionally covers dynamic timer:interval observer expressions over property arrays beyond this repeated-tag slice, variable reconfiguration, ISO period forms, multi-key expiry, nested observer/guard/consumption combinations and exact execution trace parity; Go WithinOrMax, dynamic duration and dynamic MatchUntil support do not yet cover every nested parent transition, followed-by dynamic maxima or the complete consumption policy matrix."
+    },
+    {
+      "id": "case.pattern-every-completion-boundary",
+      "javaRuntimeIds": ["java-runtime-96878ce28620e660d0b2"],
+      "javaNames": ["PatternEveryFollowedBy"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorEvery.java"],
+      "goTests": ["TestPatternEveryMatchUntilStartsAfterCompletionEvent"],
+      "tags": ["correctness", "pattern", "every", "match-until", "event-boundary"],
+      "status": "mapped",
+      "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
+      "difference": "Go does not restart a definition-level Every root on the same event that completed the previous root; the next root receives only subsequent events. Multi-layer Every, observer/guard failure restart and full consumption trace remain open."
     },
     {
       "id": "case.pattern-match-until-not",

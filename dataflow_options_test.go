@@ -58,6 +58,7 @@ func TestDataflowParameterProviderMatchesEsperInstantiationOptions(t *testing.T)
 	var contexts []DataflowParameterContext
 	instance, err := NewEngine(env).InstantiateDataflowWithOptions(context.Background(), definition, DataflowOptions{
 		InstanceID: "parameter-instance",
+		UserObject: "owner",
 		ParameterProvider: func(ctx DataflowParameterContext) (any, bool) {
 			contexts = append(contexts, ctx)
 			if ctx.ParameterName == "propTwo" {
@@ -72,8 +73,11 @@ func TestDataflowParameterProviderMatchesEsperInstantiationOptions(t *testing.T)
 	if err := instance.Run(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if captured.DataflowName != "parameter-options-flow" || captured.InstanceID != "parameter-instance" || captured.OperatorName != "custom" || captured.OperatorNum != 1 {
+	if captured.DataflowName != "parameter-options-flow" || captured.InstanceID != "parameter-instance" || captured.UserObject != "owner" || captured.OperatorName != "custom" || captured.OperatorNum != 1 {
 		t.Fatalf("operator context = %#v", captured)
+	}
+	if got := []string{captured.InputPorts[0].Name, captured.OutputPorts[0].Name}; !reflect.DeepEqual(got, []string{"in", "out"}) {
+		t.Fatalf("operator context ports = %#v", captured)
 	}
 	if !reflect.DeepEqual(captured.Properties, map[string]any{"propOne": "abc", "propTwo": "def", "propThree": "xyz"}) {
 		t.Fatalf("resolved properties = %#v", captured.Properties)

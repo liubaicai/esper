@@ -161,8 +161,11 @@ func (Row) dataflowRecord()   {}
 type DataflowOperatorContext struct {
 	DataflowName string
 	InstanceID   string
+	UserObject   any
 	OperatorName string
 	OperatorNum  int
+	InputPorts   []DataflowPort
+	OutputPorts  []DataflowPort
 	Properties   map[string]any
 }
 
@@ -2001,10 +2004,27 @@ func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowO
 	return DataflowOperatorContext{
 		DataflowName: dataflowName,
 		InstanceID:   instanceID,
+		UserObject:   options.UserObject,
 		OperatorName: operator.Name,
 		OperatorNum:  number,
+		InputPorts:   dataflowOperatorContextPorts(operator, false),
+		OutputPorts:  dataflowOperatorContextPorts(operator, true),
 		Properties:   properties,
 	}
+}
+
+func dataflowOperatorContextPorts(operator DataflowOperator, output bool) []DataflowPort {
+	names := dataflowOperatorPrettyPorts(operator, output)
+	if len(names) == 0 {
+		return nil
+	}
+	ports := make([]DataflowPort, 0, len(names))
+	for _, name := range names {
+		port := DataflowPort{Name: name}
+		port.Type = dataflowPortType(operator, output, name)
+		ports = append(ports, port)
+	}
+	return ports
 }
 
 func (e *Engine) dataflowFindStatement(name string) *Statement {
