@@ -256,7 +256,7 @@
       "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_subquery_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["typed event/row port contracts and custom source/operator port lifecycle", "concurrent delivery/backpressure", "persisted cross-process saved instances/configuration", "complete captive/join and exception recovery parity"]
+      "remaining": ["typed event/row port contracts and custom source/operator port lifecycle", "concurrent delivery/backpressure", "persisted cross-process saved instances/configuration", "complete multi-port captive/join and exception recovery parity"]
     },
     {
       "id": "join.basic",

@@ -1149,30 +1149,32 @@ func (d *DataflowInstance) process(ctx context.Context, event any) error {
 	if d.graph {
 		return d.processGraphEvent(ctx, event)
 	}
-	if eventValue, ok := event.(Event); ok {
-		if err := d.acceptDataflowSubqueryEvent(eventValue); err != nil {
-			return d.handleDataflowError(ctx, "", err)
-		}
-	}
 	if err := d.processLinear(ctx, event); err != nil {
 		return d.handleDataflowError(ctx, "", err)
 	}
 	return nil
 }
 
-func (d *DataflowInstance) evaluateDataflowSelect(operator DataflowOperator, event Event) (Row, error) {
+func (d *DataflowInstance) dataflowEvaluation(operator DataflowOperator, event Event) (EvalContext, error) {
 	if d == nil || d.engine == nil {
-		return Row{}, NewError(ErrorDependency, "dataflow select has no engine")
+		return EvalContext{}, NewError(ErrorDependency, "dataflow operator has no engine")
 	}
 	now := d.engine.Now()
 	variables := d.engine.Variables()
 	if registry := d.subqueryRegistries[operator.Name]; registry != nil {
 		if err := registry.accept(event, now, variables); err != nil {
-			return Row{}, err
+			return EvalContext{}, err
 		}
 		variables = registry.attachVariables(variables)
 	}
-	evaluation := EvalContext{Event: event, Engine: d.engine, Now: now, Variables: variables}
+	return EvalContext{Event: event, Engine: d.engine, Now: now, Variables: variables}, nil
+}
+
+func (d *DataflowInstance) evaluateDataflowSelect(operator DataflowOperator, event Event) (Row, error) {
+	evaluation, err := d.dataflowEvaluation(operator, event)
+	if err != nil {
+		return Row{}, err
+	}
 	values := make([]Value, 0, len(operator.Selections))
 	for _, selection := range operator.Selections {
 		if selection.Expr == nil {
@@ -1280,7 +1282,11 @@ func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
 				if !ok {
 					continue
 				}
-				value := operator.Predicate.eval(d.dataflowEvalContext(eventValue))
+				evaluation, err := d.dataflowEvaluation(operator, eventValue)
+				if err != nil {
+					return err
+				}
+				value := operator.Predicate.eval(evaluation)
 				if pass, isBool := boolValue(value); isBool && pass {
 					filtered = append(filtered, candidate)
 				}
@@ -1373,9 +1379,6 @@ func (d *DataflowInstance) processGraphEvent(ctx context.Context, event any) err
 	eventValue, ok := event.(Event)
 	if !ok {
 		return nil
-	}
-	if err := d.acceptDataflowSubqueryEvent(eventValue); err != nil {
-		return d.handleDataflowError(ctx, "", err)
 	}
 	starts := make([]string, 0)
 	for _, operator := range d.definition.operators {
@@ -1481,7 +1484,11 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		if !ok {
 			return nil, nil
 		}
-		result := operator.Predicate.eval(d.dataflowEvalContext(eventValue))
+		evaluation, err := d.dataflowEvaluation(operator, eventValue)
+		if err != nil {
+			return nil, err
+		}
+		result := operator.Predicate.eval(evaluation)
 		pass, ok := boolValue(result)
 		if !ok || !pass {
 			return nil, nil
