@@ -535,6 +535,102 @@ func TestOutputWhenUsesLastOutputTimestamp(t *testing.T) {
 	}
 }
 
+func TestOutputWhenThenAssignmentsSeeOutputCounterContext(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	for _, name := range []string{"insert-count", "insert-total"} {
+		if err := env.RegisterVariable(name, int64(0)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(
+		StatementName("output-when-assignment-counters"),
+		WithOutput(OutputWhen(
+			GreaterOrEqual[int64](OutputCountInsert(), Literal(int64(3))),
+			SetOutputVariable("insert-count", OutputCountInsert()),
+			SetOutputVariable("insert-total", OutputCountInsertTotal()),
+		)),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for index := 1; index <= 3; index++ {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: fmt.Sprintf("C%d", index)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertOutputCounterVariable := func(name string, want int64) {
+		t.Helper()
+		value, ok := engine.GetVariable(name)
+		if !ok || !value.Equal(Present(want)) {
+			t.Fatalf("%s after first output = %#v", name, value)
+		}
+	}
+	assertOutputCounterVariable("insert-count", 3)
+	assertOutputCounterVariable("insert-total", 3)
+	if len(batches) != 1 || len(batches[0].New) != 3 {
+		t.Fatalf("counter assignment first output = %#v", batches)
+	}
+	for index := 4; index <= 6; index++ {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: fmt.Sprintf("C%d", index)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertOutputCounterVariable("insert-count", 3)
+	assertOutputCounterVariable("insert-total", 6)
+	if len(batches) != 2 || len(batches[1].New) != 3 {
+		t.Fatalf("counter assignment second output = %#v", batches)
+	}
+}
+
+func TestOutputWhenThenAssignmentsSeeRemoveCounterContext(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	for _, name := range []string{"remove-count", "remove-total"} {
+		if err := env.RegisterVariable(name, int64(0)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(2)).Query(
+		StatementName("output-when-assignment-remove-counters"),
+		WithOutput(OutputWhen(
+			GreaterOrEqual[int64](OutputCountRemove(), Literal(int64(2))),
+			SetOutputVariable("remove-count", OutputCountRemove()),
+			SetOutputVariable("remove-total", OutputCountRemoveTotal()),
+		)),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, _ ResultBatch) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	for index := 1; index <= 4; index++ {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: fmt.Sprintf("R%d", index)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, want := range map[string]int64{"remove-count": 2, "remove-total": 2} {
+		value, ok := engine.GetVariable(name)
+		if !ok || !value.Equal(Present(want)) {
+			t.Fatalf("%s after remove output = %#v", name, value)
+		}
+	}
+}
+
 func TestOutputWhenSnapshotEmitsCurrentWindowAndThenUpdatesVariable(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	if err := env.RegisterVariable("snapshot-fired", false); err != nil {

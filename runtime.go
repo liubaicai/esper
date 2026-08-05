@@ -4688,6 +4688,16 @@ func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, 
 		batch.New = orderRowRecogResults(batch.New, plans[0].query.orderBy, now, r.variables)
 		batch.Old = orderRowRecogResults(batch.Old, plans[0].query.orderBy, now, r.variables)
 	}
+	// Capture the counters before resetting the per-output values.  Esper makes
+	// the same output context available to both the OUTPUT WHEN predicate and
+	// its THEN assignments, so an assignment such as
+	// `set observed = count_insert` must see the count that caused this output,
+	// rather than the zeroed state for the next output interval.
+	outputInsertCount := r.outputState.insertCount
+	outputRemoveCount := r.outputState.removeCount
+	outputInsertTotal := r.outputState.insertTotal
+	outputRemoveTotal := r.outputState.removeTotal
+	lastOutputAt := r.outputState.lastOutputAt
 	r.outputState.insertCount = 0
 	r.outputState.removeCount = 0
 	r.outputState.lastOutputAt = now
@@ -4697,7 +4707,15 @@ func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, 
 	working := cloneValues(r.variables)
 	assignments := make([]VariableAssignment, 0, len(policy.Then))
 	for _, assignment := range policy.Then {
-		value := assignment.Expr.eval(EvalContext{Now: now, Variables: working})
+		value := assignment.Expr.eval(EvalContext{
+			Now:                  now,
+			Variables:            working,
+			OutputInsertCount:    outputInsertCount,
+			OutputRemoveCount:    outputRemoveCount,
+			OutputInsertTotal:    outputInsertTotal,
+			OutputRemoveTotal:    outputRemoveTotal,
+			OutputLastOutputTime: lastOutputAt,
+		})
 		assignments = append(assignments, VariableAssignment{Name: assignment.Name, Value: value.Any()})
 		if value.IsPresent() {
 			working[assignment.Name] = value
