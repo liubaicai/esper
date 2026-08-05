@@ -2513,6 +2513,7 @@ type rowRecogPartitionState struct {
 	activeStateCounts  map[string]int64
 	activePaths        map[string][]rowRecogNFAPath
 	allowedMatchStarts map[string]struct{}
+	allowedMatchKeys   map[string]struct{}
 	blockedStarts      map[string]struct{}
 	fastABStarC        []rowRecogFastABStarCPath
 }

@@ -116,3 +116,44 @@ func TestRowRecogStatePoolCountsAlternatingNFAStates(t *testing.T) {
 		t.Fatalf("alternating NFA state release produced extra overflow = %#v", limits)
 	}
 }
+
+func TestRowRecogStatePoolAllowsAcceptedTerminalWhenContinuationIsBlocked(t *testing.T) {
+	env, engine := newRowRecogStatePoolTest(t, WithMatchRecognizeStateLimit(1, true))
+	stream := From[rowRecogStatePoolEvent](env, "RowRecogStatePoolEvent").Window(KeepAll())
+	query := stream.MatchRecognize(RowVar("A").ZeroOrMore()).
+		Define("A", Equal[int](Field[rowRecogStatePoolEvent, int]("phase"), Literal(1))).
+		Measures(
+			Alias("id", TagField[int64]("A", "id")),
+			Alias("size", TagSize("A")),
+		).
+		SkipToCurrentRow().
+		Query(StatementName("rowrecog-nfa-terminal-accepted"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := collectRowRecogRows(t, deployment)
+	var limits []MatchRecognizeStateLimitEvent
+	if err := engine.AddMatchRecognizeStateLimitListener(MatchRecognizeStateLimitListenerFunc(func(event MatchRecognizeStateLimitEvent) {
+		limits = append(limits, event)
+	})); err != nil {
+		t.Fatal(err)
+	}
+
+	sendRowRecogStatePoolEvent(t, engine, "A", 1, 1)
+	sendRowRecogStatePoolEvent(t, engine, "A", 1, 2)
+	if len(limits) != 1 {
+		t.Fatalf("terminal-plus-continuation overflow = %#v, want one rejected continuation", limits)
+	}
+	if len(*rows) != 3 {
+		t.Fatalf("accepted terminal rows = %#v, want the first match plus both second-event terminals", *rows)
+	}
+	last := (*rows)[2]
+	if last.Get("id").Any() != int64(2) || last.Get("size").Any() != int64(1) {
+		t.Fatalf("new blocked start terminal row = %#v, want id=2,size=1", last)
+	}
+}

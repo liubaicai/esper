@@ -661,6 +661,7 @@ func newRowRecogPartitionState() *rowRecogPartitionState {
 		activeStateCounts:  make(map[string]int64),
 		activePaths:        make(map[string][]rowRecogNFAPath),
 		allowedMatchStarts: make(map[string]struct{}),
+		allowedMatchKeys:   make(map[string]struct{}),
 		blockedStarts:      make(map[string]struct{}),
 	}
 }
@@ -812,6 +813,7 @@ func (r *statementRuntime) reconcileRowRecogStatePool(definition *rowRecogDefini
 		nextBlocked[key] = struct{}{}
 	}
 	allowedMatches := make(map[string]struct{})
+	allowedMatchKeys := make(map[string]struct{})
 
 	type activeEntry struct {
 		key   string
@@ -846,6 +848,7 @@ func (r *statementRuntime) reconcileRowRecogStatePool(definition *rowRecogDefini
 			}
 			if path.node.terminal {
 				allowedMatches[entry.key] = struct{}{}
+				allowedMatchKeys[rowRecogMatchKey(rowRecogMatch{start: entry.start, end: end, captures: captures})] = struct{}{}
 			}
 			for _, next := range path.node.next {
 				activeCandidate = true
@@ -883,6 +886,7 @@ func (r *statementRuntime) reconcileRowRecogStatePool(definition *rowRecogDefini
 		}
 		if start.terminal {
 			allowedMatches[startKey] = struct{}{}
+			allowedMatchKeys[rowRecogMatchKey(rowRecogMatch{start: end, end: end, captures: captures})] = struct{}{}
 		}
 		for _, next := range start.next {
 			startCandidate = true
@@ -908,6 +912,7 @@ func (r *statementRuntime) reconcileRowRecogStatePool(definition *rowRecogDefini
 	partition.activeStarts = nextActive
 	partition.blockedStarts = nextBlocked
 	partition.allowedMatchStarts = allowedMatches
+	partition.allowedMatchKeys = allowedMatchKeys
 }
 
 func rowRecogNFAPathMatches(definition *rowRecogDefinition, partition *rowRecogPartitionState, path rowRecogNFAPath, end int, now time.Time, variables map[string]Value) (map[string][]Event, bool) {
@@ -1221,6 +1226,11 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 		matches := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, r.variables)
 		emittedForStart := false
 		for _, match := range matches {
+			if r.rowRecogStatePoolTracking(definition) {
+				if _, allowed := partition.allowedMatchKeys[rowRecogMatchKey(match)]; !allowed {
+					continue
+				}
+			}
 			if !rowRecogMatchAllowed(definition, partition, match) {
 				continue
 			}
@@ -1504,6 +1514,15 @@ func (r *statementRuntime) emitRowRecogTerminated(definition *rowRecogDefinition
 		}
 		current := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, r.variables)
 		current = rowRecogOpenMatches(partition, startKey, current)
+		if r.rowRecogStatePoolTracking(definition) {
+			allowed := make([]rowRecogMatch, 0, len(current))
+			for _, match := range current {
+				if _, exists := partition.allowedMatchKeys[rowRecogMatchKey(match)]; exists {
+					allowed = append(allowed, match)
+				}
+			}
+			current = allowed
+		}
 		terminalCurrent := make([]rowRecogMatch, 0, len(current))
 		for _, match := range current {
 			if match.terminal || rowRecogMatchAtFiniteWidth(definition.pattern, match) {
@@ -1894,6 +1913,7 @@ func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, e
 		partition.activeStateCounts = make(map[string]int64)
 		partition.activePaths = make(map[string][]rowRecogNFAPath)
 		partition.allowedMatchStarts = make(map[string]struct{})
+		partition.allowedMatchKeys = make(map[string]struct{})
 		partition.blockedStarts = make(map[string]struct{})
 		for newIndex, candidate := range partition.events {
 			oldIndex := newIndex

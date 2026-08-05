@@ -307,6 +307,7 @@ func (e *Engine) releaseRowRecogRuntimeLocked(runtime *statementRuntime) {
 			partition.activeStateCounts = make(map[string]int64)
 			partition.activePaths = make(map[string][]rowRecogNFAPath)
 			partition.allowedMatchStarts = make(map[string]struct{})
+			partition.allowedMatchKeys = make(map[string]struct{})
 		}
 	}
 	for _, partition := range runtime.partitions {
