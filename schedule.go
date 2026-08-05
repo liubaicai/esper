@@ -73,11 +73,11 @@ func CronValuesExpr(values ...Expr) CronField {
 }
 
 // CronSchedule is a calendar schedule in the same order as Esper's
-// output-at form: minute, hour, day-of-month, month, day-of-week. Second and
-// millisecond precision are opt-in so existing five-field schedules keep
-// their historical minute-boundary behavior. A zero-valued CronField is a
-// wildcard, so a schedule can also be assembled with a struct literal when
-// all unspecified fields should match.
+// output-at form: minute, hour, day-of-month, month, day-of-week. Second,
+// millisecond and microsecond precision are opt-in so existing five-field
+// schedules keep their historical minute-boundary behavior. A zero-valued
+// CronField is a wildcard, so a schedule can also be assembled with a struct
+// literal when all unspecified fields should match.
 type CronSchedule struct {
 	Minute         CronField
 	Hour           CronField
@@ -86,8 +86,10 @@ type CronSchedule struct {
 	Weekday        CronField
 	Second         CronField
 	Millisecond    CronField
+	Microsecond    CronField
 	secondSet      bool
 	millisecondSet bool
+	microsecondSet bool
 }
 
 // NewCronSchedule is a named constructor for callers that prefer not to use a
@@ -122,6 +124,18 @@ func NewCronScheduleWithMilliseconds(milliseconds, seconds, minute, hour, dayOfM
 	}
 }
 
+// NewCronScheduleWithMicroseconds enables seconds, milliseconds and
+// microseconds. The microsecond field is the 0..999 remainder within a
+// millisecond, matching Esper's timer:at microsecond form and preserving
+// time.Time nanosecond precision in the Go runtime.
+func NewCronScheduleWithMicroseconds(microseconds, milliseconds, seconds, minute, hour, dayOfMonth, month, weekday CronField) CronSchedule {
+	return CronSchedule{
+		Minute: minute, Hour: hour, DayOfMonth: dayOfMonth, Month: month, Weekday: weekday,
+		Second: seconds, Millisecond: milliseconds, Microsecond: microseconds,
+		secondSet: true, millisecondSet: true, microsecondSet: true,
+	}
+}
+
 // WithSeconds returns a copy with second-level scheduling enabled. It is
 // useful when callers prefer a fluent rule definition over a constructor.
 func (schedule CronSchedule) WithSeconds(field CronField) CronSchedule {
@@ -143,6 +157,22 @@ func (schedule CronSchedule) WithMilliseconds(field CronField) CronSchedule {
 	return schedule
 }
 
+// WithMicroseconds returns a copy with microsecond-level scheduling enabled.
+// Milliseconds are anchored at zero unless already selected explicitly.
+func (schedule CronSchedule) WithMicroseconds(field CronField) CronSchedule {
+	if !schedule.millisecondSet && schedule.Millisecond.isWildcard() {
+		schedule.Millisecond = CronValues(0)
+		schedule.millisecondSet = true
+	}
+	if !schedule.secondSet && schedule.Second.isWildcard() {
+		schedule.Second = CronValues(0)
+		schedule.secondSet = true
+	}
+	schedule.Microsecond = field
+	schedule.microsecondSet = true
+	return schedule
+}
+
 type resolvedCronField struct {
 	wildcard bool
 	values   []int
@@ -156,6 +186,7 @@ type resolvedCronSchedule struct {
 	weekday     resolvedCronField
 	second      resolvedCronField
 	millisecond resolvedCronField
+	microsecond resolvedCronField
 }
 
 func (schedule CronSchedule) hasSeconds() bool {
@@ -164,6 +195,10 @@ func (schedule CronSchedule) hasSeconds() bool {
 
 func (schedule CronSchedule) hasMilliseconds() bool {
 	return schedule.millisecondSet || !schedule.Millisecond.isWildcard()
+}
+
+func (schedule CronSchedule) hasMicroseconds() bool {
+	return schedule.microsecondSet || !schedule.Microsecond.isWildcard()
 }
 
 // OutputAt emits the accumulated result at each matching calendar instant.
@@ -352,6 +387,11 @@ func (schedule CronSchedule) validate() error {
 			return err
 		}
 	}
+	if schedule.hasMicroseconds() {
+		if err := schedule.Microsecond.validate(0, 999, "microsecond"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -371,6 +411,10 @@ func (e *Environment) validateCronSchedule(schedule *CronSchedule) error {
 	if schedule.hasMilliseconds() {
 		fields = append(fields, schedule.Millisecond)
 		labels = append(labels, "millisecond")
+	}
+	if schedule.hasMicroseconds() {
+		fields = append(fields, schedule.Microsecond)
+		labels = append(labels, "microsecond")
 	}
 	for index, field := range fields {
 		for _, expression := range field.expressions() {
@@ -433,7 +477,14 @@ func (schedule CronSchedule) resolve(ctx EvalContext) (resolvedCronSchedule, err
 			return resolvedCronSchedule{}, err
 		}
 	}
-	return resolvedCronSchedule{minute: minute, hour: hour, dayOfMonth: dayOfMonth, month: month, weekday: weekday, second: second, millisecond: millisecond}, nil
+	microsecond := resolvedCronField{values: []int{0}}
+	if schedule.hasMicroseconds() {
+		microsecond, err = schedule.Microsecond.resolve(ctx, 0, 999, "microsecond")
+		if err != nil {
+			return resolvedCronSchedule{}, err
+		}
+	}
+	return resolvedCronSchedule{minute: minute, hour: hour, dayOfMonth: dayOfMonth, month: month, weekday: weekday, second: second, millisecond: millisecond, microsecond: microsecond}, nil
 }
 
 func (field resolvedCronField) candidates(minimum, maximum int) []int {
@@ -456,7 +507,7 @@ func (field resolvedCronField) matches(value int) bool {
 }
 
 // nextAfter returns the first schedule instant strictly after after. The
-// search is hierarchical (year/month/day/hour/minute/second/millisecond)
+// search is hierarchical (year/month/day/hour/minute/second/millisecond/microsecond)
 // rather than a fixed-duration scan, which keeps sparse schedules such as
 // February 29 practical while retaining sub-second precision.
 func (schedule resolvedCronSchedule) nextAfter(after time.Time) (time.Time, error) {
@@ -491,9 +542,11 @@ func (schedule resolvedCronSchedule) nextAfter(after time.Time) (time.Time, erro
 					for _, minute := range schedule.minute.candidates(0, 59) {
 						for _, second := range schedule.second.candidates(0, 59) {
 							for _, millisecond := range schedule.millisecond.candidates(0, 999) {
-								candidate := time.Date(year, time.Month(month), day, hour, minute, second, millisecond*int(time.Millisecond), location)
-								if candidate.After(localAfter) {
-									return candidate, nil
+								for _, microsecond := range schedule.microsecond.candidates(0, 999) {
+									candidate := time.Date(year, time.Month(month), day, hour, minute, second, millisecond*int(time.Millisecond)+microsecond*int(time.Microsecond), location)
+									if candidate.After(localAfter) {
+										return candidate, nil
+									}
 								}
 							}
 						}
@@ -546,12 +599,15 @@ func (schedule resolvedCronSchedule) previousOrAt(at time.Time) (time.Time, erro
 								continue
 							}
 							for _, millisecond := range reverseInts(schedule.millisecond.candidates(0, 999)) {
-								if year == localAt.Year() && month == int(localAt.Month()) && day == localAt.Day() && hour == localAt.Hour() && minute == localAt.Minute() && second == localAt.Second() && millisecond*int(time.Millisecond) > localAt.Nanosecond() {
-									continue
-								}
-								candidate := time.Date(year, time.Month(month), day, hour, minute, second, millisecond*int(time.Millisecond), location)
-								if !candidate.After(localAt) {
-									return candidate, nil
+								for _, microsecond := range reverseInts(schedule.microsecond.candidates(0, 999)) {
+									nanosecond := millisecond*int(time.Millisecond) + microsecond*int(time.Microsecond)
+									if year == localAt.Year() && month == int(localAt.Month()) && day == localAt.Day() && hour == localAt.Hour() && minute == localAt.Minute() && second == localAt.Second() && nanosecond > localAt.Nanosecond() {
+										continue
+									}
+									candidate := time.Date(year, time.Month(month), day, hour, minute, second, nanosecond, location)
+									if !candidate.After(localAt) {
+										return candidate, nil
+									}
 								}
 							}
 						}
@@ -641,6 +697,9 @@ func (schedule CronSchedule) description() string {
 	if schedule.hasMilliseconds() {
 		parts = append(parts, schedule.Millisecond.description())
 	}
+	if schedule.hasMicroseconds() {
+		parts = append(parts, schedule.Microsecond.description())
+	}
 	return strings.Join(parts, ",")
 }
 
@@ -654,6 +713,9 @@ func visitCronScheduleExpressions(schedule *CronSchedule, visit func(Expr) error
 	}
 	if schedule.hasMilliseconds() {
 		fields = append(fields, schedule.Millisecond)
+	}
+	if schedule.hasMicroseconds() {
+		fields = append(fields, schedule.Microsecond)
 	}
 	for _, field := range fields {
 		for _, expression := range field.expressions() {

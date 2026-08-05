@@ -518,6 +518,9 @@ func resolveStaticContextCron(schedule CronSchedule, label string) (resolvedCron
 	if schedule.hasMilliseconds() {
 		fields = append(fields, schedule.Millisecond)
 	}
+	if schedule.hasMicroseconds() {
+		fields = append(fields, schedule.Microsecond)
+	}
 	for _, field := range fields {
 		if len(field.expressions()) > 0 {
 			return resolvedCronSchedule{}, NewError(ErrorInvalidRule, "cron temporal context requires constant schedule fields")
