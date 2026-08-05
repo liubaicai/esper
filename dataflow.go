@@ -105,6 +105,24 @@ func (o DataflowBeaconOptions) validate() error {
 	return nil
 }
 
+// DataflowEventBusSourceCollector transforms one EventBusSource event into
+// zero or more values entering the source's outgoing graph. Returning an
+// Event preserves its schema envelope; a registered Go event value is
+// materialized into an Event before graph delivery.
+type DataflowEventBusSourceCollector func(context.Context, Event) ([]any, error)
+
+// DataflowEventBusSinkEmission identifies one event type/value pair sent by a
+// collector-enabled EventBusSink.
+type DataflowEventBusSinkEmission struct {
+	EventType string
+	Value     any
+}
+
+// DataflowEventBusSinkCollector transforms one graph value into zero or more
+// event-bus sends. It is the structured Go counterpart to Esper's event
+// collector callback and supports dynamic target event types.
+type DataflowEventBusSinkCollector func(context.Context, any) ([]DataflowEventBusSinkEmission, error)
+
 // DataflowRecord is the closed union of values emitted by Esper's built-in
 // event-oriented operators: Event for an event stream and Row for a
 // projection. It gives Filter and Select one typed contract while retaining
@@ -639,29 +657,31 @@ func DataflowPortOf[T any](name string) DataflowPort {
 }
 
 type DataflowOperator struct {
-	Name             string
-	Kind             DataflowOperatorKind
-	Events           []any
-	EventType        string
-	Predicate        Expr
-	Selections       []Selection
-	Log              func(context.Context, any) error
-	Statement        *Statement
-	Signal           DataflowSignalHandler
-	Factory          DataflowOperatorFactory
-	InputPorts       []string
-	OutputPorts      []string
-	InputPortTypes   map[string]reflect.Type
-	OutputPortTypes  map[string]reflect.Type
-	SourceFactory    DataflowSourceFactory
-	BeaconOptions    DataflowBeaconOptions
-	BeaconConfigured bool
-	Properties       map[string]any
-	ParameterNames   []string
-	SourceFilter     Expr
-	SelectOptions    DataflowSelectOptions
-	JoinOptions      DataflowJoinOptions
-	JoinConfigured   bool
+	Name                    string
+	Kind                    DataflowOperatorKind
+	Events                  []any
+	EventType               string
+	Predicate               Expr
+	Selections              []Selection
+	Log                     func(context.Context, any) error
+	Statement               *Statement
+	Signal                  DataflowSignalHandler
+	Factory                 DataflowOperatorFactory
+	InputPorts              []string
+	OutputPorts             []string
+	InputPortTypes          map[string]reflect.Type
+	OutputPortTypes         map[string]reflect.Type
+	SourceFactory           DataflowSourceFactory
+	BeaconOptions           DataflowBeaconOptions
+	BeaconConfigured        bool
+	Properties              map[string]any
+	ParameterNames          []string
+	SourceFilter            Expr
+	EventBusSourceCollector DataflowEventBusSourceCollector
+	EventBusSinkCollector   DataflowEventBusSinkCollector
+	SelectOptions           DataflowSelectOptions
+	JoinOptions             DataflowJoinOptions
+	JoinConfigured          bool
 }
 
 // DataflowEdge connects an operator output port to an operator input port.
@@ -822,8 +842,42 @@ func (b DataflowBuilder) EventBusSourceWithFilter(name, eventType string, predic
 	})
 }
 
+// EventBusSourceWithCollector adds a structured collector that can suppress,
+// duplicate or transform events before they enter the outgoing graph.
+func (b DataflowBuilder) EventBusSourceWithCollector(name, eventType string, collector DataflowEventBusSourceCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                    name,
+		Kind:                    EventBusSourceKind,
+		EventType:               eventType,
+		EventBusSourceCollector: collector,
+	})
+}
+
+// EventBusSourceWithFilterAndCollector combines source-side filtering with a
+// collector, preserving the order used by Esper: only accepted events reach
+// the collector and its returned values enter the outgoing graph.
+func (b DataflowBuilder) EventBusSourceWithFilterAndCollector(name, eventType string, predicate Expr, collector DataflowEventBusSourceCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                    name,
+		Kind:                    EventBusSourceKind,
+		EventType:               eventType,
+		SourceFilter:            predicate,
+		EventBusSourceCollector: collector,
+	})
+}
+
 func (b DataflowBuilder) EventBusSink(name, eventType string) DataflowBuilder {
 	return b.add(DataflowOperator{Name: name, Kind: EventBusSinkKind, EventType: eventType})
+}
+
+// EventBusSinkWithCollector sends dynamic event-type/value pairs returned by
+// a Go collector instead of requiring one static target event type.
+func (b DataflowBuilder) EventBusSinkWithCollector(name string, collector DataflowEventBusSinkCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                  name,
+		Kind:                  EventBusSinkKind,
+		EventBusSinkCollector: collector,
+	})
 }
 
 func (b DataflowBuilder) Filter(name string, predicate Expr) DataflowBuilder {
@@ -1132,11 +1186,13 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 				}
 			}
 		case EventBusSinkKind:
-			if operator.EventType == "" {
+			if operator.EventType == "" && operator.EventBusSinkCollector == nil {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow event-bus sink %q requires event type", operator.Name))
 			}
-			if _, ok := b.env.Schema(operator.EventType); !ok {
-				return DataflowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("dataflow event-bus sink %q references unknown event type %q", operator.Name, operator.EventType))
+			if operator.EventType != "" {
+				if _, ok := b.env.Schema(operator.EventType); !ok {
+					return DataflowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("dataflow event-bus sink %q references unknown event type %q", operator.Name, operator.EventType))
+				}
 			}
 		case EPStatementSourceKind:
 			if operator.Statement == nil {
@@ -2361,6 +2417,46 @@ func (d *DataflowInstance) materializeDataflowEvent(value any) (Event, error) {
 	return event, nil
 }
 
+func (d *DataflowInstance) sendDataflowEventBusValue(ctx context.Context, operator DataflowOperator, value any) error {
+	if d.engine == nil {
+		return NewError(ErrorDependency, "dataflow event-bus sink has no engine")
+	}
+	if operator.EventBusSinkCollector != nil {
+		emissions, err := operator.EventBusSinkCollector(ctx, value)
+		if err != nil {
+			return err
+		}
+		for _, emission := range emissions {
+			if emission.EventType == "" {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow event-bus sink %q collector returned an empty event type", operator.Name))
+			}
+			if _, ok := d.engine.env.Schema(emission.EventType); !ok {
+				return NewError(ErrorUnknownName, fmt.Sprintf("dataflow event-bus sink collector references unknown event type %q", emission.EventType))
+			}
+			underlying := emission.Value
+			if eventValue, ok := emission.Value.(Event); ok {
+				underlying = eventValue.Underlying()
+				if schema, ok := d.engine.env.Schema(emission.EventType); ok && schema.Kind() == SchemaVariant {
+					underlying = eventValue
+				}
+			}
+			if err := d.engine.Send(ctx, emission.EventType, underlying); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	eventValue, ok := value.(Event)
+	if !ok {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow event-bus sink %q requires Event output", operator.Name))
+	}
+	underlying := eventValue.Underlying()
+	if schema, ok := d.engine.env.Schema(operator.EventType); ok && schema.Kind() == SchemaVariant {
+		underlying = eventValue
+	}
+	return d.engine.Send(ctx, operator.EventType, underlying)
+}
+
 func (d *DataflowInstance) handleDataflowError(ctx context.Context, operator string, err error) error {
 	if err == nil {
 		return nil
@@ -2962,6 +3058,29 @@ func (d *DataflowInstance) dataflowSourceFilterAccepts(operator DataflowOperator
 		return false, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow source filter %q did not evaluate to bool", operator.Name))
 	}
 	return pass, nil
+}
+
+func (d *DataflowInstance) dataflowEventBusSourceValues(ctx context.Context, operator DataflowOperator, event Event) ([]any, error) {
+	if operator.EventBusSourceCollector == nil {
+		return []any{event}, nil
+	}
+	values, err := operator.EventBusSourceCollector(ctx, event)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]any, 0, len(values))
+	for _, value := range values {
+		if _, ok := value.(Event); ok {
+			result = append(result, value)
+			continue
+		}
+		materialized, err := d.materializeDataflowEvent(value)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, materialized)
+	}
+	return result, nil
 }
 
 func (d *DataflowInstance) dataflowEvaluationWithGroups(operator DataflowOperator, value any, group, everGroup []Event, acceptSubquery bool) (EvalContext, error) {
@@ -3591,6 +3710,12 @@ func (d *DataflowInstance) processLinearValues(ctx context.Context, current []an
 			}
 			if !accepted {
 				current = nil
+			} else if operator.EventBusSourceCollector != nil {
+				values, err := d.dataflowEventBusSourceValues(ctx, operator, eventValue)
+				if err != nil {
+					return err
+				}
+				current = values
 			}
 		case FilterKind:
 			filtered := make([]any, 0, len(current))
@@ -3639,19 +3764,8 @@ func (d *DataflowInstance) processLinearValues(ctx context.Context, current []an
 				}
 			}
 		case EventBusSinkKind:
-			if d.engine == nil {
-				return NewError(ErrorDependency, "dataflow event-bus sink has no engine")
-			}
 			for _, candidate := range current {
-				candidateEvent, ok := candidate.(Event)
-				if !ok {
-					return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow event-bus sink %q requires Event output", operator.Name))
-				}
-				underlying := candidateEvent.Underlying()
-				if schema, ok := d.engine.env.Schema(operator.EventType); ok && schema.Kind() == SchemaVariant {
-					underlying = candidateEvent
-				}
-				if err := d.engine.Send(ctx, operator.EventType, underlying); err != nil {
+				if err := d.sendDataflowEventBusValue(ctx, operator, candidate); err != nil {
 					return err
 				}
 			}
@@ -3730,8 +3844,18 @@ func (d *DataflowInstance) processGraphEvent(ctx context.Context, event any) err
 	}
 	d.processed.Add(1)
 	for _, start := range starts {
-		if err := d.processGraphFrom(ctx, event, start); err != nil {
-			return err
+		operator := d.operators[start]
+		values, err := d.dataflowEventBusSourceValues(ctx, operator, eventValue)
+		if err != nil {
+			if handled := d.handleDataflowError(ctx, operator.Name, err); handled != nil {
+				return handled
+			}
+			continue
+		}
+		for _, value := range values {
+			if err := d.processGraphFrom(ctx, value, start); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -3979,18 +4103,7 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		}
 		return []DataflowEmission{Emit(value)}, nil
 	case EventBusSinkKind:
-		if d.engine == nil {
-			return nil, NewError(ErrorDependency, "dataflow event-bus sink has no engine")
-		}
-		eventValue, ok := value.(Event)
-		if !ok {
-			return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow event-bus sink %q requires Event output", operator.Name))
-		}
-		underlying := eventValue.Underlying()
-		if schema, ok := d.engine.env.Schema(operator.EventType); ok && schema.Kind() == SchemaVariant {
-			underlying = eventValue
-		}
-		if err := d.engine.Send(ctx, operator.EventType, underlying); err != nil {
+		if err := d.sendDataflowEventBusValue(ctx, operator, value); err != nil {
 			return nil, err
 		}
 		return []DataflowEmission{Emit(value)}, nil
