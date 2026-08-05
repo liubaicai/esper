@@ -138,6 +138,12 @@ type DataflowStatementSourceContext struct {
 // parameter without Java reflection or class-loader configuration.
 type DataflowStatementSourceFilter func(DataflowStatementSourceContext) bool
 
+// DataflowStatementSourceCollector transforms one new value from an
+// EPStatementSource into zero or more graph values. It is the Go equivalent
+// of Esper's statement collector callback and intentionally receives the
+// selected statement context explicitly.
+type DataflowStatementSourceCollector func(context.Context, DataflowStatementSourceContext, any) ([]any, error)
+
 // DataflowRecord is the closed union of values emitted by Esper's built-in
 // event-oriented operators: Event for an event stream and Row for a
 // projection. It gives Filter and Select one typed contract while retaining
@@ -682,6 +688,7 @@ type DataflowOperator struct {
 	Statement               *Statement
 	StatementName           string
 	StatementFilter         DataflowStatementSourceFilter
+	StatementCollector      DataflowStatementSourceCollector
 	Signal                  DataflowSignalHandler
 	Factory                 DataflowOperatorFactory
 	InputPorts              []string
@@ -850,6 +857,28 @@ func (b DataflowBuilder) EPStatementSourceWithStatementFilter(name string, selec
 		Name:            name,
 		Kind:            EPStatementSourceKind,
 		StatementFilter: selector,
+	})
+}
+
+// EPStatementSourceByNameWithCollector follows a named statement and lets a
+// collector suppress, transform or duplicate its new result values.
+func (b DataflowBuilder) EPStatementSourceByNameWithCollector(name, statementName string, collector DataflowStatementSourceCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:               name,
+		Kind:               EPStatementSourceKind,
+		StatementName:      statementName,
+		StatementCollector: collector,
+	})
+}
+
+// EPStatementSourceWithCollector is the direct-statement counterpart to
+// EPStatementSourceByNameWithCollector.
+func (b DataflowBuilder) EPStatementSourceWithCollector(name string, statement *Statement, collector DataflowStatementSourceCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:               name,
+		Kind:               EPStatementSourceKind,
+		Statement:          statement,
+		StatementCollector: collector,
 	})
 }
 
@@ -2931,7 +2960,7 @@ func (d *DataflowInstance) statementSourceMatches(operator DataflowOperator, sta
 	return false
 }
 
-func (d *DataflowInstance) statementSourceListener(operator DataflowOperator) Listener {
+func (d *DataflowInstance) statementSourceListener(operator DataflowOperator, statement *Statement) Listener {
 	return func(callbackCtx context.Context, batch ResultBatch) error {
 		for _, result := range batch.New {
 			var value any
@@ -2949,18 +2978,28 @@ func (d *DataflowInstance) statementSourceListener(operator DataflowOperator) Li
 			if !accepted {
 				continue
 			}
-			var processErr error
-			if d.graph {
-				d.processed.Add(1)
-				processErr = d.processGraphFrom(callbackCtx, value, operator.Name)
-			} else {
-				processErr = d.process(callbackCtx, value)
+			values := []any{value}
+			if operator.StatementCollector != nil {
+				collected, collectErr := operator.StatementCollector(callbackCtx, dataflowStatementSourceContext(statement), value)
+				if collectErr != nil {
+					return collectErr
+				}
+				values = collected
 			}
-			if processErr != nil {
-				return d.completeDataflowFailure(processErr)
-			}
-			if err := contextErr(callbackCtx); err != nil {
-				return err
+			for _, collected := range values {
+				var processErr error
+				if d.graph {
+					d.processed.Add(1)
+					processErr = d.processGraphFrom(callbackCtx, collected, operator.Name)
+				} else {
+					processErr = d.process(callbackCtx, collected)
+				}
+				if processErr != nil {
+					return d.completeDataflowFailure(processErr)
+				}
+				if err := contextErr(callbackCtx); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -2989,7 +3028,7 @@ func (d *DataflowInstance) attachStatementSource(operator DataflowOperator, stat
 		_ = existing.Close()
 	}
 
-	subscription, err := statement.Subscribe(d.statementSourceListener(operator))
+	subscription, err := statement.Subscribe(d.statementSourceListener(operator, statement))
 	if err != nil {
 		return err
 	}
