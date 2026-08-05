@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 )
@@ -700,6 +701,132 @@ func TestPatternMatchUntilExpressionBoundsUseCapturedTag(t *testing.T) {
 	}
 	if len(rows) != 1 || rows[0].Get("count").Any() != int64(2) || rows[0].Get("bound").Any() != "bound" {
 		t.Fatalf("captured-tag match-until rows = %#v, want count=2", rows)
+	}
+}
+
+func TestPatternMatchUntilWithTerminatorUsesBounds(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	if err := env.RegisterVariable("lower", 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.RegisterVariable("upper", 3); err != nil {
+		t.Fatal(err)
+	}
+	base := From[runtimeTestTrade](env, "Trade")
+	repeated := PatternFrom(base, "a", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("A"))).MatchUntilExpr(
+		VariableRef[int]("lower"),
+		VariableRef[int]("upper"),
+	)
+	terminator := PatternFrom(base, "b", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("B")))
+	plan, err := env.Build(repeated.Until(terminator).Select(
+		Alias("count", TagCount("a")),
+		Alias("first", TagFieldAt[string]("a", 0, "symbol")),
+		Alias("last", TagField[string]("a", "symbol")),
+		Alias("terminator", TagField[string]("b", "symbol")),
+	).Query(StatementName("pattern-match-until-bounded-until")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(plan.Query().pattern.root.description(), "until=") {
+		t.Fatalf("bounded-until plan description = %q", plan.Query().pattern.root.description())
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, symbol := range []string{"A1", "A2", "A3", "A4"} {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol[:1]}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 0 {
+		t.Fatalf("bounded-until completed before terminator = %#v", rows)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("count").Any() != int64(3) || rows[0].Get("first").Any() != "A" || rows[0].Get("last").Any() != "A" || rows[0].Get("terminator").Any() != "B" {
+		t.Fatalf("bounded-until rows = %#v, want capped count=3 and terminator B", rows)
+	}
+
+	zeroEnv, _ := newRuntimeTest(t)
+	zeroBase := From[runtimeTestTrade](zeroEnv, "Trade")
+	zeroRepeat := PatternFrom(zeroBase, "a", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("A"))).MatchUntilExpr(nil, Literal[int](3))
+	zeroTerminator := PatternFrom(zeroBase, "b", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("A")))
+	zeroPlan, err := zeroEnv.Build(zeroRepeat.Until(zeroTerminator).Select(
+		Alias("count", TagCount("a")),
+		Alias("terminator", TagField[string]("b", "symbol")),
+	).Query(StatementName("pattern-match-until-terminator-wins")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	zeroEngine := NewEngine(zeroEnv, WithStartTime(time.Unix(0, 0).UTC()))
+	zeroDeployment, err := zeroEngine.Deploy(context.Background(), zeroPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer zeroDeployment.Undeploy(context.Background())
+	var zeroRows []Row
+	if _, err := zeroDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				zeroRows = append(zeroRows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := zeroEngine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(zeroRows) != 1 || zeroRows[0].Get("count").Any() != int64(0) || zeroRows[0].Get("terminator").Any() != "A" {
+		t.Fatalf("terminator priority rows = %#v, want zero repeated captures", zeroRows)
+	}
+}
+
+func TestPatternMatchUntilWithTerminatorBelowMinimumExpires(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	repeated := PatternFrom(base, "a", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("A"))).MatchUntil(2, 3)
+	terminator := PatternFrom(base, "b", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("B")))
+	plan, err := env.Build(repeated.Until(terminator).Select(Alias("count", TagCount("a"))).Query(StatementName("pattern-match-until-below-minimum")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var rows []Result
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		rows = append(rows, batch.New...)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []runtimeTestTrade{{Symbol: "A"}, {Symbol: "B"}} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 0 {
+		t.Fatalf("bounded-until below minimum emitted rows = %#v", rows)
 	}
 }
 

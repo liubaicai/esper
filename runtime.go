@@ -6715,14 +6715,19 @@ func newPatternProgress(node *patternNode) *patternProgress {
 		node:           node,
 		minimum:        node.minimum,
 		maximum:        node.maximum,
-		boundsResolved: node.minimumExpr == nil && node.maximumExpr == nil,
+		boundsResolved: !node.dynamicBounds || (node.minimumExpr == nil && node.maximumExpr == nil),
 	}
 	switch node.kind {
 	case patternSequenceNode, patternAndNode, patternOrNode:
 		progress.left = newPatternProgress(node.left)
 		progress.right = newPatternProgress(node.right)
-	case patternNotNode, patternMatchUntilNode:
+	case patternNotNode:
 		progress.child = newPatternProgress(node.child)
+	case patternMatchUntilNode:
+		progress.child = newPatternProgress(node.child)
+		if node.right != nil {
+			progress.right = newPatternProgress(node.right)
+		}
 	case patternWithinNode:
 		progress.child = newPatternProgress(node.child)
 	case patternUntilNode:
@@ -6758,8 +6763,10 @@ func patternCanStartWithoutEvent(node *patternNode) bool {
 		return patternCanStartWithoutEvent(node.left)
 	case patternAndNode, patternOrNode:
 		return patternCanStartWithoutEvent(node.left) || patternCanStartWithoutEvent(node.right)
-	case patternNotNode, patternMatchUntilNode, patternEveryNode:
+	case patternNotNode, patternEveryNode:
 		return patternCanStartWithoutEvent(node.child)
+	case patternMatchUntilNode:
+		return patternCanStartWithoutEvent(node.child) || patternCanStartWithoutEvent(node.right)
 	case patternWithinNode:
 		return true
 	case patternUntilNode:
@@ -6821,9 +6828,16 @@ func armPatternProgressTimers(progress *patternProgress, at time.Time, variables
 		inheritPatternProgressTags(progress, progress.right)
 		armPatternProgressTimers(progress.left, at, variables)
 		armPatternProgressTimers(progress.right, at, variables)
-	case patternNotNode, patternMatchUntilNode, patternEveryNode:
+	case patternNotNode, patternEveryNode:
 		inheritPatternProgressTags(progress, progress.child)
 		armPatternProgressTimers(progress.child, at, variables)
+	case patternMatchUntilNode:
+		inheritPatternProgressTags(progress, progress.child)
+		armPatternProgressTimers(progress.child, at, variables)
+		if progress.right != nil {
+			inheritPatternProgressTags(progress, progress.right)
+			armPatternProgressTimers(progress.right, at, variables)
+		}
 	case patternWithinNode:
 		if !progress.timerStarted {
 			progress.timerStarted = true
@@ -7062,7 +7076,7 @@ func patternProgressActive(progress *patternProgress) bool {
 		// positive matches in the enclosing And expression.
 		return true
 	case patternMatchUntilNode:
-		return progress.count > 0 || patternProgressActive(progress.child)
+		return progress.count > 0 || patternProgressActive(progress.child) || patternProgressActive(progress.right)
 	case patternUntilNode:
 		return progress.count > 0 || patternProgressActive(progress.child) || patternProgressActive(progress.right)
 	case patternEveryNode:
@@ -7095,6 +7109,12 @@ func patternSatisfied(progress *patternProgress) bool {
 	case patternNotNode:
 		return !progress.blocked
 	case patternMatchUntilNode:
+		if progress.node.right != nil {
+			return progress.done
+		}
+		if progress.node.dynamicBounds && progress.count == 0 && !progress.started {
+			return false
+		}
 		return progress.count >= progress.minimum
 	case patternUntilNode:
 		return progress.done
@@ -7494,6 +7514,77 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 			base.expired = true
 			base.child = nil
 			return []patternTransition{{state: base, complete: false}}
+		}
+		if base.node.right != nil {
+			childTransitions := make([]patternTransition, 0, 1)
+			if base.child == nil || (base.maximum > 0 && base.count >= base.maximum) {
+				childTransitions = append(childTransitions, patternTransition{state: base.child})
+			} else {
+				childTransitions = advancePatternNodeTrigger(base.child, trigger, variables)
+			}
+			terminatorTransitions := advancePatternNodeTrigger(base.right, trigger, variables)
+			terminatorMatched := false
+			for _, terminatorTransition := range terminatorTransitions {
+				if terminatorTransition.complete {
+					terminatorMatched = true
+					break
+				}
+			}
+			if terminatorMatched {
+				result := make([]patternTransition, 0, len(terminatorTransitions))
+				for _, terminatorTransition := range terminatorTransitions {
+					if !terminatorTransition.complete {
+						continue
+					}
+					next := clonePatternProgress(base)
+					next.right = terminatorTransition.state
+					next.tags = mergePatternTags(base.tags, terminatorTransition.state.tags)
+					next.tagValues = mergePatternTagValues(base.tagValues, terminatorTransition.state.tagValues)
+					next.started = true
+					if next.count >= next.minimum {
+						next.done = true
+						next.child = nil
+						result = append(result, patternTransitionFrom(next, true, terminatorTransition))
+					} else {
+						next.expired = true
+						next.child = nil
+						result = append(result, patternTransitionFrom(next, false, terminatorTransition))
+					}
+				}
+				return result
+			}
+			result := make([]patternTransition, 0, len(childTransitions)*len(terminatorTransitions))
+			for _, childTransition := range childTransitions {
+				for _, terminatorTransition := range terminatorTransitions {
+					next := clonePatternProgress(base)
+					next.child = childTransition.state
+					next.right = terminatorTransition.state
+					var childTags map[string]Event
+					var childTagValues map[string][]Event
+					if childTransition.state != nil {
+						childTags = childTransition.state.tags
+						childTagValues = childTransition.state.tagValues
+					}
+					next.tags = mergePatternTags(base.tags, childTags, terminatorTransition.state.tags)
+					next.tagValues = mergePatternTagValues(base.tagValues, childTagValues, terminatorTransition.state.tagValues)
+					next.count = base.count
+					next.started = base.count > 0 || patternProgressActive(childTransition.state) || patternProgressActive(terminatorTransition.state)
+					if patternProgressTerminal(childTransition.state) && !childTransition.complete && base.child != nil {
+						next.expired = true
+					}
+					if childTransition.complete {
+						next.count++
+						if next.maximum > 0 && next.count >= next.maximum {
+							next.child = nil
+						} else {
+							next.child = newPatternProgress(base.node.child)
+							armPatternProgressTimers(next.child, trigger.now, variables)
+						}
+					}
+					result = append(result, patternTransitionFrom(next, false, childTransition, terminatorTransition))
+				}
+			}
+			return result
 		}
 		childTransitions := advancePatternNodeTrigger(base.child, trigger, variables)
 		result := make([]patternTransition, 0, len(childTransitions))

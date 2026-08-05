@@ -47,6 +47,7 @@ type patternNode struct {
 	sequenceMaxSet    bool
 	minimum           int
 	maximum           int
+	dynamicBounds     bool
 	minimumExpr       Expr
 	maximumExpr       Expr
 	everyKey          *exprNode
@@ -106,7 +107,12 @@ func lastPatternEvent(node *patternNode) *patternNode {
 			return event
 		}
 		return lastPatternEvent(node.child)
-	case patternNotNode, patternMatchUntilNode, patternEveryNode, patternWithinNode:
+	case patternMatchUntilNode:
+		if event := lastPatternEvent(node.right); event != nil {
+			return event
+		}
+		return lastPatternEvent(node.child)
+	case patternNotNode, patternEveryNode, patternWithinNode:
 		return lastPatternEvent(node.child)
 	default:
 		return nil
@@ -150,7 +156,11 @@ func (n *patternNode) description() string {
 		} else if n.maximum > 0 {
 			maximum = fmt.Sprintf("%d", n.maximum)
 		}
-		return fmt.Sprintf("match-until(%s:%s,%s)", minimum, maximum, n.child.description())
+		child := n.child.description()
+		if n.right != nil {
+			child += ",until=" + n.right.description()
+		}
+		return fmt.Sprintf("match-until(%s:%s,%s)", minimum, maximum, child)
 	case patternUntilNode:
 		return "until(" + n.child.description() + "," + n.right.description() + ")"
 	case patternEveryNode:
@@ -671,10 +681,11 @@ func (p PatternStream) MatchUntilExpr(minimum, maximum Expression[int]) PatternS
 		maximumExpr = maximum
 	}
 	copyDefinition.root = &patternNode{
-		kind:        patternMatchUntilNode,
-		child:       p.def.root,
-		minimumExpr: minimumExpr,
-		maximumExpr: maximumExpr,
+		kind:          patternMatchUntilNode,
+		child:         p.def.root,
+		dynamicBounds: true,
+		minimumExpr:   minimumExpr,
+		maximumExpr:   maximumExpr,
 	}
 	return PatternStream{env: p.env, def: &copyDefinition}
 }
@@ -688,6 +699,14 @@ func (p PatternStream) Until(terminator PatternStream) PatternStream {
 	}
 	copyDefinition := *p.def
 	copyDefinition.steps = nil
+	if p.def.root != nil && p.def.root.kind == patternMatchUntilNode && p.def.root.right == nil {
+		copyDefinition.root = clonePatternNode(p.def.root)
+		copyDefinition.root.right = terminator.root()
+		if terminator.def == nil || p.env != terminator.env || p.def.input != terminator.def.input {
+			copyDefinition.sourceMismatch = true
+		}
+		return PatternStream{env: p.env, def: &copyDefinition}
+	}
 	copyDefinition.root = &patternNode{kind: patternUntilNode, child: p.def.root, right: terminator.root()}
 	if terminator.def == nil || p.env != terminator.env || p.def.input != terminator.def.input {
 		copyDefinition.sourceMismatch = true
@@ -919,13 +938,19 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		if node.maximumExpr != nil && node.maximumExpr.Type() != typeOf[int]() {
 			return NewError(ErrorTypeMismatch, "match-until maximum expression must return int")
 		}
-		if node.minimumExpr == nil && node.minimum <= 0 {
+		if !node.dynamicBounds && node.minimum <= 0 {
 			return NewError(ErrorInvalidRule, "match-until minimum must be positive")
 		}
-		if node.minimumExpr == nil && node.maximumExpr == nil && node.maximum > 0 && node.maximum < node.minimum {
+		if !node.dynamicBounds && node.maximum > 0 && node.maximum < node.minimum {
 			return NewError(ErrorInvalidRule, "match-until maximum must be at least minimum")
 		}
-		return validatePatternNodeScope(node.child, seen, false)
+		if err := validatePatternNodeScope(node.child, seen, false); err != nil {
+			return err
+		}
+		if node.right != nil {
+			return validatePatternNodeScope(node.right, seen, false)
+		}
+		return nil
 	case patternUntilNode:
 		if err := validatePatternNodeScope(node.child, seen, false); err != nil {
 			return err

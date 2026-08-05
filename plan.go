@@ -2846,7 +2846,13 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 				return fmt.Errorf("match-until maximum: %w", err)
 			}
 		}
-		return e.validatePatternNodeFields(input, node.child)
+		if err := e.validatePatternNodeFields(input, node.child); err != nil {
+			return err
+		}
+		if node.right != nil {
+			return e.validatePatternNodeFields(input, node.right)
+		}
+		return nil
 	case patternUntilNode:
 		if err := e.validatePatternNodeFields(input, node.child); err != nil {
 			return err
