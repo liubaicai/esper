@@ -2505,6 +2505,7 @@ type aggregateResultEntry struct {
 type patternRuntimeState struct {
 	active         []patternMatch
 	patternStopped bool
+	emittedEvents  []Event
 	distinct       map[string]struct{}
 	distinctAt     map[string]time.Time
 	timerStarted   bool
@@ -2555,6 +2556,48 @@ func recordPatternDistinct(state *patternRuntimeState, definition *patternDefini
 		}
 		state.distinctAt[key] = now
 	}
+}
+
+func patternMatchEvents(match patternMatch) []Event {
+	if len(match.tagValues) > 0 {
+		events := make([]Event, 0)
+		for _, values := range match.tagValues {
+			events = append(events, values...)
+		}
+		return events
+	}
+	events := make([]Event, 0, len(match.tags))
+	for _, event := range match.tags {
+		events = append(events, event)
+	}
+	return events
+}
+
+func patternEventsOverlap(left, right []Event) bool {
+	for _, leftEvent := range left {
+		for _, rightEvent := range right {
+			if sameEvent(leftEvent, rightEvent) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// acceptPatternMatch applies the query-level overlap policy and records the
+// captured events only when the result is visible. A suppressed completion
+// still terminates its ordinary branch, while a reusable Every branch remains
+// governed by the normal continuation logic.
+func (r *patternRuntimeState) acceptPatternMatch(query Query, match patternMatch) bool {
+	if r == nil || !query.suppressOverlappingMatches {
+		return true
+	}
+	events := patternMatchEvents(match)
+	if patternEventsOverlap(events, r.emittedEvents) {
+		return false
+	}
+	r.emittedEvents = append(r.emittedEvents, events...)
+	return true
 }
 
 type rowRecogRuntimeState struct {
@@ -7427,6 +7470,12 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 	if isPatternTimerRoot(definition) {
 		return ResultBatch{}
 	}
+	if plan.query.suppressOverlappingMatches {
+		// Esper's PatternRemoveDispatchView suppresses overlaps within the
+		// result batch being dispatched. A later event starts a fresh batch and
+		// may therefore reuse an Event that appeared in an earlier batch.
+		r.patternState.emittedEvents = nil
+	}
 	batch := ResultBatch{Time: now}
 	batch.outputCountsSet = true
 	batch.outputInserted = int64(len(delta.newEvents))
@@ -7459,7 +7508,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				}
 				if transition.complete {
 					completed = true
-					if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible {
+					if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 						batch.New = append(batch.New, resultRow(row))
 					}
 					if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
@@ -7480,7 +7529,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 		}
 
 		startAllowed := definition.every || len(matches) == 0
-		if startAllowed {
+		if startAllowed && !(plan.query.discardPartialsOnMatch && completed) {
 			progress := newPatternProgress(definition.root)
 			armPatternProgressTimers(progress, now, r.variables)
 			starts := advancePatternNode(progress, event, now, r.variables)
@@ -7505,7 +7554,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				}
 				if transition.complete {
 					completed = true
-					if row, visible := evaluatePatternMatch(definition, started, plan, now, r.variables); visible {
+					if row, visible := evaluatePatternMatch(definition, started, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, started) {
 						batch.New = append(batch.New, resultRow(row))
 					}
 					if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, started, definition) {
@@ -7521,6 +7570,9 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					}
 				}
 			}
+		}
+		if plan.query.discardPartialsOnMatch && completed {
+			nextActive = nil
 		}
 		r.patternState.active = nextActive
 		if definition.root != nil && definition.root.kind == patternWithinNode && (terminal || (len(nextActive) == 0 && completed)) {
@@ -7645,6 +7697,9 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 	if r.patternState.patternStopped {
 		return ResultBatch{}
 	}
+	if plan.query.suppressOverlappingMatches {
+		r.patternState.emittedEvents = nil
+	}
 	if !patternGuardAllows(definition, Event{}, now, r.variables) {
 		r.patternState.active = nil
 		return ResultBatch{}
@@ -7661,6 +7716,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 	batch.outputCountsSet = true
 	nextActive := make([]patternMatch, 0, len(r.patternState.active))
 	terminal := false
+	completed := false
 	for _, match := range r.patternState.active {
 		if definition.within > 0 && !match.startedAt.Add(definition.within).After(now) {
 			continue
@@ -7678,7 +7734,8 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 				startedAt: match.startedAt,
 			}
 			if transition.complete {
-				if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible {
+				completed = true
+				if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 					batch.New = append(batch.New, resultRow(row))
 				}
 				if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
@@ -7704,6 +7761,9 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 				nextActive = append(nextActive, candidate)
 			}
 		}
+	}
+	if plan.query.discardPartialsOnMatch && completed {
+		nextActive = nil
 	}
 	r.patternState.active = nextActive
 	if definition.root.kind == patternWithinNode && terminal {

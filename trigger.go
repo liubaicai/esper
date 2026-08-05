@@ -326,19 +326,21 @@ func (q TriggerQuery) Query(options ...QueryOption) Query {
 		}
 	}
 	return Query{
-		env:         q.env,
-		input:       q.definitionInput(),
-		trigger:     q.definition,
-		selections:  append([]Selection(nil), q.definition.selections...),
-		name:        spec.name,
-		selector:    spec.selector,
-		sink:        spec.sink,
-		contextName: spec.contextName,
-		output:      spec.output,
-		distinct:    spec.distinct,
-		orderBy:     append([]SortKey(nil), spec.orderBy...),
-		limit:       spec.limit,
-		offset:      spec.offset,
+		env:                        q.env,
+		input:                      q.definitionInput(),
+		trigger:                    q.definition,
+		selections:                 append([]Selection(nil), q.definition.selections...),
+		name:                       spec.name,
+		selector:                   spec.selector,
+		sink:                       spec.sink,
+		contextName:                spec.contextName,
+		output:                     spec.output,
+		distinct:                   spec.distinct,
+		discardPartialsOnMatch:     spec.discardPartialsOnMatch,
+		suppressOverlappingMatches: spec.suppressOverlappingMatches,
+		orderBy:                    append([]SortKey(nil), spec.orderBy...),
+		limit:                      spec.limit,
+		offset:                     spec.offset,
 	}
 }
 

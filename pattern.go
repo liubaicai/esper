@@ -637,20 +637,22 @@ func (p PatternQuery) Query(options ...QueryOption) Query {
 		}
 	}
 	return Query{
-		env:               p.env,
-		input:             p.definitionInput(),
-		pattern:           p.definition,
-		patternSelections: append([]Selection(nil), p.selections...),
-		routeTarget:       spec.routeTarget,
-		name:              spec.name,
-		selector:          spec.selector,
-		sink:              spec.sink,
-		contextName:       spec.contextName,
-		output:            spec.output,
-		distinct:          spec.distinct,
-		orderBy:           append([]SortKey(nil), spec.orderBy...),
-		limit:             spec.limit,
-		offset:            spec.offset,
+		env:                        p.env,
+		input:                      p.definitionInput(),
+		pattern:                    p.definition,
+		patternSelections:          append([]Selection(nil), p.selections...),
+		routeTarget:                spec.routeTarget,
+		name:                       spec.name,
+		selector:                   spec.selector,
+		sink:                       spec.sink,
+		contextName:                spec.contextName,
+		output:                     spec.output,
+		distinct:                   spec.distinct,
+		discardPartialsOnMatch:     spec.discardPartialsOnMatch,
+		suppressOverlappingMatches: spec.suppressOverlappingMatches,
+		orderBy:                    append([]SortKey(nil), spec.orderBy...),
+		limit:                      spec.limit,
+		offset:                     spec.offset,
 	}
 }
 

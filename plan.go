@@ -368,6 +368,14 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	if query.input == nil && query.join == nil && !query.sourceLess {
 		return Plan{}, NewError(ErrorInvalidRule, "query has no source")
 	}
+	if query.discardPartialsOnMatch || query.suppressOverlappingMatches {
+		if query.pattern == nil {
+			return Plan{}, NewError(ErrorInvalidRule, "pattern consumption policies require a pattern query")
+		}
+		if query.contextName != "" || query.join != nil || query.trigger != nil {
+			return Plan{}, NewError(ErrorInvalidRule, "pattern consumption policies are not supported with context, joins or actions")
+		}
+	}
 	if query.sourceLess {
 		if err := e.validateSourceLess(query.selections); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "select-once", err)
@@ -529,6 +537,10 @@ func (e *Environment) Build(query Query) (Plan, error) {
 			if operator.Predicate != nil {
 				predicate = operator.Predicate.Description()
 			}
+			sourceFilter := ""
+			if operator.SourceFilter != nil {
+				sourceFilter = operator.SourceFilter.Description()
+			}
 			selections := make([]string, 0, len(operator.Selections))
 			for _, selection := range operator.Selections {
 				selections = append(selections, selection.description())
@@ -537,7 +549,7 @@ func (e *Environment) Build(query Query) (Plan, error) {
 			if operator.Statement != nil {
 				statement = operator.Statement.Name()
 			}
-			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s", operator.Name, operator.Kind, operator.EventType, predicate, strings.Join(selections, ","), statement))
+			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement))
 		}
 		edges := make([]string, 0, len(dataflow.edges))
 		for _, edge := range dataflow.edges {

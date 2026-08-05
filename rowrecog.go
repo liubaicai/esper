@@ -308,19 +308,21 @@ func (q RowRecogQuery) Query(options ...QueryOption) Query {
 		}
 	}
 	return Query{
-		env:               q.env,
-		input:             q.definitionInput(),
-		rowRecog:          q.definition,
-		patternSelections: append([]Selection(nil), q.measures...),
-		name:              spec.name,
-		selector:          spec.selector,
-		sink:              spec.sink,
-		contextName:       spec.contextName,
-		output:            spec.output,
-		distinct:          spec.distinct,
-		orderBy:           append([]SortKey(nil), spec.orderBy...),
-		limit:             spec.limit,
-		offset:            spec.offset,
+		env:                        q.env,
+		input:                      q.definitionInput(),
+		rowRecog:                   q.definition,
+		patternSelections:          append([]Selection(nil), q.measures...),
+		name:                       spec.name,
+		selector:                   spec.selector,
+		sink:                       spec.sink,
+		contextName:                spec.contextName,
+		output:                     spec.output,
+		distinct:                   spec.distinct,
+		discardPartialsOnMatch:     spec.discardPartialsOnMatch,
+		suppressOverlappingMatches: spec.suppressOverlappingMatches,
+		orderBy:                    append([]SortKey(nil), spec.orderBy...),
+		limit:                      spec.limit,
+		offset:                     spec.offset,
 	}
 }
 

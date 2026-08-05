@@ -643,6 +643,18 @@ func (b DataflowBuilder) EPStatementSource(name string, statement *Statement) Da
 	return b.add(DataflowOperator{Name: name, Kind: EPStatementSourceKind, Statement: statement})
 }
 
+// EPStatementSourceWithFilter adds an EP statement source with a structured
+// source-side predicate. The predicate is evaluated against Event or Row
+// results before they enter the dataflow graph.
+func (b DataflowBuilder) EPStatementSourceWithFilter(name string, statement *Statement, predicate Expr) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:         name,
+		Kind:         EPStatementSourceKind,
+		Statement:    statement,
+		SourceFilter: predicate,
+	})
+}
+
 func (b DataflowBuilder) EventBusSource(name, eventType string) DataflowBuilder {
 	return b.add(DataflowOperator{Name: name, Kind: EventBusSourceKind, EventType: eventType})
 }
@@ -972,6 +984,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 		case EPStatementSourceKind:
 			if operator.Statement == nil {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q requires statement", operator.Name))
+			}
+			if operator.SourceFilter != nil && operator.SourceFilter.Type() != typeOf[bool]() {
+				return DataflowDefinition{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow statement source %q requires bool filter", operator.Name))
 			}
 		case CustomKind:
 			if operator.Factory == nil {
@@ -2370,6 +2385,13 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 				} else if row, ok := result.Row(); ok {
 					value = row
 				} else {
+					continue
+				}
+				accepted, filterErr := d.dataflowSourceFilterAccepts(operator, value)
+				if filterErr != nil {
+					return filterErr
+				}
+				if !accepted {
 					continue
 				}
 				var processErr error

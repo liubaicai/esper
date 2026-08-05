@@ -197,11 +197,11 @@
       "domain": "pattern",
       "level": "S",
       "summary": "Fluent pattern composition, tags, repetition, fixed/dynamic/calendar guards and virtual-time timer observers",
-      "javaRefs": ["PatternMicrosecondResolution", "PatternOperatorEvery", "PatternOperatorMatchUntil", "PatternOperatorFollowedByMax", "PatternObserverTimerAt", "PatternObserverTimerInterval", "PatternObserverTimerSchedule"],
-      "goRefs": ["pattern.go", "pattern_test.go", "pattern_followed_by_max_test.go"],
+      "javaRefs": ["PatternMicrosecondResolution", "PatternOperatorEvery", "PatternOperatorMatchUntil", "PatternOperatorFollowedByMax", "PatternConsumingPattern", "PatternObserverTimerAt", "PatternObserverTimerInterval", "PatternObserverTimerSchedule"],
+      "goRefs": ["pattern.go", "pattern_test.go", "pattern_followed_by_max_test.go", "pattern_consumption_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["complete guard/observer combination", "consumption policy", "advanced Match Recognize integration is tracked by rowrecog.match-recognize"]
+      "remaining": ["complete guard/observer combination", "event-level @consume(N) filter policies and the full nested combinator consumption trace", "advanced Match Recognize integration is tracked by rowrecog.match-recognize"]
     },
     {
       "id": "pattern.timer-cron-basic",
@@ -545,14 +545,14 @@
     },
     {
       "id": "case.dataflow-epstatement-pattern",
-      "javaRuntimeIds": ["java-runtime-2d7b6229c7a3b2bee40b"],
-      "javaNames": ["EPLDataflowAllTypes"],
+      "javaRuntimeIds": ["java-runtime-2d7b6229c7a3b2bee40b", "java-runtime-8c8f6f03b11605a16d11", "java-runtime-ef085a37ed45eb35a13f"],
+      "javaNames": ["EPLDataflowAllTypes", "EPLDataflowStatementFilter", "EPLDataflowInvalid"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEPStatementSource.java"],
-      "goTests": ["TestDataflowEPStatementSourceConsumesPatternRowsMatchesEsper", "TestDataflowBuiltinsProcessPatternRowsMatchesEsper", "TestDataflowBuiltinPortInferenceMatchesEsper"],
+      "goTests": ["TestDataflowEPStatementSourceConsumesPatternRowsMatchesEsper", "TestDataflowBuiltinsProcessPatternRowsMatchesEsper", "TestDataflowBuiltinPortInferenceMatchesEsper", "TestDataflowEPStatementSourceWithFilterRoutesOnlyMatchingRowsMatchesEsper", "TestDataflowEPStatementSourceWithFilterRejectsNonBooleanPredicate"],
       "tags": ["correctness", "dataflow", "epstatement-source", "row"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "Go maps the EPStatement source through an existing fluent Pattern statement and preserves projected Row values into the graph; built-in Filter/Select can consume those rows through analyzable ResultField expressions, and Build infers Event versus Row for EventBus/statement ports with connected narrowing. Java also covers all event representations, dynamic statement names, statement filters and invalid EPL-specific source diagnostics."
+      "difference": "Go maps the EPStatement source through an existing fluent Pattern statement and preserves projected Row values into the graph; built-in Filter/Select can consume those rows through analyzable ResultField expressions, source-side EPStatementSourceWithFilter evaluates a typed predicate before graph delivery, and Build infers Event versus Row for EventBus/statement ports with connected narrowing. Java also covers all event representations, dynamic statement names, statement filter parameter variants and invalid EPL-specific source diagnostics."
     },
     {
       "id": "case.dataflow-select-state",
@@ -769,6 +769,17 @@
       "status": "mapped",
       "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
       "difference": "Go exposes FollowedByMax(maximum, tag, predicate) as a chainable edge-scoped operator. Runtime capacity counts only active sequence branches waiting on that edge, so nested followed-by operators release and reuse capacity independently; non-positive static maxima are rejected at Build. Java additionally supports expression/variable maxima, condition-handler callbacks and runtime subexpression accounting/diagnostics, which remain open."
+    },
+    {
+      "id": "case.pattern-consumption-policy",
+      "javaRuntimeIds": ["java-runtime-d473b7cc639e11aa5776", "java-runtime-917b60f248cb3507337c"],
+      "javaNames": ["PatternFollowedByOp", "PatternCombination"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternConsumingPattern.java"],
+      "goTests": ["TestPatternDiscardPartialsOnMatchClearsOverlappingStartsMatchesEsper", "TestPatternSuppressOverlappingMatchesHidesRepeatedEventMatchesEsper", "TestPatternConsumptionPoliciesRejectNonPatternQueries", "TestPatternConsumptionPoliciesRejectContextQueriesAndChangePlanIdentity"],
+      "tags": ["correctness", "pattern", "consumption", "overlap", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
+      "difference": "Go exposes query-level DiscardPartialsOnMatch and SuppressOverlappingMatches options for fluent Pattern queries, rejects them for non-pattern/context/join/action shapes, clears active branches after a visible completion, and suppresses overlapping captured-event results within the current result batch while allowing reuse in a later batch; policy flags also participate in Plan hash/canonical identity. Java additionally covers event-level @consume(N), every/and/or/match-until/guard/observer combinations, ordering and repeated-tag cardinality; those remain open."
     },
     {
       "id": "case.pattern-timer-cron",
@@ -1179,6 +1190,7 @@
     {"capabilityId": "output.when-basic", "caseId": "case.output-when-then-count"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-every"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-followed-by-max"},
+    {"capabilityId": "pattern.basic", "caseId": "case.pattern-consumption-policy"},
     {"capabilityId": "pattern.timer-cron-basic", "caseId": "case.pattern-timer-cron"},
     {"capabilityId": "query.historical-sql", "caseId": "case.historical-sql"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-eventbus"},

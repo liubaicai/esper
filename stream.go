@@ -407,19 +407,21 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		}
 	}
 	return Query{
-		env:            j.env,
-		join:           j.definition,
-		joinSelections: append([]JoinSelection(nil), j.selections...),
-		routeTarget:    spec.routeTarget,
-		name:           spec.name,
-		selector:       spec.selector,
-		sink:           spec.sink,
-		contextName:    spec.contextName,
-		output:         spec.output,
-		distinct:       spec.distinct,
-		orderBy:        append([]SortKey(nil), spec.orderBy...),
-		limit:          spec.limit,
-		offset:         spec.offset,
+		env:                        j.env,
+		join:                       j.definition,
+		joinSelections:             append([]JoinSelection(nil), j.selections...),
+		routeTarget:                spec.routeTarget,
+		name:                       spec.name,
+		selector:                   spec.selector,
+		sink:                       spec.sink,
+		contextName:                spec.contextName,
+		output:                     spec.output,
+		distinct:                   spec.distinct,
+		discardPartialsOnMatch:     spec.discardPartialsOnMatch,
+		suppressOverlappingMatches: spec.suppressOverlappingMatches,
+		orderBy:                    append([]SortKey(nil), spec.orderBy...),
+		limit:                      spec.limit,
+		offset:                     spec.offset,
 	}
 }
 
@@ -689,15 +691,17 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 			selections:   append([]Selection(nil), a.selections...),
 			having:       a.having,
 		},
-		name:        spec.name,
-		selector:    spec.selector,
-		sink:        spec.sink,
-		contextName: spec.contextName,
-		output:      spec.output,
-		distinct:    spec.distinct,
-		orderBy:     append([]SortKey(nil), spec.orderBy...),
-		limit:       spec.limit,
-		offset:      spec.offset,
+		name:                       spec.name,
+		selector:                   spec.selector,
+		sink:                       spec.sink,
+		contextName:                spec.contextName,
+		output:                     spec.output,
+		distinct:                   spec.distinct,
+		discardPartialsOnMatch:     spec.discardPartialsOnMatch,
+		suppressOverlappingMatches: spec.suppressOverlappingMatches,
+		orderBy:                    append([]SortKey(nil), spec.orderBy...),
+		limit:                      spec.limit,
+		offset:                     spec.offset,
 	}
 }
 
@@ -1540,19 +1544,21 @@ func outputBasePolicy(base []OutputPolicy) OutputPolicy {
 }
 
 type querySpec struct {
-	name        string
-	selector    StreamSelector
-	selections  []Selection
-	routeTarget string
-	tableTarget string
-	sink        Sink
-	contextName string
-	output      OutputPolicy
-	distinct    bool
-	orderBy     []SortKey
-	limit       int
-	offset      int
-	allowNoSink bool
+	name                       string
+	selector                   StreamSelector
+	selections                 []Selection
+	routeTarget                string
+	tableTarget                string
+	sink                       Sink
+	contextName                string
+	output                     OutputPolicy
+	distinct                   bool
+	discardPartialsOnMatch     bool
+	suppressOverlappingMatches bool
+	orderBy                    []SortKey
+	limit                      int
+	offset                     int
+	allowNoSink                bool
 }
 
 // QueryOption configures statement metadata and output policy. Options are
@@ -1605,6 +1611,20 @@ func WithDistinct() QueryOption {
 	return func(spec *querySpec) { spec.distinct = true }
 }
 
+// DiscardPartialsOnMatch clears all still-active pattern branches after a
+// match completes. It is the fluent counterpart of Esper's
+// @DiscardPartialsOnMatch pattern policy.
+func DiscardPartialsOnMatch() QueryOption {
+	return func(spec *querySpec) { spec.discardPartialsOnMatch = true }
+}
+
+// SuppressOverlappingMatches keeps pattern state alive but suppresses a
+// completed result whose captured events overlap an already emitted result.
+// It is the fluent counterpart of Esper's @SuppressOverlappingMatches policy.
+func SuppressOverlappingMatches() QueryOption {
+	return func(spec *querySpec) { spec.suppressOverlappingMatches = true }
+}
+
 func OrderBy(keys ...SortKey) QueryOption {
 	return func(spec *querySpec) { spec.orderBy = append([]SortKey(nil), keys...) }
 }
@@ -1624,7 +1644,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -1633,28 +1653,30 @@ func SelectOnce(env *Environment, selections ...Selection) Query {
 
 // Query is an immutable logical statement definition.
 type Query struct {
-	env               *Environment
-	input             *streamNode
-	aggregate         *aggregateDefinition
-	join              *joinDefinition
-	pattern           *patternDefinition
-	rowRecog          *rowRecogDefinition
-	trigger           *triggerDefinition
-	selections        []Selection
-	joinSelections    []JoinSelection
-	patternSelections []Selection
-	routeTarget       string
-	tableTarget       string
-	name              string
-	selector          StreamSelector
-	sink              Sink
-	contextName       string
-	sourceLess        bool
-	output            OutputPolicy
-	distinct          bool
-	orderBy           []SortKey
-	limit             int
-	offset            int
+	env                        *Environment
+	input                      *streamNode
+	aggregate                  *aggregateDefinition
+	join                       *joinDefinition
+	pattern                    *patternDefinition
+	rowRecog                   *rowRecogDefinition
+	trigger                    *triggerDefinition
+	selections                 []Selection
+	joinSelections             []JoinSelection
+	patternSelections          []Selection
+	routeTarget                string
+	tableTarget                string
+	name                       string
+	selector                   StreamSelector
+	sink                       Sink
+	contextName                string
+	sourceLess                 bool
+	output                     OutputPolicy
+	distinct                   bool
+	discardPartialsOnMatch     bool
+	suppressOverlappingMatches bool
+	orderBy                    []SortKey
+	limit                      int
+	offset                     int
 }
 
 func (q Query) Name() string { return q.name }
@@ -1824,6 +1846,12 @@ func (q Query) description() string {
 func appendQueryModifiers(parts []string, query Query) []string {
 	if query.distinct {
 		parts = append(parts, "distinct")
+	}
+	if query.discardPartialsOnMatch {
+		parts = append(parts, "discard-partials-on-match")
+	}
+	if query.suppressOverlappingMatches {
+		parts = append(parts, "suppress-overlapping-matches")
 	}
 	if len(query.orderBy) > 0 {
 		keys := make([]string, 0, len(query.orderBy))
