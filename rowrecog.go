@@ -607,6 +607,7 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 			} else {
 				r.emitRowRecogMatchesAtEnd(definition, partition, len(partition.events)-1, plan, now, &batch)
 			}
+			r.pruneRowRecogFixedSequenceStarts(definition, partition, len(partition.events)-1, now)
 		} else if definition.intervalOrTerminated {
 			r.emitRowRecogTerminated(definition, partition, len(partition.events)-1, plan, now, &batch)
 		}
@@ -748,6 +749,105 @@ func (r *statementRuntime) admitRowRecogStart(definition *rowRecogDefinition, pa
 	} else {
 		partition.blockedStarts[key] = struct{}{}
 	}
+}
+
+// pruneRowRecogFixedSequenceStarts releases starts that have no NFA state
+// left after the current event. The general row-recognition evaluator is
+// intentionally history-based, while the runtime state pool is lifecycle
+// based: a fixed sequence can therefore cheaply and safely identify dead
+// starts without changing the more involved repeated/alternating matcher.
+//
+// This narrow structural path is important for engine-wide state limits. In
+// Java, a state that cannot transition on the current event is removed before
+// the next event; retaining it as an admitted start would make later
+// PreventStart decisions observe a larger pool than the actual NFA.
+func (r *statementRuntime) pruneRowRecogFixedSequenceStarts(definition *rowRecogDefinition, partition *rowRecogPartitionState, end int, now time.Time) {
+	if r == nil || definition == nil || partition == nil || end < 0 || rowRecogHasInterval(definition) {
+		return
+	}
+	parts, ok := rowRecogFixedVariableSequence(definition.pattern)
+	if !ok || len(partition.activeStarts) == 0 {
+		return
+	}
+	for key := range partition.activeStarts {
+		start, found := rowRecogActiveStartIndex(partition, key)
+		if !found || !rowRecogFixedSequenceHasOpenPath(definition, parts, partition, start, end, now, r.variables) {
+			delete(partition.activeStarts, key)
+			if r.engine != nil && r.engine.matchRecognizeStatePool != nil {
+				r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, 1)
+			}
+		}
+	}
+}
+
+func rowRecogFixedVariableSequence(pattern RowPattern) ([]RowPattern, bool) {
+	minimum, maximum := rowPatternBounds(pattern)
+	if minimum != 1 || maximum != 1 {
+		return nil, false
+	}
+	if pattern.kind == rowPatternVariable {
+		return []RowPattern{pattern}, true
+	}
+	if pattern.kind != rowPatternSequence || len(pattern.parts) == 0 {
+		return nil, false
+	}
+	parts := make([]RowPattern, len(pattern.parts))
+	for index, part := range pattern.parts {
+		partMinimum, partMaximum := rowPatternBounds(part)
+		if partMinimum != 1 || partMaximum != 1 || part.kind != rowPatternVariable {
+			return nil, false
+		}
+		parts[index] = part
+	}
+	return parts, true
+}
+
+func rowRecogActiveStartIndex(partition *rowRecogPartitionState, key string) (int, bool) {
+	if partition == nil {
+		return 0, false
+	}
+	for index, event := range partition.events {
+		if rowRecogStartKey(index, event) == key {
+			return index, true
+		}
+	}
+	return 0, false
+}
+
+func rowRecogFixedSequenceHasOpenPath(definition *rowRecogDefinition, parts []RowPattern, partition *rowRecogPartitionState, start, end int, now time.Time, variables map[string]Value) bool {
+	if definition == nil || partition == nil || start < 0 || end < start || end >= len(partition.events) || len(parts) == 0 {
+		return false
+	}
+	consumed := end - start + 1
+	if consumed >= len(parts) {
+		return false
+	}
+	captures := make(map[string][]Event)
+	for offset := 0; offset < consumed; offset++ {
+		pattern := parts[offset]
+		eventIndex := start + offset
+		event := partition.events[eventIndex]
+		captures[pattern.name] = append(captures[pattern.name], event)
+		predicate := definition.defines[pattern.name]
+		if predicate == nil {
+			continue
+		}
+		history := append([]Event(nil), partition.events[:eventIndex+1]...)
+		value := predicate.eval(EvalContext{
+			Event:           event,
+			History:         history,
+			PreviousHistory: rowRecogPreviousHistoryByMap(partition.previousByEvent, event, history),
+			Tags:            rowRecogLastTags(captures),
+			TagValues:       cloneRowRecogCaptures(captures),
+			Now:             now,
+			Variables:       variables,
+		})
+		matched, valid := boolValue(value)
+		if !valid || !matched {
+			return false
+		}
+	}
+	return true
 }
 
 func rowRecogEventCanStart(definition *rowRecogDefinition, partition *rowRecogPartitionState, event Event, now time.Time, variables map[string]Value) bool {
