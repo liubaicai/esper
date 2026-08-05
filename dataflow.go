@@ -544,6 +544,7 @@ type DataflowOperator struct {
 	SourceFactory   DataflowSourceFactory
 	Properties      map[string]any
 	ParameterNames  []string
+	SourceFilter    Expr
 	SelectOptions   DataflowSelectOptions
 	JoinOptions     DataflowJoinOptions
 	JoinConfigured  bool
@@ -644,6 +645,18 @@ func (b DataflowBuilder) EPStatementSource(name string, statement *Statement) Da
 
 func (b DataflowBuilder) EventBusSource(name, eventType string) DataflowBuilder {
 	return b.add(DataflowOperator{Name: name, Kind: EventBusSourceKind, EventType: eventType})
+}
+
+// EventBusSourceWithFilter adds an event-bus source with a source-side
+// predicate. Events that do not satisfy predicate never enter downstream
+// operators, matching Esper's EventBusSource filter parameter.
+func (b DataflowBuilder) EventBusSourceWithFilter(name, eventType string, predicate Expr) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:         name,
+		Kind:         EventBusSourceKind,
+		EventType:    eventType,
+		SourceFilter: predicate,
+	})
 }
 
 func (b DataflowBuilder) EventBusSink(name, eventType string) DataflowBuilder {
@@ -945,6 +958,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 			}
 			if _, ok := b.env.Schema(operator.EventType); !ok {
 				return DataflowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("dataflow event-bus source %q references unknown event type %q", operator.Name, operator.EventType))
+			}
+			if operator.SourceFilter != nil && operator.SourceFilter.Type() != typeOf[bool]() {
+				return DataflowDefinition{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow event-bus source %q requires bool filter", operator.Name))
 			}
 		case EventBusSinkKind:
 			if operator.EventType == "" {
@@ -2609,6 +2625,24 @@ func (d *DataflowInstance) dataflowEvaluation(operator DataflowOperator, value a
 	return d.dataflowEvaluationWithGroups(operator, value, nil, nil, true)
 }
 
+func (d *DataflowInstance) dataflowSourceFilterAccepts(operator DataflowOperator, value any) (bool, error) {
+	if operator.SourceFilter == nil {
+		return true, nil
+	}
+	if _, signal := value.(DataflowSignal); signal {
+		return true, nil
+	}
+	evaluation, err := d.dataflowEvaluation(operator, value)
+	if err != nil {
+		return false, err
+	}
+	pass, ok := boolValue(operator.SourceFilter.eval(evaluation))
+	if !ok {
+		return false, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow source filter %q did not evaluate to bool", operator.Name))
+	}
+	return pass, nil
+}
+
 func (d *DataflowInstance) dataflowEvaluationWithGroups(operator DataflowOperator, value any, group, everGroup []Event, acceptSubquery bool) (EvalContext, error) {
 	if d == nil || d.engine == nil {
 		return EvalContext{}, NewError(ErrorDependency, "dataflow operator has no engine")
@@ -3228,6 +3262,14 @@ func (d *DataflowInstance) processLinearValues(ctx context.Context, current []an
 		case EventBusSourceKind:
 			if !isEvent || !dataflowEventTypeAccepts(d.engine, operator.EventType, eventValue) {
 				current = nil
+				break
+			}
+			accepted, err := d.dataflowSourceFilterAccepts(operator, eventValue)
+			if err != nil {
+				return err
+			}
+			if !accepted {
+				current = nil
 			}
 		case FilterKind:
 			filtered := make([]any, 0, len(current))
@@ -3351,7 +3393,14 @@ func (d *DataflowInstance) processGraphEvent(ctx context.Context, event any) err
 	}
 	starts := make([]string, 0)
 	for _, operator := range d.definition.operators {
-		if operator.Kind == EventBusSourceKind && dataflowEventTypeAccepts(d.engine, operator.EventType, eventValue) {
+		if operator.Kind != EventBusSourceKind || !dataflowEventTypeAccepts(d.engine, operator.EventType, eventValue) {
+			continue
+		}
+		accepted, err := d.dataflowSourceFilterAccepts(operator, eventValue)
+		if err != nil {
+			return err
+		}
+		if accepted {
 			starts = append(starts, operator.Name)
 		}
 	}

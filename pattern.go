@@ -41,6 +41,8 @@ type patternNode struct {
 	left              *patternNode
 	right             *patternNode
 	child             *patternNode
+	sequenceMax       int
+	sequenceMaxSet    bool
 	minimum           int
 	maximum           int
 	everyKey          *exprNode
@@ -71,7 +73,11 @@ func (n *patternNode) description() string {
 		}
 		return n.tag + ":" + n.predicate.Description()
 	case patternSequenceNode:
-		return "(" + n.left.description() + "->" + n.right.description() + ")"
+		operator := "->"
+		if n.sequenceMaxSet {
+			operator = fmt.Sprintf("-[%d]>", n.sequenceMax)
+		}
+		return "(" + n.left.description() + operator + n.right.description() + ")"
 	case patternAndNode:
 		return "(" + n.left.description() + " and " + n.right.description() + ")"
 	case patternOrNode:
@@ -272,12 +278,30 @@ func TimerAtSchedule[T any](stream Stream[T], schedule CronSchedule) PatternStre
 }
 
 func (p PatternStream) FollowedBy(tag string, predicate Expression[bool]) PatternStream {
+	return p.followedBy(0, false, tag, predicate)
+}
+
+// FollowedByMax limits the number of concurrent matches waiting on the right
+// side of this followed-by edge. It is the fluent counterpart of Esper's
+// `-[N]>` operator and is scoped to this edge, rather than to the whole
+// pattern. A positive maximum is required and is checked during Build.
+func (p PatternStream) FollowedByMax(maximum int, tag string, predicate Expression[bool]) PatternStream {
+	return p.followedBy(maximum, true, tag, predicate)
+}
+
+func (p PatternStream) followedBy(maximum int, maximumSet bool, tag string, predicate Expression[bool]) PatternStream {
 	if p.def == nil {
 		return p
 	}
 	copyDefinition := *p.def
 	copyDefinition.steps = append(append([]patternStep(nil), p.def.steps...), patternStep{tag: tag, predicate: predicate})
-	copyDefinition.root = &patternNode{kind: patternSequenceNode, left: p.def.root, right: patternEvent(tag, predicate)}
+	copyDefinition.root = &patternNode{
+		kind:           patternSequenceNode,
+		left:           p.def.root,
+		right:          patternEvent(tag, predicate),
+		sequenceMax:    maximum,
+		sequenceMaxSet: maximumSet,
+	}
 	p.def = &copyDefinition
 	return p
 }
@@ -731,6 +755,9 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		}
 		seen[node.tag] = struct{}{}
 	case patternSequenceNode:
+		if node.sequenceMaxSet && node.sequenceMax <= 0 {
+			return NewError(ErrorInvalidRule, "followed-by maximum must be positive")
+		}
 		if err := validatePatternNodeScope(node.left, seen, false); err != nil {
 			return err
 		}

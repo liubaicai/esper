@@ -3130,7 +3130,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if transition.complete {
 				completedAny = true
 				completed = append(completed, candidate)
-				if patternCanContinueAfterMatch(transition.state) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
+				if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternProgressTerminal(transition.state) {
@@ -3141,7 +3141,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if patternProgressTerminal(transition.state) {
 				terminal = true
 			}
-			if patternProgressActive(transition.state) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
+			if patternProgressActive(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
@@ -3175,13 +3175,13 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if transition.complete {
 				completedAny = true
 				completed = append(completed, started)
-				if patternCanContinueAfterMatch(transition.state) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
+				if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, started, definition) {
 					nextActive = append(nextActive, started)
 				}
 				if patternProgressTerminal(transition.state) {
 					terminal = true
 				}
-			} else if definition.maxStates == 0 || len(nextActive) < definition.maxStates {
+			} else if patternMatchWithinLimits(nextActive, started, definition) {
 				nextActive = append(nextActive, started)
 				if patternProgressTerminal(transition.state) {
 					terminal = true
@@ -3288,7 +3288,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 			}
 			if transition.complete {
 				completed = append(completed, candidate)
-				if patternCanContinueAfterMatch(transition.state) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
+				if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternProgressTerminal(transition.state) {
@@ -3299,8 +3299,9 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 					progress.tags = clonePatternTags(seedTags)
 					progress.tagValues = clonePatternTagValues(seedTagValues)
 					armPatternProgressTimers(progress, now, variables)
-					if patternProgressActive(progress) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
-						nextActive = append(nextActive, patternMatch{state: progress, startedAt: now})
+					candidate := patternMatch{state: progress, startedAt: now}
+					if patternProgressActive(progress) && patternMatchWithinLimits(nextActive, candidate, definition) {
+						nextActive = append(nextActive, candidate)
 					}
 				}
 				continue
@@ -3308,7 +3309,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 			if patternProgressTerminal(transition.state) {
 				terminal = true
 			}
-			if patternProgressActive(transition.state) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
+			if patternProgressActive(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
@@ -7036,6 +7037,44 @@ func patternCanContinueAfterMatch(progress *patternProgress) bool {
 	return patternWithinCanContinue(progress) || patternEveryCanContinue(progress)
 }
 
+// patternMatchWithinLimits applies both the legacy whole-pattern MaxStates
+// limit and the per-edge FollowedByMax limit. The latter counts only active
+// sequence progress that has consumed its left side and is waiting on the
+// right side. Counting the materialized progress tree keeps nested and
+// composed followed-by edges independent, matching Esper's subexpression
+// scope instead of treating every active root as one shared bucket.
+func patternMatchWithinLimits(active []patternMatch, candidate patternMatch, definition *patternDefinition) bool {
+	if definition == nil {
+		return true
+	}
+	if definition.maxStates > 0 && len(active) >= definition.maxStates {
+		return false
+	}
+	counts := make(map[*patternNode]int)
+	for _, match := range active {
+		addPatternSequenceMaxCounts(counts, match.state)
+	}
+	addPatternSequenceMaxCounts(counts, candidate.state)
+	for node, count := range counts {
+		if node.sequenceMaxSet && count > node.sequenceMax {
+			return false
+		}
+	}
+	return true
+}
+
+func addPatternSequenceMaxCounts(counts map[*patternNode]int, progress *patternProgress) {
+	if progress == nil || progress.node == nil {
+		return
+	}
+	if progress.node.kind == patternSequenceNode && progress.node.sequenceMaxSet && progress.phase == 1 && !progress.done && !progress.expired {
+		counts[progress.node]++
+	}
+	addPatternSequenceMaxCounts(counts, progress.left)
+	addPatternSequenceMaxCounts(counts, progress.right)
+	addPatternSequenceMaxCounts(counts, progress.child)
+}
+
 func patternWithinTerminal(progress *patternProgress) bool {
 	if progress == nil || progress.node == nil || progress.node.kind != patternWithinNode {
 		return false
@@ -7423,7 +7462,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible {
 						batch.New = append(batch.New, resultRow(row))
 					}
-					if patternCanContinueAfterMatch(transition.state) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
+					if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
 						nextActive = append(nextActive, candidate)
 					}
 					if patternWithinTerminal(transition.state) {
@@ -7434,7 +7473,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				if patternWithinTerminal(transition.state) {
 					terminal = true
 				}
-				if patternProgressActive(transition.state) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
+				if patternProgressActive(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 			}
@@ -7469,13 +7508,13 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					if row, visible := evaluatePatternMatch(definition, started, plan, now, r.variables); visible {
 						batch.New = append(batch.New, resultRow(row))
 					}
-					if patternCanContinueAfterMatch(transition.state) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
+					if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, started, definition) {
 						nextActive = append(nextActive, started)
 					}
 					if patternWithinTerminal(transition.state) {
 						terminal = true
 					}
-				} else if definition.maxStates == 0 || len(nextActive) < definition.maxStates {
+				} else if patternMatchWithinLimits(nextActive, started, definition) {
 					nextActive = append(nextActive, started)
 					if patternWithinTerminal(transition.state) {
 						terminal = true
@@ -7642,7 +7681,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 				if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible {
 					batch.New = append(batch.New, resultRow(row))
 				}
-				if patternCanContinueAfterMatch(transition.state) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
+				if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternWithinTerminal(transition.state) {
@@ -7651,8 +7690,9 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 				if definition.every {
 					progress := newPatternProgress(definition.root)
 					armPatternProgressTimers(progress, now, r.variables)
-					if patternProgressActive(progress) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
-						nextActive = append(nextActive, patternMatch{state: progress, startedAt: now})
+					candidate := patternMatch{state: progress, startedAt: now}
+					if patternProgressActive(progress) && patternMatchWithinLimits(nextActive, candidate, definition) {
+						nextActive = append(nextActive, candidate)
 					}
 				}
 				continue
@@ -7660,7 +7700,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 			if patternWithinTerminal(transition.state) {
 				terminal = true
 			}
-			if patternProgressActive(transition.state) && (definition.maxStates == 0 || len(nextActive) < definition.maxStates) {
+			if patternProgressActive(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
