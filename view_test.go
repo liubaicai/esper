@@ -503,6 +503,76 @@ func TestTimeOrderWindowExpiresOnVirtualTimeAndRejectsLateEvents(t *testing.T) {
 	}
 }
 
+func TestTimeToLiveAtWindowUsesAbsoluteEventExpiry(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[externalTrade](env, "ExternalTrade"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.UnixMilli(0).UTC()))
+	timestamp := Field[externalTrade, int64]("timestamp")
+	stream := From[externalTrade](env, "ExternalTrade").Window(TimeToLiveAt(timestamp))
+	_, batches := deployViewTest(t, env, engine, stream, "time-to-live-at")
+
+	send := func(trade externalTrade) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), trade); err != nil {
+			t.Fatal(err)
+		}
+	}
+	advance := func(milliseconds int64) {
+		t.Helper()
+		if err := engine.AdvanceTime(context.Background(), time.UnixMilli(milliseconds).UTC()); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	send(externalTrade{Symbol: "E1", Timestamp: 1000})
+	send(externalTrade{Symbol: "E2", Timestamp: 500})
+	advance(499)
+	if len(*batches) != 2 {
+		t.Fatalf("events expired before absolute timestamp: %#v", *batches)
+	}
+	advance(500)
+	if len(*batches) != 3 || len((*batches)[2].Old) != 1 || eventSymbol((*batches)[2].Old[0]) != "E2" {
+		t.Fatalf("first absolute expiry = %#v", *batches)
+	}
+
+	send(externalTrade{Symbol: "E3", Timestamp: 200})
+	if len(*batches) != 4 || len((*batches)[3].New) != 1 || len((*batches)[3].Old) != 1 || eventSymbol((*batches)[3].Old[0]) != "E3" {
+		t.Fatalf("already-expired insertion = %#v", *batches)
+	}
+	send(externalTrade{Symbol: "E4", Timestamp: 1200})
+	send(externalTrade{Symbol: "E5", Timestamp: 1000})
+	advance(999)
+	if len(*batches) != 6 {
+		t.Fatalf("events expired before second boundary: %#v", *batches)
+	}
+	advance(1000)
+	if len(*batches) != 7 || len((*batches)[6].Old) != 2 || eventSymbol((*batches)[6].Old[0]) != "E1" || eventSymbol((*batches)[6].Old[1]) != "E5" {
+		t.Fatalf("same-timestamp absolute expiry = %#v", *batches)
+	}
+	advance(1199)
+	if len(*batches) != 7 {
+		t.Fatalf("future event expired too early: %#v", *batches)
+	}
+	advance(1200)
+	if len(*batches) != 8 || len((*batches)[7].Old) != 1 || eventSymbol((*batches)[7].Old[0]) != "E4" {
+		t.Fatalf("final absolute expiry = %#v", *batches)
+	}
+	send(externalTrade{Symbol: "E6", Timestamp: 1200})
+	if len(*batches) != 9 || len((*batches)[8].New) != 1 || len((*batches)[8].Old) != 1 || eventSymbol((*batches)[8].Old[0]) != "E6" {
+		t.Fatalf("boundary insertion = %#v", *batches)
+	}
+}
+
+func TestTimeToLiveAtWindowRejectsNonIntegralTimestamp(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	stream := From[runtimeTestTrade](env, "Trade").Window(TimeToLiveAt(Field[runtimeTestTrade, float64]("price")))
+	if _, err := env.Build(stream.Query(StatementName("invalid-time-to-live-at"))); err == nil {
+		t.Fatal("expected non-integral time-to-live-at timestamp to be rejected")
+	}
+}
+
 func eventSymbol(result Result) string {
 	event, ok := result.Event()
 	if !ok {

@@ -462,6 +462,68 @@ func TestNamedWindowLengthAndTimeRetention(t *testing.T) {
 	}
 }
 
+func TestNamedWindowTimeToLiveAtUsesAbsoluteEventExpiry(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[externalTrade](env, "ExternalTrade"); err != nil {
+		t.Fatal(err)
+	}
+	schema, ok := env.Schema("ExternalTrade")
+	if !ok {
+		t.Fatal("external-trade schema was not registered")
+	}
+	expiry := Field[externalTrade, int64]("timestamp")
+	if _, err := CreateNamedWindow(env, "ttl-at", schema, NamedWindowRetention(TimeToLiveAt(expiry))); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.UnixMilli(0).UTC()))
+	window, ok := engine.NamedWindow("ttl-at")
+	if !ok {
+		t.Fatal("time-to-live-at named window was not created")
+	}
+	var deltas []NamedWindowDelta
+	if _, err := window.Subscribe(func(_ context.Context, delta NamedWindowDelta) error {
+		deltas = append(deltas, NamedWindowDelta{
+			New:  append([]Event(nil), delta.New...),
+			Old:  append([]Event(nil), delta.Old...),
+			Time: delta.Time,
+		})
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	insert := func(symbol string, timestamp int64) {
+		t.Helper()
+		if err := engine.InsertNamedWindow(context.Background(), "ttl-at", externalTrade{Symbol: symbol, Timestamp: timestamp}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	insert("E1", 1000)
+	insert("E2", 500)
+	if err := engine.AdvanceTime(context.Background(), time.UnixMilli(500).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(deltas) != 3 || len(deltas[2].Old) != 1 || eventSymbol(resultEvent(deltas[2].Old[0])) != "E2" {
+		t.Fatalf("named-window first expiry = %#v", deltas)
+	}
+	insert("E3", 200)
+	if len(deltas) != 4 || len(deltas[3].New) != 1 || len(deltas[3].Old) != 1 || eventSymbol(resultEvent(deltas[3].Old[0])) != "E3" {
+		t.Fatalf("named-window expired insertion = %#v", deltas)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.UnixMilli(1000).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(deltas) != 5 || len(deltas[4].Old) != 1 || eventSymbol(resultEvent(deltas[4].Old[0])) != "E1" {
+		t.Fatalf("named-window second expiry = %#v", deltas)
+	}
+	remaining, err := window.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(remaining) != 0 {
+		t.Fatalf("named-window remaining = %#v", remaining)
+	}
+}
+
 func TestNamedWindowCanParticipateInJoinMany(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[joinPayment](env, "Payment"); err != nil {

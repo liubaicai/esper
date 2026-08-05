@@ -925,6 +925,12 @@ func (e *Environment) validateNode(node *streamNode) error {
 			}
 			return e.validateExprFields(node.input, ordered.Timestamp)
 		}
+		if timeToLive, ok := node.window.(TimeToLiveAtWindowSpec); ok {
+			if err := e.validateNode(node.input); err != nil {
+				return err
+			}
+			return e.validateExprFields(node.input, timeToLive.Timestamp)
+		}
 		if sortedWindow, ok := node.window.(SortedWindowSpec); ok {
 			if err := e.validateNode(node.input); err != nil {
 				return err
@@ -1496,6 +1502,8 @@ func visitWindowExpressions(window WindowSpec, visit func(Expr) error) error {
 	case ExternallyTimedWindowSpec:
 		return visit(value.Timestamp)
 	case TimeOrderWindowSpec:
+		return visit(value.Timestamp)
+	case TimeToLiveAtWindowSpec:
 		return visit(value.Timestamp)
 	case SortedWindowSpec:
 		for _, key := range value.UniqueKeys {

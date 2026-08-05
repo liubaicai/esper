@@ -2320,6 +2320,7 @@ func (s *Statement) dispatch(ctx context.Context, batch ResultBatch) error {
 type storedEvent struct {
 	event      Event
 	receivedAt time.Time
+	expiresAt  time.Time
 }
 
 var joinTupleSchema = func() Schema {
@@ -5477,6 +5478,17 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 	case TimeToLiveWindowSpec:
 		state.entries = append(state.entries, stored)
 		return eventDelta{newEvents: []Event{event}}, nil
+	case TimeToLiveAtWindowSpec:
+		expiresAt, err := eventTimestamp(window.Timestamp, event, now, r.variables)
+		if err != nil {
+			return eventDelta{}, err
+		}
+		stored.expiresAt = expiresAt
+		if !expiresAt.After(now) {
+			return eventDelta{newEvents: []Event{event}, oldEvents: []Event{event}}, nil
+		}
+		state.entries = append(state.entries, stored)
+		return eventDelta{newEvents: []Event{event}}, nil
 	case TimeOrderWindowSpec:
 		externalAt, err := eventTimestamp(window.Timestamp, event, now, r.variables)
 		if err != nil {
@@ -5838,6 +5850,16 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 		kept := state.entries[:0]
 		for _, stored := range state.entries {
 			if !stored.receivedAt.Add(window.Duration).After(now) {
+				result.oldEvents = append(result.oldEvents, stored.event)
+				continue
+			}
+			kept = append(kept, stored)
+		}
+		state.entries = kept
+	case TimeToLiveAtWindowSpec:
+		kept := state.entries[:0]
+		for _, stored := range state.entries {
+			if !stored.expiresAt.After(now) {
 				result.oldEvents = append(result.oldEvents, stored.event)
 				continue
 			}

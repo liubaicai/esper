@@ -854,7 +854,7 @@ func (w *NamedWindow) updateWhere(ctx context.Context, predicate func(Event) boo
 		updated.streamType = state.def.name
 		delta.Old = append(delta.Old, entry.event)
 		delta.New = append(delta.New, updated)
-		state.entries[index] = storedEvent{event: updated, receivedAt: entry.receivedAt}
+		state.entries[index] = storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt}
 	}
 	state.mu.Unlock()
 	return delta, nil
@@ -924,7 +924,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 	}
 	if insertEvent {
 		switch state.def.retention.(type) {
-		case KeepAllWindowSpec, LengthWindowSpec, TimeWindowSpec, TimeToLiveWindowSpec:
+		case KeepAllWindowSpec, LengthWindowSpec, TimeWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec:
 		default:
 			return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", state.def.retention))
 		}
@@ -967,12 +967,24 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 			updated := preparedUpdates[index]
 			delta.Old = append(delta.Old, entry.event)
 			delta.New = append(delta.New, updated)
-			entries = append(entries, storedEvent{event: updated, receivedAt: entry.receivedAt})
+			entries = append(entries, storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt})
 		}
 	}
 	if insertEvent {
-		entries = append(entries, storedEvent{event: preparedInsert, receivedAt: now})
+		entry := storedEvent{event: preparedInsert, receivedAt: now}
+		if retention, ok := state.def.retention.(TimeToLiveAtWindowSpec); ok {
+			expiresAt, err := eventTimestamp(retention.Timestamp, preparedInsert, now, nil)
+			if err != nil {
+				return NamedWindowDelta{}, err
+			}
+			entry.expiresAt = expiresAt
+		}
+		entries = append(entries, entry)
 		delta.New = append(delta.New, preparedInsert)
+		if !entry.expiresAt.IsZero() && !entry.expiresAt.After(now) {
+			delta.Old = append(delta.Old, preparedInsert)
+			entries = entries[:len(entries)-1]
+		}
 		if retention, ok := state.def.retention.(LengthWindowSpec); ok {
 			for len(entries) > retention.Size {
 				delta.Old = append(delta.Old, entries[0].event)
@@ -1017,6 +1029,17 @@ func (w *NamedWindow) insert(now time.Time, underlying any) (NamedWindowDelta, e
 		}
 	case TimeWindowSpec, TimeToLiveWindowSpec:
 		state.entries = append(state.entries, entry)
+	case TimeToLiveAtWindowSpec:
+		expiresAt, err := eventTimestamp(retention.Timestamp, event, now, nil)
+		if err != nil {
+			return NamedWindowDelta{}, err
+		}
+		entry.expiresAt = expiresAt
+		if !expiresAt.After(now) {
+			delta.Old = append(delta.Old, event)
+			return delta, nil
+		}
+		state.entries = append(state.entries, entry)
 	default:
 		return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", state.def.retention))
 	}
@@ -1036,6 +1059,18 @@ func (w *NamedWindow) expire(at time.Time) NamedWindowDelta {
 		duration = retention.Duration
 	case TimeToLiveWindowSpec:
 		duration = retention.Duration
+	case TimeToLiveAtWindowSpec:
+		kept := state.entries[:0]
+		delta := NamedWindowDelta{Time: at}
+		for _, entry := range state.entries {
+			if !entry.expiresAt.After(at) {
+				delta.Old = append(delta.Old, entry.event)
+			} else {
+				kept = append(kept, entry)
+			}
+		}
+		state.entries = kept
+		return delta
 	default:
 		return NamedWindowDelta{}
 	}

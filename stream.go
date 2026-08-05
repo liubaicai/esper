@@ -1128,6 +1128,34 @@ func (w TimeToLiveWindowSpec) validate() error {
 	return nil
 }
 
+// TimeToLiveAtWindowSpec retains each event until the absolute timestamp
+// supplied by the event expression. The timestamp uses epoch milliseconds,
+// matching TimeOrder and Esper's #timetolive(timestamp) view.
+//
+// TimeToLive is the fixed-duration form; TimeToLiveAt is the dynamic form.
+type TimeToLiveAtWindowSpec struct{ Timestamp Expr }
+
+func TimeToLiveAt(timestamp Expr) TimeToLiveAtWindowSpec {
+	return TimeToLiveAtWindowSpec{Timestamp: timestamp}
+}
+
+func (TimeToLiveAtWindowSpec) windowSpec() {}
+func (w TimeToLiveAtWindowSpec) description() string {
+	if w.Timestamp == nil {
+		return "time-to-live-at(<nil>)"
+	}
+	return "time-to-live-at(" + w.Timestamp.Description() + ")"
+}
+func (w TimeToLiveAtWindowSpec) validate() error {
+	if w.Timestamp == nil {
+		return fmt.Errorf("esper: time-to-live-at window requires a timestamp expression")
+	}
+	if !isIntegralType(w.Timestamp.Type()) {
+		return fmt.Errorf("esper: time-to-live-at window requires an integral timestamp expression")
+	}
+	return nil
+}
+
 type SortKey struct {
 	Expr       Expr
 	Descending bool
