@@ -1203,6 +1203,59 @@ func TestPatternTimerIntervalExpressionUsesVariables(t *testing.T) {
 	}
 }
 
+func TestPatternTimerIntervalExpressionUsesVariableReconfigurationForNextPeriod(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	if err := env.RegisterVariable("timerSeconds", 2.0); err != nil {
+		t.Fatal(err)
+	}
+	base := From[runtimeTestTrade](env, "Trade")
+	plan, err := env.Build(TimerIntervalExpr(base, DurationSeconds[float64](VariableRef[float64]("timerSeconds"))).Select(
+		Alias("firedAt", CurrentTime()),
+	).Query(StatementName("pattern-timer-interval-variable-reconfiguration")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	first := time.Unix(2, 0).UTC()
+	if err := engine.AdvanceTime(context.Background(), first); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("firedAt").Any() != first {
+		t.Fatalf("initial variable timer rows = %#v", rows)
+	}
+	if err := engine.SetVariable(context.Background(), "timerSeconds", 5.0); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(6, 999999999).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("reconfigured timer fired before next five-second period: %#v", rows)
+	}
+	second := time.Unix(7, 0).UTC()
+	if err := engine.AdvanceTime(context.Background(), second); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[1].Get("firedAt").Any() != second {
+		t.Fatalf("reconfigured timer rows = %#v, want t=2s and t=7s", rows)
+	}
+}
+
 func TestPatternTimerIntervalMicrosecondPrecision(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")
@@ -1239,6 +1292,54 @@ func TestPatternTimerIntervalMicrosecondPrecision(t *testing.T) {
 	}
 	if len(rows) != 1 || rows[0].Get("firedAt").Any() != time.Unix(0, int64(time.Microsecond)).UTC() {
 		t.Fatalf("microsecond timer rows = %#v", rows)
+	}
+}
+
+func TestPatternTimerIntervalPeriodPreservesCalendarAndFixedPrecision(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	period := PatternTimerPeriod{Months: 1, FixedDuration: 10 * time.Millisecond}
+	plan, err := env.Build(TimerIntervalPeriod(base, period).Select(
+		Alias("scheduled", CurrentTime()),
+	).Query(StatementName("pattern-timer-interval-period")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := time.Date(2002, time.February, 1, 9, 0, 0, 0, time.UTC)
+	engine := NewEngine(env, WithStartTime(start))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	first := start.AddDate(0, 1, 0).Add(10 * time.Millisecond)
+	second := first.AddDate(0, 1, 0).Add(10 * time.Millisecond)
+	if err := engine.AdvanceTime(context.Background(), first.Add(-time.Nanosecond)); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("mixed period timer fired before first deadline: %#v", rows)
+	}
+	if err := engine.AdvanceTime(context.Background(), second); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[0].Get("scheduled").Any() != first || rows[1].Get("scheduled").Any() != second {
+		t.Fatalf("mixed period timer rows = %#v, want %s and %s", rows, first, second)
+	}
+	if _, err := env.Build(TimerIntervalPeriod(base, PatternTimerPeriod{FixedDuration: -time.Millisecond}).Select(
+		Alias("scheduled", CurrentTime()),
+	).Query(StatementName("invalid-negative-period"))); err == nil {
+		t.Fatal("negative mixed period was accepted")
 	}
 }
 

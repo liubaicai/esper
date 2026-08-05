@@ -295,6 +295,39 @@ func TimerIntervalCalendar[T any](stream Stream[T], years, months, days int) Pat
 	}
 }
 
+// PatternTimerPeriod describes a timer interval with an optional calendar
+// component and a fixed-duration component. The calendar part is applied
+// first with time.Time.AddDate and the fixed part is then added at nanosecond
+// precision. This is the fluent counterpart of Esper time periods such as
+// "1 month 10 msec".
+type PatternTimerPeriod struct {
+	Years         int
+	Months        int
+	Days          int
+	FixedDuration time.Duration
+}
+
+// TimerIntervalPeriod creates a recurring timer observer for a mixed calendar
+// and fixed-duration period. A period must contain at least one positive
+// component; negative components are rejected during Build.
+func TimerIntervalPeriod[T any](stream Stream[T], period PatternTimerPeriod) PatternStream {
+	var calendar *OutputCalendarPeriod
+	if period.Years != 0 || period.Months != 0 || period.Days != 0 {
+		calendar = &OutputCalendarPeriod{Years: period.Years, Months: period.Months, Days: period.Days}
+	}
+	return PatternStream{
+		env: stream.env,
+		def: &patternDefinition{
+			input: stream.node,
+			root: &patternNode{
+				kind:     patternTimerIntervalNode,
+				duration: period.FixedDuration,
+				calendar: calendar,
+			},
+		},
+	}
+}
+
 // TimerAt creates a one-shot timer observer driven by Engine.AdvanceTime.
 func TimerAt[T any](stream Stream[T], at time.Time) PatternStream {
 	return PatternStream{
@@ -622,6 +655,9 @@ func (p PatternStream) WithinOrMaxCalendar(years, months, days, maximum int) Pat
 func patternWithinDurationDescription(node *patternNode) string {
 	if node == nil {
 		return "<nil-duration>"
+	}
+	if node.calendar != nil && node.duration > 0 {
+		return fmt.Sprintf("calendar(%dY%dM%dD)+%s", node.calendar.Years, node.calendar.Months, node.calendar.Days, node.duration)
 	}
 	if node.durationExpr != nil {
 		return node.durationExpr.Description()
@@ -1041,6 +1077,9 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		return validatePatternNodeScope(node.child, seen, false)
 	case patternTimerIntervalNode:
 		durationForms := 0
+		if node.duration < 0 {
+			return NewError(ErrorInvalidRule, "timer interval fixed duration cannot be negative")
+		}
 		if node.duration > 0 {
 			durationForms++
 		}
@@ -1058,6 +1097,9 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 			if node.calendar.Years == 0 && node.calendar.Months == 0 && node.calendar.Days == 0 {
 				return NewError(ErrorInvalidRule, "timer interval calendar duration must be positive")
 			}
+		}
+		if durationForms == 2 && node.duration > 0 && node.calendar != nil {
+			return nil
 		}
 		if durationForms != 1 {
 			return NewError(ErrorInvalidRule, "timer interval requires exactly one positive duration form")

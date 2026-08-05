@@ -2508,17 +2508,20 @@ type aggregateResultEntry struct {
 }
 
 type patternRuntimeState struct {
-	active         []patternMatch
-	patternStopped bool
-	emittedEvents  []Event
-	distinct       map[string]struct{}
-	distinctAt     map[string]time.Time
-	timerStarted   bool
-	timerNext      time.Time
-	timerEmitted   bool
-	scheduleIndex  int
-	cronSchedule   resolvedCronSchedule
-	cronNext       time.Time
+	active                 []patternMatch
+	patternStopped         bool
+	emittedEvents          []Event
+	distinct               map[string]struct{}
+	distinctAt             map[string]time.Time
+	timerStarted           bool
+	timerNext              time.Time
+	timerEmitted           bool
+	timerIntervalReference time.Time
+	timerIntervalVariables map[string]Value
+	timerIntervalFired     bool
+	scheduleIndex          int
+	cronSchedule           resolvedCronSchedule
+	cronNext               time.Time
 }
 
 func patternDistinctExpiry(definition *patternDefinition) time.Duration {
@@ -2788,6 +2791,8 @@ func (r *statementRuntime) initializeAt(at time.Time) {
 			return
 		}
 		r.patternState.timerNext = deadline
+		r.patternState.timerIntervalFired = false
+		recordPatternTimerIntervalSchedule(r.patternState, at, r.variables)
 	case patternTimerAtNode:
 		r.patternState.timerStarted = true
 		r.patternState.timerNext = root.at
@@ -3321,6 +3326,8 @@ func initializeContextPatternTimer(state **patternRuntimeState, definition *patt
 			return false
 		}
 		runtimeState.timerNext = deadline
+		runtimeState.timerIntervalFired = false
+		recordPatternTimerIntervalSchedule(runtimeState, at, variables)
 	case patternTimerAtNode:
 		runtimeState.timerNext = root.at
 	case patternTimerScheduleNode:
@@ -3435,6 +3442,9 @@ func advanceContextPatternTime(state **patternRuntimeState, definition *patternD
 	const maxTimerCatchUp = 100000
 	switch root.kind {
 	case patternTimerIntervalNode:
+		if !rearmPatternTimerIntervalIfVariablesChanged(runtimeState, root, variables) {
+			return completed
+		}
 		for emitted := 0; emitted < maxTimerCatchUp && !runtimeState.timerNext.IsZero() && !runtimeState.timerNext.After(now); emitted++ {
 			dueAt := runtimeState.timerNext
 			completed = append(completed, patternMatch{
@@ -3450,6 +3460,8 @@ func advanceContextPatternTime(state **patternRuntimeState, definition *patternD
 				break
 			}
 			runtimeState.timerNext = next
+			runtimeState.timerIntervalFired = true
+			recordPatternTimerIntervalSchedule(runtimeState, dueAt, variables)
 		}
 	case patternTimerAtNode:
 		if !runtimeState.timerEmitted && !now.Before(runtimeState.timerNext) {
@@ -6986,14 +6998,62 @@ func patternDurationDeadline(node *patternNode, progress *patternProgress, at ti
 		}
 		return at.Add(duration), true
 	}
+	deadline := at
 	if node.calendar != nil {
 		period := node.calendar
-		return at.AddDate(period.Years, period.Months, period.Days), true
+		deadline = deadline.AddDate(period.Years, period.Months, period.Days)
 	}
 	if node.duration <= 0 {
-		return time.Time{}, false
+		if node.calendar == nil {
+			return time.Time{}, false
+		}
+		return deadline, true
 	}
-	return at.Add(node.duration), true
+	return deadline.Add(node.duration), true
+}
+
+func recordPatternTimerIntervalSchedule(state *patternRuntimeState, at time.Time, variables map[string]Value) {
+	if state == nil {
+		return
+	}
+	state.timerIntervalReference = at
+	state.timerIntervalVariables = visibleVariableValues(variables)
+}
+
+func patternTimerIntervalVariablesChanged(state *patternRuntimeState, variables map[string]Value) bool {
+	if state == nil || state.timerIntervalVariables == nil {
+		return false
+	}
+	current := visibleVariableValues(variables)
+	if len(current) != len(state.timerIntervalVariables) {
+		return true
+	}
+	for name, prior := range state.timerIntervalVariables {
+		value, exists := current[name]
+		if !exists || !value.Equal(prior) {
+			return true
+		}
+	}
+	return false
+}
+
+// rearmPatternTimerIntervalIfVariablesChanged preserves the already scheduled
+// first callback, then mirrors Esper's every-observer lifecycle for later
+// callbacks: a changed variable is read when the next observer is armed from
+// the preceding callback timestamp.
+func rearmPatternTimerIntervalIfVariablesChanged(state *patternRuntimeState, node *patternNode, variables map[string]Value) bool {
+	if state == nil || node == nil || node.durationExpr == nil || !state.timerIntervalFired || !patternTimerIntervalVariablesChanged(state, variables) {
+		return true
+	}
+	deadline, ok := patternDurationDeadline(node, nil, state.timerIntervalReference, variables)
+	if !ok {
+		state.patternStopped = true
+		state.timerNext = time.Time{}
+		return false
+	}
+	state.timerNext = deadline
+	state.timerIntervalVariables = visibleVariableValues(variables)
+	return true
 }
 
 func patternWithinDeadline(node *patternNode, progress *patternProgress, at time.Time, variables map[string]Value) (time.Time, bool) {
@@ -7975,6 +8035,9 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 	root := plan.query.pattern.root
 	switch root.kind {
 	case patternTimerIntervalNode:
+		if !rearmPatternTimerIntervalIfVariablesChanged(r.patternState, root, r.variables) {
+			break
+		}
 		// A large clock jump may make multiple interval callbacks due. Emit one
 		// result per due callback, but cap a malformed/hostile jump so a timer
 		// cannot turn into an unbounded allocation.
@@ -7994,6 +8057,8 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 				break
 			}
 			r.patternState.timerNext = next
+			r.patternState.timerIntervalFired = true
+			recordPatternTimerIntervalSchedule(r.patternState, dueAt, r.variables)
 		}
 	case patternTimerAtNode:
 		if !r.patternState.timerEmitted && !now.Before(r.patternState.timerNext) {
