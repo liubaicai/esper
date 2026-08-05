@@ -730,9 +730,6 @@ func (e *Environment) validateRoute(query Query) error {
 			return fmt.Errorf("route projection %q has type %s, target expects %s", selection.Name, selection.Expr.Type(), field.Type)
 		}
 	}
-	if target.kind == SchemaObjectArray && len(selections) != len(target.fields) {
-		return fmt.Errorf("object-array route target %q requires %d projections, got %d", target.Name(), len(target.fields), len(selections))
-	}
 	return nil
 }
 

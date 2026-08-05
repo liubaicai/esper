@@ -113,7 +113,7 @@
       "goRefs": ["enum_expr.go", "enum_expr_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["complete Java type matrix", "BigDecimal and arbitrary collection types", "invalid-rule parity"]
+      "remaining": ["complete Java type matrix", "map/iterator-backed collection sources and Java collection metadata", "invalid-rule parity"]
     },
     {
       "id": "resultset.aggregate-dimensional",
@@ -482,11 +482,11 @@
       "javaRuntimeIds": ["java-runtime-43025f202508c2965ec6", "java-runtime-6fd02e8c51fcc85b723d", "java-runtime-505a8865455904e3d586", "java-runtime-296e045998f488e85ad1", "java-runtime-43a0c9a83ece3d584144", "java-runtime-dac362923bd330d0b18a", "java-runtime-76fe5dcbe153f095e0f5"],
       "javaNames": ["EPLInsertIntoJoinWildcard", "EPLInsertIntoWithOutputLimitAndSort", "EPLInsertIntoInsertFromPattern", "EPLInsertIntoInsertIntoPlusPattern", "EPLInsertIntoChain", "EPLInsertIntoNamedColsJoin", "EPLInsertIntoUnnamedJoin"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertInto.java"],
-      "goTests": ["TestInsertIntoRoutesOriginalEventIntoVariantAndPreservesIdentity", "TestProjectedInsertIntoBuildsMapAndAnyVariantDerivedEvents", "TestInsertIntoRoutesJoinProjection", "TestInsertIntoRoutesAggregateProjectionAndOnlyNewStream", "TestInsertIntoRoutesPatternProjection", "TestInsertIntoRoutesNamedWindowConsumerEvents", "TestInsertIntoRoutesRemoveStreamFromWindowEviction", "TestInsertIntoRouteHonorsOutputSortAndBatchPolicy", "TestInsertIntoRouteRejectsUnboundedCycle", "TestFireAndForgetRouteIsExplicitAndPreservesProjectionOrder", "TestFireAndForgetRouteWithParametersAndRejectsImplicitSideEffect"],
+      "goTests": ["TestInsertIntoRoutesOriginalEventIntoVariantAndPreservesIdentity", "TestProjectedInsertIntoBuildsMapAndAnyVariantDerivedEvents", "TestInsertIntoRoutesJoinProjection", "TestInsertIntoRoutesAggregateProjectionAndOnlyNewStream", "TestInsertIntoRoutesPatternProjection", "TestInsertIntoRoutesNamedWindowConsumerEvents", "TestInsertIntoRoutesRemoveStreamFromWindowEviction", "TestInsertIntoRouteHonorsOutputSortAndBatchPolicy", "TestInsertIntoRouteRejectsUnboundedCycle", "TestFireAndForgetRouteIsExplicitAndPreservesProjectionOrder", "TestFireAndForgetRouteWithParametersAndRejectsImplicitSideEffect", "TestInsertIntoPartialColumnsMaterializesNullAcrossRepresentations"],
       "tags": ["correctness", "route", "insert-into"],
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
-      "difference": "Go now covers basic fluent Join/Aggregate/Pattern/Named Window result routing, post-output sorting, new-stream and remove-stream delivery, bounded cycle failure, and explicit read-only-versus-side-effect FAF routing with parameter bindings; Java also covers wildcard/partial-column/event-representation, mixed-stream ordering, wrapper/recast and broader chained statements, which still require dedicated trace cases."
+      "difference": "Go now covers basic fluent Join/Aggregate/Pattern/Named Window result routing, post-output sorting, new-stream and remove-stream delivery, bounded cycle failure, explicit read-only-versus-side-effect FAF routing with parameter bindings, and partial-column materialization across Map/ObjectArray/JSON/XML/Avro targets with explicit nulls; Java wildcard-column syntax, mixed-stream ordering, wrapper/recast and broader chained statement trace cases remain open."
     },
     {
       "id": "case.subquery-basic",
@@ -636,7 +636,7 @@
       "javaRuntimeIds": ["java-runtime-261031703bf2144ad372", "java-runtime-0df0665028286b839c88"],
       "javaNames": ["ExprEnumAggregateScalar", "ExprEnumSelectFromEventsWithNew"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumAggregate.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumSelectFrom.java"],
-      "goTests": ["TestEnumerableNumericMethodsAndPlanIntegration", "TestEnumerableEventElementsAndOrdering", "TestEnumerableEventElementsAndOrdering"],
+      "goTests": ["TestEnumerableNumericMethodsAndPlanIntegration", "TestEnumerableEventElementsAndOrdering", "TestEnumerableSupportsExactBigNumbersAndArrayCollections"],
       "tags": ["correctness", "expression", "enum"],
       "status": "mapped",
       "evidence": ["go-unit"]

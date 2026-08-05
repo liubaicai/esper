@@ -2322,6 +2322,8 @@ func projectEventUnderlying(target Schema, source Event) (any, error) {
 		value := source.Get(field.Name)
 		if value.IsPresent() || value.IsNull() {
 			values[field.Name] = value.Any()
+		} else {
+			values[field.Name] = nil
 		}
 	}
 	return projectMapToSchema(target, values)
@@ -2345,7 +2347,20 @@ func projectMapToSchema(target Schema, values map[string]any) (any, error) {
 	if target.goType != nil {
 		return mergeSchemaUnderlying(target, nil, values)
 	}
-	return values, nil
+	result := make(map[string]any, len(target.fields)+len(values))
+	for _, field := range target.fields {
+		if value, ok := values[field.Name]; ok {
+			result[field.Name] = value
+		} else {
+			result[field.Name] = nil
+		}
+	}
+	for name, value := range values {
+		if _, declared := target.fieldIndex[name]; !declared {
+			result[name] = value
+		}
+	}
+	return result, nil
 }
 
 func dispatchAll(ctx context.Context, dispatches []statementDispatch) error {
