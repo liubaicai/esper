@@ -330,7 +330,7 @@ func dataflowOperatorPrettyPorts(operator DataflowOperator, output bool) []strin
 	}
 	if output {
 		switch operator.Kind {
-		case BeaconSourceKind, CustomSourceKind, EventBusSourceKind, EPStatementSourceKind, EmitterKind, FilterKind, SelectKind, CustomKind, LogSinkKind, EventBusSinkKind:
+		case BeaconSourceKind, CustomSourceKind, EventBusSourceKind, EPStatementSourceKind, EmitterKind, FilterKind, SelectKind, CustomKind, EventBusSinkKind:
 			return []string{"out"}
 		}
 		return nil
@@ -679,6 +679,7 @@ type DataflowOperator struct {
 	SourceFilter            Expr
 	EventBusSourceCollector DataflowEventBusSourceCollector
 	EventBusSinkCollector   DataflowEventBusSinkCollector
+	LogOptions              *DataflowLogSinkOptions
 	SelectOptions           DataflowSelectOptions
 	JoinOptions             DataflowJoinOptions
 	JoinConfigured          bool
@@ -985,6 +986,13 @@ func (b DataflowBuilder) LogSink(name string, logger func(context.Context, any) 
 	return b.add(DataflowOperator{Name: name, Kind: LogSinkKind, Log: logger})
 }
 
+// LogSinkWithOptions adds a terminal structured logger. The Go API exposes
+// format/layout/title/linefeed as typed options and accepts a writer callback
+// instead of relying on Java logging configuration or EPL strings.
+func (b DataflowBuilder) LogSinkWithOptions(name string, options DataflowLogSinkOptions) DataflowBuilder {
+	return b.add(DataflowOperator{Name: name, Kind: LogSinkKind, LogOptions: &options})
+}
+
 // Custom adds a Go-native operator factory. The factory is called once for
 // each instantiated dataflow and its runtime participates in graph processing
 // and optional signal/lifecycle callbacks.
@@ -1185,6 +1193,16 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 					return DataflowDefinition{}, WrapError(ErrorInvalidRule, "dataflow beacon source "+operator.Name, err)
 				}
 			}
+		case LogSinkKind:
+			if operator.LogOptions != nil {
+				normalized, err := operator.LogOptions.normalized()
+				if err != nil {
+					return DataflowDefinition{}, WrapError(ErrorInvalidRule, "dataflow log sink "+operator.Name, err)
+				}
+				operator.LogOptions = &normalized
+				operators[len(operators)-1] = operator
+				operatorsByName[operator.Name] = operator
+			}
 		case EventBusSinkKind:
 			if operator.EventType == "" && operator.EventBusSinkCollector == nil {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow event-bus sink %q requires event type", operator.Name))
@@ -1208,6 +1226,13 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 		case CustomSourceKind:
 			if operator.SourceFactory == nil {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow custom source %q requires a factory", operator.Name))
+			}
+		}
+	}
+	if len(b.edges) == 0 {
+		for index, operator := range operators {
+			if operator.Kind == LogSinkKind && index != len(operators)-1 {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow log sink %q does not provide an output stream", operator.Name))
 			}
 		}
 	}
@@ -1248,6 +1273,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 			}
 			if _, ok := seen[edge.To]; !ok {
 				return DataflowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("dataflow edge references unknown target operator %q", edge.To))
+			}
+			if operatorsByName[edge.From].Kind == LogSinkKind {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow log sink %q does not provide an output stream", edge.From))
 			}
 			if !dataflowPortAllowed(operatorsByName[edge.From], true, edge.FromPort) {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow edge references unknown output port %q on operator %q", edge.FromPort, edge.From))
@@ -1442,6 +1470,10 @@ func cloneDataflowDefinition(definition DataflowDefinition) DataflowDefinition {
 		result.operators[index].OutputPortTypes = cloneDataflowPortTypes(result.operators[index].OutputPortTypes)
 		result.operators[index].Properties = maps.Clone(result.operators[index].Properties)
 		result.operators[index].ParameterNames = append([]string(nil), result.operators[index].ParameterNames...)
+		if result.operators[index].LogOptions != nil {
+			options := *result.operators[index].LogOptions
+			result.operators[index].LogOptions = &options
+		}
 		result.operators[index].SelectOptions = cloneDataflowSelectOptions(result.operators[index].SelectOptions)
 		result.operators[index].JoinOptions = cloneDataflowJoinOptions(result.operators[index].JoinOptions)
 	}
@@ -1552,6 +1584,8 @@ func inferDataflowBuiltinPorts(operator DataflowOperator) DataflowOperator {
 		}
 	case BeaconSourceKind:
 		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", dataflowBeaconValueType(operator.Events))
+	case LogSinkKind:
+		setDataflowBuiltinPortType(&operator.InputPortTypes, "in", dataflowRecordType())
 	}
 	return operator
 }
@@ -1676,6 +1710,9 @@ func dataflowFilterOutputPorts(operator DataflowOperator) (string, string) {
 }
 
 func dataflowPortAllowed(operator DataflowOperator, output bool, port string) bool {
+	if output && operator.Kind == LogSinkKind {
+		return false
+	}
 	ports := operator.InputPorts
 	if output {
 		ports = operator.OutputPorts
@@ -3756,8 +3793,12 @@ func (d *DataflowInstance) processLinearValues(ctx context.Context, current []an
 			d.mu.Unlock()
 			d.emitted.Add(uint64(len(current)))
 		case LogSinkKind:
-			if operator.Log != nil {
-				for _, candidate := range current {
+			for _, candidate := range current {
+				if operator.LogOptions != nil {
+					if err := d.writeDataflowLog(ctx, operator, "in", candidate); err != nil {
+						return err
+					}
+				} else if operator.Log != nil {
 					if err := operator.Log(ctx, candidate); err != nil {
 						return err
 					}
@@ -4096,12 +4137,16 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		}
 		return []DataflowEmission{Emit(value)}, nil
 	case LogSinkKind:
-		if operator.Log != nil {
+		if operator.LogOptions != nil {
+			if err := d.writeDataflowLog(ctx, operator, inputPort, value); err != nil {
+				return nil, err
+			}
+		} else if operator.Log != nil {
 			if err := operator.Log(ctx, value); err != nil {
 				return nil, err
 			}
 		}
-		return []DataflowEmission{Emit(value)}, nil
+		return nil, nil
 	case EventBusSinkKind:
 		if err := d.sendDataflowEventBusValue(ctx, operator, value); err != nil {
 			return nil, err

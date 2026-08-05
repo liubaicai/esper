@@ -797,11 +797,11 @@
       "javaRuntimeIds": ["java-runtime-ab2b08d8274d0609885d", "java-runtime-862a2f5893ecc893cee3", "java-runtime-22ffb66490ffc2d07f4c"],
       "javaNames": ["PatternMultiple", "PatternMixed", "PatternSingleMaxSimple"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedByMax.java"],
-      "goTests": ["TestPatternFollowedByMaxLimitsActiveSubexpressionsMatchesEsper", "TestPatternFollowedByMaxSimpleMatchesEsper", "TestPatternFollowedByMaxRejectsNonPositiveMaximum"],
+      "goTests": ["TestPatternFollowedByMaxLimitsActiveSubexpressionsMatchesEsper", "TestPatternFollowedByMaxSimpleMatchesEsper", "TestPatternFollowedByMaxRejectsNonPositiveMaximum", "TestPatternFollowedByMaxExpressionUsesVariableAndParameter", "TestPatternFollowedByMaxExpressionRejectsInvalidFieldAndRuntimeValue"],
       "tags": ["correctness", "pattern", "concurrency", "resource-limit"],
       "status": "mapped",
       "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
-      "difference": "Go exposes FollowedByMax(maximum, tag, predicate) as a chainable edge-scoped operator. Runtime capacity counts only active sequence branches waiting on that edge, so nested followed-by operators release and reuse capacity independently; non-positive static maxima are rejected at Build. Java additionally supports expression/variable maxima, condition-handler callbacks and runtime subexpression accounting/diagnostics, which remain open."
+      "difference": "Go exposes FollowedByMax(maximum, tag, predicate) and FollowedByMaxExpr(expression, tag, predicate) as chainable edge-scoped operators. Runtime capacity counts only active sequence branches waiting on that edge, so nested followed-by operators release and reuse capacity independently; static and resolved dynamic maxima must be positive, and Java-invalid event-field/tag maximum expressions are rejected at Build. Java additionally exposes condition-handler callbacks and runtime subexpression accounting/diagnostics, which remain open."
     },
     {
       "id": "case.pattern-consumption-policy",
@@ -868,6 +868,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
       "difference": "Go adds fluent EventBusSourceWithCollector and EventBusSinkWithCollector callbacks. Source collectors may suppress, duplicate or transform incoming typed events and may return Event envelopes or registered Go values; sink collectors return zero or more explicit event-type/value emissions, including dynamic target types, while preserving variant envelopes. Java additionally covers all event representations, EventBean/object-array collector context APIs, Beacon-driven source/sink setup and exact collector diagnostics; those broader representation and lifecycle combinations remain open."
+    },
+    {
+      "id": "case.dataflow-logsink",
+      "javaRuntimeIds": ["java-runtime-1320a4f248f4d8b28332", "java-runtime-fa99678e315c32c80c59", "java-runtime-0f763eb2cfa9c4677afc"],
+      "javaNames": ["EPLDataflowOpLogSinkSettings", "EPLDataflowOpLogSinkWWrapper{wrapperWithAdditionalProps=false}", "EPLDataflowOpLogSinkWWrapper{wrapperWithAdditionalProps=true}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpLogSink.java"],
+      "goTests": ["TestDataflowLogSinkStructuredFormatsAndLayoutMatchEsper", "TestDataflowLogSinkRendersProjectionRowsAndDefaultsLineFeed", "TestDataflowLogSinkRejectsUnsupportedFormatAndOutputEdges"],
+      "tags": ["correctness", "dataflow", "logsink", "json", "xml", "layout"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Go adds terminal LogSinkWithOptions with summary/json/xml rendering, event and projection-row shapes, layout placeholders (%df/%p/%i/%t/%e), title, linefeed control and an injectable writer callback; the legacy LogSink callback remains available. LogSink output edges are rejected like Java. Java additionally selects SLF4J versus stdout through its log flag, evaluates EPL parameters at instantiation, uses Java EventBean summary/toString rules and covers a broader renderer/property matrix; Go uses typed options and Go writer semantics instead."
     },
     {
       "id": "case.dataflow-signal",
@@ -1251,6 +1262,7 @@
     {"capabilityId": "query.historical-sql", "caseId": "case.historical-sql"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-eventbus"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-eventbus-collector"},
+    {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-logsink"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-signal"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-feedback"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-exceptions"},
