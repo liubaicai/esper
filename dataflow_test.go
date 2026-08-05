@@ -619,3 +619,47 @@ func TestDataflowOperatorExceptionCompletesWithEsperContext(t *testing.T) {
 		t.Fatalf("operator exception last error = %#v/%v", last, ok)
 	}
 }
+
+func TestDataflowEventBusOperatorExceptionCompletesInstance(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	sentinel := errors.New("event-bus operator failure")
+	definition, err := DefineDataflow(env, "event-bus-exception-flow").
+		EventBusSource("source", "Trade").
+		Custom("failing", func(DataflowOperatorContext) (DataflowOperatorRuntime, error) {
+			return dataflowErrorRuntime{err: sentinel}, nil
+		}).
+		Emitter("sink").
+		Connect("source", "failing").
+		Connect("failing", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var observed DataflowError
+	engine := NewEngine(env)
+	instance, err := engine.InstantiateDataflowWithOptions(context.Background(), definition, DataflowOptions{
+		ExceptionHandler: func(_ context.Context, failure DataflowError) error {
+			observed = failure
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := instance.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	sendErr := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E1"})
+	if !errors.Is(sendErr, sentinel) {
+		t.Fatalf("event-bus send error = %v, want %v", sendErr, sentinel)
+	}
+	if instance.State() != DataflowComplete {
+		t.Fatalf("event-bus exception state = %v, want complete", instance.State())
+	}
+	if observed.OperatorName != "failing" || observed.OperatorNum != 1 || !errors.Is(observed, sentinel) {
+		t.Fatalf("event-bus exception context = %#v", observed)
+	}
+}
