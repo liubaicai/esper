@@ -1028,13 +1028,13 @@ func (e *Engine) InsertNamedWindow(ctx context.Context, name string, underlying 
 		return NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", name))
 	}
 	now := e.clock.Now()
-	delta, err := window.insert(now, underlying)
+	e.refreshVariablesLocked()
+	variables := cloneValues(e.variables)
+	delta, err := window.insertWithVariables(now, underlying, variables)
 	if err != nil {
 		e.mu.Unlock()
 		return err
 	}
-	e.refreshVariablesLocked()
-	variables := cloneValues(e.variables)
 	statements := e.sortedStatementsLocked()
 	e.pendingStatementDispatches = nil
 	e.pendingNamedWindowDispatches = nil
@@ -2887,7 +2887,16 @@ func sourceNodeAcceptsEvent(env *Environment, node *streamNode, event Event) boo
 		return false
 	}
 	schema, err := env.sourceSchema(source)
-	return err == nil && schema.acceptsEventType(event.TypeName())
+	if err != nil {
+		return false
+	}
+	if schema.kind == SchemaVariant {
+		return schema.acceptsEventType(event.TypeName())
+	}
+	if source.kind != streamSource {
+		return false
+	}
+	return env.acceptsEventType(schema.Name(), event.TypeName())
 }
 
 // processPatternInitiatedTerminated is the event-driven Context lifecycle
@@ -3760,15 +3769,19 @@ func ptrStatementRuntime(runtime statementRuntime) *statementRuntime {
 }
 
 func (r *statementRuntime) withContextProperties(variables map[string]Value) map[string]Value {
-	if r == nil || len(r.contextProperties) == 0 {
+	if r == nil || (len(r.contextProperties) == 0 && (r.partitionContextName == "" || r.partitionKey == "")) {
 		return variables
 	}
 	result := cloneValues(variables)
 	if result == nil {
-		result = make(map[string]Value, len(r.contextProperties))
+		result = make(map[string]Value, len(r.contextProperties)+2)
 	}
 	for name, value := range r.contextProperties {
 		result[contextVariableName(name)] = value
+	}
+	if r.partitionContextName != "" && r.partitionKey != "" {
+		result[subqueryContextNameVariable] = Present(r.partitionContextName)
+		result[subqueryContextPartitionVariable] = Present(r.partitionKey)
 	}
 	return result
 }

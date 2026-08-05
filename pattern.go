@@ -155,6 +155,19 @@ func PatternFrom[T any](stream Stream[T], tag string, predicate Expression[bool]
 	return PatternStream{env: stream.env, def: definition}
 }
 
+// PatternFromRecord is the dynamic-source counterpart to PatternFrom. It is
+// useful for Named Window and schema-driven sources whose Go event type is not
+// available at the call site; the predicate is still analyzed against the
+// source schema during Build.
+func PatternFromRecord(stream RecordStream, tag string, predicate Expression[bool]) PatternStream {
+	definition := &patternDefinition{input: stream.node}
+	if strings.TrimSpace(tag) != "" && predicate != nil {
+		definition.steps = append(definition.steps, patternStep{tag: tag, predicate: predicate})
+		definition.root = patternEvent(tag, predicate)
+	}
+	return PatternStream{env: stream.env, def: definition}
+}
+
 // TimerInterval creates a source-marked timer observer. The stream supplies
 // the environment and deployment source contract; timer ticks are driven by
 // Engine.AdvanceTime and do not consume source events.

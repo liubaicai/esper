@@ -419,6 +419,7 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 	parentNames := make([]string, 0, len(cfg.parents))
 	getters := make(map[string]schemaGetterSpec)
 	nestedSchemas := make(map[string]Schema)
+	inheritedFields := make(map[string]FieldSpec)
 	for index, parent := range cfg.parents {
 		if !parent.valid() {
 			return Schema{}, fmt.Errorf("esper: schema %q has invalid parent at index %d", name, index)
@@ -427,7 +428,16 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 			return Schema{}, fmt.Errorf("esper: schema %q cannot inherit itself", name)
 		}
 		parentNames = append(parentNames, parent.Name())
-		copyFields = append(copyFields, parent.fields...)
+		for _, field := range parent.fields {
+			if inherited, exists := inheritedFields[field.Name]; exists {
+				if inherited.Type != field.Type || inherited.Optional != field.Optional || inherited.StartTimestamp != field.StartTimestamp || inherited.EndTimestamp != field.EndTimestamp {
+					return Schema{}, fmt.Errorf("esper: schema %q inherits conflicting definitions for property %q", name, field.Name)
+				}
+				continue
+			}
+			inheritedFields[field.Name] = field
+			copyFields = append(copyFields, field)
+		}
 		for getterName, getter := range parent.getters {
 			getters[getterName] = getter
 		}

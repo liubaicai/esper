@@ -77,6 +77,43 @@ func (e *Environment) Schema(name string) (Schema, bool) {
 	return schema, ok
 }
 
+// acceptsEventType reports whether an event declared as eventType can enter a
+// source declared as targetType. Event inheritance is structural and may be
+// multi-level or branched; a parent source therefore receives events of every
+// registered descendant while sibling branches remain isolated.
+func (e *Environment) acceptsEventType(targetType, eventType string) bool {
+	if e == nil || strings.TrimSpace(targetType) == "" || strings.TrimSpace(eventType) == "" {
+		return false
+	}
+	if targetType == eventType {
+		return true
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	visited := make(map[string]struct{})
+	var visit func(string) bool
+	visit = func(current string) bool {
+		if current == targetType {
+			return true
+		}
+		if _, seen := visited[current]; seen {
+			return false
+		}
+		visited[current] = struct{}{}
+		schema, ok := e.schemas[current]
+		if !ok {
+			return false
+		}
+		for _, parent := range schema.parentNames {
+			if visit(parent) {
+				return true
+			}
+		}
+		return false
+	}
+	return visit(eventType)
+}
+
 func (e *Environment) Schemas() []Schema {
 	if e == nil {
 		return nil
@@ -457,7 +494,7 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		for _, field := range window.schema.fields {
 			fields = append(fields, fmt.Sprintf("%s:%s:%t:%t:%t", field.Name, field.Type, field.Optional, field.StartTimestamp, field.EndTimestamp))
 		}
-		canonicalParts = append(canonicalParts, "named-window("+window.name+":"+window.schema.Name()+":"+window.retention.description()+":"+strings.Join(fields, ",")+")")
+		canonicalParts = append(canonicalParts, "named-window("+window.name+":"+window.schema.Name()+":"+window.retention.description()+":context="+window.contextName+":"+strings.Join(fields, ",")+")")
 	}
 	for _, context := range e.Contexts() {
 		canonicalParts = append(canonicalParts, "context("+context.name+":"+context.description()+")")

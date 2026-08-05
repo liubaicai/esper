@@ -622,9 +622,10 @@ func encodeKey(values []any) string {
 // retention policy. A named window has one immutable event schema and can have
 // multiple consumers.
 type NamedWindowDefinition struct {
-	name      string
-	schema    Schema
-	retention WindowSpec
+	name        string
+	schema      Schema
+	retention   WindowSpec
+	contextName string
 }
 
 type NamedWindowOption func(*namedWindowConfig)
@@ -633,8 +634,17 @@ func NamedWindowRetention(window WindowSpec) NamedWindowOption {
 	return func(config *namedWindowConfig) { config.retention = window }
 }
 
+// NamedWindowContext binds storage to one partition of a registered key or
+// category context. The root NamedWindow still exposes an all-partition
+// snapshot for fire-and-forget reads; statements running inside the same
+// context use their partition-local snapshot.
+func NamedWindowContext(contextName string) NamedWindowOption {
+	return func(config *namedWindowConfig) { config.contextName = strings.TrimSpace(contextName) }
+}
+
 type namedWindowConfig struct {
-	retention WindowSpec
+	retention   WindowSpec
+	contextName string
 }
 
 func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
@@ -656,12 +666,13 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 	if err := config.retention.validate(); err != nil {
 		return NamedWindowDefinition{}, err
 	}
-	return NamedWindowDefinition{name: name, schema: schema, retention: config.retention}, nil
+	return NamedWindowDefinition{name: name, schema: schema, retention: config.retention, contextName: config.contextName}, nil
 }
 
 func (d NamedWindowDefinition) Name() string          { return d.name }
 func (d NamedWindowDefinition) Schema() Schema        { return d.schema }
 func (d NamedWindowDefinition) Retention() WindowSpec { return d.retention }
+func (d NamedWindowDefinition) Context() string       { return d.contextName }
 
 func (e *Environment) RegisterNamedWindow(name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
 	definition, err := NewNamedWindowDefinition(name, schema, options...)
@@ -670,6 +681,11 @@ func (e *Environment) RegisterNamedWindow(name string, schema Schema, options ..
 	}
 	if e == nil {
 		return NamedWindowDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	if definition.contextName != "" {
+		if _, ok := e.Context(definition.contextName); !ok {
+			return NamedWindowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", definition.contextName))
+		}
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -708,13 +724,15 @@ func (d NamedWindowDelta) empty() bool { return len(d.New) == 0 && len(d.Old) ==
 type NamedWindowListener func(context.Context, NamedWindowDelta) error
 
 type namedWindowRuntime struct {
-	mu        sync.RWMutex
-	def       NamedWindowDefinition
-	entries   []storedEvent
-	keyed     map[string]storedEvent
-	keyOrder  []string
-	listeners map[uint64]NamedWindowListener
-	nextID    uint64
+	mu         sync.RWMutex
+	def        NamedWindowDefinition
+	contextKey string
+	partitions map[string]*namedWindowRuntime
+	entries    []storedEvent
+	keyed      map[string]storedEvent
+	keyOrder   []string
+	listeners  map[uint64]NamedWindowListener
+	nextID     uint64
 }
 
 type NamedWindow struct {
@@ -723,14 +741,22 @@ type NamedWindow struct {
 }
 
 func newNamedWindow(definition NamedWindowDefinition, engine *Engine) *NamedWindow {
-	state := &namedWindowRuntime{def: definition, listeners: make(map[uint64]NamedWindowListener)}
+	state := newNamedWindowRuntime(definition, "")
+	return &NamedWindow{state: state, engine: engine}
+}
+
+func newNamedWindowRuntime(definition NamedWindowDefinition, contextKey string) *namedWindowRuntime {
+	state := &namedWindowRuntime{def: definition, contextKey: contextKey, listeners: make(map[uint64]NamedWindowListener)}
+	if definition.contextName != "" && contextKey == "" {
+		state.partitions = make(map[string]*namedWindowRuntime)
+	}
 	if _, unique := definition.retention.(UniqueWindowSpec); unique {
 		state.keyed = make(map[string]storedEvent)
 	}
 	if retention, sorted := definition.retention.(SortedWindowSpec); sorted && retention.Rank && len(retention.UniqueKeys) > 0 {
 		state.keyed = make(map[string]storedEvent)
 	}
-	return &NamedWindow{state: state, engine: engine}
+	return state
 }
 
 func normalizeSortedNamedWindowEntries(entries []storedEvent, retention SortedWindowSpec, now time.Time) ([]storedEvent, map[string]storedEvent) {
@@ -861,6 +887,50 @@ func (w *NamedWindow) Definition() NamedWindowDefinition {
 	return w.state.def
 }
 
+func (w *NamedWindow) contextPartitionKey(event Event, now time.Time, variables map[string]Value) (string, bool, error) {
+	if w == nil || w.state == nil || w.state.def.contextName == "" || w.state.contextKey != "" {
+		return "", true, nil
+	}
+	if w.engine == nil || w.engine.env == nil {
+		return "", false, NewError(ErrorDependency, "context-bound named window has no environment")
+	}
+	definition, ok := w.engine.env.Context(w.state.def.contextName)
+	if !ok {
+		return "", false, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", w.state.def.contextName))
+	}
+	// Callers route events while holding the engine mutex, so the variables are
+	// passed as an already captured snapshot instead of calling Engine.Variables
+	// and attempting to reacquire that mutex.
+	key, active, err := definition.partition(event, now, variables)
+	if err != nil || !active {
+		return key, active, err
+	}
+	return key, true, nil
+}
+
+func (w *NamedWindow) partitionState(key string, create bool) (*namedWindowRuntime, error) {
+	if w == nil || w.state == nil {
+		return nil, NewError(ErrorState, "nil named window")
+	}
+	if w.state.def.contextName == "" || w.state.contextKey != "" {
+		return w.state, nil
+	}
+	if key == "" {
+		return nil, NewError(ErrorInvalidRule, "context-bound named window requires an active partition key")
+	}
+	w.state.mu.Lock()
+	defer w.state.mu.Unlock()
+	partition := w.state.partitions[key]
+	if partition == nil && create {
+		partition = newNamedWindowRuntime(w.state.def, key)
+		w.state.partitions[key] = partition
+	}
+	if partition == nil {
+		return nil, NewError(ErrorUnknownName, fmt.Sprintf("named window context partition %q is not active", key))
+	}
+	return partition, nil
+}
+
 func (w *NamedWindow) Subscribe(listener NamedWindowListener) (Subscription, error) {
 	if w == nil || w.state == nil {
 		return Subscription{}, NewError(ErrorState, "nil named window")
@@ -894,13 +964,53 @@ func (w *NamedWindow) Snapshot(ctx context.Context) ([]Event, error) {
 	if w == nil || w.state == nil {
 		return nil, NewError(ErrorState, "nil named window")
 	}
+	if w.state.def.contextName == "" || w.state.contextKey != "" {
+		return snapshotNamedWindowState(w.state), nil
+	}
 	w.state.mu.RLock()
-	defer w.state.mu.RUnlock()
-	result := make([]Event, 0, len(w.state.entries))
-	for _, entry := range w.state.entries {
-		result = append(result, entry.event)
+	keys := make([]string, 0, len(w.state.partitions))
+	partitions := make(map[string]*namedWindowRuntime, len(w.state.partitions))
+	for key, partition := range w.state.partitions {
+		keys = append(keys, key)
+		partitions[key] = partition
+	}
+	w.state.mu.RUnlock()
+	sort.Strings(keys)
+	result := make([]Event, 0)
+	for _, key := range keys {
+		result = append(result, snapshotNamedWindowState(partitions[key])...)
 	}
 	return result, nil
+}
+
+// SnapshotContext returns the rows retained by one context partition. It is
+// intentionally separate from Snapshot so fire-and-forget callers can still
+// observe the complete context-bound window.
+func (w *NamedWindow) SnapshotContext(ctx context.Context, partitionKey string) ([]Event, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	if w == nil || w.state == nil {
+		return nil, NewError(ErrorState, "nil named window")
+	}
+	state, err := w.partitionState(partitionKey, false)
+	if err != nil {
+		return nil, err
+	}
+	return snapshotNamedWindowState(state), nil
+}
+
+func snapshotNamedWindowState(state *namedWindowRuntime) []Event {
+	if state == nil {
+		return nil
+	}
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	result := make([]Event, 0, len(state.entries))
+	for _, entry := range state.entries {
+		result = append(result, entry.event)
+	}
+	return result
 }
 
 func (w *NamedWindow) DeleteWhere(ctx context.Context, predicate func(Event) bool) (NamedWindowDelta, error) {
@@ -1169,6 +1279,10 @@ func (w *NamedWindow) now() time.Time {
 }
 
 func (w *NamedWindow) insert(now time.Time, underlying any) (NamedWindowDelta, error) {
+	return w.insertWithVariables(now, underlying, nil)
+}
+
+func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variables map[string]Value) (NamedWindowDelta, error) {
 	if w == nil || w.state == nil {
 		return NamedWindowDelta{}, NewError(ErrorState, "nil named window")
 	}
@@ -1179,6 +1293,19 @@ func (w *NamedWindow) insert(now time.Time, underlying any) (NamedWindowDelta, e
 	event.typeName = w.state.def.name
 	event.streamType = w.state.def.name
 	state := w.state
+	if state.def.contextName != "" && state.contextKey == "" {
+		key, active, err := w.contextPartitionKey(event, now, variables)
+		if err != nil {
+			return NamedWindowDelta{}, err
+		}
+		if !active {
+			return NamedWindowDelta{Time: now}, nil
+		}
+		state, err = w.partitionState(key, true)
+		if err != nil {
+			return NamedWindowDelta{}, err
+		}
+	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	entry := storedEvent{event: event, receivedAt: now}
@@ -1246,7 +1373,28 @@ func (w *NamedWindow) expire(at time.Time) NamedWindowDelta {
 	if w == nil || w.state == nil {
 		return NamedWindowDelta{}
 	}
-	state := w.state
+	if w.state.def.contextName != "" && w.state.contextKey == "" {
+		w.state.mu.RLock()
+		partitions := make([]*namedWindowRuntime, 0, len(w.state.partitions))
+		for _, partition := range w.state.partitions {
+			partitions = append(partitions, partition)
+		}
+		w.state.mu.RUnlock()
+		result := NamedWindowDelta{Time: at}
+		for _, partition := range partitions {
+			delta := expireNamedWindowState(partition, at)
+			result.New = append(result.New, delta.New...)
+			result.Old = append(result.Old, delta.Old...)
+		}
+		return result
+	}
+	return expireNamedWindowState(w.state, at)
+}
+
+func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindowDelta {
+	if state == nil {
+		return NamedWindowDelta{}
+	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	var duration time.Duration

@@ -10,6 +10,8 @@ import (
 
 const subqueryEngineVariable = "\x00esper.engine"
 const subqueryRuntimeVariable = "\x00esper.subqueries"
+const subqueryContextNameVariable = "\x00esper.context.name"
+const subqueryContextPartitionVariable = "\x00esper.context.partition"
 
 type subqueryEngineRef struct {
 	engine *Engine
@@ -624,7 +626,31 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 		}
 	}
 	if !usingRuntimeSnapshot {
-		if engineLocked {
+		contextName := ""
+		contextPartition := ""
+		if outer.Variables != nil {
+			if value, ok := outer.Variables[subqueryContextNameVariable]; ok && value.IsPresent() {
+				contextName, _ = value.Any().(string)
+			}
+			if value, ok := outer.Variables[subqueryContextPartitionVariable]; ok && value.IsPresent() {
+				contextPartition, _ = value.Any().(string)
+			}
+		}
+		if base.kind == streamNamedWindow && contextName != "" && contextPartition != "" {
+			var window *NamedWindow
+			if engineLocked {
+				window = e.namedWindows[base.sourceName]
+			} else {
+				window, _ = e.NamedWindow(base.sourceName)
+			}
+			if window != nil && window.Definition().Context() == contextName {
+				events, err = window.SnapshotContext(context.Background(), contextPartition)
+			} else if engineLocked {
+				events, err = e.snapshotFireAndForgetSourceLocked(context.Background(), base, now, outer.Variables)
+			} else {
+				events, err = e.snapshotFireAndForgetSource(context.Background(), base, now, outer.Variables)
+			}
+		} else if engineLocked {
 			events, err = e.snapshotFireAndForgetSourceLocked(context.Background(), base, now, outer.Variables)
 		} else {
 			events, err = e.snapshotFireAndForgetSource(context.Background(), base, now, outer.Variables)

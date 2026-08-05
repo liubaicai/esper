@@ -967,7 +967,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		delta, err := window.insert(now, underlying)
+		delta, err := window.insertWithVariables(now, underlying, variables)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
