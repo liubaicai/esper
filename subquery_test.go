@@ -295,8 +295,8 @@ func TestSubqueryParametersAndValidation(t *testing.T) {
 	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Filter(SubqueryExists(
 		FromAny(env, "Trade"),
 		Literal(true),
-	)).Query(StatementName("invalid-subquery-source"))); err == nil {
-		t.Fatal("ordinary event source must be rejected as a subquery source")
+	)).Query(StatementName("event-stream-subquery-source"))); err != nil {
+		t.Fatalf("ordinary event source should be accepted as a subquery source: %v", err)
 	}
 }
 

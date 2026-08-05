@@ -1040,8 +1040,8 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 	if err != nil {
 		return err
 	}
-	if base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical {
-		return NewError(ErrorInvalidRule, "subquery source must be a named window, table, or historical source")
+	if base.kind != streamSource && base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical {
+		return NewError(ErrorInvalidRule, "subquery source must be an event stream, named window, table, or historical source")
 	}
 	if err := e.validateNode(definition.source); err != nil {
 		return err

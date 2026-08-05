@@ -1530,6 +1530,8 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 	}
 	e.refreshVariablesLocked()
 	statement.runtime.variables = statementVariables(e.variables, statement.parameters)
+	statement.runtime.subqueryRegistry = newSubqueryRuntimeRegistry(e.env, e, plan.query)
+	statement.runtime.variables = statement.runtime.subqueryRegistry.attachVariables(statement.runtime.variables)
 	statement.runtime.initializeAt(e.clock.Now())
 	if plan.query.contextName != "" {
 		if definition, ok := e.env.Context(plan.query.contextName); ok && definition.kind == ContextInitiatedTerminated && definition.startPattern != nil {
@@ -1539,6 +1541,11 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 			// than one due instant.
 			initializeContextPatternTimer(&statement.runtime.contextStartPatternState, definition.startPattern, e.clock.Now(), statement.runtime.variables)
 		}
+	}
+	if err := e.seedNamedWindowRowRecogLocked(ctx, statement); err != nil {
+		e.matchRecognizeStatePool.removeOwner(statement.id)
+		e.mu.Unlock()
+		return nil, err
 	}
 	deployment := &Deployment{engine: e, id: deploymentID, statements: []*Statement{statement}}
 	statement.deployment = deployment
@@ -1555,6 +1562,40 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 	e.mu.Unlock()
 	e.dispatchContextEvents(contextEvents)
 	return deployment, nil
+}
+
+// seedNamedWindowRowRecogLocked replays the retained contents of a named
+// window into a newly deployed Match Recognize statement. Esper attaches the
+// row-recognition consumer to the current named-window state, so an event
+// arriving after deployment can complete a sequence that started before the
+// consumer was deployed. The replay advances recognition state but deliberately
+// discards the resulting listener batch; deployment must not emit historical
+// rows as new output.
+//
+// This is intentionally limited to non-context row-recognition consumers. A
+// context statement needs to allocate context partitions through
+// Statement.process, which cannot be called while Engine.deploy holds the
+// engine lock; context-owned named-window replay remains a separate lifecycle
+// path.
+func (e *Engine) seedNamedWindowRowRecogLocked(ctx context.Context, statement *Statement) error {
+	if e == nil || statement == nil || statement.plan.query.rowRecog == nil || statement.plan.query.trigger != nil || statement.plan.query.contextName != "" {
+		return nil
+	}
+	base, err := sourceNode(statement.plan.query.rowRecog.input)
+	if err != nil || base == nil || base.kind != streamNamedWindow {
+		return nil
+	}
+	events, err := e.snapshotFireAndForgetSourceLocked(ctx, base, e.clock.Now(), statement.runtime.variables)
+	if err != nil {
+		return err
+	}
+	statement.runtime.ctx = ctx
+	for _, event := range events {
+		if _, _, err := statement.runtime.process(statement.plan, event, e.clock.Now(), statement.runtime.variables); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
@@ -2396,6 +2437,7 @@ type statementRuntime struct {
 	nextPartitionID          int
 	contextProperties        map[string]Value
 	variables                map[string]Value
+	subqueryRegistry         *subqueryRuntimeRegistry
 	seq                      *atomic.Uint64
 	pendingOutputAssignments []VariableAssignment
 }
@@ -2707,6 +2749,12 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		return ResultBatch{}, false, nil
 	}
 	variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
+	if s.runtime.subqueryRegistry != nil {
+		if err := s.runtime.subqueryRegistry.accept(event, now, variables); err != nil {
+			return ResultBatch{}, false, err
+		}
+		variables = s.runtime.subqueryRegistry.attachVariables(variables)
+	}
 	s.runtime.ctx = ctx
 	if s.plan.query.contextName != "" {
 		definition, definitionOK := s.engine.env.Context(s.plan.query.contextName)
@@ -3772,6 +3820,10 @@ func (s *Statement) expire(now time.Time, variables map[string]Value) (ResultBat
 		return ResultBatch{}, false
 	}
 	variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
+	if s.runtime.subqueryRegistry != nil {
+		s.runtime.subqueryRegistry.expire(now)
+		variables = s.runtime.subqueryRegistry.attachVariables(variables)
+	}
 	if s.plan.query.contextName != "" {
 		if definition, ok := s.engine.env.Context(s.plan.query.contextName); ok && definition.kind == ContextInitiatedTerminated && definition.startPattern != nil {
 			patternBatch, patternChanged := s.processPatternContextTime(definition, now, variables)

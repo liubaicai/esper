@@ -4,13 +4,168 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 )
 
 const subqueryEngineVariable = "\x00esper.engine"
+const subqueryRuntimeVariable = "\x00esper.subqueries"
 
 type subqueryEngineRef struct {
 	engine *Engine
 	locked bool
+}
+
+type subqueryRuntimeRef struct {
+	registry *subqueryRuntimeRegistry
+}
+
+type subqueryRuntimeRegistry struct {
+	env    *Environment
+	engine *Engine
+	states map[*subqueryDefinition]*subqueryRuntimeState
+}
+
+type subqueryRuntimeState struct {
+	definition *subqueryDefinition
+	runtime    *statementRuntime
+	events     []Event
+}
+
+func newSubqueryRuntimeRegistry(env *Environment, engine *Engine, query Query) *subqueryRuntimeRegistry {
+	definitions := querySubqueryDefinitions(query)
+	if len(definitions) == 0 {
+		return nil
+	}
+	registry := &subqueryRuntimeRegistry{
+		env:    env,
+		engine: engine,
+		states: make(map[*subqueryDefinition]*subqueryRuntimeState),
+	}
+	for _, definition := range definitions {
+		base, err := sourceNode(definition.source)
+		if err != nil || base.kind != streamSource {
+			continue
+		}
+		query := Query{env: env, input: definition.source}
+		runtime := newStatementRuntime(query)
+		runtime.engine = engine
+		registry.states[definition] = &subqueryRuntimeState{definition: definition, runtime: &runtime}
+	}
+	if len(registry.states) == 0 {
+		return nil
+	}
+	return registry
+}
+
+func querySubqueryDefinitions(query Query) []*subqueryDefinition {
+	seen := make(map[*subqueryDefinition]struct{})
+	definitions := make([]*subqueryDefinition, 0)
+	var visitNode func(*exprNode)
+	visitNode = func(node *exprNode) {
+		if node == nil {
+			return
+		}
+		if node.subquery != nil {
+			if _, exists := seen[node.subquery]; !exists {
+				seen[node.subquery] = struct{}{}
+				definitions = append(definitions, node.subquery)
+			}
+			if node.subquery.predicate != nil {
+				visitNode(node.subquery.predicate.node())
+			}
+			if node.subquery.projection != nil {
+				visitNode(node.subquery.projection.node())
+			}
+			for _, order := range node.subquery.orderBy {
+				if order.Expression != nil {
+					visitNode(order.Expression.node())
+				}
+			}
+		}
+		for _, child := range node.children {
+			visitNode(child)
+		}
+	}
+	_ = visitQueryExpressions(query.env, query, func(expression Expr) error {
+		if expression != nil {
+			visitNode(expression.node())
+		}
+		return nil
+	})
+	return definitions
+}
+
+func (r *subqueryRuntimeRegistry) attachVariables(variables map[string]Value) map[string]Value {
+	if r == nil {
+		return variables
+	}
+	result := cloneValues(variables)
+	if result == nil {
+		result = make(map[string]Value)
+	}
+	result[subqueryRuntimeVariable] = Present(&subqueryRuntimeRef{registry: r})
+	return result
+}
+
+func (r *subqueryRuntimeRegistry) accept(event Event, now time.Time, variables map[string]Value) error {
+	if r == nil {
+		return nil
+	}
+	for _, state := range r.states {
+		if state == nil || state.definition == nil || state.runtime == nil || !sourceNodeAcceptsEvent(r.env, state.definition.source, event) {
+			continue
+		}
+		state.runtime.variables = variablesWithEngine(variables, r.engine)
+		delta, err := state.runtime.insert(state.definition.source, event, now)
+		if err != nil {
+			return err
+		}
+		if subquerySourceContainsWindow(state.definition.source) {
+			state.events = append([]Event(nil), delta.history...)
+		} else {
+			state.events = append(state.events, delta.newEvents...)
+		}
+	}
+	return nil
+}
+
+func (r *subqueryRuntimeRegistry) expire(now time.Time) {
+	if r == nil {
+		return
+	}
+	for _, state := range r.states {
+		if state == nil || state.runtime == nil || !subquerySourceContainsWindow(state.definition.source) {
+			continue
+		}
+		delta := state.runtime.expire(now)
+		state.events = append([]Event(nil), delta.history...)
+	}
+}
+
+func (r *subqueryRuntimeRegistry) snapshot(definition *subqueryDefinition) ([]Event, bool) {
+	if r == nil {
+		return nil, false
+	}
+	state, ok := r.states[definition]
+	if !ok || state == nil {
+		return nil, false
+	}
+	return append([]Event(nil), state.events...), true
+}
+
+func subqueryRuntimeFromVariables(variables map[string]Value) *subqueryRuntimeRegistry {
+	if variables == nil {
+		return nil
+	}
+	value, ok := variables[subqueryRuntimeVariable]
+	if !ok || !value.IsPresent() {
+		return nil
+	}
+	ref, ok := value.Any().(*subqueryRuntimeRef)
+	if !ok || ref == nil {
+		return nil
+	}
+	return ref.registry
 }
 
 type subqueryDefinition struct {
@@ -453,18 +608,31 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 		now = e.Now()
 	}
 	var events []Event
-	if engineLocked {
-		events, err = e.snapshotFireAndForgetSourceLocked(context.Background(), base, now, outer.Variables)
-	} else {
-		events, err = e.snapshotFireAndForgetSource(context.Background(), base, now, outer.Variables)
+	usingRuntimeSnapshot := false
+	if registry := subqueryRuntimeFromVariables(outer.Variables); registry != nil {
+		if snapshot, ok := registry.snapshot(definition); ok {
+			events = snapshot
+			usingRuntimeSnapshot = true
+		}
+	}
+	if !usingRuntimeSnapshot {
+		if engineLocked {
+			events, err = e.snapshotFireAndForgetSourceLocked(context.Background(), base, now, outer.Variables)
+		} else {
+			events, err = e.snapshotFireAndForgetSource(context.Background(), base, now, outer.Variables)
+		}
 	}
 	if err != nil {
 		return nil
 	}
-	query := Query{env: e.env, input: definition.source}
-	runtime := newStatementRuntime(query)
-	runtime.engine = e
-	runtime.variables = variablesWithEngine(outer.Variables, e)
+	var runtime *statementRuntime
+	if !usingRuntimeSnapshot {
+		query := Query{env: e.env, input: definition.source}
+		temporary := newStatementRuntime(query)
+		temporary.engine = e
+		temporary.variables = variablesWithEngine(outer.Variables, e)
+		runtime = &temporary
+	}
 	type subqueryCandidate struct {
 		value      Value
 		evaluation EvalContext
@@ -477,9 +645,15 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 	}
 	lastAggregateDeltaHasHistory := false
 	for _, event := range events {
-		delta, insertErr := runtime.insert(definition.source, event, now)
-		if insertErr != nil {
-			return nil
+		var delta eventDelta
+		if usingRuntimeSnapshot {
+			delta = eventDelta{newEvents: []Event{event}, history: events}
+		} else {
+			var insertErr error
+			delta, insertErr = runtime.insert(definition.source, event, now)
+			if insertErr != nil {
+				return nil
+			}
 		}
 		if definition.aggregateProjection && containsWindow {
 			// A window source owns the final aggregate group. The delta history

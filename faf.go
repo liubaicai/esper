@@ -689,7 +689,7 @@ func visibleVariableValues(variables map[string]Value) map[string]Value {
 	}
 	result := make(map[string]Value, len(variables))
 	for name, value := range variables {
-		if name == parameterValuesVariable || name == subqueryEngineVariable {
+		if name == parameterValuesVariable || name == subqueryEngineVariable || name == subqueryRuntimeVariable {
 			continue
 		}
 		result[name] = value
