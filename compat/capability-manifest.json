@@ -275,7 +275,7 @@
       "level": "S",
       "summary": "Named Window/Table-backed fluent correlated exists, scalar and IN subqueries with parameters and nested outer-field scope",
       "javaRefs": ["EPLSubselectAggregatedInExistsAnyAll", "EPLSubselectAggregatedSingleValue", "EPLSubselectAggregatedMultirowAndColumn"],
-      "goRefs": ["subquery.go", "subquery_test.go", "pattern_subquery_test.go", "pattern_subquery_filter_variants_test.go", "state.go", "plan.go", "runtime.go", "faf.go"],
+      "goRefs": ["subquery.go", "subquery_test.go", "pattern_subquery_test.go", "pattern_subquery_filter_variants_test.go", "pattern_subquery_invalid_test.go", "state.go", "plan.go", "runtime.go", "faf.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["multi-column/multi-row result contracts and grouped/having aggregate matrix", "advanced initiated/temporal context combinations beyond the mapped segmented/daily/initiated LastEvent cases", "Pattern aggregation and remaining Pattern/Context/Dataflow combinations", "typed/multi-port Dataflow subquery propagation", "scalar iterator/error semantics and Java cardinality diagnostics", "full Java invalid-rule and execution trace parity"]
@@ -501,14 +501,14 @@
     },
     {
       "id": "case.subquery-pattern",
-      "javaRuntimeIds": ["java-runtime-3d9d3a714bd642e784bd", "java-runtime-0db35509697665c0960e", "java-runtime-9a15ec8213060ac0185c", "java-runtime-3c1d7cc144c168f6a0d6"],
-      "javaNames": ["EPLSubselectCorrelated", "EPLSubselectFilterPatternNamedWindowNoAlias", "EPLSubselectAggregation", "EPLSubselectSubqueryAgainstNamedWindowInUDFInPattern"],
+      "javaRuntimeIds": ["java-runtime-3d9d3a714bd642e784bd", "java-runtime-0db35509697665c0960e", "java-runtime-9a15ec8213060ac0185c", "java-runtime-3c1d7cc144c168f6a0d6", "java-runtime-57f90dfd1960035b1517"],
+      "javaNames": ["EPLSubselectCorrelated", "EPLSubselectFilterPatternNamedWindowNoAlias", "EPLSubselectAggregation", "EPLSubselectSubqueryAgainstNamedWindowInUDFInPattern", "EPLSubselectInvalid"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectWithinPattern.java"],
-      "goTests": ["TestPatternSubqueryCorrelatedExistsMatchesEsper", "TestPatternSubqueryInLastEventMatchesEsper", "TestPatternSubqueryFilterAndNamedWindowVariantsMatchesEsper", "TestEventStreamSubqueryAggregationWindowMatchesEsper", "TestPatternSubqueryNamedWindowFunctionMatchesEsper"],
+      "goTests": ["TestPatternSubqueryCorrelatedExistsMatchesEsper", "TestPatternSubqueryInLastEventMatchesEsper", "TestPatternSubqueryFilterAndNamedWindowVariantsMatchesEsper", "TestEventStreamSubqueryAggregationWindowMatchesEsper", "TestPatternSubqueryNamedWindowFunctionMatchesEsper", "TestPatternSubqueryInvalidDefinitionsMatchesEsper"],
       "tags": ["correctness", "query", "subquery", "pattern", "correlation"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream and SubqueryIn over a LastEvent event stream, with inner Field expressions and explicit current-event/OuterField scope. The Java filter execution's event-stream Filter, Named Window Filter and Named Window Pattern branches now share one exact tryAssertion trace; NamedWindowRetention(LastEvent()) replaces the previous row and dispatches the old/new state needed by the subquery. Event-stream SubquerySum over a length(2) source reproduces the Java rolling aggregate filter sequence across empty, replacement and exact-sum boundaries, while a chainable Func1 receives a Named Window SubqueryCount inside a Pattern predicate and verifies current Named Window state. Invalid diagnostics, Pattern aggregation and broader Pattern/Context/Dataflow combinations remain open."
+      "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream and SubqueryIn over a LastEvent event stream, with inner Field expressions and explicit current-event/OuterField scope. The Java filter execution's event-stream Filter, Named Window Filter and Named Window Pattern branches now share one exact tryAssertion trace; NamedWindowRetention(LastEvent()) replaces the previous row and dispatches the old/new state needed by the subquery. Event-stream SubquerySum over a length(2) source reproduces the Java rolling aggregate filter sequence across empty, replacement and exact-sum boundaries, while a chainable Func1 receives a Named Window SubqueryCount inside a Pattern predicate and verifies current Named Window state. Build-time validation now rejects unbounded non-aggregated event-stream subqueries, consumer-local data windows on Named Window subqueries, and incompatible IN/ANY/ALL operand types, matching the mapped EPLSubselectInvalid boundaries. Pattern aggregation, broader Pattern/Context/Dataflow combinations, full parser diagnostics and complete execution-trace/cardinality parity remain open."
     },
     {
       "id": "case.dataflow-typed-ports",
@@ -526,7 +526,7 @@
       "javaRuntimeIds": ["java-runtime-893c8283ee90019f37fa", "java-runtime-e1bdb19779e28fa49bc2", "java-runtime-69dbb4e0d879421b52f7", "java-runtime-3bdb22d6cdef39f0336c", "java-runtime-91a5f5421ce63806e2c4", "java-runtime-f053fbdc01fad03ba5a6", "java-runtime-7e40b511fb6b6db584fd", "java-runtime-827b0af4ea14c59da2bc", "java-runtime-955a5d67e2668f50f0f5", "java-runtime-a9a21d69ccb78f9fd152", "java-runtime-42082e1062bebbe49a0a", "java-runtime-bcc34451f5417d84e6fa", "java-runtime-de4fc2179a2cb72a97e6", "java-runtime-e13449306814341577ad"],
       "javaNames": ["EPLDataflowNonBlockingJoinCancel", "EPLDataflowNonBlockingJoinException", "EPLDataflowNonBlockingException", "EPLDataflowBlockingException", "EPLDataflowBlockingCancel", "EPLDataflowNonBlockingCancel", "EPLDataflowInvalidJoinRun", "EPLDataflowNonBlockingJoinMultipleRunnable", "EPLDataflowBlockingMultipleRunnable", "EPLDataflowNonBlockingJoinSingleRunnable", "EPLDataflowFastCompleteBlocking", "EPLDataflowRunBlocking", "EPLDataflowFastCompleteNonBlocking", "EPLDataflowBlockingRunJoin"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIRunStartCancelJoin.java"],
-      "goTests": ["TestDataflowCustomSourceRunAndJoinMatchesEsper", "TestDataflowCustomSourceCancelAndJoin", "TestDataflowCustomSourceErrorPropagatesThroughRun", "TestDataflowCustomSourceRejectsWrongOutputType", "TestDataflowJoinRequiresStart"],
+      "goTests": ["TestDataflowCustomSourceRunAndJoinMatchesEsper", "TestDataflowCustomSourceCancelAndJoin", "TestDataflowCustomSourceErrorPropagatesThroughRun", "TestDataflowCustomSourceRejectsWrongOutputType", "TestDataflowCustomSourceNamedPortsRouteAndTypeCheck", "TestDataflowJoinRequiresStart"],
       "tags": ["correctness", "dataflow", "lifecycle", "cancellation", "concurrency"],
       "status": "mapped",
       "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],

@@ -237,6 +237,57 @@ func TestDataflowCustomSourceRejectsWrongOutputType(t *testing.T) {
 	}
 }
 
+type dataflowNamedSource struct{}
+
+func (dataflowNamedSource) Run(ctx context.Context, emitter *DataflowEmitter) error {
+	if err := emitter.SubmitPort(ctx, "text", "left"); err != nil {
+		return err
+	}
+	return emitter.SubmitPort(ctx, "number", 7)
+}
+
+type dataflowNamedSourceRuntime struct{}
+
+func (dataflowNamedSourceRuntime) Process(_ context.Context, input DataflowInput) ([]DataflowEmission, error) {
+	switch value := input.Value.(type) {
+	case string:
+		return []DataflowEmission{Emit("text:" + value)}, nil
+	case int:
+		return []DataflowEmission{Emit(fmt.Sprintf("number:%d", value))}, nil
+	default:
+		return nil, fmt.Errorf("unexpected named source value %T", input.Value)
+	}
+}
+
+func TestDataflowCustomSourceNamedPortsRouteAndTypeCheck(t *testing.T) {
+	env := NewEnvironment()
+	definition, err := DefineDataflow(env, "named-source-flow").
+		CustomTypedSource("source", func(DataflowOperatorContext) (DataflowSourceRuntime, error) {
+			return dataflowNamedSource{}, nil
+		}, []DataflowPort{DataflowPortOf[string]("text"), DataflowPortOf[int]("number")}).
+		CustomTypedPorts("format", func(DataflowOperatorContext) (DataflowOperatorRuntime, error) {
+			return dataflowNamedSourceRuntime{}, nil
+		}, []DataflowPort{DataflowPortOf[string]("text"), DataflowPortOf[int]("number")}, []DataflowPort{DataflowPortOf[string]("out")}).
+		Emitter("sink").
+		ConnectPorts("source", "text", "format", "text").
+		ConnectPorts("source", "number", "format", "number").
+		Connect("format", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	instance, err := NewEngine(env).InstantiateDataflow(context.Background(), definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := instance.Run(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := instance.Outputs(); len(got) != 2 || got[0] != "text:left" || got[1] != "number:7" {
+		t.Fatalf("named source outputs = %#v", got)
+	}
+}
+
 func TestDataflowJoinRequiresStart(t *testing.T) {
 	env := NewEnvironment()
 	definition, err := DefineDataflow(env, "join-before-start").BeaconSource("source").Build()

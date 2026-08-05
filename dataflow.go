@@ -103,9 +103,22 @@ func (e *DataflowEmitter) Submit(ctx context.Context, value any) error {
 		return NewError(ErrorState, "nil dataflow emitter")
 	}
 	if e.allowRaw {
-		return e.instance.submitSourceValue(ctx, e.name, value)
+		return e.instance.submitSourcePort(ctx, e.name, "out", value)
 	}
 	return e.instance.submitEmitter(ctx, e.name, value)
+}
+
+// SubmitPort emits a raw value on a named custom-source output port. It is
+// useful for fan-out sources; ordinary captive Emitters use Submit because
+// their conventional output is the single "out" port.
+func (e *DataflowEmitter) SubmitPort(ctx context.Context, port string, value any) error {
+	if e == nil || e.instance == nil {
+		return NewError(ErrorState, "nil dataflow emitter")
+	}
+	if !e.allowRaw {
+		return NewError(ErrorInvalidRule, "named output ports are only available to custom sources")
+	}
+	return e.instance.submitSourcePort(ctx, e.name, port, value)
 }
 
 // SubmitSignal injects a control-plane signal through the captive emitter.
@@ -117,7 +130,7 @@ func (e *DataflowEmitter) SubmitSignal(ctx context.Context, signal DataflowSigna
 		return NewError(ErrorInvalidRule, "dataflow signal is nil")
 	}
 	if e.allowRaw {
-		return e.instance.submitSourceValue(ctx, e.name, signal)
+		return e.instance.submitSourcePort(ctx, e.name, "out", signal)
 	}
 	return e.instance.submitEmitter(ctx, e.name, signal)
 }
@@ -1117,6 +1130,10 @@ func (d *DataflowInstance) submitEmitter(ctx context.Context, name string, value
 }
 
 func (d *DataflowInstance) submitSourceValue(ctx context.Context, name string, value any) error {
+	return d.submitSourcePort(ctx, name, "out", value)
+}
+
+func (d *DataflowInstance) submitSourcePort(ctx context.Context, name, port string, value any) error {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
@@ -1134,14 +1151,16 @@ func (d *DataflowInstance) submitSourceValue(ctx context.Context, name string, v
 	if !ok || operator.Kind != CustomSourceKind || !hasOutgoing {
 		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q is not a custom source", name))
 	}
-	if signal, ok := value.(DataflowSignal); ok {
-		return d.processGraphFrom(ctx, signal, name)
+	if !dataflowPortAllowed(operator, true, port) {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow source %q references unknown output port %q", name, port))
 	}
-	if expected := dataflowPortType(operator, true, "out"); expected != nil && !dataflowValueAssignable(value, expected) {
-		return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow source %q output port %q emitted %T, want %s", name, "out", value, expected))
+	if _, signal := value.(DataflowSignal); !signal {
+		if expected := dataflowPortType(operator, true, port); expected != nil && !dataflowValueAssignable(value, expected) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow source %q output port %q emitted %T, want %s", name, port, value, expected))
+		}
 	}
 	d.processed.Add(1)
-	return d.processGraphFrom(ctx, value, name)
+	return d.processSourceEmission(ctx, name, port, value)
 }
 
 func (d *DataflowInstance) materializeDataflowEvent(value any) (Event, error) {
@@ -1807,7 +1826,20 @@ func dataflowEventTypeAccepts(engine *Engine, eventType string, event Event) boo
 }
 
 func (d *DataflowInstance) processGraphFrom(ctx context.Context, event any, start string) error {
-	queue := []dataflowWorkItem{{operator: start, port: "in", value: event}}
+	return d.processGraphQueue(ctx, []dataflowWorkItem{{operator: start, port: "in", value: event}})
+}
+
+func (d *DataflowInstance) processSourceEmission(ctx context.Context, source, port string, value any) error {
+	queue := make([]dataflowWorkItem, 0, len(d.outgoing[source]))
+	for _, edge := range d.outgoing[source] {
+		if edge.FromPort == port {
+			queue = append(queue, dataflowWorkItem{operator: edge.To, port: edge.ToPort, value: value})
+		}
+	}
+	return d.processGraphQueue(ctx, queue)
+}
+
+func (d *DataflowInstance) processGraphQueue(ctx context.Context, queue []dataflowWorkItem) error {
 	for len(queue) > 0 {
 		if err := contextErr(ctx); err != nil {
 			return err
@@ -1836,8 +1868,15 @@ func (d *DataflowInstance) processGraphFrom(ctx context.Context, event any, star
 			}
 			continue
 		}
+		normalized := normalizeDataflowEmissions(emissions)
+		if err := validateDataflowEmissions(operator, normalized); err != nil {
+			if handled := d.handleDataflowError(ctx, operator.Name, err); handled != nil {
+				return handled
+			}
+			continue
+		}
 		for _, edge := range d.outgoing[operator.Name] {
-			for _, emission := range normalizeDataflowEmissions(emissions) {
+			for _, emission := range normalized {
 				if emission.Port != edge.FromPort {
 					continue
 				}
@@ -1951,6 +1990,21 @@ func normalizeDataflowEmissions(emissions []DataflowEmission) []DataflowEmission
 		}
 	}
 	return result
+}
+
+func validateDataflowEmissions(operator DataflowOperator, emissions []DataflowEmission) error {
+	for _, emission := range emissions {
+		if !dataflowPortAllowed(operator, true, emission.Port) {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q emitted on undeclared output port %q", operator.Name, emission.Port))
+		}
+		if _, signal := emission.Value.(DataflowSignal); signal {
+			continue
+		}
+		if expected := dataflowPortType(operator, true, emission.Port); expected != nil && !dataflowValueAssignable(emission.Value, expected) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow operator %q output port %q emitted %T, want %s", operator.Name, emission.Port, emission.Value, expected))
+		}
+	}
+	return nil
 }
 
 func selectionFields(selections []Selection) []FieldSpec {
