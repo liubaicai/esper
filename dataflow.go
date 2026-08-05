@@ -82,6 +82,7 @@ type DataflowOperatorContext struct {
 	InstanceID   string
 	OperatorName string
 	OperatorNum  int
+	Properties   map[string]any
 }
 
 // DataflowEmission is one value emitted from a custom operator. Port defaults
@@ -200,6 +201,29 @@ type DataflowSourceRuntime interface {
 // instance. Source runtimes may implement either lifecycle hook.
 type DataflowSourceFactory func(DataflowOperatorContext) (DataflowSourceRuntime, error)
 
+// DataflowParameterContext identifies one operator parameter while an
+// instance is being created. A provider may return a value with true to
+// override the definition value, or false to retain the definition value.
+type DataflowParameterContext struct {
+	DataflowName  string
+	InstanceID    string
+	OperatorName  string
+	OperatorNum   int
+	ParameterName string
+	DefaultValue  any
+}
+
+// DataflowParameterProvider supplies per-instance operator properties without
+// embedding deployment-specific values in a reusable graph definition.
+type DataflowParameterProvider func(DataflowParameterContext) (any, bool)
+
+// DataflowOperatorProvider can replace a custom operator runtime at
+// instantiation time. It is useful for dependency injection and test doubles.
+type DataflowOperatorProvider func(DataflowOperatorContext) (DataflowOperatorRuntime, error)
+
+// DataflowSourceProvider is the source counterpart to DataflowOperatorProvider.
+type DataflowSourceProvider func(DataflowOperatorContext) (DataflowSourceRuntime, error)
+
 // DataflowOperatorFactory creates one runtime operator instance.
 type DataflowOperatorFactory func(DataflowOperatorContext) (DataflowOperatorRuntime, error)
 
@@ -242,10 +266,13 @@ type DataflowExceptionHandler func(context.Context, DataflowError) error
 // DataflowOptions configures one instantiated dataflow. Definitions remain
 // immutable and reusable; these options belong to the instance lifecycle.
 type DataflowOptions struct {
-	InstanceID       string
-	UserObject       any
-	ErrorPolicy      DataflowErrorPolicy
-	ExceptionHandler DataflowExceptionHandler
+	InstanceID        string
+	UserObject        any
+	ErrorPolicy       DataflowErrorPolicy
+	ExceptionHandler  DataflowExceptionHandler
+	ParameterProvider DataflowParameterProvider
+	OperatorProvider  DataflowOperatorProvider
+	SourceProvider    DataflowSourceProvider
 }
 
 func (o DataflowOptions) validate() error {
@@ -391,6 +418,39 @@ func (o DataflowJoinOptions) validate() error {
 	return nil
 }
 
+// DataflowOperatorOptions contains definition-time properties and the names
+// that may be resolved by a DataflowParameterProvider at instantiation.
+// Properties and ParameterNames are copied when the graph is built.
+type DataflowOperatorOptions struct {
+	Properties     map[string]any
+	ParameterNames []string
+}
+
+func (o DataflowOperatorOptions) validate() error {
+	for name := range o.Properties {
+		if name == "" {
+			return NewError(ErrorInvalidRule, "dataflow operator property name cannot be empty")
+		}
+	}
+	seen := make(map[string]struct{}, len(o.ParameterNames))
+	for _, name := range o.ParameterNames {
+		if name == "" {
+			return NewError(ErrorInvalidRule, "dataflow operator parameter name cannot be empty")
+		}
+		if _, exists := seen[name]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator parameter %q is declared more than once", name))
+		}
+		seen[name] = struct{}{}
+	}
+	return nil
+}
+
+func cloneDataflowOperatorOptions(options DataflowOperatorOptions) DataflowOperatorOptions {
+	options.Properties = maps.Clone(options.Properties)
+	options.ParameterNames = append([]string(nil), options.ParameterNames...)
+	return options
+}
+
 func validateDataflowJoinCondition(condition JoinCondition, inputs int) error {
 	if len(condition.all) > 0 && len(condition.any) > 0 {
 		return fmt.Errorf("condition cannot combine all and any")
@@ -482,6 +542,8 @@ type DataflowOperator struct {
 	InputPortTypes  map[string]reflect.Type
 	OutputPortTypes map[string]reflect.Type
 	SourceFactory   DataflowSourceFactory
+	Properties      map[string]any
+	ParameterNames  []string
 	SelectOptions   DataflowSelectOptions
 	JoinOptions     DataflowJoinOptions
 	JoinConfigured  bool
@@ -515,6 +577,8 @@ func (d DataflowDefinition) Operators() []DataflowOperator {
 		result[index].OutputPorts = append([]string(nil), result[index].OutputPorts...)
 		result[index].InputPortTypes = cloneDataflowPortTypes(result[index].InputPortTypes)
 		result[index].OutputPortTypes = cloneDataflowPortTypes(result[index].OutputPortTypes)
+		result[index].Properties = maps.Clone(result[index].Properties)
+		result[index].ParameterNames = append([]string(nil), result[index].ParameterNames...)
 		result[index].SelectOptions = cloneDataflowSelectOptions(result[index].SelectOptions)
 		result[index].JoinOptions = cloneDataflowJoinOptions(result[index].JoinOptions)
 	}
@@ -588,6 +652,18 @@ func (b DataflowBuilder) EventBusSink(name, eventType string) DataflowBuilder {
 
 func (b DataflowBuilder) Filter(name string, predicate Expr) DataflowBuilder {
 	return b.add(DataflowOperator{Name: name, Kind: FilterKind, Predicate: predicate})
+}
+
+// FilterWithPorts adds the two-output Filter form. Values satisfying
+// predicate use passPort; all other values use rejectPort. The graph must use
+// ConnectPorts to route both named outputs.
+func (b DataflowBuilder) FilterWithPorts(name string, predicate Expr, passPort, rejectPort string) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:        name,
+		Kind:        FilterKind,
+		Predicate:   predicate,
+		OutputPorts: []string{passPort, rejectPort},
+	})
 }
 
 func (b DataflowBuilder) Select(name string, selections ...Selection) DataflowBuilder {
@@ -683,18 +759,31 @@ func (b DataflowBuilder) LogSink(name string, logger func(context.Context, any) 
 // each instantiated dataflow and its runtime participates in graph processing
 // and optional signal/lifecycle callbacks.
 func (b DataflowBuilder) Custom(name string, factory DataflowOperatorFactory) DataflowBuilder {
-	return b.CustomPorts(name, factory, []string{"in"}, []string{"out"})
+	return b.CustomWithOptions(name, factory, DataflowOperatorOptions{})
+}
+
+// CustomWithOptions adds a conventional custom operator with definition
+// properties and optional parameter names for instance-time injection.
+func (b DataflowBuilder) CustomWithOptions(name string, factory DataflowOperatorFactory, options DataflowOperatorOptions) DataflowBuilder {
+	return b.CustomPortsWithOptions(name, factory, []string{"in"}, []string{"out"}, options)
 }
 
 // CustomPorts adds a custom operator with explicit named input and output
 // ports. Runtime emissions are delivered only to edges matching their port.
 func (b DataflowBuilder) CustomPorts(name string, factory DataflowOperatorFactory, inputs, outputs []string) DataflowBuilder {
+	return b.CustomPortsWithOptions(name, factory, inputs, outputs, DataflowOperatorOptions{})
+}
+
+// CustomPortsWithOptions is the property-aware form of CustomPorts.
+func (b DataflowBuilder) CustomPortsWithOptions(name string, factory DataflowOperatorFactory, inputs, outputs []string, options DataflowOperatorOptions) DataflowBuilder {
 	return b.add(DataflowOperator{
-		Name:        name,
-		Kind:        CustomKind,
-		Factory:     factory,
-		InputPorts:  append([]string(nil), inputs...),
-		OutputPorts: append([]string(nil), outputs...),
+		Name:           name,
+		Kind:           CustomKind,
+		Factory:        factory,
+		InputPorts:     append([]string(nil), inputs...),
+		OutputPorts:    append([]string(nil), outputs...),
+		Properties:     maps.Clone(options.Properties),
+		ParameterNames: append([]string(nil), options.ParameterNames...),
 	})
 }
 
@@ -702,6 +791,12 @@ func (b DataflowBuilder) CustomPorts(name string, factory DataflowOperatorFactor
 // explicit for graph readability while the generic descriptors add compile
 // time intent and Build/runtime assignability checks.
 func (b DataflowBuilder) CustomTypedPorts(name string, factory DataflowOperatorFactory, inputs, outputs []DataflowPort) DataflowBuilder {
+	return b.CustomTypedPortsWithOptions(name, factory, inputs, outputs, DataflowOperatorOptions{})
+}
+
+// CustomTypedPortsWithOptions is the typed property-aware form of
+// CustomTypedPorts.
+func (b DataflowBuilder) CustomTypedPortsWithOptions(name string, factory DataflowOperatorFactory, inputs, outputs []DataflowPort, options DataflowOperatorOptions) DataflowBuilder {
 	inputNames, inputTypes := dataflowPortSpecs(inputs)
 	outputNames, outputTypes := dataflowPortSpecs(outputs)
 	return b.add(DataflowOperator{
@@ -712,6 +807,8 @@ func (b DataflowBuilder) CustomTypedPorts(name string, factory DataflowOperatorF
 		OutputPorts:     outputNames,
 		InputPortTypes:  inputTypes,
 		OutputPortTypes: outputTypes,
+		Properties:      maps.Clone(options.Properties),
+		ParameterNames:  append([]string(nil), options.ParameterNames...),
 	})
 }
 
@@ -720,13 +817,25 @@ func (b DataflowBuilder) CustomTypedPorts(name string, factory DataflowOperatorF
 // DataflowEmitter. Unlike a captive Emitter, a custom source can own its
 // lifecycle and complete the graph when Run returns.
 func (b DataflowBuilder) CustomSource(name string, factory DataflowSourceFactory) DataflowBuilder {
-	return b.CustomTypedSource(name, factory, []DataflowPort{{Name: "out"}})
+	return b.CustomSourceWithOptions(name, factory, DataflowOperatorOptions{})
+}
+
+// CustomSourceWithOptions adds a conventional custom source with
+// instance-time properties and parameter resolution.
+func (b DataflowBuilder) CustomSourceWithOptions(name string, factory DataflowSourceFactory, options DataflowOperatorOptions) DataflowBuilder {
+	return b.CustomTypedSourceWithOptions(name, factory, []DataflowPort{{Name: "out"}}, options)
 }
 
 // CustomTypedSource is the typed counterpart to CustomSource. Source outputs
 // are validated against downstream input ports at Build time and against
 // actual values while the graph is running.
 func (b DataflowBuilder) CustomTypedSource(name string, factory DataflowSourceFactory, outputs []DataflowPort) DataflowBuilder {
+	return b.CustomTypedSourceWithOptions(name, factory, outputs, DataflowOperatorOptions{})
+}
+
+// CustomTypedSourceWithOptions is the typed property-aware form of
+// CustomTypedSource.
+func (b DataflowBuilder) CustomTypedSourceWithOptions(name string, factory DataflowSourceFactory, outputs []DataflowPort, options DataflowOperatorOptions) DataflowBuilder {
 	outputNames, outputTypes := dataflowPortSpecs(outputs)
 	return b.add(DataflowOperator{
 		Name:            name,
@@ -734,6 +843,8 @@ func (b DataflowBuilder) CustomTypedSource(name string, factory DataflowSourceFa
 		OutputPorts:     outputNames,
 		OutputPortTypes: outputTypes,
 		SourceFactory:   factory,
+		Properties:      maps.Clone(options.Properties),
+		ParameterNames:  append([]string(nil), options.ParameterNames...),
 	})
 }
 
@@ -778,10 +889,21 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 		if err := validateDataflowPorts(operator); err != nil {
 			return DataflowDefinition{}, err
 		}
+		if operator.Kind == CustomKind || operator.Kind == CustomSourceKind {
+			if err := (DataflowOperatorOptions{Properties: operator.Properties, ParameterNames: operator.ParameterNames}).validate(); err != nil {
+				return DataflowDefinition{}, WrapError(ErrorInvalidRule, "dataflow operator "+operator.Name, err)
+			}
+		}
 		switch operator.Kind {
 		case FilterKind:
 			if operator.Predicate == nil || operator.Predicate.Type() != typeOf[bool]() {
 				return DataflowDefinition{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow filter %q requires bool predicate", operator.Name))
+			}
+			if len(operator.OutputPorts) > 2 {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow filter %q supports at most two output ports", operator.Name))
+			}
+			if len(operator.OutputPorts) == 2 && len(b.edges) == 0 {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow filter %q with two output ports requires graph edges", operator.Name))
 			}
 		case SelectKind:
 			if err := operator.SelectOptions.validate(); err != nil {
@@ -1072,6 +1194,8 @@ func cloneDataflowDefinition(definition DataflowDefinition) DataflowDefinition {
 		result.operators[index].OutputPorts = append([]string(nil), result.operators[index].OutputPorts...)
 		result.operators[index].InputPortTypes = cloneDataflowPortTypes(result.operators[index].InputPortTypes)
 		result.operators[index].OutputPortTypes = cloneDataflowPortTypes(result.operators[index].OutputPortTypes)
+		result.operators[index].Properties = maps.Clone(result.operators[index].Properties)
+		result.operators[index].ParameterNames = append([]string(nil), result.operators[index].ParameterNames...)
 		result.operators[index].SelectOptions = cloneDataflowSelectOptions(result.operators[index].SelectOptions)
 		result.operators[index].JoinOptions = cloneDataflowJoinOptions(result.operators[index].JoinOptions)
 	}
@@ -1147,7 +1271,13 @@ func inferDataflowBuiltinPorts(operator DataflowOperator) DataflowOperator {
 		// Filter preserves its input representation. The closed union keeps
 		// Event and Row chains valid without pretending that one is fixed.
 		setDataflowBuiltinPortType(&operator.InputPortTypes, "in", dataflowRecordType())
-		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", dataflowRecordType())
+		ports := operator.OutputPorts
+		if len(ports) == 0 {
+			ports = []string{"out"}
+		}
+		for _, port := range ports {
+			setDataflowBuiltinPortType(&operator.OutputPortTypes, port, dataflowRecordType())
+		}
 	case SelectKind:
 		// Select accepts either an Event or a projection Row. Ordinary Select
 		// emits a new Row; SelectEvent emits Event and SelectPassThrough keeps
@@ -1208,7 +1338,13 @@ func inferDataflowConnectedBuiltinPorts(operators []DataflowOperator, byName map
 			switch to.Kind {
 			case FilterKind:
 				edgeChanged = refineDataflowBuiltinPortType(&to.InputPortTypes, "in", output) || edgeChanged
-				edgeChanged = refineDataflowBuiltinPortType(&to.OutputPortTypes, "out", output) || edgeChanged
+				ports := to.OutputPorts
+				if len(ports) == 0 {
+					ports = []string{"out"}
+				}
+				for _, port := range ports {
+					edgeChanged = refineDataflowBuiltinPortType(&to.OutputPortTypes, port, output) || edgeChanged
+				}
 			case SelectKind:
 				port := edge.ToPort
 				if !to.JoinConfigured && port != "in" {
@@ -1281,6 +1417,16 @@ func dataflowBeaconValueType(values []any) reflect.Type {
 		}
 	}
 	return result
+}
+
+func dataflowFilterOutputPorts(operator DataflowOperator) (string, string) {
+	if len(operator.OutputPorts) == 0 {
+		return "out", ""
+	}
+	if len(operator.OutputPorts) == 1 {
+		return operator.OutputPorts[0], ""
+	}
+	return operator.OutputPorts[0], operator.OutputPorts[1]
 }
 
 func dataflowPortAllowed(operator DataflowOperator, output bool, port string) bool {
@@ -1432,6 +1578,50 @@ type DataflowInstance struct {
 	lastError              error
 }
 
+func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowOperator, number int, options DataflowOptions) DataflowOperatorContext {
+	properties := maps.Clone(operator.Properties)
+	if properties == nil {
+		properties = make(map[string]any)
+	}
+	names := make([]string, 0, len(operator.Properties)+len(operator.ParameterNames))
+	seen := make(map[string]struct{}, len(operator.Properties)+len(operator.ParameterNames))
+	for name := range operator.Properties {
+		seen[name] = struct{}{}
+		names = append(names, name)
+	}
+	for _, name := range operator.ParameterNames {
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	if options.ParameterProvider != nil {
+		for _, name := range names {
+			defaultValue := properties[name]
+			value, provided := options.ParameterProvider(DataflowParameterContext{
+				DataflowName:  dataflowName,
+				InstanceID:    instanceID,
+				OperatorName:  operator.Name,
+				OperatorNum:   number,
+				ParameterName: name,
+				DefaultValue:  defaultValue,
+			})
+			if provided {
+				properties[name] = value
+			}
+		}
+	}
+	return DataflowOperatorContext{
+		DataflowName: dataflowName,
+		InstanceID:   instanceID,
+		OperatorName: operator.Name,
+		OperatorNum:  number,
+		Properties:   properties,
+	}
+}
+
 func (e *Engine) InstantiateDataflow(ctx context.Context, definition DataflowDefinition) (*DataflowInstance, error) {
 	return e.InstantiateDataflowWithOptions(ctx, definition, DataflowOptions{})
 }
@@ -1478,13 +1668,15 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 		if operator.Kind == EventBusSourceKind {
 			instance.eventTypes[operator.EventType] = struct{}{}
 		}
+		operatorContext := dataflowOperatorContext(registered.name, options.InstanceID, operator, operatorNumber, options)
 		if operator.Kind == CustomKind {
-			runtime, err := operator.Factory(DataflowOperatorContext{
-				DataflowName: registered.name,
-				InstanceID:   options.InstanceID,
-				OperatorName: operator.Name,
-				OperatorNum:  operatorNumber,
-			})
+			var runtime DataflowOperatorRuntime
+			var err error
+			if options.OperatorProvider != nil {
+				runtime, err = options.OperatorProvider(operatorContext)
+			} else {
+				runtime, err = operator.Factory(operatorContext)
+			}
 			if err != nil {
 				for _, created := range instance.runtimes {
 					if lifecycle, ok := created.(DataflowOperatorCloser); ok {
@@ -1499,12 +1691,13 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 			instance.runtimes[operator.Name] = runtime
 		}
 		if operator.Kind == CustomSourceKind {
-			source, err := operator.SourceFactory(DataflowOperatorContext{
-				DataflowName: registered.name,
-				InstanceID:   options.InstanceID,
-				OperatorName: operator.Name,
-				OperatorNum:  operatorNumber,
-			})
+			var source DataflowSourceRuntime
+			var err error
+			if options.SourceProvider != nil {
+				source, err = options.SourceProvider(operatorContext)
+			} else {
+				source, err = operator.SourceFactory(operatorContext)
+			}
 			if err != nil {
 				for _, created := range instance.runtimes {
 					if lifecycle, ok := created.(DataflowOperatorCloser); ok {
@@ -3320,6 +3513,13 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 			}
 			return emissions, nil
 		}
+		if operator.Kind == FilterKind && len(operator.OutputPorts) > 1 {
+			emissions := make([]DataflowEmission, 0, len(operator.OutputPorts))
+			for _, port := range operator.OutputPorts {
+				emissions = append(emissions, EmitPort(port, signal))
+			}
+			return emissions, nil
+		}
 		if operator.Kind == CustomKind {
 			runtime := d.runtimes[operator.Name]
 			if signalRuntime, ok := runtime.(DataflowOperatorSignalRuntime); ok {
@@ -3355,9 +3555,14 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		result := operator.Predicate.eval(evaluation)
 		pass, ok := boolValue(result)
 		if !ok || !pass {
-			return nil, nil
+			_, rejectPort := dataflowFilterOutputPorts(operator)
+			if rejectPort == "" {
+				return nil, nil
+			}
+			return []DataflowEmission{EmitPort(rejectPort, value)}, nil
 		}
-		return []DataflowEmission{Emit(value)}, nil
+		passPort, _ := dataflowFilterOutputPorts(operator)
+		return []DataflowEmission{EmitPort(passPort, value)}, nil
 	case SelectKind:
 		if operator.JoinConfigured {
 			rows, err := d.processDataflowSelectJoin(operator, inputPort, value)
