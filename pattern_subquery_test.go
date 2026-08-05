@@ -105,3 +105,90 @@ func TestPatternSubqueryCorrelatedExistsMatchesEsper(t *testing.T) {
 		}
 	}
 }
+
+// TestPatternSubqueryInLastEventMatchesEsper mirrors
+// EPLSubselectWithinPattern.EPLSubselectFilterPatternNamedWindowNoAlias's
+// event-stream pattern branch. The reference source is a LastEvent window,
+// so each reference replaces the only value visible to the pattern predicate.
+func TestPatternSubqueryInLastEventMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[patternSubqueryCandidate](env, "PatternSubqueryCandidate"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[patternSubqueryReference](env, "PatternSubqueryReference"); err != nil {
+		t.Fatal(err)
+	}
+
+	inner := Select(From[patternSubqueryReference](env, "PatternSubqueryReference")).Window(LastEvent())
+	pattern := PatternFrom(
+		From[patternSubqueryCandidate](env, "PatternSubqueryCandidate"),
+		"candidate",
+		SubqueryIn[string](
+			Field[patternSubqueryCandidate, string]("symbol"),
+			inner,
+			Field[patternSubqueryReference, string]("symbol"),
+		),
+	).Every()
+	plan, err := env.Build(pattern.Select(
+		Alias("id", TagField[int64]("candidate", "id")),
+	).Query(StatementName("pattern-subquery-in-lastevent")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("pattern IN subquery result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sendCandidate := func(id int64, symbol string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), patternSubqueryCandidate{ID: id, Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendReference := func(id int64, symbol string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), patternSubqueryReference{ID: id, Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// This is the Java tryAssertion sequence. The only matches are the
+	// candidate immediately following LastEvent(A) and the one following
+	// LastEvent(E).
+	sendCandidate(1, "A")
+	sendReference(2, "A")
+	sendCandidate(3, "B")
+	sendReference(4, "C")
+	sendCandidate(5, "C")
+	sendCandidate(6, "A")
+	sendCandidate(7, "D")
+	sendReference(8, "E")
+	sendCandidate(9, "C")
+	sendCandidate(10, "E")
+
+	if len(rows) != 2 {
+		t.Fatalf("pattern IN subquery rows = %#v, want two matches", rows)
+	}
+	wantIDs := []int64{5, 10}
+	for index, wantID := range wantIDs {
+		if got := rows[index].Get("id").Any(); got != wantID {
+			t.Fatalf("pattern IN subquery row %d id = %#v, want %d", index, got, wantID)
+		}
+	}
+}

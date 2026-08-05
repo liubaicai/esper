@@ -501,14 +501,14 @@
     },
     {
       "id": "case.subquery-pattern",
-      "javaRuntimeIds": ["java-runtime-3d9d3a714bd642e784bd"],
-      "javaNames": ["EPLSubselectCorrelated"],
+      "javaRuntimeIds": ["java-runtime-3d9d3a714bd642e784bd", "java-runtime-0db35509697665c0960e", "java-runtime-9a15ec8213060ac0185c"],
+      "javaNames": ["EPLSubselectCorrelated", "EPLSubselectFilterPatternNamedWindowNoAlias", "EPLSubselectAggregation"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectWithinPattern.java"],
-      "goTests": ["TestPatternSubqueryCorrelatedExistsMatchesEsper"],
+      "goTests": ["TestPatternSubqueryCorrelatedExistsMatchesEsper", "TestPatternSubqueryInLastEventMatchesEsper", "TestEventStreamSubqueryAggregationWindowMatchesEsper"],
       "tags": ["correctness", "query", "subquery", "pattern", "correlation"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream, with inner Field expressions and explicit OuterField scope. The test reproduces Java tryAssertionCorrelated's reference-before-candidate sequence and emits candidate ids 5, 6 and 9. The remaining Java execution variants (pattern subquery aggregation, named-window/UDF and named-window IN filtering), invalid diagnostics and broader Pattern/Context/Dataflow combinations remain open."
+      "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream and SubqueryIn over a LastEvent event stream, with inner Field expressions and explicit current-event/OuterField scope. Event-stream SubquerySum over a length(2) source also reproduces the Java rolling aggregate filter sequence across empty, replacement and exact-sum boundaries. The remaining Java execution variants (pattern subquery named-window/UDF), invalid diagnostics and broader Pattern/Context/Dataflow combinations remain open."
     },
     {
       "id": "case.expr-enum-aggregate",
