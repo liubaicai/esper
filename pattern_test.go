@@ -1707,6 +1707,58 @@ func TestPatternWithinOrMaxComposesWithSequenceAndAnd(t *testing.T) {
 	}
 }
 
+func TestPatternMatchUntilNotBranchExpiresAndReleasesState(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	isSymbol := func(symbol string) Expression[bool] {
+		return Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal(symbol))
+	}
+	pattern := PatternFrom(base, "e", isSymbol("A")).And(
+		PatternFrom(base, "b", isSymbol("B")).Not(),
+	).MatchUntil(2, 2).Every().MaxStates(1)
+	plan, err := env.Build(pattern.Select(
+		Alias("first", TagFieldAt[string]("e", 0, "symbol")),
+		Alias("second", TagFieldAt[string]("e", 1, "symbol")),
+	).Query(StatementName("pattern-match-until-not")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := env.NewEngine()
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("incomplete bounded repeat emitted early: %#v", rows)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("first").Any() != "A" || rows[0].Get("second").Any() != "A" {
+		t.Fatalf("negative branch retained a stale max-state slot: %#v", rows)
+	}
+}
+
 func TestPatternWithinExpressionUsesCapturedTagDeadline(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")

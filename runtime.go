@@ -1568,6 +1568,7 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 	contextEvents := e.takeContextEventsLocked()
 	e.mu.Unlock()
 	e.dispatchContextEvents(contextEvents)
+	e.notifyDataflowStatementDeployed(statement)
 	return deployment, nil
 }
 
@@ -1619,6 +1620,7 @@ func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
 		return NewError(ErrorDeployment, fmt.Sprintf("deployment %q not found", deploymentID))
 	}
 	delete(e.deployments, deploymentID)
+	removedStatements := append([]*Statement(nil), deployment.statements...)
 	for _, statement := range deployment.statements {
 		delete(e.statements, statement.name)
 		statement.markClosedLocked()
@@ -1629,6 +1631,9 @@ func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
 	contextEvents := e.takeContextEventsLocked()
 	e.mu.Unlock()
 	e.dispatchContextEvents(contextEvents)
+	for _, statement := range removedStatements {
+		e.notifyDataflowStatementUndeployed(statement)
+	}
 	return closeDeploymentSinks(deployment)
 }
 
@@ -7105,9 +7110,9 @@ func patternProgressActive(progress *patternProgress) bool {
 		return patternProgressActive(progress.left) || patternProgressActive(progress.right)
 	case patternNotNode:
 		// A negative branch is meaningful even before its child has consumed an
-		// event, and a blocked branch must stay resident to suppress later
-		// positive matches in the enclosing And expression.
-		return true
+		// event. Once the forbidden child matches, however, the negative branch
+		// is terminal and must release its enclosing partial match immediately.
+		return !progress.blocked
 	case patternMatchUntilNode:
 		return progress.count > 0 || patternProgressActive(progress.child) || patternProgressActive(progress.right)
 	case patternUntilNode:
@@ -7286,6 +7291,9 @@ func patternWithinTerminal(progress *patternProgress) bool {
 func patternProgressTerminal(progress *patternProgress) bool {
 	if progress == nil {
 		return false
+	}
+	if progress.node != nil && progress.node.kind == patternNotNode && progress.blocked {
+		return true
 	}
 	return progress.expired || patternWithinTerminal(progress)
 }
@@ -7861,7 +7869,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					}
 					continue
 				}
-				if patternWithinTerminal(transition.state) {
+				if patternProgressTerminal(transition.state) {
 					terminal = true
 				}
 				if patternProgressActive(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
@@ -7875,6 +7883,9 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 			armPatternProgressTimers(progress, now, r.variables)
 			starts := advancePatternNodeTrigger(progress, trigger, r.variables)
 			for _, transition := range starts {
+				if patternProgressTerminal(transition.state) {
+					terminal = true
+				}
 				if transition.state == nil || (!transition.complete && !patternProgressActive(transition.state)) {
 					continue
 				}
@@ -7906,7 +7917,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					}
 				} else if patternMatchWithinLimits(nextActive, started, definition) {
 					nextActive = append(nextActive, started)
-					if patternWithinTerminal(transition.state) {
+					if patternProgressTerminal(transition.state) {
 						terminal = true
 					}
 				}
@@ -7916,6 +7927,9 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 			nextActive = nil
 		}
 		r.patternState.active = nextActive
+		if terminal && !definition.every && len(nextActive) == 0 {
+			r.patternState.patternStopped = true
+		}
 		if definition.root != nil && definition.root.kind == patternWithinNode && (terminal || (len(nextActive) == 0 && completed)) {
 			r.patternState.patternStopped = true
 		}
