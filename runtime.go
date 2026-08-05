@@ -6911,7 +6911,12 @@ func armPatternProgressTimers(progress *patternProgress, at time.Time, variables
 		if !progress.timerStarted {
 			progress.timerStarted = true
 			if progress.node.cron != nil {
-				if resolved, err := progress.node.cron.resolve(EvalContext{Now: at, Variables: variables}); err == nil {
+				if resolved, err := progress.node.cron.resolve(EvalContext{
+					Now:       at,
+					Variables: variables,
+					Tags:      progress.tags,
+					TagValues: progress.tagValues,
+				}); err == nil {
 					progress.cronSchedule = resolved
 					progress.cronNext, _ = resolved.nextAfter(at)
 				}

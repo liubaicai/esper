@@ -588,6 +588,19 @@ func (schedule CronSchedule) validate() error {
 }
 
 func (e *Environment) validateCronSchedule(schedule *CronSchedule) error {
+	return e.validateCronScheduleExpressions(schedule, false)
+}
+
+// validateCronScheduleForPattern keeps the output/context restriction that a
+// calendar expression cannot read an unbound event field, while allowing a
+// pattern observer to read fields from already-captured tags. Esper's
+// timer:at property form relies on this distinction (for example,
+// 2*a.intPrimitive after an "a" filter has matched).
+func (e *Environment) validateCronScheduleForPattern(schedule *CronSchedule) error {
+	return e.validateCronScheduleExpressions(schedule, true)
+}
+
+func (e *Environment) validateCronScheduleExpressions(schedule *CronSchedule, allowPatternTags bool) error {
 	if schedule == nil {
 		return nil
 	}
@@ -613,10 +626,16 @@ func (e *Environment) validateCronSchedule(schedule *CronSchedule) error {
 			if expression == nil {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("cron %s expression is required", labels[index]))
 			}
-			var referencedFields []string
-			expression.node().referencedFields(&referencedFields)
-			if len(referencedFields) > 0 {
-				return NewError(ErrorInvalidRule, fmt.Sprintf("cron %s expressions cannot reference event fields", labels[index]))
+			if allowPatternTags {
+				if expressionHasDirectEventField(expression.node()) {
+					return NewError(ErrorInvalidRule, fmt.Sprintf("cron %s expressions cannot reference unbound event fields", labels[index]))
+				}
+			} else {
+				var referencedFields []string
+				expression.node().referencedFields(&referencedFields)
+				if len(referencedFields) > 0 {
+					return NewError(ErrorInvalidRule, fmt.Sprintf("cron %s expressions cannot reference event fields", labels[index]))
+				}
 			}
 			if err := e.validateExprVariables(expression); err != nil {
 				return err
@@ -624,6 +643,25 @@ func (e *Environment) validateCronSchedule(schedule *CronSchedule) error {
 		}
 	}
 	return nil
+}
+
+// expressionHasDirectEventField distinguishes Field expressions from
+// TagField/TagFieldAt expressions. Both participate in the generic
+// referencedFields walk, but only the former is invalid for a pattern timer
+// that is armed after a tag has been captured.
+func expressionHasDirectEventField(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.kind == "field" {
+		return true
+	}
+	for _, child := range node.children {
+		if expressionHasDirectEventField(child) {
+			return true
+		}
+	}
+	return false
 }
 
 func (schedule CronSchedule) resolve(ctx EvalContext) (resolvedCronSchedule, error) {

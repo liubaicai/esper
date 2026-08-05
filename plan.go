@@ -2909,7 +2909,7 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 		}
 		return nil
 	case patternTimerCronNode:
-		return e.validateCronSchedule(node.cron)
+		return e.validateCronScheduleForPattern(node.cron)
 	default:
 		return NewError(ErrorInvalidRule, "unknown pattern expression kind")
 	}
