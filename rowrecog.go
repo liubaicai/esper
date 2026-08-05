@@ -120,6 +120,7 @@ type rowRecogDefinition struct {
 	input                *streamNode
 	pattern              RowPattern
 	defines              map[string]Expr
+	duplicateDefines     map[string]struct{}
 	partition            []Expr
 	allMatches           bool
 	iterateOnly          bool
@@ -135,11 +136,12 @@ func (s Stream[T]) MatchRecognize(pattern RowPattern) RowRecogQuery {
 	return RowRecogQuery{
 		env: s.env,
 		definition: &rowRecogDefinition{
-			input:      s.node,
-			pattern:    pattern,
-			defines:    make(map[string]Expr),
-			allMatches: true,
-			skip:       RowRecogSkipPastLastRow,
+			input:            s.node,
+			pattern:          pattern,
+			defines:          make(map[string]Expr),
+			duplicateDefines: make(map[string]struct{}),
+			allMatches:       true,
+			skip:             RowRecogSkipPastLastRow,
 		},
 	}
 }
@@ -149,11 +151,12 @@ func (s RecordStream) MatchRecognize(pattern RowPattern) RowRecogQuery {
 	return RowRecogQuery{
 		env: s.env,
 		definition: &rowRecogDefinition{
-			input:      s.node,
-			pattern:    pattern,
-			defines:    make(map[string]Expr),
-			allMatches: true,
-			skip:       RowRecogSkipPastLastRow,
+			input:            s.node,
+			pattern:          pattern,
+			defines:          make(map[string]Expr),
+			duplicateDefines: make(map[string]struct{}),
+			allMatches:       true,
+			skip:             RowRecogSkipPastLastRow,
 		},
 		measures: append([]Selection(nil), s.selections...),
 	}
@@ -169,7 +172,14 @@ func (q RowRecogQuery) Define(name string, predicate Expr) RowRecogQuery {
 	if q.definition.defines == nil {
 		q.definition.defines = make(map[string]Expr)
 	}
-	q.definition.defines[strings.TrimSpace(name)] = predicate
+	name = strings.TrimSpace(name)
+	if existing, exists := q.definition.defines[name]; exists && (existing == nil || predicate == nil || existing.Description() != predicate.Description()) {
+		if q.definition.duplicateDefines == nil {
+			q.definition.duplicateDefines = make(map[string]struct{})
+		}
+		q.definition.duplicateDefines[name] = struct{}{}
+	}
+	q.definition.defines[name] = predicate
 	return q
 }
 

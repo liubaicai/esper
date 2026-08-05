@@ -2703,7 +2703,7 @@ func aggregateEverPosition[T any](kind string, expression Expression[T], last bo
 // it counts every event.
 func CountEver(expressions ...Expr) AggregateExpression[int64] {
 	if len(expressions) > 1 {
-		return makeAggregateExpr[int64]("count-ever", "count-ever(<invalid>)", nil, func(EvalContext) Value { return Missing() })
+		return makeAggregateExpr[int64]("count-ever-invalid", "count-ever(<invalid>)", nil, func(EvalContext) Value { return Missing() })
 	}
 	var expression Expr
 	if len(expressions) == 1 {

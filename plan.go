@@ -2118,6 +2118,9 @@ func validateAggregateExpressionNodes(node *exprNode) error {
 	if node == nil {
 		return NewError(ErrorInvalidRule, "aggregate expression node is required")
 	}
+	if node.kind == "count-ever-invalid" {
+		return NewError(ErrorInvalidRule, "count-ever accepts at most one expression")
+	}
 	switch node.kind {
 	case "tag-sum", "tag-avg", "tag-min", "tag-max", "tag-first", "tag-last":
 		if strings.TrimSpace(node.tagName) == "" {
@@ -2356,6 +2359,14 @@ func (e *Environment) validateRowRecog(definition *rowRecogDefinition, selection
 	if len(variables) == 0 {
 		return NewError(ErrorInvalidRule, "match-recognize pattern requires at least one variable")
 	}
+	if len(definition.duplicateDefines) > 0 {
+		duplicates := make([]string, 0, len(definition.duplicateDefines))
+		for name := range definition.duplicateDefines {
+			duplicates = append(duplicates, name)
+		}
+		sort.Strings(duplicates)
+		return NewError(ErrorInvalidRule, fmt.Sprintf("match-recognize DEFINE variable %q has already been defined", duplicates[0]))
+	}
 	for name, predicate := range definition.defines {
 		name = strings.TrimSpace(name)
 		if name == "" {
@@ -2373,8 +2384,11 @@ func (e *Environment) validateRowRecog(definition *rowRecogDefinition, selection
 		if err := e.validateExprFields(definition.input, predicate); err != nil {
 			return fmt.Errorf("DEFINE %q: %w", name, err)
 		}
-		if err := validateRowRecogTags(predicate, variables); err != nil {
+		if err := validateRowRecogDefineTags(predicate, name, definition.pattern, variables); err != nil {
 			return fmt.Errorf("DEFINE %q: %w", name, err)
+		}
+		if rowRecogContainsRegularAggregate(predicate.node()) {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("DEFINE %q cannot contain an aggregate expression", name))
 		}
 	}
 	for index, key := range definition.partition {
@@ -2422,8 +2436,193 @@ func (e *Environment) validateRowRecog(definition *rowRecogDefinition, selection
 		if err := validateRowRecogTags(selection.Expr, variables); err != nil {
 			return fmt.Errorf("measure %q: %w", name, err)
 		}
+		if err := validateRowRecogMeasureAggregates(selection.Expr.node(), definition.pattern); err != nil {
+			return fmt.Errorf("measure %q: %w", name, err)
+		}
 	}
 	return nil
+}
+
+func validateRowRecogDefineTags(expression Expr, variable string, pattern RowPattern, variables map[string]struct{}) error {
+	if expression == nil || expression.node() == nil {
+		return NewError(ErrorInvalidRule, "match-recognize expression is nil")
+	}
+	var tags []string
+	expression.node().referencedTags(&tags)
+	allowed := map[string]struct{}{variable: {}}
+	order, linear := rowPatternLinearVariables(pattern)
+	if linear {
+		position := -1
+		for index, name := range order {
+			if name == variable {
+				position = index
+				break
+			}
+		}
+		if position >= 0 {
+			for _, name := range order[:position] {
+				allowed[name] = struct{}{}
+			}
+		}
+	}
+	for _, tag := range tags {
+		if _, ok := variables[tag]; !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("match-recognize expression references unknown variable tag %q", tag))
+		}
+		if linear {
+			if _, ok := allowed[tag]; !ok {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("DEFINE %q references future variable tag %q", variable, tag))
+			}
+		}
+	}
+	return nil
+}
+
+func rowPatternLinearVariables(pattern RowPattern) ([]string, bool) {
+	result := make([]string, 0)
+	var walk func(RowPattern) bool
+	walk = func(current RowPattern) bool {
+		switch current.kind {
+		case rowPatternVariable:
+			if current.name != "" {
+				result = append(result, current.name)
+			}
+			return true
+		case rowPatternSequence:
+			for _, part := range current.parts {
+				if !walk(part) {
+					return false
+				}
+			}
+			return true
+		default:
+			return false
+		}
+	}
+	if !walk(pattern) {
+		return nil, false
+	}
+	counts := make(map[string]int, len(result))
+	for _, name := range result {
+		counts[name]++
+		if counts[name] > 1 {
+			return nil, false
+		}
+	}
+	return result, true
+}
+
+func rowRecogContainsRegularAggregate(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if rowRecogIsRegularAggregateKind(node.kind) {
+		return true
+	}
+	for _, child := range node.children {
+		if rowRecogContainsRegularAggregate(child) {
+			return true
+		}
+	}
+	return false
+}
+
+func rowRecogIsRegularAggregateKind(kind string) bool {
+	if strings.HasPrefix(kind, "tag-") {
+		return false
+	}
+	if strings.HasPrefix(kind, "aggregate-") || strings.HasPrefix(kind, "linear-regression-") || strings.HasPrefix(kind, "univariate-statistics-") {
+		return true
+	}
+	switch kind {
+	case "count", "sum", "avg", "min", "max", "first", "last", "first-ever", "last-ever", "count-ever", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "correlation", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "sorted", "set", "count-min-frequency", "count-min-total":
+		return true
+	default:
+		return false
+	}
+}
+
+func validateRowRecogMeasureAggregates(node *exprNode, pattern RowPattern) error {
+	if node == nil {
+		return NewError(ErrorInvalidRule, "match-recognize expression is nil")
+	}
+	if rowRecogIsRegularAggregateKind(node.kind) {
+		var tags []string
+		node.referencedTags(&tags)
+		unique := make(map[string]struct{}, len(tags))
+		for _, tag := range tags {
+			unique[tag] = struct{}{}
+		}
+		if len(unique) == 0 {
+			// Go's ordinary aggregate expressions intentionally evaluate over
+			// the current match group. CountAll and Sum(Field(...)) therefore
+			// remain valid even though the Java EPL spelling would require an
+			// explicit group-variable property.
+			return nil
+		}
+		if len(unique) > 1 {
+			return NewError(ErrorInvalidRule, "aggregate measure must refer to properties of exactly one group variable returning multiple events")
+		}
+		for tag := range unique {
+			if !rowPatternVariableMayRepeat(pattern, tag) {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("aggregate measure group variable %q must return multiple events", tag))
+			}
+		}
+	}
+	for _, child := range node.children {
+		if err := validateRowRecogMeasureAggregates(child, pattern); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func rowPatternVariableMayRepeat(pattern RowPattern, name string) bool {
+	if !rowPatternContainsVariableNamed(pattern, name) {
+		return false
+	}
+	_, maximum := rowPatternBounds(pattern)
+	if maximum == 0 || maximum > 1 {
+		return true
+	}
+	if pattern.kind == rowPatternVariable {
+		return false
+	}
+	if rowPatternVariableCount(pattern, name) > 1 {
+		return true
+	}
+	for _, part := range pattern.parts {
+		if rowPatternVariableMayRepeat(part, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func rowPatternContainsVariableNamed(pattern RowPattern, name string) bool {
+	if pattern.kind == rowPatternVariable {
+		return pattern.name == name
+	}
+	for _, part := range pattern.parts {
+		if rowPatternContainsVariableNamed(part, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func rowPatternVariableCount(pattern RowPattern, name string) int {
+	if pattern.kind == rowPatternVariable {
+		if pattern.name == name {
+			return 1
+		}
+		return 0
+	}
+	count := 0
+	for _, part := range pattern.parts {
+		count += rowPatternVariableCount(part, name)
+	}
+	return count
 }
 
 func validateRowRecogTags(expression Expr, variables map[string]struct{}) error {
