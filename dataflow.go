@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"fmt"
+	"maps"
 	"reflect"
 	"sort"
 	"sync"
@@ -203,19 +204,35 @@ const (
 	CustomKind            DataflowOperatorKind = "Custom"
 )
 
+// DataflowPort declares a named operator port and, optionally, the Go value
+// type accepted or emitted by that port. A nil Type is a wildcard, which is
+// useful for built-in operators whose runtime value is an Event or Row.
+type DataflowPort struct {
+	Name string
+	Type reflect.Type
+}
+
+// DataflowPortOf creates a typed port descriptor without exposing reflect in
+// ordinary fluent graph definitions.
+func DataflowPortOf[T any](name string) DataflowPort {
+	return DataflowPort{Name: name, Type: typeOf[T]()}
+}
+
 type DataflowOperator struct {
-	Name        string
-	Kind        DataflowOperatorKind
-	Events      []any
-	EventType   string
-	Predicate   Expr
-	Selections  []Selection
-	Log         func(context.Context, any) error
-	Statement   *Statement
-	Signal      DataflowSignalHandler
-	Factory     DataflowOperatorFactory
-	InputPorts  []string
-	OutputPorts []string
+	Name            string
+	Kind            DataflowOperatorKind
+	Events          []any
+	EventType       string
+	Predicate       Expr
+	Selections      []Selection
+	Log             func(context.Context, any) error
+	Statement       *Statement
+	Signal          DataflowSignalHandler
+	Factory         DataflowOperatorFactory
+	InputPorts      []string
+	OutputPorts     []string
+	InputPortTypes  map[string]reflect.Type
+	OutputPortTypes map[string]reflect.Type
 }
 
 // DataflowEdge connects an operator output port to an operator input port.
@@ -244,6 +261,8 @@ func (d DataflowDefinition) Operators() []DataflowOperator {
 		result[index].Selections = append([]Selection(nil), result[index].Selections...)
 		result[index].InputPorts = append([]string(nil), result[index].InputPorts...)
 		result[index].OutputPorts = append([]string(nil), result[index].OutputPorts...)
+		result[index].InputPortTypes = cloneDataflowPortTypes(result[index].InputPortTypes)
+		result[index].OutputPortTypes = cloneDataflowPortTypes(result[index].OutputPortTypes)
 	}
 	return result
 }
@@ -332,6 +351,23 @@ func (b DataflowBuilder) CustomPorts(name string, factory DataflowOperatorFactor
 		Factory:     factory,
 		InputPorts:  append([]string(nil), inputs...),
 		OutputPorts: append([]string(nil), outputs...),
+	})
+}
+
+// CustomTypedPorts is the typed counterpart to CustomPorts. Port names remain
+// explicit for graph readability while the generic descriptors add compile
+// time intent and Build/runtime assignability checks.
+func (b DataflowBuilder) CustomTypedPorts(name string, factory DataflowOperatorFactory, inputs, outputs []DataflowPort) DataflowBuilder {
+	inputNames, inputTypes := dataflowPortSpecs(inputs)
+	outputNames, outputTypes := dataflowPortSpecs(outputs)
+	return b.add(DataflowOperator{
+		Name:            name,
+		Kind:            CustomKind,
+		Factory:         factory,
+		InputPorts:      inputNames,
+		OutputPorts:     outputNames,
+		InputPortTypes:  inputTypes,
+		OutputPortTypes: outputTypes,
 	})
 }
 
@@ -448,6 +484,11 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 			}
 			if !dataflowPortAllowed(operatorsByName[edge.To], false, edge.ToPort) {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow edge references unknown input port %q on operator %q", edge.ToPort, edge.To))
+			}
+			if outputType := dataflowPortType(operatorsByName[edge.From], true, edge.FromPort); outputType != nil {
+				if inputType := dataflowPortType(operatorsByName[edge.To], false, edge.ToPort); inputType != nil && !dataflowTypesAssignable(outputType, inputType) {
+					return DataflowDefinition{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow edge %q:%q -> %q:%q cannot assign %s to %s", edge.From, edge.FromPort, edge.To, edge.ToPort, outputType, inputType))
+				}
 			}
 			if _, duplicate := seenEdges[edge]; duplicate {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow duplicates edge %q:%q -> %q:%q", edge.From, edge.FromPort, edge.To, edge.ToPort))
@@ -615,7 +656,42 @@ func validateDataflowPorts(operator DataflowOperator) error {
 			seen[port] = struct{}{}
 		}
 	}
+	for direction, types := range map[string]map[string]reflect.Type{
+		"input":  operator.InputPortTypes,
+		"output": operator.OutputPortTypes,
+	} {
+		for port, typ := range types {
+			if !dataflowPortAllowed(operator, direction == "output", port) {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow %s port type references undeclared port %q on operator %q", direction, port, operator.Name))
+			}
+			if typ == nil {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow %s port type on operator %q cannot be nil", direction, operator.Name))
+			}
+		}
+	}
 	return nil
+}
+
+func dataflowPortSpecs(specs []DataflowPort) ([]string, map[string]reflect.Type) {
+	names := make([]string, 0, len(specs))
+	types := make(map[string]reflect.Type, len(specs))
+	for _, spec := range specs {
+		names = append(names, spec.Name)
+		if spec.Type != nil {
+			types[spec.Name] = spec.Type
+		}
+	}
+	if len(types) == 0 {
+		types = nil
+	}
+	return names, types
+}
+
+func cloneDataflowPortTypes(types map[string]reflect.Type) map[string]reflect.Type {
+	if len(types) == 0 {
+		return nil
+	}
+	return maps.Clone(types)
 }
 
 func dataflowPortAllowed(operator DataflowOperator, output bool, port string) bool {
@@ -635,6 +711,27 @@ func dataflowPortAllowed(operator DataflowOperator, output bool, port string) bo
 		}
 	}
 	return false
+}
+
+func dataflowPortType(operator DataflowOperator, output bool, port string) reflect.Type {
+	if output {
+		return operator.OutputPortTypes[port]
+	}
+	return operator.InputPortTypes[port]
+}
+
+func dataflowTypesAssignable(output, input reflect.Type) bool {
+	if output == nil || input == nil {
+		return true
+	}
+	return output.AssignableTo(input)
+}
+
+func dataflowValueAssignable(value any, expected reflect.Type) bool {
+	if expected == nil || value == nil {
+		return true
+	}
+	return reflect.TypeOf(value).AssignableTo(expected)
 }
 
 type DataflowStats struct {
@@ -1434,6 +1531,11 @@ func (d *DataflowInstance) processGraphFrom(ctx context.Context, event any, star
 		operator, ok := d.operators[item.operator]
 		if !ok {
 			return NewError(ErrorUnknownName, fmt.Sprintf("dataflow graph references unknown operator %q", item.operator))
+		}
+		if _, signal := item.value.(DataflowSignal); !signal {
+			if expected := dataflowPortType(operator, false, item.port); expected != nil && !dataflowValueAssignable(item.value, expected) {
+				return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow operator %q input port %q received %T, want %s", operator.Name, item.port, item.value, expected))
+			}
 		}
 		emissions, err := d.applyGraphOperator(ctx, operator, item.port, item.value)
 		if err != nil {
