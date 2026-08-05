@@ -95,6 +95,81 @@ func TestRowRecogVariantStreamPreservesMemberType(t *testing.T) {
 	}
 }
 
+func TestRowRecogVariantAnyStreamMatchesDynamicMembers(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[rowRecogVariantS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[rowRecogVariantS2](env, "SupportBean_S2"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterVariantAny(env, "MyAnyVariant"); err != nil {
+		t.Fatal(err)
+	}
+
+	memberType := func(name string) Expression[bool] {
+		actual := Func1[Event, string]("event-type", func(event Event) string {
+			return event.TypeName()
+		}, EventValue[Event]())
+		return Equal[string](actual, Literal(name))
+	}
+	variantStream := FromAny(env, "MyAnyVariant").Window(KeepAll())
+	query := variantStream.MatchRecognize(RowSequence(RowVar("A"), RowVar("B"))).
+		Define("A", memberType("SupportBean_S0")).
+		Define("B", memberType("SupportBean_S2")).
+		Measures(
+			Alias("a", TagField[int]("A", "id")),
+			Alias("b", TagField[int]("B", "id")),
+		).
+		Query(StatementName("rowrecog-variant-any"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := collectRowRecogRows(t, deployment)
+
+	s0Insert, err := env.Build(From[rowRecogVariantS0](env, "SupportBean_S0").InsertInto("MyAnyVariant", StatementName("variant-any-s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), s0Insert); err != nil {
+		t.Fatal(err)
+	}
+	s2Insert, err := env.Build(From[rowRecogVariantS2](env, "SupportBean_S2").InsertInto("MyAnyVariant", StatementName("variant-any-s2")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), s2Insert); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := engine.SendEvent(context.Background(), rowRecogVariantS0{ID: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), rowRecogVariantS2{ID: 20}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*rows) != 1 || (*rows)[0].Get("a").Any() != 10 || (*rows)[0].Get("b").Any() != 20 {
+		t.Fatalf("ANY variant row-recognize listener rows = %#v", *rows)
+	}
+	snapshot, err := deployment.Statements()[0].Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Results()) != 1 {
+		t.Fatalf("ANY variant row-recognize snapshot = %#v", snapshot.Results())
+	}
+	row, ok := snapshot.Results()[0].Row()
+	if !ok || row.Get("a").Any() != 10 || row.Get("b").Any() != 20 {
+		t.Fatalf("ANY variant row-recognize snapshot row = %#v", snapshot.Results())
+	}
+}
+
 func TestRowRecogVariantStreamRejectsInvalidMemberRoute(t *testing.T) {
 	env := NewEnvironment()
 	member, err := RegisterStruct[rowRecogVariantS0](env, "SupportBean_S0")

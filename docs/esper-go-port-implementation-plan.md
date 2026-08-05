@@ -1163,6 +1163,8 @@ CI 分别报告 capability coverage、source-test disposition coverage 和 case 
 
 本轮进一步复核 Java `ViewMultikeyWArray`，修复 Go `Unique`/`FirstUnique` 只写入 keyed map、却没有进入 Snapshot/Prev/Prior 历史的问题：`UniqueBy`/`FirstUniqueBy` 现在支持多个 analyzable key，key identity 保留 Value state/type/content，稳定保存首次 key 顺序，并在 `GroupWindow(..., Unique(...))` 中递归生成分区历史。新增唯一窗口快照、嵌套 group、new/old replacement、多键 first-unique、primitive/object/二维 array-key、array-key GroupWindow 和 array-key union/intersection 测试；同时对照 Java `ViewTimeOrderAndTimeToLive`，补齐 TimeOrder 的外部时间排序、虚拟时钟到期和迟到边界事件的即时 old-stream。继续对照 Java `ViewRank`/`ViewMultiKeyRank`，新增 `RankWindowBy(size, uniqueKeys, sortKeys...)`，实现唯一键替换、满窗口时的 pass-through new+old、按排序键淘汰最末事件和快照顺序，并修正 Sort/Rank 同分时各自不同的到达顺序/淘汰策略，登记为 `view.window-core` / `case.view-window-core`；subquery/named-window/dataflow 传播、更多导航和完整 Java trace 仍未完成。
 
+本轮继续对照 Java `ViewTimeOrderAndTimeToLive` 的 `#timetolive(timestamp)`：新增链式 `TimeToLiveAt(expr)`，把事件的 integral epoch-millisecond 字段解释为绝对到期时间，而不是把字段值当作插入后的相对时长；虚拟时钟在边界一次淘汰同时间事件，已过期事件在插入时产生同批 new/old，named window retention 也保留该语义。`TestTimeToLiveAtWindowUsesAbsoluteEventExpiry`、非法类型测试和 `TestNamedWindowTimeToLiveAtUsesAbsoluteEventExpiry` 固定 Java 用例的 E1–E6 生命周期；`prevtail`/`prevcount`/`prevwindow`、Grouped/Month-scoped 完整 trace、subquery/named-window/dataflow 传播和共享 Java/Go trace 仍待继续移植。
+
 ### 17.3 后续每次提交的强制核对项
 
 每实现一个 capability，提交必须同时更新四类证据：
@@ -1344,3 +1346,5 @@ RowRecog 入口拆分如下，后续必须以此表逐项消项，不能以 `Tes
 本轮继续对照 Java `RowRecogNFAView` 的 transition/state-pool 生命周期：新增轻量 Thompson 风格 NFA 计数器，在启用 engine-wide MaxStates 时按当前节点消费、后继边申请、终态释放维护每个起点的实际活动状态；覆盖 `A* B` 的循环 fan-out、`(A|B)* C` 的交替分支、PreventStart/no-prevent、skip、窗口删除与 undeploy 释放，并禁用一对一 fast path 以避免状态池只看起点。`TestRowRecogStatePoolCountsRepeatedNFAStates` 与 `TestRowRecogStatePoolCountsAlternatingNFAStates` 固定重复/交替 successor overflow 和完整释放；NFA 节点扩展、嵌套动态量词、部分分支被 PreventStart 拒绝后的精确结果过滤、Java global TimeSource 配置和性能基线仍保持 `partial`。
 
 随后补充同一起点的终态/续接分支竞争：当 `A*` 的终态允许输出而循环 successor 因 `PreventStart` 被拒绝时，状态池会按 `start/end/captures` match key 过滤结果，保留当前终态并阻断后续重建。`TestRowRecogStatePoolAllowsAcceptedTerminalWhenContinuationIsBlocked` 固定该 Java transition 边界；更复杂的分支级结果排序、interval/terminated 延迟终态、嵌套动态量词和完整 global configuration 仍待继续对照。
+
+本轮继续补齐 Java `RowRecogVariantStream` 之外的 Variant ANY 路由场景：`TestRowRecogVariantAnyStreamMatchesDynamicMembers` 注册 ANY Variant，通过两个 typed `InsertInto` 将不同 concrete member Event 路由到同一逻辑流，在链式 `MatchRecognize` 的 DEFINE 中按 `Event.TypeName()` 区分动态成员，并同时对照 listener 与 Snapshot。该切片证明 ANY Variant 可进入 RowRecog 的成员类型路由，但 Variant 的完整 dynamic property getter/cache、fragment/metadata、late schema、supertype coercion、mixed new/old order 和 rowrecog/subquery/FAF/serde 全矩阵仍未完成。
