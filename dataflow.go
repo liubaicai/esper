@@ -53,6 +53,17 @@ func (s CustomSignal) SignalType() string { return s.Type }
 // Returning an error aborts the current dataflow submission.
 type DataflowSignalHandler func(context.Context, DataflowSignal) error
 
+// DataflowRecord is the closed union of values emitted by Esper's built-in
+// event-oriented operators: Event for an event stream and Row for a
+// projection. It gives Filter and Select one typed contract while retaining
+// the concrete value shape at runtime.
+type DataflowRecord interface {
+	dataflowRecord()
+}
+
+func (Event) dataflowRecord() {}
+func (Row) dataflowRecord()   {}
+
 // DataflowOperatorContext describes the graph and operator instance supplied
 // to a custom operator factory.  A fresh runtime is created for every
 // DataflowInstance, matching Esper's factory/operator split.
@@ -465,7 +476,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 	}
 	seen := make(map[string]struct{}, len(b.operators))
 	operatorsByName := make(map[string]DataflowOperator, len(b.operators))
-	for _, operator := range b.operators {
+	operators := make([]DataflowOperator, 0, len(b.operators))
+	for _, original := range b.operators {
+		operator := inferDataflowBuiltinPorts(original)
 		if operator.Name == "" || operator.Kind == "" {
 			return DataflowDefinition{}, NewError(ErrorInvalidRule, "dataflow operator requires a name and kind")
 		}
@@ -474,6 +487,7 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 		}
 		seen[operator.Name] = struct{}{}
 		operatorsByName[operator.Name] = operator
+		operators = append(operators, operator)
 		if err := validateDataflowPorts(operator); err != nil {
 			return DataflowDefinition{}, err
 		}
@@ -519,7 +533,7 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 			}
 		}
 	}
-	operators := append([]DataflowOperator(nil), b.operators...)
+	inferDataflowConnectedBuiltinPorts(operators, operatorsByName, b.edges)
 	for name, handler := range b.signals {
 		found := false
 		for index := range operators {
@@ -764,6 +778,140 @@ func cloneDataflowPortTypes(types map[string]reflect.Type) map[string]reflect.Ty
 		return nil
 	}
 	return maps.Clone(types)
+}
+
+// inferDataflowBuiltinPorts fills the Go value contract for built-ins whose
+// runtime representation is stable. Custom operators keep their explicit
+// declarations. A nil type remains a wildcard when a source is empty or can
+// legitimately emit heterogeneous values.
+func inferDataflowBuiltinPorts(operator DataflowOperator) DataflowOperator {
+	operator.InputPortTypes = cloneDataflowPortTypes(operator.InputPortTypes)
+	operator.OutputPortTypes = cloneDataflowPortTypes(operator.OutputPortTypes)
+	eventType := reflect.TypeOf(Event{})
+	rowType := reflect.TypeOf(Row{})
+	switch operator.Kind {
+	case EventBusSourceKind:
+		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", eventType)
+	case EventBusSinkKind:
+		setDataflowBuiltinPortType(&operator.InputPortTypes, "in", eventType)
+	case FilterKind:
+		// Filter preserves its input representation. The closed union keeps
+		// Event and Row chains valid without pretending that one is fixed.
+		setDataflowBuiltinPortType(&operator.InputPortTypes, "in", dataflowRecordType())
+		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", dataflowRecordType())
+	case SelectKind:
+		// Select accepts either an Event or a projection Row and always emits a
+		// new Row projection.
+		setDataflowBuiltinPortType(&operator.InputPortTypes, "in", dataflowRecordType())
+		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", rowType)
+	case EPStatementSourceKind:
+		if operator.Statement != nil {
+			if _, projected := operator.Statement.Plan().ResultSchema(); projected {
+				setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", rowType)
+			} else {
+				setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", eventType)
+			}
+		}
+	case BeaconSourceKind:
+		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", dataflowBeaconValueType(operator.Events))
+	}
+	return operator
+}
+
+// inferDataflowConnectedBuiltinPorts narrows the Event/Row union for a
+// Filter or Select when its upstream port has an exact built-in type. This
+// keeps EventBusSource -> Filter -> EventBusSink statically valid while also
+// allowing EPStatementSource(Row) -> Filter(ResultField) -> Select graphs.
+func inferDataflowConnectedBuiltinPorts(operators []DataflowOperator, byName map[string]DataflowOperator, edges []DataflowEdge) {
+	indexes := make(map[string]int, len(operators))
+	for index, operator := range operators {
+		indexes[operator.Name] = index
+	}
+	for pass := 0; pass < len(operators)+1; pass++ {
+		changed := false
+		for _, edge := range edges {
+			from, fromOK := byName[edge.From]
+			to, toOK := byName[edge.To]
+			if !fromOK || !toOK || edge.FromPort != "out" || edge.ToPort != "in" {
+				continue
+			}
+			output := dataflowPortType(from, true, edge.FromPort)
+			if output == nil || (output != reflect.TypeOf(Event{}) && output != reflect.TypeOf(Row{})) {
+				continue
+			}
+			edgeChanged := false
+			switch to.Kind {
+			case FilterKind:
+				edgeChanged = refineDataflowBuiltinPortType(&to.InputPortTypes, "in", output) || edgeChanged
+				edgeChanged = refineDataflowBuiltinPortType(&to.OutputPortTypes, "out", output) || edgeChanged
+			case SelectKind:
+				edgeChanged = refineDataflowBuiltinPortType(&to.InputPortTypes, "in", output) || edgeChanged
+			}
+			if edgeChanged {
+				changed = true
+				byName[to.Name] = to
+				operators[indexes[to.Name]] = to
+			}
+		}
+		if !changed {
+			return
+		}
+	}
+}
+
+func setDataflowBuiltinPortType(types *map[string]reflect.Type, port string, typ reflect.Type) {
+	if typ == nil || types == nil {
+		return
+	}
+	if *types == nil {
+		*types = make(map[string]reflect.Type)
+	}
+	if _, exists := (*types)[port]; !exists {
+		(*types)[port] = typ
+	}
+}
+
+func refineDataflowBuiltinPortType(types *map[string]reflect.Type, port string, typ reflect.Type) bool {
+	if typ == nil || types == nil {
+		return false
+	}
+	if *types == nil {
+		*types = make(map[string]reflect.Type)
+	}
+	current, exists := (*types)[port]
+	if exists && current != nil && current != dataflowRecordType() {
+		return false
+	}
+	if exists && current == typ {
+		return false
+	}
+	(*types)[port] = typ
+	return true
+}
+
+func dataflowRecordType() reflect.Type {
+	return reflect.TypeOf((*DataflowRecord)(nil)).Elem()
+}
+
+func dataflowBeaconValueType(values []any) reflect.Type {
+	var result reflect.Type
+	for _, value := range values {
+		if _, signal := value.(DataflowSignal); signal {
+			continue
+		}
+		typ := reflect.TypeOf(value)
+		if typ == nil {
+			return nil
+		}
+		if result == nil {
+			result = typ
+			continue
+		}
+		if result != typ {
+			return nil
+		}
+	}
+	return result
 }
 
 func dataflowPortAllowed(operator DataflowOperator, output bool, port string) bool {
@@ -1585,23 +1733,38 @@ func (d *DataflowInstance) process(ctx context.Context, event any) error {
 	return nil
 }
 
-func (d *DataflowInstance) dataflowEvaluation(operator DataflowOperator, event Event) (EvalContext, error) {
+func (d *DataflowInstance) dataflowEvaluation(operator DataflowOperator, value any) (EvalContext, error) {
 	if d == nil || d.engine == nil {
 		return EvalContext{}, NewError(ErrorDependency, "dataflow operator has no engine")
 	}
 	now := d.engine.Now()
 	variables := d.engine.Variables()
+	evaluation := EvalContext{Engine: d.engine, Now: now, Variables: variables}
+	if event, ok := value.(Event); ok {
+		evaluation.Event = event
+	} else if row, ok := value.(Row); ok {
+		// Dataflow Select/Filter can consume projection rows produced by an
+		// EPStatementSource. ResultField is the analyzable row-property
+		// counterpart to Field and reads this private evaluation scope.
+		rowCopy := row
+		evaluation.resultRow = &rowCopy
+	} else {
+		return EvalContext{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow operator %q requires Event or Row input, got %T", operator.Name, value))
+	}
 	if registry := d.subqueryRegistries[operator.Name]; registry != nil {
-		if err := registry.accept(event, now, variables); err != nil {
-			return EvalContext{}, err
+		if event, ok := value.(Event); ok {
+			if err := registry.accept(event, now, variables); err != nil {
+				return EvalContext{}, err
+			}
 		}
 		variables = registry.attachVariables(variables)
+		evaluation.Variables = variables
 	}
-	return EvalContext{Event: event, Engine: d.engine, Now: now, Variables: variables}, nil
+	return evaluation, nil
 }
 
-func (d *DataflowInstance) evaluateDataflowSelect(operator DataflowOperator, event Event) (Row, error) {
-	evaluation, err := d.dataflowEvaluation(operator, event)
+func (d *DataflowInstance) evaluateDataflowSelect(operator DataflowOperator, value any) (Row, error) {
+	evaluation, err := d.dataflowEvaluation(operator, value)
 	if err != nil {
 		return Row{}, err
 	}
@@ -1708,11 +1871,12 @@ func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
 		case FilterKind:
 			filtered := make([]any, 0, len(current))
 			for _, candidate := range current {
-				eventValue, ok := candidate.(Event)
-				if !ok {
-					continue
+				if _, isEvent := candidate.(Event); !isEvent {
+					if _, isRow := candidate.(Row); !isRow {
+						continue
+					}
 				}
-				evaluation, err := d.dataflowEvaluation(operator, eventValue)
+				evaluation, err := d.dataflowEvaluation(operator, candidate)
 				if err != nil {
 					return err
 				}
@@ -1725,11 +1889,12 @@ func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
 		case SelectKind:
 			selected := make([]any, 0, len(current))
 			for _, candidate := range current {
-				eventValue, ok := candidate.(Event)
-				if !ok {
-					continue
+				if _, isEvent := candidate.(Event); !isEvent {
+					if _, isRow := candidate.(Row); !isRow {
+						continue
+					}
 				}
-				row, err := d.evaluateDataflowSelect(operator, eventValue)
+				row, err := d.evaluateDataflowSelect(operator, candidate)
 				if err != nil {
 					return err
 				}
@@ -1971,11 +2136,12 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		runtime := d.runtimes[operator.Name]
 		return runtime.Process(ctx, DataflowInput{Port: inputPort, Value: value})
 	case FilterKind:
-		eventValue, ok := value.(Event)
-		if !ok {
-			return nil, nil
+		if _, isEvent := value.(Event); !isEvent {
+			if _, isRow := value.(Row); !isRow {
+				return nil, nil
+			}
 		}
-		evaluation, err := d.dataflowEvaluation(operator, eventValue)
+		evaluation, err := d.dataflowEvaluation(operator, value)
 		if err != nil {
 			return nil, err
 		}
@@ -1986,11 +2152,12 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		}
 		return []DataflowEmission{Emit(value)}, nil
 	case SelectKind:
-		eventValue, ok := value.(Event)
-		if !ok {
-			return nil, nil
+		if _, isEvent := value.(Event); !isEvent {
+			if _, isRow := value.(Row); !isRow {
+				return nil, nil
+			}
 		}
-		row, err := d.evaluateDataflowSelect(operator, eventValue)
+		row, err := d.evaluateDataflowSelect(operator, value)
 		if err != nil {
 			return nil, err
 		}

@@ -71,3 +71,67 @@ func TestDataflowEPStatementSourceConsumesPatternRowsMatchesEsper(t *testing.T) 
 		t.Fatalf("pattern dataflow row = %#v", row)
 	}
 }
+
+// TestDataflowBuiltinsProcessPatternRowsMatchesEsper verifies that the
+// built-in Filter and Select operators retain projection-row values instead
+// of treating an EPStatementSource result as a missing Event.
+func TestDataflowBuiltinsProcessPatternRowsMatchesEsper(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	pattern := PatternFrom(
+		base,
+		"a",
+		Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("A")),
+	).FollowedBy(
+		"b",
+		Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("B")),
+	).Every()
+	patternPlan, err := env.Build(pattern.Select(
+		Alias("first", TagField[string]("a", "symbol")),
+		Alias("second", TagField[string]("b", "symbol")),
+	).Query(StatementName("pattern-row-source")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	patternDeployment, err := engine.Deploy(context.Background(), patternPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer patternDeployment.Undeploy(context.Background())
+
+	definition, err := DefineDataflow(env, "pattern-row-builtins").
+		EPStatementSource("pattern", patternDeployment.Statements()[0]).
+		Filter("only-b", Equal[string](ResultField[string]("second"), Literal("B"))).
+		Select("project", Alias("first", ResultField[string]("first")), Alias("second", ResultField[string]("second"))).
+		Emitter("sink").
+		Connect("pattern", "only-b").
+		Connect("only-b", "project").
+		Connect("project", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	instance, err := engine.InstantiateDataflow(context.Background(), definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := instance.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer instance.Cancel(context.Background())
+
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	outputs := instance.Outputs()
+	if len(outputs) != 1 {
+		t.Fatalf("pattern row built-in outputs = %#v", outputs)
+	}
+	row, ok := outputs[0].(Row)
+	if !ok || row.Get("first").Any() != "A" || row.Get("second").Any() != "B" {
+		t.Fatalf("pattern row built-in output = %#v", outputs[0])
+	}
+}

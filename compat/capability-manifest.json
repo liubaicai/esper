@@ -253,10 +253,10 @@
       "level": "S",
       "summary": "Fluent dataflow definitions, graph ports, source lifecycle, signal-marker propagation and instance control plane",
       "javaRefs": ["EPLDataflowOpEventBusSource", "EPLDataflowOpFilter", "EPLDataflowOpSelect"],
-      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_pattern_test.go", "dataflow_reentrant_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go", "dataflow_source_test.go"],
+      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_pattern_test.go", "dataflow_port_inference_test.go", "dataflow_reentrant_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go", "dataflow_source_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["built-in event/row port inference", "persisted cross-process saved instances/configuration", "complete multi-port captive/join and exception recovery parity"]
+      "remaining": ["built-in event/row port inference for all representations and join/multi-input forms", "persisted cross-process saved instances/configuration", "complete multi-port captive/join and exception recovery parity"]
     },
     {
       "id": "join.basic",
@@ -548,11 +548,11 @@
       "javaRuntimeIds": ["java-runtime-2d7b6229c7a3b2bee40b"],
       "javaNames": ["EPLDataflowAllTypes"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEPStatementSource.java"],
-      "goTests": ["TestDataflowEPStatementSourceConsumesPatternRowsMatchesEsper"],
+      "goTests": ["TestDataflowEPStatementSourceConsumesPatternRowsMatchesEsper", "TestDataflowBuiltinsProcessPatternRowsMatchesEsper", "TestDataflowBuiltinPortInferenceMatchesEsper"],
       "tags": ["correctness", "dataflow", "epstatement-source", "row"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "Go maps the EPStatement source through an existing fluent Pattern statement and preserves projected Row values into the graph. Java also covers all event representations, dynamic statement names, statement filters and invalid EPL-specific source diagnostics."
+      "difference": "Go maps the EPStatement source through an existing fluent Pattern statement and preserves projected Row values into the graph; built-in Filter/Select can consume those rows through analyzable ResultField expressions, and Build infers Event versus Row for EventBus/statement ports with connected narrowing. Java also covers all event representations, dynamic statement names, statement filters and invalid EPL-specific source diagnostics."
     },
     {
       "id": "case.expr-enum-aggregate",
