@@ -290,6 +290,46 @@ func (o DataflowSelectOptions) validate() error {
 	return nil
 }
 
+// DataflowJoinKind selects the row-availability policy for a multi-input
+// SelectJoin. Inner joins wait until every input has a value; FullOuter emits
+// a tuple with Null-valued missing inputs as soon as any input arrives.
+type DataflowJoinKind uint8
+
+const (
+	DataflowJoinInner DataflowJoinKind = iota
+	DataflowJoinFullOuter
+)
+
+// DataflowJoinRetention controls whether each input keeps only its latest
+// event or all events for Cartesian combinations.
+type DataflowJoinRetention uint8
+
+const (
+	DataflowJoinLastEvent DataflowJoinRetention = iota
+	DataflowJoinKeepAll
+)
+
+// DataflowJoinOptions describes the named input ports of SelectJoin. Input
+// port i is named "in<i>" and is connected with ConnectInput or ConnectPorts.
+type DataflowJoinOptions struct {
+	Inputs    int
+	Kind      DataflowJoinKind
+	Retention DataflowJoinRetention
+}
+
+func (o DataflowJoinOptions) validate() error {
+	if o.Inputs < 2 {
+		return NewError(ErrorInvalidRule, "dataflow select join requires at least two inputs")
+	}
+	if o.Kind != DataflowJoinInner && o.Kind != DataflowJoinFullOuter {
+		return NewError(ErrorInvalidRule, "unknown dataflow select join kind")
+	}
+	if o.Retention != DataflowJoinLastEvent && o.Retention != DataflowJoinKeepAll {
+		return NewError(ErrorInvalidRule, "unknown dataflow select join retention")
+	}
+	return nil
+}
+
 // DataflowPort declares a named operator port and, optionally, the Go value
 // type accepted or emitted by that port. A nil Type is a wildcard, which is
 // useful for built-in operators whose runtime value is an Event or Row.
@@ -321,6 +361,8 @@ type DataflowOperator struct {
 	OutputPortTypes map[string]reflect.Type
 	SourceFactory   DataflowSourceFactory
 	SelectOptions   DataflowSelectOptions
+	JoinOptions     DataflowJoinOptions
+	JoinConfigured  bool
 }
 
 // DataflowEdge connects an operator output port to an operator input port.
@@ -391,6 +433,15 @@ func (b DataflowBuilder) ConnectPorts(from, fromPort, to, toPort string) Dataflo
 	return result
 }
 
+// ConnectInput connects a source to the indexed SelectJoin input port.
+func (b DataflowBuilder) ConnectInput(from, to string, input int) DataflowBuilder {
+	return b.ConnectPorts(from, "out", to, dataflowJoinInputPort(input))
+}
+
+func dataflowJoinInputPort(input int) string {
+	return fmt.Sprintf("in%d", input)
+}
+
 func (b DataflowBuilder) BeaconSource(name string, events ...any) DataflowBuilder {
 	return b.add(DataflowOperator{Name: name, Kind: BeaconSourceKind, Events: append([]any(nil), events...)})
 }
@@ -442,6 +493,28 @@ func (b DataflowBuilder) SelectTimeWindow(name string, duration time.Duration, s
 // current projection per virtual-clock interval.
 func (b DataflowBuilder) SelectSnapshotEvery(name string, interval time.Duration, selections ...Selection) DataflowBuilder {
 	return b.SelectWithOptions(name, DataflowSelectOptions{OutputSnapshotEvery: interval}, selections...)
+}
+
+// SelectJoin adds an analyzable multi-input projection. JoinField and
+// JoinEventValue use the same zero-based input index as the generated in<i>
+// ports, keeping source scope explicit in Go code.
+func (b DataflowBuilder) SelectJoin(name string, options DataflowJoinOptions, selections ...Selection) DataflowBuilder {
+	capacity := 0
+	if options.Inputs > 0 {
+		capacity = options.Inputs
+	}
+	ports := make([]string, 0, capacity)
+	for index := 0; index < options.Inputs; index++ {
+		ports = append(ports, dataflowJoinInputPort(index))
+	}
+	return b.add(DataflowOperator{
+		Name:           name,
+		Kind:           SelectKind,
+		Selections:     append([]Selection(nil), selections...),
+		InputPorts:     ports,
+		JoinOptions:    options,
+		JoinConfigured: true,
+	})
 }
 
 func (b DataflowBuilder) LogSink(name string, logger func(context.Context, any) error) DataflowBuilder {
@@ -556,6 +629,14 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 			if err := operator.SelectOptions.validate(); err != nil {
 				return DataflowDefinition{}, WrapError(ErrorInvalidRule, "dataflow select "+operator.Name, err)
 			}
+			if operator.JoinConfigured {
+				if err := operator.JoinOptions.validate(); err != nil {
+					return DataflowDefinition{}, WrapError(ErrorInvalidRule, "dataflow select join "+operator.Name, err)
+				}
+				if len(b.edges) == 0 {
+					return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join %q requires graph input edges", operator.Name))
+				}
+			}
 			if len(operator.Selections) == 0 {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select %q requires projections", operator.Name))
 			}
@@ -611,6 +692,12 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 		adjacency := make(map[string][]string, len(b.operators))
 		indegree := make(map[string]int, len(b.operators))
 		seenEdges := make(map[DataflowEdge]struct{}, len(b.edges))
+		seenJoinInputs := make(map[string]map[string]struct{})
+		for _, operator := range operators {
+			if operator.Kind == SelectKind && operator.JoinConfigured {
+				seenJoinInputs[operator.Name] = make(map[string]struct{}, len(operator.InputPorts))
+			}
+		}
 		for _, edge := range b.edges {
 			if edge.From == "" || edge.To == "" || edge.FromPort == "" || edge.ToPort == "" {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, "dataflow edge requires source, source port, target and target port")
@@ -639,6 +726,12 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow duplicates edge %q:%q -> %q:%q", edge.From, edge.FromPort, edge.To, edge.ToPort))
 			}
 			seenEdges[edge] = struct{}{}
+			if _, join := seenJoinInputs[edge.To]; join {
+				if _, duplicateInput := seenJoinInputs[edge.To][edge.ToPort]; duplicateInput {
+					return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join %q has multiple edges for input port %q", edge.To, edge.ToPort))
+				}
+				seenJoinInputs[edge.To][edge.ToPort] = struct{}{}
+			}
 			adjacency[edge.From] = append(adjacency[edge.From], edge.To)
 			indegree[edge.To]++
 		}
@@ -662,6 +755,16 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 		}
 		if visited != len(b.operators) {
 			return DataflowDefinition{}, NewError(ErrorInvalidRule, "dataflow graph contains a cycle")
+		}
+		for _, operator := range operators {
+			if operator.Kind != SelectKind || !operator.JoinConfigured {
+				continue
+			}
+			for _, port := range operator.InputPorts {
+				if _, connected := seenJoinInputs[operator.Name][port]; !connected {
+					return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join %q requires an edge for input port %q", operator.Name, port))
+				}
+			}
 		}
 	}
 	definition := DataflowDefinition{
@@ -874,7 +977,13 @@ func inferDataflowBuiltinPorts(operator DataflowOperator) DataflowOperator {
 	case SelectKind:
 		// Select accepts either an Event or a projection Row and always emits a
 		// new Row projection.
-		setDataflowBuiltinPortType(&operator.InputPortTypes, "in", dataflowRecordType())
+		if operator.JoinConfigured {
+			for _, port := range operator.InputPorts {
+				setDataflowBuiltinPortType(&operator.InputPortTypes, port, dataflowRecordType())
+			}
+		} else {
+			setDataflowBuiltinPortType(&operator.InputPortTypes, "in", dataflowRecordType())
+		}
 		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", rowType)
 	case EPStatementSourceKind:
 		if operator.Statement != nil {
@@ -904,7 +1013,10 @@ func inferDataflowConnectedBuiltinPorts(operators []DataflowOperator, byName map
 		for _, edge := range edges {
 			from, fromOK := byName[edge.From]
 			to, toOK := byName[edge.To]
-			if !fromOK || !toOK || edge.FromPort != "out" || edge.ToPort != "in" {
+			if !fromOK || !toOK || edge.FromPort != "out" {
+				continue
+			}
+			if edge.ToPort != "in" && !(to.Kind == SelectKind && to.JoinConfigured) {
 				continue
 			}
 			output := dataflowPortType(from, true, edge.FromPort)
@@ -917,7 +1029,11 @@ func inferDataflowConnectedBuiltinPorts(operators []DataflowOperator, byName map
 				edgeChanged = refineDataflowBuiltinPortType(&to.InputPortTypes, "in", output) || edgeChanged
 				edgeChanged = refineDataflowBuiltinPortType(&to.OutputPortTypes, "out", output) || edgeChanged
 			case SelectKind:
-				edgeChanged = refineDataflowBuiltinPortType(&to.InputPortTypes, "in", output) || edgeChanged
+				port := edge.ToPort
+				if !to.JoinConfigured && port != "in" {
+					continue
+				}
+				edgeChanged = refineDataflowBuiltinPortType(&to.InputPortTypes, port, output) || edgeChanged
 			}
 			if edgeChanged {
 				changed = true
@@ -1041,11 +1157,14 @@ type dataflowSelectEvent struct {
 type dataflowSelectState struct {
 	mu         sync.Mutex
 	options    DataflowSelectOptions
+	join       DataflowJoinOptions
 	events     []dataflowSelectEvent
 	ever       []Event
 	lastEvent  Event
 	nextOutput time.Time
 	started    bool
+	joinLatest []*Event
+	joinAll    [][]Event
 }
 
 type DataflowInstance struct {
@@ -1199,7 +1318,15 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 			}
 		}
 		if operator.Kind == SelectKind {
-			instance.selectStates[operator.Name] = &dataflowSelectState{options: operator.SelectOptions}
+			state := &dataflowSelectState{
+				options: operator.SelectOptions,
+				join:    operator.JoinOptions,
+			}
+			if operator.JoinConfigured {
+				state.joinLatest = make([]*Event, operator.JoinOptions.Inputs)
+				state.joinAll = make([][]Event, operator.JoinOptions.Inputs)
+			}
+			instance.selectStates[operator.Name] = state
 		}
 	}
 	for _, edge := range registered.edges {
@@ -2079,6 +2206,104 @@ func (d *DataflowInstance) processDataflowSelect(operator DataflowOperator, valu
 	return []any{row}, nil
 }
 
+func (d *DataflowInstance) processDataflowSelectJoin(operator DataflowOperator, inputPort string, value any) ([]any, error) {
+	event, ok := value.(Event)
+	if !ok {
+		return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow select join %q requires Event input, got %T", operator.Name, value))
+	}
+	state := d.selectStates[operator.Name]
+	if state == nil {
+		return nil, NewError(ErrorDependency, fmt.Sprintf("dataflow select join %q has no runtime state", operator.Name))
+	}
+	input := -1
+	for index, port := range operator.InputPorts {
+		if port == inputPort {
+			input = index
+			break
+		}
+	}
+	if input < 0 || input >= state.join.Inputs {
+		return nil, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join %q received unknown input port %q", operator.Name, inputPort))
+	}
+	now := d.engine.Now()
+	state.mu.Lock()
+	tuples := state.joinTuples(input, event)
+	rows := make([]any, 0, len(tuples))
+	for _, tuple := range tuples {
+		joinEvent := newJoinTupleEvent(tuple, now)
+		row, err := d.evaluateDataflowSelectWithGroups(operator, joinEvent, nil, nil, true)
+		if err != nil {
+			state.mu.Unlock()
+			return nil, err
+		}
+		rows = append(rows, row)
+	}
+	state.mu.Unlock()
+	return rows, nil
+}
+
+func (s *dataflowSelectState) joinTuples(input int, event Event) [][]Event {
+	if s == nil || input < 0 || input >= len(s.joinLatest) {
+		return nil
+	}
+	if s.join.Retention == DataflowJoinKeepAll {
+		s.joinAll[input] = append(s.joinAll[input], event)
+		complete := true
+		for _, events := range s.joinAll {
+			if len(events) == 0 {
+				complete = false
+				break
+			}
+		}
+		if s.join.Kind == DataflowJoinInner && !complete {
+			return nil
+		}
+		lists := make([][]Event, len(s.joinAll))
+		for index, events := range s.joinAll {
+			if index == input {
+				// Only combinations containing the newly arrived event are
+				// new-stream rows. Replaying the full Cartesian product would
+				// duplicate rows whenever an existing input receives another
+				// event.
+				lists[index] = []Event{event}
+			} else if len(events) == 0 {
+				lists[index] = []Event{{}}
+			} else {
+				lists[index] = events
+			}
+		}
+		return cartesianDataflowJoinTuples(lists, 0, nil)
+	}
+
+	copyEvent := event
+	s.joinLatest[input] = &copyEvent
+	if s.join.Kind == DataflowJoinInner {
+		for _, latest := range s.joinLatest {
+			if latest == nil {
+				return nil
+			}
+		}
+	}
+	tuple := make([]Event, len(s.joinLatest))
+	for index, latest := range s.joinLatest {
+		if latest != nil {
+			tuple[index] = *latest
+		}
+	}
+	return [][]Event{tuple}
+}
+
+func cartesianDataflowJoinTuples(lists [][]Event, index int, prefix []Event) [][]Event {
+	if index == len(lists) {
+		return [][]Event{append([]Event(nil), prefix...)}
+	}
+	result := make([][]Event, 0)
+	for _, event := range lists[index] {
+		result = append(result, cartesianDataflowJoinTuples(lists, index+1, append(prefix, event))...)
+	}
+	return result
+}
+
 func (s *dataflowSelectState) currentEvents() []Event {
 	result := make([]Event, 0, len(s.events))
 	for _, item := range s.events {
@@ -2546,6 +2771,17 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		}
 		return []DataflowEmission{Emit(value)}, nil
 	case SelectKind:
+		if operator.JoinConfigured {
+			rows, err := d.processDataflowSelectJoin(operator, inputPort, value)
+			if err != nil {
+				return nil, err
+			}
+			emissions := make([]DataflowEmission, 0, len(rows))
+			for _, row := range rows {
+				emissions = append(emissions, Emit(row))
+			}
+			return emissions, nil
+		}
 		if _, isEvent := value.(Event); !isEvent {
 			if _, isRow := value.(Row); !isRow {
 				return nil, nil
