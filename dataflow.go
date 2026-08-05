@@ -35,6 +35,15 @@ type FinalMarker struct{}
 
 func (FinalMarker) SignalType() string { return "final" }
 
+func isDataflowFinalMarker(signal DataflowSignal) bool {
+	switch signal.(type) {
+	case FinalMarker, *FinalMarker:
+		return true
+	default:
+		return false
+	}
+}
+
 // WindowMarker marks a logical window boundary without ending the flow.
 type WindowMarker struct{}
 
@@ -265,10 +274,14 @@ const (
 // Select operator. A zero value preserves the original per-input emission
 // behavior. TimeWindow retains Event inputs for the supplied duration, while
 // OutputSnapshotEvery emits the current projection on each virtual-clock
-// interval instead of on every input.
+// interval instead of on every input. IterateOnFinalMarker retains a finite
+// Event batch and emits one row per GroupBy key when FinalMarker arrives.
 type DataflowSelectOptions struct {
-	TimeWindow          time.Duration
-	OutputSnapshotEvery time.Duration
+	TimeWindow           time.Duration
+	OutputSnapshotEvery  time.Duration
+	IterateOnFinalMarker bool
+	GroupBy              []Expr
+	OrderBy              []SortKey
 }
 
 func (o DataflowSelectOptions) validate() error {
@@ -277,6 +290,22 @@ func (o DataflowSelectOptions) validate() error {
 	}
 	if o.OutputSnapshotEvery < 0 {
 		return NewError(ErrorInvalidRule, "dataflow select snapshot interval cannot be negative")
+	}
+	if !o.IterateOnFinalMarker && (len(o.GroupBy) > 0 || len(o.OrderBy) > 0) {
+		return NewError(ErrorInvalidRule, "dataflow select group/order options require iterate-on-final-marker")
+	}
+	for index, expression := range o.GroupBy {
+		if expression == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select group-by expression %d is nil", index))
+		}
+	}
+	for index, key := range o.OrderBy {
+		if key.Expr == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select order-by expression %d is nil", index))
+		}
+	}
+	if o.IterateOnFinalMarker && (o.TimeWindow > 0 || o.OutputSnapshotEvery > 0) {
+		return NewError(ErrorInvalidRule, "dataflow select iterate-on-final-marker cannot combine with time or output snapshots")
 	}
 	if o.TimeWindow == 0 && o.OutputSnapshotEvery == 0 {
 		return nil
@@ -288,6 +317,12 @@ func (o DataflowSelectOptions) validate() error {
 		return NewError(ErrorInvalidRule, "dataflow select snapshot interval must have nanosecond precision")
 	}
 	return nil
+}
+
+func cloneDataflowSelectOptions(options DataflowSelectOptions) DataflowSelectOptions {
+	options.GroupBy = append([]Expr(nil), options.GroupBy...)
+	options.OrderBy = append([]SortKey(nil), options.OrderBy...)
+	return options
 }
 
 // DataflowJoinKind selects the row-availability policy for a multi-input
@@ -468,6 +503,7 @@ func (d DataflowDefinition) Operators() []DataflowOperator {
 		result[index].OutputPorts = append([]string(nil), result[index].OutputPorts...)
 		result[index].InputPortTypes = cloneDataflowPortTypes(result[index].InputPortTypes)
 		result[index].OutputPortTypes = cloneDataflowPortTypes(result[index].OutputPortTypes)
+		result[index].SelectOptions = cloneDataflowSelectOptions(result[index].SelectOptions)
 		result[index].JoinOptions = cloneDataflowJoinOptions(result[index].JoinOptions)
 	}
 	return result
@@ -555,7 +591,7 @@ func (b DataflowBuilder) SelectWithOptions(name string, options DataflowSelectOp
 		Name:          name,
 		Kind:          SelectKind,
 		Selections:    append([]Selection(nil), selections...),
-		SelectOptions: options,
+		SelectOptions: cloneDataflowSelectOptions(options),
 	})
 }
 
@@ -569,6 +605,22 @@ func (b DataflowBuilder) SelectTimeWindow(name string, duration time.Duration, s
 // current projection per virtual-clock interval.
 func (b DataflowBuilder) SelectSnapshotEvery(name string, interval time.Duration, selections ...Selection) DataflowBuilder {
 	return b.SelectWithOptions(name, DataflowSelectOptions{OutputSnapshotEvery: interval}, selections...)
+}
+
+// SelectIterate retains the finite input batch and emits grouped projections
+// only when a FinalMarker reaches the operator. OrderBy uses the same SortKey,
+// Ascending and Descending descriptors as ordinary fluent queries.
+func (b DataflowBuilder) SelectIterate(name string, groupBy []Expr, orderBy []SortKey, selections ...Selection) DataflowBuilder {
+	return b.SelectWithOptions(name, DataflowSelectOptions{
+		IterateOnFinalMarker: true,
+		GroupBy:              groupBy,
+		OrderBy:              orderBy,
+	}, selections...)
+}
+
+// SelectIterateOnFinalMarker is the concise ungrouped form of SelectIterate.
+func (b DataflowBuilder) SelectIterateOnFinalMarker(name string, selections ...Selection) DataflowBuilder {
+	return b.SelectIterate(name, nil, nil, selections...)
 }
 
 // SelectJoin adds an analyzable multi-input projection. JoinField and
@@ -976,6 +1028,7 @@ func cloneDataflowDefinition(definition DataflowDefinition) DataflowDefinition {
 		result.operators[index].OutputPorts = append([]string(nil), result.operators[index].OutputPorts...)
 		result.operators[index].InputPortTypes = cloneDataflowPortTypes(result.operators[index].InputPortTypes)
 		result.operators[index].OutputPortTypes = cloneDataflowPortTypes(result.operators[index].OutputPortTypes)
+		result.operators[index].SelectOptions = cloneDataflowSelectOptions(result.operators[index].SelectOptions)
 		result.operators[index].JoinOptions = cloneDataflowJoinOptions(result.operators[index].JoinOptions)
 	}
 	return result
@@ -1231,17 +1284,26 @@ type dataflowSelectEvent struct {
 	at    time.Time
 }
 
+type dataflowSelectGroup struct {
+	events   []Event
+	ever     []Event
+	current  Event
+	sequence uint64
+}
+
 type dataflowSelectState struct {
-	mu         sync.Mutex
-	options    DataflowSelectOptions
-	join       DataflowJoinOptions
-	events     []dataflowSelectEvent
-	ever       []Event
-	lastEvent  Event
-	nextOutput time.Time
-	started    bool
-	joinLatest []*Event
-	joinAll    [][]Event
+	mu             sync.Mutex
+	options        DataflowSelectOptions
+	join           DataflowJoinOptions
+	events         []dataflowSelectEvent
+	ever           []Event
+	lastEvent      Event
+	nextOutput     time.Time
+	started        bool
+	iterateGroups  map[string]*dataflowSelectGroup
+	nextGroupOrder uint64
+	joinLatest     []*Event
+	joinAll        [][]Event
 }
 
 type DataflowInstance struct {
@@ -1396,8 +1458,9 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 		}
 		if operator.Kind == SelectKind {
 			state := &dataflowSelectState{
-				options: operator.SelectOptions,
-				join:    operator.JoinOptions,
+				options:       cloneDataflowSelectOptions(operator.SelectOptions),
+				join:          operator.JoinOptions,
+				iterateGroups: make(map[string]*dataflowSelectGroup),
 			}
 			if operator.JoinConfigured {
 				state.joinLatest = make([]*Event, operator.JoinOptions.Inputs)
@@ -2251,6 +2314,112 @@ func (d *DataflowInstance) evaluateDataflowSelectWithGroups(operator DataflowOpe
 	return newRow(schema, values), nil
 }
 
+func (d *DataflowInstance) dataflowSelectGroupKey(operator DataflowOperator, event Event) (string, error) {
+	if len(operator.SelectOptions.GroupBy) == 0 {
+		return "<all>", nil
+	}
+	evaluation, err := d.dataflowEvaluationWithGroups(operator, event, nil, nil, false)
+	if err != nil {
+		return "", err
+	}
+	values := make([]any, 0, len(operator.SelectOptions.GroupBy))
+	for _, expression := range operator.SelectOptions.GroupBy {
+		if expression == nil {
+			return "", NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select %q contains nil group-by expression", operator.Name))
+		}
+		values = append(values, expression.eval(evaluation).Any())
+	}
+	return encodeKey(values), nil
+}
+
+func (d *DataflowInstance) processDataflowSelectIterate(operator DataflowOperator, value any) ([]any, error) {
+	event, ok := value.(Event)
+	if !ok {
+		return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow select %q iterate-on-final-marker requires Event input, got %T", operator.Name, value))
+	}
+	state := d.selectStates[operator.Name]
+	if state == nil {
+		return nil, NewError(ErrorDependency, fmt.Sprintf("dataflow select %q has no runtime state", operator.Name))
+	}
+	key, err := d.dataflowSelectGroupKey(operator, event)
+	if err != nil {
+		return nil, err
+	}
+	state.mu.Lock()
+	group := state.iterateGroups[key]
+	if group == nil {
+		state.nextGroupOrder++
+		group = &dataflowSelectGroup{sequence: state.nextGroupOrder}
+		state.iterateGroups[key] = group
+	}
+	group.events = append(group.events, event)
+	group.ever = append(group.ever, event)
+	group.current = event
+	state.mu.Unlock()
+	return nil, nil
+}
+
+type dataflowSelectSnapshotEntry struct {
+	row         Row
+	orderValues []Value
+}
+
+func (d *DataflowInstance) processDataflowSelectFinalMarker(operator DataflowOperator) ([]any, error) {
+	state := d.selectStates[operator.Name]
+	if state == nil {
+		return nil, NewError(ErrorDependency, fmt.Sprintf("dataflow select %q has no runtime state", operator.Name))
+	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	entries := make([]dataflowSelectSnapshotEntry, 0, len(state.iterateGroups))
+	groups := make([]*dataflowSelectGroup, 0, len(state.iterateGroups))
+	for _, group := range state.iterateGroups {
+		groups = append(groups, group)
+	}
+	sort.Slice(groups, func(left, right int) bool {
+		return groups[left].sequence < groups[right].sequence
+	})
+	for _, group := range groups {
+		if group == nil || len(group.events) == 0 {
+			continue
+		}
+		row, err := d.evaluateDataflowSelectWithGroups(operator, group.current, group.events, group.ever, false)
+		if err != nil {
+			return nil, err
+		}
+		entry := dataflowSelectSnapshotEntry{row: row}
+		for _, key := range operator.SelectOptions.OrderBy {
+			evaluation, err := d.dataflowEvaluationWithGroups(operator, group.current, group.events, group.ever, false)
+			if err != nil {
+				return nil, err
+			}
+			evaluation.resultRow = &entry.row
+			entry.orderValues = append(entry.orderValues, key.Expr.eval(evaluation))
+		}
+		entries = append(entries, entry)
+	}
+	if len(operator.SelectOptions.OrderBy) > 0 {
+		sort.SliceStable(entries, func(left, right int) bool {
+			for index, key := range operator.SelectOptions.OrderBy {
+				comparison, comparable := compareOrderValues(entries[left].orderValues[index], entries[right].orderValues[index])
+				if !comparable || comparison == 0 {
+					continue
+				}
+				if key.Descending {
+					return comparison > 0
+				}
+				return comparison < 0
+			}
+			return false
+		})
+	}
+	rows := make([]any, 0, len(entries))
+	for _, entry := range entries {
+		rows = append(rows, entry.row)
+	}
+	return rows, nil
+}
+
 func (d *DataflowInstance) processDataflowSelect(operator DataflowOperator, value any) ([]any, error) {
 	state := d.selectStates[operator.Name]
 	if state == nil {
@@ -2259,6 +2428,9 @@ func (d *DataflowInstance) processDataflowSelect(operator DataflowOperator, valu
 			return nil, err
 		}
 		return []any{row}, nil
+	}
+	if state.options.IterateOnFinalMarker {
+		return d.processDataflowSelectIterate(operator, value)
 	}
 	now := d.engine.Now()
 	state.mu.Lock()
@@ -2498,7 +2670,7 @@ func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
 	d.mu.Unlock()
 	if signal, ok := event.(DataflowSignal); ok {
 		current := []any{signal}
-		for _, operator := range d.definition.operators {
+		for index, operator := range d.definition.operators {
 			next := make([]any, 0, len(current))
 			for _, candidate := range current {
 				candidateSignal, isSignal := candidate.(DataflowSignal)
@@ -2506,6 +2678,18 @@ func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
 					if err := operator.Signal(ctx, candidateSignal); err != nil {
 						return err
 					}
+				}
+				if isSignal && operator.Kind == SelectKind && operator.SelectOptions.IterateOnFinalMarker && isDataflowFinalMarker(candidateSignal) {
+					rows, err := d.processDataflowSelectFinalMarker(operator)
+					if err != nil {
+						return err
+					}
+					for _, row := range rows {
+						if err := d.processLinearValues(ctx, []any{row}, index+1, false); err != nil {
+							return err
+						}
+					}
+					continue
 				}
 				if operator.Kind == CustomKind {
 					runtime := d.runtimes[operator.Name]
@@ -2826,6 +3010,17 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 			if err := operator.Signal(ctx, signal); err != nil {
 				return nil, err
 			}
+		}
+		if operator.Kind == SelectKind && operator.SelectOptions.IterateOnFinalMarker && isDataflowFinalMarker(signal) {
+			rows, err := d.processDataflowSelectFinalMarker(operator)
+			if err != nil {
+				return nil, err
+			}
+			emissions := make([]DataflowEmission, 0, len(rows))
+			for _, row := range rows {
+				emissions = append(emissions, Emit(row))
+			}
+			return emissions, nil
 		}
 		if operator.Kind == CustomKind {
 			runtime := d.runtimes[operator.Name]
