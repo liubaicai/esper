@@ -312,9 +312,18 @@ const (
 // DataflowJoinOptions describes the named input ports of SelectJoin. Input
 // port i is named "in<i>" and is connected with ConnectInput or ConnectPorts.
 type DataflowJoinOptions struct {
-	Inputs    int
-	Kind      DataflowJoinKind
-	Retention DataflowJoinRetention
+	Inputs     int
+	Kind       DataflowJoinKind
+	Retention  DataflowJoinRetention
+	Conditions []JoinCondition
+}
+
+// On appends analyzable join predicates to a SelectJoin. Multiple predicates
+// are combined with AND, matching MultiJoinStream.On while keeping the
+// dataflow definition free of EPL strings.
+func (o DataflowJoinOptions) On(conditions ...JoinCondition) DataflowJoinOptions {
+	o.Conditions = append(cloneJoinConditions(o.Conditions), conditions...)
+	return o
 }
 
 func (o DataflowJoinOptions) validate() error {
@@ -327,7 +336,73 @@ func (o DataflowJoinOptions) validate() error {
 	if o.Retention != DataflowJoinLastEvent && o.Retention != DataflowJoinKeepAll {
 		return NewError(ErrorInvalidRule, "unknown dataflow select join retention")
 	}
+	for index, condition := range o.Conditions {
+		if err := validateDataflowJoinCondition(condition, o.Inputs); err != nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join condition %d: %v", index, err))
+		}
+	}
 	return nil
+}
+
+func validateDataflowJoinCondition(condition JoinCondition, inputs int) error {
+	if len(condition.all) > 0 && len(condition.any) > 0 {
+		return fmt.Errorf("condition cannot combine all and any")
+	}
+	if len(condition.all) > 0 || len(condition.any) > 0 {
+		children := condition.all
+		logic := "all"
+		if len(condition.any) > 0 {
+			children = condition.any
+			logic = "any"
+		}
+		if len(children) == 0 {
+			return fmt.Errorf("%s condition requires at least one child", logic)
+		}
+		for index, child := range children {
+			if err := validateDataflowJoinCondition(child, inputs); err != nil {
+				return fmt.Errorf("%s child %d: %w", logic, index, err)
+			}
+		}
+		return nil
+	}
+	if condition.Left == nil || condition.Right == nil {
+		return fmt.Errorf("condition requires left and right expressions")
+	}
+	leftSource, rightSource := joinConditionSources(condition)
+	if leftSource < 0 || leftSource >= inputs || rightSource < 0 || rightSource >= inputs {
+		return fmt.Errorf("condition source indexes (%d,%d) are outside %d inputs", leftSource, rightSource, inputs)
+	}
+	if condition.Comparison > JoinGreaterOrEqual {
+		return fmt.Errorf("unknown join comparison %d", condition.Comparison)
+	}
+	return nil
+}
+
+func cloneJoinCondition(condition JoinCondition) JoinCondition {
+	result := condition
+	if len(condition.all) > 0 {
+		result.all = cloneJoinConditions(condition.all)
+	}
+	if len(condition.any) > 0 {
+		result.any = cloneJoinConditions(condition.any)
+	}
+	return result
+}
+
+func cloneJoinConditions(conditions []JoinCondition) []JoinCondition {
+	if len(conditions) == 0 {
+		return nil
+	}
+	result := make([]JoinCondition, len(conditions))
+	for index, condition := range conditions {
+		result[index] = cloneJoinCondition(condition)
+	}
+	return result
+}
+
+func cloneDataflowJoinOptions(options DataflowJoinOptions) DataflowJoinOptions {
+	options.Conditions = cloneJoinConditions(options.Conditions)
+	return options
 }
 
 // DataflowPort declares a named operator port and, optionally, the Go value
@@ -393,6 +468,7 @@ func (d DataflowDefinition) Operators() []DataflowOperator {
 		result[index].OutputPorts = append([]string(nil), result[index].OutputPorts...)
 		result[index].InputPortTypes = cloneDataflowPortTypes(result[index].InputPortTypes)
 		result[index].OutputPortTypes = cloneDataflowPortTypes(result[index].OutputPortTypes)
+		result[index].JoinOptions = cloneDataflowJoinOptions(result[index].JoinOptions)
 	}
 	return result
 }
@@ -512,7 +588,7 @@ func (b DataflowBuilder) SelectJoin(name string, options DataflowJoinOptions, se
 		Kind:           SelectKind,
 		Selections:     append([]Selection(nil), selections...),
 		InputPorts:     ports,
-		JoinOptions:    options,
+		JoinOptions:    cloneDataflowJoinOptions(options),
 		JoinConfigured: true,
 	})
 }
@@ -900,6 +976,7 @@ func cloneDataflowDefinition(definition DataflowDefinition) DataflowDefinition {
 		result.operators[index].OutputPorts = append([]string(nil), result.operators[index].OutputPorts...)
 		result.operators[index].InputPortTypes = cloneDataflowPortTypes(result.operators[index].InputPortTypes)
 		result.operators[index].OutputPortTypes = cloneDataflowPortTypes(result.operators[index].OutputPortTypes)
+		result.operators[index].JoinOptions = cloneDataflowJoinOptions(result.operators[index].JoinOptions)
 	}
 	return result
 }
@@ -2226,8 +2303,26 @@ func (d *DataflowInstance) processDataflowSelectJoin(operator DataflowOperator, 
 		return nil, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join %q received unknown input port %q", operator.Name, inputPort))
 	}
 	now := d.engine.Now()
+	variables := d.engine.Variables()
 	state.mu.Lock()
 	tuples := state.joinTuples(input, event)
+	if len(state.join.Conditions) > 0 {
+		matched := make([][]Event, 0, len(tuples))
+		for _, tuple := range tuples {
+			if joinConditionsMatchWithVariables(state.join.Conditions, tuple, now, variables) {
+				matched = append(matched, tuple)
+			}
+		}
+		// SelectJoin is insert-stream oriented. If a full-outer input has no
+		// matching combination, emit its unmatched tuple once; rows emitted
+		// for earlier inputs are not replayed when a later side arrives.
+		if len(matched) == 0 && state.join.Kind == DataflowJoinFullOuter {
+			unmatched := make([]Event, state.join.Inputs)
+			unmatched[input] = event
+			matched = append(matched, unmatched)
+		}
+		tuples = matched
+	}
 	rows := make([]any, 0, len(tuples))
 	for _, tuple := range tuples {
 		joinEvent := newJoinTupleEvent(tuple, now)

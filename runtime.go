@@ -5137,9 +5137,16 @@ func (r *statementRuntime) snapshotCurrentSourceSide(source, base *streamNode, n
 }
 
 func (r *statementRuntime) joinMatches(condition JoinCondition, events []Event, now time.Time) bool {
+	if r == nil {
+		return false
+	}
+	return joinConditionMatches(condition, events, now, r.variables)
+}
+
+func joinConditionMatches(condition JoinCondition, events []Event, now time.Time, variables map[string]Value) bool {
 	if len(condition.all) > 0 {
 		for _, child := range condition.all {
-			if !r.joinMatches(child, events, now) {
+			if !joinConditionMatches(child, events, now, variables) {
 				return false
 			}
 		}
@@ -5147,7 +5154,7 @@ func (r *statementRuntime) joinMatches(condition JoinCondition, events []Event, 
 	}
 	if len(condition.any) > 0 {
 		for _, child := range condition.any {
-			if r.joinMatches(child, events, now) {
+			if joinConditionMatches(child, events, now, variables) {
 				return true
 			}
 		}
@@ -5157,8 +5164,8 @@ func (r *statementRuntime) joinMatches(condition JoinCondition, events []Event, 
 	if condition.Left == nil || condition.Right == nil || leftSource < 0 || rightSource < 0 || leftSource >= len(events) || rightSource >= len(events) {
 		return false
 	}
-	leftValue := condition.Left.eval(EvalContext{Event: events[leftSource], Now: now, Variables: r.variables})
-	rightValue := condition.Right.eval(EvalContext{Event: events[rightSource], Now: now, Variables: r.variables})
+	leftValue := condition.Left.eval(EvalContext{Event: events[leftSource], Now: now, Variables: variables})
+	rightValue := condition.Right.eval(EvalContext{Event: events[rightSource], Now: now, Variables: variables})
 	switch condition.Comparison {
 	case JoinEqual:
 		matched, ok := boolValue(EqualValues(leftValue, rightValue))
@@ -5354,8 +5361,15 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 }
 
 func joinConditionsMatch(conditions []JoinCondition, events []Event, now time.Time, runtime *statementRuntime) bool {
+	if runtime == nil {
+		return false
+	}
+	return joinConditionsMatchWithVariables(conditions, events, now, runtime.variables)
+}
+
+func joinConditionsMatchWithVariables(conditions []JoinCondition, events []Event, now time.Time, variables map[string]Value) bool {
 	for _, condition := range conditions {
-		if !runtime.joinMatches(condition, events, now) {
+		if !joinConditionMatches(condition, events, now, variables) {
 			return false
 		}
 	}
