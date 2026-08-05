@@ -334,6 +334,13 @@ func SelectFrom(source int, name string, expression Expr) JoinSelection {
 	return JoinSelection{Name: name, Source: source, sourceSet: true, Expr: expression}
 }
 
+// SelectSourceEvent projects the complete Event envelope from one join source.
+// It is the chainable equivalent of selecting a source event under an alias
+// (the source portion of Esper's join wildcard projection).
+func SelectSourceEvent(source int, name string) JoinSelection {
+	return SelectFrom(source, name, EventValue[Event]())
+}
+
 func (selection JoinSelection) sourceIndex() int {
 	if selection.sourceSet {
 		return selection.Source
