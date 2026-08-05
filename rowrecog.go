@@ -122,6 +122,7 @@ type rowRecogDefinition struct {
 	defines              map[string]Expr
 	partition            []Expr
 	allMatches           bool
+	iterateOnly          bool
 	skip                 RowRecogSkipStrategy
 	maxStates            int
 	interval             time.Duration
@@ -206,6 +207,18 @@ func (q RowRecogQuery) AllMatches() RowRecogQuery {
 func (q RowRecogQuery) FirstMatch() RowRecogQuery {
 	if q.definition != nil {
 		q.definition.allMatches = false
+	}
+	return q
+}
+
+// IterateOnly keeps the source/window and PREV history up to date but defers
+// row-pattern evaluation until Statement.Snapshot.  This is the fluent Go
+// counterpart of Esper's @Hint('iterate_only') for MATCH_RECOGNIZE and is
+// useful for high-rate streams whose consumers poll the iterator instead of
+// receiving incremental listener batches.
+func (q RowRecogQuery) IterateOnly() RowRecogQuery {
+	if q.definition != nil {
+		q.definition.iterateOnly = true
 	}
 	return q
 }
@@ -341,6 +354,9 @@ func (definition *rowRecogDefinition) description() string {
 		parts = append(parts, "all-matches")
 	} else {
 		parts = append(parts, "first-match")
+	}
+	if definition.iterateOnly {
+		parts = append(parts, "iterate-only")
 	}
 	switch definition.skip {
 	case RowRecogSkipToNextRow:
@@ -553,13 +569,27 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 			r.rowRecogState.partitions[key] = partition
 		}
 		r.recordRowRecogPrevious(definition, partition, event, plan)
-		r.admitRowRecogStart(definition, partition, event, now)
+		if !definition.iterateOnly {
+			r.admitRowRecogStart(definition, partition, event, now)
+		}
 		partition.events = append(partition.events, event)
+		if definition.iterateOnly {
+			// Esper's iterate-only mode deliberately does not advance the NFA
+			// or produce child output.  The retained events and previous-access
+			// history above are sufficient for snapshot-time evaluation.
+			continue
+		}
 		if !rowRecogHasInterval(definition) {
 			r.emitRowRecogMatchesAtEnd(definition, partition, len(partition.events)-1, plan, now, &batch)
 		} else if definition.intervalOrTerminated {
 			r.emitRowRecogTerminated(definition, partition, len(partition.events)-1, plan, now, &batch)
 		}
+	}
+	if definition.iterateOnly {
+		if rowRecogBatchWindowNode(definition.input) != nil {
+			r.resetRowRecogBatchState()
+		}
+		return ResultBatch{}
 	}
 	if rowRecogHasInterval(definition) {
 		r.flushRowRecogIntervals(definition, plan, now, &batch)
