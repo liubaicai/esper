@@ -253,10 +253,10 @@
       "level": "S",
       "summary": "Fluent dataflow definitions, graph ports, source lifecycle, signal-marker propagation and instance control plane",
       "javaRefs": ["EPLDataflowOpEventBusSource", "EPLDataflowOpFilter", "EPLDataflowOpSelect"],
-      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_subquery_test.go"],
+      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["typed event/row port contracts and custom source/operator port lifecycle", "concurrent delivery/backpressure", "persisted cross-process saved instances/configuration", "complete multi-port captive/join and exception recovery parity"]
+      "remaining": ["custom source/operator port lifecycle and built-in event/row port inference", "concurrent delivery/backpressure", "persisted cross-process saved instances/configuration", "complete multi-port captive/join and exception recovery parity"]
     },
     {
       "id": "join.basic",
@@ -501,14 +501,25 @@
     },
     {
       "id": "case.subquery-pattern",
-      "javaRuntimeIds": ["java-runtime-3d9d3a714bd642e784bd", "java-runtime-0db35509697665c0960e", "java-runtime-9a15ec8213060ac0185c"],
-      "javaNames": ["EPLSubselectCorrelated", "EPLSubselectFilterPatternNamedWindowNoAlias", "EPLSubselectAggregation"],
+      "javaRuntimeIds": ["java-runtime-3d9d3a714bd642e784bd", "java-runtime-0db35509697665c0960e", "java-runtime-9a15ec8213060ac0185c", "java-runtime-3c1d7cc144c168f6a0d6"],
+      "javaNames": ["EPLSubselectCorrelated", "EPLSubselectFilterPatternNamedWindowNoAlias", "EPLSubselectAggregation", "EPLSubselectSubqueryAgainstNamedWindowInUDFInPattern"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectWithinPattern.java"],
-      "goTests": ["TestPatternSubqueryCorrelatedExistsMatchesEsper", "TestPatternSubqueryInLastEventMatchesEsper", "TestEventStreamSubqueryAggregationWindowMatchesEsper"],
+      "goTests": ["TestPatternSubqueryCorrelatedExistsMatchesEsper", "TestPatternSubqueryInLastEventMatchesEsper", "TestEventStreamSubqueryAggregationWindowMatchesEsper", "TestPatternSubqueryNamedWindowFunctionMatchesEsper"],
       "tags": ["correctness", "query", "subquery", "pattern", "correlation"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream and SubqueryIn over a LastEvent event stream, with inner Field expressions and explicit current-event/OuterField scope. Event-stream SubquerySum over a length(2) source also reproduces the Java rolling aggregate filter sequence across empty, replacement and exact-sum boundaries. The remaining Java execution variants (pattern subquery named-window/UDF), invalid diagnostics and broader Pattern/Context/Dataflow combinations remain open."
+      "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream and SubqueryIn over a LastEvent event stream, with inner Field expressions and explicit current-event/OuterField scope. Event-stream SubquerySum over a length(2) source reproduces the Java rolling aggregate filter sequence across empty, replacement and exact-sum boundaries, while a chainable Func1 receives a Named Window SubqueryCount inside a Pattern predicate and verifies current Named Window state. Invalid diagnostics and broader Pattern/Context/Dataflow combinations remain open."
+    },
+    {
+      "id": "case.dataflow-typed-ports",
+      "javaRuntimeIds": ["java-runtime-6309a6b7e0f0ba981a97"],
+      "javaNames": ["EPLDataflowFanInOut"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowInputOutputVariations.java"],
+      "goTests": ["TestDataflowTypedPortsFanInAndFanOutMatchesEsper"],
+      "tags": ["correctness", "dataflow", "typed-ports", "fan-in", "fan-out"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go fluent CustomTypedPorts API declares generic input/output value types, validates assignability at graph Build time and rejects a wrong runtime value at an edge. The mapped fan-in/fan-out trace routes two typed input families through four named ports and emits them to separate output ports. Java's larger custom operator lifecycle, factorial feedback, deep graph, concurrency/backpressure and cross-process configuration matrix remain open."
     },
     {
       "id": "case.expr-enum-aggregate",
@@ -1082,6 +1093,7 @@
     {"capabilityId": "query.historical-sql", "caseId": "case.historical-sql"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-eventbus"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-signal"},
+    {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-typed-ports"},
     {"capabilityId": "rowrecog.match-recognize", "caseId": "case.rowrecog-basic-ops"},
     {"capabilityId": "rowrecog.match-recognize", "caseId": "case.rowrecog-window-delete"},
     {"capabilityId": "rowrecog.match-recognize", "caseId": "case.rowrecog-inventory"},
