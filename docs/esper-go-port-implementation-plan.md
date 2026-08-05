@@ -1487,3 +1487,5 @@ RowRecog 入口拆分如下，后续必须以此表逐项消项，不能以 `Tes
 本轮继续对照 Java `EPLInsertIntoJoinWildcard`：Go 增加 `SelectSourceEvent` 链式入口，以 `EventValue[Event]` 保留 join 每个 source 的完整 Event envelope，并验证 InsertInto 下游的 source 类型、字段和 underlying 值在 Struct/Map/ObjectArray/JSON/XML/Avro 表示中保持稳定。`TestInsertIntoJoinWildcardPreservesSourceEventsAcrossRepresentations` 已登记到 `case.insert-into-chain`。Java 的 wildcard column 语法、join alias 自动推导、wrapper/recast、mixed-stream ordering 和更广的多表示转换诊断仍保持开放。
 
 本轮继续对照 Java `EPLInsertIntoAssertionWildcardRecast`：Go 对无 projection 的链式 `InsertInto` 增加 Struct/Map/ObjectArray/JSON/XML/Avro 源到同组六种目标表示的 36 条 recast 对照矩阵，固定 `p0`/`p1` 的值、目标字段顺序和缺失 `c0` 的显式 null；`TestInsertIntoWildcardRecastAcrossRepresentations` 已登记到 `case.insert-into-chain`。Java 的 wrapper bean 构造、provided-class JSON、Avro union/metadata、split/transpose 与完整异常诊断仍保持开放。
+
+本轮继续对照 Java `EPLInsertIntoChain`：Go 以四条独立链式 `Select(...).InsertInto(...)` 复现 `ChainMarketData -> S0 -> S1 -> S2 -> S3` 的稳定传播，逐段替换 `val` 并在最终消费者固定 `E1/3` 单条结果；`TestInsertIntoChainPropagatesThroughFourChainedRoutes` 已登记到 `case.insert-into-chain`。Java 的多模块部署时序、mixed new/old stream、output policy 叠加和更大 chained graph 仍保持开放。
