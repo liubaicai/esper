@@ -967,7 +967,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 	}
 	if insertEvent {
 		switch state.def.retention.(type) {
-		case KeepAllWindowSpec, LengthWindowSpec, TimeWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec:
+		case KeepAllWindowSpec, LengthWindowSpec, TimeWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec:
 		default:
 			return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", state.def.retention))
 		}
@@ -1014,24 +1014,44 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 		}
 	}
 	if insertEvent {
-		entry := storedEvent{event: preparedInsert, receivedAt: now}
-		if retention, ok := state.def.retention.(TimeToLiveAtWindowSpec); ok {
-			expiresAt, err := eventTimestamp(retention.Timestamp, preparedInsert, now, nil)
-			if err != nil {
-				return NamedWindowDelta{}, err
+		switch retention := state.def.retention.(type) {
+		case UniqueWindowSpec:
+			entry := storedEvent{event: preparedInsert, receivedAt: now}
+			duplicate := -1
+			for index, candidate := range entries {
+				if uniqueWindowKey(retention, candidate.event, now, nil) == uniqueWindowKey(retention, preparedInsert, now, nil) {
+					duplicate = index
+					break
+				}
 			}
-			entry.expiresAt = expiresAt
-		}
-		entries = append(entries, entry)
-		delta.New = append(delta.New, preparedInsert)
-		if !entry.expiresAt.IsZero() && !entry.expiresAt.After(now) {
-			delta.Old = append(delta.Old, preparedInsert)
-			entries = entries[:len(entries)-1]
-		}
-		if retention, ok := state.def.retention.(LengthWindowSpec); ok {
-			for len(entries) > retention.Size {
-				delta.Old = append(delta.Old, entries[0].event)
-				entries = entries[1:]
+			if duplicate < 0 {
+				entries = append(entries, entry)
+				delta.New = append(delta.New, preparedInsert)
+			} else if !retention.First {
+				delta.Old = append(delta.Old, entries[duplicate].event)
+				entries[duplicate] = entry
+				delta.New = append(delta.New, preparedInsert)
+			}
+		default:
+			entry := storedEvent{event: preparedInsert, receivedAt: now}
+			if retention, ok := state.def.retention.(TimeToLiveAtWindowSpec); ok {
+				expiresAt, err := eventTimestamp(retention.Timestamp, preparedInsert, now, nil)
+				if err != nil {
+					return NamedWindowDelta{}, err
+				}
+				entry.expiresAt = expiresAt
+			}
+			entries = append(entries, entry)
+			delta.New = append(delta.New, preparedInsert)
+			if !entry.expiresAt.IsZero() && !entry.expiresAt.After(now) {
+				delta.Old = append(delta.Old, preparedInsert)
+				entries = entries[:len(entries)-1]
+			}
+			if retention, ok := state.def.retention.(LengthWindowSpec); ok {
+				for len(entries) > retention.Size {
+					delta.Old = append(delta.Old, entries[0].event)
+					entries = entries[1:]
+				}
 			}
 		}
 	}
