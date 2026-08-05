@@ -162,3 +162,72 @@ func TestDataflowEventBusSourceFilterRunsBeforeCollector(t *testing.T) {
 		t.Fatalf("filtered source collector output = %#v", outputs[0])
 	}
 }
+
+func TestDataflowEventBusSourceWithUnderlyingMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	graphDefinition, err := DefineDataflow(env, "event-bus-underlying-graph").
+		EventBusSourceWithUnderlyingAndFilter("source", "Trade", Greater[float64](Field[runtimeTestTrade, float64]("price"), Literal(10.0))).
+		Emitter("sink").
+		Connect("source", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	graph, err := engine.InstantiateDataflow(context.Background(), graphDefinition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := graph.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "low", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "high", Price: 11}); err != nil {
+		t.Fatal(err)
+	}
+	outputs := graph.Outputs()
+	if len(outputs) != 1 {
+		t.Fatalf("underlying graph outputs = %#v", outputs)
+	}
+	underlying, ok := outputs[0].(runtimeTestTrade)
+	if !ok || underlying.Symbol != "high" || underlying.Price != 11 {
+		t.Fatalf("underlying graph output = %#v, want runtimeTestTrade", outputs[0])
+	}
+	if err := graph.Cancel(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	linearDefinition, err := DefineDataflow(env, "event-bus-underlying-linear").
+		EventBusSourceWithUnderlying("source", "Trade").
+		Emitter("sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	linear, err := engine.InstantiateDataflow(context.Background(), linearDefinition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := linear.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "linear", Price: 3}); err != nil {
+		t.Fatal(err)
+	}
+	outputs = linear.Outputs()
+	if len(outputs) != 1 {
+		t.Fatalf("underlying linear outputs = %#v", outputs)
+	}
+	underlying, ok = outputs[0].(runtimeTestTrade)
+	if !ok || underlying.Symbol != "linear" {
+		t.Fatalf("underlying linear output = %#v, want runtimeTestTrade", outputs[0])
+	}
+	if err := linear.Cancel(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}

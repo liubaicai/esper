@@ -688,37 +688,38 @@ func DataflowPortOf[T any](name string) DataflowPort {
 }
 
 type DataflowOperator struct {
-	Name                    string
-	Kind                    DataflowOperatorKind
-	Events                  []any
-	EventType               string
-	Predicate               Expr
-	Selections              []Selection
-	Log                     func(context.Context, any) error
-	Statement               *Statement
-	StatementName           string
-	StatementDeploymentID   string
-	StatementFilter         DataflowStatementSourceFilter
-	StatementCollector      DataflowStatementSourceCollector
-	StatementBatchCollector DataflowStatementSourceBatchCollector
-	Signal                  DataflowSignalHandler
-	Factory                 DataflowOperatorFactory
-	InputPorts              []string
-	OutputPorts             []string
-	InputPortTypes          map[string]reflect.Type
-	OutputPortTypes         map[string]reflect.Type
-	SourceFactory           DataflowSourceFactory
-	BeaconOptions           DataflowBeaconOptions
-	BeaconConfigured        bool
-	Properties              map[string]any
-	ParameterNames          []string
-	SourceFilter            Expr
-	EventBusSourceCollector DataflowEventBusSourceCollector
-	EventBusSinkCollector   DataflowEventBusSinkCollector
-	LogOptions              *DataflowLogSinkOptions
-	SelectOptions           DataflowSelectOptions
-	JoinOptions             DataflowJoinOptions
-	JoinConfigured          bool
+	Name                     string
+	Kind                     DataflowOperatorKind
+	Events                   []any
+	EventType                string
+	Predicate                Expr
+	Selections               []Selection
+	Log                      func(context.Context, any) error
+	Statement                *Statement
+	StatementName            string
+	StatementDeploymentID    string
+	StatementFilter          DataflowStatementSourceFilter
+	StatementCollector       DataflowStatementSourceCollector
+	StatementBatchCollector  DataflowStatementSourceBatchCollector
+	Signal                   DataflowSignalHandler
+	Factory                  DataflowOperatorFactory
+	InputPorts               []string
+	OutputPorts              []string
+	InputPortTypes           map[string]reflect.Type
+	OutputPortTypes          map[string]reflect.Type
+	SourceFactory            DataflowSourceFactory
+	BeaconOptions            DataflowBeaconOptions
+	BeaconConfigured         bool
+	Properties               map[string]any
+	ParameterNames           []string
+	SourceFilter             Expr
+	EventBusSourceCollector  DataflowEventBusSourceCollector
+	EventBusSourceUnderlying bool
+	EventBusSinkCollector    DataflowEventBusSinkCollector
+	LogOptions               *DataflowLogSinkOptions
+	SelectOptions            DataflowSelectOptions
+	JoinOptions              DataflowJoinOptions
+	JoinConfigured           bool
 }
 
 // DataflowEdge connects an operator output port to an operator input port.
@@ -1013,6 +1014,19 @@ func (b DataflowBuilder) EventBusSource(name, eventType string) DataflowBuilder 
 	return b.add(DataflowOperator{Name: name, Kind: EventBusSourceKind, EventType: eventType})
 }
 
+// EventBusSourceWithUnderlying emits the registered event's Go underlying
+// value instead of the Event envelope. It mirrors Esper's
+// submitEventBean=false mode and is useful when the next custom operator has
+// a typed Go port for the source representation.
+func (b DataflowBuilder) EventBusSourceWithUnderlying(name, eventType string) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                     name,
+		Kind:                     EventBusSourceKind,
+		EventType:                eventType,
+		EventBusSourceUnderlying: true,
+	})
+}
+
 // EventBusSourceWithFilter adds an event-bus source with a source-side
 // predicate. Events that do not satisfy predicate never enter downstream
 // operators, matching Esper's EventBusSource filter parameter.
@@ -1022,6 +1036,19 @@ func (b DataflowBuilder) EventBusSourceWithFilter(name, eventType string, predic
 		Kind:         EventBusSourceKind,
 		EventType:    eventType,
 		SourceFilter: predicate,
+	})
+}
+
+// EventBusSourceWithUnderlyingAndFilter combines underlying-value delivery
+// with source-side filtering. Filtering still evaluates against the Event
+// envelope so registered field expressions retain their normal semantics.
+func (b DataflowBuilder) EventBusSourceWithUnderlyingAndFilter(name, eventType string, predicate Expr) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                     name,
+		Kind:                     EventBusSourceKind,
+		EventType:                eventType,
+		SourceFilter:             predicate,
+		EventBusSourceUnderlying: true,
 	})
 }
 
@@ -1036,6 +1063,19 @@ func (b DataflowBuilder) EventBusSourceWithCollector(name, eventType string, col
 	})
 }
 
+// EventBusSourceWithUnderlyingAndCollector is the collector form of
+// EventBusSourceWithUnderlying. Returned Event values are unwrapped while
+// raw returned Go values remain raw graph values.
+func (b DataflowBuilder) EventBusSourceWithUnderlyingAndCollector(name, eventType string, collector DataflowEventBusSourceCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                     name,
+		Kind:                     EventBusSourceKind,
+		EventType:                eventType,
+		EventBusSourceUnderlying: true,
+		EventBusSourceCollector:  collector,
+	})
+}
+
 // EventBusSourceWithFilterAndCollector combines source-side filtering with a
 // collector, preserving the order used by Esper: only accepted events reach
 // the collector and its returned values enter the outgoing graph.
@@ -1046,6 +1086,19 @@ func (b DataflowBuilder) EventBusSourceWithFilterAndCollector(name, eventType st
 		EventType:               eventType,
 		SourceFilter:            predicate,
 		EventBusSourceCollector: collector,
+	})
+}
+
+// EventBusSourceWithUnderlyingFilterAndCollector combines all three source
+// options while retaining the filter-before-collector ordering.
+func (b DataflowBuilder) EventBusSourceWithUnderlyingFilterAndCollector(name, eventType string, predicate Expr, collector DataflowEventBusSourceCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                     name,
+		Kind:                     EventBusSourceKind,
+		EventType:                eventType,
+		SourceFilter:             predicate,
+		EventBusSourceUnderlying: true,
+		EventBusSourceCollector:  collector,
 	})
 }
 
@@ -1743,7 +1796,9 @@ func inferDataflowBuiltinPorts(operator DataflowOperator) DataflowOperator {
 	rowType := reflect.TypeOf(Row{})
 	switch operator.Kind {
 	case EventBusSourceKind:
-		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", eventType)
+		if !operator.EventBusSourceUnderlying {
+			setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", eventType)
+		}
 	case EventBusSinkKind:
 		setDataflowBuiltinPortType(&operator.InputPortTypes, "in", eventType)
 	case FilterKind:
@@ -3588,6 +3643,9 @@ func (d *DataflowInstance) dataflowSourceFilterAccepts(operator DataflowOperator
 
 func (d *DataflowInstance) dataflowEventBusSourceValues(ctx context.Context, operator DataflowOperator, event Event) ([]any, error) {
 	if operator.EventBusSourceCollector == nil {
+		if operator.EventBusSourceUnderlying {
+			return []any{event.Underlying()}, nil
+		}
 		return []any{event}, nil
 	}
 	values, err := operator.EventBusSourceCollector(ctx, event)
@@ -3596,6 +3654,14 @@ func (d *DataflowInstance) dataflowEventBusSourceValues(ctx context.Context, ope
 	}
 	result := make([]any, 0, len(values))
 	for _, value := range values {
+		if operator.EventBusSourceUnderlying {
+			if event, ok := value.(Event); ok {
+				result = append(result, event.Underlying())
+			} else {
+				result = append(result, value)
+			}
+			continue
+		}
 		if _, ok := value.(Event); ok {
 			result = append(result, value)
 			continue
@@ -4236,7 +4302,7 @@ func (d *DataflowInstance) processLinearValues(ctx context.Context, current []an
 			}
 			if !accepted {
 				current = nil
-			} else if operator.EventBusSourceCollector != nil {
+			} else {
 				values, err := d.dataflowEventBusSourceValues(ctx, operator, eventValue)
 				if err != nil {
 					return err
