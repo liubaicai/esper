@@ -2892,7 +2892,12 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 			return e.validateExprFields(input, node.durationExpr)
 		}
 		return nil
-	case patternTimerAtNode, patternTimerScheduleNode:
+	case patternTimerAtNode:
+		return nil
+	case patternTimerScheduleNode:
+		if node.scheduleExpr != nil {
+			return e.validateExprFields(input, node.scheduleExpr)
+		}
 		return nil
 	case patternTimerCronNode:
 		return e.validateCronSchedule(node.cron)

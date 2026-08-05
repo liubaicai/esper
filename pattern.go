@@ -35,33 +35,40 @@ const (
 // carries the event operators.  Keeping the tree explicit lets the runtime
 // execute and inspect combinators without going through EPL text.
 type patternNode struct {
-	kind              patternNodeKind
-	tag               string
-	predicate         Expression[bool]
-	consumeLevel      int
-	consumeLevelSet   bool
-	left              *patternNode
-	right             *patternNode
-	child             *patternNode
-	sequenceMax       int
-	sequenceMaxSet    bool
-	sequenceMaxExpr   Expr
-	minimum           int
-	maximum           int
-	dynamicBounds     bool
-	minimumExpr       Expr
-	maximumExpr       Expr
-	everyKey          *exprNode
-	everyExpr         Expr
-	duration          time.Duration
-	durationExpr      Expr
-	calendar          *OutputCalendarPeriod
-	at                time.Time
-	schedule          []time.Time
-	cron              *CronSchedule
-	cronOneShot       bool
-	distinctExpiry    time.Duration
-	distinctExpirySet bool
+	kind                   patternNodeKind
+	tag                    string
+	predicate              Expression[bool]
+	consumeLevel           int
+	consumeLevelSet        bool
+	left                   *patternNode
+	right                  *patternNode
+	child                  *patternNode
+	sequenceMax            int
+	sequenceMaxSet         bool
+	sequenceMaxExpr        Expr
+	minimum                int
+	maximum                int
+	dynamicBounds          bool
+	minimumExpr            Expr
+	maximumExpr            Expr
+	everyKey               *exprNode
+	everyExpr              Expr
+	duration               time.Duration
+	durationExpr           Expr
+	calendar               *OutputCalendarPeriod
+	at                     time.Time
+	schedule               []time.Time
+	schedulePeriod         *PatternTimerPeriod
+	scheduleAnchor         time.Time
+	scheduleAnchorSet      bool
+	scheduleIncludeAnchor  bool
+	scheduleRepetitions    int64
+	scheduleRepetitionsSet bool
+	scheduleExpr           Expr
+	cron                   *CronSchedule
+	cronOneShot            bool
+	distinctExpiry         time.Duration
+	distinctExpirySet      bool
 }
 
 func patternEvent(tag string, predicate Expression[bool]) *patternNode {
@@ -80,6 +87,10 @@ func clonePatternNode(node *patternNode) *patternNode {
 	copyNode.right = clonePatternNode(node.right)
 	copyNode.child = clonePatternNode(node.child)
 	copyNode.schedule = append([]time.Time(nil), node.schedule...)
+	if node.schedulePeriod != nil {
+		period := *node.schedulePeriod
+		copyNode.schedulePeriod = &period
+	}
 	if node.calendar != nil {
 		calendar := *node.calendar
 		copyNode.calendar = &calendar
@@ -186,6 +197,20 @@ func (n *patternNode) description() string {
 	case patternTimerAtNode:
 		return "timer-at(" + n.at.UTC().Format(time.RFC3339Nano) + ")"
 	case patternTimerScheduleNode:
+		if n.scheduleExpr != nil {
+			return "timer-schedule-iso(" + n.scheduleExpr.Description() + ")"
+		}
+		if n.schedulePeriod != nil {
+			start := "now"
+			if n.scheduleAnchorSet {
+				start = n.scheduleAnchor.UTC().Format(time.RFC3339Nano)
+			}
+			repetitions := "1"
+			if n.scheduleRepetitionsSet {
+				repetitions = fmt.Sprintf("%d", n.scheduleRepetitions)
+			}
+			return fmt.Sprintf("timer-schedule-period(%s,%s,%s,%t)", start, patternTimerPeriodDescription(*n.schedulePeriod), repetitions, n.scheduleIncludeAnchor)
+		}
 		parts := make([]string, 0, len(n.schedule))
 		for _, at := range n.schedule {
 			parts = append(parts, at.UTC().Format(time.RFC3339Nano))
@@ -307,6 +332,19 @@ type PatternTimerPeriod struct {
 	FixedDuration time.Duration
 }
 
+// PatternTimerScheduleSpec describes a timer:schedule period form. StartAt is
+// optional: when omitted, the current virtual time is the anchor. A zero
+// Repetitions value means one occurrence, a positive value bounds the number
+// of occurrences, and -1 means unlimited recurrence. IncludeStart controls
+// whether StartAt itself is an occurrence; it is useful for matching the
+// Java date/period and R/date/period forms precisely.
+type PatternTimerScheduleSpec struct {
+	StartAt      *time.Time
+	Period       PatternTimerPeriod
+	Repetitions  int64
+	IncludeStart bool
+}
+
 // TimerIntervalPeriod creates a recurring timer observer for a mixed calendar
 // and fixed-duration period. A period must contain at least one positive
 // component; negative components are rejected during Build.
@@ -324,6 +362,56 @@ func TimerIntervalPeriod[T any](stream Stream[T], period PatternTimerPeriod) Pat
 				duration: period.FixedDuration,
 				calendar: calendar,
 			},
+		},
+	}
+}
+
+// TimerScheduleWithPeriod creates the typed, recurring/one-shot counterpart
+// of Esper timer:schedule(period/date/repetitions). It keeps schedule data in
+// the Go AST instead of requiring an EPL fragment.
+func TimerScheduleWithPeriod[T any](stream Stream[T], spec PatternTimerScheduleSpec) PatternStream {
+	period := spec.Period
+	node := &patternNode{
+		kind:                   patternTimerScheduleNode,
+		schedulePeriod:         &period,
+		scheduleIncludeAnchor:  spec.IncludeStart,
+		scheduleRepetitions:    spec.Repetitions,
+		scheduleRepetitionsSet: true,
+	}
+	if node.scheduleRepetitions == 0 {
+		node.scheduleRepetitions = 1
+	}
+	if spec.StartAt != nil {
+		node.scheduleAnchor = *spec.StartAt
+		node.scheduleAnchorSet = true
+	}
+	return PatternStream{
+		env: stream.env,
+		def: &patternDefinition{input: stream.node, root: node},
+	}
+}
+
+// TimerScheduleISO creates a schedule observer from an ISO-8601 schedule
+// value. The typed TimerScheduleWithPeriod API is preferred for new Go rules;
+// this adapter preserves Java timer:schedule ISO forms for migration and
+// comparison tests.
+func TimerScheduleISO[T any](stream Stream[T], iso string) PatternStream {
+	return TimerScheduleISOExpr(stream, Literal[string](iso))
+}
+
+// TimerScheduleISOExpr evaluates and parses an ISO-8601 schedule when the
+// observer branch is armed, allowing a captured Pattern tag to calculate the
+// schedule just like Esper's timer:schedule(iso: expression).
+func TimerScheduleISOExpr[T any](stream Stream[T], iso Expression[string]) PatternStream {
+	var expression Expr
+	if iso != nil {
+		expression = iso
+	}
+	return PatternStream{
+		env: stream.env,
+		def: &patternDefinition{
+			input: stream.node,
+			root:  &patternNode{kind: patternTimerScheduleNode, scheduleExpr: expression},
 		},
 	}
 }
@@ -1109,6 +1197,30 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 			return NewError(ErrorInvalidRule, "timer-at time is required")
 		}
 	case patternTimerScheduleNode:
+		if node.scheduleExpr != nil {
+			if node.scheduleExpr.Type() != typeOf[string]() {
+				return NewError(ErrorTypeMismatch, "timer schedule ISO expression must return string")
+			}
+			if value := node.scheduleExpr.eval(EvalContext{}); value.IsPresent() {
+				iso, ok := value.Any().(string)
+				if !ok {
+					return NewError(ErrorTypeMismatch, "timer schedule ISO expression must return string")
+				}
+				if _, err := parsePatternTimerScheduleISO(iso); err != nil {
+					return NewError(ErrorInvalidRule, "invalid timer schedule ISO expression: "+err.Error())
+				}
+			}
+			break
+		}
+		if node.schedulePeriod != nil {
+			if node.scheduleAnchorSet && node.scheduleAnchor.IsZero() {
+				return NewError(ErrorInvalidRule, "timer schedule start time is required")
+			}
+			if node.scheduleRepetitions < -1 {
+				return NewError(ErrorInvalidRule, "timer schedule repetitions must be -1 or non-negative")
+			}
+			return validatePatternTimerPeriod(*node.schedulePeriod)
+		}
 		if len(node.schedule) == 0 {
 			return NewError(ErrorInvalidRule, "timer schedule requires at least one time")
 		}

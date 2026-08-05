@@ -2520,6 +2520,7 @@ type patternRuntimeState struct {
 	timerIntervalVariables map[string]Value
 	timerIntervalFired     bool
 	scheduleIndex          int
+	schedulePeriod         *patternTimerScheduleRuntime
 	cronSchedule           resolvedCronSchedule
 	cronNext               time.Time
 }
@@ -2653,6 +2654,7 @@ type patternProgress struct {
 	timerNext               time.Time
 	timerEmitted            bool
 	scheduleIndex           int
+	schedulePeriod          *patternTimerScheduleRuntime
 	cronSchedule            resolvedCronSchedule
 	cronNext                time.Time
 	left                    *patternProgress
@@ -2798,7 +2800,19 @@ func (r *statementRuntime) initializeAt(at time.Time) {
 		r.patternState.timerNext = root.at
 	case patternTimerScheduleNode:
 		r.patternState.timerStarted = true
-		r.patternState.scheduleIndex = 0
+		if root.schedulePeriod != nil || root.scheduleExpr != nil {
+			schedule, ok := patternTimerScheduleRuntimeFor(root, at, nil, nil, r.variables)
+			if !ok || schedule == nil {
+				r.patternState.patternStopped = true
+				return
+			}
+			r.patternState.schedulePeriod = schedule
+			if !schedule.active {
+				r.patternState.patternStopped = true
+			}
+		} else {
+			r.patternState.scheduleIndex = 0
+		}
 	case patternTimerCronNode:
 		r.patternState.timerStarted = true
 		if root.cron != nil {
@@ -3331,7 +3345,19 @@ func initializeContextPatternTimer(state **patternRuntimeState, definition *patt
 	case patternTimerAtNode:
 		runtimeState.timerNext = root.at
 	case patternTimerScheduleNode:
-		runtimeState.scheduleIndex = 0
+		if root.schedulePeriod != nil || root.scheduleExpr != nil {
+			schedule, ok := patternTimerScheduleRuntimeFor(root, at, nil, nil, variables)
+			if !ok || schedule == nil {
+				runtimeState.patternStopped = true
+				return false
+			}
+			runtimeState.schedulePeriod = schedule
+			if !schedule.active {
+				runtimeState.patternStopped = true
+			}
+		} else {
+			runtimeState.scheduleIndex = 0
+		}
 	case patternTimerCronNode:
 		if root.cron == nil {
 			return false
@@ -3474,15 +3500,28 @@ func advanceContextPatternTime(state **patternRuntimeState, definition *patternD
 			runtimeState.timerEmitted = true
 		}
 	case patternTimerScheduleNode:
-		for emitted := 0; emitted < maxTimerCatchUp && runtimeState.scheduleIndex < len(root.schedule) && !root.schedule[runtimeState.scheduleIndex].After(now); emitted++ {
-			dueAt := root.schedule[runtimeState.scheduleIndex]
-			completed = append(completed, patternMatch{
-				current:   Event{},
-				startedAt: dueAt,
-				tags:      clonePatternTags(seedTags),
-				tagValues: clonePatternTagValues(seedTagValues),
-			})
-			runtimeState.scheduleIndex++
+		if runtimeState.schedulePeriod != nil {
+			for emitted := 0; emitted < maxTimerCatchUp && runtimeState.schedulePeriod.active && !runtimeState.schedulePeriod.next.After(now); emitted++ {
+				dueAt := runtimeState.schedulePeriod.next
+				completed = append(completed, patternMatch{
+					current:   Event{},
+					startedAt: dueAt,
+					tags:      clonePatternTags(seedTags),
+					tagValues: clonePatternTagValues(seedTagValues),
+				})
+				advancePatternTimerScheduleRuntime(runtimeState.schedulePeriod)
+			}
+		} else {
+			for emitted := 0; emitted < maxTimerCatchUp && runtimeState.scheduleIndex < len(root.schedule) && !root.schedule[runtimeState.scheduleIndex].After(now); emitted++ {
+				dueAt := root.schedule[runtimeState.scheduleIndex]
+				completed = append(completed, patternMatch{
+					current:   Event{},
+					startedAt: dueAt,
+					tags:      clonePatternTags(seedTags),
+					tagValues: clonePatternTagValues(seedTagValues),
+				})
+				runtimeState.scheduleIndex++
+			}
 		}
 	case patternTimerCronNode:
 		for emitted := 0; emitted < maxTimerCatchUp && !runtimeState.cronNext.IsZero() && !runtimeState.cronNext.After(now); emitted++ {
@@ -6824,7 +6863,16 @@ func armPatternProgressTimers(progress *patternProgress, at time.Time, variables
 	case patternTimerScheduleNode:
 		if !progress.timerStarted {
 			progress.timerStarted = true
-			progress.scheduleIndex = 0
+			if progress.node.schedulePeriod != nil || progress.node.scheduleExpr != nil {
+				schedule, ok := patternTimerScheduleRuntimeFor(progress.node, at, progress.tags, progress.tagValues, variables)
+				if !ok || schedule == nil || !schedule.active {
+					progress.expired = true
+					return
+				}
+				progress.schedulePeriod = schedule
+			} else {
+				progress.scheduleIndex = 0
+			}
 		}
 	case patternTimerCronNode:
 		if !progress.timerStarted {
@@ -7068,6 +7116,9 @@ func patternTimerProgressDue(progress *patternProgress, now time.Time) bool {
 	case patternTimerIntervalNode, patternTimerAtNode:
 		return !progress.timerNext.IsZero() && !progress.timerNext.After(now)
 	case patternTimerScheduleNode:
+		if progress.schedulePeriod != nil {
+			return progress.schedulePeriod.active && !progress.schedulePeriod.next.IsZero() && !progress.schedulePeriod.next.After(now)
+		}
 		return progress.scheduleIndex < len(progress.node.schedule) && !progress.node.schedule[progress.scheduleIndex].After(now)
 	case patternTimerCronNode:
 		return !progress.cronNext.IsZero() && !progress.cronNext.After(now)
@@ -7140,6 +7191,7 @@ func clonePatternProgress(progress *patternProgress) *patternProgress {
 	copyProgress.left = clonePatternProgress(progress.left)
 	copyProgress.right = clonePatternProgress(progress.right)
 	copyProgress.child = clonePatternProgress(progress.child)
+	copyProgress.schedulePeriod = clonePatternTimerScheduleRuntime(progress.schedulePeriod)
 	copyProgress.tags = clonePatternTags(progress.tags)
 	copyProgress.tagValues = clonePatternTagValues(progress.tagValues)
 	if len(progress.distinct) > 0 {
@@ -7451,6 +7503,22 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 		next := clonePatternProgress(progress)
 		if !next.timerStarted {
 			armPatternProgressTimers(next, trigger.now, variables)
+		}
+		if next.schedulePeriod != nil {
+			if !trigger.isTimer {
+				return []patternTransition{{state: next, complete: patternSatisfied(next)}}
+			}
+			if !patternTimerProgressDue(next, trigger.now) {
+				return []patternTransition{{state: next}}
+			}
+			next.started = true
+			advancePatternTimerScheduleRuntime(next.schedulePeriod)
+			// A timer observer occurrence completes its enclosing branch. An
+			// outer Every can arm a fresh observer for the next event; keeping
+			// this branch non-terminal would make Sequence/And wait forever
+			// because their satisfaction checks use the child state.
+			next.done = true
+			return []patternTransition{{state: next, complete: true}}
 		}
 		if !trigger.isTimer || next.timerEmitted {
 			return []patternTransition{{state: next, complete: patternSatisfied(next)}}
@@ -8071,15 +8139,29 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 			r.patternState.timerEmitted = true
 		}
 	case patternTimerScheduleNode:
-		for r.patternState.scheduleIndex < len(root.schedule) && !root.schedule[r.patternState.scheduleIndex].After(now) {
-			dueAt := root.schedule[r.patternState.scheduleIndex]
-			match := patternMatch{current: Event{}, startedAt: dueAt}
-			if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
-				if row, visible := evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
-					batch.New = append(batch.New, resultRow(row))
+		if r.patternState.schedulePeriod != nil {
+			const maxScheduleCatchUp = 100000
+			for emitted := 0; emitted < maxScheduleCatchUp && r.patternState.schedulePeriod.active && !r.patternState.schedulePeriod.next.After(now); emitted++ {
+				dueAt := r.patternState.schedulePeriod.next
+				match := patternMatch{current: Event{}, startedAt: dueAt}
+				if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
+					if row, visible := evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
+						batch.New = append(batch.New, resultRow(row))
+					}
 				}
+				advancePatternTimerScheduleRuntime(r.patternState.schedulePeriod)
 			}
-			r.patternState.scheduleIndex++
+		} else {
+			for r.patternState.scheduleIndex < len(root.schedule) && !root.schedule[r.patternState.scheduleIndex].After(now) {
+				dueAt := root.schedule[r.patternState.scheduleIndex]
+				match := patternMatch{current: Event{}, startedAt: dueAt}
+				if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
+					if row, visible := evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
+						batch.New = append(batch.New, resultRow(row))
+					}
+				}
+				r.patternState.scheduleIndex++
+			}
 		}
 	case patternTimerCronNode:
 		if r.patternState.cronNext.IsZero() && root.cron != nil {
