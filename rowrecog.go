@@ -1697,7 +1697,19 @@ func rowRecogCurrentMatches(definition *rowRecogDefinition, partition *rowRecogP
 				continue
 			}
 		}
-		for end := len(partition.events) - 1; end >= start; end-- {
+		// With ALL MATCHES and SKIP TO CURRENT ROW, Esper's iterator retains
+		// every completed end for a start (including shorter optional/repeated
+		// paths). Other modes expose the longest current path for that start.
+		allCurrentEnds := definition.allMatches && definition.skip == RowRecogSkipToCurrentRow
+		endStart := len(partition.events) - 1
+		endLimit := start - 1
+		step := -1
+		if allCurrentEnds {
+			endStart = start
+			endLimit = len(partition.events)
+			step = 1
+		}
+		for end := endStart; end != endLimit; end += step {
 			matches := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, variables)
 			if len(matches) == 0 {
 				continue
@@ -1709,11 +1721,10 @@ func rowRecogCurrentMatches(definition *rowRecogDefinition, partition *rowRecogP
 				}
 				seen[key] = struct{}{}
 				result = append(result, match)
-				if !definition.allMatches {
-					break
-				}
 			}
-			break
+			if !allCurrentEnds {
+				break
+			}
 		}
 	}
 	return result
