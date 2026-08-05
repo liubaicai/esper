@@ -521,6 +521,8 @@ func rowPatternPermutationOrders(parts []RowPattern) [][]RowPattern {
 type rowRecogMatch struct {
 	start    int
 	end      int
+	terminal bool
+	branch   string
 	captures map[string][]Event
 }
 
@@ -580,13 +582,16 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 
 func newRowRecogPartitionState() *rowRecogPartitionState {
 	return &rowRecogPartitionState{
-		previousByEvent: make(map[string][]Event),
-		emitted:         make(map[string]struct{}),
-		emittedMatches:  make(map[string]rowRecogMatch),
-		intervalClosed:  make(map[string]struct{}),
-		intervalFinal:   make(map[string][]rowRecogMatch),
-		activeStarts:    make(map[string]struct{}),
-		blockedStarts:   make(map[string]struct{}),
+		previousByEvent:   make(map[string][]Event),
+		emitted:           make(map[string]struct{}),
+		emittedMatches:    make(map[string]rowRecogMatch),
+		intervalClosed:    make(map[string]struct{}),
+		closedBranches:    make(map[string]struct{}),
+		alternateNotified: make(map[string]struct{}),
+		intervalNotified:  make(map[string]struct{}),
+		intervalFinal:     make(map[string][]rowRecogMatch),
+		activeStarts:      make(map[string]struct{}),
+		blockedStarts:     make(map[string]struct{}),
 	}
 }
 
@@ -788,6 +793,25 @@ func rowPatternNullable(pattern RowPattern) bool {
 	return false
 }
 
+func rowPatternContainsAlternation(pattern RowPattern) bool {
+	minimum, maximum := rowPatternBounds(pattern)
+	base := pattern
+	if pattern.quantified && !(minimum == 1 && maximum == 1) {
+		base.quantified = false
+		base.minimum = 1
+		base.maximum = 1
+	}
+	if base.kind == rowPatternAlternation {
+		return true
+	}
+	for _, part := range base.parts {
+		if rowPatternContainsAlternation(part) {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefinition, partition *rowRecogPartitionState, end int, plan Plan, now time.Time, batch *ResultBatch) {
 	if definition == nil || partition == nil || batch == nil || end < 0 {
 		return
@@ -874,6 +898,60 @@ func rowRecogMatchAllowed(definition *rowRecogDefinition, partition *rowRecogPar
 	return match.start >= partition.skipStart
 }
 
+func rowRecogClosedBranchKey(startKey, branch string) string {
+	return startKey + "|" + branch
+}
+
+func rowRecogMatchBranchClosed(partition *rowRecogPartitionState, startKey string, match rowRecogMatch) bool {
+	if partition == nil {
+		return true
+	}
+	if _, closed := partition.intervalClosed[startKey]; closed {
+		return true
+	}
+	_, closed := partition.closedBranches[rowRecogClosedBranchKey(startKey, match.branch)]
+	return closed
+}
+
+func rowRecogOpenMatches(partition *rowRecogPartitionState, startKey string, matches []rowRecogMatch) []rowRecogMatch {
+	if len(matches) == 0 {
+		return nil
+	}
+	result := make([]rowRecogMatch, 0, len(matches))
+	for _, match := range matches {
+		if !rowRecogMatchBranchClosed(partition, startKey, match) {
+			result = append(result, match)
+		}
+	}
+	return result
+}
+
+func rowRecogHasOpenBranchAtEnd(definition *rowRecogDefinition, partition *rowRecogPartitionState, startKey string, start int, now time.Time, variables map[string]Value) bool {
+	if definition == nil || partition == nil || start < 0 || start >= len(partition.events) {
+		return false
+	}
+	end := len(partition.events) - 1
+	if end < start {
+		return false
+	}
+	for _, match := range rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, variables) {
+		if !rowRecogMatchBranchClosed(partition, startKey, match) {
+			return true
+		}
+	}
+	return false
+}
+
+func rowRecogStartAllowed(definition *rowRecogDefinition, partition *rowRecogPartitionState, start int) bool {
+	if definition == nil || partition == nil {
+		return false
+	}
+	if definition.skip == RowRecogSkipToCurrentRow {
+		return true
+	}
+	return start >= partition.skipStart
+}
+
 func (r *statementRuntime) flushRowRecogIntervals(definition *rowRecogDefinition, plan Plan, now time.Time, batch *ResultBatch) {
 	if definition == nil || !rowRecogHasInterval(definition) || r == nil || r.rowRecogState == nil || batch == nil {
 		return
@@ -891,23 +969,37 @@ func (r *statementRuntime) flushRowRecogIntervals(definition *rowRecogDefinition
 		if partition.intervalClosed == nil {
 			partition.intervalClosed = make(map[string]struct{})
 		}
+		if partition.closedBranches == nil {
+			partition.closedBranches = make(map[string]struct{})
+		}
+		if partition.intervalNotified == nil {
+			partition.intervalNotified = make(map[string]struct{})
+		}
 		if partition.intervalFinal == nil {
 			partition.intervalFinal = make(map[string][]rowRecogMatch)
 		}
 		for start := 0; start < len(partition.events); start++ {
+			if !rowRecogStartAllowed(definition, partition, start) {
+				continue
+			}
 			startEvent := partition.events[start]
 			if rowRecogStartBlocked(partition, start) {
 				continue
 			}
 			startKey := rowRecogStartKey(start, startEvent)
-			if _, closed := partition.intervalClosed[startKey]; closed {
-				continue
+			if definition.intervalOrTerminated {
+				if _, notified := partition.intervalNotified[startKey]; notified {
+					continue
+				}
+			} else {
+				if _, closed := partition.intervalClosed[startKey]; closed {
+					continue
+				}
 			}
 			deadline := rowRecogDeadline(definition, startEvent.ReceivedAt())
 			if deadline.After(now) {
 				continue
 			}
-			partition.intervalClosed[startKey] = struct{}{}
 			last := -1
 			for index := start; index < len(partition.events); index++ {
 				if partition.events[index].ReceivedAt().After(deadline) {
@@ -919,27 +1011,33 @@ func (r *statementRuntime) flushRowRecogIntervals(definition *rowRecogDefinition
 				continue
 			}
 			matches := rowRecogMatchesAtOrBeforeWithPrevious(definition, partition.events, partition.previousByEvent, start, last, now, r.variables)
-			for _, match := range matches {
-				if !rowRecogMatchAllowed(definition, partition, match) {
-					continue
-				}
-				matchKey := rowRecogMatchKey(match)
-				if _, exists := partition.emitted[matchKey]; exists {
-					continue
-				}
-				partition.emitted[matchKey] = struct{}{}
-				if partition.emittedMatches == nil {
-					partition.emittedMatches = make(map[string]rowRecogMatch)
-				}
-				partition.emittedMatches[matchKey] = match
-				partition.intervalFinal[startKey] = append(partition.intervalFinal[startKey], match)
-				if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, r.variables); visible {
-					batch.New = append(batch.New, resultRow(row))
-				}
-				r.advanceRowRecogSkip(definition, partition, match)
-				if !definition.allMatches {
+			if definition.intervalOrTerminated && definition.allMatches {
+				matches = rowRecogAllMatchesAtOrBeforeWithPrevious(definition, partition.events, partition.previousByEvent, start, last, now, r.variables)
+			}
+			if definition.intervalOrTerminated {
+				matches = rowRecogOpenMatches(partition, startKey, matches)
+				partition.intervalNotified[startKey] = struct{}{}
+				r.emitRowRecogIntervalSnapshot(definition, partition, matches, plan, now, batch)
+				if !definition.allMatches && len(matches) > 0 {
+					// Esper schedules all end states with the same match-begin
+					// timestamp together. A first-match timer callback emits the
+					// ranked earliest branch and consumes the other callbacks for
+					// that same deadline; they must not fire when a later event
+					// arrives at the exact boundary.
+					for candidate := start + 1; candidate < len(partition.events); candidate++ {
+						candidateKey := rowRecogStartKey(candidate, partition.events[candidate])
+						if rowRecogDeadline(definition, partition.events[candidate].ReceivedAt()).Equal(deadline) {
+							partition.intervalNotified[candidateKey] = struct{}{}
+						}
+					}
 					break
 				}
+				continue
+			}
+			partition.intervalClosed[startKey] = struct{}{}
+			r.emitRowRecogIntervalMatches(definition, partition, startKey, matches, plan, now, batch, true)
+			if !definition.allMatches && len(matches) > 0 {
+				break
 			}
 		}
 	}
@@ -996,28 +1094,68 @@ func (r *statementRuntime) emitRowRecogTerminated(definition *rowRecogDefinition
 		return
 	}
 	for start := 0; start <= end; start++ {
+		if !rowRecogStartAllowed(definition, partition, start) {
+			continue
+		}
 		if rowRecogStartBlocked(partition, start) {
 			continue
 		}
 		startKey := rowRecogStartKey(start, partition.events[start])
-		if _, closed := partition.intervalClosed[startKey]; closed {
-			continue
+		if !definition.intervalOrTerminated {
+			if _, closed := partition.intervalClosed[startKey]; closed {
+				continue
+			}
 		}
 		current := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, r.variables)
-		if len(current) > 0 {
-			if rowRecogMatchAtFiniteWidth(definition.pattern, current[0]) {
-				r.emitRowRecogIntervalMatches(definition, partition, startKey, current, plan, now, batch)
+		current = rowRecogOpenMatches(partition, startKey, current)
+		terminalCurrent := make([]rowRecogMatch, 0, len(current))
+		for _, match := range current {
+			if match.terminal || rowRecogMatchAtFiniteWidth(definition.pattern, match) {
+				terminalCurrent = append(terminalCurrent, match)
 			}
+		}
+		if len(terminalCurrent) > 0 {
+			r.emitRowRecogIntervalMatches(definition, partition, startKey, terminalCurrent, plan, now, batch, true)
+			continue
+		}
+		if end <= start {
 			continue
 		}
 		terminated := rowRecogMatchesAtOrBeforeWithPrevious(definition, partition.events, partition.previousByEvent, start, end-1, now, r.variables)
+		if definition.allMatches {
+			terminated = rowRecogAllMatchesAtOrBeforeWithPrevious(definition, partition.events, partition.previousByEvent, start, end-1, now, r.variables)
+		}
+		if len(current) > 0 {
+			terminated = rowRecogMatchesForTerminated(definition, partition, startKey, terminated, current)
+		}
 		if len(terminated) > 0 {
-			r.emitRowRecogIntervalMatches(definition, partition, startKey, terminated, plan, now, batch)
+			r.emitRowRecogIntervalMatches(definition, partition, startKey, terminated, plan, now, batch, true)
 		}
 	}
 }
 
-func (r *statementRuntime) emitRowRecogIntervalMatches(definition *rowRecogDefinition, partition *rowRecogPartitionState, startKey string, matches []rowRecogMatch, plan Plan, now time.Time, batch *ResultBatch) {
+func (r *statementRuntime) emitRowRecogIntervalSnapshot(definition *rowRecogDefinition, partition *rowRecogPartitionState, matches []rowRecogMatch, plan Plan, now time.Time, batch *ResultBatch) {
+	if r == nil || definition == nil || partition == nil || batch == nil || len(matches) == 0 {
+		return
+	}
+	for _, match := range matches {
+		if !rowRecogMatchAllowed(definition, partition, match) {
+			continue
+		}
+		startKey := rowRecogStartKey(match.start, partition.events[match.start])
+		if rowRecogMatchBranchClosed(partition, startKey, match) {
+			continue
+		}
+		if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, r.variables); visible {
+			batch.New = append(batch.New, resultRow(row))
+		}
+		if !definition.allMatches {
+			break
+		}
+	}
+}
+
+func (r *statementRuntime) emitRowRecogIntervalMatches(definition *rowRecogDefinition, partition *rowRecogPartitionState, startKey string, matches []rowRecogMatch, plan Plan, now time.Time, batch *ResultBatch, closeBranch bool) {
 	if r == nil || definition == nil || partition == nil || batch == nil || len(matches) == 0 {
 		return
 	}
@@ -1027,11 +1165,47 @@ func (r *statementRuntime) emitRowRecogIntervalMatches(definition *rowRecogDefin
 	if partition.intervalFinal == nil {
 		partition.intervalFinal = make(map[string][]rowRecogMatch)
 	}
-	partition.intervalClosed[startKey] = struct{}{}
+	selected := make([]rowRecogMatch, 0, len(matches))
 	for _, match := range matches {
 		if !rowRecogMatchAllowed(definition, partition, match) {
 			continue
 		}
+		if definition.intervalOrTerminated {
+			if rowRecogMatchBranchClosed(partition, startKey, match) {
+				continue
+			}
+		}
+		selected = append(selected, match)
+		if !definition.allMatches {
+			break
+		}
+	}
+	if len(selected) == 0 {
+		return
+	}
+	if closeBranch {
+		if definition.intervalOrTerminated {
+			if partition.closedBranches == nil {
+				partition.closedBranches = make(map[string]struct{})
+			}
+			endMatches := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, selected[0].start, len(partition.events)-1, now, r.variables)
+			for _, match := range selected {
+				continues := false
+				for _, later := range endMatches {
+					if rowRecogMatchExtends(match, later) {
+						continues = true
+						break
+					}
+				}
+				if !continues {
+					partition.closedBranches[rowRecogClosedBranchKey(startKey, match.branch)] = struct{}{}
+				}
+			}
+		} else {
+			partition.intervalClosed[startKey] = struct{}{}
+		}
+	}
+	for _, match := range selected {
 		matchKey := rowRecogMatchKey(match)
 		if _, exists := partition.emitted[matchKey]; exists {
 			continue
@@ -1045,10 +1219,18 @@ func (r *statementRuntime) emitRowRecogIntervalMatches(definition *rowRecogDefin
 		if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, r.variables); visible {
 			batch.New = append(batch.New, resultRow(row))
 		}
-		r.advanceRowRecogSkip(definition, partition, match)
-		if !definition.allMatches {
-			break
+	}
+	if closeBranch {
+		last := selected[0]
+		for _, match := range selected[1:] {
+			if match.end > last.end {
+				last = match
+			}
 		}
+		if definition.intervalOrTerminated && rowRecogHasOpenBranchAtEnd(definition, partition, startKey, last.start, now, r.variables) {
+			return
+		}
+		r.advanceRowRecogSkip(definition, partition, last)
 	}
 }
 
@@ -1112,6 +1294,96 @@ func rowRecogMatchesAtOrBeforeWithPrevious(definition *rowRecogDefinition, histo
 		}
 	}
 	return nil
+}
+
+func rowRecogAllMatchesAtOrBeforeWithPrevious(definition *rowRecogDefinition, history []Event, previousByEvent map[string][]Event, start, last int, now time.Time, variables map[string]Value) []rowRecogMatch {
+	if definition == nil || start < 0 || last < start || start >= len(history) {
+		return nil
+	}
+	result := make([]rowRecogMatch, 0)
+	seen := make(map[string]struct{})
+	for end := last; end >= start; end-- {
+		for _, match := range rowRecogMatchesWithPrevious(definition, history, previousByEvent, start, end, now, variables) {
+			key := rowRecogMatchKey(match)
+			if _, exists := seen[key]; exists {
+				continue
+			}
+			seen[key] = struct{}{}
+			result = append(result, match)
+		}
+	}
+	return result
+}
+
+func rowRecogMatchesNotExtendedByCurrent(previous, current []rowRecogMatch) []rowRecogMatch {
+	if len(previous) == 0 || len(current) == 0 {
+		return previous
+	}
+	result := make([]rowRecogMatch, 0, len(previous))
+	for _, candidate := range previous {
+		extended := false
+		for _, later := range current {
+			if rowRecogMatchExtends(candidate, later) {
+				extended = true
+				break
+			}
+		}
+		if !extended {
+			result = append(result, candidate)
+		}
+	}
+	return result
+}
+
+func rowRecogMatchesForTerminated(definition *rowRecogDefinition, partition *rowRecogPartitionState, startKey string, previous, current []rowRecogMatch) []rowRecogMatch {
+	if definition == nil || partition == nil || len(previous) == 0 || len(current) == 0 {
+		return previous
+	}
+	if !rowPatternContainsAlternation(definition.pattern) {
+		return rowRecogMatchesNotExtendedByCurrent(previous, current)
+	}
+	if partition.alternateNotified == nil {
+		partition.alternateNotified = make(map[string]struct{})
+	}
+	result := make([]rowRecogMatch, 0, len(previous))
+	for _, candidate := range previous {
+		extended := false
+		for _, later := range current {
+			if rowRecogMatchExtends(candidate, later) {
+				extended = true
+				break
+			}
+		}
+		if !extended {
+			result = append(result, candidate)
+			continue
+		}
+		key := rowRecogClosedBranchKey(startKey, candidate.branch)
+		if _, notified := partition.alternateNotified[key]; notified {
+			continue
+		}
+		partition.alternateNotified[key] = struct{}{}
+		result = append(result, candidate)
+	}
+	return result
+}
+
+func rowRecogMatchExtends(previous, current rowRecogMatch) bool {
+	if previous.start != current.start || current.end <= previous.end || previous.branch != current.branch {
+		return false
+	}
+	for name, events := range previous.captures {
+		later := current.captures[name]
+		if len(later) < len(events) {
+			return false
+		}
+		for index, event := range events {
+			if !sameEvent(event, later[index]) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func rowRecogStartKey(index int, event Event) string {
@@ -1239,6 +1511,9 @@ func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, e
 		partition.emitted = make(map[string]struct{})
 		partition.emittedMatches = remapRowRecogEmittedMatches(oldEmittedMatches, oldEvents, retained, partition.events)
 		partition.intervalClosed = make(map[string]struct{})
+		partition.closedBranches = make(map[string]struct{})
+		partition.alternateNotified = make(map[string]struct{})
+		partition.intervalNotified = make(map[string]struct{})
 		partition.intervalFinal = make(map[string][]rowRecogMatch)
 		if len(partition.events) == 0 && len(partition.previousRolling) == 0 {
 			delete(r.rowRecogState.partitions, key)
@@ -1286,7 +1561,13 @@ func rowRecogMatchesWithPrevious(definition *rowRecogDefinition, history []Event
 		if path.position != end+1 {
 			continue
 		}
-		result = append(result, rowRecogMatch{start: start, end: end, captures: cloneRowRecogCaptures(path.captures)})
+		result = append(result, rowRecogMatch{
+			start:    start,
+			end:      end,
+			terminal: path.terminal,
+			branch:   path.branch,
+			captures: cloneRowRecogCaptures(path.captures),
+		})
 		if definition.maxStates > 0 && len(result) >= definition.maxStates {
 			break
 		}
@@ -1298,7 +1579,59 @@ const maxRowRecogPatternSteps = 1 << 20
 
 type rowPatternMatchPath struct {
 	position int
+	terminal bool
+	branch   string
 	captures map[string][]Event
+}
+
+func rowPatternBranchKey(pattern RowPattern) string {
+	minimum, maximum := rowPatternBounds(pattern)
+	repeated := pattern.quantified && !(minimum == 1 && maximum == 1)
+	base := pattern
+	if repeated {
+		base.quantified = false
+		base.minimum = 1
+		base.maximum = 1
+	}
+	var key string
+	switch base.kind {
+	case rowPatternVariable:
+		key = "var:" + base.name
+	case rowPatternSequence:
+		parts := make([]string, 0, len(base.parts))
+		for _, part := range base.parts {
+			parts = append(parts, rowPatternBranchKey(part))
+		}
+		key = "seq/" + strings.Join(parts, "/")
+	case rowPatternAlternation:
+		parts := make([]string, 0, len(base.parts))
+		for _, part := range base.parts {
+			parts = append(parts, rowPatternBranchKey(part))
+		}
+		key = "alt/" + strings.Join(parts, "|")
+	case rowPatternPermutation:
+		parts := make([]string, 0, len(base.parts))
+		for _, part := range base.parts {
+			parts = append(parts, rowPatternBranchKey(part))
+		}
+		key = "perm/" + strings.Join(parts, "|")
+	default:
+		key = "unknown"
+	}
+	if repeated {
+		return fmt.Sprintf("repeat[%d,%d]/%s", pattern.minimum, pattern.maximum, key)
+	}
+	return key
+}
+
+func rowPatternJoinBranch(left, right string) string {
+	if left == "" {
+		return right
+	}
+	if right == "" {
+		return left
+	}
+	return left + "/" + right
 }
 
 type rowPatternMatchContext struct {
@@ -1358,13 +1691,20 @@ func (m *rowPatternMatchContext) matchBase(pattern RowPattern, position int, cap
 				return nil
 			}
 		}
-		return []rowPatternMatchPath{{position: position + 1, captures: next}}
+		return []rowPatternMatchPath{{position: position + 1, terminal: true, branch: rowPatternBranchKey(pattern), captures: next}}
 	case rowPatternSequence:
-		paths := []rowPatternMatchPath{{position: position, captures: cloneRowRecogCaptures(captures)}}
+		paths := []rowPatternMatchPath{{position: position, terminal: true, branch: "seq", captures: cloneRowRecogCaptures(captures)}}
 		for _, part := range pattern.parts {
 			next := make([]rowPatternMatchPath, 0)
 			for _, path := range paths {
-				next = m.appendLimited(next, m.match(part, path.position, path.captures))
+				for _, candidate := range m.match(part, path.position, path.captures) {
+					candidate.terminal = path.terminal && candidate.terminal
+					candidate.branch = rowPatternJoinBranch(path.branch, candidate.branch)
+					next = m.appendLimited(next, []rowPatternMatchPath{candidate})
+					if m.exhausted(len(next)) {
+						break
+					}
+				}
 				if m.exhausted(len(next)) {
 					break
 				}
@@ -1377,8 +1717,14 @@ func (m *rowPatternMatchContext) matchBase(pattern RowPattern, position int, cap
 		return paths
 	case rowPatternAlternation:
 		result := make([]rowPatternMatchPath, 0)
-		for _, part := range pattern.parts {
-			result = m.appendLimited(result, m.match(part, position, captures))
+		for index, part := range pattern.parts {
+			for _, candidate := range m.match(part, position, captures) {
+				candidate.branch = fmt.Sprintf("alt%d/%s", index, candidate.branch)
+				result = m.appendLimited(result, []rowPatternMatchPath{candidate})
+				if m.exhausted(len(result)) {
+					break
+				}
+			}
 			if m.exhausted(len(result)) {
 				break
 			}
@@ -1387,11 +1733,18 @@ func (m *rowPatternMatchContext) matchBase(pattern RowPattern, position int, cap
 	case rowPatternPermutation:
 		result := make([]rowPatternMatchPath, 0)
 		for _, order := range rowPatternPermutationOrders(pattern.parts) {
-			paths := []rowPatternMatchPath{{position: position, captures: cloneRowRecogCaptures(captures)}}
+			paths := []rowPatternMatchPath{{position: position, terminal: true, branch: "perm", captures: cloneRowRecogCaptures(captures)}}
 			for _, part := range order {
 				next := make([]rowPatternMatchPath, 0)
 				for _, path := range paths {
-					next = m.appendLimited(next, m.match(part, path.position, path.captures))
+					for _, candidate := range m.match(part, path.position, path.captures) {
+						candidate.terminal = path.terminal && candidate.terminal
+						candidate.branch = rowPatternJoinBranch(path.branch, candidate.branch)
+						next = m.appendLimited(next, []rowPatternMatchPath{candidate})
+						if m.exhausted(len(next)) {
+							break
+						}
+					}
 					if m.exhausted(len(next)) {
 						break
 					}
@@ -1413,6 +1766,11 @@ func (m *rowPatternMatchContext) matchBase(pattern RowPattern, position int, cap
 }
 
 func (m *rowPatternMatchContext) repeat(base RowPattern, position int, captures map[string][]Event, minimum, maximum int, greedy bool) []rowPatternMatchPath {
+	unbounded := maximum == 0
+	branchPrefix := ""
+	if !(minimum == 1 && maximum == 1) {
+		branchPrefix = fmt.Sprintf("repeat[%d,%d]/", minimum, maximum)
+	}
 	if maximum == 0 {
 		maximum = m.end - position + 1
 		if maximum < minimum {
@@ -1420,7 +1778,12 @@ func (m *rowPatternMatchContext) repeat(base RowPattern, position int, captures 
 		}
 	}
 	levels := make([][]rowPatternMatchPath, 0, maximum+1)
-	active := []rowPatternMatchPath{{position: position, captures: cloneRowRecogCaptures(captures)}}
+	active := []rowPatternMatchPath{{
+		position: position,
+		terminal: !unbounded && minimum == 0,
+		branch:   branchPrefix + rowPatternBranchKey(base),
+		captures: cloneRowRecogCaptures(captures),
+	}}
 	for count := 0; count <= maximum; count++ {
 		if count >= minimum {
 			levels = append(levels, active)
@@ -1438,6 +1801,8 @@ func (m *rowPatternMatchContext) repeat(base RowPattern, position int, captures 
 				if candidate.position == path.position {
 					continue
 				}
+				candidate.terminal = candidate.terminal && !unbounded
+				candidate.branch = branchPrefix + candidate.branch
 				next = m.appendLimited(next, []rowPatternMatchPath{candidate})
 				if m.exhausted(len(next)) {
 					break
@@ -1787,10 +2152,14 @@ func rowRecogCurrentMatches(definition *rowRecogDefinition, partition *rowRecogP
 						result = append(result, final)
 					}
 				}
-				continue
+				if !definition.intervalOrTerminated {
+					continue
+				}
 			}
-			if _, closed := partition.intervalClosed[startKey]; closed {
-				continue
+			if !definition.intervalOrTerminated {
+				if _, closed := partition.intervalClosed[startKey]; closed {
+					continue
+				}
 			}
 		}
 		// With ALL MATCHES and SKIP TO CURRENT ROW, Esper's iterator retains
@@ -1813,6 +2182,12 @@ func rowRecogCurrentMatches(definition *rowRecogDefinition, partition *rowRecogP
 			for _, match := range matches {
 				key := rowRecogMatchKey(match)
 				if _, exists := seen[key]; exists {
+					continue
+				}
+				if definition.intervalOrTerminated && !rowRecogMatchAllowed(definition, partition, match) {
+					continue
+				}
+				if definition.intervalOrTerminated && rowRecogMatchBranchClosed(partition, startKey, match) {
 					continue
 				}
 				if definition.skip == RowRecogSkipPastLastRow && rowRecogSkipPastLastSnapshotStartExcluded(partition, match) {
