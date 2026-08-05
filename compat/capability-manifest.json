@@ -425,6 +425,17 @@
       "difference": "The Go fluent RankWindowBy trace covers descending rank replacement, full-window pass-through, equal-sort arrival order, stable in-place replacement and worst-entry old-stream eviction over the complete Java event sequence. Broader rank navigation/context combinations and shared Java/Go trace serialization remain open."
     },
     {
+      "id": "case.view-rank-multiexpression",
+      "javaRuntimeIds": ["java-runtime-bb86eace4dae5c1c130f"],
+      "javaNames": ["ViewRankMultiexpression"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewRank.java"],
+      "goTests": ["TestRankWindowMultiexpressionMatchesEsper"],
+      "tags": ["correctness", "view", "rank", "multikey", "multisort"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go fluent RankWindowBy trace covers multiple unique-key expressions and multiple ascending sort keys, including a new event immediately evicted as the worst row, replacement old/new pairs and equal-sort tie eviction. The wider Java ViewRank navigation/context/subquery matrix and shared trace remain open."
+    },
+    {
       "id": "case.object-array-query-fields",
       "javaRuntimeIds": ["java-runtime-2560a37393c8db7566be"],
       "javaNames": ["EventObjectArrayQueryFields"],
@@ -1024,6 +1035,7 @@
     {"capabilityId": "view.window-core", "caseId": "case.view-time-order-remove-route"},
     {"capabilityId": "view.window-core", "caseId": "case.view-rank-remove-stream"},
     {"capabilityId": "view.window-core", "caseId": "case.view-rank-ranked-scene"},
+    {"capabilityId": "view.window-core", "caseId": "case.view-rank-multiexpression"},
     {"capabilityId": "event.variant", "caseId": "case.variant-dynamic-map"},
     {"capabilityId": "query.insert-into-route", "caseId": "case.insert-into-chain"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
