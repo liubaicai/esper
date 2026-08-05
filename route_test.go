@@ -2,9 +2,11 @@ package esper
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestInsertIntoRoutesOriginalEventIntoVariantAndPreservesIdentity(t *testing.T) {
@@ -529,6 +531,111 @@ func TestInsertIntoRoutesRemoveStreamFromWindowEviction(t *testing.T) {
 	if len(routed) != 1 || routed[0].Get("symbol").Any() != "first" || routed[0].Get("price").Any() != 1.0 {
 		t.Fatalf("remove-stream routed events = %#v", routed)
 	}
+}
+
+func TestTimeOrderRemoveStreamRouteMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[externalTrade](env, "SupportBeanTimestamp"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "OrderedStream", []FieldSpec{
+		FieldDef("id", reflect.TypeOf("")),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	timestamp := Field[externalTrade, int64]("timestamp")
+	routePlan, err := env.Build(Select(
+		From[externalTrade](env, "SupportBeanTimestamp").Window(TimeOrder(timestamp, 10*time.Second)),
+		Alias("id", Field[externalTrade, string]("symbol")),
+	).InsertInto("OrderedStream", StatementName("time-order-remove-route"), WithRemoveStreamOnly()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetPlan, err := env.Build(FromAny(env, "OrderedStream").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env, WithStartTime(time.UnixMilli(0).UTC()))
+	if _, err := engine.Deploy(context.Background(), routePlan); err != nil {
+		t.Fatal(err)
+	}
+	targetDeployment, err := engine.Deploy(context.Background(), targetPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	if _, err := targetDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			event, ok := result.Event()
+			if !ok {
+				return fmt.Errorf("time-order route result is not an event: %#v", result)
+			}
+			ids = append(ids, event.Get("id").Any().(string))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	advance := func(milliseconds int64) {
+		t.Helper()
+		if err := engine.AdvanceTime(context.Background(), time.UnixMilli(milliseconds).UTC()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send := func(id string, timestamp int64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), externalTrade{Symbol: id, Timestamp: timestamp}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertIDs := func(want ...string) {
+		t.Helper()
+		if !reflect.DeepEqual(ids, want) {
+			t.Fatalf("time-order routed ids = %#v, want %#v", ids, want)
+		}
+	}
+
+	advance(1000)
+	advance(21000)
+	send("E1", 21000)
+	advance(22000)
+	send("E2", 22000)
+	advance(28000)
+	send("E3", 28000)
+	advance(30000)
+	send("E4", 27000)
+	send("E5", 22000)
+	advance(30999)
+	assertIDs()
+	advance(31000)
+	assertIDs("E1")
+
+	// Events already ten seconds old are emitted as remove-stream rows on send.
+	send("E6", 21000)
+	assertIDs("E1", "E6")
+	send("E7", 21300)
+	advance(31299)
+	assertIDs("E1", "E6")
+	advance(31300)
+	assertIDs("E1", "E6", "E7")
+	advance(31999)
+	assertIDs("E1", "E6", "E7")
+	advance(32000)
+	assertIDs("E1", "E6", "E7", "E2", "E5")
+	advance(36999)
+	assertIDs("E1", "E6", "E7", "E2", "E5")
+	advance(37000)
+	assertIDs("E1", "E6", "E7", "E2", "E5", "E4")
+	send("E8", 21000)
+	assertIDs("E1", "E6", "E7", "E2", "E5", "E4", "E8")
+	send("E9", 28000)
+	advance(37999)
+	assertIDs("E1", "E6", "E7", "E2", "E5", "E4", "E8")
+	advance(38000)
+	assertIDs("E1", "E6", "E7", "E2", "E5", "E4", "E8", "E3", "E9")
 }
 
 func TestFireAndForgetRouteIsExplicitAndPreservesProjectionOrder(t *testing.T) {

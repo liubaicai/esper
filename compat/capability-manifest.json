@@ -392,6 +392,17 @@
       "difference": "Go extends the Java array-key named-window scenario through fluent MergeIntoNamedWindowWhen: unique-key replacement emits old/new rows, not-matched collisions preserve the replacement old stream, and FirstUnique ignores duplicate inserts. Full Java on-trigger merge/update/delete matrix and shared trace remain open."
     },
     {
+      "id": "case.view-time-order-remove-route",
+      "javaRuntimeIds": ["java-runtime-2a0d6340a2f57c6b5498"],
+      "javaNames": ["ViewTimeOrderTTLTimeOrderRemoveStream"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeOrderAndTimeToLive.java"],
+      "goTests": ["TestTimeOrderRemoveStreamRouteMatchesEsper"],
+      "tags": ["correctness", "view", "time-order", "remove-stream", "route"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go fluent chain projects TimeOrder old-stream rows into a registered OrderedStream map and consumes them as new downstream events, covering out-of-order timestamps, equal-timestamp stability, immediate late-event removal and virtual-clock expiry boundaries. Full Java shared trace, representation variants and broader insert-into chains remain open."
+    },
+    {
       "id": "case.object-array-query-fields",
       "javaRuntimeIds": ["java-runtime-2560a37393c8db7566be"],
       "javaNames": ["EventObjectArrayQueryFields"],
@@ -432,6 +443,17 @@
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
       "difference": "Go now covers fluent exists/scalar/IN subqueries over Named Window, Table and regular event-stream snapshots, correlated OuterField evaluation, nested subquery scope, parameter binding, statement-owned independent source-window state, Fire-and-Forget consistent snapshots, count/sum/avg projections, aggregate WindowValues projection as one row over a retained group, array-key Unique replacement in subquery count filters, explicit any/all/some quantifiers with three-valued null handling, and scalar order/offset/limit plus first/null-on-multiple options. Java also covers grouped/having aggregate matrices, multi-row and multi-column results, context/pattern/Dataflow combinations, iterator/error diagnostics, indexing and broader invalid-rule/trace matrices; those remain open."
+    },
+    {
+      "id": "case.subquery-context",
+      "javaRuntimeIds": ["java-runtime-9aa54450b89fbc94ab73"],
+      "javaNames": ["ContextKeySegmentedSubqueryFiltered"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"],
+      "goTests": ["TestContextEventStreamSubqueryKeepsPartitionLocalLastEvent"],
+      "tags": ["correctness", "context", "subquery", "partition"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Context partitions now own independent event-stream subquery registries: inner LastEvent updates broadcast only to active partitions, while a newly created partition starts empty and later outer events reuse its local state. Named-window index-sharing, pattern-context subqueries and the wider Java context/subquery matrix remain open."
     },
     {
       "id": "case.expr-enum-aggregate",
@@ -977,6 +999,7 @@
     {"capabilityId": "event.inheritance", "caseId": "case.event-inheritance"},
     {"capabilityId": "view.derived-statistical", "caseId": "case.view-derived-statistical"},
     {"capabilityId": "view.window-core", "caseId": "case.view-window-core"},
+    {"capabilityId": "view.window-core", "caseId": "case.view-time-order-remove-route"},
     {"capabilityId": "event.variant", "caseId": "case.variant-dynamic-map"},
     {"capabilityId": "query.insert-into-route", "caseId": "case.insert-into-chain"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
@@ -986,6 +1009,7 @@
     {"capabilityId": "resultset.aggregate-access", "caseId": "case.aggregate-access"},
     {"capabilityId": "resultset.aggregate-local-group", "caseId": "case.aggregate-local-group"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-basic"},
+    {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-context"},
     {"capabilityId": "context.partition", "caseId": "case.context-partitioning"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-variable"},

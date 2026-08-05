@@ -1167,6 +1167,10 @@ CI 分别报告 capability coverage、source-test disposition coverage 和 case 
 
 随后复核 Java `ViewTimeOrderTTLPreviousAndPriorSceneOne/Two`：Go 新增 `PrevTail`、`PrevCount`、`PrevWindow` 链式表达式，并为 TimeOrder/Sort/Rank 维护独立的 view-access 与 arrival-order 元数据；`Prev`/tail/window 按排序头到尾访问，`Prior` 按到达顺序访问，过期 old-stream 只保留 Java 可见的 prior 值，Snapshot 也重建同一导航上下文。`TestPreviousViewNavigationUsesWindowAndArrivalOrders` 与 `TestTimeOrderPreviousNavigationMatchesExpiryLifecycle` 覆盖普通 length、TimeOrder 的 E1/E2/E3 乱序插入、E2/E4/E3 分阶段过期、old-stream Null/保留 prior 以及 Snapshot；`TestTimeOrderPreviousAccessMatchesEsper`、`TestSortedPreviousAccessUsesPostEvictionViewForNewRows` 和 `TestGroupedSortedPreviousAccessUsesPartitionView` 进一步固定 Java 的 Sort/TimeOrder 头尾顺序、即时淘汰新流仍使用 post-eviction 视图、new/old 同事件上下文隔离和 GroupWindow 分区历史。随后补齐 Java `ViewTimeOrderTTLMonthScoped` 的 calendar-month 语义：链式 `TimeOrderCalendar(timestamp, years, months, days)` 以 `time.Time.AddDate` 计算到期点，覆盖月边界前一毫秒保留、边界精确淘汰和非法周期；`TestGroupedTimeOrderWindowMatchesExpiryLifecycle` 对照 `ViewTimeOrderTTLGroupedWindow` 固定分区独立淘汰、迟到事件和 Snapshot 顺序。subquery/named-window/dataflow 传播和共享 Java/Go trace 仍待继续移植。
 
+随后对照 Java `ViewTimeOrderTTLTimeOrderRemoveStream`，补上 `TimeOrder(...).Select(...).InsertInto(..., WithRemoveStreamOnly())` 的 Go 链路：窗口淘汰的 old-stream 结果经注册的 `OrderedStream` 投影后作为下游 new-stream 事件消费。`TestTimeOrderRemoveStreamRouteMatchesEsper` 逐时刻覆盖 E1–E9 的乱序时间戳、同时间戳稳定顺序、已过期事件即时移除和 31/31.3/32/37/38 秒边界；视图的更广表示、insert-into 组合与共享 Java/Go trace 仍待继续。
+
+本轮又补齐 Java `ContextKeySegmentedSubqueryFiltered` 的基础 event-stream subquery：Context 每个分区持有独立的 `LastEvent` 子查询状态，内层事件只广播到已存在分区，新分区不回放创建前的内层事件；`TestContextEventStreamSubqueryKeepsPartitionLocalLastEvent` 固定 G1/G2/G3 分区的 null、更新和复用序列。Named Window index-sharing、Pattern Context/Dataflow 子查询及完整 context/subquery trace 仍保持部分对等。
+
 ### 17.3 后续每次提交的强制核对项
 
 每实现一个 capability，提交必须同时更新四类证据：

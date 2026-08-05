@@ -2749,11 +2749,15 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		return ResultBatch{}, false, nil
 	}
 	variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
-	if s.runtime.subqueryRegistry != nil {
+	if s.plan.query.contextName == "" && s.runtime.subqueryRegistry != nil {
 		if err := s.runtime.subqueryRegistry.accept(event, now, variables); err != nil {
 			return ResultBatch{}, false, err
 		}
 		variables = s.runtime.subqueryRegistry.attachVariables(variables)
+	} else if s.plan.query.contextName != "" {
+		if err := s.acceptContextSubqueryEventLocked(event, now, variables); err != nil {
+			return ResultBatch{}, false, err
+		}
 	}
 	s.runtime.ctx = ctx
 	if s.plan.query.contextName != "" {
@@ -2778,13 +2782,13 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			return ResultBatch{}, false, nil
 		}
 		if s.plan.query.trigger != nil {
-			batch, err := s.processTriggerRuntime(ctx, partition, now, event, variables)
+			batch, err := s.processTriggerRuntime(ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
 			if err != nil {
 				return ResultBatch{}, false, err
 			}
 			return batch, !batch.empty(), nil
 		}
-		batch, changed, err := partition.process(s.plan, event, now, variables)
+		batch, changed, err := partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
 		if changed {
 			batch.Sequence = s.runtime.seq.Add(1)
 		}
@@ -2798,6 +2802,44 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		return batch, !batch.empty(), nil
 	}
 	return s.runtime.process(s.plan, event, now, variables)
+}
+
+// acceptContextSubqueryEventLocked advances every currently active context
+// partition's raw event-stream subqueries. Context subqueries are partition
+// local in Esper, and they observe inner-stream events even when the event is
+// not an outer-stream event for the statement itself.
+func (s *Statement) acceptContextSubqueryEventLocked(event Event, now time.Time, variables map[string]Value) error {
+	if s == nil || s.engine == nil || len(s.runtime.partitions) == 0 {
+		return nil
+	}
+	for _, partition := range s.runtime.partitions {
+		if partition == nil {
+			continue
+		}
+		partition.ensureSubqueryRegistry(s.engine)
+		if partition.subqueryRegistry == nil {
+			continue
+		}
+		partitionVariables := s.contextPartitionVariables(partition, variables)
+		if err := partition.subqueryRegistry.accept(event, now, partitionVariables); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Statement) contextPartitionVariables(partition *statementRuntime, variables map[string]Value) map[string]Value {
+	result := cloneValues(variables)
+	result = variablesWithEngine(result, s.engine)
+	if partition != nil {
+		result = partition.withContextVariables(result)
+		result = partition.withContextProperties(result)
+		partition.ensureSubqueryRegistry(s.engine)
+		if partition.subqueryRegistry != nil {
+			result = partition.subqueryRegistry.attachVariables(result)
+		}
+	}
+	return result
 }
 
 func statementAcceptsEvent(query Query, event Event) bool {
@@ -2958,10 +3000,10 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 			var partitionChanged bool
 			var err error
 			if s.plan.query.trigger != nil {
-				batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, variables)
+				batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
 				partitionChanged = !batch.empty()
 			} else {
-				batch, partitionChanged, err = partition.process(s.plan, event, now, variables)
+				batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
 			}
 			if err != nil {
 				return ResultBatch{}, false, err
@@ -2979,8 +3021,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		if partition == nil {
 			continue
 		}
-		partition.variables = partition.withContextVariables(variablesWithEngine(variables, s.engine))
-		partition.variables = partition.withContextProperties(partition.variables)
+		partition.variables = s.contextPartitionVariables(partition, variables)
 		if s.plan.query.output.Termination != OutputNoTermination {
 			terminationBatch := partition.outputAtTermination(s.plan, now)
 			result.New = append(result.New, terminationBatch.New...)
@@ -3416,8 +3457,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		if partition == nil {
 			continue
 		}
-		partition.variables = partition.withContextVariables(variablesWithEngine(variables, s.engine))
-		partition.variables = partition.withContextProperties(partition.variables)
+		partition.variables = s.contextPartitionVariables(partition, variables)
 		if s.plan.query.output.Termination != OutputNoTermination {
 			terminationBatch := partition.outputAtTermination(s.plan, now)
 			result.New = append(result.New, terminationBatch.New...)
@@ -3539,10 +3579,10 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 			var batch ResultBatch
 			var partitionChanged bool
 			if s.plan.query.trigger != nil {
-				batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, variables)
+				batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
 				partitionChanged = !batch.empty()
 			} else {
-				batch, partitionChanged, err = partition.process(s.plan, event, now, variables)
+				batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
 			}
 			if err != nil {
 				return ResultBatch{}, false, err
@@ -3560,8 +3600,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 		if partition == nil {
 			continue
 		}
-		partition.variables = partition.withContextVariables(variablesWithEngine(variables, s.engine))
-		partition.variables = partition.withContextProperties(partition.variables)
+		partition.variables = s.contextPartitionVariables(partition, variables)
 		if definition.end != nil && s.plan.query.output.Termination != OutputNoTermination {
 			terminationBatch := partition.outputAtTermination(s.plan, now)
 			result.New = append(result.New, terminationBatch.New...)
@@ -3617,6 +3656,7 @@ func (s *Statement) syncTemporalContextLocked(now time.Time) (ResultBatch, bool)
 			continue
 		}
 		if partition != nil {
+			partition.variables = s.contextPartitionVariables(partition, s.runtime.variables)
 			if s.plan.query.output.Termination != OutputNoTermination {
 				terminationBatch := partition.outputAtTermination(s.plan, now)
 				batch.New = append(batch.New, terminationBatch.New...)
@@ -3706,7 +3746,18 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 	return partition, nil
 }
 
-func ptrStatementRuntime(runtime statementRuntime) *statementRuntime { return &runtime }
+func (r *statementRuntime) ensureSubqueryRegistry(engine *Engine) {
+	if r == nil || engine == nil || r.subqueryRegistry != nil {
+		return
+	}
+	r.engine = engine
+	r.subqueryRegistry = newSubqueryRuntimeRegistry(engine.env, engine, r.query)
+}
+
+func ptrStatementRuntime(runtime statementRuntime) *statementRuntime {
+	runtime.ensureSubqueryRegistry(runtime.engine)
+	return &runtime
+}
 
 func (r *statementRuntime) withContextProperties(variables map[string]Value) map[string]Value {
 	if r == nil || len(r.contextProperties) == 0 {
@@ -3820,9 +3871,11 @@ func (s *Statement) expire(now time.Time, variables map[string]Value) (ResultBat
 		return ResultBatch{}, false
 	}
 	variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
-	if s.runtime.subqueryRegistry != nil {
+	if s.plan.query.contextName == "" && s.runtime.subqueryRegistry != nil {
 		s.runtime.subqueryRegistry.expire(now)
 		variables = s.runtime.subqueryRegistry.attachVariables(variables)
+	} else if s.plan.query.contextName != "" {
+		s.expireContextSubqueriesLocked(now)
 	}
 	if s.plan.query.contextName != "" {
 		if definition, ok := s.engine.env.Context(s.plan.query.contextName); ok && definition.kind == ContextInitiatedTerminated && definition.startPattern != nil {
@@ -3858,6 +3911,21 @@ func (s *Statement) expire(now time.Time, variables map[string]Value) (ResultBat
 	return batch, !batch.empty()
 }
 
+func (s *Statement) expireContextSubqueriesLocked(now time.Time) {
+	if s == nil {
+		return
+	}
+	for _, partition := range s.runtime.partitions {
+		if partition == nil {
+			continue
+		}
+		partition.ensureSubqueryRegistry(s.engine)
+		if partition.subqueryRegistry != nil {
+			partition.subqueryRegistry.expire(now)
+		}
+	}
+}
+
 func (s *Statement) expireContext(now time.Time, variables map[string]Value) (ResultBatch, bool) {
 	keys := make([]string, 0, len(s.runtime.partitions))
 	for key := range s.runtime.partitions {
@@ -3867,7 +3935,7 @@ func (s *Statement) expireContext(now time.Time, variables map[string]Value) (Re
 	batch := ResultBatch{Time: now}
 	for _, key := range keys {
 		partition := s.runtime.partitions[key]
-		partBatch, _ := partition.expireBatch(s.plan, now, variables)
+		partBatch, _ := partition.expireBatch(s.plan, now, s.contextPartitionVariables(partition, variables))
 		batch.New = append(batch.New, partBatch.New...)
 		batch.Old = append(batch.Old, partBatch.Old...)
 	}
@@ -4848,7 +4916,7 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 		if s.plan.query.trigger != nil {
 			triggerBatch := ResultBatch{Time: now}
 			for _, event := range group.newEvents {
-				batch, err := s.processTriggerRuntime(ctx, partition, now, event, variables)
+				batch, err := s.processTriggerRuntime(ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
 				if err != nil {
 					return ResultBatch{}, false, err
 				}
