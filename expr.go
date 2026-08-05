@@ -197,12 +197,17 @@ type EvalContext struct {
 	// uses this to preserve arrival-order PREV values after a data window has
 	// evicted the referenced event.
 	PreviousHistory []Event
-	IsLeaving       bool
-	Tags            map[string]Event
-	TagValues       map[string][]Event
-	Now             time.Time
-	Variables       map[string]Value
-	Parameters      map[string]Value
+	// PreviousTagEvents supplies the event selected by a tag-aware Prev/Prior
+	// expression to nested TagField/TagFieldAt and tag enumeration expressions.
+	// It is private-in-practice runtime context: fluent callers normally use
+	// PrevTag/PriorTag or compose Prev/Prior with TagField.
+	PreviousTagEvents map[string]Event
+	IsLeaving         bool
+	Tags              map[string]Event
+	TagValues         map[string][]Event
+	Now               time.Time
+	Variables         map[string]Value
+	Parameters        map[string]Value
 
 	// Output counters are populated only while an output-when expression is
 	// evaluated. They model Esper's count_insert/count_remove and total forms
@@ -655,6 +660,19 @@ func Prior[V any](offset int, expression Expression[V]) Expression[V] {
 	return previousExpression[V]("prior", offset, expression, true)
 }
 
+// PrevTag evaluates a property of a named Match Recognize tag against an
+// arrival-order previous event. It is the explicit Go counterpart of
+// PREV(A.property, offset) while retaining a typed, chainable expression.
+func PrevTag[V any](offset int, tag, name string) Expression[V] {
+	return Prev[V](offset, TagField[V](tag, name))
+}
+
+// PriorTag evaluates a property of a named Match Recognize tag before the
+// current event. Offset zero addresses the immediately preceding event.
+func PriorTag[V any](offset int, tag, name string) Expression[V] {
+	return Prior[V](offset, TagField[V](tag, name))
+}
+
 func previousExpression[V any](kind string, offset int, expression Expression[V], prior bool) Expression[V] {
 	if expression == nil {
 		return makeExpr[V](kind, fmt.Sprintf("%s(%d,<nil>)", kind, offset), nil, func(EvalContext) Value { return Null() })
@@ -680,6 +698,17 @@ func previousExpression[V any](kind string, offset int, expression Expression[V]
 		nested.Event = history[index]
 		nested.History = append([]Event(nil), history[:index+1]...)
 		nested.PreviousHistory = append([]Event(nil), history[:index+1]...)
+		var tags []string
+		expression.node().referencedTags(&tags)
+		if len(tags) > 0 || len(ctx.PreviousTagEvents) > 0 {
+			nested.PreviousTagEvents = make(map[string]Event, len(ctx.PreviousTagEvents)+len(tags))
+			for tag, event := range ctx.PreviousTagEvents {
+				nested.PreviousTagEvents[tag] = event
+			}
+			for _, tag := range tags {
+				nested.PreviousTagEvents[tag] = history[index]
+			}
+		}
 		return expression.eval(nested)
 	}}
 }
@@ -693,6 +722,11 @@ func TagField[V any](tag, name string) Expression[V] {
 	}
 	node := &exprNode{kind: "tag-field", typ: typeOf[V](), description: tag + "." + name, fieldName: name, tagName: tag}
 	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.PreviousTagEvents != nil {
+			if event, ok := ctx.PreviousTagEvents[tag]; ok {
+				return event.Get(name)
+			}
+		}
 		if ctx.Tags != nil {
 			if event, ok := ctx.Tags[tag]; ok {
 				return event.Get(name)
@@ -717,6 +751,12 @@ func TagFieldAt[V any](tag string, index int, name string) Expression[V] {
 	}
 	node := &exprNode{kind: "tag-field-at", typ: typeOf[V](), description: fmt.Sprintf("%s[%d].%s", tag, index, name), fieldName: name, tagName: tag}
 	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		if event, ok := ctx.PreviousTagEvents[tag]; ok {
+			if index == 0 {
+				return event.Get(name)
+			}
+			return Null()
+		}
 		if ctx.TagValues == nil || index >= len(ctx.TagValues[tag]) {
 			return Null()
 		}
@@ -734,6 +774,9 @@ func TagCount(tag string) Expression[int64] {
 	}
 	node := &exprNode{kind: "tag-count", typ: typeOf[int64](), description: "count(" + tag + ")", fieldName: tag, tagName: tag}
 	return typedExpr[int64]{n: node, fn: func(ctx EvalContext) Value {
+		if _, ok := ctx.PreviousTagEvents[tag]; ok {
+			return Present(int64(1))
+		}
 		if ctx.TagValues != nil {
 			return Present(int64(len(ctx.TagValues[tag])))
 		}
@@ -830,6 +873,11 @@ func TagAll(tag string, predicate Expression[bool]) Expression[bool] {
 }
 
 func rowRecogTagEvents(ctx EvalContext, tag string) []Event {
+	if ctx.PreviousTagEvents != nil {
+		if event, ok := ctx.PreviousTagEvents[tag]; ok {
+			return []Event{event}
+		}
+	}
 	if ctx.TagValues != nil {
 		if events, ok := ctx.TagValues[tag]; ok {
 			return events
