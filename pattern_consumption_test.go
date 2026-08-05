@@ -95,6 +95,50 @@ func TestPatternFilterConsumeAndPreservesSuppressedBranch(t *testing.T) {
 	}
 }
 
+func TestPatternFilterConsumeAndSceneTwoMatchesEsper(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	a := PatternFrom(base, "a", Literal(true))
+	b := PatternFrom(base, "b", StartsWith(Field[runtimeTestTrade, string]("symbol"), Literal("A"))).Consume()
+	pattern := a.And(b)
+	plan, err := env.Build(pattern.Select(
+		Alias("a", TagField[string]("a", "symbol")),
+		Alias("b", TagField[string]("b", "symbol")),
+	).Query(StatementName("pattern-filter-consume-scene-two")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("scene-two first event rows = %#v, want none", rows)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "X"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("a").Any() != "X" || rows[0].Get("b").Any() != "A" {
+		t.Fatalf("scene-two rows = %#v, want X/A", rows)
+	}
+}
+
 func TestPatternFilterConsumeOrSelectsHighestLevelAndFansOutTies(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -245,6 +289,34 @@ func TestPatternFilterConsumeEveryBranchesKeepSameLevelFanout(t *testing.T) {
 	}
 }
 
+func TestPatternFilterConsumeUnannotatedFiltersYieldOnlyWithoutConsumptionMatch(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	a := PatternFrom(base, "a", Equal[float64](Field[runtimeTestTrade, float64]("price"), Literal(11.0))).Consume(1).Every()
+	b := PatternFrom(base, "b", Literal(true)).Every()
+	rows, deployment := collectPatternConsumptionRows(t, env, engine, a.Or(b), "pattern-filter-consume-unannotated")
+	defer deployment.Undeploy(context.Background())
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E1", Price: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E2", Price: 11}); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"<nil>|E1|<nil>", "E2|<nil>|<nil>"}
+	if len(*rows) != len(want) {
+		t.Fatalf("unannotated @consume rows = %#v, want %v", *rows, want)
+	}
+	seen := make(map[string]struct{}, len(*rows))
+	for _, row := range *rows {
+		seen[patternConsumptionRowKey(row)] = struct{}{}
+	}
+	for _, expected := range want {
+		if _, ok := seen[expected]; !ok {
+			t.Fatalf("unannotated @consume rows = %#v, missing %q", *rows, expected)
+		}
+	}
+}
+
 func TestPatternFilterConsumeZeroAndNegativeValidation(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")
@@ -268,6 +340,11 @@ func TestPatternFilterConsumeZeroAndNegativeValidation(t *testing.T) {
 		Alias("a", TagField[string]("a", "symbol")),
 	).Query(StatementName("pattern-filter-consume-negative"))); err == nil || !errors.Is(err, ErrorInvalidRule) {
 		t.Fatalf("negative consume level error = %v, want ErrorInvalidRule", err)
+	}
+	if _, err := env.Build(PatternFrom(base, "a", Literal(true)).Consume(0, 1).Select(
+		Alias("a", TagField[string]("a", "symbol")),
+	).Query(StatementName("pattern-filter-consume-arity"))); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("consume arity error = %v, want ErrorInvalidRule", err)
 	}
 }
 

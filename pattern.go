@@ -345,17 +345,26 @@ func (p PatternStream) FollowedByMax(maximum int, tag string, predicate Expressi
 
 // Consume marks the most recently appended event filter with an event-level
 // consumption priority. When multiple filters in the same Pattern query match
-// one input Event, only filters at the highest level receive that Event. A
-// zero level is equivalent to an unannotated filter; positive levels are
-// selected over lower levels. This is the fluent Go counterpart of Esper's
-// filter-level @consume(N) annotation.
-func (p PatternStream) Consume(level int) PatternStream {
+// one input Event, only consuming filters at the highest level receive that
+// Event; unannotated filters are excluded whenever a consuming filter matches.
+// If no level is supplied, the level is zero, matching Esper's bare @consume
+// annotation. Explicit Consume(0) is also a consuming annotation and is not
+// equivalent to leaving a filter unannotated.
+func (p PatternStream) Consume(levels ...int) PatternStream {
 	if p.def == nil || p.def.root == nil {
 		return p
 	}
 	copyDefinition := *p.def
 	copyDefinition.steps = append([]patternStep(nil), p.def.steps...)
 	copyDefinition.root = clonePatternNode(p.def.root)
+	if len(levels) > 1 {
+		copyDefinition.consumeInvalid = true
+		return PatternStream{env: p.env, def: &copyDefinition}
+	}
+	level := 0
+	if len(levels) == 1 {
+		level = levels[0]
+	}
 	if event := lastPatternEvent(copyDefinition.root); event != nil {
 		event.consumeLevel = level
 		event.consumeLevelSet = true

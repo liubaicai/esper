@@ -7226,16 +7226,25 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 		if !patternPredicateMatches(next.node, next, trigger.event, trigger.now, variables) {
 			return []patternTransition{patternTransitionFor(next)}
 		}
-		if trigger.consumptionLevel >= 0 && next.node.consumeLevel < trigger.consumptionLevel {
-			return []patternTransition{patternTransitionFor(next)}
+		if trigger.consumptionLevel >= 0 {
+			// Once any consuming filter matched this event, Esper dispatches
+			// only consuming filters at the highest level. An unannotated
+			// filter therefore remains at its pre-event state even though its
+			// own predicate may match.
+			if !next.node.consumeLevelSet || next.node.consumeLevel < trigger.consumptionLevel {
+				return []patternTransition{patternTransitionFor(next)}
+			}
 		}
 		capturePatternEvent(next, trigger.event)
-		return []patternTransition{patternTransition{
-			state:            next,
-			complete:         patternSatisfied(next),
-			consumed:         true,
-			consumptionLevel: next.node.consumeLevel,
-		}}
+		transition := patternTransition{
+			state:    next,
+			complete: patternSatisfied(next),
+		}
+		if next.node.consumeLevelSet {
+			transition.consumed = true
+			transition.consumptionLevel = next.node.consumeLevel
+		}
+		return []patternTransition{transition}
 
 	case patternTimerIntervalNode, patternTimerAtNode, patternTimerScheduleNode, patternTimerCronNode:
 		next := clonePatternProgress(progress)

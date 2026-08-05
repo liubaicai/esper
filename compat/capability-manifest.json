@@ -786,11 +786,11 @@
       "javaRuntimeIds": ["java-runtime-db22761aeeae234aa70f", "java-runtime-09fdeb1428f1772fd38c", "java-runtime-fa260698edee4fba58ed", "java-runtime-6cc7b65fc365ca99568d", "java-runtime-5742c44f5fc51b6adfa1"],
       "javaNames": ["PatternFollowedBy", "PatternAnd", "PatternFilterAndSceneTwo", "PatternOr", "PatternInvalid"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternConsumingFilter.java"],
-      "goTests": ["TestPatternFilterConsumeFollowedByMatchesEsper", "TestPatternFilterConsumeAndPreservesSuppressedBranch", "TestPatternFilterConsumeOrSelectsHighestLevelAndFansOutTies", "TestPatternFilterConsumeNestedOrMatrixMatchesEsper", "TestPatternFilterConsumeContextKeepsHighestLevelSemantics", "TestPatternFilterConsumeEveryBranchesKeepSameLevelFanout", "TestPatternFilterConsumeZeroAndNegativeValidation"],
+      "goTests": ["TestPatternFilterConsumeFollowedByMatchesEsper", "TestPatternFilterConsumeAndPreservesSuppressedBranch", "TestPatternFilterConsumeAndSceneTwoMatchesEsper", "TestPatternFilterConsumeOrSelectsHighestLevelAndFansOutTies", "TestPatternFilterConsumeNestedOrMatrixMatchesEsper", "TestPatternFilterConsumeContextKeepsHighestLevelSemantics", "TestPatternFilterConsumeEveryBranchesKeepSameLevelFanout", "TestPatternFilterConsumeUnannotatedFiltersYieldOnlyWithoutConsumptionMatch", "TestPatternFilterConsumeZeroAndNegativeValidation"],
       "tags": ["correctness", "pattern", "consumption", "priority", "invalid"],
       "status": "mapped",
       "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
-      "difference": "Go exposes Consume(level) on the fluent PatternStream and applies the maximum level among matching event filters for one input Event, covering followed-by, and and or branches plus negative-level validation. Java additionally covers filter-scene lifecycle, every/non-every permutations, level zero and multi-branch cardinality, SODA rendering and parser diagnostics; nested match-until/guard/observer and complete trace parity remain open."
+      "difference": "Go exposes variadic Consume(level) on the fluent PatternStream (no argument means level 0) and, when one or more consuming filters match an input Event, dispatches only consuming filters at the maximum level; unannotated filters proceed only when no consuming filter matches. Followed-by, and, or, Context, filter-scene lifecycle, level zero, mixed unannotated filters, multi-branch cardinality, negative level and argument arity are covered. Java SODA rendering, exact parser diagnostics, repeated-tag cardinality and broader nested trace parity remain open."
     },
     {
       "id": "case.pattern-timer-cron",
