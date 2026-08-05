@@ -180,3 +180,82 @@ func TestDataflowEPStatementSourceBatchCollectorReceivesNewAndOldStreamsMatchesE
 		t.Fatal(err)
 	}
 }
+
+func TestDataflowEPStatementSourceWithUnderlyingMatchesEsper(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	eventPlan, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(StatementName("underlying-event-statement")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	eventDeployment, err := engine.Deploy(context.Background(), eventPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eventDefinition, err := DefineDataflow(env, "underlying-event-flow").
+		EPStatementSourceWithUnderlying("source", eventDeployment.Statements()[0]).
+		Emitter("emit").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	eventInstance, err := engine.InstantiateDataflow(context.Background(), eventDefinition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := eventInstance.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "event-underlying", Price: 3}); err != nil {
+		t.Fatal(err)
+	}
+	outputs := eventInstance.Outputs()
+	if len(outputs) != 1 {
+		t.Fatalf("underlying statement event outputs = %#v", outputs)
+	}
+	trade, ok := outputs[0].(runtimeTestTrade)
+	if !ok || trade.Symbol != "event-underlying" {
+		t.Fatalf("underlying statement event output = %#v, want runtimeTestTrade", outputs[0])
+	}
+	if err := eventInstance.Cancel(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	rowPlan, err := env.Build(Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("symbol", Field[runtimeTestTrade, string]("symbol")),
+		Alias("price", Field[runtimeTestTrade, float64]("price")),
+	).Query(StatementName("underlying-row-statement")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), rowPlan); err != nil {
+		t.Fatal(err)
+	}
+	rowDefinition, err := DefineDataflow(env, "underlying-row-flow").
+		EPStatementSourceByNameWithUnderlying("source", "underlying-row-statement").
+		Emitter("emit").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rowInstance, err := engine.InstantiateDataflow(context.Background(), rowDefinition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := rowInstance.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "row-underlying", Price: 4}); err != nil {
+		t.Fatal(err)
+	}
+	outputs = rowInstance.Outputs()
+	if len(outputs) != 1 {
+		t.Fatalf("underlying statement row outputs = %#v", outputs)
+	}
+	row, ok := outputs[0].(map[string]any)
+	if !ok || row["symbol"] != "row-underlying" || row["price"] != 4.0 {
+		t.Fatalf("underlying statement row output = %#v, want map", outputs[0])
+	}
+	if err := rowInstance.Cancel(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}

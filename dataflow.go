@@ -688,38 +688,39 @@ func DataflowPortOf[T any](name string) DataflowPort {
 }
 
 type DataflowOperator struct {
-	Name                     string
-	Kind                     DataflowOperatorKind
-	Events                   []any
-	EventType                string
-	Predicate                Expr
-	Selections               []Selection
-	Log                      func(context.Context, any) error
-	Statement                *Statement
-	StatementName            string
-	StatementDeploymentID    string
-	StatementFilter          DataflowStatementSourceFilter
-	StatementCollector       DataflowStatementSourceCollector
-	StatementBatchCollector  DataflowStatementSourceBatchCollector
-	Signal                   DataflowSignalHandler
-	Factory                  DataflowOperatorFactory
-	InputPorts               []string
-	OutputPorts              []string
-	InputPortTypes           map[string]reflect.Type
-	OutputPortTypes          map[string]reflect.Type
-	SourceFactory            DataflowSourceFactory
-	BeaconOptions            DataflowBeaconOptions
-	BeaconConfigured         bool
-	Properties               map[string]any
-	ParameterNames           []string
-	SourceFilter             Expr
-	EventBusSourceCollector  DataflowEventBusSourceCollector
-	EventBusSourceUnderlying bool
-	EventBusSinkCollector    DataflowEventBusSinkCollector
-	LogOptions               *DataflowLogSinkOptions
-	SelectOptions            DataflowSelectOptions
-	JoinOptions              DataflowJoinOptions
-	JoinConfigured           bool
+	Name                      string
+	Kind                      DataflowOperatorKind
+	Events                    []any
+	EventType                 string
+	Predicate                 Expr
+	Selections                []Selection
+	Log                       func(context.Context, any) error
+	Statement                 *Statement
+	StatementName             string
+	StatementDeploymentID     string
+	StatementFilter           DataflowStatementSourceFilter
+	StatementCollector        DataflowStatementSourceCollector
+	StatementBatchCollector   DataflowStatementSourceBatchCollector
+	StatementSourceUnderlying bool
+	Signal                    DataflowSignalHandler
+	Factory                   DataflowOperatorFactory
+	InputPorts                []string
+	OutputPorts               []string
+	InputPortTypes            map[string]reflect.Type
+	OutputPortTypes           map[string]reflect.Type
+	SourceFactory             DataflowSourceFactory
+	BeaconOptions             DataflowBeaconOptions
+	BeaconConfigured          bool
+	Properties                map[string]any
+	ParameterNames            []string
+	SourceFilter              Expr
+	EventBusSourceCollector   DataflowEventBusSourceCollector
+	EventBusSourceUnderlying  bool
+	EventBusSinkCollector     DataflowEventBusSinkCollector
+	LogOptions                *DataflowLogSinkOptions
+	SelectOptions             DataflowSelectOptions
+	JoinOptions               DataflowJoinOptions
+	JoinConfigured            bool
 }
 
 // DataflowEdge connects an operator output port to an operator input port.
@@ -852,6 +853,18 @@ func (b DataflowBuilder) EPStatementSource(name string, statement *Statement) Da
 	return b.add(DataflowOperator{Name: name, Kind: EPStatementSourceKind, Statement: statement})
 }
 
+// EPStatementSourceWithUnderlying emits the statement result's Go
+// underlying value instead of the Event/Row envelope. Event results use the
+// registered event underlying value; projection rows use Row.AsMap.
+func (b DataflowBuilder) EPStatementSourceWithUnderlying(name string, statement *Statement) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                      name,
+		Kind:                      EPStatementSourceKind,
+		Statement:                 statement,
+		StatementSourceUnderlying: true,
+	})
+}
+
 // EPStatementSourceByName creates a statement source that follows a named
 // statement in the engine. The source may be started before the statement is
 // deployed; a later deployment with the same name is attached automatically.
@@ -860,6 +873,17 @@ func (b DataflowBuilder) EPStatementSourceByName(name, statementName string) Dat
 		Name:          name,
 		Kind:          EPStatementSourceKind,
 		StatementName: statementName,
+	})
+}
+
+// EPStatementSourceByNameWithUnderlying follows a named statement and emits
+// its underlying event/row representation.
+func (b DataflowBuilder) EPStatementSourceByNameWithUnderlying(name, statementName string) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                      name,
+		Kind:                      EPStatementSourceKind,
+		StatementName:             statementName,
+		StatementSourceUnderlying: true,
 	})
 }
 
@@ -874,6 +898,18 @@ func (b DataflowBuilder) EPStatementSourceByDeployment(name, deploymentID, state
 	})
 }
 
+// EPStatementSourceByDeploymentWithUnderlying is the deployment-scoped
+// underlying-value form of EPStatementSourceByDeployment.
+func (b DataflowBuilder) EPStatementSourceByDeploymentWithUnderlying(name, deploymentID, statementName string) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                      name,
+		Kind:                      EPStatementSourceKind,
+		StatementName:             statementName,
+		StatementDeploymentID:     deploymentID,
+		StatementSourceUnderlying: true,
+	})
+}
+
 // EPStatementSourceWithStatementFilter subscribes to every currently
 // deployed and subsequently deployed statement accepted by selector.
 func (b DataflowBuilder) EPStatementSourceWithStatementFilter(name string, selector DataflowStatementSourceFilter) DataflowBuilder {
@@ -881,6 +917,17 @@ func (b DataflowBuilder) EPStatementSourceWithStatementFilter(name string, selec
 		Name:            name,
 		Kind:            EPStatementSourceKind,
 		StatementFilter: selector,
+	})
+}
+
+// EPStatementSourceWithStatementFilterAndUnderlying selects statements by
+// metadata and emits their underlying event/row values.
+func (b DataflowBuilder) EPStatementSourceWithStatementFilterAndUnderlying(name string, selector DataflowStatementSourceFilter) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                      name,
+		Kind:                      EPStatementSourceKind,
+		StatementFilter:           selector,
+		StatementSourceUnderlying: true,
 	})
 }
 
@@ -1089,9 +1136,9 @@ func (b DataflowBuilder) EventBusSourceWithFilterAndCollector(name, eventType st
 	})
 }
 
-// EventBusSourceWithUnderlyingFilterAndCollector combines all three source
+// EventBusSourceWithUnderlyingAndFilterAndCollector combines all three source
 // options while retaining the filter-before-collector ordering.
-func (b DataflowBuilder) EventBusSourceWithUnderlyingFilterAndCollector(name, eventType string, predicate Expr, collector DataflowEventBusSourceCollector) DataflowBuilder {
+func (b DataflowBuilder) EventBusSourceWithUnderlyingAndFilterAndCollector(name, eventType string, predicate Expr, collector DataflowEventBusSourceCollector) DataflowBuilder {
 	return b.add(DataflowOperator{
 		Name:                     name,
 		Kind:                     EventBusSourceKind,
@@ -1831,6 +1878,9 @@ func inferDataflowBuiltinPorts(operator DataflowOperator) DataflowOperator {
 			setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", rowType)
 		}
 	case EPStatementSourceKind:
+		if operator.StatementSourceUnderlying {
+			break
+		}
 		if operator.Statement != nil {
 			if _, projected := operator.Statement.Plan().ResultSchema(); projected {
 				setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", rowType)
@@ -3179,6 +3229,20 @@ func dataflowStatementResultValue(result Result) (any, bool) {
 	return nil, false
 }
 
+func dataflowStatementSourceOutputValue(value any, underlying bool) any {
+	if !underlying {
+		return value
+	}
+	switch typed := value.(type) {
+	case Event:
+		return typed.Underlying()
+	case Row:
+		return typed.AsMap()
+	default:
+		return value
+	}
+}
+
 func (d *DataflowInstance) submitStatementSourceValues(callbackCtx context.Context, operator DataflowOperator, values []any) error {
 	for _, value := range values {
 		var processErr error
@@ -3206,6 +3270,9 @@ func (d *DataflowInstance) statementSourceListener(operator DataflowOperator, st
 			if collectErr != nil {
 				return collectErr
 			}
+			for index, value := range values {
+				values[index] = dataflowStatementSourceOutputValue(value, operator.StatementSourceUnderlying)
+			}
 			return d.submitStatementSourceValues(callbackCtx, operator, values)
 		}
 		for _, result := range batch.New {
@@ -3213,6 +3280,7 @@ func (d *DataflowInstance) statementSourceListener(operator DataflowOperator, st
 			if !ok {
 				continue
 			}
+			resultValue := value
 			accepted, filterErr := d.dataflowSourceFilterAccepts(operator, value)
 			if filterErr != nil {
 				return filterErr
@@ -3227,6 +3295,14 @@ func (d *DataflowInstance) statementSourceListener(operator DataflowOperator, st
 					return collectErr
 				}
 				values = collected
+			}
+			if operator.StatementSourceUnderlying {
+				for index, collected := range values {
+					values[index] = dataflowStatementSourceOutputValue(collected, true)
+				}
+			} else if operator.StatementCollector == nil {
+				resultValue = dataflowStatementSourceOutputValue(resultValue, false)
+				values[0] = resultValue
 			}
 			if err := d.submitStatementSourceValues(callbackCtx, operator, values); err != nil {
 				return err
