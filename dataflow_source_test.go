@@ -89,6 +89,87 @@ type dataflowBlockingSource struct {
 	release chan struct{}
 }
 
+type dataflowRunnableSource struct {
+	started chan struct{}
+	release chan struct{}
+	value   int
+}
+
+func (s *dataflowRunnableSource) Open(context.Context) error {
+	close(s.started)
+	return nil
+}
+
+func (s *dataflowRunnableSource) Close(context.Context) error { return nil }
+
+func (s *dataflowRunnableSource) Run(ctx context.Context, emitter *DataflowEmitter) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-s.release:
+		return emitter.Submit(ctx, s.value)
+	}
+}
+
+func TestDataflowMultipleCustomSourcesJoinAfterEachCompletesMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	first := &dataflowRunnableSource{started: make(chan struct{}), release: make(chan struct{}), value: 1}
+	second := &dataflowRunnableSource{started: make(chan struct{}), release: make(chan struct{}), value: 2}
+	definition, err := DefineDataflow(env, "multiple-source-flow").
+		CustomTypedSource("source-one", func(DataflowOperatorContext) (DataflowSourceRuntime, error) {
+			return first, nil
+		}, []DataflowPort{DataflowPortOf[int]("out")}).
+		CustomTypedSource("source-two", func(DataflowOperatorContext) (DataflowSourceRuntime, error) {
+			return second, nil
+		}, []DataflowPort{DataflowPortOf[int]("out")}).
+		Emitter("sink").
+		Connect("source-one", "sink").
+		Connect("source-two", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	instance, err := NewEngine(env).InstantiateDataflow(context.Background(), definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := instance.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	for name, started := range map[string]<-chan struct{}{"source-one": first.started, "source-two": second.started} {
+		select {
+		case <-started:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("%s did not start, state=%v stats=%#v", name, instance.State(), instance.Stats())
+		}
+	}
+	if instance.State() != DataflowRunning {
+		t.Fatalf("multiple-source state = %v, want running", instance.State())
+	}
+
+	close(first.release)
+	deadline := time.After(2 * time.Second)
+	for len(instance.Outputs()) < 1 {
+		select {
+		case <-deadline:
+			t.Fatal("first source did not reach sink")
+		default:
+			time.Sleep(time.Millisecond)
+		}
+	}
+	if instance.State() != DataflowRunning {
+		t.Fatalf("multiple-source flow completed after one source, state = %v", instance.State())
+	}
+	close(second.release)
+	if err := instance.Join(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	outputs := instance.Outputs()
+	if len(outputs) != 2 || outputs[0] != 1 || outputs[1] != 2 {
+		t.Fatalf("multiple-source outputs = %#v, want [1 2]", outputs)
+	}
+}
+
 func (s *dataflowBlockingSource) Open(context.Context) error {
 	close(s.started)
 	return nil

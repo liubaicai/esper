@@ -88,10 +88,10 @@
       "level": "S",
       "summary": "PREDEFINED and ANY variant member matching, dynamic fields and route identity",
       "javaRefs": ["EventVariantStream"],
-      "goRefs": ["schema.go", "plan.go", "runtime.go", "dataflow.go", "variant_test.go", "variant_inheritance_test.go"],
+      "goRefs": ["schema.go", "plan.go", "runtime.go", "dataflow.go", "variant_test.go", "variant_inheritance_test.go", "variant_interface_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["interface method/property coercion", "wrapper/derived-stream matrix", "full metadata and getter cache"]
+      "remaining": ["wrapper/derived-stream matrix", "full metadata and getter cache"]
     },
     {
       "id": "query.insert-into-route",
@@ -253,10 +253,10 @@
       "level": "S",
       "summary": "Fluent dataflow definitions, graph ports, source lifecycle, signal-marker propagation and instance control plane",
       "javaRefs": ["EPLDataflowOpEventBusSource", "EPLDataflowOpFilter", "EPLDataflowOpSelect"],
-      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go", "dataflow_source_test.go"],
+      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_pattern_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go", "dataflow_source_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["built-in event/row port inference", "concurrent delivery/backpressure", "persisted cross-process saved instances/configuration", "complete multi-port captive/join and exception recovery parity"]
+      "remaining": ["built-in event/row port inference", "persisted cross-process saved instances/configuration", "complete multi-port captive/join and exception recovery parity"]
     },
     {
       "id": "join.basic",
@@ -461,10 +461,21 @@
       "javaRuntimeIds": ["java-runtime-cc53eb8cf243ca5bee5f"],
       "javaNames": ["EventVariantDynamicMapType"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/variant/EventVariantStream.java"],
-      "goTests": ["TestVariantAnyResolvesDynamicPropertiesAndRoutesExplicitEvent", "TestVariantMemberMatchingFlowsThroughJoinPatternAndNamedWindow", "TestVariantPredefinedAcceptsInheritedMemberTypes"],
+      "goTests": ["TestVariantAnyResolvesDynamicPropertiesAndRoutesExplicitEvent", "TestVariantMemberMatchingFlowsThroughJoinPatternAndNamedWindow", "TestVariantPredefinedAcceptsInheritedMemberTypes", "TestVariantCommonPropertiesWidenInterfaceTypes"],
       "tags": ["correctness", "event", "variant"],
       "status": "mapped",
       "evidence": ["go-unit"]
+    },
+    {
+      "id": "case.variant-supertypes-interfaces",
+      "javaRuntimeIds": ["java-runtime-a9cfea1ab05a48fc46fa"],
+      "javaNames": ["EventVariantSuperTypesInterfaces"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/variant/EventVariantStream.java"],
+      "goTests": ["TestVariantCommonPropertiesWidenInterfaceTypes"],
+      "tags": ["correctness", "event", "variant", "interface", "metadata"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Go maps the Java supertype/interface property coercion through Go interfaces and JavaBean-style getter schemas. It asserts that the shared Variant property metadata widens to the common interface and that concrete member getter values remain usable through that interface; Java collection/fragment metadata and every indexed/mapped property combination remain open."
     },
     {
       "id": "case.insert-into-chain",
@@ -526,11 +537,22 @@
       "javaRuntimeIds": ["java-runtime-893c8283ee90019f37fa", "java-runtime-e1bdb19779e28fa49bc2", "java-runtime-69dbb4e0d879421b52f7", "java-runtime-3bdb22d6cdef39f0336c", "java-runtime-91a5f5421ce63806e2c4", "java-runtime-f053fbdc01fad03ba5a6", "java-runtime-7e40b511fb6b6db584fd", "java-runtime-827b0af4ea14c59da2bc", "java-runtime-955a5d67e2668f50f0f5", "java-runtime-a9a21d69ccb78f9fd152", "java-runtime-42082e1062bebbe49a0a", "java-runtime-bcc34451f5417d84e6fa", "java-runtime-de4fc2179a2cb72a97e6", "java-runtime-e13449306814341577ad"],
       "javaNames": ["EPLDataflowNonBlockingJoinCancel", "EPLDataflowNonBlockingJoinException", "EPLDataflowNonBlockingException", "EPLDataflowBlockingException", "EPLDataflowBlockingCancel", "EPLDataflowNonBlockingCancel", "EPLDataflowInvalidJoinRun", "EPLDataflowNonBlockingJoinMultipleRunnable", "EPLDataflowBlockingMultipleRunnable", "EPLDataflowNonBlockingJoinSingleRunnable", "EPLDataflowFastCompleteBlocking", "EPLDataflowRunBlocking", "EPLDataflowFastCompleteNonBlocking", "EPLDataflowBlockingRunJoin"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIRunStartCancelJoin.java"],
-      "goTests": ["TestDataflowCustomSourceRunAndJoinMatchesEsper", "TestDataflowCustomSourceCancelAndJoin", "TestDataflowCustomSourceErrorPropagatesThroughRun", "TestDataflowCustomSourceRejectsWrongOutputType", "TestDataflowCustomSourceNamedPortsRouteAndTypeCheck", "TestDataflowJoinRequiresStart"],
+      "goTests": ["TestDataflowCustomSourceRunAndJoinMatchesEsper", "TestDataflowMultipleCustomSourcesJoinAfterEachCompletesMatchesEsper", "TestDataflowCustomSourceCancelAndJoin", "TestDataflowCustomSourceErrorPropagatesThroughRun", "TestDataflowCustomSourceRejectsWrongOutputType", "TestDataflowCustomSourceNamedPortsRouteAndTypeCheck", "TestDataflowJoinRequiresStart"],
       "tags": ["correctness", "dataflow", "lifecycle", "cancellation", "concurrency"],
       "status": "mapped",
       "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
-      "difference": "Go now provides blocking Run/Join over Start, terminal completion signaling, context-driven cancellation, idempotent Cancel, custom source factories with raw/typed output ports, Build/runtime output type validation, per-instance source lifecycle callbacks, finite-source completion and structured source error propagation. The Java matrix additionally covers multiple concurrent runnable source branches, blocking/non-blocking exception delivery, deep join timing, full cancellation exception text and built-in source/operator backpressure; those remain open."
+      "difference": "Go now provides blocking Run/Join over Start, terminal completion signaling, context-driven cancellation, idempotent Cancel, custom source factories with raw/typed output ports, Build/runtime output type validation, independent per-instance Open/Close hooks, finite-source completion, structured source error propagation and multiple concurrent source branches whose Join waits for every source. The Java matrix additionally covers blocking/non-blocking exception delivery, deep join timing, full cancellation exception text and built-in source/operator backpressure; those remain open."
+    },
+    {
+      "id": "case.dataflow-epstatement-pattern",
+      "javaRuntimeIds": ["java-runtime-2d7b6229c7a3b2bee40b"],
+      "javaNames": ["EPLDataflowAllTypes"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEPStatementSource.java"],
+      "goTests": ["TestDataflowEPStatementSourceConsumesPatternRowsMatchesEsper"],
+      "tags": ["correctness", "dataflow", "epstatement-source", "row"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Go maps the EPStatement source through an existing fluent Pattern statement and preserves projected Row values into the graph. Java also covers all event representations, dynamic statement names, statement filters and invalid EPL-specific source diagnostics."
     },
     {
       "id": "case.expr-enum-aggregate",

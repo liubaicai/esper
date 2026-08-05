@@ -1895,11 +1895,18 @@ func commonVariantFields(members []Schema) ([]FieldSpec, error) {
 			}
 			common.Optional = common.Optional || field.Optional
 			if common.Type != field.Type {
+				// The declared Variant property type must be able to represent
+				// values from every member. If one side is assignable to the
+				// other, keep the wider target type rather than the narrower
+				// member type. This matters for Java-style interface/property
+				// coercion: a concrete member getter and a sibling interface
+				// getter should expose their shared interface, not whichever
+				// member happened to be listed first.
 				if common.Type != nil && field.Type != nil && common.Type.AssignableTo(field.Type) {
+					common.Type = field.Type
 					continue
 				}
 				if common.Type != nil && field.Type != nil && field.Type.AssignableTo(common.Type) {
-					common.Type = field.Type
 					continue
 				}
 				if numericTypes(common.Type, field.Type) {

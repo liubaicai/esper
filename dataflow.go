@@ -149,10 +149,23 @@ type DataflowOperatorSignalRuntime interface {
 	OnSignal(context.Context, DataflowSignal) ([]DataflowEmission, error)
 }
 
-// DataflowOperatorLifecycle is optional and is invoked once per instance.
-type DataflowOperatorLifecycle interface {
+// DataflowOperatorOpener is an optional per-instance open hook. Open and
+// Close are intentionally independent: a source or operator may need only
+// one side of the lifecycle contract.
+type DataflowOperatorOpener interface {
 	Open(context.Context) error
+}
+
+// DataflowOperatorCloser is an optional per-instance close hook.
+type DataflowOperatorCloser interface {
 	Close(context.Context) error
+}
+
+// DataflowOperatorLifecycle is the convenience contract for runtimes that
+// implement both lifecycle hooks.
+type DataflowOperatorLifecycle interface {
+	DataflowOperatorOpener
+	DataflowOperatorCloser
 }
 
 // DataflowSourceRuntime produces values into a graph. A source receives its
@@ -163,7 +176,7 @@ type DataflowSourceRuntime interface {
 }
 
 // DataflowSourceFactory creates one source runtime for every dataflow
-// instance. Source runtimes may also implement DataflowOperatorLifecycle.
+// instance. Source runtimes may implement either lifecycle hook.
 type DataflowSourceFactory func(DataflowOperatorContext) (DataflowSourceRuntime, error)
 
 // DataflowOperatorFactory creates one runtime operator instance.
@@ -801,7 +814,12 @@ type DataflowStats struct {
 }
 
 type DataflowInstance struct {
-	mu                     sync.Mutex
+	mu sync.Mutex
+	// dispatchMu serializes graph delivery for one instance. Custom sources
+	// run concurrently, while Esper operators observe one input at a time;
+	// keeping the queue synchronous also makes a slow downstream operator
+	// provide natural backpressure to the submitting source.
+	dispatchMu             sync.Mutex
 	engine                 *Engine
 	definition             DataflowDefinition
 	options                DataflowOptions
@@ -882,7 +900,7 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 			})
 			if err != nil {
 				for _, created := range instance.runtimes {
-					if lifecycle, ok := created.(DataflowOperatorLifecycle); ok {
+					if lifecycle, ok := created.(DataflowOperatorCloser); ok {
 						_ = lifecycle.Close(context.Background())
 					}
 				}
@@ -902,12 +920,12 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 			})
 			if err != nil {
 				for _, created := range instance.runtimes {
-					if lifecycle, ok := created.(DataflowOperatorLifecycle); ok {
+					if lifecycle, ok := created.(DataflowOperatorCloser); ok {
 						_ = lifecycle.Close(context.Background())
 					}
 				}
 				for _, created := range instance.sources {
-					if lifecycle, ok := created.(DataflowOperatorLifecycle); ok {
+					if lifecycle, ok := created.(DataflowOperatorCloser); ok {
 						_ = lifecycle.Close(context.Background())
 					}
 				}
@@ -915,12 +933,12 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 			}
 			if source == nil {
 				for _, created := range instance.runtimes {
-					if lifecycle, ok := created.(DataflowOperatorLifecycle); ok {
+					if lifecycle, ok := created.(DataflowOperatorCloser); ok {
 						_ = lifecycle.Close(context.Background())
 					}
 				}
 				for _, created := range instance.sources {
-					if lifecycle, ok := created.(DataflowOperatorLifecycle); ok {
+					if lifecycle, ok := created.(DataflowOperatorCloser); ok {
 						_ = lifecycle.Close(context.Background())
 					}
 				}
@@ -1229,7 +1247,7 @@ func (d *DataflowInstance) openRuntimes(ctx context.Context) error {
 	for _, operator := range d.definition.operators {
 		runtime := d.runtimes[operator.Name]
 		if runtime != nil {
-			if lifecycle, ok := runtime.(DataflowOperatorLifecycle); ok {
+			if lifecycle, ok := runtime.(DataflowOperatorOpener); ok {
 				if err := lifecycle.Open(ctx); err != nil {
 					return fmt.Errorf("dataflow operator %q open: %w", operator.Name, err)
 				}
@@ -1237,7 +1255,7 @@ func (d *DataflowInstance) openRuntimes(ctx context.Context) error {
 		}
 		source := d.sources[operator.Name]
 		if source != nil {
-			if lifecycle, ok := source.(DataflowOperatorLifecycle); ok {
+			if lifecycle, ok := source.(DataflowOperatorOpener); ok {
 				if err := lifecycle.Open(ctx); err != nil {
 					return fmt.Errorf("dataflow source %q open: %w", operator.Name, err)
 				}
@@ -1258,13 +1276,13 @@ func (d *DataflowInstance) closeRuntimes(ctx context.Context) {
 	for _, operator := range d.definition.operators {
 		runtime := d.runtimes[operator.Name]
 		if runtime != nil {
-			if lifecycle, ok := runtime.(DataflowOperatorLifecycle); ok {
+			if lifecycle, ok := runtime.(DataflowOperatorCloser); ok {
 				_ = lifecycle.Close(ctx)
 			}
 		}
 		source := d.sources[operator.Name]
 		if source != nil {
-			if lifecycle, ok := source.(DataflowOperatorLifecycle); ok {
+			if lifecycle, ok := source.(DataflowOperatorCloser); ok {
 				_ = lifecycle.Close(ctx)
 			}
 		}
@@ -1384,16 +1402,20 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 		hasEventSource = true
 		subscription, err := operator.Statement.Subscribe(func(callbackCtx context.Context, batch ResultBatch) error {
 			for _, result := range batch.New {
-				event, ok := result.Event()
-				if !ok {
+				var value any
+				if event, ok := result.Event(); ok {
+					value = event
+				} else if row, ok := result.Row(); ok {
+					value = row
+				} else {
 					continue
 				}
 				var processErr error
 				if d.graph {
 					d.processed.Add(1)
-					processErr = d.processGraphFrom(callbackCtx, event, operator.Name)
+					processErr = d.processGraphFrom(callbackCtx, value, operator.Name)
 				} else {
-					processErr = d.process(callbackCtx, event)
+					processErr = d.process(callbackCtx, value)
 				}
 				if processErr != nil {
 					return processErr
@@ -1846,6 +1868,19 @@ func (d *DataflowInstance) processSourceEmission(ctx context.Context, source, po
 }
 
 func (d *DataflowInstance) processGraphQueue(ctx context.Context, queue []dataflowWorkItem) error {
+	if d == nil {
+		return NewError(ErrorState, "nil dataflow instance")
+	}
+	// Source runtimes are started independently and may submit concurrently.
+	// Serialize the complete work queue so stateful built-ins (notably the
+	// statement-owned subquery registry) and custom operators see the same
+	// single-input-at-a-time contract as the Java graph runtime.
+	d.dispatchMu.Lock()
+	defer d.dispatchMu.Unlock()
+	return d.processGraphQueueLocked(ctx, queue)
+}
+
+func (d *DataflowInstance) processGraphQueueLocked(ctx context.Context, queue []dataflowWorkItem) error {
 	for len(queue) > 0 {
 		if err := contextErr(ctx); err != nil {
 			return err
