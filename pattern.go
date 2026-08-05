@@ -670,7 +670,11 @@ func (p PatternStream) Not() PatternStream {
 	}
 	copyDefinition := *p.def
 	copyDefinition.steps = nil
-	copyDefinition.root = &patternNode{kind: patternNotNode, child: p.def.root}
+	copyDefinition.every = false
+	copyDefinition.everyDistinct = nil
+	copyDefinition.everyDistinctExpiry = 0
+	copyDefinition.everyDistinctExpirySet = false
+	copyDefinition.root = &patternNode{kind: patternNotNode, child: patternBranchRoot(p.def)}
 	return PatternStream{env: p.env, def: &copyDefinition}
 }
 
@@ -684,7 +688,11 @@ func (p PatternStream) MatchUntil(minimum, maximum int) PatternStream {
 	}
 	copyDefinition := *p.def
 	copyDefinition.steps = nil
-	copyDefinition.root = &patternNode{kind: patternMatchUntilNode, child: p.def.root, minimum: minimum, maximum: maximum}
+	copyDefinition.every = false
+	copyDefinition.everyDistinct = nil
+	copyDefinition.everyDistinctExpiry = 0
+	copyDefinition.everyDistinctExpirySet = false
+	copyDefinition.root = &patternNode{kind: patternMatchUntilNode, child: patternBranchRoot(p.def), minimum: minimum, maximum: maximum}
 	return PatternStream{env: p.env, def: &copyDefinition}
 }
 
@@ -699,6 +707,10 @@ func (p PatternStream) MatchUntilExpr(minimum, maximum Expression[int]) PatternS
 	}
 	copyDefinition := *p.def
 	copyDefinition.steps = nil
+	copyDefinition.every = false
+	copyDefinition.everyDistinct = nil
+	copyDefinition.everyDistinctExpiry = 0
+	copyDefinition.everyDistinctExpirySet = false
 	var minimumExpr, maximumExpr Expr
 	if minimum != nil {
 		minimumExpr = minimum
@@ -708,7 +720,7 @@ func (p PatternStream) MatchUntilExpr(minimum, maximum Expression[int]) PatternS
 	}
 	copyDefinition.root = &patternNode{
 		kind:          patternMatchUntilNode,
-		child:         p.def.root,
+		child:         patternBranchRoot(p.def),
 		dynamicBounds: true,
 		minimumExpr:   minimumExpr,
 		maximumExpr:   maximumExpr,
@@ -725,15 +737,19 @@ func (p PatternStream) Until(terminator PatternStream) PatternStream {
 	}
 	copyDefinition := *p.def
 	copyDefinition.steps = nil
+	copyDefinition.every = false
+	copyDefinition.everyDistinct = nil
+	copyDefinition.everyDistinctExpiry = 0
+	copyDefinition.everyDistinctExpirySet = false
 	if p.def.root != nil && p.def.root.kind == patternMatchUntilNode && p.def.root.right == nil {
 		copyDefinition.root = clonePatternNode(p.def.root)
-		copyDefinition.root.right = terminator.root()
+		copyDefinition.root.right = patternBranchRoot(terminator.def)
 		if terminator.def == nil || p.env != terminator.env || p.def.input != terminator.def.input {
 			copyDefinition.sourceMismatch = true
 		}
 		return PatternStream{env: p.env, def: &copyDefinition}
 	}
-	copyDefinition.root = &patternNode{kind: patternUntilNode, child: p.def.root, right: terminator.root()}
+	copyDefinition.root = &patternNode{kind: patternUntilNode, child: patternBranchRoot(p.def), right: patternBranchRoot(terminator.def)}
 	if terminator.def == nil || p.env != terminator.env || p.def.input != terminator.def.input {
 		copyDefinition.sourceMismatch = true
 	}

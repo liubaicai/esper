@@ -7715,7 +7715,13 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 			next.started = true
 			fired := childTransition.complete
 			if patternProgressTerminal(childTransition.state) && !childTransition.complete {
-				next.expired = true
+				// Every restarts its child after a failed/terminated attempt. This
+				// matters for timer-and-not branches: a forbidden event cancels
+				// only the current attempt, and the next timer is armed from the
+				// cancellation time rather than ending the enclosing repetition.
+				next.child = newPatternProgress(next.node.child)
+				armPatternProgressTimers(next.child, trigger.now, variables)
+				next.started = patternProgressActive(next.child)
 			}
 			if childTransition.complete {
 				if next.node.everyExpr != nil {

@@ -1759,6 +1759,125 @@ func TestPatternMatchUntilNotBranchExpiresAndReleasesState(t *testing.T) {
 	}
 }
 
+func TestPatternEveryMatchUntilNotRestartsTimerAfterForbiddenEvent(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	a := PatternFrom(base, "a", Literal[bool](true))
+	b := PatternFrom(base, "b", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("B")))
+	repeated := TimerInterval(base, 10*time.Second).And(b.Not()).Every().MatchUntil(1, 1)
+	pattern := a.Then(repeated)
+	plan, err := env.Build(pattern.Select(
+		Alias("symbol", TagField[string]("a", "symbol")),
+		Alias("matchedAt", CurrentTime()),
+	).Query(StatementName("pattern-every-match-until-not-timer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(5, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(6, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(15, 999999999).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("timer/not branch emitted before restarted deadline: %#v", rows)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(16, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("symbol").Any() != "A" || rows[0].Get("matchedAt").Any() != time.Unix(16, 0).UTC() {
+		t.Fatalf("timer/not branch rows = %#v, want one row at restarted deadline", rows)
+	}
+}
+
+func TestPatternUntilNestedEveryMatchUntilNotRetainsRepeatedEvents(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	a := PatternFrom(base, "a", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("A")))
+	b := PatternFrom(base, "b", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("B")))
+	c := PatternFrom(base, "c", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("C")))
+	terminator := TimerInterval(base, 10*time.Second).And(c.Not()).Every().MatchUntil(1, 1)
+	pattern := a.Then(b.Until(terminator))
+	plan, err := env.Build(pattern.Select(
+		Alias("first", TagField[string]("a", "symbol")),
+		Alias("b0", TagFieldAt[string]("b", 0, "symbol")),
+		Alias("b1", TagFieldAt[string]("b", 1, "symbol")),
+		Alias("matchedAt", CurrentTime()),
+	).Query(StatementName("pattern-until-nested-every-not")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []struct {
+		at     int64
+		symbol string
+	}{
+		{1, "A"},
+		{2, "B"},
+		{3, "C"},
+		{4, "B"},
+	} {
+		if err := engine.AdvanceTime(context.Background(), time.Unix(event.at, 0).UTC()); err != nil {
+			t.Fatal(err)
+		}
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: event.symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(12, 999999999).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("nested timer/not until emitted before restarted deadline: %#v", rows)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(13, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("first").Any() != "A" || rows[0].Get("b0").Any() != "B" || rows[0].Get("b1").Any() != "B" || rows[0].Get("matchedAt").Any() != time.Unix(13, 0).UTC() {
+		t.Fatalf("nested timer/not until rows = %#v, want A/B/B at 13s", rows)
+	}
+}
+
 func TestPatternWithinExpressionUsesCapturedTagDeadline(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")
