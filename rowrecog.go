@@ -1498,6 +1498,14 @@ func (r *statementRuntime) snapshotRowRecog(plan Plan, now time.Time, variables 
 	if definition == nil {
 		return ResultBatch{Time: now}
 	}
+	// Esper does not expose an iterator for match-recognize directly over an
+	// unbound event stream. The runtime still evaluates incoming events and
+	// dispatches listener matches, but there is no retained data-window view
+	// for Statement.Snapshot to enumerate. Filters may sit between the source
+	// and MATCH_RECOGNIZE, so inspect the complete input chain.
+	if rowRecogInputIsUnbound(definition.input) {
+		return ResultBatch{Time: now}
+	}
 	partitions := make(map[string]*rowRecogPartitionState)
 	if r != nil && r.rowRecogState != nil {
 		partitions = r.rowRecogState.partitions
@@ -1545,6 +1553,18 @@ func (r *statementRuntime) snapshotRowRecog(plan Plan, now time.Time, variables 
 	result.New = orderRowRecogResults(result.New, plan.query.orderBy, now, variables)
 	result.New = applyResultWindow(result.New, plan.query)
 	return result
+}
+
+func rowRecogInputIsUnbound(input *streamNode) bool {
+	for node := input; node != nil; node = node.input {
+		switch node.kind {
+		case streamWindow, streamNamedWindow, streamTable, streamHistorical:
+			return false
+		case streamSource:
+			return true
+		}
+	}
+	return true
 }
 
 // rowRecogBatchPendingPartitions reconstructs the recognition input visible
