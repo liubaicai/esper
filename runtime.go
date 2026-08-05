@@ -7884,7 +7884,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 			}
 		}
 
-		if startAllowed && !(plan.query.discardPartialsOnMatch && completed) {
+		if startAllowed && !(definition.every && completed) && !(plan.query.discardPartialsOnMatch && completed) {
 			progress := newPatternProgress(definition.root)
 			armPatternProgressTimers(progress, now, r.variables)
 			starts := advancePatternNodeTrigger(progress, trigger, r.variables)

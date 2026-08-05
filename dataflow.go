@@ -860,6 +860,17 @@ func (b DataflowBuilder) EPStatementSourceWithStatementFilter(name string, selec
 	})
 }
 
+// EPStatementSourceWithStatementFilterAndCollector combines statement
+// selection with per-result collection for dynamic source graphs.
+func (b DataflowBuilder) EPStatementSourceWithStatementFilterAndCollector(name string, selector DataflowStatementSourceFilter, collector DataflowStatementSourceCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:               name,
+		Kind:               EPStatementSourceKind,
+		StatementFilter:    selector,
+		StatementCollector: collector,
+	})
+}
+
 // EPStatementSourceByNameWithCollector follows a named statement and lets a
 // collector suppress, transform or duplicate its new result values.
 func (b DataflowBuilder) EPStatementSourceByNameWithCollector(name, statementName string, collector DataflowStatementSourceCollector) DataflowBuilder {

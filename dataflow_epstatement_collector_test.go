@@ -87,3 +87,41 @@ func TestDataflowEPStatementSourceCollectorCanSuppressValues(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestDataflowEPStatementSourceStatementFilterAndCollectorCompose(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(StatementName("combined-statement-source")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), plan); err != nil {
+		t.Fatal(err)
+	}
+	definition, err := DefineDataflow(env, "combined-statement-source-flow").
+		EPStatementSourceWithStatementFilterAndCollector(
+			"source",
+			func(ctx DataflowStatementSourceContext) bool { return ctx.StatementName == "combined-statement-source" },
+			func(_ context.Context, _ DataflowStatementSourceContext, value any) ([]any, error) {
+				return []any{value, value}, nil
+			},
+		).
+		Emitter("emit").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	instance, err := engine.InstantiateDataflow(context.Background(), definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := instance.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "combined"}); err != nil {
+		t.Fatal(err)
+	}
+	assertDataflowEventSymbols(t, instance.Outputs(), []string{"combined", "combined"})
+	if err := instance.Cancel(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}

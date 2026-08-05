@@ -1878,6 +1878,44 @@ func TestPatternUntilNestedEveryMatchUntilNotRetainsRepeatedEvents(t *testing.T)
 	}
 }
 
+func TestPatternEveryMatchUntilStartsAfterCompletionEvent(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	pattern := PatternFrom(base, "tick", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("A"))).
+		MatchUntil(2, 2).Every()
+	plan, err := env.Build(pattern.Select(
+		Alias("first", TagFieldAt[float64]("tick", 0, "price")),
+		Alias("second", TagFieldAt[float64]("tick", 1, "price")),
+	).Query(StatementName("pattern-every-match-until-boundary")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := env.NewEngine()
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for price := 1.0; price <= 4.0; price++ {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A", Price: price}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 2 || rows[0].Get("first").Any() != float64(1) || rows[0].Get("second").Any() != float64(2) || rows[1].Get("first").Any() != float64(3) || rows[1].Get("second").Any() != float64(4) {
+		t.Fatalf("every match-until completion boundary rows = %#v, want 1/2 and 3/4", rows)
+	}
+}
+
 func TestPatternWithinExpressionUsesCapturedTagDeadline(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")
