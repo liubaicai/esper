@@ -414,6 +414,17 @@
       "difference": "The Go fluent Named Window chain models rank retention with unique-key replacement, stable sort/tie eviction, capacity old-stream removal, direct delete routing and iterator snapshots. The Java execution is covered as an exact lifecycle slice; broader rank view context/pattern/subquery combinations and a shared Java/Go trace remain open."
     },
     {
+      "id": "case.view-rank-ranked-scene",
+      "javaRuntimeIds": ["java-runtime-4f00badc903c01a57422"],
+      "javaNames": ["ViewRankRanked"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewRank.java"],
+      "goTests": ["TestRankWindowRankedSceneMatchesEsper"],
+      "tags": ["correctness", "view", "rank", "replacement", "tie-order"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go fluent RankWindowBy trace covers descending rank replacement, full-window pass-through, equal-sort arrival order, stable in-place replacement and worst-entry old-stream eviction over the complete Java event sequence. Broader rank navigation/context combinations and shared Java/Go trace serialization remain open."
+    },
+    {
       "id": "case.object-array-query-fields",
       "javaRuntimeIds": ["java-runtime-2560a37393c8db7566be"],
       "javaNames": ["EventObjectArrayQueryFields"],
@@ -1012,6 +1023,7 @@
     {"capabilityId": "view.window-core", "caseId": "case.view-window-core"},
     {"capabilityId": "view.window-core", "caseId": "case.view-time-order-remove-route"},
     {"capabilityId": "view.window-core", "caseId": "case.view-rank-remove-stream"},
+    {"capabilityId": "view.window-core", "caseId": "case.view-rank-ranked-scene"},
     {"capabilityId": "event.variant", "caseId": "case.variant-dynamic-map"},
     {"capabilityId": "query.insert-into-route", "caseId": "case.insert-into-chain"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
