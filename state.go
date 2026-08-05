@@ -727,15 +727,104 @@ func newNamedWindow(definition NamedWindowDefinition, engine *Engine) *NamedWind
 	if _, unique := definition.retention.(UniqueWindowSpec); unique {
 		state.keyed = make(map[string]storedEvent)
 	}
+	if retention, sorted := definition.retention.(SortedWindowSpec); sorted && retention.Rank && len(retention.UniqueKeys) > 0 {
+		state.keyed = make(map[string]storedEvent)
+	}
 	return &NamedWindow{state: state, engine: engine}
 }
 
-// rebuildUniqueStateLocked normalizes the keyed index after a direct
+func normalizeSortedNamedWindowEntries(entries []storedEvent, retention SortedWindowSpec, now time.Time) ([]storedEvent, map[string]storedEvent) {
+	normalized := append([]storedEvent(nil), entries...)
+	var keyed map[string]storedEvent
+	if retention.Rank && len(retention.UniqueKeys) > 0 {
+		keyed = make(map[string]storedEvent, len(normalized))
+		positions := make(map[string]int, len(normalized))
+		deduplicated := make([]storedEvent, 0, len(normalized))
+		for _, entry := range normalized {
+			key := sortedWindowKey(retention, entry.event, now, nil)
+			if position, exists := positions[key]; exists {
+				// A direct update can change one event's key to another event's
+				// key. Keep the later entry, matching rank replacement semantics.
+				deduplicated[position] = entry
+				continue
+			}
+			positions[key] = len(deduplicated)
+			deduplicated = append(deduplicated, entry)
+		}
+		normalized = deduplicated
+	}
+	sort.SliceStable(normalized, func(i, j int) bool {
+		return compareStoredEvents(normalized[i].event, normalized[j].event, retention.Keys, now, nil) < 0
+	})
+	if !retention.Rank {
+		reverseSortedEqualRuns(normalized, retention.Keys, now, nil)
+	}
+	if retention.Rank && len(retention.UniqueKeys) > 0 {
+		keyed = make(map[string]storedEvent, len(normalized))
+		for _, entry := range normalized {
+			keyed[sortedWindowKey(retention, entry.event, now, nil)] = entry
+		}
+	}
+	return normalized, keyed
+}
+
+func applySortedNamedWindowInsertLocked(state *namedWindowRuntime, retention SortedWindowSpec, entry storedEvent, now time.Time, delta *NamedWindowDelta) {
+	entries, keyed := normalizeSortedNamedWindowEntries(state.entries, retention, now)
+	var uniqueKey string
+	if retention.Rank && len(retention.UniqueKeys) > 0 {
+		uniqueKey = sortedWindowKey(retention, entry.event, now, nil)
+		if previous, exists := keyed[uniqueKey]; exists {
+			for index, candidate := range entries {
+				if sameEvent(candidate.event, previous.event) {
+					entries = append(entries[:index], entries[index+1:]...)
+					delta.Old = append(delta.Old, previous.event)
+					break
+				}
+			}
+			delete(keyed, uniqueKey)
+		}
+	}
+	entries = append(entries, entry)
+	sort.SliceStable(entries, func(i, j int) bool {
+		return compareStoredEvents(entries[i].event, entries[j].event, retention.Keys, now, nil) < 0
+	})
+	if !retention.Rank {
+		reverseSortedEqualRuns(entries, retention.Keys, now, nil)
+	}
+	for len(entries) > retention.Size {
+		removeIndex := len(entries) - 1
+		if retention.Rank {
+			removeIndex = rankEvictionIndex(entries, retention.Keys, now, nil)
+		}
+		removed := entries[removeIndex]
+		delta.Old = append(delta.Old, removed.event)
+		if retention.Rank && len(retention.UniqueKeys) > 0 {
+			delete(keyed, sortedWindowKey(retention, removed.event, now, nil))
+		}
+		entries = append(entries[:removeIndex], entries[removeIndex+1:]...)
+	}
+	if retention.Rank && len(retention.UniqueKeys) > 0 {
+		keyed = make(map[string]storedEvent, len(entries))
+		for _, retained := range entries {
+			keyed[sortedWindowKey(retention, retained.event, now, nil)] = retained
+		}
+	}
+	state.entries = entries
+	state.keyed = keyed
+	state.keyOrder = nil
+}
+
+// rebuildUniqueStateLocked normalizes keyed and sorted state after a direct
 // named-window delete or update. Unique retention keeps the first-seen key
 // order, matching the ordinary Unique window's snapshot order while moving
 // the current event value into the existing key slot.
 func (w *NamedWindow) rebuildUniqueStateLocked() {
 	if w == nil || w.state == nil {
+		return
+	}
+	if retention, sorted := w.state.def.retention.(SortedWindowSpec); sorted {
+		w.state.entries, w.state.keyed = normalizeSortedNamedWindowEntries(w.state.entries, retention, w.now())
+		w.state.keyOrder = nil
 		return
 	}
 	retention, unique := w.state.def.retention.(UniqueWindowSpec)
@@ -967,7 +1056,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 	}
 	if insertEvent {
 		switch state.def.retention.(type) {
-		case KeepAllWindowSpec, LengthWindowSpec, TimeWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec:
+		case KeepAllWindowSpec, LengthWindowSpec, TimeWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec:
 		default:
 			return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", state.def.retention))
 		}
@@ -1053,6 +1142,12 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 					entries = entries[1:]
 				}
 			}
+		case SortedWindowSpec:
+			state.entries = entries
+			w.rebuildUniqueStateLocked()
+			delta.New = append(delta.New, preparedInsert)
+			applySortedNamedWindowInsertLocked(state, retention, storedEvent{event: preparedInsert, receivedAt: now}, now, &delta)
+			entries = state.entries
 		}
 	}
 	state.entries = entries
@@ -1128,6 +1223,8 @@ func (w *NamedWindow) insert(now time.Time, underlying any) (NamedWindowDelta, e
 		state.keyed[key] = entry
 		state.keyOrder = append(state.keyOrder, key)
 		state.entries = append(state.entries, entry)
+	case SortedWindowSpec:
+		applySortedNamedWindowInsertLocked(state, retention, entry, now, &delta)
 	default:
 		return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", retention))
 	}

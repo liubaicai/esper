@@ -403,6 +403,17 @@
       "difference": "The Go fluent chain projects TimeOrder old-stream rows into a registered OrderedStream map and consumes them as new downstream events, covering out-of-order timestamps, equal-timestamp stability, immediate late-event removal and virtual-clock expiry boundaries. Full Java shared trace, representation variants and broader insert-into chains remain open."
     },
     {
+      "id": "case.view-rank-remove-stream",
+      "javaRuntimeIds": ["java-runtime-0652854f960214bc4473"],
+      "javaNames": ["ViewRankRemoveStream"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewRank.java"],
+      "goTests": ["TestNamedWindowRankRemoveStreamMatchesEsper"],
+      "tags": ["correctness", "view", "rank", "named-window", "remove-stream"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go fluent Named Window chain models rank retention with unique-key replacement, stable sort/tie eviction, capacity old-stream removal, direct delete routing and iterator snapshots. The Java execution is covered as an exact lifecycle slice; broader rank view context/pattern/subquery combinations and a shared Java/Go trace remain open."
+    },
+    {
       "id": "case.object-array-query-fields",
       "javaRuntimeIds": ["java-runtime-2560a37393c8db7566be"],
       "javaNames": ["EventObjectArrayQueryFields"],
@@ -1000,6 +1011,7 @@
     {"capabilityId": "view.derived-statistical", "caseId": "case.view-derived-statistical"},
     {"capabilityId": "view.window-core", "caseId": "case.view-window-core"},
     {"capabilityId": "view.window-core", "caseId": "case.view-time-order-remove-route"},
+    {"capabilityId": "view.window-core", "caseId": "case.view-rank-remove-stream"},
     {"capabilityId": "event.variant", "caseId": "case.variant-dynamic-map"},
     {"capabilityId": "query.insert-into-route", "caseId": "case.insert-into-chain"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
