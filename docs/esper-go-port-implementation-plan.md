@@ -1173,6 +1173,8 @@ CI 分别报告 capability coverage、source-test disposition coverage 和 case 
 
 随后对照 Java `ContextStartEndSubselect` 与 `ContextStartEndSubselectCorrelated`，补充日历 Context 的 event-stream subquery 生命周期：09:00 打开分区时不回放非活动期的 `LastEvent`，17:00 关闭时释放状态，次日 09:00 新分区重新从 Null 开始，活动期内仍支持按 outer field 关联内层事件。`TestTemporalContextEventStreamSubqueryResetsAtCalendarBoundary` 覆盖首日/跨日边界和 inactive 期间事件；Pattern/initiated-context、Named Window index-sharing、复杂 temporal 组合和完整 Java/Go trace 仍未完成。
 
+本轮再覆盖事件驱动 initiated Context 的 event-stream subquery 生命周期：`TestInitiatedContextEventStreamSubqueryReleasesPartitionState` 验证 start 创建分区、active 期间内层 `LastEvent` 可被 outer field 关联、end 释放状态，以及同一 key 再次 start 不回放两次 start 之间的内层事件。该测试对应 Java `ContextInitTermSubqueryInFilter` 的上下文子查询方向，但 Java 原用例还包含同 Context Named Window 与 `not exists` 过滤，不能把本轮 event-stream 证据解释为 Named Window/filter parity。
+
 ### 17.3 后续每次提交的强制核对项
 
 每实现一个 capability，提交必须同时更新四类证据：

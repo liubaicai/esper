@@ -208,3 +208,108 @@ func TestTemporalContextEventStreamSubqueryResetsAtCalendarBoundary(t *testing.T
 	sendReference(1, "S02")
 	sendOuter("E4", 1, "S02", false)
 }
+
+func TestInitiatedContextEventStreamSubqueryReleasesPartitionState(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[contextLifecycleEvent](env, "InitiatedSubqueryLifecycle"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[contextSubqueryOuter](env, "InitiatedSubqueryOuter"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[contextSubqueryReference](env, "InitiatedSubqueryReference"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateInitiatedTerminatedContext(
+		env,
+		"initiated-subquery",
+		Literal("A"),
+		Equal[string](Field[contextLifecycleEvent, string]("kind"), Literal("start")),
+		Equal[string](Field[contextLifecycleEvent, string]("kind"), Literal("end")),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	inner := Select(From[contextSubqueryReference](env, "InitiatedSubqueryReference")).Window(LastEvent())
+	plan, err := env.Build(Select(
+		From[contextSubqueryOuter](env, "InitiatedSubqueryOuter"),
+		Alias("symbol", Field[contextSubqueryOuter, string]("symbol")),
+		Alias("id", Field[contextSubqueryOuter, int64]("id")),
+		Alias("value", SubqueryValue[string](
+			inner,
+			Field[contextSubqueryReference, string]("value"),
+			Equal[int64](Field[contextSubqueryReference, int64]("id"), OuterField[int64]("id")),
+		)),
+	).Query(StatementName("initiated-context-subquery"), WithContext("initiated-subquery")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statement := deployment.Statements()[0]
+	var rows []Row
+	if _, err := statement.Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("initiated context subquery result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sendLifecycle := func(id, kind string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), contextLifecycleEvent{ID: id, Kind: kind}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendReference := func(id int64, value string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), contextSubqueryReference{ID: id, Value: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendOuter := func(symbol string, id int64, wantValue string, wantNull bool) {
+		t.Helper()
+		before := len(rows)
+		if err := engine.SendEvent(context.Background(), contextSubqueryOuter{Symbol: symbol, ID: id}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != before+1 {
+			t.Fatalf("initiated context subquery rows after %s = %d, want %d", symbol, len(rows), before+1)
+		}
+		value := rows[len(rows)-1].Get("value")
+		if value.IsNull() != wantNull || (!wantNull && value.Any() != wantValue) {
+			t.Fatalf("initiated context subquery value for %s = %#v, want %q (null=%v)", symbol, value.Any(), wantValue, wantNull)
+		}
+	}
+
+	// No active initiated partition exists before the start boundary.
+	sendReference(1, "before-start")
+	sendLifecycle("A", "start")
+	if statement.ContextPartitionCount() != 1 {
+		t.Fatalf("initiated context did not start = %v", statement.ContextPartitions())
+	}
+	sendOuter("E1", 1, "", true)
+	sendReference(1, "S01")
+	sendOuter("E2", 1, "S01", false)
+
+	sendLifecycle("A", "end")
+	if statement.ContextPartitionCount() != 0 {
+		t.Fatalf("initiated context did not terminate = %v", statement.ContextPartitions())
+	}
+	sendReference(1, "between-starts")
+	sendLifecycle("A", "start")
+	if statement.ContextPartitionCount() != 1 {
+		t.Fatalf("initiated context did not restart = %v", statement.ContextPartitions())
+	}
+	sendOuter("E3", 1, "", true)
+}
