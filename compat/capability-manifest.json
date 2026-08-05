@@ -165,7 +165,7 @@
       "level": "S",
       "summary": "Analyzable local group-by aggregate parameters nested inside outer grouped and ungrouped result rows",
       "javaRefs": ["ResultSetQueryTypeLocalGroupBy"],
-      "goRefs": ["expr.go", "plan.go", "runtime.go", "aggregate_test.go"],
+      "goRefs": ["expr.go", "plan.go", "runtime.go", "aggregate_test.go", "aggregate_local_group_test.go"],
       "phase": 3,
       "status": "partial",
       "remaining": ["local access/enumeration combinations, multikey array keys and plugin aggregates", "row-remove, context/join/FAF/table combinations", "complete planning and invalid-rule parity"]
@@ -493,11 +493,11 @@
       "javaRuntimeIds": ["java-runtime-a40ad8ec1c03959b5f33", "java-runtime-6bec44d03e954b1cd52c", "java-runtime-9ad9539a7e8f5581b192", "java-runtime-1dc3599a7c07036be603", "java-runtime-49be8402f85fb067edc3", "java-runtime-9a3385eedb2df5f1627c", "java-runtime-ae96db5ed464e562e6d7", "java-runtime-87b3bcfdf164bc939fe5", "java-runtime-6f77d02f924ecaa4c3ca", "java-runtime-05aad621b7c43863ff93", "java-runtime-ee681560ebeda52abbb1", "java-runtime-890001d4334d5de6c50a", "java-runtime-a2b77511196632040e51", "java-runtime-3a47ac428a21e66d8614", "java-runtime-07d68fdd9a8dffc8c7f4", "java-runtime-efa4ac181b956105b4bb", "java-runtime-377240544dc6ec554ab2", "java-runtime-b6a938fde543383eb73c", "java-runtime-27dff810bb25f959acbc", "java-runtime-81855e4095ee0ca7cadd", "java-runtime-e1253cd2c17a180c243a"],
       "javaNames": ["ResultSetLocalUngroupedSumSimple", "ResultSetLocalUngroupedAggSQLStandard", "ResultSetLocalUngroupedAggEvent", "ResultSetLocalUngroupedHaving", "ResultSetLocalGroupedSimple", "ResultSetLocalGroupedMultiLevelMethod", "ResultSetLocalGroupedSolutionPattern", "ResultSetLocalGroupedMultiLevelAccess", "ResultSetLocalGroupedMultiLevelNoDefaultLvl", "ResultSetLocalInvalid", "ResultSetAggregateFullyVersusNotFullyAgg", "ResultSetLocalUngroupedSameKey", "ResultSetLocalGroupedSameKey", "ResultSetLocalUngroupedRowRemove", "ResultSetLocalGroupedRowRemove", "ResultSetLocalGroupedOnSelect", "ResultSetLocalUngroupedOrderBy", "ResultSetLocalEnumMethods", "ResultSetLocalUngroupedAggAdditionalAndPlugin", "ResultSetLocalMultikeyWArray", "ResultSetLocalUngroupedOnlyWGroupBy"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"],
-      "goTests": ["TestLocalGroupByAggregateUsesCurrentEventAndOuterGroup"],
+      "goTests": ["TestLocalGroupByAggregateUsesCurrentEventAndOuterGroup", "TestLocalGroupByMultiKeyTrace", "TestLocalGroupByOuterGroupsShareCrossGroupState", "TestLocalGroupByNamedWindowDeleteRecomputesOuterAndLocalState", "TestLocalGroupByRejectsInvalidKeys"],
       "tags": ["correctness", "invalid", "aggregate", "local-group-by"],
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
-      "difference": "Go covers analyzable local group-by wrappers in ungrouped and outer-grouped streams, current-event selection, null-safe key matching and rejection with dimensional grouping. Java also covers multiple levels, access/enumeration methods, array multikey keys, row removal, joins/context/tables, plugins, planning hooks and complete invalid/trace behavior; those remain open."
+      "difference": "Go now covers statement-scope local group-by filtering across ungrouped and multi-key outer-grouped streams, multi-key accumulation, local WindowValues access, current-event selection, Named Window row removal/recomputation, null-safe key matching and aggregate-key rejection. Java also covers array multikey keys, joins/context/tables, plugins, planning hooks and complete invalid/trace behavior; those remain open."
     },
     {
       "id": "case.context-partitioning",

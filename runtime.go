@@ -2415,7 +2415,9 @@ type joinRuntimeState struct {
 }
 
 type aggregateRuntimeState struct {
-	groups map[string]*aggregateGroup
+	groups        map[string]*aggregateGroup
+	allEvents     []Event
+	allEverEvents []Event
 }
 
 type aggregateGroup struct {
@@ -4129,6 +4131,8 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 			false,
 			group.groupingSet,
 			group.current,
+			r.aggregateState.allEvents,
+			r.aggregateState.allEverEvents,
 			now,
 			r.variables,
 			group.pluginStates,
@@ -4139,7 +4143,7 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 		entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), group: group})
 	}
 	if len(plan.query.orderBy) > 0 {
-		orderAggregateResults(entries, plan.query.orderBy, definition, now, r.variables, false)
+		orderAggregateResults(entries, plan.query.orderBy, definition, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, false)
 	}
 	for _, entry := range entries {
 		result.New = append(result.New, entry.result)
@@ -7359,6 +7363,9 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		r.aggregateState = &aggregateRuntimeState{groups: make(map[string]*aggregateGroup)}
 	}
 	state := r.aggregateState
+	removeAggregateScopeEvents(state, delta.oldEvents)
+	state.allEvents = appendAggregateScopeEvents(state.allEvents, delta.newEvents)
+	state.allEverEvents = appendAggregateScopeEvents(state.allEverEvents, delta.newEvents)
 	affected := make([]string, 0)
 	seen := make(map[string]struct{})
 	groupingSets := aggregateGroupingSetsForDefinition(definition)
@@ -7419,7 +7426,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				group:  group,
 			})
 		}
-		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, now, r.variables, group.pluginStates)
+		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates)
 		if visible && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 			newEntries = append(newEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, newValues)),
@@ -7438,8 +7445,8 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		}
 	}
 	if len(plan.query.orderBy) > 0 {
-		orderAggregateResults(newEntries, plan.query.orderBy, definition, now, r.variables, false)
-		orderAggregateResults(oldEntries, plan.query.orderBy, definition, now, r.variables, true)
+		orderAggregateResults(newEntries, plan.query.orderBy, definition, state.allEvents, state.allEverEvents, now, r.variables, false)
+		orderAggregateResults(oldEntries, plan.query.orderBy, definition, state.allEvents, state.allEverEvents, now, r.variables, true)
 	}
 	for _, entry := range newEntries {
 		batch.New = append(batch.New, entry.result)
@@ -7486,7 +7493,7 @@ func (r *statementRuntime) persistAggregateTable(plan Plan, now time.Time) error
 		if group == nil || len(group.events) == 0 {
 			continue
 		}
-		values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, now, r.variables, group.pluginStates)
+		values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, group.pluginStates)
 		if !visible {
 			continue
 		}
@@ -7575,6 +7582,27 @@ func cubeGroupingSets(size int) [][]int {
 	return sets
 }
 
+func appendAggregateScopeEvents(existing, additions []Event) []Event {
+	if len(additions) == 0 {
+		return existing
+	}
+	return append(existing, additions...)
+}
+
+func removeAggregateScopeEvents(state *aggregateRuntimeState, removals []Event) {
+	if state == nil || len(removals) == 0 || len(state.allEvents) == 0 {
+		return
+	}
+	for _, removal := range removals {
+		for index, event := range state.allEvents {
+			if sameEvent(event, removal) {
+				state.allEvents = append(state.allEvents[:index], state.allEvents[index+1:]...)
+				break
+			}
+		}
+	}
+}
+
 func aggregateGroupKey(groupBy []Expr, groupingSet []int, event Event, now time.Time, variables map[string]Value) string {
 	if len(groupBy) == 0 {
 		return "<all>"
@@ -7595,11 +7623,11 @@ func aggregateGroupKey(groupBy []Expr, groupingSet []int, event Event, now time.
 	return encodeKey(values)
 }
 
-func evaluateAggregateGroup(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState) ([]Value, bool) {
+func evaluateAggregateGroup(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState) ([]Value, bool) {
 	if len(events) == 0 && len(everEvents) == 0 && current.Schema().Name() == "" {
 		return nil, false
 	}
-	ctx := aggregateGroupContext(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, now, variables, pluginStates)
+	ctx := aggregateGroupContext(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, allEvents, allEverEvents, now, variables, pluginStates)
 	values := make([]Value, 0, len(definition.selections))
 	for _, selection := range definition.selections {
 		values = append(values, evaluateAggregateExpression(selection.Expr, ctx))
@@ -7614,7 +7642,7 @@ func evaluateAggregateGroup(definition *aggregateDefinition, events []Event, eve
 	return values, true
 }
 
-func aggregateGroupContext(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState) EvalContext {
+func aggregateGroupContext(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState) EvalContext {
 	if current.Schema().Name() == "" {
 		if len(events) > 0 {
 			current = events[0]
@@ -7622,7 +7650,7 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 			current = everEvents[0]
 		}
 	}
-	ctx := EvalContext{Event: current, Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Now: now, Variables: variables, aggregatePluginStates: pluginStates}
+	ctx := EvalContext{Event: current, Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Now: now, Variables: variables, aggregatePluginStates: pluginStates}
 	if len(definition.groupBy) > 0 {
 		groupingEvent := current
 		if groupingEvent.Schema().Name() == "" {
@@ -7658,7 +7686,7 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 	return ctx
 }
 
-func orderAggregateResults(entries []aggregateResultEntry, keys []SortKey, definition *aggregateDefinition, now time.Time, variables map[string]Value, leaving bool) {
+func orderAggregateResults(entries []aggregateResultEntry, keys []SortKey, definition *aggregateDefinition, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, leaving bool) {
 	if len(entries) < 2 || len(keys) == 0 {
 		return
 	}
@@ -7666,9 +7694,9 @@ func orderAggregateResults(entries []aggregateResultEntry, keys []SortKey, defin
 		leftRow, _ := entries[left].result.Row()
 		rightRow, _ := entries[right].result.Row()
 		for _, key := range keys {
-			leftContext := aggregateResultContext(entries[left].group, definition, now, variables, leaving)
+			leftContext := aggregateResultContext(entries[left].group, definition, allEvents, allEverEvents, now, variables, leaving)
 			leftContext.resultRow = &leftRow
-			rightContext := aggregateResultContext(entries[right].group, definition, now, variables, leaving)
+			rightContext := aggregateResultContext(entries[right].group, definition, allEvents, allEverEvents, now, variables, leaving)
 			rightContext.resultRow = &rightRow
 			comparison, ok := compareOrderValues(key.Expr.eval(leftContext), key.Expr.eval(rightContext))
 			if !ok || comparison == 0 {
@@ -7683,7 +7711,7 @@ func orderAggregateResults(entries []aggregateResultEntry, keys []SortKey, defin
 	})
 }
 
-func aggregateResultContext(group *aggregateGroup, definition *aggregateDefinition, now time.Time, variables map[string]Value, leaving bool) EvalContext {
+func aggregateResultContext(group *aggregateGroup, definition *aggregateDefinition, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, leaving bool) EvalContext {
 	if group == nil {
 		return EvalContext{Now: now, Variables: variables, IsLeaving: leaving}
 	}
@@ -7691,7 +7719,7 @@ func aggregateResultContext(group *aggregateGroup, definition *aggregateDefiniti
 	if len(events) == 0 && group.representative.Schema().Name() != "" {
 		events = []Event{group.representative}
 	}
-	ctx := aggregateGroupContext(definition, events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, now, variables, group.pluginStates)
+	ctx := aggregateGroupContext(definition, events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, allEvents, allEverEvents, now, variables, group.pluginStates)
 	ctx.IsLeaving = leaving
 	return ctx
 }

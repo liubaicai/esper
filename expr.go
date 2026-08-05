@@ -184,6 +184,12 @@ type EvalContext struct {
 	Engine    *Engine
 	Group     []Event
 	EverGroup []Event
+	// AllGroup and AllEverGroup are the statement-level current and retained
+	// event ranges used by local group-by aggregates. They are populated by
+	// aggregate statement evaluation; ordinary expressions fall back to Group
+	// and EverGroup when the statement-level ranges are absent.
+	AllGroup     []Event
+	AllEverGroup []Event
 	// LeavingEvents contains events that have left the current aggregate
 	// window. Aggregate leaving expressions retain this history for the
 	// lifetime of the aggregate group, matching Esper's stateful leaving().
@@ -1905,6 +1911,8 @@ func FilterAggregate[T any](aggregate AggregateExpression[T], predicate Expressi
 		nested := ctx
 		nested.Group = filterEvents(ctx.Group)
 		nested.EverGroup = filterEvents(ctx.EverGroup)
+		nested.AllGroup = filterEvents(ctx.AllGroup)
+		nested.AllEverGroup = filterEvents(ctx.AllEverGroup)
 		return aggregate.eval(nested)
 	})
 }
@@ -1932,7 +1940,16 @@ func LocalGroupBy[T any](aggregate AggregateExpression[T], keys ...Expr) Aggrega
 	description := aggregate.Description() + ",group_by:(" + strings.Join(parts, ",") + ")"
 	return makeAggregateExpr[T]("aggregate-local-group", description, children, func(ctx EvalContext) Value {
 		if len(keys) == 0 {
-			return aggregate.eval(ctx)
+			nested := ctx
+			if ctx.AllGroup != nil {
+				nested.Group = ctx.AllGroup
+			}
+			if ctx.AllEverGroup != nil {
+				nested.EverGroup = ctx.AllEverGroup
+			}
+			nested.AllGroup = nested.Group
+			nested.AllEverGroup = nested.EverGroup
+			return aggregate.eval(nested)
 		}
 		current := ctx.Event
 		if current.Schema().Name() == "" {
@@ -1943,6 +1960,14 @@ func LocalGroupBy[T any](aggregate AggregateExpression[T], keys ...Expr) Aggrega
 			}
 		}
 		target := evaluateLocalGroupKeys(keys, current, ctx)
+		scope := ctx.AllGroup
+		if scope == nil {
+			scope = ctx.Group
+		}
+		everScope := ctx.AllEverGroup
+		if everScope == nil {
+			everScope = ctx.EverGroup
+		}
 		filter := func(events []Event) []Event {
 			filtered := make([]Event, 0, len(events))
 			for _, event := range events {
@@ -1953,8 +1978,12 @@ func LocalGroupBy[T any](aggregate AggregateExpression[T], keys ...Expr) Aggrega
 			return filtered
 		}
 		nested := ctx
-		nested.Group = filter(ctx.Group)
-		nested.EverGroup = filter(ctx.EverGroup)
+		nested.Group = filter(scope)
+		nested.EverGroup = filter(everScope)
+		// A nested filtered/local aggregate must see the subset selected by
+		// this local group as its own statement scope.
+		nested.AllGroup = nested.Group
+		nested.AllEverGroup = nested.EverGroup
 		return aggregate.eval(nested)
 	})
 }
