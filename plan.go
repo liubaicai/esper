@@ -1011,6 +1011,9 @@ func (e *Environment) validateExpressionSubqueries(node *exprNode) error {
 		if err := e.validateSubquery(node.subquery); err != nil {
 			return err
 		}
+		if err := validateSubqueryComparison(node); err != nil {
+			return err
+		}
 	}
 	for _, child := range node.children {
 		if err := e.validateExpressionSubqueries(child); err != nil {
@@ -1043,6 +1046,12 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 	if base.kind != streamSource && base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical {
 		return NewError(ErrorInvalidRule, "subquery source must be an event stream, named window, table, or historical source")
 	}
+	if base.kind == streamSource && !subquerySourceContainsWindow(definition.source) && !definition.aggregateProjection {
+		return NewError(ErrorInvalidRule, "non-aggregated event-stream subquery requires a window")
+	}
+	if base.kind == streamNamedWindow && subquerySourceContainsWindow(definition.source) {
+		return NewError(ErrorInvalidRule, "named-window subquery cannot declare a data window")
+	}
 	if err := e.validateNode(definition.source); err != nil {
 		return err
 	}
@@ -1068,6 +1077,26 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 		}
 	}
 	return nil
+}
+
+func validateSubqueryComparison(node *exprNode) error {
+	if node == nil || node.subquery == nil || node.subquery.projection == nil || len(node.children) == 0 {
+		return nil
+	}
+	switch node.kind {
+	case "subquery-in", "subquery-any", "subquery-all":
+	default:
+		return nil
+	}
+	left := node.children[0].typ
+	right := node.subquery.projection.Type()
+	if left == nil || right == nil || left == typeOf[any]() || right == typeOf[any]() {
+		return nil
+	}
+	if left.AssignableTo(right) || right.AssignableTo(left) || numericTypes(left, right) {
+		return nil
+	}
+	return NewError(ErrorTypeMismatch, fmt.Sprintf("subquery comparison types %s and %s are incompatible", left, right))
 }
 
 // validateTriggerTargetExpression validates an expression that may read both
