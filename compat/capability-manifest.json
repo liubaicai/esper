@@ -176,10 +176,10 @@
       "level": "S",
       "summary": "Five-field calendar OutputAt with wildcard/range/step/value and initial variable/parameter fields",
       "javaRefs": ["ResultSetOutputLimitCrontabWhen"],
-      "goRefs": ["schedule.go", "schedule_test.go"],
+      "goRefs": ["schedule.go", "schedule_test.go", "schedule_special_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["microsecond precision and special calendar operators", "dynamic reconfiguration", "timezone/DST matrix"]
+      "remaining": ["dynamic reconfiguration", "full timezone/DST gap-overlap and invalid-rule matrix"]
     },
     {
       "id": "output.when-basic",
@@ -209,10 +209,10 @@
       "level": "S",
       "summary": "Calendar TimerCron pattern observer using the shared schedule kernel",
       "javaRefs": ["PatternMicrosecondResolutionCrontab", "PatternObserverTimerAt", "PatternObserverTimerSchedule"],
-      "goRefs": ["pattern.go", "pattern_test.go"],
+      "goRefs": ["pattern.go", "pattern_test.go", "pattern_schedule.go", "pattern_schedule_test.go", "schedule_special_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["microsecond/ISO period schedule forms and special operators", "DST and dynamic schedule matrix", "full timer:at timezone/property/SODA variants"]
+      "remaining": ["ISO period dynamic date/period/repetition expressions and full typed diagnostics", "DST gap/overlap policy and dynamic schedule reconfiguration matrix", "full timer:at timezone/property/SODA variants and nested observer trace"]
     },
     {
       "id": "query.historical-sql",
