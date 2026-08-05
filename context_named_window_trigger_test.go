@@ -174,3 +174,30 @@ func TestContextScopedNamedWindowTriggerMutatesOnlyCurrentPartition(t *testing.T
 		t.Fatalf("context-local trigger select rows = %#v", selected)
 	}
 }
+
+func TestContextScopedNamedWindowTriggerRequiresMatchingContext(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterStruct[contextBoundNamedEvent](env, "ContextTriggerValidationEvent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateKeyContext(env, "context-trigger-validation", Field[contextBoundNamedEvent, string]("group")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateKeyContext(env, "other-trigger-context", Field[contextBoundNamedEvent, string]("group")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "context-trigger-validation-window", schema,
+		NamedWindowContext("context-trigger-validation"),
+	); err != nil {
+		t.Fatal(err)
+	}
+	source := From[contextBoundNamedEvent](env, "ContextTriggerValidationEvent")
+	match := Equal[int64](NamedWindowField[int64]("id"), Field[contextBoundNamedEvent, int64]("id"))
+	if _, err := env.Build(OnEvent(source).DeleteFromNamedWindow("context-trigger-validation-window", match).Query()); err == nil {
+		t.Fatal("context-bound named-window trigger without context was accepted")
+	}
+	if _, err := env.Build(OnEvent(source).DeleteFromNamedWindow("context-trigger-validation-window", match).Query(WithContext("other-trigger-context"))); err == nil {
+		t.Fatal("context-bound named-window trigger with a different context was accepted")
+	}
+}

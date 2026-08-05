@@ -358,6 +358,11 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		if err := e.validateTrigger(query.trigger); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "trigger", err)
 		}
+		if query.trigger.target == triggerTargetNamedWindow {
+			if err := e.validateNamedWindowTriggerContext(query.trigger, query.contextName); err != nil {
+				return Plan{}, WrapError(ErrorInvalidRule, "trigger context", err)
+			}
+		}
 	} else if query.rowRecog != nil {
 		if err := e.validateRowRecog(query.rowRecog, query.patternSelections); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "match-recognize", err)
@@ -531,6 +536,31 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		query:         query,
 		resultSchema:  resultSchema,
 	}, nil
+}
+
+func (e *Environment) validateNamedWindowTriggerContext(definition *triggerDefinition, contextName string) error {
+	if e == nil || definition == nil || definition.target != triggerTargetNamedWindow {
+		return nil
+	}
+	window, ok := e.NamedWindow(definition.table)
+	if !ok {
+		return nil
+	}
+	declared := strings.TrimSpace(window.contextName)
+	contextName = strings.TrimSpace(contextName)
+	if declared == contextName {
+		return nil
+	}
+	if declared == "" {
+		if contextName != "" {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("named window %q was declared without a context, but trigger uses context %q", definition.table, contextName))
+		}
+		return nil
+	}
+	if contextName == "" {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("named window %q was declared with context %q; trigger must declare the same context", definition.table, declared))
+	}
+	return NewError(ErrorInvalidRule, fmt.Sprintf("named window %q was declared with context %q; trigger uses context %q", definition.table, declared, contextName))
 }
 
 func validateContextFieldScope(query Query) error {
