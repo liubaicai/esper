@@ -711,6 +711,8 @@ type namedWindowRuntime struct {
 	mu        sync.RWMutex
 	def       NamedWindowDefinition
 	entries   []storedEvent
+	keyed     map[string]storedEvent
+	keyOrder  []string
 	listeners map[uint64]NamedWindowListener
 	nextID    uint64
 }
@@ -721,7 +723,46 @@ type NamedWindow struct {
 }
 
 func newNamedWindow(definition NamedWindowDefinition, engine *Engine) *NamedWindow {
-	return &NamedWindow{state: &namedWindowRuntime{def: definition, listeners: make(map[uint64]NamedWindowListener)}, engine: engine}
+	state := &namedWindowRuntime{def: definition, listeners: make(map[uint64]NamedWindowListener)}
+	if _, unique := definition.retention.(UniqueWindowSpec); unique {
+		state.keyed = make(map[string]storedEvent)
+	}
+	return &NamedWindow{state: state, engine: engine}
+}
+
+// rebuildUniqueStateLocked normalizes the keyed index after a direct
+// named-window delete or update. Unique retention keeps the first-seen key
+// order, matching the ordinary Unique window's snapshot order while moving
+// the current event value into the existing key slot.
+func (w *NamedWindow) rebuildUniqueStateLocked() {
+	if w == nil || w.state == nil {
+		return
+	}
+	retention, unique := w.state.def.retention.(UniqueWindowSpec)
+	if !unique {
+		w.state.keyed = nil
+		w.state.keyOrder = nil
+		return
+	}
+	keyed := make(map[string]storedEvent, len(w.state.entries))
+	keyOrder := make([]string, 0, len(w.state.entries))
+	positions := make(map[string]int, len(w.state.entries))
+	entries := make([]storedEvent, 0, len(w.state.entries))
+	for _, entry := range w.state.entries {
+		key := uniqueWindowKey(retention, entry.event, entry.receivedAt, nil)
+		if position, exists := positions[key]; exists {
+			entries[position] = entry
+			keyed[key] = entry
+			continue
+		}
+		positions[key] = len(entries)
+		entries = append(entries, entry)
+		keyOrder = append(keyOrder, key)
+		keyed[key] = entry
+	}
+	w.state.entries = entries
+	w.state.keyed = keyed
+	w.state.keyOrder = keyOrder
 }
 
 func (w *NamedWindow) Definition() NamedWindowDefinition {
@@ -807,6 +848,7 @@ func (w *NamedWindow) deleteWhere(ctx context.Context, predicate func(Event) boo
 		}
 	}
 	state.entries = kept
+	w.rebuildUniqueStateLocked()
 	state.mu.Unlock()
 	return delta, nil
 }
@@ -856,6 +898,7 @@ func (w *NamedWindow) updateWhere(ctx context.Context, predicate func(Event) boo
 		delta.New = append(delta.New, updated)
 		state.entries[index] = storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt}
 	}
+	w.rebuildUniqueStateLocked()
 	state.mu.Unlock()
 	return delta, nil
 }
@@ -993,6 +1036,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 		}
 	}
 	state.entries = entries
+	w.rebuildUniqueStateLocked()
 	return delta, nil
 }
 
@@ -1040,8 +1084,32 @@ func (w *NamedWindow) insert(now time.Time, underlying any) (NamedWindowDelta, e
 			return delta, nil
 		}
 		state.entries = append(state.entries, entry)
+	case UniqueWindowSpec:
+		if state.keyed == nil {
+			state.keyed = make(map[string]storedEvent)
+		}
+		key := uniqueWindowKey(retention, event, now, nil)
+		if previous, exists := state.keyed[key]; exists {
+			if retention.First {
+				return NamedWindowDelta{Time: now}, nil
+			}
+			for index, candidate := range state.entries {
+				if sameEvent(candidate.event, previous.event) {
+					state.entries[index] = entry
+					state.keyed[key] = entry
+					delta.Old = append(delta.Old, previous.event)
+					return delta, nil
+				}
+			}
+			state.keyed[key] = entry
+			state.entries = append(state.entries, entry)
+			return delta, nil
+		}
+		state.keyed[key] = entry
+		state.keyOrder = append(state.keyOrder, key)
+		state.entries = append(state.entries, entry)
 	default:
-		return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", state.def.retention))
+		return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", retention))
 	}
 	return delta, nil
 }
