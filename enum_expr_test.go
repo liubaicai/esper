@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
@@ -17,6 +18,13 @@ type enumExpressionContainer struct {
 	Values []int64              `esper:"values"`
 	Items  []enumExpressionItem `esper:"items"`
 }
+
+type enumDecimalItem struct {
+	ID     string  `esper:"id"`
+	Amount big.Rat `esper:"amount"`
+}
+
+type enumExpressionNumbers []int64
 
 func TestEnumerableExpressionsUseElementIndexAndSize(t *testing.T) {
 	values := Literal([]int64{1, 2, 3})
@@ -202,6 +210,73 @@ func TestEnumerableNumericMethodsAndPlanIntegration(t *testing.T) {
 	}
 	if !reflect.DeepEqual(filtered, []int64{2, 3}) {
 		t.Fatalf("runtime filtered = %#v", filtered)
+	}
+}
+
+func TestEnumerableSupportsExactBigNumbersAndArrayCollections(t *testing.T) {
+	largeOne := *big.NewInt(9007199254740993001)
+	largeTwo := *big.NewInt(9007199254740993002)
+	largeValues := Literal([]big.Int{largeOne, largeTwo})
+	largeSum, err := As[big.Int](EnumSum[big.Int](largeValues).eval(EvalContext{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantSum := new(big.Int).Add(&largeOne, &largeTwo)
+	if largeSum.Cmp(wantSum) != 0 {
+		t.Fatalf("big integer sum = %s, want %s", largeSum.String(), wantSum.String())
+	}
+	largeMin, err := As[big.Int](EnumMin[big.Int](largeValues).eval(EvalContext{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if largeMin.Cmp(&largeOne) != 0 {
+		t.Fatalf("big integer min = %s, want %s", largeMin.String(), largeOne.String())
+	}
+
+	third := *big.NewRat(1, 3)
+	twoThirds := *big.NewRat(2, 3)
+	rationalValues := Literal([]big.Rat{third, twoThirds})
+	exactAverage, err := As[big.Rat](EnumAverageExact[big.Rat](rationalValues).eval(EvalContext{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantAverage := *big.NewRat(1, 2)
+	if exactAverage.Cmp(&wantAverage) != 0 {
+		t.Fatalf("exact rational average = %s, want %s", exactAverage.RatString(), wantAverage.RatString())
+	}
+	if got := EnumSum[big.Rat](rationalValues).eval(EvalContext{}); !got.IsPresent() {
+		t.Fatalf("rational sum = %v", got)
+	}
+
+	items := Literal([]enumDecimalItem{
+		{ID: "A", Amount: *big.NewRat(7, 10)},
+		{ID: "B", Amount: *big.NewRat(1, 10)},
+	})
+	amount := EnumField[enumDecimalItem, big.Rat]("amount")
+	selectedSum, err := As[big.Rat](EnumSumOf[enumDecimalItem, big.Rat](items, amount).eval(EvalContext{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantSelectedSum := *big.NewRat(4, 5)
+	if selectedSum.Cmp(&wantSelectedSum) != 0 {
+		t.Fatalf("selected rational sum = %s, want %s", selectedSum.RatString(), wantSelectedSum.RatString())
+	}
+	minimum, err := As[enumDecimalItem](EnumMinBy[enumDecimalItem, big.Rat](items, amount).eval(EvalContext{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if minimum.ID != "B" {
+		t.Fatalf("selected rational minimum = %#v", minimum)
+	}
+
+	array := Literal([3]int64{4, 5, 6})
+	collected := EnumCollect[int64](array)
+	if got := EnumSum[int64](collected).eval(EvalContext{}); !got.Equal(Present(int64(15))) {
+		t.Fatalf("array collection sum = %v", got)
+	}
+	namedSlice := EnumCollect[int64](Literal(enumExpressionNumbers{7, 8, 9}))
+	if got := EnumCount[int64](namedSlice).eval(EvalContext{}); !got.Equal(Present(int64(3))) {
+		t.Fatalf("named slice collection count = %v", got)
 	}
 }
 

@@ -2,9 +2,26 @@ package esper
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 	"sort"
 )
+
+// EnumOrdered is the ordered value set supported by enumeration methods.
+// big.Int and big.Rat provide the Go equivalents of Esper's BigInteger and
+// BigDecimal values without converting through float64.
+type EnumOrdered interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+		~float32 | ~float64 | ~string | big.Int | big.Rat
+}
+
+// EnumNumeric is the numeric subset used by enumeration sum/average methods.
+type EnumNumeric interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+		~float32 | ~float64 | big.Int | big.Rat
+}
 
 // EnumElement returns the current item inside an enumerable lambda. It is the
 // Go-style, analyzable equivalent of Esper's lambda item parameter; callers
@@ -78,6 +95,120 @@ func enumItems[T any](expression Expression[[]T], ctx EvalContext) ([]T, Value, 
 		return nil, Null(), false
 	}
 	return items, input, true
+}
+
+// EnumCollect normalizes an analyzable Go array, slice, or named slice into
+// the ordered slice representation consumed by the enumeration methods. It
+// is useful for event properties declared as [N]T or a named slice type while
+// keeping the rest of the fluent API strongly typed as []T.
+func EnumCollect[T any](values Expr) Expression[[]T] {
+	description := "collect(<nil>)"
+	var children []*exprNode
+	if values != nil {
+		description = "collect(" + values.Description() + ")"
+		children = []*exprNode{values.node()}
+	}
+	return makeExpr[[]T]("enum-collect", description, children, func(ctx EvalContext) Value {
+		if values == nil {
+			return Missing()
+		}
+		input := values.eval(ctx)
+		if !input.IsPresent() {
+			return input
+		}
+		if items, err := As[[]T](input); err == nil {
+			return Present(enumCopy(items))
+		}
+		raw := reflect.ValueOf(input.Any())
+		if !raw.IsValid() {
+			return Null()
+		}
+		for raw.Kind() == reflect.Pointer {
+			if raw.IsNil() {
+				return Null()
+			}
+			raw = raw.Elem()
+		}
+		if raw.Kind() != reflect.Array && raw.Kind() != reflect.Slice {
+			return Null()
+		}
+		result := make([]T, 0, raw.Len())
+		for index := 0; index < raw.Len(); index++ {
+			item := raw.Index(index)
+			if !item.CanInterface() {
+				return Null()
+			}
+			converted, err := As[T](Present(item.Interface()))
+			if err != nil {
+				return Null()
+			}
+			result = append(result, converted)
+		}
+		return Present(result)
+	})
+}
+
+func enumRatFromValue(value Value) (*big.Rat, bool) {
+	if !value.IsPresent() {
+		return nil, false
+	}
+	switch number := value.Any().(type) {
+	case big.Int:
+		return new(big.Rat).SetInt(&number), true
+	case big.Rat:
+		return new(big.Rat).Set(&number), true
+	}
+	raw := reflect.ValueOf(value.Any())
+	if !raw.IsValid() {
+		return nil, false
+	}
+	switch raw.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return new(big.Rat).SetInt64(raw.Int()), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return new(big.Rat).SetUint64(raw.Uint()), true
+	case reflect.Float32, reflect.Float64:
+		rat := new(big.Rat).SetFloat64(raw.Float())
+		return rat, rat != nil
+	default:
+		return nil, false
+	}
+}
+
+func enumRatTo[T EnumNumeric](number *big.Rat) (T, bool) {
+	var zero T
+	if number == nil {
+		return zero, false
+	}
+	switch any(zero).(type) {
+	case big.Int:
+		if !number.IsInt() {
+			return zero, false
+		}
+		var result big.Int
+		result.Set(number.Num())
+		return any(result).(T), true
+	case big.Rat:
+		var result big.Rat
+		result.Set(number)
+		return any(result).(T), true
+	default:
+		value, _ := number.Float64()
+		converted := reflect.ValueOf(value).Convert(reflect.TypeOf(zero))
+		return converted.Interface().(T), true
+	}
+}
+
+func enumCompareValues(left, right Value) (int, bool) {
+	if comparison, comparable := compareValues(left, right); comparable {
+		return comparison, true
+	}
+	leftNumber, leftOK := enumRatFromValue(left)
+	rightNumber, rightOK := enumRatFromValue(right)
+	if !leftOK || !rightOK {
+		return 0, false
+	}
+	return leftNumber.Cmp(rightNumber), true
 }
 
 func enumCopy[T any](items []T) []T {
@@ -426,19 +557,19 @@ func EnumReverse[T any](values Expression[[]T]) Expression[[]T] {
 	})
 }
 
-func EnumMin[T Ordered](values Expression[[]T]) Expression[T] {
+func EnumMin[T EnumOrdered](values Expression[[]T]) Expression[T] {
 	return enumExtreme[T]("min", values, nil, true)
 }
 
-func EnumMax[T Ordered](values Expression[[]T]) Expression[T] {
+func EnumMax[T EnumOrdered](values Expression[[]T]) Expression[T] {
 	return enumExtreme[T]("max", values, nil, false)
 }
 
-func EnumMinBy[T any, K Ordered](values Expression[[]T], selector Expression[K]) Expression[T] {
+func EnumMinBy[T any, K EnumOrdered](values Expression[[]T], selector Expression[K]) Expression[T] {
 	return enumExtreme[T]("min-by", values, selector, true)
 }
 
-func EnumMaxBy[T any, K Ordered](values Expression[[]T], selector Expression[K]) Expression[T] {
+func EnumMaxBy[T any, K EnumOrdered](values Expression[[]T], selector Expression[K]) Expression[T] {
 	return enumExtreme[T]("max-by", values, selector, false)
 }
 
@@ -464,7 +595,7 @@ func enumExtreme[T any](kind string, values Expression[[]T], selector Expr, mini
 				selectedKey = key
 				continue
 			}
-			comparison, comparable := compareValues(key, selectedKey)
+			comparison, comparable := enumCompareValues(key, selectedKey)
 			if comparable && ((minimum && comparison < 0) || (!minimum && comparison > 0)) {
 				selected = Present(item)
 				selectedKey = key
@@ -477,7 +608,7 @@ func enumExtreme[T any](kind string, values Expression[[]T], selector Expr, mini
 	})
 }
 
-func EnumOrderBy[T any, K Ordered](values Expression[[]T], selector Expression[K], descending bool) Expression[[]T] {
+func EnumOrderBy[T any, K EnumOrdered](values Expression[[]T], selector Expression[K], descending bool) Expression[[]T] {
 	kind := "order-by"
 	if descending {
 		kind = "order-by-desc"
@@ -500,7 +631,7 @@ func EnumOrderBy[T any, K Ordered](values Expression[[]T], selector Expression[K
 			keyedItems = append(keyedItems, keyed{item: item, key: selector.eval(enumElementContext(ctx, item, index, len(items)))})
 		}
 		sort.SliceStable(keyedItems, func(left, right int) bool {
-			comparison, comparable := compareValues(keyedItems[left].key, keyedItems[right].key)
+			comparison, comparable := enumCompareValues(keyedItems[left].key, keyedItems[right].key)
 			if !comparable {
 				return false
 			}
@@ -516,69 +647,111 @@ func EnumOrderBy[T any, K Ordered](values Expression[[]T], selector Expression[K
 	})
 }
 
-func EnumSum[T Numeric](values Expression[[]T]) Expression[T] {
+func EnumSum[T EnumNumeric](values Expression[[]T]) Expression[T] {
 	return enumSumOf[T, T](values, nil)
 }
 
-func EnumSumOf[T any, K Numeric](values Expression[[]T], selector Expression[K]) Expression[K] {
+func EnumSumOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K]) Expression[K] {
 	return enumSumOf[T, K](values, selector)
 }
 
-func enumSumOf[T any, K Numeric](values Expression[[]T], selector Expression[K]) Expression[K] {
+func enumSumOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K]) Expression[K] {
 	return makeExpr[K]("enum-sum", enumDescription[T]("sum-of", values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
 		}
-		var total float64
+		total := new(big.Rat)
 		found := false
 		for index, item := range items {
 			value := Present(item)
 			if selector != nil {
 				value = selector.eval(enumElementContext(ctx, item, index, len(items)))
 			}
-			number, numeric := numericValue(value)
+			number, numeric := enumRatFromValue(value)
 			if !numeric {
 				continue
 			}
-			total += number
+			total.Add(total, number)
 			found = true
 		}
 		if !found {
 			return Null()
 		}
-		return Present(convertNumeric[K](total))
+		result, ok := enumRatTo[K](total)
+		if !ok {
+			return Null()
+		}
+		return Present(result)
 	})
 }
 
-func EnumAverage[T Numeric](values Expression[[]T]) Expression[float64] {
+func EnumAverage[T EnumNumeric](values Expression[[]T]) Expression[float64] {
 	return EnumAverageOf[T, T](values, nil)
 }
 
-func EnumAverageOf[T any, K Numeric](values Expression[[]T], selector Expression[K]) Expression[float64] {
+func EnumAverageOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K]) Expression[float64] {
 	return makeExpr[float64]("enum-average", enumDescription[T]("average", values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
 		}
-		var total float64
+		total := new(big.Rat)
 		var count int
 		for index, item := range items {
 			value := Present(item)
 			if selector != nil {
 				value = selector.eval(enumElementContext(ctx, item, index, len(items)))
 			}
-			number, numeric := numericValue(value)
+			number, numeric := enumRatFromValue(value)
 			if !numeric {
 				continue
 			}
-			total += number
+			total.Add(total, number)
 			count++
 		}
 		if count == 0 {
 			return Null()
 		}
-		return Present(total / float64(count))
+		average := new(big.Rat).Quo(total, new(big.Rat).SetInt64(int64(count)))
+		value, _ := average.Float64()
+		return Present(value)
+	})
+}
+
+// EnumAverageExact returns an exact rational average. It is the lossless Go
+// counterpart for Esper enumeration averages over BigDecimal/BigInteger
+// values; callers can render the result as a decimal with big.Rat.FloatString.
+func EnumAverageExact[T EnumNumeric](values Expression[[]T]) Expression[big.Rat] {
+	return EnumAverageExactOf[T, T](values, nil)
+}
+
+// EnumAverageExactOf applies an analyzable numeric selector and retains the
+// exact rational result instead of narrowing to float64.
+func EnumAverageExactOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K]) Expression[big.Rat] {
+	return makeExpr[big.Rat]("enum-average-exact", enumDescription[T]("average-exact", values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
+		items, input, ok := enumItems[T](values, ctx)
+		if !ok {
+			return input
+		}
+		total := new(big.Rat)
+		count := int64(0)
+		for index, item := range items {
+			value := Present(item)
+			if selector != nil {
+				value = selector.eval(enumElementContext(ctx, item, index, len(items)))
+			}
+			number, numeric := enumRatFromValue(value)
+			if !numeric {
+				continue
+			}
+			total.Add(total, number)
+			count++
+		}
+		if count == 0 {
+			return Null()
+		}
+		return Present(*new(big.Rat).Quo(total, new(big.Rat).SetInt64(count)))
 	})
 }
 
