@@ -774,7 +774,10 @@ func (r *statementRuntime) rowRecogStatePoolTracking(definition *rowRecogDefinit
 	if r == nil || definition == nil || r.engine == nil || r.rowRecogOwner == "" || r.engine.matchRecognizeStatePool == nil {
 		return false
 	}
-	return rowRecogStatePoolNFAFor(definition) != nil && r.engine.matchRecognizeStatePool.maxStates >= 0
+	if r.engine.matchRecognizeStatePool.maxStates < 0 {
+		return false
+	}
+	return rowRecogStatePoolNFAFor(definition) != nil
 }
 
 // reconcileRowRecogStatePool advances each active NFA entry exactly once for
