@@ -2496,13 +2496,15 @@ type rowRecogRuntimeState struct {
 }
 
 type rowRecogPartitionState struct {
-	events         []Event
-	skipStart      int
-	emitted        map[string]struct{}
-	intervalClosed map[string]struct{}
-	intervalFinal  map[string][]rowRecogMatch
-	activeStarts   map[string]struct{}
-	blockedStarts  map[string]struct{}
+	events          []Event
+	previousByEvent map[string][]Event
+	previousRolling []Event
+	skipStart       int
+	emitted         map[string]struct{}
+	intervalClosed  map[string]struct{}
+	intervalFinal   map[string][]rowRecogMatch
+	activeStarts    map[string]struct{}
+	blockedStarts   map[string]struct{}
 }
 
 // patternProgress is the runtime state of one pattern expression tree. It is

@@ -44,6 +44,7 @@ type exprNode struct {
 	pluginEnvironment *Environment
 	methodName        string
 	joinSource        int
+	previousOffset    int
 	children          []*exprNode
 	subquery          *subqueryDefinition
 }
@@ -190,13 +191,18 @@ type EvalContext struct {
 	// History is the current data-window view in insertion order. When an
 	// expression is evaluated for a newly arriving event, the current event is
 	// included as the last item. It is primarily consumed by Prev and Prior.
-	History    []Event
-	IsLeaving  bool
-	Tags       map[string]Event
-	TagValues  map[string][]Event
-	Now        time.Time
-	Variables  map[string]Value
-	Parameters map[string]Value
+	History []Event
+	// PreviousHistory overrides History for Prev/Prior evaluation when a
+	// runtime maintains a separate previous-access stream. Match-recognize
+	// uses this to preserve arrival-order PREV values after a data window has
+	// evicted the referenced event.
+	PreviousHistory []Event
+	IsLeaving       bool
+	Tags            map[string]Event
+	TagValues       map[string][]Event
+	Now             time.Time
+	Variables       map[string]Value
+	Parameters      map[string]Value
 
 	// Output counters are populated only while an output-when expression is
 	// evaluated. They model Esper's count_insert/count_remove and total forms
@@ -654,22 +660,28 @@ func previousExpression[V any](kind string, offset int, expression Expression[V]
 		return makeExpr[V](kind, fmt.Sprintf("%s(%d,<nil>)", kind, offset), nil, func(EvalContext) Value { return Null() })
 	}
 	description := fmt.Sprintf("%s(%d,%s)", kind, offset, expression.Description())
-	return makeExpr[V](kind, description, []*exprNode{expression.node()}, func(ctx EvalContext) Value {
-		if offset < 0 || len(ctx.History) == 0 {
+	node := &exprNode{kind: kind, typ: typeOf[V](), description: description, previousOffset: offset, children: []*exprNode{expression.node()}}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		history := ctx.PreviousHistory
+		if history == nil {
+			history = ctx.History
+		}
+		if offset < 0 || len(history) == 0 {
 			return Null()
 		}
-		index := len(ctx.History) - 1 - offset
+		index := len(history) - 1 - offset
 		if prior {
 			index--
 		}
-		if index < 0 || index >= len(ctx.History) {
+		if index < 0 || index >= len(history) {
 			return Null()
 		}
 		nested := ctx
-		nested.Event = ctx.History[index]
-		nested.History = append([]Event(nil), ctx.History[:index+1]...)
+		nested.Event = history[index]
+		nested.History = append([]Event(nil), history[:index+1]...)
+		nested.PreviousHistory = append([]Event(nil), history[:index+1]...)
 		return expression.eval(nested)
-	})
+	}}
 }
 
 // TagField reads a property from a named Pattern or Match Recognize tag. A
@@ -1487,6 +1499,25 @@ func Negate[T Numeric](value Expression[T]) Expression[T] {
 			return Null()
 		}
 		return Present(convertNumeric[T](-number))
+	})
+}
+
+// Abs returns the absolute value while preserving the expression's numeric
+// type. It is useful in fluent rules that mirror Java's Math.abs without
+// introducing an untyped callback into the plan.
+func Abs[T Numeric](value Expression[T]) Expression[T] {
+	if value == nil {
+		return makeExpr[T]("abs", "abs(<nil>)", nil, func(EvalContext) Value { return Null() })
+	}
+	return makeExpr[T]("abs", "abs("+value.Description()+")", []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		number, ok := numericValue(value.eval(ctx))
+		if !ok {
+			return Null()
+		}
+		if number < 0 {
+			number = -number
+		}
+		return Present(convertNumeric[T](number))
 	})
 }
 

@@ -550,6 +550,7 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 			partition = newRowRecogPartitionState()
 			r.rowRecogState.partitions[key] = partition
 		}
+		r.recordRowRecogPrevious(definition, partition, event, plan)
 		r.admitRowRecogStart(definition, partition, event, now)
 		partition.events = append(partition.events, event)
 		if !rowRecogHasInterval(definition) {
@@ -579,12 +580,90 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 
 func newRowRecogPartitionState() *rowRecogPartitionState {
 	return &rowRecogPartitionState{
-		emitted:        make(map[string]struct{}),
-		intervalClosed: make(map[string]struct{}),
-		intervalFinal:  make(map[string][]rowRecogMatch),
-		activeStarts:   make(map[string]struct{}),
-		blockedStarts:  make(map[string]struct{}),
+		previousByEvent: make(map[string][]Event),
+		emitted:         make(map[string]struct{}),
+		intervalClosed:  make(map[string]struct{}),
+		intervalFinal:   make(map[string][]rowRecogMatch),
+		activeStarts:    make(map[string]struct{}),
+		blockedStarts:   make(map[string]struct{}),
 	}
+}
+
+func (r *statementRuntime) recordRowRecogPrevious(definition *rowRecogDefinition, partition *rowRecogPartitionState, event Event, plan Plan) {
+	if definition == nil || partition == nil {
+		return
+	}
+	if partition.previousByEvent == nil {
+		partition.previousByEvent = make(map[string][]Event)
+	}
+	rolling := append(append([]Event(nil), partition.previousRolling...), event)
+	maximum := rowRecogPreviousMaximum(definition, plan)
+	if maximum < 0 {
+		return
+	}
+	needed := maximum + 1
+	if needed < 1 {
+		needed = 1
+	}
+	if len(rolling) > needed {
+		rolling = rolling[len(rolling)-needed:]
+	}
+	partition.previousRolling = append([]Event(nil), rolling...)
+	partition.previousByEvent[rowRecogPreviousEventKey(event)] = append([]Event(nil), rolling...)
+}
+
+func rowRecogPreviousEventKey(event Event) string {
+	return fmt.Sprintf("%s:%d", eventIdentity(event), event.ReceivedAt().UnixNano())
+}
+
+func rowRecogPreviousMaximum(definition *rowRecogDefinition, plan Plan) int {
+	maximum := -1
+	if definition == nil {
+		return maximum
+	}
+	var walk func(*exprNode)
+	walk = func(node *exprNode) {
+		if node == nil {
+			return
+		}
+		requested := node.previousOffset
+		if node.kind == "prior" {
+			requested++
+		}
+		if (node.kind == "prev" || node.kind == "prior") && requested > maximum {
+			maximum = requested
+		}
+		for _, child := range node.children {
+			walk(child)
+		}
+	}
+	for _, expression := range definition.defines {
+		if expression != nil {
+			walk(expression.node())
+		}
+	}
+	for _, selection := range plan.query.patternSelections {
+		if selection.Expr != nil {
+			walk(selection.Expr.node())
+		}
+	}
+	return maximum
+}
+
+func rowRecogPreviousHistory(partition *rowRecogPartitionState, event Event, fallback []Event) []Event {
+	if partition == nil {
+		return append([]Event(nil), fallback...)
+	}
+	return rowRecogPreviousHistoryByMap(partition.previousByEvent, event, fallback)
+}
+
+func rowRecogPreviousHistoryByMap(previousByEvent map[string][]Event, event Event, fallback []Event) []Event {
+	if previousByEvent != nil {
+		if history, ok := previousByEvent[rowRecogPreviousEventKey(event)]; ok {
+			return append([]Event(nil), history...)
+		}
+	}
+	return append([]Event(nil), fallback...)
 }
 
 func (r *statementRuntime) admitRowRecogStart(definition *rowRecogDefinition, partition *rowRecogPartitionState, event Event, now time.Time) {
@@ -625,10 +704,11 @@ func rowRecogEventCanStart(definition *rowRecogDefinition, partition *rowRecogPa
 			return true
 		}
 		value := predicate.eval(EvalContext{
-			Event:     event,
-			History:   history,
-			Now:       now,
-			Variables: variables,
+			Event:           event,
+			History:         history,
+			PreviousHistory: rowRecogPreviousHistory(partition, event, history),
+			Now:             now,
+			Variables:       variables,
 		})
 		matched, ok := boolValue(value)
 		if ok && matched {
@@ -715,7 +795,7 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 		if rowRecogStartBlocked(partition, start) {
 			continue
 		}
-		matches := rowRecogMatches(definition, partition.events, start, end, now, r.variables)
+		matches := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, r.variables)
 		emittedForStart := false
 		for _, match := range matches {
 			if match.start < partition.skipStart {
@@ -726,7 +806,7 @@ func (r *statementRuntime) emitRowRecogMatchesAtEnd(definition *rowRecogDefiniti
 				continue
 			}
 			partition.emitted[matchKey] = struct{}{}
-			if row, visible := evaluateRowRecogMatch(match, partition.events, plan, now, r.variables); visible {
+			if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, r.variables); visible {
 				batch.New = append(batch.New, resultRow(row))
 			}
 			emittedForStart = true
@@ -815,7 +895,7 @@ func (r *statementRuntime) flushRowRecogIntervals(definition *rowRecogDefinition
 			if last < start {
 				continue
 			}
-			matches := rowRecogMatchesAtOrBefore(definition, partition.events, start, last, now, r.variables)
+			matches := rowRecogMatchesAtOrBeforeWithPrevious(definition, partition.events, partition.previousByEvent, start, last, now, r.variables)
 			for _, match := range matches {
 				if match.start < partition.skipStart {
 					continue
@@ -826,7 +906,7 @@ func (r *statementRuntime) flushRowRecogIntervals(definition *rowRecogDefinition
 				}
 				partition.emitted[matchKey] = struct{}{}
 				partition.intervalFinal[startKey] = append(partition.intervalFinal[startKey], match)
-				if row, visible := evaluateRowRecogMatch(match, partition.events, plan, now, r.variables); visible {
+				if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, r.variables); visible {
 					batch.New = append(batch.New, resultRow(row))
 				}
 				r.advanceRowRecogSkip(definition, partition, match)
@@ -896,14 +976,14 @@ func (r *statementRuntime) emitRowRecogTerminated(definition *rowRecogDefinition
 		if _, closed := partition.intervalClosed[startKey]; closed {
 			continue
 		}
-		current := rowRecogMatches(definition, partition.events, start, end, now, r.variables)
+		current := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, r.variables)
 		if len(current) > 0 {
 			if rowRecogMatchAtFiniteWidth(definition.pattern, current[0]) {
 				r.emitRowRecogIntervalMatches(definition, partition, startKey, current, plan, now, batch)
 			}
 			continue
 		}
-		terminated := rowRecogMatchesAtOrBefore(definition, partition.events, start, end-1, now, r.variables)
+		terminated := rowRecogMatchesAtOrBeforeWithPrevious(definition, partition.events, partition.previousByEvent, start, end-1, now, r.variables)
 		if len(terminated) > 0 {
 			r.emitRowRecogIntervalMatches(definition, partition, startKey, terminated, plan, now, batch)
 		}
@@ -931,7 +1011,7 @@ func (r *statementRuntime) emitRowRecogIntervalMatches(definition *rowRecogDefin
 		}
 		partition.emitted[matchKey] = struct{}{}
 		partition.intervalFinal[startKey] = append(partition.intervalFinal[startKey], match)
-		if row, visible := evaluateRowRecogMatch(match, partition.events, plan, now, r.variables); visible {
+		if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, r.variables); visible {
 			batch.New = append(batch.New, resultRow(row))
 		}
 		r.advanceRowRecogSkip(definition, partition, match)
@@ -990,8 +1070,12 @@ func rowPatternMaxWidth(pattern RowPattern) (int, bool) {
 }
 
 func rowRecogMatchesAtOrBefore(definition *rowRecogDefinition, history []Event, start, last int, now time.Time, variables map[string]Value) []rowRecogMatch {
+	return rowRecogMatchesAtOrBeforeWithPrevious(definition, history, nil, start, last, now, variables)
+}
+
+func rowRecogMatchesAtOrBeforeWithPrevious(definition *rowRecogDefinition, history []Event, previousByEvent map[string][]Event, start, last int, now time.Time, variables map[string]Value) []rowRecogMatch {
 	for end := last; end >= start; end-- {
-		matches := rowRecogMatches(definition, history, start, end, now, variables)
+		matches := rowRecogMatchesWithPrevious(definition, history, previousByEvent, start, end, now, variables)
 		if len(matches) > 0 {
 			return matches
 		}
@@ -1031,6 +1115,9 @@ func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, e
 				r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, 1)
 			}
 		}
+		if partition.previousByEvent != nil {
+			delete(partition.previousByEvent, rowRecogPreviousEventKey(retained))
+		}
 		partition.events = append(partition.events[:index], partition.events[index+1:]...)
 		partition.activeStarts = make(map[string]struct{})
 		partition.blockedStarts = make(map[string]struct{})
@@ -1063,7 +1150,7 @@ func (r *statementRuntime) removeRowRecogEvent(definition *rowRecogDefinition, e
 		partition.emitted = make(map[string]struct{})
 		partition.intervalClosed = make(map[string]struct{})
 		partition.intervalFinal = make(map[string][]rowRecogMatch)
-		if len(partition.events) == 0 {
+		if len(partition.events) == 0 && len(partition.previousRolling) == 0 {
 			delete(r.rowRecogState.partitions, key)
 		}
 		return
@@ -1087,16 +1174,21 @@ func rowRecogPartitionKey(definition *rowRecogDefinition, event Event, history [
 }
 
 func rowRecogMatches(definition *rowRecogDefinition, history []Event, start, end int, now time.Time, variables map[string]Value) []rowRecogMatch {
+	return rowRecogMatchesWithPrevious(definition, history, nil, start, end, now, variables)
+}
+
+func rowRecogMatchesWithPrevious(definition *rowRecogDefinition, history []Event, previousByEvent map[string][]Event, start, end int, now time.Time, variables map[string]Value) []rowRecogMatch {
 	if definition == nil || start < 0 || end < start || end >= len(history) {
 		return nil
 	}
 	matcher := &rowPatternMatchContext{
-		definition: definition,
-		history:    history,
-		end:        end,
-		now:        now,
-		variables:  variables,
-		limit:      definition.maxStates,
+		definition:      definition,
+		history:         history,
+		previousByEvent: previousByEvent,
+		end:             end,
+		now:             now,
+		variables:       variables,
+		limit:           definition.maxStates,
 	}
 	paths := matcher.match(definition.pattern, start, nil)
 	result := make([]rowRecogMatch, 0, len(paths))
@@ -1120,13 +1212,14 @@ type rowPatternMatchPath struct {
 }
 
 type rowPatternMatchContext struct {
-	definition *rowRecogDefinition
-	history    []Event
-	end        int
-	now        time.Time
-	variables  map[string]Value
-	limit      int
-	steps      int
+	definition      *rowRecogDefinition
+	history         []Event
+	previousByEvent map[string][]Event
+	end             int
+	now             time.Time
+	variables       map[string]Value
+	limit           int
+	steps           int
 }
 
 func (m *rowPatternMatchContext) match(pattern RowPattern, position int, captures map[string][]Event) []rowPatternMatchPath {
@@ -1162,12 +1255,13 @@ func (m *rowPatternMatchContext) matchBase(pattern RowPattern, position int, cap
 		predicate := m.definition.defines[pattern.name]
 		if predicate != nil {
 			value := predicate.eval(EvalContext{
-				Event:     event,
-				History:   append([]Event(nil), m.history[:position+1]...),
-				Tags:      rowRecogLastTags(next),
-				TagValues: cloneRowRecogCaptures(next),
-				Now:       m.now,
-				Variables: m.variables,
+				Event:           event,
+				History:         append([]Event(nil), m.history[:position+1]...),
+				PreviousHistory: rowRecogPreviousHistoryByMap(m.previousByEvent, event, m.history[:position+1]),
+				Tags:            rowRecogLastTags(next),
+				TagValues:       cloneRowRecogCaptures(next),
+				Now:             m.now,
+				Variables:       m.variables,
 			})
 			matched, ok := boolValue(value)
 			if !ok || !matched {
@@ -1361,18 +1455,23 @@ func rowRecogMatchKey(match rowRecogMatch) string {
 }
 
 func evaluateRowRecogMatch(match rowRecogMatch, history []Event, plan Plan, now time.Time, variables map[string]Value) (Row, bool) {
+	return evaluateRowRecogMatchWithPrevious(match, history, nil, plan, now, variables)
+}
+
+func evaluateRowRecogMatchWithPrevious(match rowRecogMatch, history []Event, previousByEvent map[string][]Event, plan Plan, now time.Time, variables map[string]Value) (Row, bool) {
 	if len(plan.query.patternSelections) == 0 || match.end < 0 || match.end >= len(history) {
 		return Row{}, false
 	}
 	currentHistory := append([]Event(nil), history[:match.end+1]...)
 	ctx := EvalContext{
-		Event:     history[match.end],
-		Group:     append([]Event(nil), history[match.start:match.end+1]...),
-		History:   currentHistory,
-		Tags:      rowRecogLastTags(match.captures),
-		TagValues: cloneRowRecogCaptures(match.captures),
-		Now:       now,
-		Variables: variables,
+		Event:           history[match.end],
+		Group:           append([]Event(nil), history[match.start:match.end+1]...),
+		History:         currentHistory,
+		PreviousHistory: rowRecogPreviousHistoryByMap(previousByEvent, history[match.end], currentHistory),
+		Tags:            rowRecogLastTags(match.captures),
+		TagValues:       cloneRowRecogCaptures(match.captures),
+		Now:             now,
+		Variables:       variables,
 	}
 	values := make([]Value, 0, len(plan.query.patternSelections))
 	for _, selection := range plan.query.patternSelections {
@@ -1425,7 +1524,7 @@ func (r *statementRuntime) snapshotRowRecog(plan Plan, now time.Time, variables 
 				continue
 			}
 			seen[matchKey] = struct{}{}
-			if row, visible := evaluateRowRecogMatch(match, partition.events, plan, now, variables); visible {
+			if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, variables); visible {
 				result.New = append(result.New, resultRow(row))
 			}
 		}
@@ -1561,7 +1660,7 @@ func rowRecogCurrentMatches(definition *rowRecogDefinition, partition *rowRecogP
 			}
 		}
 		for end := len(partition.events) - 1; end >= start; end-- {
-			matches := rowRecogMatches(definition, partition.events, start, end, now, variables)
+			matches := rowRecogMatchesWithPrevious(definition, partition.events, partition.previousByEvent, start, end, now, variables)
 			if len(matches) == 0 {
 				continue
 			}
