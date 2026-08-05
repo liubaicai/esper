@@ -542,6 +542,17 @@ type rowRecogMatch struct {
 	captures map[string][]Event
 }
 
+type rowRecogFastABStarCDefinition struct {
+	a string
+	b string
+	c string
+}
+
+type rowRecogFastABStarCPath struct {
+	start int
+	a     Event
+}
+
 func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.Time) ResultBatch {
 	definition := plan.query.rowRecog
 	if definition == nil {
@@ -554,6 +565,7 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 		r.rowRecogState.partitions = make(map[string]*rowRecogPartitionState)
 	}
 	batch := ResultBatch{Time: now, outputCountsSet: true, outputInserted: int64(len(delta.newEvents)), outputRemoved: int64(len(delta.oldEvents))}
+	fastDefinition, fastPath := rowRecogFastABStarCDefinitionFor(definition)
 
 	// Retention changes must be applied before new rows are matched. This is
 	// observable for length/time windows where one arrival can remove an older
@@ -580,7 +592,11 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 			continue
 		}
 		if !rowRecogHasInterval(definition) {
-			r.emitRowRecogMatchesAtEnd(definition, partition, len(partition.events)-1, plan, now, &batch)
+			if fastPath {
+				r.emitRowRecogFastABStarC(definition, partition, len(partition.events)-1, plan, now, &batch, fastDefinition)
+			} else {
+				r.emitRowRecogMatchesAtEnd(definition, partition, len(partition.events)-1, plan, now, &batch)
+			}
 		} else if definition.intervalOrTerminated {
 			r.emitRowRecogTerminated(definition, partition, len(partition.events)-1, plan, now, &batch)
 		}
@@ -732,17 +748,30 @@ func rowRecogEventCanStart(definition *rowRecogDefinition, partition *rowRecogPa
 	if len(names) == 0 {
 		return false
 	}
-	history := append([]Event(nil), partition.events...)
-	history = append(history, event)
+	history := partition.events
+	needsPrevious := false
+	for _, name := range names {
+		if predicate := definition.defines[name]; predicate != nil && rowRecogExprUsesPrevious(predicate.node()) {
+			needsPrevious = true
+			break
+		}
+	}
+	if needsPrevious {
+		history = append(append([]Event(nil), partition.events...), event)
+	}
 	for _, name := range names {
 		predicate := definition.defines[name]
 		if predicate == nil {
 			return true
 		}
+		previous := []Event(nil)
+		if needsPrevious {
+			previous = rowRecogPreviousHistory(partition, event, history)
+		}
 		value := predicate.eval(EvalContext{
 			Event:           event,
 			History:         history,
-			PreviousHistory: rowRecogPreviousHistory(partition, event, history),
+			PreviousHistory: previous,
 			Now:             now,
 			Variables:       variables,
 		})
@@ -1458,9 +1487,18 @@ func remapRowRecogEmittedMatches(matches map[string]rowRecogMatch, oldEvents []E
 	return result
 }
 
-func rowRecogSkipPastLastSnapshotStartExcluded(partition *rowRecogPartitionState, match rowRecogMatch) bool {
+func rowRecogSkipPastLastSnapshotStartExcluded(partition *rowRecogPartitionState, match rowRecogMatch, strict bool) bool {
 	if partition == nil || match.start < 0 || match.start >= len(partition.events) {
 		return false
+	}
+	if strict {
+		// The emitted history is added to the iterator before discovering any
+		// current matches. New starts before the skip boundary are therefore
+		// already consumed by SKIP PAST LAST ROW, including starts between an
+		// emitted match's first and last event. Comparing only the start event
+		// to the emitted end event would incorrectly expose suffix matches such
+		// as (A* B) starting at the second A.
+		return match.start < partition.skipStart
 	}
 	startEvent := partition.events[match.start]
 	for _, emitted := range partition.emittedMatches {
@@ -1570,6 +1608,172 @@ func rowRecogPartitionKey(definition *rowRecogDefinition, event Event, history [
 
 func rowRecogMatches(definition *rowRecogDefinition, history []Event, start, end int, now time.Time, variables map[string]Value) []rowRecogMatch {
 	return rowRecogMatchesWithPrevious(definition, history, nil, start, end, now, variables)
+}
+
+func rowRecogFastABStarCDefinitionFor(definition *rowRecogDefinition) (rowRecogFastABStarCDefinition, bool) {
+	if definition == nil || !definition.allMatches || definition.iterateOnly || definition.skip != RowRecogSkipPastLastRow ||
+		rowRecogHasInterval(definition) || rowRecogBatchWindowNode(definition.input) != nil || definition.pattern.kind != rowPatternSequence ||
+		len(definition.pattern.parts) != 3 {
+		return rowRecogFastABStarCDefinition{}, false
+	}
+	first, repeated, terminal := definition.pattern.parts[0], definition.pattern.parts[1], definition.pattern.parts[2]
+	firstMinimum, firstMaximum := rowPatternBounds(first)
+	repeatedMinimum, repeatedMaximum := rowPatternBounds(repeated)
+	terminalMinimum, terminalMaximum := rowPatternBounds(terminal)
+	if first.kind != rowPatternVariable || repeated.kind != rowPatternVariable || terminal.kind != rowPatternVariable ||
+		firstMinimum != 1 || firstMaximum != 1 || repeatedMinimum != 0 || repeatedMaximum != 0 ||
+		terminalMinimum != 1 || terminalMaximum != 1 || repeated.greedy || first.name == "" || repeated.name == "" || terminal.name == "" {
+		return rowRecogFastABStarCDefinition{}, false
+	}
+	// A repeated predicate that reads its own tag depends on the complete
+	// capture array. The fast path intentionally keeps only the first event
+	// and derives the repeated slice at terminal time, so leave such patterns
+	// on the general matcher.
+	for _, name := range []string{first.name, repeated.name, terminal.name} {
+		predicate := definition.defines[name]
+		if predicate != nil && (rowRecogExprUsesPrevious(predicate.node()) || (name == repeated.name && rowRecogExprUsesTag(predicate.node(), repeated.name))) {
+			return rowRecogFastABStarCDefinition{}, false
+		}
+	}
+	return rowRecogFastABStarCDefinition{a: first.name, b: repeated.name, c: terminal.name}, true
+}
+
+func rowRecogExprUsesTag(node *exprNode, tag string) bool {
+	if node == nil || tag == "" {
+		return false
+	}
+	if node.tagName == tag {
+		return true
+	}
+	for _, child := range node.children {
+		if rowRecogExprUsesTag(child, tag) {
+			return true
+		}
+	}
+	return false
+}
+
+func rowRecogExprUsesPrevious(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.kind == "prev" || node.kind == "prior" {
+		return true
+	}
+	for _, child := range node.children {
+		if rowRecogExprUsesPrevious(child) {
+			return true
+		}
+	}
+	return false
+}
+
+func rowRecogFastDefineMatches(definition *rowRecogDefinition, variable string, event Event, partition *rowRecogPartitionState, captures map[string][]Event, now time.Time, variables map[string]Value) bool {
+	if definition == nil || partition == nil {
+		return false
+	}
+	predicate := definition.defines[variable]
+	if predicate == nil {
+		return true
+	}
+	history := partition.events
+	previous := []Event(nil)
+	if rowRecogExprUsesPrevious(predicate.node()) {
+		previous = rowRecogPreviousHistory(partition, event, history)
+	}
+	value := predicate.eval(EvalContext{
+		Event:           event,
+		History:         history,
+		PreviousHistory: previous,
+		Tags:            rowRecogLastTags(captures),
+		TagValues:       cloneRowRecogCaptures(captures),
+		Now:             now,
+		Variables:       variables,
+	})
+	matched, ok := boolValue(value)
+	return ok && matched
+}
+
+func rowRecogFastABStarCCaptures(path rowRecogFastABStarCPath, partition *rowRecogPartitionState, end int, definition rowRecogFastABStarCDefinition) map[string][]Event {
+	captures := map[string][]Event{definition.a: []Event{path.a}}
+	if path.start+1 < end {
+		captures[definition.b] = append([]Event(nil), partition.events[path.start+1:end]...)
+	}
+	captures[definition.c] = []Event{partition.events[end]}
+	return captures
+}
+
+func (r *statementRuntime) dropRowRecogFastABStarCPath(partition *rowRecogPartitionState, path rowRecogFastABStarCPath) {
+	if r == nil || partition == nil || path.start < 0 || path.start >= len(partition.events) {
+		return
+	}
+	key := rowRecogStartKey(path.start, partition.events[path.start])
+	if _, active := partition.activeStarts[key]; !active {
+		return
+	}
+	delete(partition.activeStarts, key)
+	if r.engine != nil && r.engine.matchRecognizeStatePool != nil {
+		r.engine.matchRecognizeStatePool.decrease(r.rowRecogOwner, 1)
+	}
+}
+
+func (r *statementRuntime) emitRowRecogFastABStarC(definition *rowRecogDefinition, partition *rowRecogPartitionState, end int, plan Plan, now time.Time, batch *ResultBatch, fast rowRecogFastABStarCDefinition) {
+	if r == nil || definition == nil || partition == nil || batch == nil || end < 0 || end >= len(partition.events) {
+		return
+	}
+	event := partition.events[end]
+	next := make([]rowRecogFastABStarCPath, 0, len(partition.fastABStarC))
+	for _, path := range partition.fastABStarC {
+		if path.start < 0 || path.start >= end {
+			continue
+		}
+		baseCaptures := map[string][]Event{fast.a: []Event{path.a}}
+		cCaptures := baseCaptures
+		if predicate := definition.defines[fast.c]; predicate != nil && rowRecogExprUsesTag(predicate.node(), fast.b) {
+			cCaptures = rowRecogFastABStarCCaptures(path, partition, end, rowRecogFastABStarCDefinition{a: fast.a, b: fast.b, c: ""})
+			delete(cCaptures, "")
+		}
+		if rowRecogFastDefineMatches(definition, fast.c, event, partition, cCaptures, now, r.variables) {
+			captures := rowRecogFastABStarCCaptures(path, partition, end, fast)
+			match := rowRecogMatch{
+				start:    path.start,
+				end:      end,
+				terminal: true,
+				branch:   rowPatternBranchKey(definition.pattern),
+				captures: captures,
+			}
+			key := rowRecogMatchKey(match)
+			if _, emitted := partition.emitted[key]; !emitted {
+				partition.emitted[key] = struct{}{}
+				if partition.emittedMatches == nil {
+					partition.emittedMatches = make(map[string]rowRecogMatch)
+				}
+				partition.emittedMatches[key] = match
+				if row, visible := evaluateRowRecogMatchWithPrevious(match, partition.events, partition.previousByEvent, plan, now, r.variables); visible {
+					batch.New = append(batch.New, resultRow(row))
+				}
+			}
+			// The fast path is restricted to SKIP PAST LAST ROW, therefore the
+			// first terminal branch closes every earlier in-flight start just as
+			// the general matcher does.
+			r.advanceRowRecogSkip(definition, partition, match)
+			partition.fastABStarC = nil
+			return
+		}
+		bCaptures := baseCaptures
+		if rowRecogFastDefineMatches(definition, fast.b, event, partition, bCaptures, now, r.variables) {
+			next = append(next, path)
+			continue
+		}
+		r.dropRowRecogFastABStarCPath(partition, path)
+	}
+	partition.fastABStarC = next
+	if key := rowRecogStartKey(end, event); func() bool {
+		_, active := partition.activeStarts[key]
+		return active
+	}() {
+		partition.fastABStarC = append(partition.fastABStarC, rowRecogFastABStarCPath{start: end, a: event})
+	}
 }
 
 func rowRecogMatchesWithPrevious(definition *rowRecogDefinition, history []Event, previousByEvent map[string][]Event, start, end int, now time.Time, variables map[string]Value) []rowRecogMatch {
@@ -2220,7 +2424,7 @@ func rowRecogCurrentMatches(definition *rowRecogDefinition, partition *rowRecogP
 				if definition.intervalOrTerminated && rowRecogMatchBranchClosed(partition, startKey, match) {
 					continue
 				}
-				if definition.skip == RowRecogSkipPastLastRow && rowRecogSkipPastLastSnapshotStartExcluded(partition, match) {
+				if definition.skip == RowRecogSkipPastLastRow && rowRecogSkipPastLastSnapshotStartExcluded(partition, match, !definition.allMatches) {
 					continue
 				}
 				seen[key] = struct{}{}
