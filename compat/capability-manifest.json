@@ -721,13 +721,13 @@
     {
       "id": "case.output-crontab-static",
       "javaRuntimeIds": ["java-runtime-d1732fdb170309836a4d", "java-runtime-f03ba450d0474adb58e6", "java-runtime-529144b12e8729215062"],
-      "javaNames": ["ResultSetOutputCrontabAt", "ResultSetOutputCrontabAtOMCreate", "ResultSetOutputCrontabAtOMCompile"],
-      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitCrontabWhen.java"],
-      "goTests": ["TestCronScheduleNextOccurrenceAndDayOrSemantics", "TestCronScheduleSupportsSecondAndMillisecondPrecision", "TestCronScheduleSupportsMicrosecondPrecision", "TestCronScheduleMicrosecondPrecisionFlowsThroughOutputAt", "TestCronSchedulePrecisionFlowsThroughOutputAtAndTimerCron", "TestOutputAtUsesVirtualClockAndFlushesAccumulatedRows", "TestOutputAtSnapshotReadsCurrentWindowAtCalendarTick"],
+      "javaNames": ["ResultSetOutputCrontabAt", "ResultSetOutputCrontabAtOMCreate", "ResultSetOutputCrontabAtOMCompile", "TestScheduleComputeHelper"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitCrontabWhen.java", "common/src/test/java/com/espertech/esper/common/internal/schedule/TestScheduleComputeHelper.java"],
+      "goTests": ["TestCronScheduleNextOccurrenceAndDayOrSemantics", "TestCronScheduleSupportsSecondAndMillisecondPrecision", "TestCronScheduleSupportsMicrosecondPrecision", "TestCronScheduleMicrosecondPrecisionFlowsThroughOutputAt", "TestCronScheduleSupportsSpecialCalendarOperators", "TestCronScheduleSpecialOperatorsMatchEsperSequences", "TestCronScheduleSpecialOperatorsFlowThroughOutputAt", "TestCronScheduleUsesConfiguredTimeZoneAndDST", "TestCronScheduleConfiguredTimeZoneFlowsThroughTimerCron", "TestCronScheduleRejectsInvalidSpecialCombinations", "TestCronSchedulePrecisionFlowsThroughOutputAtAndTimerCron", "TestOutputAtUsesVirtualClockAndFlushesAccumulatedRows", "TestOutputAtSnapshotReadsCurrentWindowAtCalendarTick"],
       "tags": ["correctness", "output", "calendar", "virtual-time"],
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
-      "difference": "Go covers the compatible five-field default plus opt-in second/millisecond/microsecond fields through OutputAt; Java additionally covers special calendar operators and timezone/DST cases."
+      "difference": "Go covers the compatible five-field default plus opt-in second/millisecond/microsecond fields through OutputAt, typed last/lastweekday/nearest-weekday operators, fixed/IANA timezone resolution and a DST boundary; Java's full SODA/property/timezone and invalid-rule matrix remains open."
     },
     {
       "id": "case.output-crontab-variable",
@@ -860,14 +860,14 @@
     },
     {
       "id": "case.pattern-timer-cron",
-      "javaRuntimeIds": ["java-runtime-2ebf6d23390f9296e7b1", "java-runtime-15b8c1050cdf38920faa", "java-runtime-198e29697d770d74a050", "java-runtime-87905b2cf25801c7702d", "java-runtime-5d93878f1402d6f74201"],
-      "javaNames": ["PatternMicrosecondResolutionCrontab", "PatternTimerScheduleDateWithPeriod", "PatternTimerAtSimple", "PatternOp", "PatternWMilliseconds"],
+      "javaRuntimeIds": ["java-runtime-2ebf6d23390f9296e7b1", "java-runtime-15b8c1050cdf38920faa", "java-runtime-198e29697d770d74a050", "java-runtime-87905b2cf25801c7702d", "java-runtime-8d6e62c19954af2c09d6", "java-runtime-7d6abd69515c8afad13e", "java-runtime-5d93878f1402d6f74201"],
+      "javaNames": ["PatternMicrosecondResolutionCrontab", "PatternTimerScheduleDateWithPeriod", "PatternTimerAtSimple", "PatternOp", "PatternCronParameter", "PatternPropertyAndSODAAndTimezone", "PatternWMilliseconds"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternMicrosecondResolutionCrontab.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerAt.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerSchedule.java"],
-      "goTests": ["TestPatternTimerCronEmitsCalendarOccurrences", "TestCronSchedulePrecisionFlowsThroughOutputAtAndTimerCron", "TestCronScheduleSupportsMicrosecondPrecision", "TestCronScheduleMicrosecondPrecisionFlowsThroughTimerCron", "TestPatternTimerScheduleEmitsAllDueInstantsInOrder", "TestPatternTimerScheduleWithPeriodFiniteAndCalendarAnchor", "TestPatternTimerScheduleISOForms", "TestPatternTimerScheduleISOExpressionUsesCapturedTag", "TestPatternTimerAtScheduleEmitsNextCalendarOccurrenceOnly", "TestPatternTimerAtScheduleSupportsStepAndMilliseconds", "TestPatternTimerAtScheduleContextCreatesOnePartition", "TestPatternTimerSchedulePeriodContextCreatesRecurringPartitions"],
+      "goTests": ["TestPatternTimerCronEmitsCalendarOccurrences", "TestCronSchedulePrecisionFlowsThroughOutputAtAndTimerCron", "TestCronScheduleSupportsMicrosecondPrecision", "TestCronScheduleMicrosecondPrecisionFlowsThroughTimerCron", "TestCronScheduleSupportsSpecialCalendarOperators", "TestCronScheduleSpecialOperatorsMatchEsperSequences", "TestCronScheduleSpecialOperatorsFlowThroughTimerCron", "TestCronScheduleUsesConfiguredTimeZoneAndDST", "TestCronScheduleConfiguredTimeZoneFlowsThroughTimerCron", "TestPatternTimerScheduleEmitsAllDueInstantsInOrder", "TestPatternTimerScheduleWithPeriodFiniteAndCalendarAnchor", "TestPatternTimerScheduleISOForms", "TestPatternTimerScheduleISOExpressionUsesCapturedTag", "TestPatternTimerAtScheduleEmitsNextCalendarOccurrenceOnly", "TestPatternTimerAtScheduleSupportsStepAndMilliseconds", "TestPatternTimerAtScheduleContextCreatesOnePartition", "TestPatternTimerSchedulePeriodContextCreatesRecurringPartitions"],
       "tags": ["correctness", "pattern", "calendar", "virtual-time"],
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
-      "difference": "Go TimerCron now shares opt-in second/millisecond/microsecond precision with OutputAt, TimerAtSchedule resolves the next wildcard/range/step calendar occurrence once for ordinary Pattern and Pattern Context, and TimerScheduleWithPeriod/TimerScheduleISO cover typed calendar/fixed periods, finite/unlimited recurrence, past-date anchoring, ISO date/period forms, and captured-tag ISO expressions for ordinary Pattern and recurring Pattern Context. Java timezone/DST, timezone/property/SODA and special schedule variants, plus full nested observer trace parity, remain open."
+      "difference": "Go TimerCron now shares opt-in second/millisecond/microsecond precision and typed special calendar operators/timezone resolution with OutputAt, TimerAtSchedule resolves the next wildcard/range/step calendar occurrence once for ordinary Pattern and Pattern Context, and TimerScheduleWithPeriod/TimerScheduleISO cover typed calendar/fixed periods, finite/unlimited recurrence, past-date anchoring, ISO date/period forms, and captured-tag ISO expressions for ordinary Pattern and recurring Pattern Context. Java timezone/property/SODA rendering, dynamic special-operator expressions, timezone invalid diagnostics, DST gap/overlap policy, and full nested observer trace parity remain open."
     },
     {
       "id": "case.historical-sql",
