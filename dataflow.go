@@ -690,6 +690,7 @@ type DataflowOperator struct {
 	Log                     func(context.Context, any) error
 	Statement               *Statement
 	StatementName           string
+	StatementDeploymentID   string
 	StatementFilter         DataflowStatementSourceFilter
 	StatementCollector      DataflowStatementSourceCollector
 	Signal                  DataflowSignalHandler
@@ -853,6 +854,17 @@ func (b DataflowBuilder) EPStatementSourceByName(name, statementName string) Dat
 	})
 }
 
+// EPStatementSourceByDeployment follows statementName only within the given
+// deployment. It mirrors Esper's statementDeploymentId + statementName pair.
+func (b DataflowBuilder) EPStatementSourceByDeployment(name, deploymentID, statementName string) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                  name,
+		Kind:                  EPStatementSourceKind,
+		StatementName:         statementName,
+		StatementDeploymentID: deploymentID,
+	})
+}
+
 // EPStatementSourceWithStatementFilter subscribes to every currently
 // deployed and subsequently deployed statement accepted by selector.
 func (b DataflowBuilder) EPStatementSourceWithStatementFilter(name string, selector DataflowStatementSourceFilter) DataflowBuilder {
@@ -882,6 +894,18 @@ func (b DataflowBuilder) EPStatementSourceByNameWithCollector(name, statementNam
 		Kind:               EPStatementSourceKind,
 		StatementName:      statementName,
 		StatementCollector: collector,
+	})
+}
+
+// EPStatementSourceByDeploymentWithCollector is the deployment-scoped
+// collector form of EPStatementSourceByNameWithCollector.
+func (b DataflowBuilder) EPStatementSourceByDeploymentWithCollector(name, deploymentID, statementName string, collector DataflowStatementSourceCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                  name,
+		Kind:                  EPStatementSourceKind,
+		StatementName:         statementName,
+		StatementDeploymentID: deploymentID,
+		StatementCollector:    collector,
 	})
 }
 
@@ -916,6 +940,18 @@ func (b DataflowBuilder) EPStatementSourceByNameWithFilter(name, statementName s
 		Kind:          EPStatementSourceKind,
 		StatementName: statementName,
 		SourceFilter:  predicate,
+	})
+}
+
+// EPStatementSourceByDeploymentWithFilter is the deployment-scoped filtered
+// form of EPStatementSourceByNameWithFilter.
+func (b DataflowBuilder) EPStatementSourceByDeploymentWithFilter(name, deploymentID, statementName string, predicate Expr) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                  name,
+		Kind:                  EPStatementSourceKind,
+		StatementName:         statementName,
+		StatementDeploymentID: deploymentID,
+		SourceFilter:          predicate,
 	})
 }
 
@@ -1305,6 +1341,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 				}
 			}
 		case EPStatementSourceKind:
+			if operator.StatementDeploymentID != "" && operator.StatementName == "" {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q requires statement name with deployment id", operator.Name))
+			}
 			sourceModes := 0
 			if operator.Statement != nil {
 				sourceModes++
@@ -2034,6 +2073,24 @@ func (e *Engine) dataflowFindStatement(name string) *Statement {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return e.statements[name]
+}
+
+func (e *Engine) dataflowFindStatementInDeployment(deploymentID, name string) *Statement {
+	if e == nil || deploymentID == "" || name == "" {
+		return nil
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	deployment := e.deployments[deploymentID]
+	if deployment == nil {
+		return nil
+	}
+	for _, statement := range deployment.statements {
+		if statement != nil && statement.Name() == name {
+			return statement
+		}
+	}
+	return nil
 }
 
 func (e *Engine) dataflowFindStatements() []*Statement {
@@ -2975,6 +3032,9 @@ func (d *DataflowInstance) resolveStatementSource(operator DataflowOperator) *St
 	if d == nil || d.engine == nil || operator.StatementName == "" {
 		return nil
 	}
+	if operator.StatementDeploymentID != "" {
+		return d.engine.dataflowFindStatementInDeployment(operator.StatementDeploymentID, operator.StatementName)
+	}
 	return d.engine.dataflowFindStatement(operator.StatementName)
 }
 
@@ -2983,7 +3043,13 @@ func (d *DataflowInstance) statementSourceMatches(operator DataflowOperator, sta
 		return false
 	}
 	if operator.StatementName != "" {
-		return operator.StatementName == statement.Name()
+		if operator.StatementName != statement.Name() {
+			return false
+		}
+		if operator.StatementDeploymentID == "" {
+			return true
+		}
+		return operator.StatementDeploymentID == dataflowStatementSourceContext(statement).DeploymentID
 	}
 	if operator.StatementFilter != nil {
 		return operator.StatementFilter(dataflowStatementSourceContext(statement))

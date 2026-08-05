@@ -131,6 +131,48 @@ func TestDataflowEPStatementSourceByNameRequiresName(t *testing.T) {
 		Build(); err == nil {
 		t.Fatal("empty named statement source was accepted")
 	}
+	if _, err := DefineDataflow(env, "missing-deployment-statement").
+		EPStatementSourceByDeployment("source", "deployment-1", "").
+		Emitter("emit").
+		Build(); err == nil {
+		t.Fatal("deployment-scoped source without statement name was accepted")
+	}
+}
+
+func TestDataflowEPStatementSourceByDeploymentMatchesDeploymentScope(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(StatementName("deployment-scoped-statement")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	definition, err := DefineDataflow(env, "deployment-scoped-flow").
+		EPStatementSourceByDeployment("source", deployment.ID(), "deployment-scoped-statement").
+		Emitter("emit").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	instance, err := engine.InstantiateDataflow(context.Background(), definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := instance.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "deployment-scoped"}); err != nil {
+		t.Fatal(err)
+	}
+	assertDataflowEventSymbols(t, instance.Outputs(), []string{"deployment-scoped"})
+	if err := instance.Cancel(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := deployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func assertDataflowEventSymbols(t *testing.T, values []any, want []string) {
