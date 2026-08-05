@@ -1036,6 +1036,66 @@ func TestPatternTimerIntervalExpressionUsesRepeatedTagValues(t *testing.T) {
 	}
 }
 
+func TestPatternTimerIntervalExpressionUsesCapturedPropertyArray(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	type timerArrayEvent struct {
+		ID     string    `esper:"id"`
+		Delays []float64 `esper:"delays"`
+	}
+	if _, err := RegisterStruct[timerArrayEvent](env, "TimerArray"); err != nil {
+		t.Fatal(err)
+	}
+	base := From[timerArrayEvent](env, "TimerArray")
+	repeated := PatternFrom(base, "a", Literal[bool](true)).MatchUntil(2, 2)
+	firstDelay := ArrayAt[float64](TagFieldAt[[]float64]("a", 0, "delays"), Literal[int64](0))
+	secondDelay := ArrayAt[float64](TagFieldAt[[]float64]("a", 1, "delays"), Literal[int64](1))
+	pattern := repeated.Then(TimerIntervalExpr(base, DurationSeconds[float64](Add[float64](firstDelay, secondDelay))))
+	plan, err := env.Build(pattern.Select(
+		Alias("first", TagFieldAt[string]("a", 0, "id")),
+		Alias("second", TagFieldAt[string]("a", 1, "id")),
+		Alias("firedAt", CurrentTime()),
+	).Query(StatementName("pattern-timer-interval-property-array")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(10, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []timerArrayEvent{{ID: "E1", Delays: []float64{3}}, {ID: "E2", Delays: []float64{2, 2}}} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(14, 999999999).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("property-array timer fired before summed deadline: %#v", rows)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(15, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("first").Any() != "E1" || rows[0].Get("second").Any() != "E2" || rows[0].Get("firedAt").Any() != time.Unix(15, 0).UTC() {
+		t.Fatalf("property-array timer rows = %#v, want E1/E2 at 15s", rows)
+	}
+}
+
 func TestPatternTimerIntervalExpressionUsesComponentParameters(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")
