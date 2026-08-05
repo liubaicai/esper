@@ -313,3 +313,83 @@ func TestInitiatedContextEventStreamSubqueryReleasesPartitionState(t *testing.T)
 	}
 	sendOuter("E3", 1, "", true)
 }
+
+func TestContextNamedWindowSubqueryUsesGlobalState(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[contextSubqueryOuter](env, "ContextNamedWindowOuter"); err != nil {
+		t.Fatal(err)
+	}
+	referenceSchema, err := RegisterStruct[contextSubqueryReference](env, "ContextNamedWindowReference")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "context-global-references", referenceSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateKeyContext(env, "context-named-window", Field[contextSubqueryOuter, string]("symbol")); err != nil {
+		t.Fatal(err)
+	}
+
+	inner := FromNamedWindow(env, "context-global-references")
+	plan, err := env.Build(Select(
+		From[contextSubqueryOuter](env, "ContextNamedWindowOuter"),
+		Alias("symbol", Field[contextSubqueryOuter, string]("symbol")),
+		Alias("id", Field[contextSubqueryOuter, int64]("id")),
+		Alias("value", SubqueryValue[string](
+			inner,
+			Field[contextSubqueryReference, string]("value"),
+			Equal[int64](Field[contextSubqueryReference, int64]("id"), OuterField[int64]("id")),
+		)),
+	).Query(StatementName("context-named-window-subquery"), WithContext("context-named-window")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("context named-window subquery result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sendOuter := func(symbol string, id int64, wantValue string, wantNull bool) {
+		t.Helper()
+		before := len(rows)
+		if err := engine.SendEvent(context.Background(), contextSubqueryOuter{Symbol: symbol, ID: id}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != before+1 {
+			t.Fatalf("context named-window subquery rows after %s = %d, want %d", symbol, len(rows), before+1)
+		}
+		value := rows[len(rows)-1].Get("value")
+		if value.IsNull() != wantNull || (!wantNull && value.Any() != wantValue) {
+			t.Fatalf("context named-window subquery value for %s = %#v, want %q (null=%v)", symbol, value.Any(), wantValue, wantNull)
+		}
+	}
+
+	// The global Named Window is not replayed into a Context-local registry;
+	// each outer event evaluates against the current global snapshot instead.
+	sendOuter("G1", 10, "", true)
+	if err := engine.InsertNamedWindow(context.Background(), "context-global-references", contextSubqueryReference{ID: 10, Value: "S01"}); err != nil {
+		t.Fatal(err)
+	}
+	sendOuter("G1", 10, "S01", false)
+	sendOuter("G2", 10, "S01", false)
+	if err := engine.InsertNamedWindow(context.Background(), "context-global-references", contextSubqueryReference{ID: 20, Value: "S02"}); err != nil {
+		t.Fatal(err)
+	}
+	sendOuter("G1", 20, "S02", false)
+	sendOuter("G2", 20, "S02", false)
+}

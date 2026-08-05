@@ -1175,6 +1175,8 @@ CI 分别报告 capability coverage、source-test disposition coverage 和 case 
 
 本轮再覆盖事件驱动 initiated Context 的 event-stream subquery 生命周期：`TestInitiatedContextEventStreamSubqueryReleasesPartitionState` 验证 start 创建分区、active 期间内层 `LastEvent` 可被 outer field 关联、end 释放状态，以及同一 key 再次 start 不回放两次 start 之间的内层事件。该测试对应 Java `ContextInitTermSubqueryInFilter` 的上下文子查询方向，但 Java 原用例还包含同 Context Named Window 与 `not exists` 过滤，不能把本轮 event-stream 证据解释为 Named Window/filter parity。
 
+随后补上 Java `ContextKeyedSubqueryNamedWindowIndexUnShared`/`IndexShared` 的值语义切片：`TestContextNamedWindowSubqueryUsesGlobalState` 用全局 `NamedWindow` 作为子查询源，验证 G1/G2 Context 分区都读取当前全局快照、不同 inner key 的结果不会错误串联；Go 还未实现 Java 的 index-sharing 优化、Context-scoped Named Window 创建/retention 和同 Context `not exists` filter 完整矩阵。
+
 ### 17.3 后续每次提交的强制核对项
 
 每实现一个 capability，提交必须同时更新四类证据：
