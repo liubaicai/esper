@@ -2029,6 +2029,10 @@ func (e *Engine) AdvanceTime(ctx context.Context, at time.Time) error {
 	e.pendingStatementDispatches = nil
 	e.pendingNamedWindowDispatches = nil
 	e.pendingRoutedEvents = nil
+	dataflows := make([]*DataflowInstance, 0, len(e.dataflows))
+	for instance := range e.dataflows {
+		dataflows = append(dataflows, instance)
+	}
 	e.mu.Unlock()
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
@@ -2038,6 +2042,11 @@ func (e *Engine) AdvanceTime(ctx context.Context, at time.Time) error {
 	}
 	for _, dispatch := range namedWindowDispatches {
 		if err := dispatch.window.dispatch(ctx, dispatch.delta); err != nil {
+			return err
+		}
+	}
+	for _, dataflow := range dataflows {
+		if err := dataflow.advanceDataflowTime(ctx, at); err != nil {
 			return err
 		}
 	}

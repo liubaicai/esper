@@ -267,8 +267,8 @@ const (
 // OutputSnapshotEvery emits the current projection on each virtual-clock
 // interval instead of on every input.
 type DataflowSelectOptions struct {
-	TimeWindow           time.Duration
-	OutputSnapshotEvery  time.Duration
+	TimeWindow          time.Duration
+	OutputSnapshotEvery time.Duration
 }
 
 func (o DataflowSelectOptions) validate() error {
@@ -1033,6 +1033,21 @@ type DataflowStats struct {
 	Dropped   uint64
 }
 
+type dataflowSelectEvent struct {
+	event Event
+	at    time.Time
+}
+
+type dataflowSelectState struct {
+	mu         sync.Mutex
+	options    DataflowSelectOptions
+	events     []dataflowSelectEvent
+	ever       []Event
+	lastEvent  Event
+	nextOutput time.Time
+	started    bool
+}
+
 type DataflowInstance struct {
 	mu sync.Mutex
 	// dispatchMu serializes graph delivery for one instance. Custom sources
@@ -1054,6 +1069,7 @@ type DataflowInstance struct {
 	runtimes               map[string]DataflowOperatorRuntime
 	sources                map[string]DataflowSourceRuntime
 	subqueryRegistries     map[string]*subqueryRuntimeRegistry
+	selectStates           map[string]*dataflowSelectState
 	runtimesClosed         bool
 	done                   chan struct{}
 	doneOnce               sync.Once
@@ -1104,6 +1120,7 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 		runtimes:           make(map[string]DataflowOperatorRuntime),
 		sources:            make(map[string]DataflowSourceRuntime),
 		subqueryRegistries: make(map[string]*subqueryRuntimeRegistry),
+		selectStates:       make(map[string]*dataflowSelectState),
 		done:               make(chan struct{}),
 	}
 	for operatorNumber, operator := range registered.operators {
@@ -1180,6 +1197,9 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 			if registry != nil {
 				instance.subqueryRegistries[operator.Name] = registry
 			}
+		}
+		if operator.Kind == SelectKind {
+			instance.selectStates[operator.Name] = &dataflowSelectState{options: operator.SelectOptions}
 		}
 	}
 	for _, edge := range registered.edges {
@@ -1690,6 +1710,7 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 	d.runCancel = runCancel
 	d.mu.Unlock()
 	d.watchRunContext(runCtx)
+	d.startDataflowSelectStates(d.engine.Now())
 	if err := d.openRuntimes(ctx); err != nil {
 		_ = d.Cancel(context.Background())
 		return err
@@ -1784,6 +1805,25 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 	return nil
 }
 
+func (d *DataflowInstance) startDataflowSelectStates(now time.Time) {
+	if d == nil {
+		return
+	}
+	for _, state := range d.selectStates {
+		if state == nil {
+			continue
+		}
+		state.mu.Lock()
+		if !state.started {
+			state.started = true
+			if state.options.OutputSnapshotEvery > 0 {
+				state.nextOutput = now.Add(state.options.OutputSnapshotEvery)
+			}
+		}
+		state.mu.Unlock()
+	}
+}
+
 // Run starts a dataflow and waits until it completes or is canceled. It is
 // the blocking counterpart to Start, mirroring Esper's run API while keeping
 // cancellation and deadlines idiomatic through context.Context.
@@ -1876,22 +1916,89 @@ func (d *DataflowInstance) Cancel(ctx context.Context) error {
 }
 
 func (d *DataflowInstance) process(ctx context.Context, event any) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if d.graph {
 		return d.processGraphEvent(ctx, event)
 	}
-	if err := d.processLinear(ctx, event); err != nil {
+	if owner, ok := ctx.Value(dataflowDispatchOwnerKey{}).(*DataflowInstance); ok && owner == d {
+		return d.processLinear(ctx, event)
+	}
+	d.dispatchMu.Lock()
+	defer d.dispatchMu.Unlock()
+	owned := context.WithValue(ctx, dataflowDispatchOwnerKey{}, d)
+	if err := d.processLinear(owned, event); err != nil {
 		return d.handleDataflowError(ctx, "", err)
 	}
 	return nil
 }
 
+func (d *DataflowInstance) advanceDataflowTime(ctx context.Context, at time.Time) error {
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if d == nil {
+		return nil
+	}
+	d.mu.Lock()
+	running := d.state == DataflowRunning
+	d.mu.Unlock()
+	if !running {
+		return nil
+	}
+	d.dispatchMu.Lock()
+	defer d.dispatchMu.Unlock()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	owned := context.WithValue(ctx, dataflowDispatchOwnerKey{}, d)
+	for index, operator := range d.definition.operators {
+		if operator.Kind != SelectKind {
+			continue
+		}
+		rows, err := d.advanceDataflowSelect(operator, at)
+		if err != nil {
+			if handled := d.handleDataflowError(owned, operator.Name, err); handled != nil {
+				return handled
+			}
+			continue
+		}
+		for _, row := range rows {
+			if d.graph {
+				err = d.processSourceEmission(owned, operator.Name, "out", row)
+			} else {
+				err = d.processLinearValues(owned, []any{row}, index+1, false)
+			}
+			if err != nil {
+				if handled := d.handleDataflowError(owned, operator.Name, err); handled != nil {
+					return handled
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (d *DataflowInstance) dataflowEvaluation(operator DataflowOperator, value any) (EvalContext, error) {
+	return d.dataflowEvaluationWithGroups(operator, value, nil, nil, true)
+}
+
+func (d *DataflowInstance) dataflowEvaluationWithGroups(operator DataflowOperator, value any, group, everGroup []Event, acceptSubquery bool) (EvalContext, error) {
 	if d == nil || d.engine == nil {
 		return EvalContext{}, NewError(ErrorDependency, "dataflow operator has no engine")
 	}
 	now := d.engine.Now()
 	variables := d.engine.Variables()
-	evaluation := EvalContext{Engine: d.engine, Now: now, Variables: variables}
+	evaluation := EvalContext{
+		Engine:       d.engine,
+		Now:          now,
+		Variables:    variables,
+		Group:        append([]Event(nil), group...),
+		EverGroup:    append([]Event(nil), everGroup...),
+		AllGroup:     append([]Event(nil), group...),
+		AllEverGroup: append([]Event(nil), everGroup...),
+	}
 	if event, ok := value.(Event); ok {
 		evaluation.Event = event
 	} else if row, ok := value.(Row); ok {
@@ -1904,9 +2011,11 @@ func (d *DataflowInstance) dataflowEvaluation(operator DataflowOperator, value a
 		return EvalContext{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow operator %q requires Event or Row input, got %T", operator.Name, value))
 	}
 	if registry := d.subqueryRegistries[operator.Name]; registry != nil {
-		if event, ok := value.(Event); ok {
-			if err := registry.accept(event, now, variables); err != nil {
-				return EvalContext{}, err
+		if acceptSubquery {
+			if event, ok := value.(Event); ok {
+				if err := registry.accept(event, now, variables); err != nil {
+					return EvalContext{}, err
+				}
 			}
 		}
 		variables = registry.attachVariables(variables)
@@ -1916,7 +2025,11 @@ func (d *DataflowInstance) dataflowEvaluation(operator DataflowOperator, value a
 }
 
 func (d *DataflowInstance) evaluateDataflowSelect(operator DataflowOperator, value any) (Row, error) {
-	evaluation, err := d.dataflowEvaluation(operator, value)
+	return d.evaluateDataflowSelectWithGroups(operator, value, nil, nil, true)
+}
+
+func (d *DataflowInstance) evaluateDataflowSelectWithGroups(operator DataflowOperator, value any, group, everGroup []Event, acceptSubquery bool) (Row, error) {
+	evaluation, err := d.dataflowEvaluationWithGroups(operator, value, group, everGroup, acceptSubquery)
 	if err != nil {
 		return Row{}, err
 	}
@@ -1932,6 +2045,125 @@ func (d *DataflowInstance) evaluateDataflowSelect(operator DataflowOperator, val
 		return Row{}, err
 	}
 	return newRow(schema, values), nil
+}
+
+func (d *DataflowInstance) processDataflowSelect(operator DataflowOperator, value any) ([]any, error) {
+	state := d.selectStates[operator.Name]
+	if state == nil {
+		row, err := d.evaluateDataflowSelect(operator, value)
+		if err != nil {
+			return nil, err
+		}
+		return []any{row}, nil
+	}
+	now := d.engine.Now()
+	state.mu.Lock()
+	if event, ok := value.(Event); ok {
+		if state.options.TimeWindow > 0 {
+			state.expireAt(now)
+		}
+		state.events = append(state.events, dataflowSelectEvent{event: event, at: now})
+		state.ever = append(state.ever, event)
+		state.lastEvent = event
+	}
+	group := state.currentEvents()
+	everGroup := append([]Event(nil), state.ever...)
+	row, err := d.evaluateDataflowSelectWithGroups(operator, value, group, everGroup, true)
+	state.mu.Unlock()
+	if err != nil {
+		return nil, err
+	}
+	if state.options.OutputSnapshotEvery > 0 {
+		return nil, nil
+	}
+	return []any{row}, nil
+}
+
+func (s *dataflowSelectState) currentEvents() []Event {
+	result := make([]Event, 0, len(s.events))
+	for _, item := range s.events {
+		result = append(result, item.event)
+	}
+	return result
+}
+
+func (s *dataflowSelectState) expireAt(at time.Time) bool {
+	if s == nil || s.options.TimeWindow <= 0 || len(s.events) == 0 {
+		return false
+	}
+	kept := make([]dataflowSelectEvent, 0, len(s.events))
+	removed := false
+	for _, item := range s.events {
+		if !item.at.Add(s.options.TimeWindow).After(at) {
+			removed = true
+			continue
+		}
+		kept = append(kept, item)
+	}
+	if removed {
+		s.events = kept
+	}
+	return removed
+}
+
+func (s *dataflowSelectState) nextExpiry() (time.Time, bool) {
+	if s == nil || s.options.TimeWindow <= 0 || len(s.events) == 0 {
+		return time.Time{}, false
+	}
+	next := s.events[0].at.Add(s.options.TimeWindow)
+	for _, item := range s.events[1:] {
+		expires := item.at.Add(s.options.TimeWindow)
+		if expires.Before(next) {
+			next = expires
+		}
+	}
+	return next, true
+}
+
+func (d *DataflowInstance) advanceDataflowSelect(operator DataflowOperator, at time.Time) ([]any, error) {
+	state := d.selectStates[operator.Name]
+	if state == nil {
+		return nil, nil
+	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if !state.started {
+		state.started = true
+		if state.options.OutputSnapshotEvery > 0 {
+			state.nextOutput = at.Add(state.options.OutputSnapshotEvery)
+		}
+	}
+	rows := make([]any, 0)
+	if state.options.OutputSnapshotEvery > 0 {
+		for !state.nextOutput.IsZero() && !state.nextOutput.After(at) {
+			dueAt := state.nextOutput
+			state.expireAt(dueAt)
+			row, err := d.evaluateDataflowSelectWithGroups(operator, state.lastEvent, state.currentEvents(), append([]Event(nil), state.ever...), false)
+			if err != nil {
+				return nil, err
+			}
+			rows = append(rows, row)
+			state.nextOutput = state.nextOutput.Add(state.options.OutputSnapshotEvery)
+		}
+		state.expireAt(at)
+		return rows, nil
+	}
+	if state.options.TimeWindow <= 0 {
+		return nil, nil
+	}
+	for {
+		expiresAt, ok := state.nextExpiry()
+		if !ok || expiresAt.After(at) {
+			break
+		}
+		state.expireAt(expiresAt)
+		row, err := d.evaluateDataflowSelectWithGroups(operator, state.lastEvent, state.currentEvents(), append([]Event(nil), state.ever...), false)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
 }
 
 func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
@@ -2011,13 +2243,21 @@ func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
 			return nil
 		}
 	}
-	current := []any{event}
-	for _, operator := range d.definition.operators {
+	return d.processLinearValues(ctx, []any{event}, 0, true)
+}
+
+func (d *DataflowInstance) processLinearValues(ctx context.Context, current []any, start int, countProcessed bool) error {
+	eventValue, isEvent := Event{}, false
+	if len(current) > 0 {
+		eventValue, isEvent = current[0].(Event)
+	}
+	for index := start; index < len(d.definition.operators); index++ {
+		operator := d.definition.operators[index]
 		switch operator.Kind {
 		case BeaconSourceKind, EPStatementSourceKind:
 			continue
 		case EventBusSourceKind:
-			if !dataflowEventTypeAccepts(d.engine, operator.EventType, eventValue) {
+			if !isEvent || !dataflowEventTypeAccepts(d.engine, operator.EventType, eventValue) {
 				current = nil
 			}
 		case FilterKind:
@@ -2046,11 +2286,11 @@ func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
 						continue
 					}
 				}
-				row, err := d.evaluateDataflowSelect(operator, candidate)
+				rows, err := d.processDataflowSelect(operator, candidate)
 				if err != nil {
 					return err
 				}
-				selected = append(selected, row)
+				selected = append(selected, rows...)
 			}
 			current = selected
 		case EmitterKind:
@@ -2098,7 +2338,9 @@ func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
 			current = processed
 		}
 	}
-	d.processed.Add(1)
+	if countProcessed {
+		d.processed.Add(1)
+	}
 	return nil
 }
 
@@ -2309,11 +2551,15 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 				return nil, nil
 			}
 		}
-		row, err := d.evaluateDataflowSelect(operator, value)
+		rows, err := d.processDataflowSelect(operator, value)
 		if err != nil {
 			return nil, err
 		}
-		return []DataflowEmission{Emit(row)}, nil
+		emissions := make([]DataflowEmission, 0, len(rows))
+		for _, row := range rows {
+			emissions = append(emissions, Emit(row))
+		}
+		return emissions, nil
 	case EmitterKind:
 		// An Emitter with outgoing edges is a captive source/forwarder. Only
 		// terminal Emitters are sinks visible through Outputs; this preserves

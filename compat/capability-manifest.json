@@ -253,7 +253,7 @@
       "level": "S",
       "summary": "Fluent dataflow definitions, graph ports, source lifecycle, signal-marker propagation and instance control plane",
       "javaRefs": ["EPLDataflowOpEventBusSource", "EPLDataflowOpFilter", "EPLDataflowOpSelect"],
-      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_pattern_test.go", "dataflow_port_inference_test.go", "dataflow_saved_test.go", "dataflow_reentrant_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go", "dataflow_source_test.go"],
+      "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_pattern_test.go", "dataflow_port_inference_test.go", "dataflow_select_test.go", "dataflow_saved_test.go", "dataflow_reentrant_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go", "dataflow_source_test.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["built-in event/row port inference for all representations and join/multi-input forms", "external serialization and cross-process restoration of saved definitions/instances", "complete multi-port captive/join and exception recovery parity"]
@@ -553,6 +553,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
       "difference": "Go maps the EPStatement source through an existing fluent Pattern statement and preserves projected Row values into the graph; built-in Filter/Select can consume those rows through analyzable ResultField expressions, and Build infers Event versus Row for EventBus/statement ports with connected narrowing. Java also covers all event representations, dynamic statement names, statement filters and invalid EPL-specific source diagnostics."
+    },
+    {
+      "id": "case.dataflow-select-state",
+      "javaRuntimeIds": ["java-runtime-64f78048eb114d0e9cf9", "java-runtime-553841d9498fc8d6d1c7"],
+      "javaNames": ["EPLDataflowOutputRateLimit", "EPLDataflowTimeWindowTriggered"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpSelect.java"],
+      "goTests": ["TestDataflowSelectSnapshotEveryMatchesEsper", "TestDataflowSelectTimeWindowExpiresAtBoundaryMatchesEsper"],
+      "tags": ["correctness", "dataflow", "select", "aggregate", "time-window", "output-rate"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go fluent SelectWithOptions/SelectTimeWindow/SelectSnapshotEvery APIs maintain per-instance aggregate Event state, remove time-window rows at exact virtual-clock boundaries, and emit snapshot rows through the graph on Engine.AdvanceTime. Java also covers output-rate expressions beyond snapshots, richer view combinations, multi-input joins, iterate/final-marker behavior, all event representations and invalid diagnostics; those remain open."
     },
     {
       "id": "case.expr-enum-aggregate",
@@ -1127,6 +1138,7 @@
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-eventbus"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-signal"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-typed-ports"},
+    {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-select-state"},
     {"capabilityId": "rowrecog.match-recognize", "caseId": "case.rowrecog-basic-ops"},
     {"capabilityId": "rowrecog.match-recognize", "caseId": "case.rowrecog-window-delete"},
     {"capabilityId": "rowrecog.match-recognize", "caseId": "case.rowrecog-inventory"},
