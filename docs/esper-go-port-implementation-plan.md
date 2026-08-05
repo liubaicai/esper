@@ -1204,10 +1204,12 @@ RowRecog 入口拆分如下，后续必须以此表逐项消项，不能以 `Tes
 | `RowRecogInvalid`、`RowRecogClausePresence` | 已覆盖空模式、非法 DEFINE、未知 tag、重复 measure、负 MaxStates、旧流和 snapshot 限制的部分校验 | `partial` |
 | `RowRecogEmptyPartition`、`RowRecogMultikeyWArray` | 有普通 `PartitionBy` 运行时切片，空分区回收和多键数组语义未对照 | `partial` |
 | `RowRecogInterval`、`RowRecogIntervalResolution`、`RowRecogIntervalOrTerminated` | 已有固定 duration/月份边界 interval、虚拟时钟和基础 `IntervalOrTerminated` 测试：固定模式即时终止、重复尾遇到 mismatch 终止、未终止分支按 deadline 发射；日历 interval 的终止矩阵、分辨率边界和复杂分支生命周期仍未对照 | `partial` |
-| `RowRecogIterateOnly`、`RowRecogDataWin`、`RowRecogDelete` | 已有 `Statement.Snapshot` 基础 iterator 视图、长度窗口淘汰重算、Named Window 乱序删除重算和“删除不产生伪 listener batch”的测试；iterate-only 性能提示、time/time-batch 窗口、PREV 顺序保持、完整 out-of-sequence delete/NFA 状态库和排序语义仍未对照 | `partial` |
+| `RowRecogIterateOnly`、`RowRecogDataWin`、`RowRecogDelete` | 已有 `Statement.Snapshot` 基础 iterator 视图、长度窗口淘汰重算、time-window 到期重算、time-batch pending batch 迭代器及边界后状态清空、Named Window 乱序删除重算和“删除不产生伪 listener batch”的测试；iterate-only 性能提示、PREV 顺序保持、完整 out-of-sequence delete/NFA 状态库和 Java 输出排序仍未对照 | `partial` |
 | `RowRecogEnumMethod`、`RowRecogAggregation`、`RowRecogArrayAccess` | 有基础字段 `CountAll`/`Sum`、`TagFieldAt`，枚举方法、完整聚合和数组属性矩阵未对照 | `partial` |
 | `RowRecogPrev`、`RowRecogRegex`、`RowRecogVariantStream`、`RowRecogDataSet` | 已有当前窗口 `Prev` 在 DEFINE 中的正向测试；tag-aware prev/prior 引用、正则模式、Variant 输入、数据集/外部 fixture 的共享场景仍未映射 | `partial` |
 | `RowRecogPerf` 及 MaxStates engine-wide 变体 | Go 已增加 `WithMatchRecognizeStateLimit`/`WithMatchRecognizeMaxStates`/`WithMatchRecognizePreventStart` 引擎级配置、按 statement.ID 汇总的不可变超限事件、prevent-start 分支拒绝、跨 statement/Context/Named Window 生命周期和 undeploy 释放测试；精确 NFA 状态计数及性能基线仍未完成 | `partial` |
+
+本轮针对 `RowRecogDataWin` 增加了 Go 链式 API 对照场景：`TestRowRecogTimeWindowIteratorAndExpiry` 覆盖虚拟时钟下的 time window 到期、匹配后 iterator 视图和到期后的重算；`TestRowRecogTimeBatchWindowPendingIteratorAndBoundary` 覆盖 partition-by、pending batch 的 iterator、边界 listener 发射、边界后识别状态清空和下一批重新识别。实现将 time-batch 窗口保留的上一批与 match-recognize 当前识别状态分离，Java 的 unbound stream、PREV 到达顺序、Named Window time-batch 变体和完整输出顺序仍需继续对照。
 
 本轮又以固定环境在 `regression-run` 模块专项执行 `mvn -pl regression-run -Dtest=TestSuiteExprEnum -DfailIfNoTests=false test`，Java `TestSuiteExprEnum` 的 28 个 JUnit 入口全部通过。该结果证明 Java oracle 的 ExprEnum 基线可复现，不等于 Go 端已经覆盖这 28 个入口；Go 当前只映射了首批可分析枚举算子和中立/运行态测试，嵌套、子查询、访问聚合、UDF、BigDecimal、完整无效规则与 Java trace 仍需逐项关联。
 

@@ -571,6 +571,9 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 		batch.Old = applyResultWindow(batch.Old, plan.query)
 		batch.Sequence = r.seq.Add(1)
 	}
+	if rowRecogBatchWindowNode(definition.input) != nil {
+		r.resetRowRecogBatchState()
+	}
 	return batch
 }
 
@@ -848,6 +851,32 @@ func rowRecogDeadline(definition *rowRecogDefinition, started time.Time) time.Ti
 
 func rowRecogHasInterval(definition *rowRecogDefinition) bool {
 	return definition != nil && (definition.interval > 0 || definition.intervalCalendar != nil)
+}
+
+// rowRecogBatchWindowNode locates a batch view in the input chain. Batch
+// views expose pending rows to iterator snapshots before the boundary, but
+// the recognition state itself is rebuilt for each completed batch.
+func rowRecogBatchWindowNode(input *streamNode) *streamNode {
+	for node := input; node != nil; node = node.input {
+		if node.kind != streamWindow {
+			continue
+		}
+		switch node.window.(type) {
+		case LengthBatchWindowSpec, TimeBatchWindowSpec, TimeLengthBatchWindowSpec:
+			return node
+		}
+	}
+	return nil
+}
+
+func (r *statementRuntime) resetRowRecogBatchState() {
+	if r == nil {
+		return
+	}
+	if r.engine != nil {
+		r.engine.releaseRowRecogRuntimeLocked(r)
+	}
+	r.rowRecogState = &rowRecogRuntimeState{partitions: make(map[string]*rowRecogPartitionState)}
 }
 
 // emitRowRecogTerminated handles the useful common subset of Esper's
@@ -1367,18 +1396,25 @@ func (r *statementRuntime) snapshotQuery(plan Plan, now time.Time, variables map
 
 func (r *statementRuntime) snapshotRowRecog(plan Plan, now time.Time, variables map[string]Value) ResultBatch {
 	definition := plan.query.rowRecog
-	if definition == nil || r.rowRecogState == nil {
+	if definition == nil {
 		return ResultBatch{Time: now}
 	}
-	keys := make([]string, 0, len(r.rowRecogState.partitions))
-	for key := range r.rowRecogState.partitions {
+	partitions := make(map[string]*rowRecogPartitionState)
+	if r != nil && r.rowRecogState != nil {
+		partitions = r.rowRecogState.partitions
+	}
+	if batchNode := rowRecogBatchWindowNode(definition.input); batchNode != nil {
+		partitions = r.rowRecogBatchPendingPartitions(definition, batchNode, now, variables)
+	}
+	keys := make([]string, 0, len(partitions))
+	for key := range partitions {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 	result := ResultBatch{Time: now}
 	seen := make(map[string]struct{})
 	for _, key := range keys {
-		partition := r.rowRecogState.partitions[key]
+		partition := partitions[key]
 		if partition == nil {
 			continue
 		}
@@ -1410,6 +1446,56 @@ func (r *statementRuntime) snapshotRowRecog(plan Plan, now time.Time, variables 
 	result.New = orderRowRecogResults(result.New, plan.query.orderBy, now, variables)
 	result.New = applyResultWindow(result.New, plan.query)
 	return result
+}
+
+// rowRecogBatchPendingPartitions reconstructs the recognition input visible
+// to an iterator while a batch window is collecting its next batch. Esper's
+// match-recognize iterator exposes the pending batch before the boundary, but
+// after the boundary the recognition state is cleared even though the window
+// retains the just-flushed batch for ordinary window consumers.
+func (r *statementRuntime) rowRecogBatchPendingPartitions(definition *rowRecogDefinition, batchNode *streamNode, now time.Time, variables map[string]Value) map[string]*rowRecogPartitionState {
+	partitions := make(map[string]*rowRecogPartitionState)
+	if r == nil || definition == nil || batchNode == nil {
+		return partitions
+	}
+	state := r.windows[batchNode]
+	if state == nil || len(state.pendingNew) == 0 {
+		return partitions
+	}
+
+	// A filter downstream of the batch node has not been applied to pendingNew
+	// yet. Walk from the row-recognition input back to the batch node and apply
+	// those filters in upstream-to-downstream order.
+	var filters []Expr
+	for node := definition.input; node != nil && node != batchNode; node = node.input {
+		if node.kind == streamFilter && node.predicate != nil {
+			filters = append(filters, node.predicate)
+		}
+	}
+
+	for _, stored := range state.pendingNew {
+		event := stored.event
+		accepted := true
+		for index := len(filters) - 1; index >= 0; index-- {
+			value := filters[index].eval(EvalContext{Event: event, Now: now, Variables: variables})
+			matched, ok := boolValue(value)
+			if !ok || !matched {
+				accepted = false
+				break
+			}
+		}
+		if !accepted {
+			continue
+		}
+		key := rowRecogPartitionKey(definition, event, nil, now, variables)
+		partition := partitions[key]
+		if partition == nil {
+			partition = newRowRecogPartitionState()
+			partitions[key] = partition
+		}
+		partition.events = append(partition.events, event)
+	}
+	return partitions
 }
 
 func orderRowRecogResults(results []Result, keys []SortKey, now time.Time, variables map[string]Value) []Result {
