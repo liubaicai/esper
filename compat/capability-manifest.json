@@ -275,10 +275,10 @@
       "level": "S",
       "summary": "Named Window/Table-backed fluent correlated exists, scalar and IN subqueries with parameters and nested outer-field scope",
       "javaRefs": ["EPLSubselectAggregatedInExistsAnyAll", "EPLSubselectAggregatedSingleValue", "EPLSubselectAggregatedMultirowAndColumn"],
-      "goRefs": ["subquery.go", "subquery_test.go", "plan.go", "runtime.go", "faf.go"],
+      "goRefs": ["subquery.go", "subquery_test.go", "pattern_subquery_test.go", "plan.go", "runtime.go", "faf.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["multi-column/multi-row result contracts and grouped/having aggregate matrix", "pattern and advanced initiated/temporal context subquery combinations beyond the mapped segmented/daily/initiated LastEvent cases", "typed/multi-port Dataflow subquery propagation", "scalar iterator/error semantics and Java cardinality diagnostics", "full Java invalid-rule and execution trace parity"]
+      "remaining": ["multi-column/multi-row result contracts and grouped/having aggregate matrix", "advanced initiated/temporal context combinations beyond the mapped segmented/daily/initiated LastEvent cases, Pattern aggregation/named-window/UDF combinations", "typed/multi-port Dataflow subquery propagation", "scalar iterator/error semantics and Java cardinality diagnostics", "full Java invalid-rule and execution trace parity"]
     },
     {
       "id": "rowrecog.match-recognize",
@@ -436,6 +436,17 @@
       "difference": "The Go fluent RankWindowBy trace covers multiple unique-key expressions and multiple ascending sort keys, including a new event immediately evicted as the worst row, replacement old/new pairs and equal-sort tie eviction. The wider Java ViewRank navigation/context/subquery matrix and shared trace remain open."
     },
     {
+      "id": "case.view-rank-invalid",
+      "javaRuntimeIds": ["java-runtime-7f484bec5fd437a0a6da"],
+      "javaNames": ["ViewRankInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewRank.java"],
+      "goTests": ["TestRankWindowRejectsInvalidDefinitions"],
+      "tags": ["correctness", "view", "rank", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go test fixes the chainable API's equivalent structural validation for non-positive size, missing/nil unique keys and nil sort keys. EPL-only parser diagnostics and exact Java error text are intentionally outside the Go fluent API boundary."
+    },
+    {
       "id": "case.object-array-query-fields",
       "javaRuntimeIds": ["java-runtime-2560a37393c8db7566be"],
       "javaNames": ["EventObjectArrayQueryFields"],
@@ -487,6 +498,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
       "difference": "Context partitions now own independent event-stream subquery registries: inner LastEvent updates broadcast only to active partitions, while a newly created partition starts empty and later outer events reuse its local state. Daily temporal Context termination and next-calendar-window recreation reset the same state, including events received while inactive. Event-driven initiated Context start/end also releases and recreates the registry state. A global Named Window subquery is evaluated from the current global snapshot in every active Context partition, matching the unshared/shared source shape at the value level. The Java ContextInitTermSubqueryInFilter source additionally requires same-context Named Window and not-exists filtering; Named Window index-sharing performance, Context-scoped Named Window retention, pattern Context and the wider Java context/subquery matrix remain open."
+    },
+    {
+      "id": "case.subquery-pattern",
+      "javaRuntimeIds": ["java-runtime-3d9d3a714bd642e784bd"],
+      "javaNames": ["EPLSubselectCorrelated"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectWithinPattern.java"],
+      "goTests": ["TestPatternSubqueryCorrelatedExistsMatchesEsper"],
+      "tags": ["correctness", "query", "subquery", "pattern", "correlation"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream, with inner Field expressions and explicit OuterField scope. The test reproduces Java tryAssertionCorrelated's reference-before-candidate sequence and emits candidate ids 5, 6 and 9. The remaining Java execution variants (pattern subquery aggregation, named-window/UDF and named-window IN filtering), invalid diagnostics and broader Pattern/Context/Dataflow combinations remain open."
     },
     {
       "id": "case.expr-enum-aggregate",
@@ -1036,6 +1058,7 @@
     {"capabilityId": "view.window-core", "caseId": "case.view-rank-remove-stream"},
     {"capabilityId": "view.window-core", "caseId": "case.view-rank-ranked-scene"},
     {"capabilityId": "view.window-core", "caseId": "case.view-rank-multiexpression"},
+    {"capabilityId": "view.window-core", "caseId": "case.view-rank-invalid"},
     {"capabilityId": "event.variant", "caseId": "case.variant-dynamic-map"},
     {"capabilityId": "query.insert-into-route", "caseId": "case.insert-into-chain"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
@@ -1046,6 +1069,7 @@
     {"capabilityId": "resultset.aggregate-local-group", "caseId": "case.aggregate-local-group"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-basic"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-context"},
+    {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-pattern"},
     {"capabilityId": "context.partition", "caseId": "case.context-partitioning"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-variable"},

@@ -261,3 +261,29 @@ func TestRankWindowMultiexpressionMatchesEsper(t *testing.T) {
 	send(e4, e1b)
 	assertSnapshot(e1d, e3, e4)
 }
+
+func TestRankWindowRejectsInvalidDefinitions(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[externalTrade](env, "ExternalTrade"); err != nil {
+		t.Fatal(err)
+	}
+	symbol := Field[externalTrade, string]("symbol")
+	price := Field[externalTrade, float64]("price")
+	cases := []struct {
+		name   string
+		window WindowSpec
+	}{
+		{name: "non-positive-size", window: RankWindowBy(0, []Expr{symbol}, Ascending(price))},
+		{name: "missing-unique-key", window: RankWindowBy(1, nil, Ascending(price))},
+		{name: "nil-unique-key", window: RankWindowBy(1, []Expr{nil}, Ascending(price))},
+		{name: "nil-sort-key", window: RankWindowBy(1, []Expr{symbol}, SortKey{})},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			stream := From[externalTrade](env, "ExternalTrade").Window(testCase.window)
+			if _, err := env.Build(stream.Query(StatementName("invalid-rank-" + testCase.name))); err == nil {
+				t.Fatal("invalid rank definition was accepted")
+			}
+		})
+	}
+}
