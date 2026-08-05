@@ -284,6 +284,40 @@ func TestDataflowCustomSourceErrorPropagatesThroughRun(t *testing.T) {
 	}
 }
 
+func TestDataflowSourceExceptionContextMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	sentinel := errors.New("My-Exception-Is-Here")
+	definition, err := DefineDataflow(env, "source-exception-flow").
+		CustomSource("source", func(DataflowOperatorContext) (DataflowSourceRuntime, error) {
+			return dataflowFailingSource{err: sentinel}, nil
+		}).
+		Emitter("sink").
+		Connect("source", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var observed DataflowError
+	instance, err := NewEngine(env).InstantiateDataflowWithOptions(context.Background(), definition, DataflowOptions{
+		ExceptionHandler: func(_ context.Context, failure DataflowError) error {
+			observed = failure
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := instance.Run(context.Background()); !errors.Is(err, sentinel) {
+		t.Fatalf("source exception run error = %v", err)
+	}
+	if instance.State() != DataflowComplete {
+		t.Fatalf("source exception state = %v, want complete", instance.State())
+	}
+	if observed.OperatorName != "source" || observed.OperatorNum != 0 || observed.OperatorPrettyPrint != "source#0() -> out" || !errors.Is(observed, sentinel) {
+		t.Fatalf("source exception context = %#v", observed)
+	}
+}
+
 type dataflowWrongTypedSource struct{}
 
 func (dataflowWrongTypedSource) Run(ctx context.Context, emitter *DataflowEmitter) error {

@@ -2,10 +2,12 @@ package esper
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -243,10 +245,12 @@ const (
 // It keeps graph/operator identity without requiring callers to parse a
 // formatted error string.
 type DataflowError struct {
-	DataflowName string
-	InstanceID   string
-	OperatorName string
-	Err          error
+	DataflowName        string
+	InstanceID          string
+	OperatorName        string
+	OperatorNum         int
+	OperatorPrettyPrint string
+	Err                 error
 }
 
 func (e DataflowError) Error() string {
@@ -257,6 +261,74 @@ func (e DataflowError) Error() string {
 }
 
 func (e DataflowError) Unwrap() error { return e.Err }
+
+func dataflowOperatorPrettyPorts(operator DataflowOperator, output bool) []string {
+	ports := operator.InputPorts
+	if output {
+		ports = operator.OutputPorts
+	}
+	if len(ports) > 0 {
+		return ports
+	}
+	if output {
+		switch operator.Kind {
+		case BeaconSourceKind, CustomSourceKind, EventBusSourceKind, EPStatementSourceKind, EmitterKind, FilterKind, SelectKind, CustomKind, LogSinkKind, EventBusSinkKind:
+			return []string{"out"}
+		}
+		return nil
+	}
+	switch operator.Kind {
+	case EmitterKind, FilterKind, SelectKind, CustomKind, LogSinkKind, EventBusSinkKind:
+		return []string{"in"}
+	default:
+		return nil
+	}
+}
+
+func dataflowPrettyPort(operator DataflowOperator, output bool, port string) string {
+	typ := dataflowPortType(operator, output, port)
+	if typ == nil {
+		return port
+	}
+	return fmt.Sprintf("%s<%s>", port, typ.String())
+}
+
+func dataflowOperatorPrettyPrint(operator DataflowOperator, number int) string {
+	inputs := dataflowOperatorPrettyPorts(operator, false)
+	outputs := dataflowOperatorPrettyPorts(operator, true)
+	var builder strings.Builder
+	fmt.Fprintf(&builder, "%s#%d(", operator.Name, number)
+	for index, port := range inputs {
+		if index > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(dataflowPrettyPort(operator, false, port))
+	}
+	builder.WriteByte(')')
+	if len(outputs) == 0 {
+		return builder.String()
+	}
+	builder.WriteString(" -> ")
+	for index, port := range outputs {
+		if index > 0 {
+			builder.WriteByte(',')
+		}
+		builder.WriteString(dataflowPrettyPort(operator, true, port))
+	}
+	return builder.String()
+}
+
+func (d *DataflowInstance) dataflowOperatorDetails(name string) (int, string) {
+	if d == nil || name == "" {
+		return -1, ""
+	}
+	for number, operator := range d.definition.operators {
+		if operator.Name == name {
+			return number, dataflowOperatorPrettyPrint(operator, number)
+		}
+	}
+	return -1, ""
+}
 
 // DataflowExceptionHandler observes operator failures. Returning nil is a
 // recovery decision and is only effective with DataflowErrorContinue;
@@ -1985,7 +2057,7 @@ func (d *DataflowInstance) OperatorStats() []DataflowOperatorStat {
 		stat := DataflowOperatorStat{
 			Name:        operator.Name,
 			Number:      number,
-			PrettyPrint: fmt.Sprintf("%s#%d", operator.Name, number),
+			PrettyPrint: dataflowOperatorPrettyPrint(operator, number),
 		}
 		if state != nil {
 			stat.Submitted = state.submitted.Load()
@@ -2102,7 +2174,11 @@ func (d *DataflowInstance) SubmitSignal(ctx context.Context, signal DataflowSign
 	if !running {
 		return NewError(ErrorState, "dataflow is not running")
 	}
-	return d.process(ctx, signal)
+	err := d.process(ctx, signal)
+	if err != nil {
+		return d.completeDataflowFailure(err)
+	}
+	return nil
 }
 
 func (d *DataflowInstance) submitEmitter(ctx context.Context, name string, value any) error {
@@ -2124,14 +2200,22 @@ func (d *DataflowInstance) submitEmitter(ctx context.Context, name string, value
 		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q is not a captive emitter source", name))
 	}
 	if signal, ok := value.(DataflowSignal); ok {
-		return d.processGraphFrom(ctx, signal, name)
+		err := d.processGraphFrom(ctx, signal, name)
+		if err != nil {
+			return d.completeDataflowFailure(err)
+		}
+		return nil
 	}
 	event, err := d.materializeDataflowEvent(value)
 	if err != nil {
 		return err
 	}
 	d.processed.Add(1)
-	return d.processGraphFrom(ctx, event, name)
+	err = d.processGraphFrom(ctx, event, name)
+	if err != nil {
+		return d.completeDataflowFailure(err)
+	}
+	return nil
 }
 
 func (d *DataflowInstance) submitSourceValue(ctx context.Context, name string, value any) error {
@@ -2219,12 +2303,15 @@ func (d *DataflowInstance) handleDataflowError(ctx context.Context, operator str
 	if d == nil {
 		return err
 	}
+	operatorNum, operatorPrettyPrint := d.dataflowOperatorDetails(operator)
 	d.mu.Lock()
 	errorValue := DataflowError{
-		DataflowName: d.definition.name,
-		InstanceID:   d.options.InstanceID,
-		OperatorName: operator,
-		Err:          err,
+		DataflowName:        d.definition.name,
+		InstanceID:          d.options.InstanceID,
+		OperatorName:        operator,
+		OperatorNum:         operatorNum,
+		OperatorPrettyPrint: operatorPrettyPrint,
+		Err:                 err,
 	}
 	d.lastError = errorValue
 	handler := d.options.ExceptionHandler
@@ -2241,6 +2328,26 @@ func (d *DataflowInstance) handleDataflowError(ctx context.Context, operator str
 		return nil
 	}
 	return errorValue
+}
+
+func dataflowErrorWasHandled(err error) bool {
+	if err == nil {
+		return false
+	}
+	var failure DataflowError
+	return errors.As(err, &failure)
+}
+
+func dataflowContextCancellation(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+}
+
+func (d *DataflowInstance) completeDataflowFailure(err error) error {
+	if err == nil || dataflowContextCancellation(err) {
+		return err
+	}
+	d.complete(err)
+	return err
 }
 
 func (d *DataflowInstance) openRuntimes(ctx context.Context) error {
@@ -2356,6 +2463,10 @@ func (d *DataflowInstance) runSource(runCtx context.Context, operator DataflowOp
 	if err == nil || runCtx.Err() != nil {
 		return
 	}
+	if dataflowErrorWasHandled(err) {
+		d.complete(err)
+		return
+	}
 	if handled := d.handleDataflowError(context.Background(), operator.Name, err); handled != nil {
 		d.complete(handled)
 	}
@@ -2428,7 +2539,7 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 					processErr = d.process(callbackCtx, value)
 				}
 				if processErr != nil {
-					return processErr
+					return d.completeDataflowFailure(processErr)
 				}
 				if err := contextErr(callbackCtx); err != nil {
 					return err
@@ -2464,8 +2575,7 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 				processErr = d.process(ctx, event)
 			}
 			if processErr != nil {
-				_ = d.Cancel(context.Background())
-				return processErr
+				return d.completeDataflowFailure(processErr)
 			}
 		}
 	}
@@ -2618,7 +2728,11 @@ func (d *DataflowInstance) process(ctx context.Context, event any) error {
 	defer d.dispatchMu.Unlock()
 	owned := context.WithValue(ctx, dataflowDispatchOwnerKey{}, d)
 	if err := d.processLinear(owned, event); err != nil {
-		return d.handleDataflowError(ctx, "", err)
+		handled := d.handleDataflowError(ctx, "", err)
+		if handled != nil {
+			return d.completeDataflowFailure(handled)
+		}
+		return nil
 	}
 	return nil
 }
@@ -2649,7 +2763,7 @@ func (d *DataflowInstance) advanceDataflowTime(ctx context.Context, at time.Time
 		rows, err := d.advanceDataflowSelect(operator, at)
 		if err != nil {
 			if handled := d.handleDataflowError(owned, operator.Name, err); handled != nil {
-				return handled
+				return d.completeDataflowFailure(handled)
 			}
 			continue
 		}
@@ -2661,7 +2775,7 @@ func (d *DataflowInstance) advanceDataflowTime(ctx context.Context, at time.Time
 			}
 			if err != nil {
 				if handled := d.handleDataflowError(owned, operator.Name, err); handled != nil {
-					return handled
+					return d.completeDataflowFailure(handled)
 				}
 			}
 		}

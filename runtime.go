@@ -2118,7 +2118,7 @@ func (e *Engine) dispatchDataflowEvent(ctx context.Context, event Event) error {
 			continue
 		}
 		if err := instance.process(ctx, event); err != nil {
-			return err
+			return instance.completeDataflowFailure(err)
 		}
 	}
 	return nil

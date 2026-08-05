@@ -553,7 +553,7 @@ func TestDataflowOptionsExceptionsAndSavedConfiguration(t *testing.T) {
 	if stats := instance.Stats(); stats.Processed != 1 || stats.Errors != 1 || stats.Dropped != 1 || stats.Emitted != 0 {
 		t.Fatalf("continued dataflow stats = %#v", stats)
 	}
-	if observed.OperatorName != "failing" || !errors.Is(observed, sentinel) {
+	if observed.OperatorName != "failing" || observed.OperatorNum != 1 || observed.OperatorPrettyPrint != "failing#1(in) -> out" || !errors.Is(observed, sentinel) {
 		t.Fatalf("dataflow exception = %#v", observed)
 	}
 	if last, ok := instance.LastError(); !ok || !errors.Is(last, sentinel) {
@@ -564,5 +564,58 @@ func TestDataflowOptionsExceptionsAndSavedConfiguration(t *testing.T) {
 	}
 	if _, ok := env.LoadDataflowConfiguration("error-flow"); ok {
 		t.Fatal("deleted dataflow configuration is still available")
+	}
+}
+
+func TestDataflowOperatorExceptionCompletesWithEsperContext(t *testing.T) {
+	env := NewEnvironment()
+	sentinel := errors.New("Operator-thrown-exception")
+	definition, err := DefineDataflow(env, "operator-exception-flow").
+		BeaconSource("source", "E1").
+		Custom("failing", func(DataflowOperatorContext) (DataflowOperatorRuntime, error) {
+			return dataflowErrorRuntime{err: sentinel}, nil
+		}).
+		Emitter("sink").
+		Connect("source", "failing").
+		Connect("failing", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	observed := make(chan DataflowError, 1)
+	instance, err := NewEngine(env).InstantiateDataflowWithOptions(context.Background(), definition, DataflowOptions{
+		InstanceID:  "operator-exception-instance",
+		ErrorPolicy: DataflowErrorFail,
+		ExceptionHandler: func(_ context.Context, failure DataflowError) error {
+			observed <- failure
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runErr := instance.Run(context.Background())
+	if !errors.Is(runErr, sentinel) {
+		t.Fatalf("operator run error = %v, want %v", runErr, sentinel)
+	}
+	if instance.State() != DataflowComplete {
+		t.Fatalf("operator exception state = %v, want complete", instance.State())
+	}
+	select {
+	case failure := <-observed:
+		if failure.DataflowName != "operator-exception-flow" || failure.InstanceID != "operator-exception-instance" || failure.OperatorName != "failing" || failure.OperatorNum != 1 || failure.OperatorPrettyPrint != "failing#1(in) -> out" {
+			t.Fatalf("operator exception context = %#v", failure)
+		}
+		if !errors.Is(failure, sentinel) {
+			t.Fatalf("operator exception context error = %v", failure)
+		}
+	default:
+		t.Fatal("operator exception handler was not called")
+	}
+	if stats := instance.Stats(); stats.Processed != 1 || stats.Errors != 1 || stats.Dropped != 0 {
+		t.Fatalf("operator exception stats = %#v", stats)
+	}
+	if last, ok := instance.LastError(); !ok || !errors.Is(last, sentinel) {
+		t.Fatalf("operator exception last error = %#v/%v", last, ok)
 	}
 }

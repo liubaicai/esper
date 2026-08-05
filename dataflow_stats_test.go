@@ -40,7 +40,7 @@ func TestDataflowOperatorStatsMatchEsperSubmissionShape(t *testing.T) {
 	if len(stats) != 2 {
 		t.Fatalf("operator stats length = %d, want 2: %#v", len(stats), stats)
 	}
-	if stats[0].Name != "source" || stats[0].Number != 0 || stats[0].PrettyPrint != "source#0" {
+	if stats[0].Name != "source" || stats[0].Number != 0 || stats[0].PrettyPrint != "source#0() -> out<int>" {
 		t.Fatalf("source metadata = %#v", stats[0])
 	}
 	if stats[0].Submitted != 2 || len(stats[0].SubmittedByPort) != 1 || stats[0].SubmittedByPort[0] != 2 {
