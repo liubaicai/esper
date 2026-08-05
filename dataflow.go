@@ -123,6 +123,21 @@ type DataflowEventBusSinkEmission struct {
 // collector callback and supports dynamic target event types.
 type DataflowEventBusSinkCollector func(context.Context, any) ([]DataflowEventBusSinkEmission, error)
 
+// DataflowStatementSourceContext identifies one deployed statement offered to
+// an EPStatementSource selector. The selector controls which statements are
+// subscribed; it is intentionally separate from SourceFilter, which filters
+// result values after subscription.
+type DataflowStatementSourceContext struct {
+	DeploymentID  string
+	StatementName string
+	Statement     *Statement
+}
+
+// DataflowStatementSourceFilter selects deployed statements for a dynamic
+// EPStatementSource. It is the Go equivalent of Esper's statementFilter
+// parameter without Java reflection or class-loader configuration.
+type DataflowStatementSourceFilter func(DataflowStatementSourceContext) bool
+
 // DataflowRecord is the closed union of values emitted by Esper's built-in
 // event-oriented operators: Event for an event stream and Row for a
 // projection. It gives Filter and Select one typed contract while retaining
@@ -666,6 +681,7 @@ type DataflowOperator struct {
 	Log                     func(context.Context, any) error
 	Statement               *Statement
 	StatementName           string
+	StatementFilter         DataflowStatementSourceFilter
 	Signal                  DataflowSignalHandler
 	Factory                 DataflowOperatorFactory
 	InputPorts              []string
@@ -824,6 +840,16 @@ func (b DataflowBuilder) EPStatementSourceByName(name, statementName string) Dat
 		Name:          name,
 		Kind:          EPStatementSourceKind,
 		StatementName: statementName,
+	})
+}
+
+// EPStatementSourceWithStatementFilter subscribes to every currently
+// deployed and subsequently deployed statement accepted by selector.
+func (b DataflowBuilder) EPStatementSourceWithStatementFilter(name string, selector DataflowStatementSourceFilter) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:            name,
+		Kind:            EPStatementSourceKind,
+		StatementFilter: selector,
 	})
 }
 
@@ -1236,11 +1262,21 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 				}
 			}
 		case EPStatementSourceKind:
-			if operator.Statement == nil && operator.StatementName == "" {
-				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q requires statement or statement name", operator.Name))
+			sourceModes := 0
+			if operator.Statement != nil {
+				sourceModes++
 			}
-			if operator.Statement != nil && operator.StatementName != "" {
-				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q cannot combine statement and statement name", operator.Name))
+			if operator.StatementName != "" {
+				sourceModes++
+			}
+			if operator.StatementFilter != nil {
+				sourceModes++
+			}
+			if sourceModes == 0 {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q requires statement, statement name or statement filter", operator.Name))
+			}
+			if sourceModes > 1 {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q requires exactly one statement source mode", operator.Name))
 			}
 			if operator.SourceFilter != nil && operator.SourceFilter.Type() != typeOf[bool]() {
 				return DataflowDefinition{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow statement source %q requires bool filter", operator.Name))
@@ -1938,6 +1974,37 @@ func (e *Engine) dataflowFindStatement(name string) *Statement {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return e.statements[name]
+}
+
+func (e *Engine) dataflowFindStatements() []*Statement {
+	if e == nil {
+		return nil
+	}
+	e.mu.Lock()
+	statements := make([]*Statement, 0, len(e.statements))
+	for _, statement := range e.statements {
+		statements = append(statements, statement)
+	}
+	e.mu.Unlock()
+	sort.SliceStable(statements, func(left, right int) bool {
+		if statements[left].Name() != statements[right].Name() {
+			return statements[left].Name() < statements[right].Name()
+		}
+		return statements[left].ID() < statements[right].ID()
+	})
+	return statements
+}
+
+func dataflowStatementSourceContext(statement *Statement) DataflowStatementSourceContext {
+	deploymentID := ""
+	if statement != nil && statement.deployment != nil {
+		deploymentID = statement.deployment.ID()
+	}
+	return DataflowStatementSourceContext{
+		DeploymentID:  deploymentID,
+		StatementName: statement.Name(),
+		Statement:     statement,
+	}
 }
 
 func (e *Engine) notifyDataflowStatementDeployed(statement *Statement) {
@@ -2851,6 +2918,19 @@ func (d *DataflowInstance) resolveStatementSource(operator DataflowOperator) *St
 	return d.engine.dataflowFindStatement(operator.StatementName)
 }
 
+func (d *DataflowInstance) statementSourceMatches(operator DataflowOperator, statement *Statement) bool {
+	if statement == nil {
+		return false
+	}
+	if operator.StatementName != "" {
+		return operator.StatementName == statement.Name()
+	}
+	if operator.StatementFilter != nil {
+		return operator.StatementFilter(dataflowStatementSourceContext(statement))
+	}
+	return false
+}
+
 func (d *DataflowInstance) statementSourceListener(operator DataflowOperator) Listener {
 	return func(callbackCtx context.Context, batch ResultBatch) error {
 		for _, result := range batch.New {
@@ -2954,7 +3034,7 @@ func (d *DataflowInstance) onStatementDeployed(statement *Statement) {
 		return
 	}
 	for _, operator := range d.definition.operators {
-		if operator.Kind != EPStatementSourceKind || operator.StatementName == "" || operator.StatementName != statement.Name() {
+		if operator.Kind != EPStatementSourceKind || (operator.StatementName == "" && operator.StatementFilter == nil) || !d.statementSourceMatches(operator, statement) {
 			continue
 		}
 		if err := d.attachStatementSource(operator, statement); err != nil {
@@ -2968,7 +3048,7 @@ func (d *DataflowInstance) onStatementUndeployed(statement *Statement) {
 		return
 	}
 	for _, operator := range d.definition.operators {
-		if operator.Kind != EPStatementSourceKind || operator.StatementName == "" || operator.StatementName != statement.Name() {
+		if operator.Kind != EPStatementSourceKind || (operator.StatementName == "" && operator.StatementFilter == nil) {
 			continue
 		}
 		d.detachStatementSource(operator.Name, statement)
@@ -3007,6 +3087,18 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 			continue
 		}
 		hasEventSource = true
+		if operator.StatementFilter != nil {
+			for _, statement := range d.engine.dataflowFindStatements() {
+				if !d.statementSourceMatches(operator, statement) {
+					continue
+				}
+				if err := d.attachStatementSource(operator, statement); err != nil {
+					_ = d.Cancel(context.Background())
+					return err
+				}
+			}
+			continue
+		}
 		statement := d.resolveStatementSource(operator)
 		if statement == nil {
 			if operator.Statement != nil {
