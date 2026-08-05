@@ -922,10 +922,14 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 	if !ok {
 		return ResultBatch{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger named window %q is not available", definition.table))
 	}
-	events, err := window.Snapshot(ctx)
+	target, exists, err := window.scopedForVariables(variables, false)
 	if err != nil {
 		return ResultBatch{}, err
 	}
+	if !exists {
+		return ResultBatch{Time: now}, nil
+	}
+	events := snapshotNamedWindowState(target.state)
 	result := ResultBatch{Time: now}
 	for _, candidate := range events {
 		if err := contextErr(ctx); err != nil {
@@ -959,7 +963,15 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 	if !ok {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger named window %q is not available", definition.table))
 	}
-	schema := window.Definition().schema
+	createPartition := definition.action == triggerInsertTable || definition.action == triggerMergeTable
+	target, exists, err := window.scopedForVariables(variables, createPartition)
+	if err != nil {
+		return tableMutationResult{}, err
+	}
+	if !exists {
+		return tableMutationResult{}, nil
+	}
+	schema := target.Definition().schema
 	switch definition.action {
 	case triggerInsertTable:
 		values := evaluateTriggerAssignments(definition.assignments, EvalContext{Event: event, Now: now, Variables: variables})
@@ -967,7 +979,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		delta, err := window.insertWithVariables(now, underlying, variables)
+		delta, err := target.insertWithVariables(now, underlying, variables)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
@@ -976,7 +988,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		}
 		return tableMutationResult{newEvents: append([]Event(nil), delta.New...)}, nil
 	case triggerMergeTable:
-		delta, err := window.mergeWhere(ctx, func(candidate Event) (namedWindowMergeDecision, error) {
+		delta, err := target.mergeWhere(ctx, func(candidate Event) (namedWindowMergeDecision, error) {
 			evaluation := EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
 			if definition.where != nil {
 				matched, ok := boolValue(definition.where.eval(evaluation))
@@ -1038,7 +1050,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		if definition.action == triggerDeleteAllTable {
 			predicate = Literal(true)
 		}
-		delta, err := window.deleteWhere(ctx, func(candidate Event) bool {
+		delta, err := target.deleteWhere(ctx, func(candidate Event) bool {
 			if predicate == nil {
 				return true
 			}
@@ -1057,7 +1069,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		if definition.where == nil {
 			return tableMutationResult{}, NewError(ErrorInvalidRule, "named-window update requires a predicate")
 		}
-		delta, err := window.updateWhere(ctx, func(candidate Event) bool {
+		delta, err := target.updateWhere(ctx, func(candidate Event) bool {
 			value := definition.where.eval(EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables})
 			matched, ok := boolValue(value)
 			return ok && matched

@@ -845,25 +845,32 @@ func applySortedNamedWindowInsertLocked(state *namedWindowRuntime, retention Sor
 // order, matching the ordinary Unique window's snapshot order while moving
 // the current event value into the existing key slot.
 func (w *NamedWindow) rebuildUniqueStateLocked() {
-	if w == nil || w.state == nil {
+	if w == nil {
 		return
 	}
-	if retention, sorted := w.state.def.retention.(SortedWindowSpec); sorted {
-		w.state.entries, w.state.keyed = normalizeSortedNamedWindowEntries(w.state.entries, retention, w.now())
-		w.state.keyOrder = nil
+	w.rebuildUniqueStateForLocked(w.state)
+}
+
+func (w *NamedWindow) rebuildUniqueStateForLocked(state *namedWindowRuntime) {
+	if w == nil || state == nil {
 		return
 	}
-	retention, unique := w.state.def.retention.(UniqueWindowSpec)
+	if retention, sorted := state.def.retention.(SortedWindowSpec); sorted {
+		state.entries, state.keyed = normalizeSortedNamedWindowEntries(state.entries, retention, w.now())
+		state.keyOrder = nil
+		return
+	}
+	retention, unique := state.def.retention.(UniqueWindowSpec)
 	if !unique {
-		w.state.keyed = nil
-		w.state.keyOrder = nil
+		state.keyed = nil
+		state.keyOrder = nil
 		return
 	}
-	keyed := make(map[string]storedEvent, len(w.state.entries))
-	keyOrder := make([]string, 0, len(w.state.entries))
-	positions := make(map[string]int, len(w.state.entries))
-	entries := make([]storedEvent, 0, len(w.state.entries))
-	for _, entry := range w.state.entries {
+	keyed := make(map[string]storedEvent, len(state.entries))
+	keyOrder := make([]string, 0, len(state.entries))
+	positions := make(map[string]int, len(state.entries))
+	entries := make([]storedEvent, 0, len(state.entries))
+	for _, entry := range state.entries {
 		key := uniqueWindowKey(retention, entry.event, entry.receivedAt, nil)
 		if position, exists := positions[key]; exists {
 			entries[position] = entry
@@ -875,9 +882,9 @@ func (w *NamedWindow) rebuildUniqueStateLocked() {
 		keyOrder = append(keyOrder, key)
 		keyed[key] = entry
 	}
-	w.state.entries = entries
-	w.state.keyed = keyed
-	w.state.keyOrder = keyOrder
+	state.entries = entries
+	state.keyed = keyed
+	state.keyOrder = keyOrder
 }
 
 func (w *NamedWindow) Definition() NamedWindowDefinition {
@@ -929,6 +936,83 @@ func (w *NamedWindow) partitionState(key string, create bool) (*namedWindowRunti
 		return nil, NewError(ErrorUnknownName, fmt.Sprintf("named window context partition %q is not active", key))
 	}
 	return partition, nil
+}
+
+// scopedForVariables returns the context partition represented by the
+// reserved context variables attached to a statement evaluation.  A
+// context-bound named window is still exposed as a root object for public
+// snapshots and fire-and-forget queries, but on-trigger operations running
+// inside a context must address only the current partition.
+//
+// When create is false, an inactive/empty partition is reported through the
+// boolean result instead of creating state or treating the whole context
+// window as the target.  This makes context-local select/update/delete
+// operations no-ops until that partition has received an insert.
+func (w *NamedWindow) scopedForVariables(variables map[string]Value, create bool) (*NamedWindow, bool, error) {
+	if w == nil || w.state == nil {
+		return nil, false, NewError(ErrorState, "nil named window")
+	}
+	if w.state.def.contextName == "" || w.state.contextKey != "" {
+		return w, true, nil
+	}
+	partitionKey, ok := w.contextPartitionFromVariables(variables)
+	if !ok {
+		return w, true, nil
+	}
+	if !create {
+		w.state.mu.RLock()
+		partition := w.state.partitions[partitionKey]
+		w.state.mu.RUnlock()
+		if partition == nil {
+			return nil, false, nil
+		}
+		return &NamedWindow{state: partition, engine: w.engine}, true, nil
+	}
+	partition, err := w.partitionState(partitionKey, true)
+	if err != nil {
+		return nil, false, err
+	}
+	return &NamedWindow{state: partition, engine: w.engine}, true, nil
+}
+
+func (w *NamedWindow) contextPartitionFromVariables(variables map[string]Value) (string, bool) {
+	if w == nil || w.state == nil || w.state.def.contextName == "" || w.state.contextKey != "" || variables == nil {
+		return "", false
+	}
+	nameValue, nameOK := variables[subqueryContextNameVariable]
+	keyValue, keyOK := variables[subqueryContextPartitionVariable]
+	if !nameOK || !keyOK || !nameValue.IsPresent() || !keyValue.IsPresent() {
+		return "", false
+	}
+	contextName, nameTypeOK := nameValue.Any().(string)
+	partitionKey, keyTypeOK := keyValue.Any().(string)
+	if !nameTypeOK || !keyTypeOK || contextName != w.state.def.contextName || partitionKey == "" {
+		return "", false
+	}
+	return partitionKey, true
+}
+
+func (w *NamedWindow) contextPartitionStates() []*namedWindowRuntime {
+	if w == nil || w.state == nil {
+		return nil
+	}
+	if w.state.def.contextName == "" || w.state.contextKey != "" {
+		return []*namedWindowRuntime{w.state}
+	}
+	w.state.mu.RLock()
+	keys := make([]string, 0, len(w.state.partitions))
+	partitions := make(map[string]*namedWindowRuntime, len(w.state.partitions))
+	for key, partition := range w.state.partitions {
+		keys = append(keys, key)
+		partitions[key] = partition
+	}
+	w.state.mu.RUnlock()
+	sort.Strings(keys)
+	result := make([]*namedWindowRuntime, 0, len(keys))
+	for _, key := range keys {
+		result = append(result, partitions[key])
+	}
+	return result
 }
 
 func (w *NamedWindow) Subscribe(listener NamedWindowListener) (Subscription, error) {
@@ -1035,8 +1119,44 @@ func (w *NamedWindow) deleteWhere(ctx context.Context, predicate func(Event) boo
 		return NamedWindowDelta{}, NewError(ErrorInvalidRule, "named-window delete predicate is required")
 	}
 	now := w.now()
-	state := w.state
+	if w.state.def.contextName != "" && w.state.contextKey == "" {
+		result := NamedWindowDelta{Time: now}
+		for _, state := range w.contextPartitionStates() {
+			delta, err := w.deleteWhereState(ctx, state, predicate, now)
+			if err != nil {
+				return NamedWindowDelta{}, err
+			}
+			result.New = append(result.New, delta.New...)
+			result.Old = append(result.Old, delta.Old...)
+		}
+		return result, nil
+	}
+	return w.deleteWhereState(ctx, w.state, predicate, now)
+}
+
+func (w *NamedWindow) deleteWherePartition(ctx context.Context, partitionKey string, predicate func(Event) bool) (NamedWindowDelta, error) {
+	if err := contextErr(ctx); err != nil {
+		return NamedWindowDelta{}, err
+	}
+	if w == nil || w.state == nil {
+		return NamedWindowDelta{}, NewError(ErrorState, "nil named window")
+	}
+	if predicate == nil {
+		return NamedWindowDelta{}, NewError(ErrorInvalidRule, "named-window delete predicate is required")
+	}
+	state, err := w.partitionState(partitionKey, false)
+	if err != nil {
+		return NamedWindowDelta{}, err
+	}
+	return w.deleteWhereState(ctx, state, predicate, w.now())
+}
+
+func (w *NamedWindow) deleteWhereState(ctx context.Context, state *namedWindowRuntime, predicate func(Event) bool, now time.Time) (NamedWindowDelta, error) {
+	if state == nil {
+		return NamedWindowDelta{}, NewError(ErrorState, "nil named-window partition")
+	}
 	state.mu.Lock()
+	defer state.mu.Unlock()
 	kept := state.entries[:0]
 	delta := NamedWindowDelta{Time: now}
 	for _, entry := range state.entries {
@@ -1047,8 +1167,7 @@ func (w *NamedWindow) deleteWhere(ctx context.Context, predicate func(Event) boo
 		}
 	}
 	state.entries = kept
-	w.rebuildUniqueStateLocked()
-	state.mu.Unlock()
+	w.rebuildUniqueStateForLocked(state)
 	return delta, nil
 }
 
@@ -1074,8 +1193,44 @@ func (w *NamedWindow) updateWhere(ctx context.Context, predicate func(Event) boo
 		return NamedWindowDelta{}, NewError(ErrorInvalidRule, "named-window update requires predicate and updater")
 	}
 	now := w.now()
-	state := w.state
+	if w.state.def.contextName != "" && w.state.contextKey == "" {
+		result := NamedWindowDelta{Time: now}
+		for _, state := range w.contextPartitionStates() {
+			delta, err := w.updateWhereState(ctx, state, predicate, update, now)
+			if err != nil {
+				return NamedWindowDelta{}, err
+			}
+			result.New = append(result.New, delta.New...)
+			result.Old = append(result.Old, delta.Old...)
+		}
+		return result, nil
+	}
+	return w.updateWhereState(ctx, w.state, predicate, update, now)
+}
+
+func (w *NamedWindow) updateWherePartition(ctx context.Context, partitionKey string, predicate func(Event) bool, update func(Event) (any, error)) (NamedWindowDelta, error) {
+	if err := contextErr(ctx); err != nil {
+		return NamedWindowDelta{}, err
+	}
+	if w == nil || w.state == nil {
+		return NamedWindowDelta{}, NewError(ErrorState, "nil named window")
+	}
+	if predicate == nil || update == nil {
+		return NamedWindowDelta{}, NewError(ErrorInvalidRule, "named-window update requires predicate and updater")
+	}
+	state, err := w.partitionState(partitionKey, false)
+	if err != nil {
+		return NamedWindowDelta{}, err
+	}
+	return w.updateWhereState(ctx, state, predicate, update, w.now())
+}
+
+func (w *NamedWindow) updateWhereState(ctx context.Context, state *namedWindowRuntime, predicate func(Event) bool, update func(Event) (any, error), now time.Time) (NamedWindowDelta, error) {
+	if state == nil {
+		return NamedWindowDelta{}, NewError(ErrorState, "nil named-window partition")
+	}
 	state.mu.Lock()
+	defer state.mu.Unlock()
 	delta := NamedWindowDelta{Time: now}
 	for index, entry := range state.entries {
 		if !predicate(entry.event) {
@@ -1083,12 +1238,10 @@ func (w *NamedWindow) updateWhere(ctx context.Context, predicate func(Event) boo
 		}
 		underlying, err := update(entry.event)
 		if err != nil {
-			state.mu.Unlock()
 			return NamedWindowDelta{}, err
 		}
 		updated, err := newEvent(state.def.schema, underlying, now)
 		if err != nil {
-			state.mu.Unlock()
 			return NamedWindowDelta{}, err
 		}
 		updated.typeName = state.def.name
@@ -1097,8 +1250,7 @@ func (w *NamedWindow) updateWhere(ctx context.Context, predicate func(Event) boo
 		delta.New = append(delta.New, updated)
 		state.entries[index] = storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt}
 	}
-	w.rebuildUniqueStateLocked()
-	state.mu.Unlock()
+	w.rebuildUniqueStateForLocked(state)
 	return delta, nil
 }
 
@@ -1260,14 +1412,14 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 			}
 		case SortedWindowSpec:
 			state.entries = entries
-			w.rebuildUniqueStateLocked()
+			w.rebuildUniqueStateForLocked(state)
 			delta.New = append(delta.New, preparedInsert)
 			applySortedNamedWindowInsertLocked(state, retention, storedEvent{event: preparedInsert, receivedAt: now}, now, &delta)
 			entries = state.entries
 		}
 	}
 	state.entries = entries
-	w.rebuildUniqueStateLocked()
+	w.rebuildUniqueStateForLocked(state)
 	return delta, nil
 }
 
@@ -1294,16 +1446,24 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 	event.streamType = w.state.def.name
 	state := w.state
 	if state.def.contextName != "" && state.contextKey == "" {
-		key, active, err := w.contextPartitionKey(event, now, variables)
-		if err != nil {
-			return NamedWindowDelta{}, err
-		}
-		if !active {
-			return NamedWindowDelta{Time: now}, nil
-		}
-		state, err = w.partitionState(key, true)
-		if err != nil {
-			return NamedWindowDelta{}, err
+		if partitionKey, fromContext := w.contextPartitionFromVariables(variables); fromContext {
+			var err error
+			state, err = w.partitionState(partitionKey, true)
+			if err != nil {
+				return NamedWindowDelta{}, err
+			}
+		} else {
+			key, active, err := w.contextPartitionKey(event, now, variables)
+			if err != nil {
+				return NamedWindowDelta{}, err
+			}
+			if !active {
+				return NamedWindowDelta{Time: now}, nil
+			}
+			state, err = w.partitionState(key, true)
+			if err != nil {
+				return NamedWindowDelta{}, err
+			}
 		}
 	}
 	state.mu.Lock()
