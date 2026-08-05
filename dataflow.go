@@ -144,6 +144,13 @@ type DataflowStatementSourceFilter func(DataflowStatementSourceContext) bool
 // selected statement context explicitly.
 type DataflowStatementSourceCollector func(context.Context, DataflowStatementSourceContext, any) ([]any, error)
 
+// DataflowStatementSourceBatchCollector receives one complete statement
+// result batch, including both its new and old streams, and returns the
+// values that should enter the dataflow graph. It is the Go fluent equivalent
+// of Esper's IR-stream collector while keeping the public result shape typed
+// as ResultBatch.
+type DataflowStatementSourceBatchCollector func(context.Context, DataflowStatementSourceContext, ResultBatch) ([]any, error)
+
 // DataflowRecord is the closed union of values emitted by Esper's built-in
 // event-oriented operators: Event for an event stream and Row for a
 // projection. It gives Filter and Select one typed contract while retaining
@@ -693,6 +700,7 @@ type DataflowOperator struct {
 	StatementDeploymentID   string
 	StatementFilter         DataflowStatementSourceFilter
 	StatementCollector      DataflowStatementSourceCollector
+	StatementBatchCollector DataflowStatementSourceBatchCollector
 	Signal                  DataflowSignalHandler
 	Factory                 DataflowOperatorFactory
 	InputPorts              []string
@@ -886,6 +894,18 @@ func (b DataflowBuilder) EPStatementSourceWithStatementFilterAndCollector(name s
 	})
 }
 
+// EPStatementSourceWithStatementFilterAndBatchCollector combines dynamic
+// statement selection with a collector that observes each complete new/old
+// result batch.
+func (b DataflowBuilder) EPStatementSourceWithStatementFilterAndBatchCollector(name string, selector DataflowStatementSourceFilter, collector DataflowStatementSourceBatchCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                    name,
+		Kind:                    EPStatementSourceKind,
+		StatementFilter:         selector,
+		StatementBatchCollector: collector,
+	})
+}
+
 // EPStatementSourceByNameWithCollector follows a named statement and lets a
 // collector suppress, transform or duplicate its new result values.
 func (b DataflowBuilder) EPStatementSourceByNameWithCollector(name, statementName string, collector DataflowStatementSourceCollector) DataflowBuilder {
@@ -894,6 +914,17 @@ func (b DataflowBuilder) EPStatementSourceByNameWithCollector(name, statementNam
 		Kind:               EPStatementSourceKind,
 		StatementName:      statementName,
 		StatementCollector: collector,
+	})
+}
+
+// EPStatementSourceByNameWithBatchCollector follows a named statement and
+// exposes each complete new/old result batch to the collector.
+func (b DataflowBuilder) EPStatementSourceByNameWithBatchCollector(name, statementName string, collector DataflowStatementSourceBatchCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                    name,
+		Kind:                    EPStatementSourceKind,
+		StatementName:           statementName,
+		StatementBatchCollector: collector,
 	})
 }
 
@@ -909,6 +940,18 @@ func (b DataflowBuilder) EPStatementSourceByDeploymentWithCollector(name, deploy
 	})
 }
 
+// EPStatementSourceByDeploymentWithBatchCollector is the deployment-scoped
+// batch collector form of EPStatementSourceByNameWithBatchCollector.
+func (b DataflowBuilder) EPStatementSourceByDeploymentWithBatchCollector(name, deploymentID, statementName string, collector DataflowStatementSourceBatchCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                    name,
+		Kind:                    EPStatementSourceKind,
+		StatementName:           statementName,
+		StatementDeploymentID:   deploymentID,
+		StatementBatchCollector: collector,
+	})
+}
+
 // EPStatementSourceWithCollector is the direct-statement counterpart to
 // EPStatementSourceByNameWithCollector.
 func (b DataflowBuilder) EPStatementSourceWithCollector(name string, statement *Statement, collector DataflowStatementSourceCollector) DataflowBuilder {
@@ -917,6 +960,17 @@ func (b DataflowBuilder) EPStatementSourceWithCollector(name string, statement *
 		Kind:               EPStatementSourceKind,
 		Statement:          statement,
 		StatementCollector: collector,
+	})
+}
+
+// EPStatementSourceWithBatchCollector is the direct-statement form of the
+// complete new/old result-batch collector.
+func (b DataflowBuilder) EPStatementSourceWithBatchCollector(name string, statement *Statement, collector DataflowStatementSourceBatchCollector) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                    name,
+		Kind:                    EPStatementSourceKind,
+		Statement:               statement,
+		StatementBatchCollector: collector,
 	})
 }
 
@@ -1343,6 +1397,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 		case EPStatementSourceKind:
 			if operator.StatementDeploymentID != "" && operator.StatementName == "" {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q requires statement name with deployment id", operator.Name))
+			}
+			if operator.StatementCollector != nil && operator.StatementBatchCollector != nil {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow statement source %q cannot configure both value and batch collectors", operator.Name))
 			}
 			sourceModes := 0
 			if operator.Statement != nil {
@@ -3057,15 +3114,48 @@ func (d *DataflowInstance) statementSourceMatches(operator DataflowOperator, sta
 	return false
 }
 
+func dataflowStatementResultValue(result Result) (any, bool) {
+	if event, ok := result.Event(); ok {
+		return event, true
+	}
+	if row, ok := result.Row(); ok {
+		return row, true
+	}
+	return nil, false
+}
+
+func (d *DataflowInstance) submitStatementSourceValues(callbackCtx context.Context, operator DataflowOperator, values []any) error {
+	for _, value := range values {
+		var processErr error
+		if d.graph {
+			d.processed.Add(1)
+			processErr = d.processGraphFrom(callbackCtx, value, operator.Name)
+		} else {
+			processErr = d.process(callbackCtx, value)
+		}
+		if processErr != nil {
+			return d.completeDataflowFailure(processErr)
+		}
+		if err := contextErr(callbackCtx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (d *DataflowInstance) statementSourceListener(operator DataflowOperator, statement *Statement) Listener {
 	return func(callbackCtx context.Context, batch ResultBatch) error {
+		statementContext := dataflowStatementSourceContext(statement)
+		if operator.StatementBatchCollector != nil {
+			values, collectErr := operator.StatementBatchCollector(callbackCtx, statementContext, batch.clone())
+			if collectErr != nil {
+				return collectErr
+			}
+			return d.submitStatementSourceValues(callbackCtx, operator, values)
+		}
 		for _, result := range batch.New {
-			var value any
-			if event, ok := result.Event(); ok {
-				value = event
-			} else if row, ok := result.Row(); ok {
-				value = row
-			} else {
+			value, ok := dataflowStatementResultValue(result)
+			if !ok {
 				continue
 			}
 			accepted, filterErr := d.dataflowSourceFilterAccepts(operator, value)
@@ -3077,26 +3167,14 @@ func (d *DataflowInstance) statementSourceListener(operator DataflowOperator, st
 			}
 			values := []any{value}
 			if operator.StatementCollector != nil {
-				collected, collectErr := operator.StatementCollector(callbackCtx, dataflowStatementSourceContext(statement), value)
+				collected, collectErr := operator.StatementCollector(callbackCtx, statementContext, value)
 				if collectErr != nil {
 					return collectErr
 				}
 				values = collected
 			}
-			for _, collected := range values {
-				var processErr error
-				if d.graph {
-					d.processed.Add(1)
-					processErr = d.processGraphFrom(callbackCtx, collected, operator.Name)
-				} else {
-					processErr = d.process(callbackCtx, collected)
-				}
-				if processErr != nil {
-					return d.completeDataflowFailure(processErr)
-				}
-				if err := contextErr(callbackCtx); err != nil {
-					return err
-				}
+			if err := d.submitStatementSourceValues(callbackCtx, operator, values); err != nil {
+				return err
 			}
 		}
 		return nil
