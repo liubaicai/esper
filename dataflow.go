@@ -1585,7 +1585,16 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow edge references unknown input port %q on operator %q", edge.ToPort, edge.To))
 			}
 			if outputType := dataflowPortType(operatorsByName[edge.From], true, edge.FromPort); outputType != nil {
-				if inputType := dataflowPortType(operatorsByName[edge.To], false, edge.ToPort); inputType != nil && !dataflowTypesAssignable(outputType, inputType) {
+				if operatorsByName[edge.To].Kind == EventBusSinkKind && operatorsByName[edge.To].EventType != "" {
+					assignable := dataflowEventBusSinkOutputAssignable(b.env, operatorsByName[edge.To].EventType, outputType)
+					from := operatorsByName[edge.From]
+					if assignable && outputType == dataflowRecordType() && from.Kind == SelectKind && from.SelectOptions.PreserveInput {
+						assignable = dataflowPortType(from, false, "in") != reflect.TypeOf(Row{})
+					}
+					if !assignable {
+						return DataflowDefinition{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow edge %q:%q -> %q:%q cannot assign %s to event-bus event type %q", edge.From, edge.FromPort, edge.To, edge.ToPort, outputType, operatorsByName[edge.To].EventType))
+					}
+				} else if inputType := dataflowPortType(operatorsByName[edge.To], false, edge.ToPort); inputType != nil && !dataflowTypesAssignable(outputType, inputType) {
 					return DataflowDefinition{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow edge %q:%q -> %q:%q cannot assign %s to %s", edge.From, edge.FromPort, edge.To, edge.ToPort, outputType, inputType))
 				}
 			}
@@ -1847,7 +1856,12 @@ func inferDataflowBuiltinPorts(operator DataflowOperator) DataflowOperator {
 			setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", eventType)
 		}
 	case EventBusSinkKind:
-		setDataflowBuiltinPortType(&operator.InputPortTypes, "in", eventType)
+		// EventBusSink accepts either an Event envelope or the registered
+		// schema's underlying representation. The latter is required for the
+		// Java-compatible BeaconSource/DefaultSupportSourceOp shape where a
+		// POJO, map, object-array or XML tree enters the sink directly. Keep
+		// the input wildcard here and validate the representation against the
+		// target schema at edge-build/runtime boundaries.
 	case FilterKind:
 		// Filter preserves its input representation. The closed union keeps
 		// Event and Row chains valid without pretending that one is fixed.
@@ -2056,6 +2070,50 @@ func dataflowValueAssignable(value any, expected reflect.Type) bool {
 		return true
 	}
 	return reflect.TypeOf(value).AssignableTo(expected)
+}
+
+// dataflowEventBusSinkOutputAssignable checks the closed set of values that
+// a static EventBusSink can forward. Event is always accepted because the
+// runtime unwraps it and lets the target schema perform final validation;
+// Row is deliberately rejected because it is a projection result rather than
+// an event representation. Nil/empty interfaces remain wildcards for custom
+// operators whose concrete value is known only at runtime.
+func dataflowEventBusSinkOutputAssignable(env *Environment, eventType string, output reflect.Type) bool {
+	if output == nil {
+		return true
+	}
+	if output == reflect.TypeOf(Event{}) {
+		return true
+	}
+	if output == reflect.TypeOf(Row{}) {
+		return false
+	}
+	if output == dataflowRecordType() || (output.Kind() == reflect.Interface && output.NumMethod() == 0) {
+		return true
+	}
+	if env == nil {
+		return false
+	}
+	schema, ok := env.Schema(eventType)
+	if !ok {
+		return false
+	}
+	switch schema.Kind() {
+	case SchemaVariant:
+		return false
+	case SchemaObjectArray:
+		return output.Kind() == reflect.Array || output.Kind() == reflect.Slice
+	case SchemaMap, SchemaJSON, SchemaXML, SchemaAvro:
+		return output == reflect.TypeOf(map[string]any{})
+	case SchemaStruct:
+		if schema.GoType() == nil {
+			return output == reflect.TypeOf(map[string]any{})
+		}
+		target := schema.GoType()
+		return output.AssignableTo(target) || (output.Kind() == reflect.Pointer && output.Elem().AssignableTo(target))
+	default:
+		return false
+	}
 }
 
 type DataflowStats struct {
@@ -2896,13 +2954,20 @@ func (d *DataflowInstance) sendDataflowEventBusValue(ctx context.Context, operat
 		return nil
 	}
 	eventValue, ok := value.(Event)
-	if !ok {
-		return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow event-bus sink %q requires Event output", operator.Name))
+	if ok {
+		underlying := eventValue.Underlying()
+		if schema, ok := d.engine.env.Schema(operator.EventType); ok && schema.Kind() == SchemaVariant {
+			underlying = eventValue
+		}
+		return d.engine.Send(ctx, operator.EventType, underlying)
 	}
-	underlying := eventValue.Underlying()
-	if schema, ok := d.engine.env.Schema(operator.EventType); ok && schema.Kind() == SchemaVariant {
-		underlying = eventValue
+	if _, row := value.(Row); row {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow event-bus sink %q cannot send projection Row as event type %q", operator.Name, operator.EventType))
 	}
+	// Static EventBusSink also accepts the target schema's native Go
+	// representation. Engine.Send performs the definitive schema-specific
+	// normalization/coercion for maps, object-arrays, XML trees and structs.
+	underlying := value
 	return d.engine.Send(ctx, operator.EventType, underlying)
 }
 

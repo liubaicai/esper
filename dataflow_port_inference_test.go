@@ -71,6 +71,15 @@ func TestDataflowBuiltinPortInferenceMatchesEsper(t *testing.T) {
 		Build(); err == nil {
 		t.Fatal("row output was accepted by an EventBusSink")
 	}
+	if _, err := DefineDataflow(env, "row-pass-through-to-event-sink").
+		EPStatementSource("rows", rowDeployment.Statements()[0]).
+		SelectPassThrough("pass").
+		EventBusSink("sink", "Trade").
+		Connect("rows", "pass").
+		Connect("pass", "sink").
+		Build(); err == nil {
+		t.Fatal("row pass-through output was accepted by an EventBusSink")
+	}
 	if _, err := DefineDataflow(env, "event-to-event-sink").
 		EPStatementSource("events", eventDeployment.Statements()[0]).
 		EventBusSink("sink", "Trade").

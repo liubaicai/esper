@@ -256,7 +256,7 @@
       "goRefs": ["dataflow.go", "dataflow_test.go", "dataflow_pattern_test.go", "dataflow_port_inference_test.go", "dataflow_select_test.go", "dataflow_select_iterate_test.go", "dataflow_select_event_test.go", "dataflow_join_test.go", "dataflow_join_outer_test.go", "dataflow_join_order_test.go", "dataflow_join_condition_test.go", "dataflow_join_captive_test.go", "dataflow_representation_test.go", "dataflow_saved_test.go", "dataflow_reentrant_test.go", "dataflow_subquery_test.go", "dataflow_typed_ports_test.go", "dataflow_source_test.go", "dataflow_stats_test.go", "dataflow_options_test.go", "dataflow_filter_ports_test.go", "dataflow_source_filter_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["complete EventBean/Map/ObjectArray/XML representation coercion and Dataflow join multi-row lifecycle", "external serialization and cross-process restoration of saved definitions/instances", "complete multi-port captive/join and exception recovery parity"]
+      "remaining": ["Dataflow join multi-row lifecycle", "external serialization and cross-process restoration of saved definitions/instances", "complete multi-port captive/join and exception recovery parity"]
     },
     {
       "id": "join.basic",
@@ -885,22 +885,22 @@
       "javaRuntimeIds": ["java-runtime-37aed9aedcbbb25c4826", "java-runtime-dfb59d3bd4798d57cc0c", "java-runtime-73c4f6808b38087c5a59"],
       "javaNames": ["EPLDataflowSchemaObjectArray", "EPLDataflowAllTypes", "EPLDataflowAllTypes"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEventBusSource.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpFilter.java"],
-      "goTests": ["TestEventBusDataflowRunsUntilCanceled", "TestDataflowGraphBranchesAndNamedPorts", "TestDataflowEventBusSourceConsumesAllRegisteredRepresentationsMatchesEsper", "TestDataflowFilterWithPortsRoutesMatchedAndRejectedValuesMatchesEsper", "TestDataflowFilterWithPortsFansOutSignalsMatchesEsper", "TestDataflowFilterWithPortsRejectsLinearDefinition", "TestDataflowEventBusSourceWithFilterRoutesOnlyMatchingEventsMatchesEsper", "TestDataflowEventBusSourceWithFilterWorksOnLinearPathMatchesEsper", "TestDataflowEventBusSourceWithFilterRejectsNonBooleanPredicate", "TestDataflowEventBusSourceWithUnderlyingMatchesEsper"],
+      "goTests": ["TestEventBusDataflowRunsUntilCanceled", "TestDataflowGraphBranchesAndNamedPorts", "TestDataflowBuiltinPortInferenceMatchesEsper", "TestDataflowEventBusSourceConsumesAllRegisteredRepresentationsMatchesEsper", "TestDataflowEventBusSourceWithUnderlyingAllRegisteredRepresentationsMatchesEsper", "TestDataflowFilterWithPortsRoutesMatchedAndRejectedValuesMatchesEsper", "TestDataflowFilterWithPortsFansOutSignalsMatchesEsper", "TestDataflowFilterWithPortsRejectsLinearDefinition", "TestDataflowEventBusSourceWithFilterRoutesOnlyMatchingEventsMatchesEsper", "TestDataflowEventBusSourceWithFilterWorksOnLinearPathMatchesEsper", "TestDataflowEventBusSourceWithFilterRejectsNonBooleanPredicate", "TestDataflowEventBusSourceWithUnderlyingMatchesEsper"],
       "tags": ["correctness", "dataflow", "lifecycle"],
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
-      "difference": "Go adds the fluent EventBusSourceWithFilter and EventBusSourceWithUnderlying APIs: filters evaluate against the Event envelope, while accepted values can enter graph or linear paths as the raw registered Go value. Java additionally covers EventBean/object-array collector modes and broader source parameter/representation diagnostics; those remain open."
+      "difference": "Go adds the fluent EventBusSourceWithFilter and EventBusSourceWithUnderlying APIs: filters evaluate against the Event envelope, while accepted values can enter graph or linear paths as the raw registered Go value. Struct, Map, ObjectArray and XML source representations are now exercised through the same typed graph boundary. Java additionally covers EventBean/object-array collector modes and broader source parameter/representation diagnostics; those remain open."
     },
     {
       "id": "case.dataflow-eventbus-collector",
       "javaRuntimeIds": ["java-runtime-dfb59d3bd4798d57cc0c", "java-runtime-37aed9aedcbbb25c4826", "java-runtime-e6b4bb618f70b384cf03", "java-runtime-1ecb769e10b4a818772c", "java-runtime-11a7b321e6901dbad740"],
       "javaNames": ["EPLDataflowAllTypes", "EPLDataflowSchemaObjectArray", "EPLDataflowAllTypes", "EPLDataflowBeacon", "EPLDataflowSendEventDynamicType"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEventBusSource.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEventBusSink.java"],
-      "goTests": ["TestDataflowEventBusSourceCollectorTransformsAndDuplicatesEvents", "TestDataflowEventBusSinkCollectorSendsDynamicEventTypes", "TestDataflowEventBusSourceFilterRunsBeforeCollector", "TestDataflowEventBusSinkIsTerminalAndRejectsOutputEdges"],
+      "goTests": ["TestDataflowEventBusSourceCollectorTransformsAndDuplicatesEvents", "TestDataflowEventBusSinkCollectorSendsDynamicEventTypes", "TestDataflowEventBusSourceFilterRunsBeforeCollector", "TestDataflowEventBusSinkIsTerminalAndRejectsOutputEdges", "TestDataflowEventBusSinkSendsAllRegisteredRepresentationsMatchesEsper"],
       "tags": ["correctness", "dataflow", "eventbus", "collector", "dynamic-type", "representation"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "Go adds fluent EventBusSourceWithCollector and EventBusSinkWithCollector callbacks. Source collectors may suppress, duplicate or transform incoming typed events and may return Event envelopes or registered Go values; sink collectors return zero or more explicit event-type/value emissions, including dynamic target types, while preserving variant envelopes. Java additionally covers all event representations, EventBean/object-array collector context APIs, Beacon-driven source/sink setup and exact collector diagnostics; those broader representation and lifecycle combinations remain open."
+      "difference": "Go adds fluent EventBusSourceWithCollector and EventBusSinkWithCollector callbacks. Source collectors may suppress, duplicate or transform incoming typed events and may return Event envelopes or registered Go values; sink collectors return zero or more explicit event-type/value emissions, including dynamic target types, while preserving variant envelopes. Static EventBusSink now also materializes native Struct, Map, ObjectArray and XML values, matching Java's Beacon/source-to-sink representation boundary. Java's EventBean/object-array collector context APIs, Beacon-driven collector setup and exact collector diagnostics remain open."
     },
     {
       "id": "case.dataflow-logsink",
