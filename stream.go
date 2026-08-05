@@ -1072,20 +1072,40 @@ type ExternallyTimedWindowSpec struct {
 }
 
 type TimeOrderWindowSpec struct {
-	Timestamp Expr
-	Duration  time.Duration
+	Timestamp      Expr
+	Duration       time.Duration
+	CalendarYears  int
+	CalendarMonths int
+	CalendarDays   int
 }
 
 func TimeOrder(timestamp Expr, duration time.Duration) TimeOrderWindowSpec {
 	return TimeOrderWindowSpec{Timestamp: timestamp, Duration: duration}
 }
 
+// TimeOrderCalendar creates an externally timestamp-ordered window whose
+// retention interval is measured with calendar arithmetic. This is the Go
+// fluent counterpart of Esper's time_order(timestamp, 1 month/year/day)
+// forms; expiry uses time.Time.AddDate rather than a fixed duration.
+func TimeOrderCalendar(timestamp Expr, years, months, days int) TimeOrderWindowSpec {
+	return TimeOrderWindowSpec{
+		Timestamp:      timestamp,
+		CalendarYears:  years,
+		CalendarMonths: months,
+		CalendarDays:   days,
+	}
+}
+
 func (TimeOrderWindowSpec) windowSpec() {}
 func (w TimeOrderWindowSpec) description() string {
+	if w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
+		return fmt.Sprintf("time-order(%s,%dY%dM%dD)", w.Timestamp.Description(), w.CalendarYears, w.CalendarMonths, w.CalendarDays)
+	}
 	return "time-order(" + w.Timestamp.Description() + "," + w.Duration.String() + ")"
 }
 func (w TimeOrderWindowSpec) validate() error {
-	if w.Timestamp == nil || w.Duration <= 0 {
+	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
+	if w.Timestamp == nil || (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
 		return fmt.Errorf("esper: time-order window requires timestamp and positive duration")
 	}
 	return nil

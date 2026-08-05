@@ -5612,7 +5612,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		}
 		kept := state.entries[:0]
 		for _, existing := range state.entries {
-			if existing.receivedAt.Add(window.Duration).After(cutoff) {
+			if timeOrderExpiry(window, existing.receivedAt).After(cutoff) {
 				kept = append(kept, existing)
 			} else {
 				result.oldEvents = append(result.oldEvents, existing.event)
@@ -6010,7 +6010,7 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 	case TimeOrderWindowSpec:
 		kept := state.entries[:0]
 		for _, stored := range state.entries {
-			if !stored.receivedAt.Add(window.Duration).After(now) {
+			if !timeOrderExpiry(window, stored.receivedAt).After(now) {
 				result.oldEvents = append(result.oldEvents, stored.event)
 				continue
 			}
@@ -6403,6 +6403,13 @@ func eventTimestamp(expression Expr, event Event, now time.Time, variables map[s
 		return time.Unix(0, int64(number*float64(time.Millisecond))).UTC(), nil
 	}
 	return time.Time{}, fmt.Errorf("esper: external timestamp has unsupported type %T", value.Any())
+}
+
+func timeOrderExpiry(window TimeOrderWindowSpec, receivedAt time.Time) time.Time {
+	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
+		return receivedAt.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	}
+	return receivedAt.Add(window.Duration)
 }
 
 func compareStoredEvents(left, right Event, keys []SortKey, now time.Time, variables map[string]Value) int {
