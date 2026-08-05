@@ -559,6 +559,11 @@ type DataflowEdge struct {
 	FromPort string
 	To       string
 	ToPort   string
+	// Feedback marks an explicitly requested feedback edge. Ordinary edges
+	// remain acyclic so accidental graph cycles are rejected during Build;
+	// marked edges are retained in the runtime work queue for stateful custom
+	// operators such as iterative aggregators and factorial graphs.
+	Feedback bool
 }
 
 type DataflowDefinition struct {
@@ -616,9 +621,28 @@ func (b DataflowBuilder) Connect(from, to string) DataflowBuilder {
 // ConnectPorts links explicitly named ports. Build validates that declared
 // ports exist; built-in operators expose the conventional "in"/"out" ports.
 func (b DataflowBuilder) ConnectPorts(from, fromPort, to, toPort string) DataflowBuilder {
+	return b.connectPorts(from, fromPort, to, toPort, false)
+}
+
+// ConnectFeedback links an operator's conventional output to another
+// operator's conventional input as an explicit feedback edge. Feedback is
+// opt-in because ordinary graph cycles are rejected during Build; this form
+// is intended for stateful custom operators that terminate their own loop.
+func (b DataflowBuilder) ConnectFeedback(from, to string) DataflowBuilder {
+	return b.ConnectFeedbackPorts(from, "out", to, "in")
+}
+
+// ConnectFeedbackPorts is the named-port form of ConnectFeedback. The edge
+// remains visible through DataflowDefinition.Edges and is delivered by the
+// same synchronous work queue as ordinary edges.
+func (b DataflowBuilder) ConnectFeedbackPorts(from, fromPort, to, toPort string) DataflowBuilder {
+	return b.connectPorts(from, fromPort, to, toPort, true)
+}
+
+func (b DataflowBuilder) connectPorts(from, fromPort, to, toPort string, feedback bool) DataflowBuilder {
 	result := b
 	result.edges = append([]DataflowEdge(nil), b.edges...)
-	result.edges = append(result.edges, DataflowEdge{From: from, FromPort: fromPort, To: to, ToPort: toPort})
+	result.edges = append(result.edges, DataflowEdge{From: from, FromPort: fromPort, To: to, ToPort: toPort, Feedback: feedback})
 	return result
 }
 
@@ -1027,7 +1051,7 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 			if edge.From == "" || edge.To == "" || edge.FromPort == "" || edge.ToPort == "" {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, "dataflow edge requires source, source port, target and target port")
 			}
-			if edge.From == edge.To {
+			if edge.From == edge.To && !edge.Feedback {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow edge cannot loop operator %q to itself", edge.From))
 			}
 			if _, ok := seen[edge.From]; !ok {
@@ -1057,8 +1081,10 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 				}
 				seenJoinInputs[edge.To][edge.ToPort] = struct{}{}
 			}
-			adjacency[edge.From] = append(adjacency[edge.From], edge.To)
-			indegree[edge.To]++
+			if !edge.Feedback {
+				adjacency[edge.From] = append(adjacency[edge.From], edge.To)
+				indegree[edge.To]++
+			}
 		}
 		queue := make([]string, 0, len(b.operators))
 		for name := range seen {

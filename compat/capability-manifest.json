@@ -530,7 +530,7 @@
       "tags": ["correctness", "dataflow", "typed-ports", "fan-in", "fan-out"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "The Go fluent CustomTypedPorts API declares generic input/output value types, validates assignability at graph Build time and rejects a wrong runtime value at an edge. The mapped fan-in/fan-out trace routes two typed input families through four named ports and emits them to separate output ports. Java's larger custom operator lifecycle, factorial feedback, deep graph, concurrency/backpressure and cross-process configuration matrix remain open."
+      "difference": "The Go fluent CustomTypedPorts API declares generic input/output value types, validates assignability at graph Build time and rejects a wrong runtime value at an edge. The mapped fan-in/fan-out trace routes two typed input families through four named ports and emits them to separate output ports. Java's larger custom operator lifecycle, concurrency/backpressure and cross-process configuration matrix remain open; factorial feedback and the deep linear graph are mapped separately in case.dataflow-feedback."
     },
     {
       "id": "case.dataflow-lifecycle",
@@ -542,6 +542,17 @@
       "status": "mapped",
       "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
       "difference": "Go now provides blocking Run/Join over Start, terminal completion signaling, context-driven cancellation, idempotent Cancel, custom source factories with raw/typed output ports, Build/runtime output type validation, independent per-instance Open/Close hooks, finite-source completion, structured source error propagation, deterministic per-operator submission/time snapshots, definition properties with per-instance parameter providers, operator/source runtime injection callbacks and multiple concurrent source branches whose Join waits for every source. Graph delivery is serialized per instance with synchronous backpressure, while same-instance EventBusSink re-entry bypasses only the already-held delivery gate to avoid self-deadlock. Saved configurations support an independent configuration name, duplicate rejection and instantiation; saved in-process instances support deterministic listing, lookup and deletion. The Java matrix additionally covers blocking/non-blocking exception delivery, deep join timing, full cancellation exception text and built-in source/operator backpressure; external serialization/cross-process restoration and those remaining runtime combinations stay open."
+    },
+    {
+      "id": "case.dataflow-feedback",
+      "javaRuntimeIds": ["java-runtime-bddc8c72bd9d2a2c8869", "java-runtime-98c5bdc6afa84705b9db"],
+      "javaNames": ["EPLDataflowLargeNumOpsDataFlow", "EPLDataflowFactorial"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowInputOutputVariations.java"],
+      "goTests": ["TestDataflowDeepLinearGraphMatchesEsper", "TestDataflowFeedbackEdgeFactorialMatchesEsper", "TestDataflowUnmarkedCycleStillRejected"],
+      "tags": ["correctness", "dataflow", "deep-graph", "feedback", "ports"],
+      "status": "mapped",
+      "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
+      "difference": "The Go fluent graph supports explicit ConnectFeedback/ConnectFeedbackPorts edges for terminating stateful custom-operator loops while continuing to reject accidental unmarked cycles. The mapped factorial uses named typed ports and a feedback self-loop to produce 120, and a 17-stage linear graph covers the Java deep-operator shape. Java's scheduler/backpressure, arbitrary feedback termination diagnostics and broader custom operator method-binding matrix remain open."
     },
     {
       "id": "case.dataflow-epstatement-pattern",
@@ -1207,6 +1218,7 @@
     {"capabilityId": "query.historical-sql", "caseId": "case.historical-sql"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-eventbus"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-signal"},
+    {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-feedback"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-typed-ports"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-select-state"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-select-iterate"},
