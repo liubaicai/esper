@@ -1791,6 +1791,8 @@ type dataflowWorkItem struct {
 	value    any
 }
 
+type dataflowDispatchOwnerKey struct{}
+
 func (d *DataflowInstance) processGraphEvent(ctx context.Context, event any) error {
 	if err := contextErr(ctx); err != nil {
 		return err
@@ -1871,13 +1873,24 @@ func (d *DataflowInstance) processGraphQueue(ctx context.Context, queue []datafl
 	if d == nil {
 		return NewError(ErrorState, "nil dataflow instance")
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if owner, ok := ctx.Value(dataflowDispatchOwnerKey{}).(*DataflowInstance); ok && owner == d {
+		// An EventBusSink can synchronously re-enter Engine.Send, which may
+		// dispatch another source in this same instance before the outer graph
+		// queue returns. It is already inside this instance's dispatch section,
+		// so processing the nested queue directly avoids self-deadlock.
+		return d.processGraphQueueLocked(ctx, queue)
+	}
 	// Source runtimes are started independently and may submit concurrently.
 	// Serialize the complete work queue so stateful built-ins (notably the
 	// statement-owned subquery registry) and custom operators see the same
 	// single-input-at-a-time contract as the Java graph runtime.
 	d.dispatchMu.Lock()
 	defer d.dispatchMu.Unlock()
-	return d.processGraphQueueLocked(ctx, queue)
+	owned := context.WithValue(ctx, dataflowDispatchOwnerKey{}, d)
+	return d.processGraphQueueLocked(owned, queue)
 }
 
 func (d *DataflowInstance) processGraphQueueLocked(ctx context.Context, queue []dataflowWorkItem) error {
