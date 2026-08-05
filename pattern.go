@@ -38,6 +38,8 @@ type patternNode struct {
 	kind              patternNodeKind
 	tag               string
 	predicate         Expression[bool]
+	consumeLevel      int
+	consumeLevelSet   bool
 	left              *patternNode
 	right             *patternNode
 	child             *patternNode
@@ -62,6 +64,53 @@ func patternEvent(tag string, predicate Expression[bool]) *patternNode {
 	return &patternNode{kind: patternEventNode, tag: tag, predicate: predicate}
 }
 
+// clonePatternNode returns an independent pattern tree. PatternStream
+// builders are value-like, so modifiers such as Consume must not mutate a
+// branch that the caller may still reuse in another composed pattern.
+func clonePatternNode(node *patternNode) *patternNode {
+	if node == nil {
+		return nil
+	}
+	copyNode := *node
+	copyNode.left = clonePatternNode(node.left)
+	copyNode.right = clonePatternNode(node.right)
+	copyNode.child = clonePatternNode(node.child)
+	copyNode.schedule = append([]time.Time(nil), node.schedule...)
+	if node.calendar != nil {
+		calendar := *node.calendar
+		copyNode.calendar = &calendar
+	}
+	if node.cron != nil {
+		cron := *node.cron
+		copyNode.cron = &cron
+	}
+	return &copyNode
+}
+
+func lastPatternEvent(node *patternNode) *patternNode {
+	if node == nil {
+		return nil
+	}
+	switch node.kind {
+	case patternEventNode:
+		return node
+	case patternSequenceNode, patternAndNode, patternOrNode:
+		if event := lastPatternEvent(node.right); event != nil {
+			return event
+		}
+		return lastPatternEvent(node.left)
+	case patternUntilNode:
+		if event := lastPatternEvent(node.right); event != nil {
+			return event
+		}
+		return lastPatternEvent(node.child)
+	case patternNotNode, patternMatchUntilNode, patternEveryNode, patternWithinNode:
+		return lastPatternEvent(node.child)
+	default:
+		return nil
+	}
+}
+
 func (n *patternNode) description() string {
 	if n == nil {
 		return "<nil-pattern>"
@@ -71,7 +120,11 @@ func (n *patternNode) description() string {
 		if n.predicate == nil {
 			return n.tag + ":<nil>"
 		}
-		return n.tag + ":" + n.predicate.Description()
+		description := n.tag + ":" + n.predicate.Description()
+		if n.consumeLevelSet {
+			description += fmt.Sprintf(".consume(%d)", n.consumeLevel)
+		}
+		return description
 	case patternSequenceNode:
 		operator := "->"
 		if n.sequenceMaxSet {
@@ -142,6 +195,7 @@ type patternDefinition struct {
 	maxStates              int
 	within                 time.Duration
 	guard                  Expression[bool]
+	consumeInvalid         bool
 }
 
 // PatternStream is a fluent single-source CEP pattern builder. It deliberately
@@ -287,6 +341,28 @@ func (p PatternStream) FollowedBy(tag string, predicate Expression[bool]) Patter
 // pattern. A positive maximum is required and is checked during Build.
 func (p PatternStream) FollowedByMax(maximum int, tag string, predicate Expression[bool]) PatternStream {
 	return p.followedBy(maximum, true, tag, predicate)
+}
+
+// Consume marks the most recently appended event filter with an event-level
+// consumption priority. When multiple filters in the same Pattern query match
+// one input Event, only filters at the highest level receive that Event. A
+// zero level is equivalent to an unannotated filter; positive levels are
+// selected over lower levels. This is the fluent Go counterpart of Esper's
+// filter-level @consume(N) annotation.
+func (p PatternStream) Consume(level int) PatternStream {
+	if p.def == nil || p.def.root == nil {
+		return p
+	}
+	copyDefinition := *p.def
+	copyDefinition.steps = append([]patternStep(nil), p.def.steps...)
+	copyDefinition.root = clonePatternNode(p.def.root)
+	if event := lastPatternEvent(copyDefinition.root); event != nil {
+		event.consumeLevel = level
+		event.consumeLevelSet = true
+	} else {
+		copyDefinition.consumeInvalid = true
+	}
+	return PatternStream{env: p.env, def: &copyDefinition}
 }
 
 func (p PatternStream) followedBy(maximum int, maximumSet bool, tag string, predicate Expression[bool]) PatternStream {
@@ -726,6 +802,9 @@ func validatePattern(definition *patternDefinition) error {
 	if definition.sourceMismatch {
 		return NewError(ErrorDependency, "pattern combinators require the same environment and source")
 	}
+	if definition.consumeInvalid {
+		return NewError(ErrorInvalidRule, "pattern consume requires an event filter")
+	}
 	if definition.root == nil {
 		return NewError(ErrorInvalidRule, "pattern requires a pattern expression")
 	}
@@ -751,6 +830,9 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 	case patternEventNode:
 		if strings.TrimSpace(node.tag) == "" || node.predicate == nil {
 			return NewError(ErrorInvalidRule, "pattern event requires a tag and predicate")
+		}
+		if node.consumeLevelSet && node.consumeLevel < 0 {
+			return NewError(ErrorInvalidRule, "pattern consume level cannot be negative")
 		}
 		if _, exists := seen[node.tag]; exists && !allowDuplicate {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("pattern duplicates tag %q", node.tag))
@@ -905,4 +987,14 @@ func patternContainsTimer(node *patternNode) bool {
 		return true
 	}
 	return patternContainsTimer(node.left) || patternContainsTimer(node.right) || patternContainsTimer(node.child)
+}
+
+func patternHasConsumption(node *patternNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.kind == patternEventNode && node.consumeLevelSet {
+		return true
+	}
+	return patternHasConsumption(node.left) || patternHasConsumption(node.right) || patternHasConsumption(node.child)
 }

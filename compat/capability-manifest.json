@@ -197,11 +197,11 @@
       "domain": "pattern",
       "level": "S",
       "summary": "Fluent pattern composition, tags, repetition, fixed/dynamic/calendar guards and virtual-time timer observers",
-      "javaRefs": ["PatternMicrosecondResolution", "PatternOperatorEvery", "PatternOperatorMatchUntil", "PatternOperatorFollowedByMax", "PatternConsumingPattern", "PatternObserverTimerAt", "PatternObserverTimerInterval", "PatternObserverTimerSchedule"],
+      "javaRefs": ["PatternMicrosecondResolution", "PatternOperatorEvery", "PatternOperatorMatchUntil", "PatternOperatorFollowedByMax", "PatternConsumingPattern", "PatternConsumingFilter", "PatternObserverTimerAt", "PatternObserverTimerInterval", "PatternObserverTimerSchedule"],
       "goRefs": ["pattern.go", "pattern_test.go", "pattern_followed_by_max_test.go", "pattern_consumption_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["complete guard/observer combination", "event-level @consume(N) filter policies and the full nested combinator consumption trace", "advanced Match Recognize integration is tracked by rowrecog.match-recognize"]
+      "remaining": ["complete guard/observer combination", "full nested @consume(N) trace across match-until/guard/observer and complete SODA/invalid matrix", "advanced Match Recognize integration is tracked by rowrecog.match-recognize"]
     },
     {
       "id": "pattern.timer-cron-basic",
@@ -782,6 +782,17 @@
       "difference": "Go exposes query-level DiscardPartialsOnMatch and SuppressOverlappingMatches options for fluent Pattern queries, rejects them for non-pattern/context/join/action shapes, clears active branches after a visible completion, and suppresses overlapping captured-event results within the current result batch while allowing reuse in a later batch; policy flags also participate in Plan hash/canonical identity. Java additionally covers event-level @consume(N), every/and/or/match-until/guard/observer combinations, ordering and repeated-tag cardinality; those remain open."
     },
     {
+      "id": "case.pattern-consuming-filter",
+      "javaRuntimeIds": ["java-runtime-db22761aeeae234aa70f", "java-runtime-09fdeb1428f1772fd38c", "java-runtime-fa260698edee4fba58ed", "java-runtime-6cc7b65fc365ca99568d", "java-runtime-5742c44f5fc51b6adfa1"],
+      "javaNames": ["PatternFollowedBy", "PatternAnd", "PatternFilterAndSceneTwo", "PatternOr", "PatternInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternConsumingFilter.java"],
+      "goTests": ["TestPatternFilterConsumeFollowedByMatchesEsper", "TestPatternFilterConsumeAndPreservesSuppressedBranch", "TestPatternFilterConsumeOrSelectsHighestLevelAndFansOutTies", "TestPatternFilterConsumeNestedOrMatrixMatchesEsper", "TestPatternFilterConsumeContextKeepsHighestLevelSemantics", "TestPatternFilterConsumeEveryBranchesKeepSameLevelFanout", "TestPatternFilterConsumeZeroAndNegativeValidation"],
+      "tags": ["correctness", "pattern", "consumption", "priority", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
+      "difference": "Go exposes Consume(level) on the fluent PatternStream and applies the maximum level among matching event filters for one input Event, covering followed-by, and and or branches plus negative-level validation. Java additionally covers filter-scene lifecycle, every/non-every permutations, level zero and multi-branch cardinality, SODA rendering and parser diagnostics; nested match-until/guard/observer and complete trace parity remain open."
+    },
+    {
       "id": "case.pattern-timer-cron",
       "javaRuntimeIds": ["java-runtime-2ebf6d23390f9296e7b1", "java-runtime-15b8c1050cdf38920faa", "java-runtime-198e29697d770d74a050", "java-runtime-87905b2cf25801c7702d", "java-runtime-5d93878f1402d6f74201"],
       "javaNames": ["PatternMicrosecondResolutionCrontab", "PatternTimerScheduleDateWithPeriod", "PatternTimerAtSimple", "PatternOp", "PatternWMilliseconds"],
@@ -1191,6 +1202,7 @@
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-every"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-followed-by-max"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-consumption-policy"},
+    {"capabilityId": "pattern.basic", "caseId": "case.pattern-consuming-filter"},
     {"capabilityId": "pattern.timer-cron-basic", "caseId": "case.pattern-timer-cron"},
     {"capabilityId": "query.historical-sql", "caseId": "case.historical-sql"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-eventbus"},

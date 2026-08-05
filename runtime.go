@@ -2652,8 +2652,10 @@ type patternProgress struct {
 }
 
 type patternTransition struct {
-	state    *patternProgress
-	complete bool
+	state            *patternProgress
+	complete         bool
+	consumed         bool
+	consumptionLevel int
 }
 
 // patternTrigger distinguishes an incoming event from a virtual-clock
@@ -2661,9 +2663,10 @@ type patternTransition struct {
 // active match needs its own timer state instead of sharing the statement
 // level timer used by a timer-root pattern.
 type patternTrigger struct {
-	event   Event
-	now     time.Time
-	isTimer bool
+	event            Event
+	now              time.Time
+	isTimer          bool
+	consumptionLevel int
 }
 
 type patternMatch struct {
@@ -3153,12 +3156,39 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 		runtimeState.active = kept
 	}
 	matches := runtimeState.active
+	startAllowed := definition.every || len(matches) == 0
+	var startProgress *patternProgress
+	if startAllowed {
+		startProgress = newPatternProgress(definition.root)
+		startProgress.tags = clonePatternTags(seedTags)
+		startProgress.tagValues = clonePatternTagValues(seedTagValues)
+		armPatternProgressTimers(startProgress, now, variables)
+	}
+	consumptionLevel := -1
+	if patternHasConsumption(definition.root) {
+		probe := patternTrigger{event: event, now: now, consumptionLevel: -1}
+		for _, match := range matches {
+			for _, transition := range advancePatternNodeTrigger(match.state, probe, variables) {
+				if transition.consumed && transition.consumptionLevel > consumptionLevel {
+					consumptionLevel = transition.consumptionLevel
+				}
+			}
+		}
+		if startProgress != nil {
+			for _, transition := range advancePatternNodeTrigger(startProgress, probe, variables) {
+				if transition.consumed && transition.consumptionLevel > consumptionLevel {
+					consumptionLevel = transition.consumptionLevel
+				}
+			}
+		}
+	}
+	trigger := patternTrigger{event: event, now: now, consumptionLevel: consumptionLevel}
 	completed := make([]patternMatch, 0)
 	nextActive := make([]patternMatch, 0, len(matches)+1)
 	terminal := false
 	completedAny := false
 	for _, match := range matches {
-		transitions := advancePatternNode(match.state, event, now, variables)
+		transitions := advancePatternNodeTrigger(match.state, trigger, variables)
 		for _, transition := range transitions {
 			if transition.state == nil {
 				continue
@@ -3189,13 +3219,8 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			}
 		}
 	}
-	startAllowed := definition.every || len(matches) == 0
-	if startAllowed {
-		progress := newPatternProgress(definition.root)
-		progress.tags = clonePatternTags(seedTags)
-		progress.tagValues = clonePatternTagValues(seedTagValues)
-		armPatternProgressTimers(progress, now, variables)
-		starts := advancePatternNode(progress, event, now, variables)
+	if startProgress != nil {
+		starts := advancePatternNodeTrigger(startProgress, trigger, variables)
 		for _, transition := range starts {
 			if transition.state == nil || (!transition.complete && !patternProgressActive(transition.state)) {
 				continue
@@ -7163,12 +7188,26 @@ func patternTransitionFor(progress *patternProgress) patternTransition {
 	return patternTransition{state: progress, complete: complete}
 }
 
+func patternTransitionFrom(progress *patternProgress, complete bool, sources ...patternTransition) patternTransition {
+	transition := patternTransition{state: progress, complete: complete}
+	for _, source := range sources {
+		if !source.consumed {
+			continue
+		}
+		if !transition.consumed || source.consumptionLevel > transition.consumptionLevel {
+			transition.consumptionLevel = source.consumptionLevel
+		}
+		transition.consumed = true
+	}
+	return transition
+}
+
 func advancePatternNode(progress *patternProgress, event Event, now time.Time, variables map[string]Value) []patternTransition {
-	return advancePatternNodeTrigger(progress, patternTrigger{event: event, now: now}, variables)
+	return advancePatternNodeTrigger(progress, patternTrigger{event: event, now: now, consumptionLevel: -1}, variables)
 }
 
 func advancePatternNodeTime(progress *patternProgress, now time.Time, variables map[string]Value) []patternTransition {
-	return advancePatternNodeTrigger(progress, patternTrigger{now: now, isTimer: true}, variables)
+	return advancePatternNodeTrigger(progress, patternTrigger{now: now, isTimer: true, consumptionLevel: -1}, variables)
 }
 
 func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger, variables map[string]Value) []patternTransition {
@@ -7187,8 +7226,16 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 		if !patternPredicateMatches(next.node, next, trigger.event, trigger.now, variables) {
 			return []patternTransition{patternTransitionFor(next)}
 		}
+		if trigger.consumptionLevel >= 0 && next.node.consumeLevel < trigger.consumptionLevel {
+			return []patternTransition{patternTransitionFor(next)}
+		}
 		capturePatternEvent(next, trigger.event)
-		return []patternTransition{patternTransitionFor(next)}
+		return []patternTransition{patternTransition{
+			state:            next,
+			complete:         patternSatisfied(next),
+			consumed:         true,
+			consumptionLevel: next.node.consumeLevel,
+		}}
 
 	case patternTimerIntervalNode, patternTimerAtNode, patternTimerScheduleNode, patternTimerCronNode:
 		next := clonePatternProgress(progress)
@@ -7230,7 +7277,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					armPatternProgressTimers(next.right, trigger.now, variables)
 					next.started = true
 				}
-				result = append(result, patternTransitionFor(next))
+				result = append(result, patternTransitionFrom(next, patternSatisfied(next), leftTransition))
 			}
 			return result
 		}
@@ -7250,7 +7297,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				next.phase = 2
 				next.done = true
 			}
-			result = append(result, patternTransitionFor(next))
+			result = append(result, patternTransitionFrom(next, patternSatisfied(next), rightTransition))
 		}
 		return result
 
@@ -7270,7 +7317,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					next.expired = true
 				}
 				next.done = patternSatisfied(next.left) && patternSatisfied(next.right)
-				result = append(result, patternTransitionFor(next))
+				result = append(result, patternTransitionFrom(next, patternSatisfied(next), leftTransition, rightTransition))
 			}
 		}
 		return result
@@ -7278,7 +7325,58 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 	case patternOrNode:
 		leftTransitions := advancePatternNodeTrigger(progress.left, trigger, variables)
 		rightTransitions := advancePatternNodeTrigger(progress.right, trigger, variables)
-		result := make([]patternTransition, 0, len(leftTransitions)*len(rightTransitions))
+		result := make([]patternTransition, 0, len(leftTransitions)+len(rightTransitions))
+		leftMatched := false
+		rightMatched := false
+		for _, transition := range leftTransitions {
+			leftMatched = leftMatched || transition.consumed
+		}
+		for _, transition := range rightTransitions {
+			rightMatched = rightMatched || transition.consumed
+		}
+		if leftMatched || rightMatched {
+			// An Or is a fan-out of independent alternatives. Advancing both
+			// sides and merging their captures would turn two same-event
+			// callbacks into one row and would make @consume(N) unable to
+			// suppress the lower-priority alternative. Keep the other side at
+			// its pre-event state for each branch that actually matched.
+			for _, leftTransition := range leftTransitions {
+				if !leftTransition.consumed {
+					continue
+				}
+				next := clonePatternProgress(progress)
+				next.left = leftTransition.state
+				next.right = clonePatternProgress(progress.right)
+				next.tags = mergePatternTags(leftTransition.state.tags, next.right.tags)
+				next.tagValues = mergePatternTagValues(leftTransition.state.tagValues, next.right.tagValues)
+				next.started = patternProgressActive(next.left) || patternProgressActive(next.right)
+				next.done = patternSatisfied(next.left) || patternSatisfied(next.right)
+				if !next.done && patternProgressTerminal(leftTransition.state) && patternProgressTerminal(next.right) {
+					next.expired = true
+				}
+				result = append(result, patternTransitionFrom(next, patternSatisfied(next), leftTransition))
+			}
+			for _, rightTransition := range rightTransitions {
+				if !rightTransition.consumed {
+					continue
+				}
+				next := clonePatternProgress(progress)
+				next.left = clonePatternProgress(progress.left)
+				next.right = rightTransition.state
+				next.tags = mergePatternTags(next.left.tags, rightTransition.state.tags)
+				next.tagValues = mergePatternTagValues(next.left.tagValues, rightTransition.state.tagValues)
+				next.started = patternProgressActive(next.left) || patternProgressActive(next.right)
+				next.done = patternSatisfied(next.left) || patternSatisfied(next.right)
+				if !next.done && patternProgressTerminal(next.left) && patternProgressTerminal(rightTransition.state) {
+					next.expired = true
+				}
+				result = append(result, patternTransitionFrom(next, patternSatisfied(next), rightTransition))
+			}
+			return result
+		}
+		// No branch consumed the event. Preserve the existing product of
+		// no-op transitions so nested observers and negative branches keep
+		// their current state.
 		for _, leftTransition := range leftTransitions {
 			for _, rightTransition := range rightTransitions {
 				next := clonePatternProgress(progress)
@@ -7291,7 +7389,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				if !next.done && patternProgressTerminal(leftTransition.state) && patternProgressTerminal(rightTransition.state) {
 					next.expired = true
 				}
-				result = append(result, patternTransitionFor(next))
+				result = append(result, patternTransitionFrom(next, patternSatisfied(next), leftTransition, rightTransition))
 			}
 		}
 		return result
@@ -7311,7 +7409,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 			// A negative branch never contributes positive captures to its parent.
 			next.tags = nil
 			next.tagValues = nil
-			result = append(result, patternTransitionFor(next))
+			result = append(result, patternTransitionFrom(next, patternTransitionFor(next).complete, childTransition))
 		}
 		return result
 
@@ -7338,7 +7436,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					armPatternProgressTimers(next.child, trigger.now, variables)
 				}
 			}
-			result = append(result, patternTransitionFor(next))
+			result = append(result, patternTransitionFrom(next, patternSatisfied(next), childTransition))
 		}
 		return result
 
@@ -7364,7 +7462,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				if terminatorTransition.complete {
 					next.done = true
 				}
-				result = append(result, patternTransitionFor(next))
+				result = append(result, patternTransitionFrom(next, patternSatisfied(next), childTransition, terminatorTransition))
 			}
 		}
 		return result
@@ -7406,7 +7504,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				inheritPatternProgressTags(next, next.child)
 				armPatternProgressTimers(next.child, trigger.now, variables)
 			}
-			result = append(result, patternTransition{state: next, complete: fired})
+			result = append(result, patternTransitionFrom(next, fired, childTransition))
 		}
 		return result
 
@@ -7444,17 +7542,14 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				if candidate.node.maximum == 0 {
 					candidate.expired = true
 					candidate.child = nil
-					result = append(result, patternTransition{state: candidate})
+					result = append(result, patternTransitionFrom(candidate, false, childTransition))
 					continue
 				}
 				if candidate.node.maximum > 0 && candidate.count >= candidate.node.maximum {
 					candidate.done = true
 				}
 			}
-			result = append(result, patternTransition{
-				state:    candidate,
-				complete: childTransition.complete && patternSatisfied(candidate),
-			})
+			result = append(result, patternTransitionFrom(candidate, childTransition.complete && patternSatisfied(candidate), childTransition))
 		}
 		return result
 	default:
@@ -7480,6 +7575,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 	batch.outputCountsSet = true
 	batch.outputInserted = int64(len(delta.newEvents))
 	batch.outputRemoved = int64(len(delta.oldEvents))
+	hasConsumption := patternHasConsumption(definition.root)
 	for _, event := range delta.newEvents {
 		if r.patternState.patternStopped {
 			continue
@@ -7490,11 +7586,33 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 		}
 		r.patternExpire(definition, now)
 		matches := r.patternState.active
+		startAllowed := definition.every || len(matches) == 0
+		consumptionLevel := -1
+		if hasConsumption {
+			probe := patternTrigger{event: event, now: now, consumptionLevel: -1}
+			for _, match := range matches {
+				for _, transition := range advancePatternNodeTrigger(match.state, probe, r.variables) {
+					if transition.consumed && transition.consumptionLevel > consumptionLevel {
+						consumptionLevel = transition.consumptionLevel
+					}
+				}
+			}
+			if startAllowed && !plan.query.discardPartialsOnMatch {
+				progress := newPatternProgress(definition.root)
+				armPatternProgressTimers(progress, now, r.variables)
+				for _, transition := range advancePatternNodeTrigger(progress, probe, r.variables) {
+					if transition.consumed && transition.consumptionLevel > consumptionLevel {
+						consumptionLevel = transition.consumptionLevel
+					}
+				}
+			}
+		}
+		trigger := patternTrigger{event: event, now: now, consumptionLevel: consumptionLevel}
 		nextActive := make([]patternMatch, 0, len(matches)+1)
 		terminal := false
 		completed := false
 		for _, match := range matches {
-			transitions := advancePatternNode(match.state, event, now, r.variables)
+			transitions := advancePatternNodeTrigger(match.state, trigger, r.variables)
 			for _, transition := range transitions {
 				if transition.state == nil {
 					continue
@@ -7528,11 +7646,10 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 			}
 		}
 
-		startAllowed := definition.every || len(matches) == 0
 		if startAllowed && !(plan.query.discardPartialsOnMatch && completed) {
 			progress := newPatternProgress(definition.root)
 			armPatternProgressTimers(progress, now, r.variables)
-			starts := advancePatternNode(progress, event, now, r.variables)
+			starts := advancePatternNodeTrigger(progress, trigger, r.variables)
 			for _, transition := range starts {
 				if transition.state == nil || (!transition.complete && !patternProgressActive(transition.state)) {
 					continue
