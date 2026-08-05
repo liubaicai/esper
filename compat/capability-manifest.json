@@ -275,10 +275,10 @@
       "level": "S",
       "summary": "Named Window/Table-backed fluent correlated exists, scalar and IN subqueries with parameters and nested outer-field scope",
       "javaRefs": ["EPLSubselectAggregatedInExistsAnyAll", "EPLSubselectAggregatedSingleValue", "EPLSubselectAggregatedMultirowAndColumn"],
-      "goRefs": ["subquery.go", "subquery_test.go", "pattern_subquery_test.go", "plan.go", "runtime.go", "faf.go"],
+      "goRefs": ["subquery.go", "subquery_test.go", "pattern_subquery_test.go", "pattern_subquery_filter_variants_test.go", "state.go", "plan.go", "runtime.go", "faf.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["multi-column/multi-row result contracts and grouped/having aggregate matrix", "advanced initiated/temporal context combinations beyond the mapped segmented/daily/initiated LastEvent cases, Pattern aggregation/named-window/UDF combinations", "typed/multi-port Dataflow subquery propagation", "scalar iterator/error semantics and Java cardinality diagnostics", "full Java invalid-rule and execution trace parity"]
+      "remaining": ["multi-column/multi-row result contracts and grouped/having aggregate matrix", "advanced initiated/temporal context combinations beyond the mapped segmented/daily/initiated LastEvent cases", "Pattern aggregation and remaining Pattern/Context/Dataflow combinations", "typed/multi-port Dataflow subquery propagation", "scalar iterator/error semantics and Java cardinality diagnostics", "full Java invalid-rule and execution trace parity"]
     },
     {
       "id": "rowrecog.match-recognize",
@@ -504,11 +504,11 @@
       "javaRuntimeIds": ["java-runtime-3d9d3a714bd642e784bd", "java-runtime-0db35509697665c0960e", "java-runtime-9a15ec8213060ac0185c", "java-runtime-3c1d7cc144c168f6a0d6"],
       "javaNames": ["EPLSubselectCorrelated", "EPLSubselectFilterPatternNamedWindowNoAlias", "EPLSubselectAggregation", "EPLSubselectSubqueryAgainstNamedWindowInUDFInPattern"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectWithinPattern.java"],
-      "goTests": ["TestPatternSubqueryCorrelatedExistsMatchesEsper", "TestPatternSubqueryInLastEventMatchesEsper", "TestEventStreamSubqueryAggregationWindowMatchesEsper", "TestPatternSubqueryNamedWindowFunctionMatchesEsper"],
+      "goTests": ["TestPatternSubqueryCorrelatedExistsMatchesEsper", "TestPatternSubqueryInLastEventMatchesEsper", "TestPatternSubqueryFilterAndNamedWindowVariantsMatchesEsper", "TestEventStreamSubqueryAggregationWindowMatchesEsper", "TestPatternSubqueryNamedWindowFunctionMatchesEsper"],
       "tags": ["correctness", "query", "subquery", "pattern", "correlation"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream and SubqueryIn over a LastEvent event stream, with inner Field expressions and explicit current-event/OuterField scope. Event-stream SubquerySum over a length(2) source reproduces the Java rolling aggregate filter sequence across empty, replacement and exact-sum boundaries, while a chainable Func1 receives a Named Window SubqueryCount inside a Pattern predicate and verifies current Named Window state. Invalid diagnostics and broader Pattern/Context/Dataflow combinations remain open."
+      "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream and SubqueryIn over a LastEvent event stream, with inner Field expressions and explicit current-event/OuterField scope. The Java filter execution's event-stream Filter, Named Window Filter and Named Window Pattern branches now share one exact tryAssertion trace; NamedWindowRetention(LastEvent()) replaces the previous row and dispatches the old/new state needed by the subquery. Event-stream SubquerySum over a length(2) source reproduces the Java rolling aggregate filter sequence across empty, replacement and exact-sum boundaries, while a chainable Func1 receives a Named Window SubqueryCount inside a Pattern predicate and verifies current Named Window state. Invalid diagnostics, Pattern aggregation and broader Pattern/Context/Dataflow combinations remain open."
     },
     {
       "id": "case.dataflow-typed-ports",

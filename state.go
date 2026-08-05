@@ -1056,7 +1056,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 	}
 	if insertEvent {
 		switch state.def.retention.(type) {
-		case KeepAllWindowSpec, LengthWindowSpec, TimeWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec:
+		case KeepAllWindowSpec, LengthWindowSpec, LastEventWindowSpec, TimeWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec:
 		default:
 			return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", state.def.retention))
 		}
@@ -1104,6 +1104,12 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 	}
 	if insertEvent {
 		switch retention := state.def.retention.(type) {
+		case LastEventWindowSpec:
+			if len(entries) > 0 {
+				delta.Old = append(delta.Old, entries[len(entries)-1].event)
+			}
+			entries = []storedEvent{{event: preparedInsert, receivedAt: now}}
+			delta.New = append(delta.New, preparedInsert)
 		case UniqueWindowSpec:
 			entry := storedEvent{event: preparedInsert, receivedAt: now}
 			duplicate := -1
@@ -1186,6 +1192,11 @@ func (w *NamedWindow) insert(now time.Time, underlying any) (NamedWindowDelta, e
 			delta.Old = append(delta.Old, state.entries[0].event)
 			state.entries = state.entries[1:]
 		}
+	case LastEventWindowSpec:
+		if len(state.entries) > 0 {
+			delta.Old = append(delta.Old, state.entries[len(state.entries)-1].event)
+		}
+		state.entries = []storedEvent{entry}
 	case TimeWindowSpec, TimeToLiveWindowSpec:
 		state.entries = append(state.entries, entry)
 	case TimeToLiveAtWindowSpec:
