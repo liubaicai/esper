@@ -497,6 +497,212 @@ func TestPatternMatchUntilCountsRepeats(t *testing.T) {
 	}
 }
 
+func TestPatternMatchUntilExpressionBoundsUseVariablesAndParameters(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	if err := env.RegisterVariable("lower", 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.RegisterVariable("upper", 3); err != nil {
+		t.Fatal(err)
+	}
+	base := From[runtimeTestTrade](env, "Trade")
+	pattern := PatternFrom(base, "tick", Literal(true)).MatchUntilExpr(
+		VariableRef[int]("lower"),
+		VariableRef[int]("upper"),
+	)
+	plan, err := env.Build(pattern.Select(
+		Alias("count", TagCount("tick")),
+		Alias("first", TagFieldAt[string]("tick", 0, "symbol")),
+		Alias("last", TagField[string]("tick", "symbol")),
+	).Query(StatementName("pattern-match-until-expression-bounds")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Query().pattern.root.minimumExpr == nil || plan.Query().pattern.root.maximumExpr == nil {
+		t.Fatal("dynamic match-until bounds were not retained")
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, symbol := range []string{"A1", "A2"} {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 1 || rows[0].Get("count").Any() != int64(2) || rows[0].Get("first").Any() != "A1" || rows[0].Get("last").Any() != "A2" {
+		t.Fatalf("variable match-until rows = %#v, want count=2 A1/A2", rows)
+	}
+
+	parameterPattern := PatternFrom(base, "tick", Literal(true)).MatchUntilExpr(
+		Parameter[int]("lowerParam"),
+		Parameter[int]("upperParam"),
+	)
+	parameterPlan, err := env.Build(parameterPattern.Select(
+		Alias("count", TagCount("tick")),
+	).Query(StatementName("pattern-match-until-parameter-bounds")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	parameterDeployment, err := engine.DeployWithParameters(context.Background(), parameterPlan, ParameterValues{
+		"lowerParam": 2,
+		"upperParam": 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer parameterDeployment.Undeploy(context.Background())
+	var parameterRows []Row
+	if _, err := parameterDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				parameterRows = append(parameterRows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, symbol := range []string{"P1", "P2"} {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(parameterRows) != 1 || parameterRows[0].Get("count").Any() != int64(2) {
+		t.Fatalf("parameter match-until rows = %#v, want count=2", parameterRows)
+	}
+
+	openPattern := PatternFrom(base, "tick", Literal(true)).MatchUntilExpr(
+		Parameter[int]("lowerOpen"),
+		Parameter[int]("upperOpen"),
+	)
+	openPlan, err := env.Build(openPattern.Select(
+		Alias("count", TagCount("tick")),
+	).Query(StatementName("pattern-match-until-open-parameter-bounds")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	openDeployment, err := engine.DeployWithParameters(context.Background(), openPlan, ParameterValues{
+		"lowerOpen": 3,
+		"upperOpen": nil,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer openDeployment.Undeploy(context.Background())
+	var openRows []Row
+	if _, err := openDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				openRows = append(openRows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, symbol := range []string{"O1", "O2", "O3"} {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(openRows) != 1 || openRows[0].Get("count").Any() != int64(3) {
+		t.Fatalf("open parameter match-until rows = %#v, want count=3", openRows)
+	}
+}
+
+func TestPatternMatchUntilExpressionBoundsRejectInvalidRuntimeValues(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	if err := env.RegisterVariable("lower", 3); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.RegisterVariable("upper", 2); err != nil {
+		t.Fatal(err)
+	}
+	base := From[runtimeTestTrade](env, "Trade")
+	plan, err := env.Build(PatternFrom(base, "tick", Literal(true)).MatchUntilExpr(
+		VariableRef[int]("lower"),
+		VariableRef[int]("upper"),
+	).Select(Alias("count", TagCount("tick"))).Query(StatementName("pattern-match-until-invalid-runtime-bounds")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var rows []Result
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		rows = append(rows, batch.New...)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "invalid"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("invalid dynamic match-until bounds emitted rows = %#v", rows)
+	}
+}
+
+func TestPatternMatchUntilExpressionBoundsUseCapturedTag(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	bound := PatternFrom(base, "bound", Literal(true))
+	repeated := PatternFrom(base, "tick", Literal(true)).MatchUntilExpr(
+		Cast[float64, int](TagField[float64]("bound", "price")),
+		nil,
+	)
+	plan, err := env.Build(bound.Then(repeated).Select(
+		Alias("count", TagCount("tick")),
+		Alias("bound", TagField[string]("bound", "symbol")),
+	).Query(StatementName("pattern-match-until-captured-tag-bounds")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []runtimeTestTrade{{Symbol: "bound", Price: 2}, {Symbol: "A"}, {Symbol: "B"}} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 1 || rows[0].Get("count").Any() != int64(2) || rows[0].Get("bound").Any() != "bound" {
+		t.Fatalf("captured-tag match-until rows = %#v, want count=2", rows)
+	}
+}
+
 func TestPatternUntilRetainsRepeatedTagsAndTerminator(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")

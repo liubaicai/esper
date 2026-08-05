@@ -2629,26 +2629,29 @@ type rowRecogPartitionState struct {
 // deliberately separate from the public builder AST: the same pattern tree
 // can have many independent in-flight matches when Every is enabled.
 type patternProgress struct {
-	node          *patternNode
-	phase         uint8
-	count         int
-	done          bool
-	blocked       bool
-	started       bool
-	expired       bool
-	timerStarted  bool
-	timerNext     time.Time
-	timerEmitted  bool
-	scheduleIndex int
-	cronSchedule  resolvedCronSchedule
-	cronNext      time.Time
-	left          *patternProgress
-	right         *patternProgress
-	child         *patternProgress
-	tags          map[string]Event
-	tagValues     map[string][]Event
-	distinct      map[string]struct{}
-	distinctAt    map[string]time.Time
+	node           *patternNode
+	phase          uint8
+	count          int
+	done           bool
+	blocked        bool
+	started        bool
+	expired        bool
+	minimum        int
+	maximum        int
+	boundsResolved bool
+	timerStarted   bool
+	timerNext      time.Time
+	timerEmitted   bool
+	scheduleIndex  int
+	cronSchedule   resolvedCronSchedule
+	cronNext       time.Time
+	left           *patternProgress
+	right          *patternProgress
+	child          *patternProgress
+	tags           map[string]Event
+	tagValues      map[string][]Event
+	distinct       map[string]struct{}
+	distinctAt     map[string]time.Time
 }
 
 type patternTransition struct {
@@ -6708,7 +6711,12 @@ func newPatternProgress(node *patternNode) *patternProgress {
 	if node == nil {
 		return nil
 	}
-	progress := &patternProgress{node: node}
+	progress := &patternProgress{
+		node:           node,
+		minimum:        node.minimum,
+		maximum:        node.maximum,
+		boundsResolved: node.minimumExpr == nil && node.maximumExpr == nil,
+	}
 	switch node.kind {
 	case patternSequenceNode, patternAndNode, patternOrNode:
 		progress.left = newPatternProgress(node.left)
@@ -6842,6 +6850,64 @@ func inheritPatternProgressTags(parent, child *patternProgress) {
 	}
 	child.tags = mergePatternTags(parent.tags, child.tags)
 	child.tagValues = mergePatternTagValues(parent.tagValues, child.tagValues)
+}
+
+func resolvePatternMatchUntilBounds(progress *patternProgress, trigger patternTrigger, variables map[string]Value) bool {
+	if progress == nil || progress.node == nil || progress.node.kind != patternMatchUntilNode || progress.boundsResolved {
+		return progress != nil && progress.boundsResolved
+	}
+	minimum := 0
+	maximum := 0
+	maximumPresent := false
+	if progress.node.minimumExpr != nil {
+		value := progress.node.minimumExpr.eval(EvalContext{
+			Tags:       progress.tags,
+			TagValues:  progress.tagValues,
+			Now:        trigger.now,
+			Variables:  variables,
+			Parameters: parameterValuesFromVariables(variables),
+		})
+		if value.IsMissing() {
+			return false
+		}
+		if value.IsNull() {
+			value = Present(0)
+		}
+		resolved, err := As[int](value)
+		if err != nil || !value.IsPresent() {
+			return false
+		}
+		minimum = resolved
+	}
+	if progress.node.maximumExpr != nil {
+		value := progress.node.maximumExpr.eval(EvalContext{
+			Tags:       progress.tags,
+			TagValues:  progress.tagValues,
+			Now:        trigger.now,
+			Variables:  variables,
+			Parameters: parameterValuesFromVariables(variables),
+		})
+		if value.IsMissing() {
+			return false
+		}
+		if value.IsNull() {
+			value = Present(0)
+		} else {
+			maximumPresent = true
+		}
+		resolved, err := As[int](value)
+		if err != nil || !value.IsPresent() {
+			return false
+		}
+		maximum = resolved
+	}
+	if minimum < 0 || (maximumPresent && maximum <= 0) || (maximum > 0 && maximum < minimum) {
+		return false
+	}
+	progress.minimum = minimum
+	progress.maximum = maximum
+	progress.boundsResolved = true
+	return true
 }
 
 func patternDurationDeadline(node *patternNode, progress *patternProgress, at time.Time, variables map[string]Value) (time.Time, bool) {
@@ -7029,7 +7095,7 @@ func patternSatisfied(progress *patternProgress) bool {
 	case patternNotNode:
 		return !progress.blocked
 	case patternMatchUntilNode:
-		return progress.count >= progress.node.minimum
+		return progress.count >= progress.minimum
 	case patternUntilNode:
 		return progress.done
 	case patternEveryNode:
@@ -7423,21 +7489,27 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 		return result
 
 	case patternMatchUntilNode:
-		childTransitions := advancePatternNodeTrigger(progress.child, trigger, variables)
+		base := clonePatternProgress(progress)
+		if !resolvePatternMatchUntilBounds(base, trigger, variables) {
+			base.expired = true
+			base.child = nil
+			return []patternTransition{{state: base, complete: false}}
+		}
+		childTransitions := advancePatternNodeTrigger(base.child, trigger, variables)
 		result := make([]patternTransition, 0, len(childTransitions))
 		for _, childTransition := range childTransitions {
-			next := clonePatternProgress(progress)
+			next := clonePatternProgress(base)
 			next.child = childTransition.state
 			next.tags = mergePatternTags(progress.tags, childTransition.state.tags)
 			next.tagValues = mergePatternTagValues(progress.tagValues, childTransition.state.tagValues)
 			next.count = progress.count
 			next.started = progress.count > 0 || patternProgressActive(childTransition.state)
-			if patternProgressTerminal(childTransition.state) && !childTransition.complete && next.count < progress.node.minimum {
+			if patternProgressTerminal(childTransition.state) && !childTransition.complete && next.count < next.minimum {
 				next.expired = true
 			}
 			if childTransition.complete {
 				next.count++
-				if next.count >= progress.node.minimum || (progress.node.maximum > 0 && next.count >= progress.node.maximum) {
+				if next.count >= next.minimum || (next.maximum > 0 && next.count >= next.maximum) {
 					next.done = true
 					next.child = nil
 				} else {

@@ -47,6 +47,8 @@ type patternNode struct {
 	sequenceMaxSet    bool
 	minimum           int
 	maximum           int
+	minimumExpr       Expr
+	maximumExpr       Expr
 	everyKey          *exprNode
 	everyExpr         Expr
 	duration          time.Duration
@@ -138,11 +140,17 @@ func (n *patternNode) description() string {
 	case patternNotNode:
 		return "not(" + n.child.description() + ")"
 	case patternMatchUntilNode:
+		minimum := fmt.Sprintf("%d", n.minimum)
+		if n.minimumExpr != nil {
+			minimum = n.minimumExpr.Description()
+		}
 		maximum := "*"
-		if n.maximum > 0 {
+		if n.maximumExpr != nil {
+			maximum = n.maximumExpr.Description()
+		} else if n.maximum > 0 {
 			maximum = fmt.Sprintf("%d", n.maximum)
 		}
-		return fmt.Sprintf("match-until(%d:%s,%s)", n.minimum, maximum, n.child.description())
+		return fmt.Sprintf("match-until(%s:%s,%s)", minimum, maximum, n.child.description())
 	case patternUntilNode:
 		return "until(" + n.child.description() + "," + n.right.description() + ")"
 	case patternEveryNode:
@@ -644,6 +652,33 @@ func (p PatternStream) MatchUntil(minimum, maximum int) PatternStream {
 	return PatternStream{env: p.env, def: &copyDefinition}
 }
 
+// MatchUntilExpr applies dynamic lower and upper bounds to a repeated
+// pattern branch. A nil minimum means zero and a nil maximum means
+// unbounded. Bounds are resolved when the branch is first armed, so they can
+// read registered variables, deployment parameters, and captured outer tags.
+// Runtime values must be non-negative and maximum must be at least minimum.
+func (p PatternStream) MatchUntilExpr(minimum, maximum Expression[int]) PatternStream {
+	if p.def == nil {
+		return p
+	}
+	copyDefinition := *p.def
+	copyDefinition.steps = nil
+	var minimumExpr, maximumExpr Expr
+	if minimum != nil {
+		minimumExpr = minimum
+	}
+	if maximum != nil {
+		maximumExpr = maximum
+	}
+	copyDefinition.root = &patternNode{
+		kind:        patternMatchUntilNode,
+		child:       p.def.root,
+		minimumExpr: minimumExpr,
+		maximumExpr: maximumExpr,
+	}
+	return PatternStream{env: p.env, def: &copyDefinition}
+}
+
 // Until repeats the left pattern while independently watching the right
 // pattern as a terminator. A completed terminator emits one match containing
 // the repeated left-tag values and the terminator tags.
@@ -878,10 +913,16 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 	case patternNotNode:
 		return validatePatternNodeScope(node.child, seen, false)
 	case patternMatchUntilNode:
-		if node.minimum <= 0 {
+		if node.minimumExpr != nil && node.minimumExpr.Type() != typeOf[int]() {
+			return NewError(ErrorTypeMismatch, "match-until minimum expression must return int")
+		}
+		if node.maximumExpr != nil && node.maximumExpr.Type() != typeOf[int]() {
+			return NewError(ErrorTypeMismatch, "match-until maximum expression must return int")
+		}
+		if node.minimumExpr == nil && node.minimum <= 0 {
 			return NewError(ErrorInvalidRule, "match-until minimum must be positive")
 		}
-		if node.maximum > 0 && node.maximum < node.minimum {
+		if node.minimumExpr == nil && node.maximumExpr == nil && node.maximum > 0 && node.maximum < node.minimum {
 			return NewError(ErrorInvalidRule, "match-until maximum must be at least minimum")
 		}
 		return validatePatternNodeScope(node.child, seen, false)

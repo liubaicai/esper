@@ -1580,6 +1580,12 @@ func visitPatternNodeExpressions(node *patternNode, visit func(Expr) error) erro
 	if err := visit(node.everyExpr); err != nil {
 		return err
 	}
+	if err := visit(node.minimumExpr); err != nil {
+		return err
+	}
+	if err := visit(node.maximumExpr); err != nil {
+		return err
+	}
 	if err := visit(node.durationExpr); err != nil {
 		return err
 	}
@@ -2827,7 +2833,19 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 			return err
 		}
 		return e.validatePatternNodeFields(input, node.right)
-	case patternNotNode, patternMatchUntilNode:
+	case patternNotNode:
+		return e.validatePatternNodeFields(input, node.child)
+	case patternMatchUntilNode:
+		if node.minimumExpr != nil {
+			if err := e.validateExprFields(input, node.minimumExpr); err != nil {
+				return fmt.Errorf("match-until minimum: %w", err)
+			}
+		}
+		if node.maximumExpr != nil {
+			if err := e.validateExprFields(input, node.maximumExpr); err != nil {
+				return fmt.Errorf("match-until maximum: %w", err)
+			}
+		}
 		return e.validatePatternNodeFields(input, node.child)
 	case patternUntilNode:
 		if err := e.validatePatternNodeFields(input, node.child); err != nil {
