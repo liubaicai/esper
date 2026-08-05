@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -81,6 +82,36 @@ func EmitPort(port string, value any) DataflowEmission {
 type DataflowInput struct {
 	Port  string
 	Value any
+}
+
+// DataflowEmitter is a handle to a captive Emitter source.  It is returned by
+// DataflowInstance.CaptiveEmitter and lets a caller feed a running graph one
+// value at a time without routing the value through the engine's ordinary
+// event bus.
+type DataflowEmitter struct {
+	instance *DataflowInstance
+	name     string
+}
+
+// Submit injects one event value into the captive emitter's outgoing graph.
+// Registered Go event values and already materialized Event values are both
+// accepted.
+func (e *DataflowEmitter) Submit(ctx context.Context, value any) error {
+	if e == nil || e.instance == nil {
+		return NewError(ErrorState, "nil dataflow emitter")
+	}
+	return e.instance.submitEmitter(ctx, e.name, value)
+}
+
+// SubmitSignal injects a control-plane signal through the captive emitter.
+func (e *DataflowEmitter) SubmitSignal(ctx context.Context, signal DataflowSignal) error {
+	if e == nil || e.instance == nil {
+		return NewError(ErrorState, "nil dataflow emitter")
+	}
+	if signal == nil {
+		return NewError(ErrorInvalidRule, "dataflow signal is nil")
+	}
+	return e.instance.submitEmitter(ctx, e.name, signal)
 }
 
 // DataflowOperatorRuntime is the minimum contract for a custom transform or
@@ -627,6 +658,7 @@ type DataflowInstance struct {
 	graph                  bool
 	statementSubscriptions []*Subscription
 	runtimes               map[string]DataflowOperatorRuntime
+	subqueryRegistries     map[string]*subqueryRuntimeRegistry
 	runtimesClosed         bool
 	processed              atomic.Uint64
 	emitted                atomic.Uint64
@@ -660,15 +692,16 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 		options.InstanceID = registered.name
 	}
 	instance := &DataflowInstance{
-		engine:     e,
-		definition: registered,
-		options:    options,
-		state:      DataflowInstantiated,
-		eventTypes: make(map[string]struct{}),
-		operators:  make(map[string]DataflowOperator, len(registered.operators)),
-		outgoing:   make(map[string][]DataflowEdge),
-		graph:      len(registered.edges) > 0,
-		runtimes:   make(map[string]DataflowOperatorRuntime),
+		engine:             e,
+		definition:         registered,
+		options:            options,
+		state:              DataflowInstantiated,
+		eventTypes:         make(map[string]struct{}),
+		operators:          make(map[string]DataflowOperator, len(registered.operators)),
+		outgoing:           make(map[string][]DataflowEdge),
+		graph:              len(registered.edges) > 0,
+		runtimes:           make(map[string]DataflowOperatorRuntime),
+		subqueryRegistries: make(map[string]*subqueryRuntimeRegistry),
 	}
 	for operatorNumber, operator := range registered.operators {
 		instance.operators[operator.Name] = operator
@@ -695,6 +728,21 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 			}
 			instance.runtimes[operator.Name] = runtime
 		}
+		var expressions []Selection
+		switch operator.Kind {
+		case FilterKind:
+			if operator.Predicate != nil {
+				expressions = []Selection{{Name: operator.Name, Expr: operator.Predicate}}
+			}
+		case SelectKind:
+			expressions = operator.Selections
+		}
+		if len(expressions) > 0 {
+			registry := newSubqueryRuntimeRegistry(e.env, e, Query{env: e.env, selections: expressions})
+			if registry != nil {
+				instance.subqueryRegistries[operator.Name] = registry
+			}
+		}
 	}
 	for _, edge := range registered.edges {
 		instance.outgoing[edge.From] = append(instance.outgoing[edge.From], edge)
@@ -707,6 +755,26 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 	e.dataflows[instance] = struct{}{}
 	e.mu.Unlock()
 	return instance, nil
+}
+
+// CaptiveEmitter returns a handle for an Emitter operator that has outgoing
+// graph edges.  The handle can be used after Start while the dataflow remains
+// in its running state, matching Esper's captive start mode.
+func (d *DataflowInstance) CaptiveEmitter(name string) (*DataflowEmitter, error) {
+	if d == nil {
+		return nil, NewError(ErrorState, "nil dataflow instance")
+	}
+	d.mu.Lock()
+	operator, ok := d.operators[name]
+	hasOutgoing := len(d.outgoing[name]) > 0
+	d.mu.Unlock()
+	if !ok {
+		return nil, NewError(ErrorUnknownName, fmt.Sprintf("dataflow emitter %q is not defined", name))
+	}
+	if operator.Kind != EmitterKind || !hasOutgoing {
+		return nil, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q is not a captive emitter source", name))
+	}
+	return &DataflowEmitter{instance: d, name: name}, nil
 }
 
 // InstantiateSavedDataflow creates an instance from a saved in-process
@@ -822,6 +890,66 @@ func (d *DataflowInstance) SubmitSignal(ctx context.Context, signal DataflowSign
 	return d.process(ctx, signal)
 }
 
+func (d *DataflowInstance) submitEmitter(ctx context.Context, name string, value any) error {
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if d == nil {
+		return NewError(ErrorState, "nil dataflow instance")
+	}
+	d.mu.Lock()
+	running := d.state == DataflowRunning
+	operator, ok := d.operators[name]
+	hasOutgoing := len(d.outgoing[name]) > 0
+	d.mu.Unlock()
+	if !running {
+		return NewError(ErrorState, "dataflow is not running")
+	}
+	if !ok || operator.Kind != EmitterKind || !hasOutgoing {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q is not a captive emitter source", name))
+	}
+	if signal, ok := value.(DataflowSignal); ok {
+		return d.processGraphFrom(ctx, signal, name)
+	}
+	event, err := d.materializeDataflowEvent(value)
+	if err != nil {
+		return err
+	}
+	d.processed.Add(1)
+	return d.processGraphFrom(ctx, event, name)
+}
+
+func (d *DataflowInstance) materializeDataflowEvent(value any) (Event, error) {
+	if event, ok := value.(Event); ok {
+		return event, nil
+	}
+	if d == nil || d.engine == nil || d.engine.env == nil {
+		return Event{}, NewError(ErrorDependency, "dataflow has no engine environment")
+	}
+	typ := reflect.TypeOf(value)
+	if typ == nil {
+		return Event{}, NewError(ErrorTypeMismatch, "cannot infer dataflow event type from nil")
+	}
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	d.engine.env.mu.RLock()
+	eventType, ok := d.engine.env.typeToName[typ]
+	d.engine.env.mu.RUnlock()
+	if !ok {
+		return Event{}, NewError(ErrorUnknownName, fmt.Sprintf("no registered event type for Go type %s", typ))
+	}
+	schema, ok := d.engine.env.Schema(eventType)
+	if !ok {
+		return Event{}, NewError(ErrorUnknownName, fmt.Sprintf("event type %q is not registered", eventType))
+	}
+	event, err := newEvent(schema, value, d.engine.Now())
+	if err != nil {
+		return Event{}, WrapError(ErrorTypeMismatch, "dataflow.event", err)
+	}
+	return event, nil
+}
+
 func (d *DataflowInstance) handleDataflowError(ctx context.Context, operator string, err error) error {
 	if err == nil {
 		return nil
@@ -906,6 +1034,14 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 		return err
 	}
 	hasEventSource := len(d.eventTypes) > 0
+	if !hasEventSource {
+		for _, operator := range d.definition.operators {
+			if operator.Kind == EmitterKind && len(d.outgoing[operator.Name]) > 0 {
+				hasEventSource = true
+				break
+			}
+		}
+	}
 	for _, operator := range d.definition.operators {
 		if operator.Kind != EPStatementSourceKind {
 			continue
@@ -1013,10 +1149,42 @@ func (d *DataflowInstance) process(ctx context.Context, event any) error {
 	if d.graph {
 		return d.processGraphEvent(ctx, event)
 	}
+	if eventValue, ok := event.(Event); ok {
+		if err := d.acceptDataflowSubqueryEvent(eventValue); err != nil {
+			return d.handleDataflowError(ctx, "", err)
+		}
+	}
 	if err := d.processLinear(ctx, event); err != nil {
 		return d.handleDataflowError(ctx, "", err)
 	}
 	return nil
+}
+
+func (d *DataflowInstance) evaluateDataflowSelect(operator DataflowOperator, event Event) (Row, error) {
+	if d == nil || d.engine == nil {
+		return Row{}, NewError(ErrorDependency, "dataflow select has no engine")
+	}
+	now := d.engine.Now()
+	variables := d.engine.Variables()
+	if registry := d.subqueryRegistries[operator.Name]; registry != nil {
+		if err := registry.accept(event, now, variables); err != nil {
+			return Row{}, err
+		}
+		variables = registry.attachVariables(variables)
+	}
+	evaluation := EvalContext{Event: event, Engine: d.engine, Now: now, Variables: variables}
+	values := make([]Value, 0, len(operator.Selections))
+	for _, selection := range operator.Selections {
+		if selection.Expr == nil {
+			return Row{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select %q contains nil expression", operator.Name))
+		}
+		values = append(values, selection.Expr.eval(evaluation))
+	}
+	schema, err := NewSchema("dataflow:"+operator.Name, selectionFields(operator.Selections)...)
+	if err != nil {
+		return Row{}, err
+	}
+	return newRow(schema, values), nil
 }
 
 func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
@@ -1112,7 +1280,7 @@ func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
 				if !ok {
 					continue
 				}
-				value := operator.Predicate.eval(EvalContext{Event: eventValue})
+				value := operator.Predicate.eval(d.dataflowEvalContext(eventValue))
 				if pass, isBool := boolValue(value); isBool && pass {
 					filtered = append(filtered, candidate)
 				}
@@ -1125,15 +1293,11 @@ func (d *DataflowInstance) processLinear(ctx context.Context, event any) error {
 				if !ok {
 					continue
 				}
-				values := make([]Value, 0, len(operator.Selections))
-				for _, selection := range operator.Selections {
-					values = append(values, selection.Expr.eval(EvalContext{Event: eventValue}))
+				row, err := d.evaluateDataflowSelect(operator, eventValue)
+				if err != nil {
+					return err
 				}
-				schema, schemaErr := NewSchema("dataflow:"+operator.Name, selectionFields(operator.Selections)...)
-				if schemaErr != nil {
-					return schemaErr
-				}
-				selected = append(selected, newRow(schema, values))
+				selected = append(selected, row)
 			}
 			current = selected
 		case EmitterKind:
@@ -1209,6 +1373,9 @@ func (d *DataflowInstance) processGraphEvent(ctx context.Context, event any) err
 	eventValue, ok := event.(Event)
 	if !ok {
 		return nil
+	}
+	if err := d.acceptDataflowSubqueryEvent(eventValue); err != nil {
+		return d.handleDataflowError(ctx, "", err)
 	}
 	starts := make([]string, 0)
 	for _, operator := range d.definition.operators {
@@ -1314,7 +1481,7 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		if !ok {
 			return nil, nil
 		}
-		result := operator.Predicate.eval(EvalContext{Event: eventValue})
+		result := operator.Predicate.eval(d.dataflowEvalContext(eventValue))
 		pass, ok := boolValue(result)
 		if !ok || !pass {
 			return nil, nil
@@ -1325,23 +1492,22 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 		if !ok {
 			return nil, nil
 		}
-		values := make([]Value, 0, len(operator.Selections))
-		for _, selection := range operator.Selections {
-			if selection.Expr == nil {
-				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select %q contains nil expression", operator.Name))
-			}
-			values = append(values, selection.Expr.eval(EvalContext{Event: eventValue}))
-		}
-		schema, err := NewSchema("dataflow:"+operator.Name, selectionFields(operator.Selections)...)
+		row, err := d.evaluateDataflowSelect(operator, eventValue)
 		if err != nil {
 			return nil, err
 		}
-		return []DataflowEmission{Emit(newRow(schema, values))}, nil
+		return []DataflowEmission{Emit(row)}, nil
 	case EmitterKind:
-		d.mu.Lock()
-		d.outputs = append(d.outputs, value)
-		d.mu.Unlock()
-		d.emitted.Add(1)
+		// An Emitter with outgoing edges is a captive source/forwarder. Only
+		// terminal Emitters are sinks visible through Outputs; this preserves
+		// the Java Emitter -> instream -> operator shape without recording the
+		// source submission as an extra output row.
+		if len(d.outgoing[operator.Name]) == 0 {
+			d.mu.Lock()
+			d.outputs = append(d.outputs, value)
+			d.mu.Unlock()
+			d.emitted.Add(1)
+		}
 		return []DataflowEmission{Emit(value)}, nil
 	case LogSinkKind:
 		if operator.Log != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type subqueryRuntimeRef struct {
 }
 
 type subqueryRuntimeRegistry struct {
+	mu     sync.Mutex
 	env    *Environment
 	engine *Engine
 	states map[*subqueryDefinition]*subqueryRuntimeState
@@ -111,6 +113,8 @@ func (r *subqueryRuntimeRegistry) accept(event Event, now time.Time, variables m
 	if r == nil {
 		return nil
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	for _, state := range r.states {
 		if state == nil || state.definition == nil || state.runtime == nil || !sourceNodeAcceptsEvent(r.env, state.definition.source, event) {
 			continue
@@ -133,6 +137,8 @@ func (r *subqueryRuntimeRegistry) expire(now time.Time) {
 	if r == nil {
 		return
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	for _, state := range r.states {
 		if state == nil || state.runtime == nil || !subquerySourceContainsWindow(state.definition.source) {
 			continue
@@ -146,6 +152,8 @@ func (r *subqueryRuntimeRegistry) snapshot(definition *subqueryDefinition) ([]Ev
 	if r == nil {
 		return nil, false
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	state, ok := r.states[definition]
 	if !ok || state == nil {
 		return nil, false
