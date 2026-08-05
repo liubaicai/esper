@@ -172,6 +172,7 @@ type Engine struct {
 	statements                        map[string]*Statement
 	deployments                       map[string]*Deployment
 	dataflows                         map[*DataflowInstance]struct{}
+	savedDataflowInstances            map[string]*DataflowInstance
 	pendingStatementDispatches        []statementDispatch
 	pendingNamedWindowDispatches      []namedWindowDispatch
 	pendingRoutedEvents               []Event
@@ -216,6 +217,7 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		statements:                      make(map[string]*Statement),
 		deployments:                     make(map[string]*Deployment),
 		dataflows:                       make(map[*DataflowInstance]struct{}),
+		savedDataflowInstances:          make(map[string]*DataflowInstance),
 	}
 	if env != nil {
 		env.mu.RLock()
@@ -2081,6 +2083,7 @@ func (e *Engine) Close(ctx context.Context) error {
 		instances = append(instances, instance)
 	}
 	e.dataflows = make(map[*DataflowInstance]struct{})
+	e.savedDataflowInstances = make(map[string]*DataflowInstance)
 	e.mu.Unlock()
 	for _, instance := range instances {
 		_ = instance.Cancel(context.Background())

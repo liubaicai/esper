@@ -8,6 +8,7 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type DataflowState uint8
@@ -260,6 +261,35 @@ const (
 	CustomSourceKind      DataflowOperatorKind = "CustomSource"
 )
 
+// DataflowSelectOptions controls the state and trigger policy of a built-in
+// Select operator. A zero value preserves the original per-input emission
+// behavior. TimeWindow retains Event inputs for the supplied duration, while
+// OutputSnapshotEvery emits the current projection on each virtual-clock
+// interval instead of on every input.
+type DataflowSelectOptions struct {
+	TimeWindow           time.Duration
+	OutputSnapshotEvery  time.Duration
+}
+
+func (o DataflowSelectOptions) validate() error {
+	if o.TimeWindow < 0 {
+		return NewError(ErrorInvalidRule, "dataflow select time window cannot be negative")
+	}
+	if o.OutputSnapshotEvery < 0 {
+		return NewError(ErrorInvalidRule, "dataflow select snapshot interval cannot be negative")
+	}
+	if o.TimeWindow == 0 && o.OutputSnapshotEvery == 0 {
+		return nil
+	}
+	if o.TimeWindow > 0 && o.TimeWindow < time.Nanosecond {
+		return NewError(ErrorInvalidRule, "dataflow select time window must have nanosecond precision")
+	}
+	if o.OutputSnapshotEvery > 0 && o.OutputSnapshotEvery < time.Nanosecond {
+		return NewError(ErrorInvalidRule, "dataflow select snapshot interval must have nanosecond precision")
+	}
+	return nil
+}
+
 // DataflowPort declares a named operator port and, optionally, the Go value
 // type accepted or emitted by that port. A nil Type is a wildcard, which is
 // useful for built-in operators whose runtime value is an Event or Row.
@@ -290,6 +320,7 @@ type DataflowOperator struct {
 	InputPortTypes  map[string]reflect.Type
 	OutputPortTypes map[string]reflect.Type
 	SourceFactory   DataflowSourceFactory
+	SelectOptions   DataflowSelectOptions
 }
 
 // DataflowEdge connects an operator output port to an operator input port.
@@ -385,7 +416,32 @@ func (b DataflowBuilder) Filter(name string, predicate Expr) DataflowBuilder {
 }
 
 func (b DataflowBuilder) Select(name string, selections ...Selection) DataflowBuilder {
-	return b.add(DataflowOperator{Name: name, Kind: SelectKind, Selections: append([]Selection(nil), selections...)})
+	return b.SelectWithOptions(name, DataflowSelectOptions{}, selections...)
+}
+
+// SelectWithOptions adds a built-in projection with optional stateful
+// time-window and virtual-clock snapshot semantics. It keeps selection
+// expressions analyzable and avoids embedding EPL strings in a dataflow
+// definition.
+func (b DataflowBuilder) SelectWithOptions(name string, options DataflowSelectOptions, selections ...Selection) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:          name,
+		Kind:          SelectKind,
+		Selections:    append([]Selection(nil), selections...),
+		SelectOptions: options,
+	})
+}
+
+// SelectTimeWindow is the concise chain form for a Select retaining Event
+// inputs for duration and emitting a projection on input and expiry changes.
+func (b DataflowBuilder) SelectTimeWindow(name string, duration time.Duration, selections ...Selection) DataflowBuilder {
+	return b.SelectWithOptions(name, DataflowSelectOptions{TimeWindow: duration}, selections...)
+}
+
+// SelectSnapshotEvery is the concise chain form for a Select that emits one
+// current projection per virtual-clock interval.
+func (b DataflowBuilder) SelectSnapshotEvery(name string, interval time.Duration, selections ...Selection) DataflowBuilder {
+	return b.SelectWithOptions(name, DataflowSelectOptions{OutputSnapshotEvery: interval}, selections...)
 }
 
 func (b DataflowBuilder) LogSink(name string, logger func(context.Context, any) error) DataflowBuilder {
@@ -497,6 +553,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 				return DataflowDefinition{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow filter %q requires bool predicate", operator.Name))
 			}
 		case SelectKind:
+			if err := operator.SelectOptions.validate(); err != nil {
+				return DataflowDefinition{}, WrapError(ErrorInvalidRule, "dataflow select "+operator.Name, err)
+			}
 			if len(operator.Selections) == 0 {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select %q requires projections", operator.Name))
 			}
@@ -649,27 +708,38 @@ func (e *Environment) Dataflows() []DataflowDefinition {
 	return result
 }
 
-// SaveDataflowConfiguration records a registered definition under its own
-// stable name so it can be looked up and instantiated later. This is an
-// in-process saved configuration: operator factories remain Go values and
-// are intentionally not serialized as executable code.
+// SaveDataflowConfiguration records a registered definition under the same
+// name so it can be looked up and instantiated later. This is an in-process
+// saved configuration: operator factories remain Go values and are
+// intentionally not serialized as executable code.
 func (e *Environment) SaveDataflowConfiguration(name string) error {
+	return e.SaveDataflowConfigurationAs(name, name)
+}
+
+// SaveDataflowConfigurationAs records dataflowName under an independent
+// configuration name. The separation mirrors Esper's runtime service, while
+// the Go API omits Java deployment ids because an Environment owns the
+// registered dataflow catalog directly.
+func (e *Environment) SaveDataflowConfigurationAs(configurationName, dataflowName string) error {
 	if e == nil {
 		return NewError(ErrorDependency, "nil environment")
 	}
-	if name == "" {
+	if configurationName == "" || dataflowName == "" {
 		return NewError(ErrorInvalidRule, "dataflow configuration name is required")
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	definition, ok := e.dataflows[name]
+	definition, ok := e.dataflows[dataflowName]
 	if !ok {
-		return NewError(ErrorUnknownName, fmt.Sprintf("dataflow %q is not registered", name))
+		return NewError(ErrorUnknownName, fmt.Sprintf("dataflow %q is not registered", dataflowName))
 	}
 	if e.savedDataflows == nil {
 		e.savedDataflows = make(map[string]DataflowDefinition)
 	}
-	e.savedDataflows[name] = cloneDataflowDefinition(definition)
+	if _, exists := e.savedDataflows[configurationName]; exists {
+		return NewError(ErrorDependency, fmt.Sprintf("dataflow configuration %q is already saved", configurationName))
+	}
+	e.savedDataflows[configurationName] = cloneDataflowDefinition(definition)
 	return nil
 }
 
@@ -725,6 +795,8 @@ func cloneDataflowDefinition(definition DataflowDefinition) DataflowDefinition {
 		result.operators[index].Selections = append([]Selection(nil), result.operators[index].Selections...)
 		result.operators[index].InputPorts = append([]string(nil), result.operators[index].InputPorts...)
 		result.operators[index].OutputPorts = append([]string(nil), result.operators[index].OutputPorts...)
+		result.operators[index].InputPortTypes = cloneDataflowPortTypes(result.operators[index].InputPortTypes)
+		result.operators[index].OutputPortTypes = cloneDataflowPortTypes(result.operators[index].OutputPortTypes)
 	}
 	return result
 }
@@ -1168,6 +1240,86 @@ func (e *Engine) InstantiateSavedDataflowWithOptions(ctx context.Context, name s
 		return nil, NewError(ErrorUnknownName, fmt.Sprintf("dataflow configuration %q is not saved", name))
 	}
 	return e.InstantiateDataflowWithOptions(ctx, definition, options)
+}
+
+// SaveDataflowInstance stores an already-instantiated runtime under a stable
+// name. The saved value is the same in-memory instance, matching Esper's
+// saveInstance/getSavedInstance contract; it is not a process boundary or a
+// serialization mechanism.
+func (e *Engine) SaveDataflowInstance(name string, instance *DataflowInstance) error {
+	if e == nil {
+		return NewError(ErrorDependency, "nil engine")
+	}
+	if name == "" {
+		return NewError(ErrorInvalidRule, "dataflow instance name is required")
+	}
+	if instance == nil {
+		return NewError(ErrorState, "nil dataflow instance")
+	}
+	if instance.engine != e {
+		return NewError(ErrorDependency, "dataflow instance belongs to a different engine")
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed {
+		return NewError(ErrorState, "engine is closed")
+	}
+	if e.savedDataflowInstances == nil {
+		e.savedDataflowInstances = make(map[string]*DataflowInstance)
+	}
+	if _, exists := e.savedDataflowInstances[name]; exists {
+		return NewError(ErrorDependency, fmt.Sprintf("dataflow instance %q is already saved", name))
+	}
+	e.savedDataflowInstances[name] = instance
+	return nil
+}
+
+// LoadDataflowInstance returns a previously saved in-process instance.
+func (e *Engine) LoadDataflowInstance(name string) (*DataflowInstance, bool) {
+	if e == nil {
+		return nil, false
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	instance, ok := e.savedDataflowInstances[name]
+	return instance, ok
+}
+
+// SavedDataflowInstances returns saved instance names in deterministic order.
+func (e *Engine) SavedDataflowInstances() []string {
+	if e == nil {
+		return nil
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	result := make([]string, 0, len(e.savedDataflowInstances))
+	for name := range e.savedDataflowInstances {
+		result = append(result, name)
+	}
+	sort.Strings(result)
+	return result
+}
+
+// DeleteDataflowInstance removes a previously saved in-process instance.
+func (e *Engine) DeleteDataflowInstance(name string) error {
+	if e == nil {
+		return NewError(ErrorDependency, "nil engine")
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if _, ok := e.savedDataflowInstances[name]; !ok {
+		return NewError(ErrorUnknownName, fmt.Sprintf("dataflow instance %q is not saved", name))
+	}
+	delete(e.savedDataflowInstances, name)
+	return nil
+}
+
+// DataflowName identifies the registered definition used by this instance.
+func (d *DataflowInstance) DataflowName() string {
+	if d == nil {
+		return ""
+	}
+	return d.definition.name
 }
 
 func (d *DataflowInstance) State() DataflowState {
