@@ -417,6 +417,14 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		if err := e.validateJoin(query.join, query.joinSelections); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "join", err)
 		}
+		if query.joinWhere != nil {
+			if query.joinWhere.Type() != typeOf[bool]() {
+				return Plan{}, WrapError(ErrorInvalidRule, "join where", NewError(ErrorTypeMismatch, "join where expression must return bool"))
+			}
+			if err := e.validateJoinScopedExpression(query.join, query.joinWhere, "join where"); err != nil {
+				return Plan{}, WrapError(ErrorInvalidRule, "join where", err)
+			}
+		}
 	} else if err := e.validateNode(query.input); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "stream", err)
 	}
@@ -1743,6 +1751,9 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 				return err
 			}
 		}
+		if err := visit(query.joinWhere); err != nil {
+			return err
+		}
 	}
 	if query.pattern != nil {
 		if err := visitStreamNodeExpressions(query.pattern.input, visit); err != nil {
@@ -2542,8 +2553,12 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 }
 
 func (e *Environment) validateJoinAggregateFields(definition *joinDefinition, expression Expr) error {
+	return e.validateJoinScopedExpression(definition, expression, "join aggregate")
+}
+
+func (e *Environment) validateJoinScopedExpression(definition *joinDefinition, expression Expr, scope string) error {
 	if definition == nil || expression == nil {
-		return NewError(ErrorInvalidRule, "join aggregate expression is required")
+		return NewError(ErrorInvalidRule, scope+" expression is required")
 	}
 	if err := validateMethodNodes(expression.node()); err != nil {
 		return err
@@ -2583,7 +2598,7 @@ func (e *Environment) validateJoinAggregateFields(definition *joinDefinition, ex
 				return fmt.Errorf("join aggregate event references source %d, have %d sources", node.joinSource, len(sources))
 			}
 		case "field":
-			return NewError(ErrorInvalidRule, "join aggregate fields must use JoinField(source, name)")
+			return NewError(ErrorInvalidRule, scope+" fields must use JoinField(source, name)")
 		}
 		for _, child := range node.children {
 			if err := visit(child); err != nil {

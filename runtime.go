@@ -4541,6 +4541,7 @@ func (r *statementRuntime) snapshotJoinBatch(plan Plan, now time.Time) ResultBat
 		state.sides[index] = r.assignJoinLineageIDs(side, state.sides[index])
 	}
 	tuples := joinTuples(plan.query.join, state, now, r)
+	tuples = filterJoinTuples(tuples, plan.query, now, r.variables)
 	result.New = projectJoinTuples(tuples, plan.query, plan.resultSchema, now, r.variables, false)
 	if plan.query.distinct {
 		result.New = distinctSnapshotResults(result.New)
@@ -9388,20 +9389,23 @@ func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) Res
 
 func (r *statementRuntime) joinBatch(delta joinDelta, plan Plan, now time.Time) ResultBatch {
 	batch := ResultBatch{Time: now}
-	if len(joinDefinitionSources(plan.query.join)) > 2 {
-		if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
-			batch.New = projectJoinTuples(delta.newTuples, plan.query, plan.resultSchema, now, r.variables, false)
+	newTuples := append([][]Event(nil), delta.newTuples...)
+	if len(newTuples) == 0 {
+		for _, pair := range delta.newPairs {
+			newTuples = append(newTuples, []Event{pair.left, pair.right})
 		}
-		if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
-			batch.Old = projectJoinTuples(delta.oldTuples, plan.query, plan.resultSchema, now, r.variables, true)
+	}
+	oldTuples := append([][]Event(nil), delta.oldTuples...)
+	if len(oldTuples) == 0 {
+		for _, pair := range delta.oldPairs {
+			oldTuples = append(oldTuples, []Event{pair.left, pair.right})
 		}
-	} else {
-		if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
-			batch.New = projectJoinResults(delta.newPairs, plan.query, plan.resultSchema, now, r.variables, false)
-		}
-		if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
-			batch.Old = projectJoinResults(delta.oldPairs, plan.query, plan.resultSchema, now, r.variables, true)
-		}
+	}
+	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
+		batch.New = projectJoinTuples(filterJoinTuples(newTuples, plan.query, now, r.variables), plan.query, plan.resultSchema, now, r.variables, false)
+	}
+	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
+		batch.Old = projectJoinTuples(filterJoinTuples(oldTuples, plan.query, now, r.variables), plan.query, plan.resultSchema, now, r.variables, true)
 	}
 	if plan.query.distinct {
 		batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
@@ -9412,6 +9416,31 @@ func (r *statementRuntime) joinBatch(delta joinDelta, plan Plan, now time.Time) 
 		batch.Sequence = r.seq.Add(1)
 	}
 	return batch
+}
+
+func filterJoinTuples(tuples [][]Event, query Query, now time.Time, variables map[string]Value) [][]Event {
+	if query.joinWhere == nil || len(tuples) == 0 {
+		return tuples
+	}
+	filtered := make([][]Event, 0, len(tuples))
+	for _, tuple := range tuples {
+		var event Event
+		if len(tuple) > 0 {
+			event = tuple[0]
+		}
+		value := query.joinWhere.eval(EvalContext{
+			Event:      event,
+			JoinEvents: tuple,
+			OuterEvent: event,
+			Now:        now,
+			Variables:  variables,
+		})
+		matched, ok := boolValue(value)
+		if ok && matched {
+			filtered = append(filtered, tuple)
+		}
+	}
+	return filtered
 }
 
 func projectResults(events []Event, query Query, resultSchema Schema, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool) []Result {

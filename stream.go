@@ -460,6 +460,7 @@ type JoinQuery struct {
 	env        *Environment
 	definition *joinDefinition
 	selections []JoinSelection
+	where      Expr
 }
 
 type joinDefinition struct {
@@ -560,6 +561,7 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		env:                        j.env,
 		join:                       j.definition,
 		joinSelections:             append([]JoinSelection(nil), j.selections...),
+		joinWhere:                  j.where,
 		routeTarget:                spec.routeTarget,
 		name:                       spec.name,
 		selector:                   spec.selector,
@@ -573,6 +575,14 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		limit:                      spec.limit,
 		offset:                     spec.offset,
 	}
+}
+
+// Where applies a post-join predicate after ON matching and outer-row
+// materialization. Use JoinField/JoinEventValue to make source scope explicit;
+// this keeps outer-join null-side behavior analyzable in the fluent API.
+func (j JoinQuery) Where(predicate Expression[bool]) JoinQuery {
+	j.where = predicate
+	return j
 }
 
 // InsertInto routes the join's new-stream projection into a registered event
@@ -1873,6 +1883,7 @@ type Query struct {
 	trigger                    *triggerDefinition
 	selections                 []Selection
 	joinSelections             []JoinSelection
+	joinWhere                  Expr
 	patternSelections          []Selection
 	routeTarget                string
 	tableTarget                string
@@ -2002,6 +2013,9 @@ func (q Query) description() string {
 	}
 	if q.join != nil {
 		parts := []string{describeJoinDefinition(q.join)}
+		if q.joinWhere != nil {
+			parts = append(parts, "where("+q.joinWhere.Description()+")")
+		}
 		if len(q.joinSelections) == 0 {
 			return strings.Join(parts, " -> ")
 		}

@@ -620,6 +620,95 @@ func TestLeftOuterJoinTransitionsFromUnmatchedToMatched(t *testing.T) {
 	}
 }
 
+func TestJoinWhereFiltersPostJoinOuterRowsAndOldNewTransitions(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[joinOrder](env, "JoinWhereOrder"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[joinPayment](env, "JoinWherePayment"); err != nil {
+		t.Fatal(err)
+	}
+	query := Join(
+		From[joinOrder](env, "JoinWhereOrder"),
+		From[joinPayment](env, "JoinWherePayment"),
+		OnEqual(
+			Field[joinOrder, string]("orderID"),
+			Field[joinPayment, string]("orderID"),
+		),
+	).LeftOuter().Select(
+		SelectLeft("symbol", Field[joinOrder, string]("symbol")),
+		SelectRight("amount", Field[joinPayment, float64]("amount")),
+	).Where(IsNull[float64](JoinField[float64](1, "amount"))).Query(StatementName("join-where"), WithOldStream())
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	withoutWhere, err := env.Build(Join(
+		From[joinOrder](env, "JoinWhereOrder"),
+		From[joinPayment](env, "JoinWherePayment"),
+		OnEqual(
+			Field[joinOrder, string]("orderID"),
+			Field[joinPayment, string]("orderID"),
+		),
+	).LeftOuter().Select(
+		SelectLeft("symbol", Field[joinOrder, string]("symbol")),
+		SelectRight("amount", Field[joinPayment, float64]("amount")),
+	).Query(StatementName("join-without-where")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Hash() == withoutWhere.Hash() {
+		t.Fatal("join where predicate did not enter plan identity")
+	}
+	if _, err := env.Build(Join(
+		From[joinOrder](env, "JoinWhereOrder"),
+		From[joinPayment](env, "JoinWherePayment"),
+		OnEqual(
+			Field[joinOrder, string]("orderID"),
+			Field[joinPayment, string]("orderID"),
+		),
+	).Select(
+		SelectLeft("symbol", Field[joinOrder, string]("symbol")),
+		SelectRight("amount", Field[joinPayment, float64]("amount")),
+	).Where(Equal[string](Field[joinOrder, string]("symbol"), Literal("A"))).Query()); err == nil {
+		t.Fatal("join where accepted an implicit unscoped field")
+	}
+
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "JoinWhereOrder", joinOrder{OrderID: "O1", Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	firstRow, firstOK := Row{}, false
+	if len(batches) == 1 && len(batches[0].New) == 1 {
+		firstRow, firstOK = batches[0].New[0].Row()
+	}
+	if !firstOK || !firstRow.Get("amount").IsNull() {
+		t.Fatalf("post-join where unmatched row = %#v", batches)
+	}
+	if err := engine.Send(context.Background(), "JoinWherePayment", joinPayment{OrderID: "O1", Amount: 3}); err != nil {
+		t.Fatal(err)
+	}
+	oldRow, oldOK := Row{}, false
+	if len(batches) == 2 && len(batches[1].Old) == 1 {
+		oldRow, oldOK = batches[1].Old[0].Row()
+	}
+	if !oldOK || len(batches[1].New) != 0 || !oldRow.Get("amount").IsNull() {
+		t.Fatalf("post-join where outer transition = %#v", batches)
+	}
+}
+
 func TestCompoundJoinConditionSupportsRangePredicate(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[joinLimitOrder](env, "LimitOrder"); err != nil {
