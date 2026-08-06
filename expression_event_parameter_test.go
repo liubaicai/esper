@@ -234,3 +234,151 @@ func TestParameterizedNamedExpressionReferenceSupportsMapSubqueryEventValues(t *
 		t.Fatalf("map subquery event parameter rows = %#v", *rows)
 	}
 }
+
+func TestParameterizedNamedExpressionReferenceSupportsContextPatternEventValues(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[eventParameterParityEvent](env, "EventParameterContextPattern"); err != nil {
+		t.Fatal(err)
+	}
+	input := From[eventParameterParityEvent](env, "EventParameterContextPattern")
+	start := PatternFrom(input, "a", Literal(true))
+	if _, err := CreatePatternInitiatedContext(env, "declared-context-pattern", start); err != nil {
+		t.Fatal(err)
+	}
+	eventParam := ExpressionParam[Event]("event")
+	if err := DefineExpression[string](env, "context-pattern-event-value", Property[string](eventParam, "p00")); err != nil {
+		t.Fatal(err)
+	}
+	engine, rows := deployEventParameterRows(t, env, FromAny(env, "EventParameterContextPattern").Select(
+		Alias("value", ExpressionRef[string](env, "context-pattern-event-value", ContextPatternEvent("a"))),
+	).Query(StatementName("declared-context-pattern-event"), WithContext("declared-context-pattern")))
+	if err := engine.SendEvent(context.Background(), eventParameterParityEvent{P00: "seed"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), eventParameterParityEvent{P00: "next"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*rows) != 2 || (*rows)[0].Get("value").Any() != "seed" || (*rows)[1].Get("value").Any() != "seed" {
+		t.Fatalf("context pattern event parameter rows = %#v", *rows)
+	}
+}
+
+func TestParameterizedNamedExpressionReferenceSupportsMultirowSubqueryValues(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[eventParameterParityEvent](env, "EventParameterMultirowSource"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[eventParameterParityTrigger](env, "EventParameterMultirowTrigger"); err != nil {
+		t.Fatal(err)
+	}
+	values := ExpressionParam[[]Event]("values")
+	if err := DefineExpression[int64](env, "multirow-event-count", EnumCount[Event](values)); err != nil {
+		t.Fatal(err)
+	}
+	inner := Select(From[eventParameterParityEvent](env, "EventParameterMultirowSource")).Window(LengthWindow(3))
+	argument := SubqueryEvents(inner)
+	engine, rows := deployEventParameterRows(t, env, Select(From[eventParameterParityTrigger](env, "EventParameterMultirowTrigger"),
+		Alias("count", ExpressionRef[int64](env, "multirow-event-count", argument)),
+	).Query(StatementName("declared-multirow-subquery")))
+	trigger := func() {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), eventParameterParityTrigger{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	trigger()
+	if len(*rows) != 1 || (*rows)[0].Get("count").Any() != int64(0) {
+		t.Fatalf("empty multirow event parameter rows = %#v", *rows)
+	}
+	for _, event := range []eventParameterParityEvent{{P00: "A"}, {P00: "B"}, {P00: "C"}, {P00: "D"}} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	trigger()
+	if len(*rows) != 2 || (*rows)[1].Get("count").Any() != int64(3) {
+		t.Fatalf("multirow event parameter rows = %#v", *rows)
+	}
+}
+
+func TestParameterizedNamedExpressionReferenceSupportsContextInitiatingEventValues(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[eventParameterParityEvent](env, "EventParameterContextInitiator"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[eventParameterParityTrigger](env, "EventParameterContextTrigger"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateInitiatedContext(env, "declared-context-event", Literal("global"), Literal(true)); err != nil {
+		t.Fatal(err)
+	}
+	eventParam := ExpressionParam[Event]("event")
+	if err := DefineExpression[string](env, "context-initiating-event-value", Property[string](eventParam, "p00")); err != nil {
+		t.Fatal(err)
+	}
+	engine, rows := deployEventParameterRows(t, env, Select(
+		From[eventParameterParityTrigger](env, "EventParameterContextTrigger"),
+		Alias("value", ExpressionRef[string](env, "context-initiating-event-value", ContextInitiatingEvent())),
+	).Query(StatementName("declared-context-event"), WithContext("declared-context-event")))
+	if err := engine.SendEvent(context.Background(), eventParameterParityEvent{P00: "initiator"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), eventParameterParityTrigger{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*rows) != 1 || (*rows)[0].Get("value").Any() != "initiator" {
+		t.Fatalf("context initiating event parameter rows = %#v", *rows)
+	}
+}
+
+func TestParameterizedNamedExpressionReferenceSupportsMapSubqueryWhereAndCardinality(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("p00", reflect.TypeOf("")), FieldDef("p01", reflect.TypeOf(""))}
+	if _, err := RegisterMap(env, "EventParameterMapKeepAll", fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "EventParameterMapKeepAllTrigger", nil); err != nil {
+		t.Fatal(err)
+	}
+	eventParam := ExpressionParam[Event]("event")
+	if err := DefineExpression[string](env, "map-subquery-where-value", Concat(Property[string](eventParam, "p00"), Property[string](eventParam, "p01"))); err != nil {
+		t.Fatal(err)
+	}
+	inner := FromAny(env, "EventParameterMapKeepAll").Window(KeepAll())
+	matching := Equal[string](Field[any, string]("p00"), Literal("A"))
+	argument := SubqueryValueWithOptions[Event](inner, EventValue[Event](), SubqueryWhere(matching), SubqueryCardinalityMode(SubqueryNullOnMultiple))
+	engine, rows := deployEventParameterRows(t, env, FromAny(env, "EventParameterMapKeepAllTrigger").Select(
+		Alias("value", ExpressionRef[string](env, "map-subquery-where-value", argument)),
+	).Query(StatementName("declared-map-subquery-where")))
+	trigger := func() {
+		t.Helper()
+		if err := engine.SendRecord(context.Background(), "EventParameterMapKeepAllTrigger", map[string]any{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	trigger()
+	if len(*rows) != 1 || (*rows)[0].Get("value").Any() != nil {
+		t.Fatalf("empty map where subquery rows = %#v", *rows)
+	}
+	if err := engine.SendRecord(context.Background(), "EventParameterMapKeepAll", map[string]any{"p00": "C", "p01": "D"}); err != nil {
+		t.Fatal(err)
+	}
+	trigger()
+	if len(*rows) != 2 || (*rows)[1].Get("value").Any() != nil {
+		t.Fatalf("nonmatching map where subquery rows = %#v", *rows)
+	}
+	if err := engine.SendRecord(context.Background(), "EventParameterMapKeepAll", map[string]any{"p00": "A", "p01": "D"}); err != nil {
+		t.Fatal(err)
+	}
+	trigger()
+	if len(*rows) != 3 || (*rows)[2].Get("value").Any() != "AD" {
+		t.Fatalf("single matching map where subquery rows = %#v", *rows)
+	}
+	if err := engine.SendRecord(context.Background(), "EventParameterMapKeepAll", map[string]any{"p00": "A", "p01": "E"}); err != nil {
+		t.Fatal(err)
+	}
+	trigger()
+	if len(*rows) != 4 || (*rows)[3].Get("value").Any() != nil {
+		t.Fatalf("multiple matching map where subquery rows = %#v", *rows)
+	}
+}
