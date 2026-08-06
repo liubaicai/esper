@@ -246,6 +246,12 @@ type EvalContext struct {
 	Now               time.Time
 	Variables         map[string]Value
 	Parameters        map[string]Value
+	// Metadata is the statement-level evaluation context exposed by
+	// CurrentEvaluationContext. It is set only by statement projection paths;
+	// direct expression evaluation keeps the zero value and the expression
+	// normalizes its partition id to -1.
+	Metadata             ExpressionEvaluationContext
+	evaluationContextSet bool
 
 	// Output counters are populated only while an output-when expression is
 	// evaluated. They model Esper's count_insert/count_remove and total forms
@@ -556,7 +562,7 @@ func Property[T any](object Expr, name string) Expression[T] {
 		if !value.IsPresent() {
 			return value
 		}
-		return propertyValue(value.Any(), name)
+		return castPropertyValue[T](propertyValue(value.Any(), name))
 	})
 }
 
@@ -734,6 +740,36 @@ func propertyValue(underlying any, name string) Value {
 	return getPropertyPath(underlying, name, func(value any, property string) Value {
 		return (Schema{resolution: PropertyCaseSensitive}).getOne(value, property)
 	})
+}
+
+func castPropertyValue[T any](value Value) Value {
+	if !value.IsPresent() {
+		return value
+	}
+	target := typeOf[T]()
+	source := reflect.ValueOf(value.Any())
+	if !source.IsValid() {
+		return Null()
+	}
+	if source.Type().AssignableTo(target) {
+		return Present(source.Interface())
+	}
+	for source.IsValid() && (source.Kind() == reflect.Pointer || source.Kind() == reflect.Interface) {
+		if source.IsNil() {
+			return Null()
+		}
+		source = source.Elem()
+	}
+	if !source.IsValid() {
+		return Null()
+	}
+	if source.Type().AssignableTo(target) {
+		return Present(source.Interface())
+	}
+	if source.Type().ConvertibleTo(target) && (numericTypes(source.Type(), target) || target.Kind() == reflect.Interface) {
+		return Present(source.Convert(target).Interface())
+	}
+	return castValue[T](Present(source.Interface()))
 }
 
 // TableField reads a property from the target table row during a table

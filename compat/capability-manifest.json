@@ -141,9 +141,9 @@
       "id": "expr.core",
       "domain": "expression",
       "level": "S",
-      "summary": "Go-native core expressions including searched/simple CASE, coalesce, bitwise operators and virtual-clock current timestamp, with ordered branches, null semantics and aggregate-aware evaluation",
-      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreCurrentTimestamp"],
-      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_current_timestamp_test.go", "expr.go", "subquery.go", "plan.go"],
+      "summary": "Go-native core expressions including searched/simple CASE, coalesce, bitwise operators, virtual-clock current timestamp and statement evaluation metadata, with ordered branches, null semantics and aggregate-aware evaluation",
+      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext"],
+      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
@@ -938,6 +938,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
       "difference": "Go exposes Coalesce[T] for same-typed expressions and CoalesceOf[T](...Expr) when the explicit result type must widen nullable numeric operands or preserve a bean/event value. It returns the first non-Null/non-Missing value, skips typed-nil boxed pointers, preserves numeric widening through byte/short/int/long/float/double ranks, and rejects fewer than two operands, nil operands, incompatible types and narrowing during Build; CoalesceOf[any] represents Java's all-null dynamic result. Java EPL, SODA and compile paths are represented by the fluent constructor, and exact Java boxed metadata, parser diagnostics and implicit result-type inference remain open."
+    },
+    {
+      "id": "case.expr-core-current-evaluation-context",
+      "javaRuntimeIds": ["java-runtime-2efbbb4fce55aa6ce513", "java-runtime-ca0799a6d2f163a49f7f"],
+      "javaNames": ["ExprCoreCurrentEvalCtx{soda=false}", "ExprCoreCurrentEvalCtx{soda=true}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCurrentEvaluationContext.java"],
+      "goTests": ["TestCurrentEvaluationContextMatchesJavaMetadataContract", "TestCurrentEvaluationContextNormalizesDirectEvaluationPartitionID"],
+      "tags": ["correctness", "expression", "evaluation-context", "runtime-uri", "statement-name", "user-object", "context-partition"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go exposes ExpressionEvaluationContext and CurrentEvaluationContext() with explicit WithRuntimeURI/WithStatementUserObject query options. Ordinary live projections carry runtime URI, statement name, user object and non-context partition id -1 through deterministic typed metadata; direct expression evaluation also normalizes to -1. Java EPL/SODA text/model compilation and exact context-partition lifecycle payloads remain outside the fluent builder, and filter/FAF/trigger metadata propagation beyond the covered projection paths remains partial."
     },
     {
       "id": "case.expr-script-provider",
@@ -1736,6 +1747,7 @@
     {"capabilityId": "expr.core", "caseId": "case.expr-core-bitwise"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-current-timestamp"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-coalesce"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-current-evaluation-context"},
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},

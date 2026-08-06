@@ -1035,6 +1035,7 @@ func (p PatternQuery) Query(options ...QueryOption) Query {
 		patternSelections:          append([]Selection(nil), p.selections...),
 		routeTarget:                spec.routeTarget,
 		name:                       spec.name,
+		statementUserObject:        spec.statementUserObject,
 		selector:                   spec.selector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,

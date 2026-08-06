@@ -711,6 +711,7 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		joinWhere:                  j.where,
 		routeTarget:                spec.routeTarget,
 		name:                       spec.name,
+		statementUserObject:        spec.statementUserObject,
 		selector:                   spec.selector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,
@@ -1237,6 +1238,7 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 			having:       a.having,
 		},
 		name:                       spec.name,
+		statementUserObject:        spec.statementUserObject,
 		selector:                   spec.selector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,
@@ -2177,6 +2179,7 @@ func outputBasePolicy(base []OutputPolicy) OutputPolicy {
 
 type querySpec struct {
 	name                       string
+	statementUserObject        any
 	selector                   StreamSelector
 	selections                 []Selection
 	routeTarget                string
@@ -2199,6 +2202,13 @@ type QueryOption func(*querySpec)
 
 func StatementName(name string) QueryOption {
 	return func(spec *querySpec) { spec.name = name }
+}
+
+// WithStatementUserObject attaches an opaque caller-owned value to the
+// statement metadata exposed by CurrentEvaluationContext. It is not evaluated
+// as part of the rule and does not enter Plan canonical identity.
+func WithStatementUserObject(value any) QueryOption {
+	return func(spec *querySpec) { spec.statementUserObject = value }
 }
 
 func WithOldStream() QueryOption {
@@ -2276,7 +2286,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -2299,6 +2309,7 @@ type Query struct {
 	routeTarget                string
 	tableTarget                string
 	name                       string
+	statementUserObject        any
 	selector                   StreamSelector
 	sink                       Sink
 	contextName                string

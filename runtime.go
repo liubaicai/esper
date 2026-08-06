@@ -142,6 +142,7 @@ func (c *VirtualClock) Advance(at time.Time) error {
 type engineConfig struct {
 	clock          *VirtualClock
 	matchRecognize MatchRecognizeRuntimeConfig
+	runtimeURI     string
 }
 
 type EngineOption func(*engineConfig)
@@ -154,11 +155,18 @@ func WithStartTime(start time.Time) EngineOption {
 	return func(cfg *engineConfig) { cfg.clock = NewVirtualClock(start) }
 }
 
+// WithRuntimeURI sets the stable runtime identifier exposed by
+// CurrentEvaluationContext and lifecycle metadata. The default is "default".
+func WithRuntimeURI(uri string) EngineOption {
+	return func(cfg *engineConfig) { cfg.runtimeURI = strings.TrimSpace(uri) }
+}
+
 // Engine owns deployed statements and the explicit processing clock.
 type Engine struct {
 	mu                                 sync.Mutex
 	env                                *Environment
 	clock                              *VirtualClock
+	runtimeURI                         string
 	matchRecognizeStatePool            *rowRecogStatePool
 	matchRecognizeStateLimitListeners  []MatchRecognizeStateLimitListener
 	pendingMatchRecognizeStateLimits   []MatchRecognizeStateLimitEvent
@@ -194,7 +202,8 @@ type Engine struct {
 
 func NewEngine(env *Environment, options ...EngineOption) *Engine {
 	cfg := engineConfig{
-		clock: NewVirtualClock(time.Unix(0, 0).UTC()),
+		clock:      NewVirtualClock(time.Unix(0, 0).UTC()),
+		runtimeURI: "default",
 		matchRecognize: MatchRecognizeRuntimeConfig{
 			MaxStates:    -1,
 			PreventStart: true,
@@ -208,9 +217,13 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 	if cfg.clock == nil {
 		cfg.clock = NewVirtualClock(time.Unix(0, 0).UTC())
 	}
+	if strings.TrimSpace(cfg.runtimeURI) == "" {
+		cfg.runtimeURI = "default"
+	}
 	engine := &Engine{
 		env:                             env,
 		clock:                           cfg.clock,
+		runtimeURI:                      cfg.runtimeURI,
 		matchRecognizeStatePool:         newRowRecogStatePool(cfg.matchRecognize),
 		variables:                       make(map[string]Value),
 		contextVariables:                make(map[string]map[string]map[string]Value),
@@ -262,6 +275,14 @@ func (e *Engine) Now() time.Time {
 		return time.Time{}
 	}
 	return e.clock.Now()
+}
+
+// RuntimeURI returns the immutable identifier of this Engine.
+func (e *Engine) RuntimeURI() string {
+	if e == nil {
+		return ""
+	}
+	return e.runtimeURI
 }
 
 type VariableAssignment struct {
@@ -1537,6 +1558,8 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 		e.mu.Unlock()
 		return nil, NewError(ErrorDeployment, fmt.Sprintf("statement name %q is already deployed", name))
 	}
+	runtimeQuery := plan.query
+	runtimeQuery.name = name
 	statement := &Statement{
 		engine:     e,
 		id:         deploymentID + ":" + name,
@@ -1545,7 +1568,7 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 		parameters: cloneParameterValues(parameters),
 		listeners:  make(map[uint64]Listener),
 		state:      StatementStarted,
-		runtime:    newStatementRuntime(plan.query),
+		runtime:    newStatementRuntime(runtimeQuery),
 	}
 	statement.runtime.engine = e
 	statement.runtime.rowRecogOwner = statement.id
@@ -3141,7 +3164,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		if _, exists := s.runtime.partitions[allocationKey]; exists {
 			continue
 		}
-		query := s.plan.query
+		query := s.runtime.query
 		query.contextName = ""
 		partitionRuntime := newStatementRuntime(query)
 		partitionRuntime.engine = s.engine
@@ -3683,7 +3706,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		if _, exists := s.runtime.partitions[allocationKey]; exists {
 			continue
 		}
-		query := s.plan.query
+		query := s.runtime.query
 		query.contextName = ""
 		partitionRuntime := newStatementRuntime(query)
 		partitionRuntime.engine = s.engine
@@ -3774,7 +3797,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 		if definition.initiatedOverlapping {
 			allocationKey = s.engine.allocateOverlappingContextPartitionKeyLocked(s.plan.query.contextName, key)
 		}
-		query := s.plan.query
+		query := s.runtime.query
 		query.contextName = ""
 		partitionRuntime := newStatementRuntime(query)
 		partitionRuntime.engine = s.engine
@@ -3954,7 +3977,7 @@ func (s *Statement) syncTemporalContextLocked(now time.Time) (ResultBatch, bool)
 	}
 	if active {
 		if _, exists := s.runtime.partitions[activeKey]; !exists {
-			query := s.plan.query
+			query := s.runtime.query
 			query.contextName = ""
 			partitionRuntime := newStatementRuntime(query)
 			partitionRuntime.engine = s.engine
@@ -4009,7 +4032,7 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 	}
 	partition := s.runtime.partitions[key]
 	if partition == nil {
-		query := s.plan.query
+		query := s.runtime.query
 		query.contextName = ""
 		partitionRuntime := newStatementRuntime(query)
 		partitionRuntime.engine = s.engine
@@ -4152,6 +4175,22 @@ func (r *statementRuntime) context() context.Context {
 		return context.Background()
 	}
 	return r.ctx
+}
+
+func (r *statementRuntime) evaluationContext() ExpressionEvaluationContext {
+	metadata := ExpressionEvaluationContext{ContextPartitionID: -1}
+	if r == nil {
+		return metadata
+	}
+	metadata.StatementName = r.query.name
+	metadata.StatementUserObject = r.query.statementUserObject
+	if r.engine != nil {
+		metadata.RuntimeURI = r.engine.RuntimeURI()
+	}
+	if strings.TrimSpace(r.partitionContextName) != "" {
+		metadata.ContextPartitionID = r.partitionID
+	}
+	return metadata
 }
 
 func (s *Statement) expire(now time.Time, variables map[string]Value) (ResultBatch, bool) {
@@ -4732,7 +4771,7 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 	history := append([]Event(nil), events...)
 	previousByEvent := r.currentPreviousAccess(plan.query.input)
 	priorByEvent := r.currentPriorAccess(plan.query.input)
-	result.New = projectResults(events, plan.query, plan.resultSchema, now, r.variables, history, nil, previousByEvent, priorByEvent, false)
+	result.New = projectResults(events, plan.query, plan.resultSchema, now, r.variables, history, nil, previousByEvent, priorByEvent, false, r.evaluationContext())
 	result.New = applyResultWindow(result.New, plan.query)
 	if !result.empty() {
 		result.Sequence = r.seq.Add(1)
@@ -4843,7 +4882,7 @@ func (r *statementRuntime) snapshotJoinBatch(plan Plan, now time.Time) ResultBat
 	tuples := joinTuples(plan.query.join, state, now, r)
 	tuples = filterJoinTuples(tuples, plan.query, now, r.variables)
 	result.New = orderJoinResults(
-		projectJoinTuples(tuples, plan.query, plan.resultSchema, now, r.variables, false),
+		projectJoinTuples(tuples, plan.query, plan.resultSchema, now, r.variables, false, r.evaluationContext()),
 		tuples, plan.query.orderBy, now, r.variables, false,
 	)
 	if plan.query.distinct {
@@ -5475,7 +5514,7 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 			if len(group.newEvents) == 0 {
 				continue
 			}
-			query := s.plan.query
+			query := s.runtime.query
 			query.contextName = ""
 			partitionRuntime := newStatementRuntime(query)
 			partitionRuntime.engine = s.engine
@@ -5506,7 +5545,7 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 			result.Old = append(result.Old, triggerBatch.Old...)
 			continue
 		}
-		query := s.plan.query
+		query := s.runtime.query
 		query.contextName = ""
 		partitionPlan := s.plan
 		partitionPlan.query = query
@@ -10128,7 +10167,7 @@ func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) Res
 	newResults := []Result(nil)
 	oldResults := []Result(nil)
 	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream || plan.query.distinct {
-		newResults = projectResults(delta.newEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, delta.historyByEvent, delta.previousByEvent, delta.priorByEvent, false)
+		newResults = projectResults(delta.newEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, delta.historyByEvent, delta.previousByEvent, delta.priorByEvent, false, r.evaluationContext())
 	}
 	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream || plan.query.distinct {
 		oldPreviousByEvent := cloneEventHistories(delta.previousByEvent)
@@ -10149,7 +10188,7 @@ func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) Res
 				oldHistoryByEvent[eventIdentity(old)] = nil
 			}
 		}
-		oldResults = projectResults(delta.oldEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, oldHistoryByEvent, oldPreviousByEvent, delta.priorByEvent, true)
+		oldResults = projectResults(delta.oldEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, oldHistoryByEvent, oldPreviousByEvent, delta.priorByEvent, true, r.evaluationContext())
 	}
 	if plan.query.distinct {
 		newResults, oldResults = r.applyDistinct(plan.query, newResults, oldResults)
@@ -10189,14 +10228,14 @@ func (r *statementRuntime) joinBatch(delta joinDelta, plan Plan, now time.Time) 
 	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
 		filtered := filterJoinTuples(newTuples, plan.query, now, r.variables)
 		batch.New = orderJoinResults(
-			projectJoinTuples(filtered, plan.query, plan.resultSchema, now, r.variables, false),
+			projectJoinTuples(filtered, plan.query, plan.resultSchema, now, r.variables, false, r.evaluationContext()),
 			filtered, plan.query.orderBy, now, r.variables, false,
 		)
 	}
 	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
 		filtered := filterJoinTuples(oldTuples, plan.query, now, r.variables)
 		batch.Old = orderJoinResults(
-			projectJoinTuples(filtered, plan.query, plan.resultSchema, now, r.variables, true),
+			projectJoinTuples(filtered, plan.query, plan.resultSchema, now, r.variables, true, r.evaluationContext()),
 			filtered, plan.query.orderBy, now, r.variables, true,
 		)
 	}
@@ -10238,11 +10277,11 @@ func filterJoinTuples(tuples [][]Event, query Query, now time.Time, variables ma
 	return filtered
 }
 
-func projectResults(events []Event, query Query, resultSchema Schema, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool) []Result {
+func projectResults(events []Event, query Query, resultSchema Schema, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) []Result {
 	if len(events) == 0 {
 		return nil
 	}
-	events = orderEvents(events, query.orderBy, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving)
+	events = orderEvents(events, query.orderBy, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)
 	results := make([]Result, 0, len(events))
 	for _, event := range events {
 		if len(query.selections) == 0 {
@@ -10251,7 +10290,7 @@ func projectResults(events []Event, query Query, resultSchema Schema, now time.T
 		}
 		values := make([]Value, 0, len(query.selections))
 		for _, selection := range query.selections {
-			values = append(values, selection.Expr.eval(projectionEvalContext(event, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving)))
+			values = append(values, selection.Expr.eval(projectionEvalContext(event, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)))
 		}
 		row := newRow(resultSchema, values)
 		results = append(results, resultRow(row))
@@ -10259,14 +10298,14 @@ func projectResults(events []Event, query Query, resultSchema Schema, now time.T
 	return results
 }
 
-func orderEvents(events []Event, keys []SortKey, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool) []Event {
+func orderEvents(events []Event, keys []SortKey, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) []Event {
 	if len(keys) == 0 || len(events) < 2 {
 		return events
 	}
 	ordered := append([]Event(nil), events...)
 	sort.SliceStable(ordered, func(left, right int) bool {
 		for _, key := range keys {
-			comparison, ok := compareValues(key.Expr.eval(projectionEvalContext(ordered[left], now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving)), key.Expr.eval(projectionEvalContext(ordered[right], now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving)))
+			comparison, ok := compareValues(key.Expr.eval(projectionEvalContext(ordered[left], now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)), key.Expr.eval(projectionEvalContext(ordered[right], now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)))
 			if !ok || comparison == 0 {
 				continue
 			}
@@ -10280,13 +10319,13 @@ func orderEvents(events []Event, keys []SortKey, now time.Time, variables map[st
 	return ordered
 }
 
-func projectionEvalContext(event Event, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool) EvalContext {
+func projectionEvalContext(event Event, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) EvalContext {
 	eventHistory := history
 	identity := eventIdentity(event)
 	if historyByEvent != nil {
 		eventHistory = historyByEvent[identity]
 	}
-	ctx := EvalContext{Event: event, History: append([]Event(nil), eventHistory...), IsLeaving: leaving, Now: now, Variables: variables}
+	ctx := EvalContext{Event: event, History: append([]Event(nil), eventHistory...), IsLeaving: leaving, Now: now, Variables: variables, Metadata: evaluation, evaluationContextSet: true}
 	if previousByEvent != nil {
 		if previous, ok := previousByEvent[identity]; ok {
 			ctx.PreviousWindowAccess = true
@@ -10418,15 +10457,15 @@ func resultKey(result Result) string {
 	return "empty"
 }
 
-func projectJoinResults(pairs []eventPair, query Query, resultSchema Schema, now time.Time, variables map[string]Value, leaving bool) []Result {
+func projectJoinResults(pairs []eventPair, query Query, resultSchema Schema, now time.Time, variables map[string]Value, leaving bool, evaluation ExpressionEvaluationContext) []Result {
 	tuuples := make([][]Event, 0, len(pairs))
 	for _, pair := range pairs {
 		tuuples = append(tuuples, []Event{pair.left, pair.right})
 	}
-	return projectJoinTuples(tuuples, query, resultSchema, now, variables, leaving)
+	return projectJoinTuples(tuuples, query, resultSchema, now, variables, leaving, evaluation)
 }
 
-func projectJoinTuples(tuples [][]Event, query Query, resultSchema Schema, now time.Time, variables map[string]Value, leaving bool) []Result {
+func projectJoinTuples(tuples [][]Event, query Query, resultSchema Schema, now time.Time, variables map[string]Value, leaving bool, evaluation ExpressionEvaluationContext) []Result {
 	if len(tuples) == 0 {
 		return nil
 	}
@@ -10440,12 +10479,14 @@ func projectJoinTuples(tuples [][]Event, query Query, resultSchema Schema, now t
 				event = tuple[source]
 			}
 			values = append(values, selection.Expr.eval(EvalContext{
-				Event:      event,
-				JoinEvents: tuple,
-				OuterEvent: event,
-				IsLeaving:  leaving,
-				Now:        now,
-				Variables:  variables,
+				Event:                event,
+				JoinEvents:           tuple,
+				OuterEvent:           event,
+				IsLeaving:            leaving,
+				Now:                  now,
+				Variables:            variables,
+				Metadata:             evaluation,
+				evaluationContextSet: true,
 			}))
 		}
 		results = append(results, resultJoinRow(newRow(resultSchema, values), tuple))

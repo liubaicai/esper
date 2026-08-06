@@ -331,6 +331,7 @@ func (q TriggerQuery) Query(options ...QueryOption) Query {
 		trigger:                    q.definition,
 		selections:                 append([]Selection(nil), q.definition.selections...),
 		name:                       spec.name,
+		statementUserObject:        spec.statementUserObject,
 		selector:                   spec.selector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,

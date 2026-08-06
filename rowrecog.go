@@ -313,6 +313,7 @@ func (q RowRecogQuery) Query(options ...QueryOption) Query {
 		rowRecog:                   q.definition,
 		patternSelections:          append([]Selection(nil), q.measures...),
 		name:                       spec.name,
+		statementUserObject:        spec.statementUserObject,
 		selector:                   spec.selector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,
