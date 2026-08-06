@@ -44,7 +44,7 @@
       "level": "S",
       "summary": "Typed fluent expansion of slice/array-valued parent-event properties into child event streams",
       "javaRefs": ["EPLContainedEventSimple", "EPLContainedEventNested", "EPLContainedEventArray", "EPLContainedEventSplitExpr", "EPLContainedEventExample", "EventInfraContainedSimple", "EventInfraContainedNested", "EventInfraContainedNestedArray", "EventInfraContainedIndexedWithIndex", "InfraNamedWindowContainedEvent"],
-      "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "contained_test.go", "contained_unidirectional_test.go"],
+      "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "subquery.go", "contained_test.go", "contained_unidirectional_test.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["nested contained Pattern/Subselect/underlying and property-selection alias/fragment semantics", "scalar/string/array split expressions and @type materialization", "contained Table/FAF interactions and remaining Named Window representation combinations", "invalid diagnostics and complete Java contained-event trace"]
