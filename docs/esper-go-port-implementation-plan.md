@@ -1630,3 +1630,5 @@ method source 的组合矩阵再补两条 Go-native 证据：多个 `FromMethodO
 本轮补齐 Java `EPLOuterJoinCart4Stream`/`EPLOuterJoinCart5Stream` 的 13 个 Cartesian hub/root runtime：`TestCartesianOuterHubVariantsMatchEsper` 以 Go `JoinChain` 覆盖四流 4 个 root、五流 9 个 root/order 变体及对应 left/right edge。当前证据锁定拓扑和同 key 最终 tuple；多行 Cartesian cardinality、中间 unmatched old/new、完整到达顺序和物理索引计划仍保持 partial。
 
 本轮补齐 Java `EPLOuterJoinVarA3Stream`/`EPLOuterJoinVarB3Stream`/`EPLOuterJoinVarC3Stream` 的 14 个三流 outer runtime：`TestThreeStreamOuterVarRootVariantsMatchEsper` 用 Go `JoinChain` 覆盖 VarA/VarB/VarC 的 9 个 root source order、left/right edge 组合，并让每侧两行同 key 收敛为 8 行完整组合，验证多行 cardinality。Java 的 Map 未排序属性、精确复合列矩阵、SODA/compile 入口与 invalid 诊断文本仍作为 approved difference，后续补齐更宽的事件到达序列。
+
+本轮补强 Java `EPLOuterJoinChain4Stream` 的四流 cardinality 对照：`TestFourStreamOuterChainCardinalityMatchesEsper` 覆盖 S0–S3 四个 root、单行/多行/中间缺侧/尾侧多行七种场景，并验证每个新批次的唯一组合数。该测试补充了原有 root 收敛测试没有锁定的多行笛卡尔基数；完整 old-stream、Bushy 拓扑和物理索引计划仍保持 partial。
