@@ -189,6 +189,23 @@ type DataflowRecord interface {
 func (Event) dataflowRecord() {}
 func (Row) dataflowRecord()   {}
 
+// DataflowFactoryMetadata identifies the definition-time factory associated
+// with one operator. Built-in operators are represented by Kind alone;
+// custom operators and sources also retain their original typed factory.
+// This is the Go-style equivalent of Esper's provider-context getFactory
+// metadata without exposing a reflection or annotation contract.
+type DataflowFactoryMetadata struct {
+	Kind            DataflowOperatorKind
+	OperatorFactory DataflowOperatorFactory
+	SourceFactory   DataflowSourceFactory
+}
+
+// IsBuiltin reports whether the operator is implemented by the engine rather
+// than a caller-supplied custom factory.
+func (m DataflowFactoryMetadata) IsBuiltin() bool {
+	return m.OperatorFactory == nil && m.SourceFactory == nil
+}
+
 // DataflowOperatorContext describes the graph and operator instance supplied
 // to a custom operator factory.  A fresh runtime is created for every
 // DataflowInstance, matching Esper's factory/operator split.
@@ -198,6 +215,7 @@ type DataflowOperatorContext struct {
 	UserObject   any
 	OperatorName string
 	OperatorNum  int
+	Factory      DataflowFactoryMetadata
 	InputPorts   []DataflowPort
 	OutputPorts  []DataflowPort
 	Properties   map[string]any
@@ -327,6 +345,7 @@ type DataflowParameterContext struct {
 	InstanceID    string
 	OperatorName  string
 	OperatorNum   int
+	Factory       DataflowFactoryMetadata
 	ParameterName string
 	DefaultValue  any
 }
@@ -616,19 +635,27 @@ type DataflowOperatorOptions struct {
 
 func (o DataflowOperatorOptions) validate() error {
 	for name := range o.Properties {
-		if name == "" {
+		trimmed := strings.TrimSpace(name)
+		if trimmed == "" {
 			return NewError(ErrorInvalidRule, "dataflow operator property name cannot be empty")
+		}
+		if trimmed != name {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator property name %q has surrounding whitespace", name))
 		}
 	}
 	seen := make(map[string]struct{}, len(o.ParameterNames))
 	for _, name := range o.ParameterNames {
-		if name == "" {
+		trimmed := strings.TrimSpace(name)
+		if trimmed == "" {
 			return NewError(ErrorInvalidRule, "dataflow operator parameter name cannot be empty")
 		}
-		if _, exists := seen[name]; exists {
-			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator parameter %q is declared more than once", name))
+		if trimmed != name {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator parameter name %q has surrounding whitespace", name))
 		}
-		seen[name] = struct{}{}
+		if _, exists := seen[trimmed]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator parameter %q is declared more than once", trimmed))
+		}
+		seen[trimmed] = struct{}{}
 	}
 	return nil
 }
@@ -2458,6 +2485,7 @@ type DataflowInstance struct {
 }
 
 func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowOperator, number int, options DataflowOptions) DataflowOperatorContext {
+	factory := dataflowFactoryMetadata(operator)
 	properties := maps.Clone(operator.Properties)
 	if properties == nil {
 		properties = make(map[string]any)
@@ -2484,6 +2512,7 @@ func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowO
 				InstanceID:    instanceID,
 				OperatorName:  operator.Name,
 				OperatorNum:   number,
+				Factory:       factory,
 				ParameterName: name,
 				DefaultValue:  defaultValue,
 			})
@@ -2498,9 +2527,18 @@ func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowO
 		UserObject:   options.UserObject,
 		OperatorName: operator.Name,
 		OperatorNum:  number,
+		Factory:      factory,
 		InputPorts:   dataflowOperatorContextPorts(operator, false),
 		OutputPorts:  dataflowOperatorContextPorts(operator, true),
 		Properties:   properties,
+	}
+}
+
+func dataflowFactoryMetadata(operator DataflowOperator) DataflowFactoryMetadata {
+	return DataflowFactoryMetadata{
+		Kind:            operator.Kind,
+		OperatorFactory: operator.Factory,
+		SourceFactory:   operator.SourceFactory,
 	}
 }
 

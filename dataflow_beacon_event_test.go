@@ -306,6 +306,9 @@ func TestDataflowBeaconFieldParametersOverridePerInstanceAndRouteEventBusMatches
 		if parameter.OperatorName != "source" || parameter.OperatorNum != 0 || parameter.DefaultValue != nil {
 			t.Fatalf("beacon parameter context[%d] = %#v", index, parameter)
 		}
+		if parameter.Factory.Kind != BeaconSourceKind || !parameter.Factory.IsBuiltin() || parameter.Factory.OperatorFactory != nil || parameter.Factory.SourceFactory != nil {
+			t.Fatalf("beacon parameter factory context[%d] = %#v", index, parameter.Factory)
+		}
 		if parameter.ParameterName != []string{"p0", "p1"}[index%2] {
 			t.Fatalf("beacon parameter order[%d] = %#v", index, parameter)
 		}

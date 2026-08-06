@@ -38,12 +38,13 @@ func TestDataflowParameterProviderMatchesEsperInstantiationOptions(t *testing.T)
 		t.Fatal(err)
 	}
 	var captured DataflowOperatorContext
+	customFactory := func(ctx DataflowOperatorContext) (DataflowOperatorRuntime, error) {
+		captured = ctx
+		return dataflowOptionRuntime{}, nil
+	}
 	definition, err := DefineDataflow(env, "parameter-options-flow").
 		BeaconSource("source", event).
-		CustomWithOptions("custom", func(ctx DataflowOperatorContext) (DataflowOperatorRuntime, error) {
-			captured = ctx
-			return dataflowOptionRuntime{}, nil
-		}, DataflowOperatorOptions{
+		CustomWithOptions("custom", customFactory, DataflowOperatorOptions{
 			Properties:     map[string]any{"propOne": "abc", "propThree": "xyz"},
 			ParameterNames: []string{"propOne", "propTwo", "propThree"},
 		}).
@@ -76,6 +77,12 @@ func TestDataflowParameterProviderMatchesEsperInstantiationOptions(t *testing.T)
 	if captured.DataflowName != "parameter-options-flow" || captured.InstanceID != "parameter-instance" || captured.UserObject != "owner" || captured.OperatorName != "custom" || captured.OperatorNum != 1 {
 		t.Fatalf("operator context = %#v", captured)
 	}
+	if captured.Factory.Kind != CustomKind || captured.Factory.OperatorFactory == nil || captured.Factory.SourceFactory != nil || captured.Factory.IsBuiltin() {
+		t.Fatalf("operator factory metadata = %#v", captured.Factory)
+	}
+	if reflect.ValueOf(captured.Factory.OperatorFactory).Pointer() != reflect.ValueOf(customFactory).Pointer() {
+		t.Fatal("operator context did not retain the definition factory")
+	}
 	if got := []string{captured.InputPorts[0].Name, captured.OutputPorts[0].Name}; !reflect.DeepEqual(got, []string{"in", "out"}) {
 		t.Fatalf("operator context ports = %#v", captured)
 	}
@@ -91,6 +98,9 @@ func TestDataflowParameterProviderMatchesEsperInstantiationOptions(t *testing.T)
 	for _, parameter := range contexts {
 		if parameter.DataflowName != "parameter-options-flow" || parameter.InstanceID != "parameter-instance" || parameter.OperatorName != "custom" || parameter.OperatorNum != 1 {
 			t.Fatalf("parameter context = %#v", parameter)
+		}
+		if parameter.Factory.Kind != CustomKind || parameter.Factory.OperatorFactory == nil || parameter.Factory.SourceFactory != nil || parameter.Factory.IsBuiltin() {
+			t.Fatalf("parameter factory metadata = %#v", parameter.Factory)
 		}
 		if parameter.ParameterName == "propOne" && parameter.DefaultValue != "abc" {
 			t.Fatalf("propOne default = %#v", parameter.DefaultValue)
@@ -114,12 +124,13 @@ func TestDataflowOperatorAndSourceProvidersOverrideFactories(t *testing.T) {
 		}
 		factoryCalled := false
 		var provided DataflowOperatorContext
+		originalFactory := func(DataflowOperatorContext) (DataflowOperatorRuntime, error) {
+			factoryCalled = true
+			return nil, errors.New("factory should not be called")
+		}
 		definition, err := DefineDataflow(env, "operator-provider-flow").
 			BeaconSource("source", event).
-			CustomWithOptions("custom", func(DataflowOperatorContext) (DataflowOperatorRuntime, error) {
-				factoryCalled = true
-				return nil, errors.New("factory should not be called")
-			}, DataflowOperatorOptions{Properties: map[string]any{"mode": "factory"}}).
+			CustomWithOptions("custom", originalFactory, DataflowOperatorOptions{Properties: map[string]any{"mode": "factory"}}).
 			Emitter("sink").
 			Connect("source", "custom").
 			Connect("custom", "sink").
@@ -145,6 +156,12 @@ func TestDataflowOperatorAndSourceProvidersOverrideFactories(t *testing.T) {
 		if provided.OperatorName != "custom" || provided.Properties["mode"] != "factory" {
 			t.Fatalf("operator provider context = %#v", provided)
 		}
+		if provided.Factory.Kind != CustomKind || provided.Factory.OperatorFactory == nil || provided.Factory.SourceFactory != nil || provided.Factory.IsBuiltin() {
+			t.Fatalf("operator provider factory metadata = %#v", provided.Factory)
+		}
+		if reflect.ValueOf(provided.Factory.OperatorFactory).Pointer() != reflect.ValueOf(originalFactory).Pointer() {
+			t.Fatal("operator provider did not receive the definition factory")
+		}
 		if outputs := instance.Outputs(); len(outputs) != 1 || outputs[0] != "operator-injected" {
 			t.Fatalf("operator provider outputs = %#v", outputs)
 		}
@@ -154,11 +171,12 @@ func TestDataflowOperatorAndSourceProvidersOverrideFactories(t *testing.T) {
 		env := NewEnvironment()
 		factoryCalled := false
 		var provided DataflowOperatorContext
+		originalFactory := func(DataflowOperatorContext) (DataflowSourceRuntime, error) {
+			factoryCalled = true
+			return nil, errors.New("source factory should not be called")
+		}
 		definition, err := DefineDataflow(env, "source-provider-flow").
-			CustomSourceWithOptions("source", func(DataflowOperatorContext) (DataflowSourceRuntime, error) {
-				factoryCalled = true
-				return nil, errors.New("source factory should not be called")
-			}, DataflowOperatorOptions{Properties: map[string]any{"mode": "factory"}}).
+			CustomSourceWithOptions("source", originalFactory, DataflowOperatorOptions{Properties: map[string]any{"mode": "factory"}}).
 			Emitter("sink").
 			Connect("source", "sink").
 			Build()
@@ -183,6 +201,12 @@ func TestDataflowOperatorAndSourceProvidersOverrideFactories(t *testing.T) {
 		if provided.OperatorName != "source" || provided.Properties["mode"] != "factory" {
 			t.Fatalf("source provider context = %#v", provided)
 		}
+		if provided.Factory.Kind != CustomSourceKind || provided.Factory.SourceFactory == nil || provided.Factory.OperatorFactory != nil || provided.Factory.IsBuiltin() {
+			t.Fatalf("source provider factory metadata = %#v", provided.Factory)
+		}
+		if reflect.ValueOf(provided.Factory.SourceFactory).Pointer() != reflect.ValueOf(originalFactory).Pointer() {
+			t.Fatal("source provider did not receive the definition factory")
+		}
 		if outputs := instance.Outputs(); len(outputs) != 1 || outputs[0] != "source-injected" {
 			t.Fatalf("source provider outputs = %#v", outputs)
 		}
@@ -197,5 +221,24 @@ func TestDataflowOperatorOptionsRejectDuplicateParameters(t *testing.T) {
 		}, DataflowOperatorOptions{ParameterNames: []string{"same", "same"}}).
 		Build(); err == nil {
 		t.Fatal("duplicate parameter names were accepted")
+	}
+}
+
+func TestDataflowOperatorOptionsRejectNonCanonicalNames(t *testing.T) {
+	env := NewEnvironment()
+	factory := func(DataflowOperatorContext) (DataflowOperatorRuntime, error) {
+		return dataflowOptionRuntime{}, nil
+	}
+	for _, options := range []DataflowOperatorOptions{
+		{Properties: map[string]any{" ": 1}},
+		{Properties: map[string]any{" mode ": 1}},
+		{ParameterNames: []string{" "}},
+		{ParameterNames: []string{" mode "}},
+	} {
+		if _, err := DefineDataflow(env, "invalid-operator-option-name").
+			CustomWithOptions("custom", factory, options).
+			Build(); err == nil {
+			t.Fatalf("operator options accepted non-canonical name: %#v", options)
+		}
 	}
 }
