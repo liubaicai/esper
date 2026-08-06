@@ -981,6 +981,17 @@
       "difference": "Go's fluent builder rejects duplicate definitions/operators/routes, unknown operators and ports, incompatible typed edges, undeclared schemas, ordinary cycles, source-targeted input edges, non-cyclic feedback markers, non-canonical names/ports and terminal-sink output edges; the feedback bit also participates in Plan canonical/hash identity. EPL parser syntax, Java forge/class resolution, annotation property injection and reflective onInput method discovery have no runtime analogue in the typed Go API: Go factories, port descriptors and Process/Run interfaces make those shapes compile-time contracts instead."
     },
     {
+      "id": "case.dataflow-captive-emitter-ports",
+      "javaRuntimeIds": ["java-runtime-6309a6b7e0f0ba981a97", "java-98ad6f7cdc7876aaf6b3"],
+      "javaNames": ["EPLDataflowFanInOut", "EPLDataflowAPIStartCaptive", "EPDataFlowEmitterOperator"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowInputOutputVariations.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIStartCaptive.java", "common/src/main/java/com/espertech/esper/common/client/dataflow/core/EPDataFlowEmitterOperator.java"],
+      "goTests": ["TestDataflowCaptiveEmitterNamedPortsMatchEsperSubmitPort", "TestDataflowSingleNamedEmitterPortSupportsSubmit", "TestDataflowCustomSourceSignalFansOutAllNamedPorts", "TestDataflowEmitterPortDefinitionsEnterPlanIdentity"],
+      "tags": ["correctness", "dataflow", "start-captive", "emitter", "named-ports", "signal", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Go adds fluent EmitterPorts and uses stable named SubmitPort routing instead of Java's numeric port index. Ambiguous Submit is rejected for multiple outputs, a single named output remains usable through Submit, and SubmitSignal fans out once over every connected output for both captive Emitter and custom-source handles. Declared port names and Go types participate in Plan canonical/hash identity; Java's exact numeric-index exception text and reflection-based stream schemas are intentionally replaced by named fluent descriptors."
+    },
+    {
       "id": "case.dataflow-eventbus",
       "javaRuntimeIds": ["java-runtime-37aed9aedcbbb25c4826", "java-runtime-dfb59d3bd4798d57cc0c", "java-runtime-73c4f6808b38087c5a59"],
       "javaNames": ["EPLDataflowSchemaObjectArray", "EPLDataflowAllTypes", "EPLDataflowAllTypes"],
@@ -1400,6 +1411,8 @@
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-consuming-filter"},
     {"capabilityId": "pattern.timer-cron-basic", "caseId": "case.pattern-timer-cron"},
     {"capabilityId": "query.historical-sql", "caseId": "case.historical-sql"},
+    {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-invalid-graph"},
+    {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-captive-emitter-ports"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-eventbus"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-eventbus-collector"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-logsink"},

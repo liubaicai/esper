@@ -595,7 +595,7 @@ func (e *Environment) Build(query Query) (Plan, error) {
 			}
 			parameterNames := append([]string(nil), operator.ParameterNames...)
 			sort.Strings(parameterNames)
-			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s:properties=%s:parameters=%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon, canonicalDataflowProperties(operator.Properties), strings.Join(parameterNames, ",")))
+			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s:inputs=%s:outputs=%s:properties=%s:parameters=%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon, canonicalDataflowPorts(operator, false), canonicalDataflowPorts(operator, true), canonicalDataflowProperties(operator.Properties), strings.Join(parameterNames, ",")))
 		}
 		edges := make([]string, 0, len(dataflow.edges))
 		for _, edge := range dataflow.edges {
@@ -612,6 +612,27 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		query:         query,
 		resultSchema:  resultSchema,
 	}, nil
+}
+
+func canonicalDataflowPorts(operator DataflowOperator, output bool) string {
+	ports := operator.InputPorts
+	defaultPort := "in"
+	if output {
+		ports = operator.OutputPorts
+		defaultPort = "out"
+	}
+	if len(ports) == 0 && dataflowPortAllowed(operator, output, defaultPort) {
+		ports = []string{defaultPort}
+	}
+	definitions := make([]string, 0, len(ports))
+	for _, port := range ports {
+		typ := "*"
+		if portType := dataflowPortType(operator, output, port); portType != nil {
+			typ = portType.String()
+		}
+		definitions = append(definitions, port+"="+typ)
+	}
+	return "[" + strings.Join(definitions, ",") + "]"
 }
 
 type canonicalDataflowReference struct {

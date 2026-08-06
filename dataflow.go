@@ -513,17 +513,18 @@ func (e *DataflowEmitter) Submit(ctx context.Context, value any) error {
 	return e.instance.submitEmitter(ctx, e.name, value)
 }
 
-// SubmitPort emits a raw value on a named custom-source output port. It is
-// useful for fan-out sources; ordinary captive Emitters use Submit because
-// their conventional output is the single "out" port.
+// SubmitPort emits a value on one named output port. Custom sources forward
+// the raw Go value, while captive Emitter operators materialize registered
+// event values in the same way as Submit. Named ports are the Go-style
+// counterpart to Esper's numeric submitPort index.
 func (e *DataflowEmitter) SubmitPort(ctx context.Context, port string, value any) error {
 	if e == nil || e.instance == nil {
 		return NewError(ErrorState, "nil dataflow emitter")
 	}
-	if !e.allowRaw {
-		return NewError(ErrorInvalidRule, "named output ports are only available to custom sources")
+	if e.allowRaw {
+		return e.instance.submitSourcePort(ctx, e.name, port, value)
 	}
-	return e.instance.submitSourcePort(ctx, e.name, port, value)
+	return e.instance.submitEmitterPort(ctx, e.name, port, value)
 }
 
 // SubmitSignal injects a control-plane signal through the captive emitter.
@@ -535,9 +536,9 @@ func (e *DataflowEmitter) SubmitSignal(ctx context.Context, signal DataflowSigna
 		return NewError(ErrorInvalidRule, "dataflow signal is nil")
 	}
 	if e.allowRaw {
-		return e.instance.submitSourcePort(ctx, e.name, "out", signal)
+		return e.instance.submitSourceSignal(ctx, e.name, signal)
 	}
-	return e.instance.submitEmitter(ctx, e.name, signal)
+	return e.instance.submitEmitterSignal(ctx, e.name, signal)
 }
 
 // DataflowOperatorRuntime is the minimum contract for a custom transform or
@@ -1260,6 +1261,13 @@ func (b DataflowBuilder) beaconEventSource(name, eventType string, options Dataf
 
 func (b DataflowBuilder) Emitter(name string) DataflowBuilder {
 	return b.add(DataflowOperator{Name: name, Kind: EmitterKind})
+}
+
+// EmitterPorts adds a caller-driven captive Emitter with explicit named
+// outputs. SubmitPort selects one output; SubmitSignal fans out over all of
+// them. A multi-output emitter intentionally rejects ambiguous Submit calls.
+func (b DataflowBuilder) EmitterPorts(name string, outputs ...string) DataflowBuilder {
+	return b.add(DataflowOperator{Name: name, Kind: EmitterKind, OutputPorts: append([]string(nil), outputs...)})
 }
 
 func (b DataflowBuilder) EPStatementSource(name string, statement *Statement) DataflowBuilder {
@@ -3628,6 +3636,9 @@ func (d *DataflowInstance) SubmitSignal(ctx context.Context, signal DataflowSign
 }
 
 func (d *DataflowInstance) submitEmitter(ctx context.Context, name string, value any) error {
+	if signal, ok := value.(DataflowSignal); ok {
+		return d.submitEmitterSignal(ctx, name, signal)
+	}
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
@@ -3645,20 +3656,111 @@ func (d *DataflowInstance) submitEmitter(ctx context.Context, name string, value
 	if !ok || operator.Kind != EmitterKind || !hasOutgoing {
 		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q is not a captive emitter source", name))
 	}
-	if signal, ok := value.(DataflowSignal); ok {
-		err := d.processGraphFrom(ctx, signal, name)
-		if err != nil {
-			return d.completeDataflowFailure(err)
+	port, unambiguous := dataflowEmitterDefaultOutputPort(operator)
+	if !unambiguous {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow emitter %q has multiple output ports; use SubmitPort", name))
+	}
+	return d.submitEmitterPort(ctx, name, port, value)
+}
+
+func (d *DataflowInstance) submitEmitterPort(ctx context.Context, name, port string, value any) error {
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if d == nil {
+		return NewError(ErrorState, "nil dataflow instance")
+	}
+	d.mu.Lock()
+	running := d.state == DataflowRunning
+	operator, ok := d.operators[name]
+	hasOutgoing := len(d.outgoing[name]) > 0
+	connected := false
+	for _, edge := range d.outgoing[name] {
+		if edge.FromPort == port {
+			connected = true
+			break
 		}
-		return nil
+	}
+	d.mu.Unlock()
+	if !running {
+		return NewError(ErrorState, "dataflow is not running")
+	}
+	if !ok || operator.Kind != EmitterKind || !hasOutgoing {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q is not a captive emitter source", name))
+	}
+	if !dataflowPortAllowed(operator, true, port) {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow emitter %q references unknown output port %q", name, port))
+	}
+	if signal, ok := value.(DataflowSignal); ok {
+		return d.processEmitterPortSignal(ctx, name, port, signal)
 	}
 	event, err := d.materializeDataflowEvent(value)
 	if err != nil {
 		return err
 	}
+	if expected := dataflowPortType(operator, true, port); expected != nil && !dataflowValueAssignable(event, expected) {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow emitter %q output port %q emitted %T, want %s", name, port, event, expected))
+	}
 	d.processed.Add(1)
-	err = d.processGraphFrom(ctx, event, name)
+	started := time.Now()
+	err = d.processSourceEmission(ctx, name, port, event)
 	if err != nil {
+		return d.completeDataflowFailure(err)
+	}
+	if connected {
+		d.recordOperatorSubmission(name, port, time.Since(started))
+	}
+	return nil
+}
+
+func dataflowEmitterDefaultOutputPort(operator DataflowOperator) (string, bool) {
+	if len(operator.OutputPorts) == 0 {
+		return "out", true
+	}
+	if len(operator.OutputPorts) == 1 {
+		return operator.OutputPorts[0], true
+	}
+	return "", false
+}
+
+func (d *DataflowInstance) submitEmitterSignal(ctx context.Context, name string, signal DataflowSignal) error {
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if d == nil {
+		return NewError(ErrorState, "nil dataflow instance")
+	}
+	d.mu.Lock()
+	running := d.state == DataflowRunning
+	operator, ok := d.operators[name]
+	edges := append([]DataflowEdge(nil), d.outgoing[name]...)
+	d.mu.Unlock()
+	if !running {
+		return NewError(ErrorState, "dataflow is not running")
+	}
+	if !ok || operator.Kind != EmitterKind || len(edges) == 0 {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q is not a captive emitter source", name))
+	}
+	if operator.Signal != nil {
+		if err := operator.Signal(ctx, signal); err != nil {
+			return d.completeDataflowFailure(err)
+		}
+	}
+	d.mu.Lock()
+	d.signals = append(d.signals, signal)
+	d.mu.Unlock()
+	queue := make([]dataflowWorkItem, 0, len(edges))
+	for _, edge := range edges {
+		queue = append(queue, dataflowWorkItem{operator: edge.To, port: edge.ToPort, value: signal})
+	}
+	if err := d.processGraphQueue(ctx, queue); err != nil {
+		return d.completeDataflowFailure(err)
+	}
+	return nil
+}
+
+func (d *DataflowInstance) processEmitterPortSignal(ctx context.Context, name, port string, signal DataflowSignal) error {
+	if err := d.processSourceEmission(ctx, name, port, signal); err != nil {
 		return d.completeDataflowFailure(err)
 	}
 	return nil
@@ -3666,6 +3768,32 @@ func (d *DataflowInstance) submitEmitter(ctx context.Context, name string, value
 
 func (d *DataflowInstance) submitSourceValue(ctx context.Context, name string, value any) error {
 	return d.submitSourcePort(ctx, name, "out", value)
+}
+
+func (d *DataflowInstance) submitSourceSignal(ctx context.Context, name string, signal DataflowSignal) error {
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if d == nil {
+		return NewError(ErrorState, "nil dataflow instance")
+	}
+	d.mu.Lock()
+	running := d.state == DataflowRunning
+	operator, ok := d.operators[name]
+	edges := append([]DataflowEdge(nil), d.outgoing[name]...)
+	d.mu.Unlock()
+	if !running {
+		return NewError(ErrorState, "dataflow is not running")
+	}
+	if !ok || operator.Kind != CustomSourceKind || len(edges) == 0 {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q is not a custom source", name))
+	}
+	d.processed.Add(1)
+	queue := make([]dataflowWorkItem, 0, len(edges))
+	for _, edge := range edges {
+		queue = append(queue, dataflowWorkItem{operator: edge.To, port: edge.ToPort, value: signal})
+	}
+	return d.processGraphQueue(ctx, queue)
 }
 
 func (d *DataflowInstance) submitSourcePort(ctx context.Context, name, port string, value any) error {
