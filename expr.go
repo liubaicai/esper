@@ -963,53 +963,7 @@ func previousExpression[V any](kind string, offset int, expression Expression[V]
 	description := fmt.Sprintf("%s(%d,%s)", kind, offset, expression.Description())
 	node := &exprNode{kind: kind, typ: typeOf[V](), description: description, previousOffset: offset, children: []*exprNode{expression.node()}}
 	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
-		history := ctx.PreviousHistory
-		windowAccess := ctx.PreviousWindowAccess && !prior
-		if prior && (ctx.PriorHistorySet || ctx.PriorHistory != nil) {
-			history = ctx.PriorHistory
-			windowAccess = false
-		} else if history == nil && !ctx.PreviousWindowAccess {
-			history = ctx.History
-		}
-		if offset < 0 || len(history) == 0 {
-			return Null()
-		}
-		if windowAccess {
-			if offset >= len(history) {
-				return Null()
-			}
-			nested := ctx
-			nested.History = history
-			nested.PreviousHistory = history
-			nested.PreviousWindowAccess = true
-			return evaluatePreviousAt[V](expression, nested, offset)
-		}
-		index := len(history) - 1 - offset
-		if prior {
-			index--
-		}
-		if index < 0 || index >= len(history) {
-			return Null()
-		}
-		nested := ctx
-		nested.Event = history[index]
-		nested.History = append([]Event(nil), history[:index+1]...)
-		nested.PreviousHistory = append([]Event(nil), history[:index+1]...)
-		nested.PreviousWindowAccess = ctx.PreviousWindowAccess
-		nested.PriorHistory = append([]Event(nil), ctx.PriorHistory...)
-		nested.PriorHistorySet = ctx.PriorHistorySet
-		var tags []string
-		expression.node().referencedTags(&tags)
-		if len(tags) > 0 || len(ctx.PreviousTagEvents) > 0 {
-			nested.PreviousTagEvents = make(map[string]Event, len(ctx.PreviousTagEvents)+len(tags))
-			for tag, event := range ctx.PreviousTagEvents {
-				nested.PreviousTagEvents[tag] = event
-			}
-			for _, tag := range tags {
-				nested.PreviousTagEvents[tag] = history[index]
-			}
-		}
-		return expression.eval(nested)
+		return evaluatePreviousOffset[V](ctx, offset, expression, prior)
 	}}
 }
 
