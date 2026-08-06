@@ -318,20 +318,18 @@ func (e *Engine) executeJoinFireAndForget(ctx context.Context, plan Plan, parame
 	runtime.ctx = ctx
 	runtime.variables = variablesWithEngine(variables, e)
 	runtime.joinState = &joinRuntimeState{sides: make([][]storedEvent, len(sources))}
-	for index, source := range sources {
+	evaluationOrder, err := methodJoinEvaluationOrder(plan.query.join)
+	if err != nil {
+		return QueryResult{}, err
+	}
+	for _, index := range evaluationOrder {
+		source := sources[index]
 		base, err := sourceNode(source)
 		if err != nil {
 			return QueryResult{}, err
 		}
-		if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
-			return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget joins with dependent method sources are not supported")
-		}
 		if base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical && base.kind != streamMethod {
 			return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget join sources must be named windows, tables, historical sources, or method sources")
-		}
-		events, err := e.snapshotFireAndForgetSource(ctx, base, now, variables)
-		if err != nil {
-			return QueryResult{}, err
 		}
 		input := source
 		if base.kind == streamHistorical {
@@ -339,21 +337,60 @@ func (e *Engine) executeJoinFireAndForget(ctx context.Context, plan Plan, parame
 		} else if base.kind == streamMethod {
 			input = replaceStreamBase(source, base, &streamNode{kind: streamSource, sourceName: base.method.schema.Name(), sourceType: typeOf[any]()})
 		}
-		for _, event := range events {
-			delta, insertErr := runtime.insert(input, event, now)
-			if insertErr != nil {
-				return QueryResult{}, insertErr
+		if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
+			invocations, invocationErr := methodDependencyInvocations(base.method.dependencies, sources, runtime.joinState)
+			if invocationErr != nil {
+				return QueryResult{}, invocationErr
 			}
-			removeStoredEvents(&runtime.joinState.sides[index], delta.oldEvents)
-			for _, inserted := range delta.newEvents {
-				runtime.joinState.sides[index] = append(runtime.joinState.sides[index], storedEvent{event: inserted, receivedAt: now})
+			for _, invocation := range invocations {
+				previous := runtime.methodDependencies
+				runtime.methodDependencies = invocation.events
+				events, pollErr := base.method.provider.Poll(ctx, MethodRequest{
+					Now: now, Variables: visibleVariableValues(variables), Parameters: parameterValuesFromVariables(variables),
+					Dependencies: cloneMethodDependencies(invocation.events),
+					Invocation:   MethodInvocationContext{SourceName: base.sourceName, ContextPartitionID: -1},
+				})
+				runtime.methodDependencies = previous
+				if pollErr != nil {
+					return QueryResult{}, pollErr
+				}
+				if appendErr := appendFireAndForgetJoinSource(&runtime, &runtime.joinState.sides[index], input, events, now, invocation.lineage); appendErr != nil {
+					return QueryResult{}, appendErr
+				}
 			}
+			continue
+		}
+		events, err := e.snapshotFireAndForgetSource(ctx, base, now, variables)
+		if err != nil {
+			return QueryResult{}, err
+		}
+		if appendErr := appendFireAndForgetJoinSource(&runtime, &runtime.joinState.sides[index], input, events, now, nil); appendErr != nil {
+			return QueryResult{}, appendErr
 		}
 	}
 	tuples := joinTuples(plan.query.join, runtime.joinState, now, &runtime)
 	batch := runtime.joinBatch(joinDeltaWithPairs(joinDelta{newTuples: tuples}), plan, now)
 	batch = runtime.applyOutput(plan.query.output, batch, false, now, plan)
 	return QueryResult{Batch: batch}, nil
+}
+
+func appendFireAndForgetJoinSource(runtime *statementRuntime, side *[]storedEvent, input *streamNode, events []Event, now time.Time, lineage map[int]uint64) error {
+	if runtime == nil || side == nil {
+		return NewError(ErrorDependency, "fire-and-forget join runtime is nil")
+	}
+	for _, event := range events {
+		delta, err := runtime.insert(input, event, now)
+		if err != nil {
+			return err
+		}
+		removeStoredEvents(side, delta.oldEvents)
+		for _, inserted := range delta.newEvents {
+			*side = append(*side, storedEvent{
+				event: inserted, receivedAt: now, lineageID: runtime.nextJoinLineageID(), lineage: cloneMethodLineage(lineage),
+			})
+		}
+	}
+	return nil
 }
 
 func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan, selector ContextPartitionSelector, parameters ParameterValues) (QueryResult, error) {
@@ -368,6 +405,10 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 	if len(sources) < 2 {
 		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context join requires at least two sources")
 	}
+	evaluationOrder, err := methodJoinEvaluationOrder(plan.query.join)
+	if err != nil {
+		return QueryResult{}, err
+	}
 	e.mu.Lock()
 	now := e.clock.Now()
 	variables := bindParameterValues(cloneValues(e.variables), parameters)
@@ -379,11 +420,11 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 		if err != nil {
 			return QueryResult{}, err
 		}
-		if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
-			return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context joins with dependent method sources are not supported")
-		}
 		if base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical && base.kind != streamMethod {
 			return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context join sources must be named windows, tables, historical sources, or method sources")
+		}
+		if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
+			continue
 		}
 		events, err := e.snapshotFireAndForgetSource(ctx, base, now, variables)
 		if err != nil {
@@ -438,7 +479,8 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 		runtime.variables = runtime.withContextVariables(variablesWithEngine(cloneValues(variables), e))
 		runtime.variables = runtime.withContextProperties(runtime.variables)
 		runtime.joinState = &joinRuntimeState{sides: make([][]storedEvent, len(sources))}
-		for index, source := range sources {
+		for _, index := range evaluationOrder {
+			source := sources[index]
 			base, baseErr := sourceNode(source)
 			if baseErr != nil {
 				return QueryResult{}, baseErr
@@ -449,15 +491,31 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 			} else if base.kind == streamMethod {
 				input = replaceStreamBase(source, base, &streamNode{kind: streamSource, sourceName: base.method.schema.Name(), sourceType: typeOf[any]()})
 			}
-			for _, event := range grouped[index][key] {
-				delta, insertErr := runtime.insert(input, event, now)
-				if insertErr != nil {
-					return QueryResult{}, insertErr
+			if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
+				invocations, invocationErr := methodDependencyInvocations(base.method.dependencies, sources, runtime.joinState)
+				if invocationErr != nil {
+					return QueryResult{}, invocationErr
 				}
-				removeStoredEvents(&runtime.joinState.sides[index], delta.oldEvents)
-				for _, inserted := range delta.newEvents {
-					runtime.joinState.sides[index] = append(runtime.joinState.sides[index], storedEvent{event: inserted, receivedAt: now})
+				for _, invocation := range invocations {
+					previous := runtime.methodDependencies
+					runtime.methodDependencies = invocation.events
+					events, pollErr := base.method.provider.Poll(ctx, MethodRequest{
+						Now: now, Variables: visibleVariableValues(runtime.variables), Parameters: parameterValuesFromVariables(runtime.variables),
+						Dependencies: cloneMethodDependencies(invocation.events),
+						Invocation:   runtime.methodInvocationContext(base.sourceName),
+					})
+					runtime.methodDependencies = previous
+					if pollErr != nil {
+						return QueryResult{}, pollErr
+					}
+					if appendErr := appendFireAndForgetJoinSource(&runtime, &runtime.joinState.sides[index], input, events, now, invocation.lineage); appendErr != nil {
+						return QueryResult{}, appendErr
+					}
 				}
+				continue
+			}
+			if appendErr := appendFireAndForgetJoinSource(&runtime, &runtime.joinState.sides[index], input, grouped[index][key], now, nil); appendErr != nil {
+				return QueryResult{}, appendErr
 			}
 		}
 		tuples := joinTuples(query.join, runtime.joinState, now, &runtime)

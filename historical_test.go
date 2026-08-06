@@ -913,7 +913,85 @@ func TestHistoricalAndMethodContextFireAndForgetJoinPartitionsRows(t *testing.T)
 	}
 }
 
-func TestHistoricalAndMethodFireAndForgetRejectsDependentMethodSource(t *testing.T) {
+func TestHistoricalAndMethodDependentContextFireAndForgetPartitionsRows(t *testing.T) {
+	env := NewEnvironment()
+	historySchema, err := NewMapSchema("HistoryDependentContextJoinFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	methodSchema, err := NewMapSchema("MethodDependentContextJoinFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	historicalProvider := &fixtureHistoricalProvider{
+		schema: historySchema,
+		rows: []map[string]any{
+			{"symbol": "A", "value": 7},
+			{"symbol": "B", "value": 8},
+		},
+	}
+	methodCalls := 0
+	partitionIDs := map[int]bool{}
+	method := FromMethod[map[string]any](env, "method-dependent-context-faf", methodSchema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		methodCalls++
+		if request.Trigger.TypeName() != "" || request.Invocation.ContextName != "historical-dependent-context-faf" || request.Invocation.ContextPartitionID < 0 {
+			return nil, fmt.Errorf("dependent context method metadata = %#v", request.Invocation)
+		}
+		partitionIDs[request.Invocation.ContextPartitionID] = true
+		dependency, ok := request.Dependency("history-dependent-context-faf")
+		if !ok {
+			return nil, NewError(ErrorDependency, "dependent context history event is missing")
+		}
+		symbol, symbolOK := dependency.Get("symbol").Any().(string)
+		value, valueOK := dependency.Get("value").Any().(int)
+		if !symbolOK || !valueOK {
+			return nil, fmt.Errorf("dependent context history row = %#v", dependency.Underlying())
+		}
+		event, eventErr := newEvent(methodSchema, map[string]any{"symbol": symbol, "value": value + 2}, request.Now)
+		return []Event{event}, eventErr
+	})).DependingOn("history-dependent-context-faf")
+	if _, err := CreateKeyContext(env, "historical-dependent-context-faf", Field[any, string]("symbol")); err != nil {
+		t.Fatal(err)
+	}
+	historical := FromHistorical[map[string]any](env, "history-dependent-context-faf", historySchema, historicalProvider)
+	query := Join(historical, method, OnEqual(
+		Field[map[string]any, string]("symbol"),
+		Field[map[string]any, string]("symbol"),
+	)).Select(
+		SelectLeft("history", Field[map[string]any, int]("value")),
+		SelectRight("method", Field[map[string]any, int]("value")),
+	).Query(StatementName("historical-dependent-context-join-faf"), WithContext("historical-dependent-context-faf"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := NewEngine(env).ExecuteFireAndForgetWithSelector(context.Background(), plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if methodCalls != 2 || historicalProvider.CallCount() != 1 || len(partitionIDs) != 2 || len(result.Results()) != 2 {
+		t.Fatalf("dependent context FAF calls/partitions/results = %d/%v/%d/%#v", methodCalls, partitionIDs, historicalProvider.CallCount(), result.Results())
+	}
+	seen := map[string]bool{}
+	for _, item := range result.Results() {
+		row, ok := item.Row()
+		if !ok {
+			t.Fatalf("dependent context FAF result = %#v", item)
+		}
+		seen[fmt.Sprintf("%v/%v", row.Get("history").Any(), row.Get("method").Any())] = true
+	}
+	if !seen["7/9"] || !seen["8/10"] || len(seen) != 2 {
+		t.Fatalf("dependent context FAF rows = %#v", seen)
+	}
+}
+
+func TestHistoricalAndMethodFireAndForgetSupportsDependentMethodSource(t *testing.T) {
 	env := NewEnvironment()
 	historySchema, err := NewMapSchema("HistoryDependentJoinFAF", []FieldSpec{
 		FieldDef("symbol", reflect.TypeOf("")),
@@ -931,9 +1009,28 @@ func TestHistoricalAndMethodFireAndForgetRejectsDependentMethodSource(t *testing
 	}
 	historical := FromHistorical[map[string]any](env, "history-dependent-join-faf", historySchema, &fixtureHistoricalProvider{
 		schema: historySchema,
+		rows: []map[string]any{
+			{"symbol": "A", "value": 7},
+			{"symbol": "B", "value": 8},
+		},
 	})
-	method := FromMethod[map[string]any](env, "method-dependent-join-faf", methodSchema, MethodProviderFunc(func(context.Context, MethodRequest) ([]Event, error) {
-		return nil, nil
+	methodCalls := 0
+	method := FromMethod[map[string]any](env, "method-dependent-join-faf", methodSchema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		methodCalls++
+		if request.Trigger.TypeName() != "" {
+			return nil, fmt.Errorf("dependent FAF trigger = %q", request.Trigger.TypeName())
+		}
+		dependency, ok := request.Dependency("history-dependent-join-faf")
+		if !ok {
+			return nil, NewError(ErrorDependency, "dependent FAF history event is missing")
+		}
+		symbol, symbolOK := dependency.Get("symbol").Any().(string)
+		value, valueOK := dependency.Get("value").Any().(int)
+		if !symbolOK || !valueOK {
+			return nil, fmt.Errorf("dependent FAF history row = %#v", dependency.Underlying())
+		}
+		event, eventErr := newEvent(methodSchema, map[string]any{"symbol": symbol, "value": value + 2}, request.Now)
+		return []Event{event}, eventErr
 	})).DependingOn("history-dependent-join-faf")
 	query := Join(historical, method, OnEqual(
 		Field[map[string]any, string]("symbol"),
@@ -946,9 +1043,175 @@ func TestHistoricalAndMethodFireAndForgetRejectsDependentMethodSource(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = NewEngine(env).ExecuteFireAndForget(context.Background(), plan)
-	if err == nil || !strings.Contains(err.Error(), "dependent method sources are not supported") {
-		t.Fatalf("dependent method FAF error = %v", err)
+	result, err := NewEngine(env).ExecuteFireAndForget(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if methodCalls != 2 || len(result.Results()) != 2 {
+		t.Fatalf("dependent method FAF calls/results = %d/%#v", methodCalls, result.Results())
+	}
+	seen := map[string]bool{}
+	for _, item := range result.Results() {
+		row, ok := item.Row()
+		if !ok {
+			t.Fatalf("dependent method FAF result = %#v", item)
+		}
+		seen[fmt.Sprintf("%v/%v", row.Get("history").Any(), row.Get("method").Any())] = true
+	}
+	if !seen["7/9"] || !seen["8/10"] || len(seen) != 2 {
+		t.Fatalf("dependent method FAF rows = %#v", seen)
+	}
+}
+
+func TestHistoricalAndMethodContextFireAndForgetSupportsDependentMethodSource(t *testing.T) {
+	env := NewEnvironment()
+	historySchema, err := NewMapSchema("HistoryDependentContextJoinFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	methodSchema, err := NewMapSchema("MethodDependentContextJoinFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("sourceValue", reflect.TypeOf(0)),
+		FieldDef("result", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateKeyContext(env, "historical-dependent-context-faf", Field[any, string]("symbol")); err != nil {
+		t.Fatal(err)
+	}
+	historical := FromHistorical[map[string]any](env, "history-dependent-context-faf", historySchema, &fixtureHistoricalProvider{
+		schema: historySchema,
+		rows: []map[string]any{
+			{"symbol": "A", "value": 7},
+			{"symbol": "B", "value": 8},
+		},
+	})
+	invocations := make([]MethodInvocationContext, 0, 2)
+	method := FromMethod[map[string]any](env, "method-dependent-context-faf", methodSchema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		dependency, ok := request.Dependency("history-dependent-context-faf")
+		if !ok {
+			return nil, NewError(ErrorDependency, "dependent Context FAF history event is missing")
+		}
+		value, ok := dependency.Get("value").Any().(int)
+		if !ok {
+			return nil, fmt.Errorf("dependent Context FAF history row = %#v", dependency.Underlying())
+		}
+		invocations = append(invocations, request.Invocation)
+		symbol, ok := dependency.Get("symbol").Any().(string)
+		if !ok {
+			return nil, fmt.Errorf("dependent Context FAF symbol = %#v", dependency.Underlying())
+		}
+		event, eventErr := newEvent(methodSchema, map[string]any{"symbol": symbol, "sourceValue": value, "result": value + 2}, request.Now)
+		return []Event{event}, eventErr
+	})).DependingOn("history-dependent-context-faf")
+	query := Join(historical, method, OnEqual(
+		Field[map[string]any, int]("value"),
+		Field[map[string]any, int]("sourceValue"),
+	)).Select(
+		SelectLeft("symbol", Field[map[string]any, string]("symbol")),
+		SelectRight("result", Field[map[string]any, int]("result")),
+	).Query(
+		StatementName("dependent-method-context-join-faf"),
+		WithContext("historical-dependent-context-faf"),
+	)
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := NewEngine(env).ExecuteFireAndForgetWithSelector(context.Background(), plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Results()) != 2 || len(invocations) != 2 {
+		t.Fatalf("dependent Context FAF rows/invocations = %#v/%#v", result.Results(), invocations)
+	}
+	seenRows := map[string]bool{}
+	for _, item := range result.Results() {
+		row, ok := item.Row()
+		if !ok {
+			t.Fatalf("dependent Context FAF result = %#v", item)
+		}
+		seenRows[fmt.Sprintf("%v/%v", row.Get("symbol").Any(), row.Get("result").Any())] = true
+	}
+	if !seenRows["A/9"] || !seenRows["B/10"] || len(seenRows) != 2 {
+		t.Fatalf("dependent Context FAF rows = %#v", seenRows)
+	}
+	seenPartitions := map[int]bool{}
+	for _, invocation := range invocations {
+		if invocation.DeploymentID != "" || invocation.StatementName != "dependent-method-context-join-faf" || invocation.SourceName != "method-dependent-context-faf" || invocation.ContextName != "historical-dependent-context-faf" || invocation.ContextPartitionID < 0 {
+			t.Fatalf("dependent Context FAF invocation = %#v", invocation)
+		}
+		seenPartitions[invocation.ContextPartitionID] = true
+	}
+	if len(seenPartitions) != 2 {
+		t.Fatalf("dependent Context FAF partition IDs = %#v", seenPartitions)
+	}
+}
+
+func TestHistoricalAndMethodFireAndForgetDependentChainPreservesLineage(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := NewMapSchema("HistoricalDependentChainFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	historical := FromHistorical[map[string]any](env, "history-dependent-chain-faf", schema, &fixtureHistoricalProvider{
+		schema: schema,
+		rows: []map[string]any{
+			{"symbol": "A", "value": 7},
+			{"symbol": "A", "value": 7},
+		},
+	})
+	h0Calls := 0
+	h0 := FromMethod[map[string]any](env, "method-dependent-chain-h0-faf", schema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		h0Calls++
+		dependency, ok := request.Dependency("history-dependent-chain-faf")
+		if !ok {
+			return nil, NewError(ErrorDependency, "dependent FAF chain history event is missing")
+		}
+		event, eventErr := newEvent(schema, map[string]any{"symbol": dependency.Get("symbol").Any(), "value": 9}, request.Now)
+		return []Event{event}, eventErr
+	})).DependingOn("history-dependent-chain-faf")
+	h1Calls := 0
+	h1 := FromMethod[map[string]any](env, "method-dependent-chain-h1-faf", schema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		h1Calls++
+		dependency, ok := request.Dependency("method-dependent-chain-h0-faf")
+		if !ok {
+			return nil, NewError(ErrorDependency, "dependent FAF chain h0 event is missing")
+		}
+		event, eventErr := newEvent(schema, map[string]any{"symbol": dependency.Get("symbol").Any(), "value": 11}, request.Now)
+		return []Event{event}, eventErr
+	})).DependingOn("method-dependent-chain-h0-faf")
+	query := JoinMany(JoinSource(historical), JoinSource(h0), JoinSource(h1)).On(
+		OnSourcesEqual(0, Field[map[string]any, string]("symbol"), 1, Field[map[string]any, string]("symbol")),
+		OnSourcesEqual(1, Field[map[string]any, string]("symbol"), 2, Field[map[string]any, string]("symbol")),
+	).Select(
+		SelectFrom(0, "history", Field[map[string]any, int]("value")),
+		SelectFrom(1, "h0", Field[map[string]any, int]("value")),
+		SelectFrom(2, "h1", Field[map[string]any, int]("value")),
+	).Query(StatementName("dependent-method-chain-faf"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := NewEngine(env).ExecuteFireAndForget(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Results()) != 2 || h0Calls != 2 || h1Calls != 2 {
+		t.Fatalf("dependent FAF chain rows/calls = %#v h0:%d h1:%d", result.Results(), h0Calls, h1Calls)
+	}
+	for _, item := range result.Results() {
+		row, ok := item.Row()
+		if !ok || row.Get("history").Any() != 7 || row.Get("h0").Any() != 9 || row.Get("h1").Any() != 11 {
+			t.Fatalf("dependent FAF chain result = %#v", item)
+		}
 	}
 }
 
