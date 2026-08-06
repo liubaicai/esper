@@ -994,14 +994,15 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 		}
 		for _, candidate := range delta.newEvents {
 			evaluation := EvalContext{
-				Engine:     e,
-				Event:      candidate,
-				JoinEvents: append([]Event(nil), outer.JoinEvents...),
-				OuterEvent: outer.Event,
-				History:    historyForEvent(delta, candidate),
-				Now:        now,
-				Variables:  outer.Variables,
-				Parameters: outer.Parameters,
+				Engine:               e,
+				Event:                candidate,
+				JoinEvents:           append([]Event(nil), outer.JoinEvents...),
+				OuterEvent:           outer.Event,
+				ContainedParentEvent: containedParentEvent(candidate),
+				History:              historyForEvent(delta, candidate),
+				Now:                  now,
+				Variables:            outer.Variables,
+				Parameters:           outer.Parameters,
 			}
 			if definition.grouped {
 				if definition.predicate != nil {
@@ -1047,15 +1048,16 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 			filtered := make([]Event, 0, len(aggregateGroup))
 			for _, event := range aggregateGroup {
 				matched, ok := boolValue(definition.predicate.eval(EvalContext{
-					Engine:     e,
-					Event:      event,
-					JoinEvents: append([]Event(nil), outer.JoinEvents...),
-					OuterEvent: outer.Event,
-					Group:      aggregateGroup,
-					History:    aggregateGroup,
-					Now:        now,
-					Variables:  outer.Variables,
-					Parameters: outer.Parameters,
+					Engine:               e,
+					Event:                event,
+					JoinEvents:           append([]Event(nil), outer.JoinEvents...),
+					OuterEvent:           outer.Event,
+					ContainedParentEvent: containedParentEvent(event),
+					Group:                aggregateGroup,
+					History:              aggregateGroup,
+					Now:                  now,
+					Variables:            outer.Variables,
+					Parameters:           outer.Parameters,
 				}))
 				if ok && matched {
 					filtered = append(filtered, event)

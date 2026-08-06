@@ -2104,6 +2104,7 @@ type Event struct {
 	schema     Schema
 	underlying any
 	receivedAt time.Time
+	parent     *Event
 }
 
 func newEvent(schema Schema, underlying any, receivedAt time.Time) (Event, error) {
@@ -2449,6 +2450,36 @@ func (e Event) Underlying() any       { return e.underlying }
 func (e Event) ReceivedAt() time.Time { return e.receivedAt }
 func (e Event) Get(name string) Value { return e.schema.get(e.underlying, name) }
 func (e Event) Identity() any         { return e.underlying }
+
+// Parent returns the event that produced this event through a contained
+// expansion. Ordinary events have no parent. The returned event is a value
+// snapshot of the envelope; its underlying value remains owned by the
+// runtime/event source.
+func (e Event) Parent() (Event, bool) {
+	if e.parent == nil || !e.parent.Schema().valid() {
+		return Event{}, false
+	}
+	return *e.parent, true
+}
+
+// Ancestor returns the requested contained-event ancestor. Level 1 is the
+// immediate parent, level 2 is the grandparent, and so on. This keeps nested
+// contained projections explicit in the Go API instead of relying on an
+// implicit EPL alias scope.
+func (e Event) Ancestor(level int) (Event, bool) {
+	if level <= 0 {
+		return Event{}, false
+	}
+	current := e
+	for index := 0; index < level; index++ {
+		parent, ok := current.Parent()
+		if !ok {
+			return Event{}, false
+		}
+		current = parent
+	}
+	return current, true
+}
 
 func (e Event) PropertyNames() []string { return e.schema.PropertyNames() }
 

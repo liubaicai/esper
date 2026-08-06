@@ -372,25 +372,25 @@
     },
     {
       "id": "case.event-contained-nested-basic",
-      "javaRuntimeIds": ["java-runtime-9a863f09416b4c8b43e6", "java-runtime-d4eca17557644b49612e"],
-      "javaNames": ["EPLContainedSimple", "EPLContainedColumnSelect"],
+      "javaRuntimeIds": ["java-runtime-9a863f09416b4c8b43e6", "java-runtime-d4eca17557644b49612e", "java-runtime-ff13b3bc5a565eb4b93f", "java-runtime-a5dd50ac815b19d4874b", "java-runtime-087caf5365cd7095a87a", "java-runtime-3c9593be93a52df79592"],
+      "javaNames": ["EPLContainedSimple", "EPLContainedColumnSelect", "EPLContainedPatternSelect", "EPLContainedSubSelect", "EPLContainedUnderlyingSelect", "EPLContainedInvalid"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventNested.java"],
-      "goTests": ["TestUnnestNestedStructsPreserveParentArrayOrder"],
-      "tags": ["correctness", "event", "contained", "nested", "projection", "order"],
+      "goTests": ["TestUnnestNestedStructsPreserveParentArrayOrder", "TestContainedNestedPatternSelectMatchesEsper", "TestContainedNestedSubselectMatchesEsper", "TestContainedNestedUnderlyingParentSelectionMatchesEsper", "TestContainedNestedInvalidRules"],
+      "tags": ["correctness", "event", "contained", "nested", "projection", "order", "pattern", "subquery", "parent-scope", "diagnostics"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
-      "difference": "Go composes Unnest twice over registered struct slices and preserves parent/child array order while projecting the terminal child fields. Nested Named Window, Pattern, Subquery, underlying-event and invalid-expression variants remain open."
+      "difference": "Go composes Unnest twice over registered struct slices and preserves parent/child array order while projecting the terminal child fields. The mapped cases additionally cover Pattern followed-by with contained child output, retained contained subselect state, explicit immediate-parent/grandparent selection through ContainedParentField/ContainedAncestorField, and Build-time invalid parent-field/depth diagnostics. Named Window and other contained fragment/underlying representation variants remain open."
     },
     {
       "id": "case.event-contained-array-basic",
-      "javaRuntimeIds": ["java-runtime-4528359bf8f2f87a61fb"],
-      "javaNames": ["EPLContainedEventIntArray"],
+      "javaRuntimeIds": ["java-runtime-4528359bf8f2f87a61fb", "java-runtime-21f178697f4d3a9b9099"],
+      "javaNames": ["EPLContainedEventIntArray", "EPLContainedStringArrayWithWhere"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventArray.java"],
-      "goTests": ["TestUnnestValuesProjectsScalarArrayElements"],
-      "tags": ["correctness", "event", "contained", "scalar", "array"],
+      "goTests": ["TestUnnestValuesProjectsScalarArrayElements", "TestUnnestStringArrayWhereMatchesEsper"],
+      "tags": ["correctness", "event", "contained", "scalar", "array", "where"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
-      "difference": "Go adds a typed ContainedValue[T] wrapper and UnnestValues API so scalar arrays enter the same registered event-stream model; the mapped case covers ordered int-array expansion and typed projection. String-array where/type materialization, split expressions and scalar contained joins remain open."
+      "difference": "Go adds a typed ContainedValue[T] wrapper and UnnestValues API so scalar arrays enter the same registered event-stream model; the mapped cases cover ordered int-array expansion, typed projection, and string-array filtering against the immediate parent field through ContainedParentField plus InSlice/Not. String-array @type event materialization, split expressions and scalar contained joins remain open."
     },
     {
       "id": "case.event-contained-named-window-nested",

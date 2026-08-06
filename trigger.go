@@ -826,11 +826,12 @@ func (r *statementRuntime) forEachTriggerCandidate(node *streamNode, event Event
 		}
 		return r.forEachTriggerCandidate(node.input, event, now, func(candidate Event) error {
 			value := node.predicate.eval(EvalContext{
-				Event:      candidate,
-				OuterEvent: candidate,
-				Engine:     r.engine,
-				Now:        now,
-				Variables:  r.variables,
+				Event:                candidate,
+				OuterEvent:           candidate,
+				ContainedParentEvent: containedParentEvent(candidate),
+				Engine:               r.engine,
+				Now:                  now,
+				Variables:            r.variables,
 			})
 			if ok, isBool := boolValue(value); !isBool || !ok {
 				return nil

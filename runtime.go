@@ -3070,6 +3070,18 @@ func sourceNodeAcceptsEvent(env *Environment, node *streamNode, event Event) boo
 		return false
 	}
 	if source.kind == streamContained {
+		// A contained source is fed by its parent event at the statement input
+		// boundary, but Pattern/Join branches consume the expanded child events
+		// after the source has been evaluated. Accept both representations so a
+		// nested contained pattern can arm on the child while the statement still
+		// subscribes to the parent event type.
+		if env != nil {
+			if childSchema, schemaErr := env.sourceSchema(source); schemaErr == nil {
+				if event.StreamType() == childSchema.Name() || event.TypeName() == childSchema.Name() || env.acceptsEventType(childSchema.Name(), event.TypeName()) {
+					return true
+				}
+			}
+		}
 		return sourceNodeAcceptsEvent(env, source.input, event)
 	}
 	if source.kind == streamHistorical || source.kind == streamMethod {
@@ -6530,19 +6542,20 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		}
 		for _, candidate := range inputDelta.newEvents {
 			value := node.predicate.eval(EvalContext{
-				Event:      candidate,
-				OuterEvent: candidate,
-				Engine:     r.engine,
-				History:    historyForEvent(inputDelta, candidate),
-				Now:        now,
-				Variables:  r.variables,
+				Event:                candidate,
+				OuterEvent:           candidate,
+				ContainedParentEvent: containedParentEvent(candidate),
+				Engine:               r.engine,
+				History:              historyForEvent(inputDelta, candidate),
+				Now:                  now,
+				Variables:            r.variables,
 			})
 			if ok, isBool := boolValue(value); isBool && ok {
 				filtered.newEvents = append(filtered.newEvents, candidate)
 			}
 		}
 		for _, candidate := range inputDelta.oldEvents {
-			value := node.predicate.eval(EvalContext{Event: candidate, History: historyForEvent(inputDelta, candidate), Now: now, Variables: r.variables})
+			value := node.predicate.eval(EvalContext{Event: candidate, OuterEvent: candidate, ContainedParentEvent: containedParentEvent(candidate), History: historyForEvent(inputDelta, candidate), Now: now, Variables: r.variables})
 			if ok, isBool := boolValue(value); isBool && ok {
 				filtered.oldEvents = append(filtered.oldEvents, candidate)
 			}
@@ -6658,7 +6671,7 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
 		}
 		for _, candidate := range inputDelta.oldEvents {
-			value := node.predicate.eval(EvalContext{Event: candidate, History: historyForEvent(inputDelta, candidate), Now: now, Variables: r.variables})
+			value := node.predicate.eval(EvalContext{Event: candidate, OuterEvent: candidate, ContainedParentEvent: containedParentEvent(candidate), History: historyForEvent(inputDelta, candidate), Now: now, Variables: r.variables})
 			if ok, isBool := boolValue(value); isBool && ok {
 				filtered.oldEvents = append(filtered.oldEvents, candidate)
 			}
@@ -6718,7 +6731,7 @@ func expandContainedEvents(schema Schema, definition *containedDefinition, paren
 	}
 	result := make([]Event, 0)
 	for _, parent := range parents {
-		value := definition.property.eval(EvalContext{Event: parent, Now: now, Variables: variables})
+		value := definition.property.eval(EvalContext{Event: parent, ContainedParentEvent: containedParentEvent(parent), Now: now, Variables: variables})
 		if value.IsMissing() || value.IsNull() {
 			continue
 		}
@@ -6746,10 +6759,20 @@ func expandContainedEvents(schema Schema, definition *containedDefinition, paren
 			if err != nil {
 				return nil, fmt.Errorf("unnest child %d: %w", index, err)
 			}
+			parentCopy := parent
+			child.parent = &parentCopy
 			result = append(result, child)
 		}
 	}
 	return result, nil
+}
+
+func containedParentEvent(event Event) Event {
+	parent, ok := event.Parent()
+	if !ok {
+		return Event{}
+	}
+	return parent
 }
 
 func (r *statementRuntime) insertDerived(node *streamNode, delta eventDelta, now time.Time) (eventDelta, error) {
@@ -9066,10 +9089,48 @@ func patternEventSourceMatches(node *patternNode, trigger patternTrigger) bool {
 	if node == nil || node.source == nil || trigger.isTimer {
 		return true
 	}
-	if trigger.env != nil {
-		return sourceNodeAcceptsEvent(trigger.env, node.source, trigger.event)
+	return streamNodeOutputAcceptsEvent(trigger.env, node.source, trigger.event)
+}
+
+// streamNodeOutputAcceptsEvent checks the type emitted by a pattern input.
+// sourceNodeAcceptsEvent answers the different question of whether an input
+// event can enter a source graph; for contained/filter/window chains the
+// pattern receives the transformed child/output event instead.
+func streamNodeOutputAcceptsEvent(env *Environment, node *streamNode, event Event) bool {
+	if node == nil || !event.Schema().valid() {
+		return false
 	}
-	return sourceNodeAcceptsEvent(nil, node.source, trigger.event)
+	switch node.kind {
+	case streamFilter, streamWindow:
+		return streamNodeOutputAcceptsEvent(env, node.input, event)
+	case streamContained:
+		if env == nil {
+			return false
+		}
+		schema, err := env.sourceSchema(node)
+		if err != nil {
+			return false
+		}
+		return env.acceptsEventType(schema.Name(), event.TypeName())
+	case streamDerived:
+		if env == nil || node.derived == nil || !node.derived.schema.valid() {
+			return false
+		}
+		return env.acceptsEventType(node.derived.schema.Name(), event.TypeName())
+	case streamSource, streamNamedWindow, streamTable, streamHistorical, streamMethod:
+		return sourceNodeAcceptsEvent(env, node, event)
+	case streamPattern:
+		if env == nil || node.pattern == nil {
+			return false
+		}
+		schema, err := patternJoinSchema(node.pattern)
+		if err != nil {
+			return false
+		}
+		return env.acceptsEventType(schema.Name(), event.TypeName())
+	default:
+		return false
+	}
 }
 
 func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Time) ResultBatch {

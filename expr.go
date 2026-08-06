@@ -44,6 +44,7 @@ type exprNode struct {
 	pluginFactory         aggregatePluginFactory
 	pluginEnvironment     *Environment
 	methodName            string
+	containedParentLevels int
 	joinSource            int
 	previousOffset        int
 	enumInputRequired     bool
@@ -187,6 +188,12 @@ type EvalContext struct {
 	// OuterEvent is the event from the enclosing statement while evaluating a
 	// correlated subquery. Ordinary expressions leave it empty.
 	OuterEvent Event
+	// ContainedParentEvent is the immediate parent event while evaluating a
+	// child produced by Unnest/UnnestValues. It is deliberately separate from
+	// OuterEvent: the latter is the enclosing statement scope used by existing
+	// correlated expressions, while this field models Esper's contained-event
+	// parent scope.
+	ContainedParentEvent Event
 	// Engine is populated by deployed statement evaluation. It is intentionally
 	// absent from the public builder API; subquery expressions use it to obtain
 	// a consistent named-window/table snapshot.
@@ -443,6 +450,76 @@ func OuterField[V any](name string) Expression[V] {
 	}
 	node := &exprNode{kind: "outer-field", typ: typeOf[V](), description: "outer." + name, fieldName: name}
 	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value { return ctx.OuterEvent.Get(name) }}
+}
+
+// ContainedParentField reads a property from the immediate parent event of a
+// contained child. It is the explicit Go counterpart of a contained-event
+// where clause referring to a field of the enclosing event.
+func ContainedParentField[V any](name string) Expression[V] {
+	if strings.TrimSpace(name) == "" {
+		return makeExpr[V]("contained-parent-field", "<invalid-contained-parent-field>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "contained-parent-field", typ: typeOf[V](), description: "contained.parent." + name, fieldName: name, containedParentLevels: 1}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		parent := ctx.ContainedParentEvent
+		if !parent.Schema().valid() {
+			parent, _ = ctx.Event.Ancestor(1)
+		}
+		if !parent.Schema().valid() {
+			return Missing()
+		}
+		return parent.Get(name)
+	}}
+}
+
+// ContainedParentEvent returns the immediate parent event of an Unnest child.
+// It is useful when a projection needs the parent fragment itself rather
+// than one of its fields.
+func ContainedParentEvent() Expression[Event] {
+	node := &exprNode{kind: "contained-parent-event", typ: typeOf[Event](), description: "contained.parent()", containedParentLevels: 1}
+	return typedExpr[Event]{n: node, fn: func(ctx EvalContext) Value {
+		parent := ctx.ContainedParentEvent
+		if !parent.Schema().valid() {
+			parent, _ = ctx.Event.Ancestor(1)
+		}
+		if !parent.Schema().valid() {
+			return Null()
+		}
+		return Present(parent)
+	}}
+}
+
+// ContainedAncestorEvent returns a parent at an explicit nesting level. Level
+// 1 is equivalent to ContainedParentEvent; non-positive levels are invalid.
+func ContainedAncestorEvent(level int) Expression[Event] {
+	if level <= 0 {
+		return makeExpr[Event]("contained-ancestor-event", "<invalid-contained-ancestor>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "contained-ancestor-event", typ: typeOf[Event](), description: fmt.Sprintf("contained.ancestor(%d)", level), containedParentLevels: level}
+	return typedExpr[Event]{n: node, fn: func(ctx EvalContext) Value {
+		ancestor, ok := ctx.Event.Ancestor(level)
+		if !ok {
+			return Null()
+		}
+		return Present(ancestor)
+	}}
+}
+
+// ContainedAncestorField reads a property from a nested contained ancestor.
+// It is the chain-API counterpart of selecting a parent/grandparent fragment
+// while traversing nested arrays.
+func ContainedAncestorField[V any](level int, name string) Expression[V] {
+	if level <= 0 || strings.TrimSpace(name) == "" {
+		return makeExpr[V]("contained-ancestor-field", "<invalid-contained-ancestor-field>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "contained-ancestor-field", typ: typeOf[V](), description: fmt.Sprintf("contained.ancestor(%d).%s", level, name), fieldName: name, containedParentLevels: level}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		ancestor, ok := ctx.Event.Ancestor(level)
+		if !ok {
+			return Missing()
+		}
+		return ancestor.Get(name)
+	}}
 }
 
 // ResultField reads a named column from a projected Row. It is primarily
@@ -4792,6 +4869,53 @@ func (n *exprNode) referencedFields(result *[]string) {
 	}
 	for _, child := range n.children {
 		child.referencedFields(result)
+	}
+}
+
+func (n *exprNode) referencedLocalFields(result *[]string) {
+	if n == nil {
+		return
+	}
+	if n.kind == "field" {
+		*result = append(*result, n.fieldName)
+	}
+	for _, child := range n.children {
+		child.referencedLocalFields(result)
+	}
+}
+
+type tagFieldReference struct {
+	tag  string
+	name string
+	typ  reflect.Type
+}
+
+func (n *exprNode) referencedTagFields(result *[]tagFieldReference) {
+	if n == nil {
+		return
+	}
+	if n.kind == "tag-field" || n.kind == "tag-field-at" {
+		*result = append(*result, tagFieldReference{tag: n.tagName, name: n.fieldName, typ: n.typ})
+	}
+	for _, child := range n.children {
+		child.referencedTagFields(result)
+	}
+}
+
+type containedParentFieldReference struct {
+	level int
+	name  string
+}
+
+func (n *exprNode) referencedContainedParentFields(result *[]containedParentFieldReference) {
+	if n == nil {
+		return
+	}
+	if n.kind == "contained-parent-field" || n.kind == "contained-ancestor-field" {
+		*result = append(*result, containedParentFieldReference{level: n.containedParentLevels, name: n.fieldName})
+	}
+	for _, child := range n.children {
+		child.referencedContainedParentFields(result)
 	}
 }
 

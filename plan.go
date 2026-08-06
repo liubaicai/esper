@@ -1068,7 +1068,7 @@ func (e *Environment) validateContextPattern(definition *patternDefinition, labe
 			return fmt.Errorf("context %s pattern guard: %w", label, err)
 		}
 	}
-	if err := e.validatePatternNodeFields(definition.input, definition.root); err != nil {
+	if err := e.validatePatternNodeFields(definition.input, definition.root, patternTagSources(definition), false); err != nil {
 		return fmt.Errorf("context %s pattern: %w", label, err)
 	}
 	return nil
@@ -1274,7 +1274,7 @@ func (e *Environment) validateNode(node *streamNode) error {
 			}
 		}
 		if node.pattern.root != nil {
-			return e.validatePatternNodeFields(node.pattern.input, node.pattern.root)
+			return e.validatePatternNodeFields(node.pattern.input, node.pattern.root, patternTagSources(node.pattern), true)
 		}
 		for _, step := range node.pattern.steps {
 			if err := e.validateExprFields(node.pattern.input, step.predicate); err != nil {
@@ -1394,7 +1394,7 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 		return err
 	}
 	var fields []string
-	expression.node().referencedFields(&fields)
+	expression.node().referencedLocalFields(&fields)
 	source, err := sourceNode(input)
 	if err != nil {
 		return err
@@ -1415,7 +1415,46 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 			}
 		}
 	}
+	var parentFields []containedParentFieldReference
+	expression.node().referencedContainedParentFields(&parentFields)
+	for _, reference := range parentFields {
+		if reference.level <= 0 {
+			return NewError(ErrorInvalidRule, "contained ancestor level must be positive")
+		}
+		parentSchema, err := e.containedAncestorSchema(input, reference.level)
+		if err != nil {
+			return err
+		}
+		field, exists := parentSchema.Field(reference.name)
+		if !exists {
+			return fmt.Errorf("esper: contained ancestor references unknown field %q on schema %q", reference.name, parentSchema.Name())
+		}
+		expressionType := expressionFieldType(expression.node(), reference.name)
+		if expressionType != nil && field.Type != nil && field.Type != typeOf[any]() {
+			if !field.Type.AssignableTo(expressionType) && !expressionType.AssignableTo(field.Type) && !numericTypes(field.Type, expressionType) {
+				return fmt.Errorf("esper: contained ancestor field %q has type %s, expression expects %s", reference.name, field.Type, expressionType)
+			}
+		}
+	}
 	return e.validateExpressionSubqueries(expression.node())
+}
+
+func (e *Environment) containedAncestorSchema(input *streamNode, level int) (Schema, error) {
+	node, err := sourceNode(input)
+	if err != nil {
+		return Schema{}, err
+	}
+	for index := 0; index < level; index++ {
+		if node == nil || node.kind != streamContained || node.input == nil {
+			return Schema{}, NewError(ErrorDependency, fmt.Sprintf("contained ancestor level %d requires a nested contained stream", level))
+		}
+		parentNode, sourceErr := sourceNode(node.input)
+		if sourceErr != nil {
+			return Schema{}, sourceErr
+		}
+		node = parentNode
+	}
+	return e.sourceSchema(node)
 }
 
 func validateMethodNodes(node *exprNode) error {
@@ -2205,7 +2244,7 @@ func expressionFieldType(node *exprNode, fieldName string) reflect.Type {
 	if node == nil {
 		return nil
 	}
-	if (node.kind == "field" || node.kind == "tag-field" || node.kind == "tag-field-at") && node.fieldName == fieldName {
+	if (node.kind == "field" || node.kind == "tag-field" || node.kind == "tag-field-at" || node.kind == "contained-parent-field" || node.kind == "contained-ancestor-field") && node.fieldName == fieldName {
 		return node.typ
 	}
 	for _, child := range node.children {
@@ -3390,13 +3429,14 @@ func (e *Environment) validatePattern(definition *patternDefinition, selections 
 			return fmt.Errorf("pattern while guard: %w", err)
 		}
 	}
+	tagSources := patternTagSources(definition)
 	if definition.root != nil {
-		if err := e.validatePatternNodeFields(definition.input, definition.root); err != nil {
+		if err := e.validatePatternNodeFields(definition.input, definition.root, tagSources, true); err != nil {
 			return err
 		}
 	} else {
 		for _, step := range definition.steps {
-			if err := e.validateExprFields(definition.input, step.predicate); err != nil {
+			if err := e.validatePatternExpressionFields(definition.input, step.predicate, tagSources, true); err != nil {
 				return err
 			}
 		}
@@ -3413,14 +3453,91 @@ func (e *Environment) validatePattern(definition *patternDefinition, selections 
 			return NewError(ErrorInvalidRule, fmt.Sprintf("pattern projection duplicates alias %q", selection.Name))
 		}
 		seen[selection.Name] = struct{}{}
-		if err := e.validateExprFields(definition.input, selection.Expr); err != nil {
+		if err := e.validatePatternExpressionFields(definition.input, selection.Expr, tagSources, false); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (e *Environment) validatePatternNodeFields(input *streamNode, node *patternNode) error {
+func patternTagSources(definition *patternDefinition) map[string][]*streamNode {
+	result := make(map[string][]*streamNode)
+	if definition == nil {
+		return result
+	}
+	var visit func(*patternNode)
+	visit = func(node *patternNode) {
+		if node == nil {
+			return
+		}
+		if node.kind == patternEventNode && strings.TrimSpace(node.tag) != "" {
+			source := node.source
+			if source == nil {
+				source = definition.input
+			}
+			if source != nil {
+				known := false
+				for _, existing := range result[node.tag] {
+					if existing == source {
+						known = true
+						break
+					}
+				}
+				if !known {
+					result[node.tag] = append(result[node.tag], source)
+				}
+			}
+		}
+		visit(node.left)
+		visit(node.right)
+		visit(node.child)
+	}
+	visit(definition.root)
+	return result
+}
+
+func (e *Environment) validatePatternExpressionFields(input *streamNode, expression Expr, tagSources map[string][]*streamNode, requireTags bool) error {
+	if err := e.validateExprFields(input, expression); err != nil {
+		return err
+	}
+	var references []tagFieldReference
+	expression.node().referencedTagFields(&references)
+	for _, reference := range references {
+		sources := tagSources[reference.tag]
+		if len(sources) == 0 && !requireTags {
+			continue
+		}
+		if len(sources) == 0 {
+			return NewError(ErrorUnknownName, fmt.Sprintf("pattern expression references unknown tag %q", reference.tag))
+		}
+		matched := false
+		var lastSchema Schema
+		for _, source := range sources {
+			schema, err := e.sourceSchema(source)
+			if err != nil {
+				return err
+			}
+			lastSchema = schema
+			field, exists := schema.Field(reference.name)
+			if !exists {
+				continue
+			}
+			if reference.typ == nil || field.Type == nil || field.Type == typeOf[any]() || reference.typ == typeOf[any]() || field.Type.AssignableTo(reference.typ) || reference.typ.AssignableTo(field.Type) || numericTypes(field.Type, reference.typ) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			if lastSchema.valid() {
+				return fmt.Errorf("esper: pattern tag %q field %q is not valid on schema %q", reference.tag, reference.name, lastSchema.Name())
+			}
+			return fmt.Errorf("esper: pattern tag %q field %q is not valid", reference.tag, reference.name)
+		}
+	}
+	return nil
+}
+
+func (e *Environment) validatePatternNodeFields(input *streamNode, node *patternNode, tagSources map[string][]*streamNode, requireTags bool) error {
 	if node == nil {
 		return NewError(ErrorInvalidRule, "pattern expression cannot be nil")
 	}
@@ -3430,7 +3547,7 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 		if eventInput == nil {
 			eventInput = input
 		}
-		return e.validateExprFields(eventInput, node.predicate)
+		return e.validatePatternExpressionFields(eventInput, node.predicate, tagSources, requireTags)
 	case patternSequenceNode, patternAndNode, patternOrNode:
 		if node.kind == patternSequenceNode && node.sequenceMaxExpr != nil {
 			if err := e.validateExprFields(input, node.sequenceMaxExpr); err != nil {
@@ -3444,12 +3561,12 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 				return NewError(ErrorInvalidRule, "followed-by maximum expression cannot reference event fields or pattern tags")
 			}
 		}
-		if err := e.validatePatternNodeFields(input, node.left); err != nil {
+		if err := e.validatePatternNodeFields(input, node.left, tagSources, requireTags); err != nil {
 			return err
 		}
-		return e.validatePatternNodeFields(input, node.right)
+		return e.validatePatternNodeFields(input, node.right, tagSources, requireTags)
 	case patternNotNode:
-		return e.validatePatternNodeFields(input, node.child)
+		return e.validatePatternNodeFields(input, node.child, tagSources, requireTags)
 	case patternMatchUntilNode:
 		if node.minimumExpr != nil {
 			if err := e.validateExprFields(input, node.minimumExpr); err != nil {
@@ -3461,32 +3578,32 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 				return fmt.Errorf("match-until maximum: %w", err)
 			}
 		}
-		if err := e.validatePatternNodeFields(input, node.child); err != nil {
+		if err := e.validatePatternNodeFields(input, node.child, tagSources, requireTags); err != nil {
 			return err
 		}
 		if node.right != nil {
-			return e.validatePatternNodeFields(input, node.right)
+			return e.validatePatternNodeFields(input, node.right, tagSources, requireTags)
 		}
 		return nil
 	case patternUntilNode:
-		if err := e.validatePatternNodeFields(input, node.child); err != nil {
+		if err := e.validatePatternNodeFields(input, node.child, tagSources, requireTags); err != nil {
 			return err
 		}
-		return e.validatePatternNodeFields(input, node.right)
+		return e.validatePatternNodeFields(input, node.right, tagSources, requireTags)
 	case patternEveryNode:
 		if node.everyExpr != nil {
 			if err := e.validateExprFields(input, node.everyExpr); err != nil {
 				return err
 			}
 		}
-		return e.validatePatternNodeFields(input, node.child)
+		return e.validatePatternNodeFields(input, node.child, tagSources, requireTags)
 	case patternWithinNode:
 		if node.durationExpr != nil {
 			if err := e.validateExprFields(input, node.durationExpr); err != nil {
 				return err
 			}
 		}
-		return e.validatePatternNodeFields(input, node.child)
+		return e.validatePatternNodeFields(input, node.child, tagSources, requireTags)
 	case patternTimerIntervalNode:
 		if node.durationExpr != nil {
 			return e.validateExprFields(input, node.durationExpr)

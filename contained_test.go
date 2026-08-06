@@ -26,6 +26,11 @@ type unnestIntContainer struct {
 	IDs []int64 `esper:"ids"`
 }
 
+type unnestStringContainer struct {
+	IDsBefore []string `esper:"idsBefore"`
+	IDsAfter  []string `esper:"idsAfter"`
+}
+
 type unnestPayment struct {
 	BookID string `esper:"bookId"`
 	Amount int64  `esper:"amount"`
@@ -535,6 +540,72 @@ func TestUnnestValuesProjectsScalarArrayElements(t *testing.T) {
 	for index, expected := range []int64{2, 4, 8} {
 		if got := rows[index].Get("value").Any(); got != expected {
 			t.Fatalf("scalar unnest row %d = %#v, want %d", index, got, expected)
+		}
+	}
+}
+
+func TestUnnestStringArrayWhereMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[unnestStringContainer](env, "UnnestStringContainer"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[ContainedValue[string]](env, "UnnestString"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	input := From[unnestStringContainer](env, "UnnestStringContainer")
+	idsAfter := Property[[]string](EventValue[unnestStringContainer](), "idsAfter")
+	values := UnnestValues[unnestStringContainer, string](input, idsAfter).Filter(
+		Not(InSlice[string](
+			Field[ContainedValue[string], string]("value"),
+			ContainedParentField[[]string]("idsBefore"),
+		)),
+	)
+	plan, err := env.Build(Select(values,
+		Alias("value", Field[ContainedValue[string], string]("value")),
+	).Query(StatementName("unnest-string-array-where")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []string
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("string-array contained result is not a row: %#v", result)
+			}
+			value, ok := row.Get("value").Any().(string)
+			if !ok {
+				t.Fatalf("string-array contained value = %#v", row.Get("value"))
+			}
+			rows = append(rows, value)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		before []string
+		after  []string
+		want   []string
+	}{
+		{before: []string{"A", "B", "C"}, after: []string{"D", "E"}, want: []string{"D", "E"}},
+		{before: []string{"A", "C"}, after: []string{"C", "A"}, want: nil},
+		{before: []string{"A"}, after: []string{"B"}, want: []string{"B"}},
+		{before: []string{"A", "B"}, after: []string{"F", "B", "A"}, want: []string{"F"}},
+	}
+	for index, current := range cases {
+		start := len(rows)
+		if err := engine.SendEvent(context.Background(), unnestStringContainer{IDsBefore: current.before, IDsAfter: current.after}); err != nil {
+			t.Fatal(err)
+		}
+		got := append([]string(nil), rows[start:]...)
+		if !reflect.DeepEqual(got, current.want) {
+			t.Fatalf("string-array where case %d = %#v, want %#v", index, got, current.want)
 		}
 	}
 }
