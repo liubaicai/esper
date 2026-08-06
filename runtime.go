@@ -2486,6 +2486,7 @@ func joinTupleEvents(event Event) []Event {
 
 func newJoinTupleEvent(events []Event, receivedAt time.Time) Event {
 	return Event{
+		identity:   &eventIdentityToken{marker: 1},
 		typeName:   "esper:join-tuple",
 		schema:     joinTupleSchema,
 		underlying: joinTuple{events: append([]Event(nil), events...)},
@@ -7761,6 +7762,9 @@ func containsEvent(events []storedEvent, target Event) bool {
 }
 
 func eventIdentity(event Event) string {
+	if event.identity != nil {
+		return fmt.Sprintf("token:%p", event.identity)
+	}
 	return fmt.Sprintf("%s:%T:%#v", event.TypeName(), event.Underlying(), event.Underlying())
 }
 

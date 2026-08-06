@@ -141,9 +141,9 @@
       "id": "expr.core",
       "domain": "expression",
       "level": "S",
-      "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, arithmetic/exact numeric operations, scalar min/max, mixed relational comparisons, typed casts, typed array literals/indexing, LIKE/REGEXP matching, concatenation, mixed IN/BETWEEN and ANY/ALL/SOME quantifiers, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates, property presence checks and runtime type names, with ordered branches, null semantics and aggregate-aware evaluation",
-      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreMath", "ExprCoreMathDivisionRules", "ExprCoreBigNumberSupportMathContext", "ExprCoreMinMaxNonAgg", "ExprCoreRelOp", "ExprCoreCast", "ExprCoreArray", "ExprCoreArrayAtElement", "ExprCoreLikeRegexp", "ExprCoreConcat", "ExprCoreInBetween", "ExprCoreAnyAllSome", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
-      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_math.go", "expr_math_test.go", "expr_minmax.go", "expr_minmax_test.go", "expr_relop.go", "expr_relop_test.go", "expr_array.go", "expr_array_test.go", "expr_like.go", "expr_like_test.go", "expr_cast.go", "expr_cast_test.go", "expr_concat.go", "expr_concat_test.go", "expr_in_between.go", "expr_in_between_test.go", "expr_quantifier.go", "expr_quantifier_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "enum_expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
+      "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, arithmetic/exact numeric operations, scalar min/max, mixed relational and equality/identity comparisons, typed casts, typed array literals/indexing, LIKE/REGEXP matching, concatenation, mixed IN/BETWEEN and ANY/ALL/SOME quantifiers, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates, property presence checks and runtime type names, with ordered branches, null semantics and aggregate-aware evaluation",
+      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreMath", "ExprCoreMathDivisionRules", "ExprCoreBigNumberSupportMathContext", "ExprCoreMinMaxNonAgg", "ExprCoreRelOp", "ExprCoreEqualsIs", "ExprCoreEventIdentityEquals", "ExprCoreCast", "ExprCoreArray", "ExprCoreArrayAtElement", "ExprCoreLikeRegexp", "ExprCoreConcat", "ExprCoreInBetween", "ExprCoreAnyAllSome", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
+      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_math.go", "expr_math_test.go", "expr_minmax.go", "expr_minmax_test.go", "expr_relop.go", "expr_relop_test.go", "expr_equals.go", "expr_equals_test.go", "expr_event_identity.go", "expr_event_identity_test.go", "expr_array.go", "expr_array_test.go", "expr_like.go", "expr_like_test.go", "expr_cast.go", "expr_cast_test.go", "expr_concat.go", "expr_concat_test.go", "expr_in_between.go", "expr_in_between_test.go", "expr_quantifier.go", "expr_quantifier_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "enum_expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["automatic heterogeneous branch-result coercion and complete array/collection representation and parameterized metadata matrix", "complete MathContext/decimal scale and rounding policy, mixed BigDecimal/BigInteger result metadata and division configuration matrix", "complete ANY/ALL/SOME mixed representation, collection typing and invalid-diagnostic matrix", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
@@ -1082,6 +1082,28 @@
       "difference": "Go preserves the typed Concat builder and adds ConcatOf for explicit mixed string/numeric operands. Operands are evaluated in declaration order, empty strings contribute no characters, and Null/Missing/typed-nil operands produce Null; the result type and operand structure enter Plan identity and Build rejects empty, nil, boolean and collection operands. Java's operator syntax, EPL/SODA/compile paths and exact compiler diagnostics remain outside the fluent API."
     },
     {
+      "id": "case.expr-core-equals-is",
+      "javaRuntimeIds": ["java-runtime-fdef3bed6ec0b16d36db", "java-runtime-1eaef3b328c31a863b26", "java-runtime-2fb582ea3ac2dc026c82", "java-runtime-bc33c9283b85c18481fb", "java-runtime-d6084d5b7a191cbde6cd"],
+      "javaNames": ["ExprCoreEqualsIsCoercion", "ExprCoreEqualsIsCoercionSameType", "ExprCoreEqualsIsMultikeyWArray", "ExprCoreEqualsInvalid", "ExprCoreEqualsNull"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreEqualsIs.java"],
+      "goTests": ["TestEqualityExpressionsMatchJavaCoercionArrayAndNullSemantics", "TestEqualityExpressionsBuildLiveProjectionAndPlanIdentity", "TestEqualityExpressionsRejectInvalidBuilders"],
+      "tags": ["correctness", "expression", "equals", "is", "array", "numeric-coercion", "null", "invalid", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go adds explicit EqualOf/NotEqualOf for mixed scalar and deep array values, plus null-safe Is/IsNot builders. Numeric operands use exact rational comparison, arrays use Go deep equality after static component compatibility checks, Null/Missing/typed-nil follow Esper's three-valued or null-safe rules, and all operands enter the analyzable Plan. Java operator syntax, full object-array representation coercion, EPL/SODA/compile paths and exact compiler diagnostics remain partial."
+    },
+    {
+      "id": "case.expr-core-event-identity-equals",
+      "javaRuntimeIds": ["java-runtime-292f25dc225cb23b7225", "java-runtime-615c5592f1cdd37d56bf", "java-runtime-ab2a4ffa3ad0439c39b1", "java-runtime-746e0698b45d8a884302", "java-runtime-eeb8e631e5f2bcbe9cd5"],
+      "javaNames": ["ExprCoreEventIdentityEqualsSimple", "ExprCoreEventIdentityEqualsDocSample", "ExprCoreEventIdentityEqualsSubquery", "ExprCoreEventIdentityEqualsEnumMethod", "ExprCoreEventIdentityEqualsInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreEventIdentityEquals.java"],
+      "goTests": ["TestEventIdentityExpressionsMatchJavaEnvelopeIdentitySemantics", "TestEventIdentityExpressionsBuildLiveProjectionAndPlanIdentity", "TestEventIdentityExpressionsRejectInvalidBuilders"],
+      "tags": ["correctness", "expression", "event", "identity", "subquery", "aggregate", "invalid", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go adds EventIdentityEquals for typed Event expressions and gives every ingested Event envelope a stable private identity token that survives envelope copies and variant routing. Equal payloads from separate ingestions compare false, same envelope copies compare true, and non-event/Null values are false; full correlated subquery and enumeration aggregate examples are represented by the existing fluent source APIs but Java EPL/SODA/compile syntax and exact diagnostics remain partial."
+    },
+    {
       "id": "case.expr-script-provider",
       "javaRuntimeIds": ["java-runtime-1010c63eb2330597a750", "java-runtime-a2b886734b1a2ad4cc28", "java-runtime-416f111d2368882ea644", "java-runtime-3834e7de0be8f481cea2", "java-runtime-76f900f81eab8fbb7068", "java-runtime-7b3d5e1ed4c6e5a98f89", "java-runtime-39ad2c583a5c307fdeaa", "java-runtime-c115e9369d2a342e8e7f", "java-runtime-97cf680e34e215878dae", "java-runtime-de45e4c09a85a606f39f", "java-runtime-e5e8e7be2d9e28ca1fcf"],
       "javaNames": ["EPLScriptScripts", "EPLScriptQuoteEscape", "EPLScriptDocSamples", "EPLScriptSubqueryParam", "EPLScriptReturnNullWhenNumeric", "EPLScriptGenericResultType", "EPLScriptExpressionConfiguration", "EPLScriptExpressionDisable", "EPLScriptSandboxJSR223", "EPLScriptSandboxMVEL", "EPLContainedScriptContextValue"],
@@ -1891,6 +1913,8 @@
     {"capabilityId": "expr.core", "caseId": "case.expr-core-like-regexp"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-in-between"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-concat"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-equals-is"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-event-identity-equals"},
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},

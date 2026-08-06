@@ -2097,8 +2097,15 @@ func structFieldValue(value reflect.Value, target string, resolution PropertyRes
 	return reflect.Value{}
 }
 
-// Event is a typed event envelope used by the runtime and listeners.
+type eventIdentityToken struct {
+	marker byte
+}
+
+// Event is a typed event envelope used by the runtime and listeners. The
+// private identity token is stable across envelope copies and distinguishes
+// two separately ingested events that happen to contain equal values.
 type Event struct {
+	identity   *eventIdentityToken
 	typeName   string
 	streamType string
 	schema     Schema
@@ -2122,7 +2129,11 @@ func newEvent(schema Schema, underlying any, receivedAt time.Time) (Event, error
 		if !schema.acceptsEventSchema(routed.Schema()) {
 			return Event{}, fmt.Errorf("esper: event type %q is not a valid member of variant schema %q", routed.TypeName(), schema.name)
 		}
-		return Event{typeName: routed.TypeName(), streamType: schema.name, schema: routed.Schema(), underlying: routed.Underlying(), receivedAt: receivedAt}, nil
+		identity := routed.identity
+		if identity == nil {
+			identity = &eventIdentityToken{marker: 1}
+		}
+		return Event{identity: identity, typeName: routed.TypeName(), streamType: schema.name, schema: routed.Schema(), underlying: routed.Underlying(), receivedAt: receivedAt}, nil
 	}
 	if schema.kind == SchemaObjectArray {
 		normalized, err := normalizeObjectArray(schema, underlying)
@@ -2144,7 +2155,7 @@ func newEvent(schema Schema, underlying any, receivedAt time.Time) (Event, error
 			return Event{}, fmt.Errorf("esper: event %q expects %s, got %s", schema.name, schema.goType, got)
 		}
 	}
-	return Event{typeName: schema.name, schema: schema, underlying: underlying, receivedAt: receivedAt}, nil
+	return Event{identity: &eventIdentityToken{marker: 1}, typeName: schema.name, schema: schema, underlying: underlying, receivedAt: receivedAt}, nil
 }
 
 // NewEvent creates a schema-bound Event envelope for Go extension functions
