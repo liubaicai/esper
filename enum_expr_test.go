@@ -296,6 +296,95 @@ func TestEnumerableSupportsExactBigNumbersAndArrayCollections(t *testing.T) {
 	}
 }
 
+func TestEnumerableSelectorExtremesNaturalOrderAndDynamicTake(t *testing.T) {
+	items := Literal([]enumExpressionItem{
+		{ID: "E1", Score: 12},
+		{ID: "E2", Score: 11},
+		{ID: "E3", Score: 2},
+	})
+	score := EnumField[enumExpressionItem, int64]("score")
+	if got := EnumMinOf[enumExpressionItem, int64](items, score).eval(EvalContext{}); !got.Equal(Present(int64(2))) {
+		t.Fatalf("min selector = %v", got)
+	}
+	if got := EnumMaxOf[enumExpressionItem, int64](items, score).eval(EvalContext{}); !got.Equal(Present(int64(12))) {
+		t.Fatalf("max selector = %v", got)
+	}
+
+	words := Literal([]string{"E2", "E1", "E5", "E4"})
+	if got := EnumOrderByNatural[string](words, false).eval(EvalContext{}); !got.Equal(Present([]string{"E1", "E2", "E4", "E5"})) {
+		t.Fatalf("natural ascending order = %v", got)
+	}
+	if got := EnumOrderByNatural[string](words, true).eval(EvalContext{}); !got.Equal(Present([]string{"E5", "E4", "E2", "E1"})) {
+		t.Fatalf("natural descending order = %v", got)
+	}
+
+	values := Literal([]int64{1, 2, 3, 4})
+	if got := EnumTakeExpr[int64](values, Literal(int64(2))).eval(EvalContext{}); !got.Equal(Present([]int64{1, 2})) {
+		t.Fatalf("dynamic take = %v", got)
+	}
+	if got := EnumTakeLastExpr[int64](values, Literal(int64(2))).eval(EvalContext{}); !got.Equal(Present([]int64{3, 4})) {
+		t.Fatalf("dynamic take-last = %v", got)
+	}
+	if got := EnumTakeExpr[int64](values, Literal(int64(-1))).eval(EvalContext{}); !got.Equal(Present([]int64{})) {
+		t.Fatalf("negative dynamic take = %v", got)
+	}
+
+	env := NewEnvironment()
+	if _, err := RegisterStruct[enumExpressionContainer](env, "EnumDynamicContainer"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.RegisterVariable("enum-limit", int64(2)); err != nil {
+		t.Fatal(err)
+	}
+	stream := From[enumExpressionContainer](env, "EnumDynamicContainer")
+	field := Field[enumExpressionContainer, []int64]("values")
+	query := Select(stream, Alias("head", EnumTakeExpr[int64](field, VariableRef[int64]("enum-limit"))))
+	plan, err := env.Build(query.Query(StatementName("enum-dynamic")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, received ResultBatch) error {
+		batches = append(batches, received)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), enumExpressionContainer{Values: []int64{1, 2, 3}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SetVariable(context.Background(), "enum-limit", int64(1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), enumExpressionContainer{Values: []int64{4, 5, 6}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(batches) != 2 {
+		t.Fatalf("dynamic take batch count = %d", len(batches))
+	}
+	firstRow, ok := batches[0].New[0].Row()
+	if !ok {
+		t.Fatal("first dynamic take result is not a row")
+	}
+	first, err := As[[]int64](firstRow.Get("head"))
+	if err != nil || !reflect.DeepEqual(first, []int64{1, 2}) {
+		t.Fatalf("first dynamic take = %#v, err=%v", first, err)
+	}
+	secondRow, ok := batches[1].New[0].Row()
+	if !ok {
+		t.Fatal("updated dynamic take result is not a row")
+	}
+	second, err := As[[]int64](secondRow.Get("head"))
+	if err != nil || !reflect.DeepEqual(second, []int64{4}) {
+		t.Fatalf("updated dynamic take = %#v, err=%v", second, err)
+	}
+}
+
 func TestEnumerableCollectsMapValuesAndIterators(t *testing.T) {
 	mapValues := map[string]int64{"a": 4, "b": 5, "c": 6}
 	collectedMap := EnumCollect[int64](Literal(maps.Values(mapValues)))

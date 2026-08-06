@@ -565,6 +565,18 @@ func EnumTakeLast[T any](values Expression[[]T], count int) Expression[[]T] {
 	return enumSlice[T]("take-last", values, count, true)
 }
 
+// EnumTakeExpr is the analyzable dynamic-count form of EnumTake. The count
+// is evaluated once for each collection evaluation, matching Esper's
+// expression-valued take footprint while keeping the result slice typed.
+func EnumTakeExpr[T any](values Expression[[]T], count Expression[int64]) Expression[[]T] {
+	return enumSliceExpr[T]("take", values, count, false)
+}
+
+// EnumTakeLastExpr is the dynamic-count counterpart of EnumTakeLast.
+func EnumTakeLastExpr[T any](values Expression[[]T], count Expression[int64]) Expression[[]T] {
+	return enumSliceExpr[T]("take-last", values, count, true)
+}
+
 func enumSlice[T any](kind string, values Expression[[]T], count int, last bool) Expression[[]T] {
 	return makeEnumExpr[[]T]("enum-"+kind, fmt.Sprintf("%s(%s,%d)", kind, enumInputDescription[T](values), count), enumExpressionChildren[T](values, nil), values, false, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
@@ -583,6 +595,42 @@ func enumSlice[T any](kind string, values Expression[[]T], count int, last bool)
 		}
 		return Present(enumCopy(items[:limit]))
 	})
+}
+
+func enumSliceExpr[T any](kind string, values Expression[[]T], count Expression[int64], last bool) Expression[[]T] {
+	description := fmt.Sprintf("%s(%s,%s)", kind, enumInputDescription[T](values), expressionDescription(count))
+	return makeEnumExpr[[]T]("enum-"+kind, description, enumExpressionChildren[T](values, count), values, true, func(ctx EvalContext) Value {
+		items, input, ok := enumItems[T](values, ctx)
+		if !ok {
+			return input
+		}
+		if count == nil {
+			return Null()
+		}
+		value := count.eval(ctx)
+		if !value.IsPresent() {
+			return Null()
+		}
+		limit, err := As[int64](value)
+		if err != nil {
+			return Null()
+		}
+		return enumSliceResult(items, limit, last)
+	})
+}
+
+func enumSliceResult[T any](items []T, count int64, last bool) Value {
+	if count <= 0 || len(items) == 0 {
+		return Present(make([]T, 0))
+	}
+	limit := count
+	if limit > int64(len(items)) {
+		limit = int64(len(items))
+	}
+	if last {
+		return Present(enumCopy(items[len(items)-int(limit):]))
+	}
+	return Present(enumCopy(items[:int(limit)]))
 }
 
 func EnumTakeWhile[T any](values Expression[[]T], predicate Expression[bool]) Expression[[]T] {
@@ -657,6 +705,20 @@ func EnumMaxBy[T any, K EnumOrdered](values Expression[[]T], selector Expression
 	return enumExtreme[T]("max-by", values, selector, false, true)
 }
 
+// EnumMinOf returns the minimum value produced by selector. It corresponds
+// to Esper's min(lambda) footprint; EnumMinBy instead returns the source item
+// that owns the minimum selector value.
+func EnumMinOf[T any, K EnumOrdered](values Expression[[]T], selector Expression[K]) Expression[K] {
+	return enumExtremeValue[T, K]("min", values, selector, true)
+}
+
+// EnumMaxOf returns the maximum value produced by selector. It corresponds
+// to Esper's max(lambda) footprint; EnumMaxBy instead returns the source item
+// that owns the maximum selector value.
+func EnumMaxOf[T any, K EnumOrdered](values Expression[[]T], selector Expression[K]) Expression[K] {
+	return enumExtremeValue[T, K]("max", values, selector, false)
+}
+
 func enumExtreme[T any](kind string, values Expression[[]T], selector Expr, minimum, parameterRequired bool) Expression[T] {
 	return makeEnumExpr[T]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), values, parameterRequired, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
@@ -692,18 +754,56 @@ func enumExtreme[T any](kind string, values Expression[[]T], selector Expr, mini
 	})
 }
 
-func EnumOrderBy[T any, K EnumOrdered](values Expression[[]T], selector Expression[K], descending bool) Expression[[]T] {
-	kind := "order-by"
-	if descending {
-		kind = "order-by-desc"
-	}
-	return makeEnumExpr[[]T]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), values, true, func(ctx EvalContext) Value {
+func enumExtremeValue[T any, K EnumOrdered](kind string, values Expression[[]T], selector Expression[K], minimum bool) Expression[K] {
+	return makeEnumExpr[K]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
 		}
 		if selector == nil {
 			return Null()
+		}
+		var selected Value
+		for index, item := range items {
+			key := selector.eval(enumElementContext(ctx, item, index, len(items)))
+			if !key.IsPresent() {
+				continue
+			}
+			if !selected.IsPresent() {
+				selected = key
+				continue
+			}
+			comparison, comparable := enumCompareValues(key, selected)
+			if comparable && ((minimum && comparison < 0) || (!minimum && comparison > 0)) {
+				selected = key
+			}
+		}
+		if !selected.IsPresent() {
+			return Null()
+		}
+		return selected
+	})
+}
+
+func EnumOrderBy[T any, K EnumOrdered](values Expression[[]T], selector Expression[K], descending bool) Expression[[]T] {
+	return enumOrderBy[T](values, selector, descending, true)
+}
+
+// EnumOrderByNatural sorts scalar values without a selector. It corresponds
+// to Esper's orderBy() and orderByDesc() footprints.
+func EnumOrderByNatural[T EnumOrdered](values Expression[[]T], descending bool) Expression[[]T] {
+	return enumOrderBy[T](values, nil, descending, false)
+}
+
+func enumOrderBy[T any](values Expression[[]T], selector Expr, descending, parameterRequired bool) Expression[[]T] {
+	kind := "order-by"
+	if descending {
+		kind = "order-by-desc"
+	}
+	return makeEnumExpr[[]T]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), values, parameterRequired, func(ctx EvalContext) Value {
+		items, input, ok := enumItems[T](values, ctx)
+		if !ok {
+			return input
 		}
 		result := enumCopy(items)
 		type keyed struct {
@@ -712,7 +812,11 @@ func EnumOrderBy[T any, K EnumOrdered](values Expression[[]T], selector Expressi
 		}
 		keyedItems := make([]keyed, 0, len(result))
 		for index, item := range result {
-			keyedItems = append(keyedItems, keyed{item: item, key: selector.eval(enumElementContext(ctx, item, index, len(items)))})
+			key := Present(item)
+			if selector != nil {
+				key = selector.eval(enumElementContext(ctx, item, index, len(items)))
+			}
+			keyedItems = append(keyedItems, keyed{item: item, key: key})
 		}
 		sort.SliceStable(keyedItems, func(left, right int) bool {
 			comparison, comparable := enumCompareValues(keyedItems[left].key, keyedItems[right].key)

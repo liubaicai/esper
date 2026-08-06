@@ -113,7 +113,7 @@
       "goRefs": ["enum_expr.go", "enum_expr_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["complete Java type matrix", "Java collection metadata and generic component descriptors", "complete invalid-rule diagnostics and Java error-text parity", "nested/subquery/access-aggregate/UDF source matrix"]
+      "remaining": ["complete Java method-footprint and type matrix", "Java collection metadata and generic component descriptors", "complete invalid-rule diagnostics and Java error-text parity", "nested/subquery/access-aggregate/UDF source matrix"]
     },
     {
       "id": "resultset.aggregate-dimensional",
@@ -559,11 +559,11 @@
       "javaRuntimeIds": ["java-runtime-5438f7be9b56ca119b0c", "java-runtime-f54de0ae037b90b24551", "java-runtime-aac755fc7592bf62718d", "java-runtime-f1fc7e290467bab36366"],
       "javaNames": ["EPLDataflowBeaconWithBeans", "EPLDataflowBeaconVariable", "EPLDataflowBeaconFields", "EPLDataflowBeaconNoType"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpBeaconSource.java"],
-      "goTests": ["TestDataflowBeaconOptionsIterationsAndFinalMarkerMatchesEsper", "TestDataflowBeaconFactoryReceivesStableIterationContext", "TestDataflowBeaconWithoutIterationLimitRunsUntilCanceled", "TestDataflowBeaconOptionsRejectNegativeTiming", "TestDataflowBeaconEventFieldsMaterializeAllRepresentationsMatchesEsper", "TestDataflowBeaconEventFactoryMaterializesPerIterationBaseValues", "TestDataflowBeaconIterationsExpressionUsesVariableAtInstantiationMatchesEsper", "TestDataflowBeaconEventFieldsFlowIntoEventBusSinkMatchesEsper", "TestDataflowBeaconEventFieldsRejectInvalidDefinitions"],
-      "tags": ["correctness", "dataflow", "beacon", "timing", "termination", "expression", "representation", "eventbus"],
+      "goTests": ["TestDataflowBeaconOptionsIterationsAndFinalMarkerMatchesEsper", "TestDataflowBeaconFactoryReceivesStableIterationContext", "TestDataflowBeaconWithoutIterationLimitRunsUntilCanceled", "TestDataflowBeaconOptionsRejectNegativeTiming", "TestDataflowBeaconEventFieldsMaterializeAllRepresentationsMatchesEsper", "TestDataflowBeaconEventFactoryMaterializesPerIterationBaseValues", "TestDataflowBeaconIterationsExpressionUsesVariableAtInstantiationMatchesEsper", "TestDataflowBeaconEventFieldsFlowIntoEventBusSinkMatchesEsper", "TestDataflowBeaconFieldParametersOverridePerInstanceAndRouteEventBusMatchesEsper", "TestDataflowBeaconFieldParametersHaveStablePlanIdentity", "TestDataflowBeaconEventFieldsRejectInvalidDefinitions"],
+      "tags": ["correctness", "dataflow", "beacon", "timing", "termination", "expression", "representation", "eventbus", "parameter-provider"],
       "status": "mapped",
       "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
-      "difference": "Go provides structured BeaconSourceWithOptions plus typed BeaconEventSource/BeaconEventSourceWithUnderlying. Iteration count can be fixed or evaluated once from registered variables at instantiation; typed source-less fields support literals, variables and Go expressions, optional per-iteration factory base values, Event envelopes or native Struct/Map/ObjectArray/JSON/XML/Avro representations, and direct EventBusSink routing. Finite sources submit FinalMarker and unlimited sources honor cancellation. Java's URI-based per-field parameter writer, exact JavaBean constructor/setter discovery, GenericData.Record Avro underlying, reflective operator injection metadata and the full invalid/diagnostic matrix remain open."
+      "difference": "Go provides structured BeaconSourceWithOptions plus typed BeaconEventSource/BeaconEventSourceWithUnderlying. Iteration count can be fixed or evaluated once from registered variables at instantiation; typed source-less fields support literals, variables and Go expressions, optional per-iteration factory base values, Event envelopes or native Struct/Map/ObjectArray/JSON/XML/Avro representations, and direct EventBusSink routing. FieldParameters integrates the shared DataflowParameterProvider for deterministic, type-checked, instance-scoped field overrides while preserving expression defaults, mapping Java's BeaconSource/property URI writer without string URI parsing. Finite sources submit FinalMarker and unlimited sources honor cancellation. Java's exact JavaBean constructor/setter discovery, GenericData.Record Avro underlying, reflective operator injection metadata and the full invalid/diagnostic matrix remain open."
     },
     {
       "id": "case.dataflow-feedback",
@@ -662,6 +662,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
       "difference": "Go now rejects missing collection inputs, required selectors/predicates and pair operands during Build, while Go generic signatures provide compile-time type rejection for many Java invalid cases. Complete invalid expression-body/property diagnostics and Java error-text parity remain open."
+    },
+    {
+      "id": "case.expr-enum-footprints",
+      "javaRuntimeIds": ["java-runtime-de1bcaf9deecd986e68d", "java-runtime-7b857f459e33c14bbe64", "java-runtime-2ec6618bc45779487cba", "java-runtime-3d4634e5bf5d8372c234", "java-runtime-399a143e349314e112f0", "java-runtime-a3bed382cc19389d382d"],
+      "javaNames": ["ExprEnumMinMaxEvents", "ExprEnumMinMaxScalarWithPredicate", "ExprEnumOrderByScalar", "ExprEnumOrderByScalarWithParam", "ExprEnumTakeEvents", "ExprEnumTakeScalar"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumOrderBy.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumTakeAndTakeLast.java"],
+      "goTests": ["TestEnumerableSelectorExtremesNaturalOrderAndDynamicTake"],
+      "tags": ["correctness", "expression", "enum", "footprint", "dynamic"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go adds typed EnumMinOf/EnumMaxOf selector-value results, EnumOrderByNatural ascending/descending forms, and analyzable Expression[int64]-backed EnumTakeExpr/EnumTakeLastExpr with runtime variable updates. Static count/order and selector-returning MinBy/MaxBy remain source-compatible; Java's broader lambda arity, null/type diagnostics and collection metadata are still open."
     },
     {
       "id": "case.aggregate-dimensional",
@@ -1296,6 +1307,7 @@
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-invalid"},
+    {"capabilityId": "expr.enum", "caseId": "case.expr-enum-footprints"},
     {"capabilityId": "resultset.aggregate-dimensional", "caseId": "case.aggregate-dimensional"},
     {"capabilityId": "resultset.aggregate-filtered", "caseId": "case.aggregate-filtered"},
     {"capabilityId": "resultset.aggregate-ever", "caseId": "case.aggregate-ever"},
