@@ -1014,6 +1014,17 @@
       "difference": "Go covers event-count and fixed-duration activation, calendar-month activation, after+every composition and after+when/then variable assignment through chain options. Java's after+output-last aggregate matrix, snapshot-when variable activation, ObjectModel round-trips, support output-limit hints and exact diagnostics remain open."
     },
     {
+      "id": "case.output-first-having",
+      "javaRuntimeIds": ["java-runtime-fe5c5a8ab0d234ff63c7", "java-runtime-52135d56e04dfb024bfe", "java-runtime-febaeddd92a7ab7f3c96"],
+      "javaNames": ["ResultSetHavingNoAvgOutputFirstEvents", "ResultSetHavingNoAvgOutputFirstMinutes", "ResultSetHavingAvgOutputFirstEveryTwoMinutes"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitFirstHaving.java"],
+      "goTests": ["TestOutputFirstEveryEventsWithHavingMatchesEsper", "TestOutputFirstEveryTimeWithHavingMatchesEsper"],
+      "tags": ["correctness", "output", "first", "having", "virtual-time"],
+      "status": "mapped",
+      "evidence": ["java-baseline", "go-unit"],
+      "difference": "Go adds OutputFirstEveryEvents/OutputFirstEveryTime chain policies with first-visible activation, input-event throttling and virtual-time throttling, covering ungrouped HAVING aggregate traces. Java's raw and two-stream join variants, exact expression typing/diagnostics and full output-first composition matrix remain open."
+    },
+    {
       "id": "case.pattern-every",
       "javaRuntimeIds": ["java-runtime-1599ec33f3b19e7b7688", "java-runtime-bb8113cb979826cff927", "java-runtime-f0649272cfb528ce731b", "java-runtime-2fe5370a7c1599bfb424", "java-runtime-66d65309509fac58bbfc", "java-runtime-36ef6f15f14a0e86ab93", "java-runtime-6a5e8128ae184e8a7249", "java-runtime-34555c4a9823a346d710", "java-runtime-78d9e9fcf78678c48ff9", "java-runtime-56116a3e1351bcc4dc23", "java-runtime-a0ae611c1bd46c4407d9", "java-runtime-9b41fb5951301c0de979", "java-runtime-d5ad6ad9d226628f8383", "java-runtime-bbb75d6bcc54f29c7652", "java-runtime-97c5e6b5e4c46cc0adb4", "java-runtime-ea394f5795b88ddd71c9", "java-runtime-28fc7f508485cbc765a2", "java-runtime-6155a2b0181e2169f2a4", "java-runtime-d74fc320152752b79c83"],
       "javaNames": ["PatternEverySimple", "PatternOp", "PatternInterval10Min", "PatternInterval10MinVariable", "PatternIntervalPrepared", "PatternWithinFromExpression", "PatternPatternNotFollowedBy", "PatternWithinMayMaxMonthScoped", "PatternGuardTimerWithinOrMax", "PatternTimerWithinOverDistinct", "PatternEveryDistinctOverTimerWithin", "PatternIntervalSpec", "PatternIntervalSpecVariables", "PatternIntervalSpecExpression", "PatternIntervalSpecExpressionWithProperty", "PatternIntervalSpecPreparedStmt", "PatternMonthScoped", "PatternIntervalSpecExpressionWithPropertyArray", "PatternMicrosecondResolution"],
@@ -1564,6 +1575,7 @@
     {"capabilityId": "output.when-basic", "caseId": "case.output-when-then-count"},
     {"capabilityId": "output.when-basic", "caseId": "case.output-row-limit-batch"},
     {"capabilityId": "output.when-basic", "caseId": "case.output-after-basic"},
+    {"capabilityId": "output.when-basic", "caseId": "case.output-first-having"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-every"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-followed-by-max"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-consumption-policy"},

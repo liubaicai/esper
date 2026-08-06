@@ -1784,6 +1784,8 @@ const (
 	OutputSnapshotPolicy
 	OutputEveryPolicy
 	OutputEveryTimePolicy
+	OutputFirstEveryEventsPolicy
+	OutputFirstEveryTimePolicy
 )
 
 type OutputAfterKind uint8
@@ -1841,6 +1843,19 @@ func OutputAll() OutputPolicy { return OutputPolicy{Kind: OutputAllPolicy} }
 
 func OutputFirst(count int) OutputPolicy {
 	return OutputPolicy{Kind: OutputFirstPolicy, Count: count}
+}
+
+// OutputFirstEveryEvents emits the first visible result immediately, then
+// permits the next first result after count accepted input events. This is
+// the chainable Go form of Esper's "output first every N events" policy.
+func OutputFirstEveryEvents(count int) OutputPolicy {
+	return OutputPolicy{Kind: OutputFirstEveryEventsPolicy, Count: count}
+}
+
+// OutputFirstEveryTime emits the first visible result immediately, then
+// permits the next first result after interval on the engine's virtual clock.
+func OutputFirstEveryTime(interval time.Duration) OutputPolicy {
+	return OutputPolicy{Kind: OutputFirstEveryTimePolicy, Interval: interval}
 }
 
 func OutputLast() OutputPolicy { return OutputPolicy{Kind: OutputLastPolicy, Count: 1} }
@@ -2587,6 +2602,10 @@ func outputDescription(policy OutputPolicy) string {
 		} else {
 			base = fmt.Sprintf("every-time(%s)", policy.Interval)
 		}
+	case OutputFirstEveryEventsPolicy:
+		base = fmt.Sprintf("first-every-events(%d)", policy.Count)
+	case OutputFirstEveryTimePolicy:
+		base = fmt.Sprintf("first-every-time(%s)", policy.Interval)
 	case OutputLastPolicy:
 		base = "last"
 	case OutputSnapshotPolicy:

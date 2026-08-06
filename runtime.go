@@ -2762,22 +2762,24 @@ type patternMatch struct {
 }
 
 type outputRuntimeState struct {
-	firstEmitted int
-	pending      *ResultBatch
-	pendingCount int
-	whenPending  *ResultBatch
-	afterSeen    int
-	afterActive  bool
-	afterStarted time.Time
-	nextOutputAt time.Time
-	cronNext     time.Time
-	cronSchedule resolvedCronSchedule
-	cronPending  *ResultBatch
-	insertCount  int64
-	removeCount  int64
-	insertTotal  int64
-	removeTotal  int64
-	lastOutputAt time.Time
+	firstEmitted      int
+	firstEverySeen    int
+	firstEveryStarted bool
+	pending           *ResultBatch
+	pendingCount      int
+	whenPending       *ResultBatch
+	afterSeen         int
+	afterActive       bool
+	afterStarted      time.Time
+	nextOutputAt      time.Time
+	cronNext          time.Time
+	cronSchedule      resolvedCronSchedule
+	cronPending       *ResultBatch
+	insertCount       int64
+	removeCount       int64
+	insertTotal       int64
+	removeTotal       int64
+	lastOutputAt      time.Time
 }
 
 func newStatementRuntime(query Query) statementRuntime {
@@ -4317,6 +4319,10 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		}
 		r.outputState.firstEmitted += len(result.New) + len(result.Old)
 		return r.finishOutput(policy, result, now, plans...)
+	case OutputFirstEveryEventsPolicy:
+		return r.applyFirstEveryEvents(policy, batch, now, plans...)
+	case OutputFirstEveryTimePolicy:
+		return r.applyFirstEveryTime(policy, batch, now, plans...)
 	case OutputLastPolicy, OutputSnapshotPolicy:
 		if !batch.empty() {
 			copyBatch := batch.clone()
@@ -4397,6 +4403,66 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 	default:
 		return r.finishOutput(policy, batch, now, plans...)
 	}
+}
+
+func (r *statementRuntime) applyFirstEveryEvents(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
+	if r == nil || r.outputState == nil {
+		return ResultBatch{}
+	}
+	state := r.outputState
+	if !state.firstEveryStarted {
+		if batch.empty() {
+			return ResultBatch{}
+		}
+		state.firstEveryStarted = true
+		state.firstEverySeen = 0
+		return r.finishOutput(policy, firstOutputResult(batch), now, plans...)
+	}
+	state.firstEverySeen += acceptedOutputEventCount(batch)
+	if state.firstEverySeen < policy.Count {
+		return ResultBatch{}
+	}
+	state.firstEverySeen = 0
+	if batch.empty() {
+		return ResultBatch{}
+	}
+	return r.finishOutput(policy, firstOutputResult(batch), now, plans...)
+}
+
+func (r *statementRuntime) applyFirstEveryTime(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
+	if r == nil || r.outputState == nil || batch.empty() {
+		return ResultBatch{}
+	}
+	state := r.outputState
+	if state.firstEveryStarted && !state.nextOutputAt.IsZero() && now.Before(state.nextOutputAt) {
+		return ResultBatch{}
+	}
+	state.firstEveryStarted = true
+	state.nextOutputAt = now.Add(policy.Interval)
+	return r.finishOutput(policy, firstOutputResult(batch), now, plans...)
+}
+
+func acceptedOutputEventCount(batch ResultBatch) int {
+	if batch.outputCountsSet {
+		if batch.outputInserted <= 0 {
+			return 0
+		}
+		return int(batch.outputInserted)
+	}
+	return len(batch.New)
+}
+
+func firstOutputResult(batch ResultBatch) ResultBatch {
+	result := batch.clone()
+	if len(result.New) > 0 {
+		result.New = result.New[:1]
+		result.Old = nil
+		return result
+	}
+	if len(result.Old) > 1 {
+		result.Old = result.Old[:1]
+	}
+	return result
 }
 
 // outputAtTermination produces the result associated with an initiated
