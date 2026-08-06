@@ -763,12 +763,20 @@ func TestSortedAccessEventBucketNavigationMatchesEsper(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	price := Field[runtimeTestTrade, float64]("price")
 	sorted := SortedAccessBy[runtimeTestTrade, float64](EventValue[runtimeTestTrade](), price)
+	lookup := Literal(15.0)
 	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(4)).Aggregate(
-		Alias("lowerEvents", sorted.LowerEvents(Literal(15.0))),
-		Alias("floorEvents", sorted.FloorEvents(Literal(15.0))),
-		Alias("higherEvents", sorted.HigherEvents(Literal(15.0))),
-		Alias("ceilingEvents", sorted.CeilingEvents(Literal(15.0))),
-		Alias("lowerLast", EnumLastOf[runtimeTestTrade](sorted.LowerEvents(Literal(15.0)))),
+		Alias("lowerEvent", sorted.LowerEvent(lookup)),
+		Alias("floorEvent", sorted.FloorEvent(lookup)),
+		Alias("higherEvent", sorted.HigherEvent(lookup)),
+		Alias("ceilingEvent", sorted.CeilingEvent(lookup)),
+		Alias("lowerEvents", sorted.LowerEvents(lookup)),
+		Alias("floorEvents", sorted.FloorEvents(lookup)),
+		Alias("higherEvents", sorted.HigherEvents(lookup)),
+		Alias("ceilingEvents", sorted.CeilingEvents(lookup)),
+		Alias("lowerLast", EnumLastOf[runtimeTestTrade](sorted.LowerEvents(lookup))),
+		Alias("floorLast", EnumLastOf[runtimeTestTrade](sorted.FloorEvents(lookup))),
+		Alias("higherLast", EnumLastOf[runtimeTestTrade](sorted.HigherEvents(lookup))),
+		Alias("ceilingLast", EnumLastOf[runtimeTestTrade](sorted.CeilingEvents(lookup))),
 	).Query(StatementName("sorted-access-event-buckets")))
 	if err != nil {
 		t.Fatal(err)
@@ -797,10 +805,30 @@ func TestSortedAccessEventBucketNavigationMatchesEsper(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	assertEvent := func(name, want string) {
+		value := last.Get(name)
+		if want == "" {
+			if !value.IsNull() {
+				t.Fatalf("%s = %#v, want null", name, value.Any())
+			}
+			return
+		}
+		got, ok := value.Any().(runtimeTestTrade)
+		if !ok || got.Symbol != want {
+			t.Fatalf("%s = %#v, want symbol %q", name, value.Any(), want)
+		}
+	}
 	assertBucket := func(name string, want ...string) {
-		values, ok := last.Get(name).Any().([]runtimeTestTrade)
+		value := last.Get(name)
+		if len(want) == 0 {
+			if !value.IsNull() {
+				t.Fatalf("%s = %#v, want null", name, value.Any())
+			}
+			return
+		}
+		values, ok := value.Any().([]runtimeTestTrade)
 		if !ok || len(values) != len(want) {
-			t.Fatalf("%s = %#v, want %v", name, last.Get(name).Any(), want)
+			t.Fatalf("%s = %#v, want %v", name, value.Any(), want)
 		}
 		for index, symbol := range want {
 			if values[index].Symbol != symbol {
@@ -808,12 +836,173 @@ func TestSortedAccessEventBucketNavigationMatchesEsper(t *testing.T) {
 			}
 		}
 	}
+	assertEvent("lowerEvent", "A")
+	assertEvent("floorEvent", "A")
+	assertEvent("higherEvent", "C")
+	assertEvent("ceilingEvent", "C")
 	assertBucket("lowerEvents", "A", "B")
 	assertBucket("floorEvents", "A", "B")
 	assertBucket("higherEvents", "C")
 	assertBucket("ceilingEvents", "C")
-	if value, ok := last.Get("lowerLast").Any().(runtimeTestTrade); !ok || value.Symbol != "B" {
-		t.Fatalf("lowerLast = %#v", last.Get("lowerLast").Any())
+	assertEvent("lowerLast", "B")
+	assertEvent("floorLast", "B")
+	assertEvent("higherLast", "C")
+	assertEvent("ceilingLast", "C")
+
+	for _, test := range []struct {
+		name                          string
+		key                           float64
+		lower, floor, higher, ceiling []string
+	}{
+		{name: "below-first", key: 5, higher: []string{"A", "B"}, ceiling: []string{"A", "B"}},
+		{name: "exact-first", key: 10, floor: []string{"A", "B"}, ceiling: []string{"A", "B"}, higher: []string{"C"}},
+		{name: "between", key: 15, lower: []string{"A", "B"}, floor: []string{"A", "B"}, higher: []string{"C"}, ceiling: []string{"C"}},
+		{name: "exact-second", key: 20, lower: []string{"A", "B"}, floor: []string{"C"}, higher: []string{"D"}, ceiling: []string{"C"}},
+		{name: "between-last", key: 25, lower: []string{"C"}, floor: []string{"C"}, higher: []string{"D"}, ceiling: []string{"D"}},
+		{name: "exact-last", key: 30, lower: []string{"C"}, floor: []string{"D"}, ceiling: []string{"D"}},
+		{name: "above-last", key: 35, lower: []string{"D"}, floor: []string{"D"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			boundaryEnv, boundaryEngine := newRuntimeTest(t)
+			boundaryPrice := Field[runtimeTestTrade, float64]("price")
+			boundarySorted := SortedAccessBy[runtimeTestTrade, float64](EventValue[runtimeTestTrade](), boundaryPrice)
+			boundaryKey := Literal(test.key)
+			boundaryPlan, err := boundaryEnv.Build(From[runtimeTestTrade](boundaryEnv, "Trade").Window(LengthWindow(4)).Aggregate(
+				Alias("lower", boundarySorted.LowerEvents(boundaryKey)),
+				Alias("floor", boundarySorted.FloorEvents(boundaryKey)),
+				Alias("higher", boundarySorted.HigherEvents(boundaryKey)),
+				Alias("ceiling", boundarySorted.CeilingEvents(boundaryKey)),
+			).Query(StatementName("sorted-access-boundary-" + test.name)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			boundaryDeployment, err := boundaryEngine.Deploy(context.Background(), boundaryPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var boundaryRow Row
+			if _, err := boundaryDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+				if len(batch.New) != 0 {
+					boundaryRow, _ = batch.New[len(batch.New)-1].Row()
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			for _, event := range []runtimeTestTrade{
+				{Symbol: "A", Price: 10},
+				{Symbol: "B", Price: 10},
+				{Symbol: "C", Price: 20},
+				{Symbol: "D", Price: 30},
+			} {
+				if err := boundaryEngine.SendEvent(context.Background(), event); err != nil {
+					t.Fatal(err)
+				}
+			}
+			assertBoundaryBucket := func(name string, want []string) {
+				value := boundaryRow.Get(name)
+				if len(want) == 0 {
+					if !value.IsNull() {
+						t.Fatalf("%s = %#v, want null", name, value.Any())
+					}
+					return
+				}
+				values, ok := value.Any().([]runtimeTestTrade)
+				if !ok || len(values) != len(want) {
+					t.Fatalf("%s = %#v, want %v", name, value.Any(), want)
+				}
+				for index, symbol := range want {
+					if values[index].Symbol != symbol {
+						t.Fatalf("%s[%d] = %#v, want symbol %q", name, index, values[index], symbol)
+					}
+				}
+			}
+			assertBoundaryBucket("lower", test.lower)
+			assertBoundaryBucket("floor", test.floor)
+			assertBoundaryBucket("higher", test.higher)
+			assertBoundaryBucket("ceiling", test.ceiling)
+		})
+	}
+}
+
+func TestSortedAccessValueNavigableSnapshotAndIteratorMatchesEsper(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	price := Field[runtimeTestTrade, float64]("price")
+	sorted := SortedAccessBy[runtimeTestTrade, float64](EventValue[runtimeTestTrade](), price)
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(5)).Aggregate(
+		Alias("map", sorted.NavigableMapReference()),
+	).Query(StatementName("sorted-access-navigable-snapshot")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var last Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) > 0 {
+			last, _ = batch.New[len(batch.New)-1].Row()
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []runtimeTestTrade{
+		{Symbol: "A", Price: 10},
+		{Symbol: "B", Price: 10},
+		{Symbol: "C", Price: 20},
+		{Symbol: "D", Price: 30},
+	} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	access, ok := last.Get("map").Any().(SortedAccessValue[float64, runtimeTestTrade])
+	if !ok || access.IsEmpty() {
+		t.Fatalf("sorted access snapshot = %#v", last.Get("map").Any())
+	}
+	if !reflect.DeepEqual(access.Keys(), []float64{10, 20, 30}) {
+		t.Fatalf("sorted access keys = %#v", access.Keys())
+	}
+	buckets := access.Buckets()
+	if len(buckets) != 3 || len(buckets[0]) != 2 || buckets[0][0].Symbol != "A" || buckets[0][1].Symbol != "B" {
+		t.Fatalf("sorted access buckets = %#v", buckets)
+	}
+	if entry, found := access.LowerEntry(20); !found || entry.Key != 10 || len(entry.Values) != 2 {
+		t.Fatalf("lower entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := access.FloorEntry(20); !found || entry.Key != 20 || entry.Values[0].Symbol != "C" {
+		t.Fatalf("floor entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := access.HigherEntry(20); !found || entry.Key != 30 || entry.Values[0].Symbol != "D" {
+		t.Fatalf("higher entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := access.CeilingEntry(21); !found || entry.Key != 30 || entry.Values[0].Symbol != "D" {
+		t.Fatalf("ceiling entry = %#v, found=%t", entry, found)
+	}
+	if !reflect.DeepEqual(access.HeadMap(20, true).Keys(), []float64{10, 20}) || !reflect.DeepEqual(access.TailMap(20, false).Keys(), []float64{30}) {
+		t.Fatalf("head/tail maps = %#v / %#v", access.HeadMap(20, true).Keys(), access.TailMap(20, false).Keys())
+	}
+	if !reflect.DeepEqual(access.Descending().Keys(), []float64{30, 20, 10}) {
+		t.Fatalf("descending keys = %#v", access.Descending().Keys())
+	}
+	iterator := access.Iterator()
+	var iterated []float64
+	for {
+		entry, found := iterator.Next()
+		if !found {
+			break
+		}
+		iterated = append(iterated, entry.Key)
+		entry.Values[0].Symbol = "mutated"
+	}
+	if !reflect.DeepEqual(iterated, []float64{10, 20, 30}) || access.FirstEvents()[0].Symbol != "A" {
+		t.Fatalf("iterator or copy isolation = %#v / %#v", iterated, access.FirstEvents())
+	}
+	var empty SortedAccessValue[float64, runtimeTestTrade]
+	if !empty.IsEmpty() || len(empty.Keys()) != 0 {
+		t.Fatalf("empty sorted access = %#v", empty)
 	}
 }
 
