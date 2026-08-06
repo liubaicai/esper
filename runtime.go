@@ -2802,8 +2802,12 @@ type patternProgress struct {
 }
 
 type patternTransition struct {
-	state            *patternProgress
-	complete         bool
+	state    *patternProgress
+	complete bool
+	// matched reports that this transition accepted the current input event;
+	// it is separate from consumed because ordinary filters may match without
+	// an event-level @consume annotation.
+	matched          bool
 	consumed         bool
 	consumptionLevel int
 }
@@ -2826,6 +2830,10 @@ type patternMatch struct {
 	tagValues map[string][]Event
 	current   Event
 	startedAt time.Time
+	// prearmed marks a branch installed by a timer/guard clock callback before
+	// an input event arrived. The first matching event must advance that branch
+	// instead of creating a duplicate Every root for the same event.
+	prearmed bool
 }
 
 type outputRuntimeState struct {
@@ -2924,7 +2932,7 @@ func (r *statementRuntime) initializeAt(at time.Time) {
 		progress := newPatternProgress(r.query.pattern.root)
 		armPatternProgressTimers(progress, at, r.variables)
 		if patternProgressActive(progress) {
-			r.patternState.active = []patternMatch{{state: progress, startedAt: at}}
+			r.patternState.active = []patternMatch{{state: progress, startedAt: at, prearmed: true}}
 		}
 	}
 	switch root := r.query.pattern.root; root.kind {
@@ -3364,7 +3372,14 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 		runtimeState.active = kept
 	}
 	matches := runtimeState.active
-	startAllowed := definition.every || len(matches) == 0
+	prearmedActive := false
+	for _, match := range matches {
+		if match.prearmed {
+			prearmedActive = true
+			break
+		}
+	}
+	startAllowed := !prearmedActive && (definition.every || len(matches) == 0)
 	var startProgress *patternProgress
 	if startAllowed {
 		startProgress = newPatternProgress(definition.root)
@@ -3407,6 +3422,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 				tagValues: clonePatternTagValues(transition.state.tagValues),
 				current:   event,
 				startedAt: match.startedAt,
+				prearmed:  match.prearmed && !transition.matched,
 			}
 			if transition.complete {
 				completedAny = true
@@ -3501,7 +3517,7 @@ func initializeContextPatternTimer(state **patternRuntimeState, definition *patt
 			progress := newPatternProgress(definition.root)
 			armPatternProgressTimers(progress, at, variables)
 			if patternProgressActive(progress) {
-				runtimeState.active = []patternMatch{{state: progress, startedAt: at}}
+				runtimeState.active = []patternMatch{{state: progress, startedAt: at, prearmed: true}}
 			}
 		}
 		return true
@@ -3575,6 +3591,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 				tagValues: mergePatternTagValues(seedTagValues, transition.state.tagValues),
 				current:   Event{},
 				startedAt: match.startedAt,
+				prearmed:  match.prearmed,
 			}
 			if transition.complete {
 				completed = append(completed, candidate)
@@ -3589,7 +3606,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 					progress.tags = clonePatternTags(seedTags)
 					progress.tagValues = clonePatternTagValues(seedTagValues)
 					armPatternProgressTimers(progress, now, variables)
-					candidate := patternMatch{state: progress, startedAt: now}
+					candidate := patternMatch{state: progress, startedAt: now, prearmed: patternCanStartWithoutEvent(definition.root)}
 					if patternProgressActive(progress) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
 						nextActive = append(nextActive, candidate)
 					}
@@ -8779,6 +8796,9 @@ func patternTransitionFor(progress *patternProgress) patternTransition {
 func patternTransitionFrom(progress *patternProgress, complete bool, sources ...patternTransition) patternTransition {
 	transition := patternTransition{state: progress, complete: complete}
 	for _, source := range sources {
+		if source.matched {
+			transition.matched = true
+		}
 		if !source.consumed {
 			continue
 		}
@@ -8830,6 +8850,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 		transition := patternTransition{
 			state:    next,
 			complete: patternSatisfied(next),
+			matched:  true,
 		}
 		if next.node.consumeLevelSet {
 			transition.consumed = true
@@ -9338,6 +9359,13 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 		}
 		r.patternExpire(definition, now)
 		matches := r.patternState.active
+		prearmedActive := false
+		for _, match := range matches {
+			if match.prearmed {
+				prearmedActive = true
+				break
+			}
+		}
 		startAllowed := definition.every || len(matches) == 0
 		consumptionLevel := -1
 		if hasConsumption {
@@ -9375,6 +9403,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					tagValues: clonePatternTagValues(transition.state.tagValues),
 					current:   event,
 					startedAt: match.startedAt,
+					prearmed:  match.prearmed && !transition.matched,
 				}
 				if transition.complete {
 					completed = true
@@ -9398,7 +9427,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 			}
 		}
 
-		if startAllowed && !(definition.every && completed) && !(plan.query.discardPartialsOnMatch && completed) {
+		if startAllowed && !prearmedActive && !(definition.every && completed) && !(plan.query.discardPartialsOnMatch && completed) {
 			progress := newPatternProgress(definition.root)
 			armPatternProgressTimers(progress, now, r.variables)
 			starts := advancePatternNodeTrigger(progress, trigger, r.variables)
@@ -9607,7 +9636,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 		progress := newPatternProgress(definition.root)
 		armPatternProgressTimers(progress, now, r.variables)
 		if patternProgressActive(progress) {
-			r.patternState.active = []patternMatch{{state: progress, startedAt: now}}
+			r.patternState.active = []patternMatch{{state: progress, startedAt: now, prearmed: true}}
 		}
 	}
 	batch := ResultBatch{Time: now}
@@ -9630,6 +9659,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 				tagValues: clonePatternTagValues(transition.state.tagValues),
 				current:   Event{},
 				startedAt: match.startedAt,
+				prearmed:  match.prearmed,
 			}
 			if transition.complete {
 				completed = true
@@ -9645,7 +9675,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 				if definition.every {
 					progress := newPatternProgress(definition.root)
 					armPatternProgressTimers(progress, now, r.variables)
-					candidate := patternMatch{state: progress, startedAt: now}
+					candidate := patternMatch{state: progress, startedAt: now, prearmed: patternCanStartWithoutEvent(definition.root)}
 					if patternProgressActive(progress) && r.admitPatternMatch(nextActive, candidate, definition) {
 						nextActive = append(nextActive, candidate)
 					}
@@ -9696,6 +9726,7 @@ func clonePatternMatch(match patternMatch) patternMatch {
 		tagValues: clonePatternTagValues(match.tagValues),
 		current:   match.current,
 		startedAt: match.startedAt,
+		prearmed:  match.prearmed,
 	}
 }
 
