@@ -503,6 +503,7 @@ func TestEnumerableBuildRejectsMissingRequiredExpressions(t *testing.T) {
 		{name: "union-right", expr: EnumUnion[int64](values, nil)},
 		{name: "min-by-selector", expr: EnumMinBy[int64, int64](values, nil)},
 		{name: "to-map-value", expr: EnumToMap[int64, string, int64](values, Literal("key"), nil)},
+		{name: "group-by-value-selector", expr: EnumGroupBySelect[int64, int64, int64](values, Literal(int64(1)), nil)},
 	}
 	for _, testCase := range invalid {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -544,6 +545,19 @@ func TestEnumerableSetFoldGroupMapAndFrequencyMethods(t *testing.T) {
 	groups := EnumGroupBy[string, string](words, EnumElement[string]()).eval(EvalContext{})
 	if !groups.Equal(Present(map[string][]string{"a": {"a", "a"}, "b": {"b"}})) {
 		t.Fatalf("group-by = %v", groups)
+	}
+	itemsForGroups := Literal([]enumExpressionItem{
+		{ID: "A", Score: 1},
+		{ID: "B", Score: 2},
+		{ID: "A", Score: 3},
+	})
+	groupedValues := EnumGroupBySelect[enumExpressionItem, string, int64](
+		itemsForGroups,
+		EnumField[enumExpressionItem, string]("id"),
+		EnumField[enumExpressionItem, int64]("score"),
+	).eval(EvalContext{})
+	if !groupedValues.Equal(Present(map[string][]int64{"A": {1, 3}, "B": {2}})) {
+		t.Fatalf("group-by selector = %v", groupedValues)
 	}
 	toMap := EnumToMap[string, string, int64](words, EnumElement[string](), EnumIndex()).eval(EvalContext{})
 	if !toMap.Equal(Present(map[string]int64{"a": 2, "b": 1})) {

@@ -317,7 +317,7 @@ func validateEnumExpressionNodes(node *exprNode) error {
 	}
 	if node.enumParameterRequired {
 		minimumChildren := 2
-		if node.kind == "enum-to-map" {
+		if node.kind == "enum-to-map" || node.kind == "enum-group-by-select" {
 			minimumChildren = 3
 		}
 		if len(node.children) < minimumChildren {
@@ -1098,6 +1098,49 @@ func EnumGroupBy[T any, K comparable](values Expression[[]T], key Expression[K])
 				groupKey = converted
 			}
 			groups[groupKey] = append(groups[groupKey], item)
+		}
+		return Present(groups)
+	})
+}
+
+// EnumGroupBySelect groups selector values by a separate key selector. It is
+// the typed Go counterpart of Esper's two-lambda groupBy footprint; the
+// one-lambda EnumGroupBy form retains the original items in each bucket.
+func EnumGroupBySelect[T any, K comparable, V any](values Expression[[]T], key Expression[K], selector Expression[V]) Expression[map[K][]V] {
+	children := enumExpressionChildren[T](values, key)
+	if selector != nil {
+		children = append(children, selector.node())
+	}
+	return makeEnumExpr[map[K][]V]("enum-group-by-select", fmt.Sprintf("group-by(%s,%s,%s)", enumInputDescription[T](values), expressionDescription(key), expressionDescription(selector)), children, values, true, func(ctx EvalContext) Value {
+		items, input, ok := enumItems[T](values, ctx)
+		if !ok {
+			return input
+		}
+		if key == nil || selector == nil {
+			return Null()
+		}
+		groups := make(map[K][]V)
+		for index, item := range items {
+			nested := enumElementContext(ctx, item, index, len(items))
+			keyValue := key.eval(nested)
+			var groupKey K
+			if keyValue.IsPresent() {
+				converted, err := As[K](keyValue)
+				if err != nil {
+					continue
+				}
+				groupKey = converted
+			}
+			value := selector.eval(nested)
+			var groupValue V
+			if value.IsPresent() {
+				converted, err := As[V](value)
+				if err != nil {
+					continue
+				}
+				groupValue = converted
+			}
+			groups[groupKey] = append(groups[groupKey], groupValue)
 		}
 		return Present(groups)
 	})
