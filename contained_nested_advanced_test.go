@@ -320,6 +320,66 @@ func TestContainedNestedUnderlyingParentSelectionMatchesEsper(t *testing.T) {
 	}
 }
 
+func TestContainedNestedParentFragmentsMatchEsper(t *testing.T) {
+	env := NewEnvironment()
+	registerContainedAdvancedTypes(t, env)
+	reviews, err := buildContainedAdvancedReviews(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(Select(reviews,
+		Alias("orderFragment", ContainedAncestorEvent(2)),
+		Alias("bookFragment", ContainedParentEvent()),
+		Alias("reviewFragment", EventValue[Event]()),
+	).Query(StatementName("contained-nested-fragments")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deployment.Undeploy(context.Background()) }()
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("contained fragment result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), containedAdvancedOrder{
+		OrderID: "PO-fragment",
+		Books: []containedAdvancedBook{
+			{BookID: "B-fragment", Title: "Enders Game", Reviews: []containedAdvancedReview{{ReviewID: 7, MatchID: 7}}},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("contained fragment rows = %#v", rows)
+	}
+	order, ok := rows[0].Get("orderFragment").Any().(Event)
+	if !ok || order.Get("orderId").Any() != "PO-fragment" {
+		t.Fatalf("contained order fragment = %#v", rows[0].Get("orderFragment"))
+	}
+	book, ok := rows[0].Get("bookFragment").Any().(Event)
+	if !ok || book.Get("bookId").Any() != "B-fragment" || book.Get("title").Any() != "Enders Game" {
+		t.Fatalf("contained book fragment = %#v", rows[0].Get("bookFragment"))
+	}
+	review, ok := rows[0].Get("reviewFragment").Any().(Event)
+	if !ok || review.Get("reviewId").Any() != int64(7) {
+		t.Fatalf("contained review fragment = %#v", rows[0].Get("reviewFragment"))
+	}
+}
+
 func TestContainedNestedInvalidRules(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[containedAdvancedOrder](env, "ContainedAdvancedOrder"); err != nil {
