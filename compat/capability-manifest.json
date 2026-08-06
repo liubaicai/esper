@@ -141,12 +141,12 @@
       "id": "expr.core",
       "domain": "expression",
       "level": "S",
-      "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates, property presence checks and runtime type names, with ordered branches, null semantics and aggregate-aware evaluation",
-      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
-      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
+      "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, arithmetic/exact numeric operations, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates, property presence checks and runtime type names, with ordered branches, null semantics and aggregate-aware evaluation",
+      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreMath", "ExprCoreMathDivisionRules", "ExprCoreBigNumberSupportMathContext", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
+      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_math.go", "expr_math_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "enum_expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
+      "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "complete MathContext/decimal scale and rounding policy, mixed BigDecimal/BigInteger result metadata and division configuration matrix", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
     },
     {
       "id": "expr.declared",
@@ -995,6 +995,17 @@
       "difference": "Go's TypeName(Expr) returns the schema TypeName for an Event envelope and the Go reflect type string for ordinary dynamic values, preserving Null and Plan identity; dynamic Map values are covered live. Java fragment/variant names, POJO simple-name rules, representation-specific metadata and exact invalid diagnostics remain partial because the Go builder has no EPL/SODA type-name parser."
     },
     {
+      "id": "case.expr-core-math",
+      "javaRuntimeIds": ["java-runtime-405fa04b5f1af20f1e13", "java-runtime-a3016beb7537aaf1c737", "java-runtime-babbfc6755a26b62b22c", "java-runtime-6af819ef980958c5a674", "java-runtime-3cc6c889919a4bf72ace", "java-runtime-dd0e4d664e434a26b9eb", "java-runtime-3896bd31e1788b516b8b", "java-runtime-3d7b82c49ee5cf63d30b", "java-runtime-64cc57ddcc9ffb00533c", "java-runtime-548f20325f0a97b516be", "java-runtime-521ac552224e56149c6d", "java-runtime-3421f39650853c11b513", "java-runtime-7bb6729ae48117fe847c", "java-runtime-5d1b5d5b573bc6b7f0c7", "java-runtime-3ff86e431005db558919", "java-runtime-1b8818c11b408cc0be72", "java-runtime-937dc1691e1ff83298d7"],
+      "javaNames": ["ExprCoreMathDouble", "ExprCoreMathLong", "ExprCoreMathFloat", "ExprCoreMathIntWNull", "ExprCoreMathBigDec", "ExprCoreMathBigDecConv", "ExprCoreMathBigInt", "ExprCoreMathBigIntConv", "ExprCoreMathShortAndByteArithmetic", "ExprCoreMathModulo", "ExprCoreMathRulesBigInt", "ExprCoreMathRulesLong", "ExprCoreMathRulesFloat", "ExprCoreMathRulesDouble", "ExprCoreMathRulesInt", "ExprCoreMathContextBigDecConvDivide", "ExprCoreMathContextDivide"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreMath.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreMathDivisionRules.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreBigNumberSupportMathContext.java"],
+      "goTests": ["TestMathExpressionsMatchJavaPromotionAndDivisionPolicies", "TestExactMathExpressionsPreserveBigIntegerAndDecimalValues", "TestMathExpressionsBuildTypedPlanAndLiveProjection"],
+      "tags": ["correctness", "expression", "math", "numeric-promotion", "integer-division", "division-by-zero", "modulo", "big-integer", "big-decimal", "null", "invalid", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go adds explicit-result AddOf/SubtractOf/MultiplyOf/ModuloOf and configurable DivideWithOptions/DivideFloat builders for mixed native numeric operands, preserving exact integral arithmetic until conversion, Null/typed-nil propagation and Esper division-by-zero policies. AddExact/SubtractExact/MultiplyExact/DivideExact use big.Int/big.Rat without float64 loss and cover Java BigInteger/BigDecimal value semantics. Java compiler-level default type inference, EPL/SODA/compile paths, MathContext DECIMAL32 rounding/scale, BigDecimal serialization and the complete mixed-type diagnostic matrix remain partial."
+    },
+    {
       "id": "case.expr-script-provider",
       "javaRuntimeIds": ["java-runtime-1010c63eb2330597a750", "java-runtime-a2b886734b1a2ad4cc28", "java-runtime-416f111d2368882ea644", "java-runtime-3834e7de0be8f481cea2", "java-runtime-76f900f81eab8fbb7068", "java-runtime-7b3d5e1ed4c6e5a98f89", "java-runtime-39ad2c583a5c307fdeaa", "java-runtime-c115e9369d2a342e8e7f", "java-runtime-97cf680e34e215878dae", "java-runtime-de45e4c09a85a606f39f", "java-runtime-e5e8e7be2d9e28ca1fcf"],
       "javaNames": ["EPLScriptScripts", "EPLScriptQuoteEscape", "EPLScriptDocSamples", "EPLScriptSubqueryParam", "EPLScriptReturnNullWhenNumeric", "EPLScriptGenericResultType", "EPLScriptExpressionConfiguration", "EPLScriptExpressionDisable", "EPLScriptSandboxJSR223", "EPLScriptSandboxMVEL", "EPLContainedScriptContextValue"],
@@ -1796,6 +1807,7 @@
     {"capabilityId": "expr.core", "caseId": "case.expr-core-instanceof"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-exists-cast"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-type-name"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-math"},
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},

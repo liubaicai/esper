@@ -201,15 +201,21 @@ func enumRatFromValue(value Value) (*big.Rat, bool) {
 	if !value.IsPresent() {
 		return nil, false
 	}
-	switch number := value.Any().(type) {
+	raw := reflect.ValueOf(value.Any())
+	for raw.IsValid() && (raw.Kind() == reflect.Pointer || raw.Kind() == reflect.Interface) {
+		if raw.IsNil() {
+			return nil, false
+		}
+		raw = raw.Elem()
+	}
+	if !raw.IsValid() || !raw.CanInterface() {
+		return nil, false
+	}
+	switch number := raw.Interface().(type) {
 	case big.Int:
 		return new(big.Rat).SetInt(&number), true
 	case big.Rat:
 		return new(big.Rat).Set(&number), true
-	}
-	raw := reflect.ValueOf(value.Any())
-	if !raw.IsValid() {
-		return nil, false
 	}
 	switch raw.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
