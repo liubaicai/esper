@@ -682,6 +682,11 @@ func expressionContainsKind(node *exprNode, kind string) bool {
 		if node.subquery.projection != nil && expressionContainsKind(node.subquery.projection.node(), kind) {
 			return true
 		}
+		for _, selection := range node.subquery.columns {
+			if selection.Expr != nil && expressionContainsKind(selection.Expr.node(), kind) {
+				return true
+			}
+		}
 		if node.subquery.groupBy != nil && expressionContainsKind(node.subquery.groupBy.node(), kind) {
 			return true
 		}
@@ -1204,11 +1209,40 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 			return WrapError(ErrorInvalidRule, "subquery projection", err)
 		}
 	}
+	if definition.multiColumn && len(definition.columns) == 0 {
+		return NewError(ErrorInvalidRule, "multi-column subquery requires at least one column")
+	}
+	if len(definition.columns) > 0 {
+		seen := make(map[string]struct{}, len(definition.columns))
+		hasAggregate := false
+		allAggregate := true
+		for index, selection := range definition.columns {
+			if strings.TrimSpace(selection.Name) == "" {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("subquery column %d requires a name", index))
+			}
+			if selection.Expr == nil {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("subquery column %q has a nil expression", selection.Name))
+			}
+			if _, exists := seen[selection.Name]; exists {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("subquery column duplicates alias %q", selection.Name))
+			}
+			seen[selection.Name] = struct{}{}
+			if err := e.validateExprFields(definition.source, selection.Expr); err != nil {
+				return WrapError(ErrorInvalidRule, fmt.Sprintf("subquery column %q", selection.Name), err)
+			}
+			aggregate := isAggregateExpression(selection.Expr)
+			hasAggregate = hasAggregate || aggregate
+			allAggregate = allAggregate && aggregate
+		}
+		if !definition.grouped && hasAggregate && !allAggregate {
+			return NewError(ErrorInvalidRule, "multi-column subquery requires all columns to be aggregated unless a group-by clause is specified")
+		}
+	}
 	if definition.grouped {
 		if definition.groupBy == nil {
 			return NewError(ErrorInvalidRule, "grouped subquery key is required")
 		}
-		if definition.projection == nil {
+		if definition.projection == nil && len(definition.columns) == 0 {
 			return NewError(ErrorInvalidRule, "grouped subquery projection is required")
 		}
 		if err := e.validateExprFields(definition.source, definition.groupBy); err != nil {
@@ -1216,6 +1250,17 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 		}
 		if isAggregateExpression(definition.groupBy) {
 			return NewError(ErrorInvalidRule, "subquery group-by key cannot be an aggregate")
+		}
+		if expressionContainsKind(definition.groupBy.node(), "outer-field") {
+			return NewError(ErrorInvalidRule, "subquery group-by key cannot reference the outer event")
+		}
+		if definition.groupedRowProjection && len(definition.columns) > 0 {
+			groupKeyDescription := definition.groupBy.Description()
+			for _, selection := range definition.columns {
+				if !isAggregateExpression(selection.Expr) && selection.Expr.Description() != groupKeyDescription {
+					return NewError(ErrorInvalidRule, fmt.Sprintf("subquery column %q must be an aggregate or match the group-by key", selection.Name))
+				}
+			}
 		}
 		if definition.having != nil {
 			if definition.having.Type() != typeOf[bool]() {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -79,6 +80,11 @@ func querySubqueryDefinitions(query Query) []*subqueryDefinition {
 			}
 			if node.subquery.projection != nil {
 				visitNode(node.subquery.projection.node())
+			}
+			for _, selection := range node.subquery.columns {
+				if selection.Expr != nil {
+					visitNode(selection.Expr.node())
+				}
 			}
 			if node.subquery.groupBy != nil {
 				visitNode(node.subquery.groupBy.node())
@@ -185,20 +191,23 @@ func subqueryRuntimeFromVariables(variables map[string]Value) *subqueryRuntimeRe
 }
 
 type subqueryDefinition struct {
-	source              *streamNode
-	predicate           Expr
-	projection          Expr
-	groupBy             Expr
-	having              Expr
-	grouped             bool
-	aggregateProjection bool
-	quantified          bool
-	comparison          SubqueryComparison
-	cardinality         SubqueryCardinality
-	orderBy             []SubqueryOrderKey
-	offset              int
-	limit               int
-	limitSet            bool
+	source               *streamNode
+	predicate            Expr
+	projection           Expr
+	columns              []Selection
+	multiColumn          bool
+	groupBy              Expr
+	having               Expr
+	grouped              bool
+	groupedRowProjection bool
+	aggregateProjection  bool
+	quantified           bool
+	comparison           SubqueryComparison
+	cardinality          SubqueryCardinality
+	orderBy              []SubqueryOrderKey
+	offset               int
+	limit                int
+	limitSet             bool
 }
 
 type subqueryGroupValue struct {
@@ -433,6 +442,92 @@ func SubqueryEvents(source RecordStream, options ...SubqueryOption) Expression[[
 	return SubqueryValues[Event](source, nil, options...)
 }
 
+// SubqueryRow returns the first projected row from a multi-column subquery.
+// The row is a Go-native map keyed by the explicit Selection aliases; null or
+// missing inner values are represented by nil map values. Use SubqueryRows
+// when the inner source may return more than one row.
+func SubqueryRow(source RecordStream, selections ...Selection) Expression[map[string]any] {
+	return SubqueryRowWithOptions(source, selections)
+}
+
+// SubqueryRowWithOptions adds the ordinary subquery predicate, ordering,
+// offset/limit and scalar-cardinality options to a multi-column row.
+func SubqueryRowWithOptions(source RecordStream, selections []Selection, options ...SubqueryOption) Expression[map[string]any] {
+	definition := newSubqueryColumnsDefinition(source, selections, options...)
+	return makeSubqueryExpr[map[string]any]("subquery-row", "row("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		if len(values) == 0 || (definition.cardinality != SubqueryFirst && len(values) > 1) {
+			return Null()
+		}
+		row, ok := values[0].Any().(map[string]any)
+		if !ok {
+			return Null()
+		}
+		return Present(row)
+	})
+}
+
+// SubqueryRows returns every projected row from a multi-column subquery. Each
+// Selection alias becomes one map key, preserving the declared selection order
+// only in the AST; callers that need deterministic presentation can keep the
+// returned slice order and use the aliases for lookup.
+func SubqueryRows(source RecordStream, selections ...Selection) Expression[[]map[string]any] {
+	return SubqueryRowsWithOptions(source, selections)
+}
+
+// SubqueryRowsWithOptions applies predicate, ordering, offset and limit before
+// materializing the multi-column rows.
+func SubqueryRowsWithOptions(source RecordStream, selections []Selection, options ...SubqueryOption) Expression[[]map[string]any] {
+	definition := newSubqueryColumnsDefinition(source, selections, options...)
+	return makeSubqueryExpr[[]map[string]any]("subquery-rows", "rows("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		rows := make([]map[string]any, 0, len(values))
+		for _, value := range values {
+			row, ok := value.Any().(map[string]any)
+			if !ok {
+				return Null()
+			}
+			rows = append(rows, row)
+		}
+		return Present(rows)
+	})
+}
+
+// SubqueryGroupRows returns one multi-column map row per accepted group. The
+// key is kept in the group evaluation context, while each Selection is
+// evaluated against that group so scalar key columns and aggregate columns
+// can be mixed in the same row.
+func SubqueryGroupRows(source RecordStream, key Expr, selections []Selection, options ...SubqueryGroupOption) Expression[[]map[string]any] {
+	config := SubqueryGroupConfig{}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	definition := newSubqueryColumnsDefinition(source, selections)
+	definition.predicate = config.Where
+	definition.groupBy = key
+	definition.having = config.Having
+	definition.grouped = true
+	definition.groupedRowProjection = true
+	return makeSubqueryExpr[[]map[string]any]("subquery-group-rows", "group-rows("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		rows := make([]map[string]any, 0, len(values))
+		for _, value := range values {
+			group, ok := value.Any().(subqueryGroupValue)
+			if !ok {
+				return Null()
+			}
+			row, ok := group.value.Any().(map[string]any)
+			if !ok {
+				return Null()
+			}
+			rows = append(rows, row)
+		}
+		return Present(rows)
+	})
+}
+
 // SubqueryGroupBy groups the current inner snapshot by key and returns one
 // typed value bucket per key. A scalar projection contributes one value per
 // accepted inner event; an aggregate projection such as Sum contributes one
@@ -485,6 +580,37 @@ func SubqueryGroupBy[K comparable, V any](source RecordStream, key Expression[K]
 		}
 		return Present(result)
 	})
+}
+
+func newSubqueryColumnsDefinition(source RecordStream, selections []Selection, options ...SubqueryOption) *subqueryDefinition {
+	config := SubqueryConfig{Cardinality: SubqueryFirst}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	columns := append([]Selection(nil), selections...)
+	return &subqueryDefinition{
+		source:              source.node,
+		predicate:           config.Predicate,
+		columns:             columns,
+		multiColumn:         true,
+		aggregateProjection: subqueryColumnsHaveAggregate(columns),
+		cardinality:         config.Cardinality,
+		orderBy:             append([]SubqueryOrderKey(nil), config.OrderBy...),
+		offset:              config.Offset,
+		limit:               config.Limit,
+		limitSet:            config.LimitSet,
+	}
+}
+
+func subqueryColumnsHaveAggregate(columns []Selection) bool {
+	for _, selection := range columns {
+		if isAggregateExpression(selection.Expr) {
+			return true
+		}
+	}
+	return false
 }
 
 // SubqueryIn compares value with the projected values of a named-window or
@@ -706,6 +832,17 @@ func subqueryDescription(definition *subqueryDefinition) string {
 	if definition.projection != nil {
 		description += ".select(" + definition.projection.Description() + ")"
 	}
+	if len(definition.columns) > 0 {
+		columns := make([]string, 0, len(definition.columns))
+		for _, selection := range definition.columns {
+			if selection.Expr == nil {
+				columns = append(columns, selection.Name+"=<nil>")
+				continue
+			}
+			columns = append(columns, selection.Name+"="+selection.Expr.Description())
+		}
+		description += ".select(" + strings.Join(columns, ",") + ")"
+	}
 	if definition.groupBy != nil {
 		description += ".groupBy(" + definition.groupBy.Description() + ")"
 	}
@@ -874,11 +1011,11 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 					continue
 				}
 			}
-			if definition.projection == nil {
+			if definition.projection == nil && len(definition.columns) == 0 {
 				candidates = append(candidates, subqueryCandidate{value: Present(candidate), evaluation: evaluation})
 				continue
 			}
-			candidates = append(candidates, subqueryCandidate{value: definition.projection.eval(evaluation), evaluation: evaluation})
+			candidates = append(candidates, subqueryCandidate{value: evaluateSubqueryProjection(definition, evaluation), evaluation: evaluation})
 		}
 	}
 	if definition.grouped {
@@ -923,7 +1060,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 			evaluation.Event = aggregateGroup[len(aggregateGroup)-1]
 		}
 		candidates = append(candidates, subqueryCandidate{
-			value:      definition.projection.eval(evaluation),
+			value:      evaluateSubqueryProjection(definition, evaluation),
 			evaluation: evaluation,
 		})
 	}
@@ -969,7 +1106,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 }
 
 func evaluateSubqueryGroups(definition *subqueryDefinition, candidates []subqueryCandidate, outer EvalContext, engine *Engine, now time.Time) []Value {
-	if definition == nil || definition.groupBy == nil || definition.projection == nil {
+	if definition == nil || definition.groupBy == nil || (definition.projection == nil && len(definition.columns) == 0) {
 		return nil
 	}
 	type groupCandidate struct {
@@ -1021,8 +1158,8 @@ func evaluateSubqueryGroups(definition *subqueryDefinition, candidates []subquer
 				continue
 			}
 		}
-		if definition.aggregateProjection {
-			values = append(values, Present(subqueryGroupValue{key: group.key, value: definition.projection.eval(evaluation)}))
+		if definition.aggregateProjection || definition.groupedRowProjection {
+			values = append(values, Present(subqueryGroupValue{key: group.key, value: evaluateSubqueryProjection(definition, evaluation)}))
 			continue
 		}
 		for _, candidateEvaluation := range group.evaluations {
@@ -1033,10 +1170,35 @@ func evaluateSubqueryGroups(definition *subqueryDefinition, candidates []subquer
 			if candidateEvaluation.Now.IsZero() {
 				candidateEvaluation.Now = now
 			}
-			values = append(values, Present(subqueryGroupValue{key: group.key, value: definition.projection.eval(candidateEvaluation)}))
+			values = append(values, Present(subqueryGroupValue{key: group.key, value: evaluateSubqueryProjection(definition, candidateEvaluation)}))
 		}
 	}
 	return values
+}
+
+func evaluateSubqueryProjection(definition *subqueryDefinition, evaluation EvalContext) Value {
+	if definition == nil {
+		return Null()
+	}
+	if len(definition.columns) == 0 {
+		if definition.projection == nil {
+			return Null()
+		}
+		return definition.projection.eval(evaluation)
+	}
+	row := make(map[string]any, len(definition.columns))
+	for _, selection := range definition.columns {
+		if selection.Expr == nil {
+			return Null()
+		}
+		value := selection.Expr.eval(evaluation)
+		if value.IsPresent() {
+			row[selection.Name] = value.Any()
+		} else {
+			row[selection.Name] = nil
+		}
+	}
+	return Present(row)
 }
 
 func subqueryValuesEqual(left, right Value) bool {

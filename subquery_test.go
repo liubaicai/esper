@@ -572,3 +572,147 @@ func TestSubqueryGroupByAggregateAndHaving(t *testing.T) {
 		t.Fatal("grouped subquery aggregate key must be rejected")
 	}
 }
+
+func TestSubqueryRowsAndGroupedRows(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	schema, ok := env.Schema("Trade")
+	if !ok {
+		t.Fatal("Trade schema is missing")
+	}
+	if _, err := CreateNamedWindow(env, "Prices", schema); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	for _, trade := range []runtimeTestTrade{
+		{Symbol: "A", Price: 5},
+		{Symbol: "A", Price: 10},
+		{Symbol: "B", Price: 20},
+		{Symbol: "C", Price: 2},
+	} {
+		if err := engine.InsertNamedWindow(context.Background(), "Prices", trade); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	prices := FromNamedWindow(env, "Prices")
+	symbol := Field[any, string]("symbol")
+	price := Field[any, float64]("price")
+	sum := Sum[float64](price)
+	columns := []Selection{
+		Alias("symbol", symbol),
+		Alias("total", sum),
+	}
+	query := Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("first", SubqueryRow(prices,
+			Alias("symbol", symbol),
+			Alias("price", price),
+		)),
+		Alias("aggregate", SubqueryRow(prices,
+			Alias("count", Count[float64](price)),
+			Alias("sum", sum),
+		)),
+		Alias("rows", SubqueryRows(prices,
+			Alias("symbol", symbol),
+			Alias("price", price),
+		)),
+		Alias("group_rows", SubqueryGroupRows(
+			prices,
+			symbol,
+			columns,
+			SubqueryGroupWhere(Greater[float64](price, Literal(3.0))),
+			SubqueryGroupHaving(GreaterOrEqual[float64](sum, Literal(15.0))),
+		)),
+	).Query(StatementName("subquery-rows"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("multi-column subquery result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "outer", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("multi-column subquery rows = %#v", rows)
+	}
+	first, ok := rows[0].Get("first").Any().(map[string]any)
+	if !ok {
+		t.Fatalf("multi-column scalar type = %#v", rows[0].Get("first"))
+	}
+	if !reflect.DeepEqual(first, map[string]any{"symbol": "A", "price": 5.0}) {
+		t.Fatalf("multi-column scalar value = %#v", first)
+	}
+	aggregate, ok := rows[0].Get("aggregate").Any().(map[string]any)
+	if !ok || !reflect.DeepEqual(aggregate, map[string]any{"count": int64(4), "sum": 37.0}) {
+		t.Fatalf("multi-column aggregate value = %#v", rows[0].Get("aggregate"))
+	}
+	many, ok := rows[0].Get("rows").Any().([]map[string]any)
+	if !ok || len(many) != 4 {
+		t.Fatalf("multi-column rows value = %#v", rows[0].Get("rows"))
+	}
+	grouped, ok := rows[0].Get("group_rows").Any().([]map[string]any)
+	if !ok || !reflect.DeepEqual(grouped, []map[string]any{
+		{"symbol": "A", "total": 15.0},
+		{"symbol": "B", "total": 20.0},
+	}) {
+		t.Fatalf("multi-column grouped rows = %#v", rows[0].Get("group_rows"))
+	}
+
+	invalid := Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("bad", SubqueryRow(prices,
+			Alias("duplicate", symbol),
+			Alias("duplicate", price),
+		)),
+	).Query(StatementName("invalid-subquery-column"))
+	if _, err := env.Build(invalid); err == nil {
+		t.Fatal("multi-column duplicate aliases must be rejected")
+	}
+	invalid = Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("bad", SubqueryRow(prices)),
+	).Query(StatementName("invalid-subquery-no-columns"))
+	if _, err := env.Build(invalid); err == nil {
+		t.Fatal("multi-column subquery without columns must be rejected")
+	}
+	invalid = Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("bad", SubqueryRow(prices,
+			Alias("symbol", symbol),
+			Alias("sum", sum),
+		)),
+	).Query(StatementName("invalid-subquery-mixed-columns"))
+	if _, err := env.Build(invalid); err == nil {
+		t.Fatal("multi-column mixed aggregate columns must be rejected")
+	}
+	invalid = Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("bad", SubqueryGroupRows(prices, OuterField[string]("symbol"), columns)),
+	).Query(StatementName("invalid-subquery-correlated-group-key"))
+	if _, err := env.Build(invalid); err == nil {
+		t.Fatal("grouped subquery outer group key must be rejected")
+	}
+	invalid = Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("bad", SubqueryGroupRows(prices, symbol, []Selection{
+			Alias("price", price),
+			Alias("total", sum),
+		})),
+	).Query(StatementName("invalid-subquery-group-column"))
+	if _, err := env.Build(invalid); err == nil {
+		t.Fatal("grouped subquery non-key scalar column must be rejected")
+	}
+}
