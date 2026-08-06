@@ -117,6 +117,7 @@ func (m CapabilityManifest) Validate() error {
 		}
 	}
 	pairs := make(map[string]struct{}, len(m.Mappings))
+	mappedCases := make(map[string]struct{}, len(m.Mappings))
 	for index, mapping := range m.Mappings {
 		if _, exists := capabilities[mapping.CapabilityID]; !exists {
 			return fmt.Errorf("compat: mapping %d references unknown capability %q", index, mapping.CapabilityID)
@@ -129,6 +130,15 @@ func (m CapabilityManifest) Validate() error {
 			return fmt.Errorf("compat: duplicate mapping %q -> %q", mapping.CapabilityID, mapping.CaseID)
 		}
 		pairs[key] = struct{}{}
+		mappedCases[mapping.CaseID] = struct{}{}
+	}
+	for _, parityCase := range m.Cases {
+		if parityCase.Status == "unmapped" {
+			continue
+		}
+		if _, mapped := mappedCases[parityCase.ID]; !mapped {
+			return fmt.Errorf("compat: case %q with status %q has no capability mapping", parityCase.ID, parityCase.Status)
+		}
 	}
 	return nil
 }

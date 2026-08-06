@@ -42,3 +42,23 @@ func TestCapabilityManifestRejectsUnknownAndDuplicateMappings(t *testing.T) {
 		t.Fatalf("unknown capability error = %v", err)
 	}
 }
+
+func TestCapabilityManifestRejectsMappedCaseWithoutCapabilityMapping(t *testing.T) {
+	manifest := CapabilityManifest{
+		Version:    CapabilityManifestVersion,
+		JavaCommit: "java",
+		Capabilities: []CapabilityRecord{{
+			ID: "cap-a", Level: "S", Phase: 1, Status: "prototype",
+		}},
+		Cases: []CapabilityCase{{
+			ID: "case-a", JavaRuntimeIDs: []string{"runtime-a"}, Status: "mapped",
+		}},
+	}
+	if err := manifest.Validate(); err == nil || !strings.Contains(err.Error(), "has no capability mapping") {
+		t.Fatalf("missing capability mapping error = %v", err)
+	}
+	manifest.Cases[0].Status = "unmapped"
+	if err := manifest.Validate(); err != nil {
+		t.Fatalf("explicitly unmapped case should not require a mapping: %v", err)
+	}
+}
