@@ -700,6 +700,79 @@ func SubqueryGroupBy[K comparable, V any](source RecordStream, key Expression[K]
 	})
 }
 
+// SubqueryGroupBucket is one ordered result bucket from SubqueryGroupByAny.
+// Key is the typed Go value when the group key is present; KeyValue preserves
+// Missing/Null and supports non-comparable keys such as slices and arrays.
+// Values contains one projected value per accepted inner row, or one value
+// for an aggregate projection.
+type SubqueryGroupBucket[K any, V any] struct {
+	Key      K
+	KeyValue Value
+	Values   []V
+}
+
+// SubqueryGroupByAny groups a subquery by any expression result, including
+// slice, array, map and struct keys that cannot satisfy Go's comparable map
+// key constraint. It is the typed bucket counterpart of Esper's multi-row
+// grouped subselect; bucket order follows first group appearance in the
+// inner snapshot.
+func SubqueryGroupByAny[K any, V any](source RecordStream, key Expression[K], projection Expression[V], options ...SubqueryGroupOption) Expression[[]SubqueryGroupBucket[K, V]] {
+	config := SubqueryGroupConfig{}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	definition := &subqueryDefinition{
+		source:              source.node,
+		predicate:           config.Where,
+		projection:          projection,
+		groupBy:             key,
+		having:              config.Having,
+		grouped:             true,
+		aggregateProjection: isAggregateExpression(projection),
+	}
+	return makeSubqueryExpr[[]SubqueryGroupBucket[K, V]]("subquery-group-by-any", "group-by-any("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		buckets := make([]SubqueryGroupBucket[K, V], 0, len(values))
+		for _, value := range values {
+			group, ok := value.Any().(subqueryGroupValue)
+			if !ok {
+				return Null()
+			}
+			bucketIndex := -1
+			for index := range buckets {
+				if subqueryValuesEqual(buckets[index].KeyValue, group.key) {
+					bucketIndex = index
+					break
+				}
+			}
+			if bucketIndex < 0 {
+				var typedKey K
+				if group.key.IsPresent() {
+					converted, err := As[K](group.key)
+					if err != nil {
+						return Null()
+					}
+					typedKey = converted
+				}
+				buckets = append(buckets, SubqueryGroupBucket[K, V]{Key: typedKey, KeyValue: group.key})
+				bucketIndex = len(buckets) - 1
+			}
+			var projected V
+			if group.value.IsPresent() {
+				converted, err := As[V](group.value)
+				if err != nil {
+					return Null()
+				}
+				projected = converted
+			}
+			buckets[bucketIndex].Values = append(buckets[bucketIndex].Values, projected)
+		}
+		return Present(buckets)
+	})
+}
+
 func newSubqueryColumnsDefinition(source RecordStream, selections []Selection, options ...SubqueryOption) *subqueryDefinition {
 	config := SubqueryConfig{Cardinality: SubqueryFirst}
 	for _, option := range options {
