@@ -2401,6 +2401,9 @@ func validateUnidirectionalJoin(definition *joinDefinition, sources []*streamNod
 				return fmt.Errorf("unidirectional join source %d cannot declare a window view", index)
 			}
 		}
+		if source := sources[index]; source != nil && source.kind == streamPattern && source.patternWindow != nil {
+			return fmt.Errorf("unidirectional join source %d cannot declare a pattern result window", index)
+		}
 	}
 	if count == 1 {
 		return nil

@@ -2519,6 +2519,8 @@ type statementRuntime struct {
 	partitionKey             string
 	partitionID              int
 	nextPartitionID          int
+	initializedAt            time.Time
+	initialized              bool
 	contextProperties        map[string]Value
 	variables                map[string]Value
 	methodDependencies       map[string]Event
@@ -2821,6 +2823,8 @@ func (r *statementRuntime) initializeAt(at time.Time) {
 	if r == nil {
 		return
 	}
+	r.initializedAt = at
+	r.initialized = true
 	if r.outputState != nil {
 		r.outputState.afterStarted = at
 		r.outputState.lastOutputAt = at
@@ -4204,14 +4208,23 @@ func (r *statementRuntime) expireBatch(plan Plan, now time.Time, variables map[s
 	var batch ResultBatch
 	if plan.query.aggregate != nil {
 		if plan.query.aggregate.join != nil {
-			delta := r.expireJoin(now)
+			delta, expireErr := r.expireJoin(now)
+			if expireErr != nil {
+				return ResultBatch{}, expireErr
+			}
+			if delta.unidirectionalTrigger {
+				r.aggregateState = nil
+			}
 			batch, _ = r.aggregateBatch(joinDeltaEvents(delta, now), plan, now)
 		} else {
 			delta := r.expire(now)
 			batch, _ = r.aggregateBatch(delta, plan, now)
 		}
 	} else if plan.query.join != nil {
-		delta := r.expireJoin(now)
+		delta, expireErr := r.expireJoin(now)
+		if expireErr != nil {
+			return ResultBatch{}, expireErr
+		}
 		batch = r.joinBatch(delta, plan, now)
 	} else if plan.query.rowRecog != nil {
 		delta := r.expire(now)
@@ -5725,24 +5738,32 @@ func removeStoredEvents(active *[]storedEvent, removed []Event) {
 	}
 }
 
-func (r *statementRuntime) expireJoin(now time.Time) joinDelta {
+func (r *statementRuntime) expireJoin(now time.Time) (joinDelta, error) {
 	if r.joinState == nil {
-		return joinDelta{}
+		return joinDelta{}, nil
 	}
 	definition := r.query.join
 	if definition == nil {
-		return joinDelta{}
+		return joinDelta{}, nil
 	}
 	before := joinTuples(definition, r.joinState, now, r)
 	delta := r.expire(now)
 	for index := range r.joinState.sides {
 		removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
 	}
+	timedEvents, err := r.advancePatternJoinSources(definition, now)
+	if err != nil {
+		return joinDelta{}, err
+	}
+	timedDelta, err := r.applyPatternJoinTime(definition, timedEvents, now)
+	if err != nil {
+		return joinDelta{}, err
+	}
 	if joinDefinitionHasUnidirectional(definition) {
-		return joinDelta{}
+		return timedDelta, nil
 	}
 	after := joinTuples(definition, r.joinState, now, r)
-	return joinDeltaWithPairs(diffJoinTuples(before, after))
+	return joinDeltaWithPairs(diffJoinTuples(before, after)), nil
 }
 
 func joinPairs(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) []eventPair {

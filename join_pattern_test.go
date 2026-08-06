@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -44,20 +45,148 @@ func TestPatternJoinRejectsUnmaterializablePattern(t *testing.T) {
 	}
 }
 
-func TestPatternJoinRejectsTimerOnlyPattern(t *testing.T) {
+func TestPatternUnidirectionalTimerJoinMatchesEsper(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[joinPatternS0](env, "PatternS0"); err != nil {
 		t.Fatal(err)
 	}
 	s0 := From[joinPatternS0](env, "PatternS0")
 	query := JoinMany(
-		JoinPatternSource(TimerInterval(s0, time.Second)),
-		JoinSource(s0),
+		JoinPatternSource(TimerInterval(s0, time.Second)).Unidirectional(),
+		JoinSource(s0).Window(KeepAll()),
+	).LeftOuter().Aggregate(
+		Alias("sum", Sum[int](JoinField[int](1, "id"))),
+		Alias("count", CountAll()),
+	).Query(StatementName("pattern-unidirectional-timer-join"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(0, 0).Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if len(batches) != 1 || len(batches[0].New) != 1 {
+		t.Fatalf("timer-only pattern first trigger = %#v", batches)
+	}
+	row, ok := batches[0].New[0].Row()
+	if !ok || row.Get("sum").IsPresent() || row.Get("count").Any() != int64(1) {
+		t.Fatalf("timer-only pattern unmatched row = %#v", row.AsMap())
+	}
+	if err := engine.Send(context.Background(), "PatternS0", joinPatternS0{ID: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if len(batches) != 1 {
+		t.Fatalf("passive pattern-join event emitted = %#v", batches)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(0, 0).Add(2*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if len(batches) != 2 || len(batches[1].New) != 1 {
+		t.Fatalf("timer-only pattern second trigger = %#v", batches)
+	}
+	newRow, newOK := batches[1].New[0].Row()
+	sum, sumOK := numericValue(newRow.Get("sum"))
+	if !newOK || !sumOK || sum != 10 || newRow.Get("count").Any() != int64(1) {
+		t.Fatalf("timer-only pattern matched row = %#v", newRow.AsMap())
+	}
+}
+
+func TestPatternUnidirectionalRejectsPatternResultWindow(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[joinPatternS0](env, "PatternS0"); err != nil {
+		t.Fatal(err)
+	}
+	s0 := From[joinPatternS0](env, "PatternS0")
+	pattern := PatternFrom(s0, "a", Literal[bool](true)).Every()
+	query := JoinMany(
+		JoinPatternSource(pattern).Window(LengthWindow(2)).Unidirectional(),
+		JoinSource(s0).Window(KeepAll()),
 	).Select(
-		SelectFrom(0, "pattern", JoinEventValue[Event](0)),
-	).Query(StatementName("invalid-timer-pattern-join"))
-	if _, err := env.Build(query); err == nil || !errors.Is(err, ErrorInvalidRule) {
-		t.Fatalf("timer-only pattern join build error = %v, want %v", err, ErrorInvalidRule)
+		SelectFrom(0, "id", JoinPatternField[int](0, "a", "id")),
+	).Query(StatementName("invalid-pattern-unidirectional-window"))
+	if _, err := env.Build(query); err == nil || !strings.Contains(err.Error(), "pattern result window") {
+		t.Fatalf("pattern unidirectional window error = %v", err)
+	}
+}
+
+func TestPatternUnidirectionalTimerJoinOutputRateMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[joinPatternS0](env, "PatternS0"); err != nil {
+		t.Fatal(err)
+	}
+	base := From[joinPatternS0](env, "PatternS0")
+	a := base.Filter(Equal[int](Field[joinPatternS0, int]("id"), Literal(1))).Window(Unique(Field[joinPatternS0, string]("p00")))
+	b := base.Filter(Equal[int](Field[joinPatternS0, int]("id"), Literal(2))).Window(Unique(Field[joinPatternS0, string]("p00")))
+	query := JoinMany(
+		JoinPatternSource(TimerInterval(base, time.Minute)).Unidirectional(),
+		JoinSource(a),
+		JoinSource(b),
+	).On(OnSourcesEqual(
+		1, Field[joinPatternS0, string]("p00"),
+		2, Field[joinPatternS0, string]("p00"),
+	)).Aggregate(
+		Alias("num", CountAll()),
+	).Query(
+		StatementName("pattern-unidirectional-timer-output-rate"),
+		WithOutput(OutputEveryTime(2*time.Minute)),
+	)
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []joinPatternS0{
+		{ID: 1, P00: "A"},
+		{ID: 1, P00: "B"},
+		{ID: 2, P00: "A"},
+		{ID: 2, P00: "B"},
+	} {
+		if err := engine.Send(context.Background(), "PatternS0", event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(0, 0).Add(70*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if len(batches) != 0 {
+		t.Fatalf("output-rate timer flushed too early = %#v", batches)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(0, 0).Add(140*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if len(batches) != 1 || len(batches[0].New) != 2 {
+		t.Fatalf("output-rate timer batch = %#v", batches)
+	}
+	for _, result := range batches[0].New {
+		row, ok := result.Row()
+		if !ok || row.Get("num").Any() != int64(2) {
+			t.Fatalf("output-rate timer row = %#v", result)
+		}
 	}
 }
 
@@ -258,5 +387,116 @@ func TestTwoPatternJoinProjectsTagEventsMatchesEsper(t *testing.T) {
 	rightEvent, ok := right.Get("es3").Any().(Event)
 	if !ok || rightEvent.Underlying().(joinPatternS3).P30 != "d" {
 		t.Fatalf("two-pattern wildcard right tag = %#v", right.Get("es3").Any())
+	}
+}
+
+func TestPatternFilterJoinRedeployClearsStateMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	for _, register := range []func(*Environment) error{
+		func(env *Environment) error { _, err := RegisterStruct[joinPatternS0](env, "PatternS0"); return err },
+		func(env *Environment) error { _, err := RegisterStruct[joinPatternS1](env, "PatternS1"); return err },
+	} {
+		if err := register(env); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s0 := From[joinPatternS0](env, "PatternS0")
+	s1 := From[joinPatternS1](env, "PatternS1")
+	pattern := PatternFrom(s0, "es0a", Equal[string](Field[joinPatternS0, string]("p00"), Literal("a"))).
+		Or(PatternFrom(s0, "es0b", Equal[string](Field[joinPatternS0, string]("p00"), Literal("b")))).
+		Every()
+	query := JoinMany(
+		JoinPatternSource(pattern).Window(LengthWindow(5)),
+		JoinSource(s1).Window(LengthWindow(5)),
+	).On(AnyJoin(
+		OnSourcesEqual(0, JoinPatternField[int](0, "es0a", "id"), 1, Field[joinPatternS1, int]("id")),
+		OnSourcesEqual(0, JoinPatternField[int](0, "es0b", "id"), 1, Field[joinPatternS1, int]("id")),
+	)).Select(
+		SelectFrom(0, "es0aId", JoinPatternField[int](0, "es0a", "id")),
+		SelectFrom(0, "es0bId", JoinPatternField[int](0, "es0b", "id")),
+		SelectFrom(1, "s1Id", Field[joinPatternS1, int]("id")),
+	).Query(StatementName("pattern-filter-join-redeploy"), WithOldStream())
+
+	engine := env.NewEngine()
+	var batches []ResultBatch
+	deploy := func() *Deployment {
+		t.Helper()
+		plan, err := env.Build(query)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+			batches = append(batches, batch)
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return deployment
+	}
+	send0 := func(event joinPatternS0) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send1 := func(event joinPatternS1) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	deployment := deploy()
+	send1(joinPatternS1{ID: 1, P10: "s1A"})
+	send0(joinPatternS0{ID: 2, P00: "a"})
+	send0(joinPatternS0{ID: 1, P00: "b"})
+	send1(joinPatternS1{ID: 2, P10: "s2A"})
+	send1(joinPatternS1{ID: 20, P10: "s20A"})
+	send1(joinPatternS1{ID: 30, P10: "s30A"})
+	send0(joinPatternS0{ID: 20, P00: "a"})
+	send0(joinPatternS0{ID: 20, P00: "b"})
+	send0(joinPatternS0{ID: 30, P00: "c"})
+	send0(joinPatternS0{ID: 40, P00: "a"})
+	send0(joinPatternS0{ID: 50, P00: "b"})
+	if len(batches) != 5 || len(batches[4].Old) != 1 {
+		t.Fatalf("pattern filter join initial lifecycle = %#v", batches)
+	}
+	old, ok := batches[4].Old[0].Row()
+	if !ok || old.Get("es0aId").Any() != 2 || old.Get("s1Id").Any() != 2 {
+		t.Fatalf("pattern filter join initial eviction = %#v", old.AsMap())
+	}
+
+	if err := deployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	batches = nil
+	send1(joinPatternS1{ID: 60, P10: "s20"})
+	send0(joinPatternS0{ID: 70, P00: "a"})
+	send0(joinPatternS0{ID: 71, P00: "b"})
+	if len(batches) != 0 {
+		t.Fatalf("events reached undeployed pattern join: %#v", batches)
+	}
+
+	deployment = deploy()
+	send1(joinPatternS1{ID: 70, P10: "s1-70"})
+	send0(joinPatternS0{ID: 60, P00: "a"})
+	send1(joinPatternS1{ID: 20, P10: "s1"})
+	if len(batches) != 0 {
+		t.Fatalf("re-deployed pattern join emitted premature row: %#v", batches)
+	}
+	send0(joinPatternS0{ID: 70, P00: "b"})
+	if len(batches) != 1 || len(batches[0].New) != 1 {
+		t.Fatalf("re-deployed pattern join result = %#v", batches)
+	}
+	row, ok := batches[0].New[0].Row()
+	if !ok || row.Get("es0bId").Any() != 70 || row.Get("s1Id").Any() != 70 || row.Get("es0aId").IsPresent() {
+		t.Fatalf("re-deployed pattern join row = %#v", row.AsMap())
+	}
+	if err := deployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
 	}
 }
