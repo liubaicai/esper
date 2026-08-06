@@ -57,6 +57,127 @@ func (f MethodProviderFunc) Poll(ctx context.Context, request MethodRequest) ([]
 	return f(ctx, request)
 }
 
+// MethodCacheKey extracts the stable invocation arguments used by a cached
+// method source. The key is explicit so callers can choose the same fields a
+// Java method reference would use without relying on reflection.
+type MethodCacheKey func(MethodRequest) []any
+
+// MethodCacheConfig selects LRU or expiry caching for a method provider. A
+// zero value disables caching. LRUSize and MaxAge are mutually exclusive.
+type MethodCacheConfig struct {
+	LRUSize       int
+	MaxAge        time.Duration
+	PurgeInterval time.Duration
+}
+
+func (c MethodCacheConfig) validate() error {
+	if c.LRUSize < 0 {
+		return NewError(ErrorInvalidRule, "method LRU cache size cannot be negative")
+	}
+	if c.MaxAge < 0 {
+		return NewError(ErrorInvalidRule, "method cache maximum age cannot be negative")
+	}
+	if c.PurgeInterval < 0 {
+		return NewError(ErrorInvalidRule, "method cache purge interval cannot be negative")
+	}
+	if c.LRUSize > 0 && c.MaxAge > 0 {
+		return NewError(ErrorInvalidRule, "method cache cannot configure both LRU and expiry")
+	}
+	if c.MaxAge > 0 && c.PurgeInterval == 0 {
+		return NewError(ErrorInvalidRule, "method expiry cache requires a positive purge interval")
+	}
+	return nil
+}
+
+// CachedMethodProvider wraps a MethodProvider with an explicit invocation-key
+// cache. Cached results are cloned on both storage and retrieval so a caller
+// cannot mutate a later hit through an earlier Event underlying value.
+type CachedMethodProvider struct {
+	provider MethodProvider
+	key      MethodCacheKey
+	cache    *historicalSQLCache
+	mu       sync.Mutex
+}
+
+// NewCachedMethodProvider adds LRU or expiry caching to provider. A key
+// function is required when caching is enabled and may be nil for a
+// pass-through wrapper with a zero MethodCacheConfig.
+func NewCachedMethodProvider(provider MethodProvider, key MethodCacheKey, config MethodCacheConfig) (*CachedMethodProvider, error) {
+	if provider == nil {
+		return nil, NewError(ErrorDependency, "method provider is nil")
+	}
+	if err := config.validate(); err != nil {
+		return nil, err
+	}
+	if (config.LRUSize > 0 || config.MaxAge > 0) && key == nil {
+		return nil, NewError(ErrorInvalidRule, "cached method provider requires a cache key function")
+	}
+	return &CachedMethodProvider{
+		provider: provider,
+		key:      key,
+		cache: newHistoricalSQLCache(SQLHistoricalCacheConfig{
+			LRUSize:       config.LRUSize,
+			MaxAge:        config.MaxAge,
+			PurgeInterval: config.PurgeInterval,
+		}),
+	}, nil
+}
+
+// ConfigureCache replaces the cache policy. Configure a provider before it
+// is shared with a running engine; Poll remains safe after configuration.
+func (p *CachedMethodProvider) ConfigureCache(config MethodCacheConfig) error {
+	if p == nil {
+		return NewError(ErrorDependency, "cached method provider is nil")
+	}
+	if err := config.validate(); err != nil {
+		return err
+	}
+	if (config.LRUSize > 0 || config.MaxAge > 0) && p.key == nil {
+		return NewError(ErrorInvalidRule, "cached method provider requires a cache key function")
+	}
+	p.mu.Lock()
+	p.cache = newHistoricalSQLCache(SQLHistoricalCacheConfig{
+		LRUSize:       config.LRUSize,
+		MaxAge:        config.MaxAge,
+		PurgeInterval: config.PurgeInterval,
+	})
+	p.mu.Unlock()
+	return nil
+}
+
+func (p *CachedMethodProvider) Poll(ctx context.Context, request MethodRequest) ([]Event, error) {
+	if p == nil || p.provider == nil {
+		return nil, NewError(ErrorDependency, "cached method provider has no provider")
+	}
+	now := request.Now
+	if now.IsZero() {
+		now = time.Now()
+		request.Now = now
+	}
+	key := ""
+	if p.key != nil {
+		key = encodeKey(p.key(request))
+	}
+	p.mu.Lock()
+	if p.cache != nil {
+		if cached, ok := p.cache.get(key, now); ok {
+			p.mu.Unlock()
+			return cached, nil
+		}
+	}
+	p.mu.Unlock()
+	events, err := p.provider.Poll(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	p.mu.Lock()
+	if p.cache != nil {
+		p.cache.put(key, events, now)
+	}
+	p.mu.Unlock()
+	return events, nil
+}
+
 // SQLHistoricalQueryer is implemented by *sql.DB and *sql.Tx. It lets a
 // historical provider participate in a caller-owned transaction without
 // making the provider responsible for commit or rollback.

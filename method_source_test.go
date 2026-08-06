@@ -2,8 +2,10 @@ package esper
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"testing"
+	"time"
 )
 
 type methodSourceRow struct {
@@ -234,5 +236,121 @@ func TestMethodSourceValidationRequiresProviderAndKnownTrigger(t *testing.T) {
 	provider := MethodProviderFunc(func(context.Context, MethodRequest) ([]Event, error) { return nil, nil })
 	if _, err := env.Build(FromMethodOn[methodSourceRow](env, "unknown-trigger", "MissingTrigger", methodSchema, provider).Query(StatementName("method-unknown-trigger"))); err == nil {
 		t.Fatal("method source with unknown trigger was accepted")
+	}
+}
+
+func TestCachedMethodProviderLRUReusesAndEvictsByExplicitKey(t *testing.T) {
+	triggerSchema, err := StructSchema[runtimeTestTrade]("MethodCacheLRUTrigger")
+	if err != nil {
+		t.Fatal(err)
+	}
+	methodSchema, err := StructSchema[methodSourceRow]("MethodCacheLRURow")
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := &recordingMethodProvider{schema: methodSchema}
+	cached, err := NewCachedMethodProvider(base, func(request MethodRequest) []any {
+		return []any{request.Trigger.Get("symbol").Any(), request.Trigger.Get("price").Any()}
+	}, MethodCacheConfig{LRUSize: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	poll := func(symbol string, price float64) {
+		t.Helper()
+		trigger, eventErr := newEvent(triggerSchema, runtimeTestTrade{Symbol: symbol, Price: price}, time.Unix(0, 0).UTC())
+		if eventErr != nil {
+			t.Fatal(eventErr)
+		}
+		if _, pollErr := cached.Poll(context.Background(), MethodRequest{Trigger: trigger, Now: time.Unix(100, 0).UTC()}); pollErr != nil {
+			t.Fatal(pollErr)
+		}
+	}
+	poll("E1", 1)
+	poll("E2", 2)
+	poll("E3", 3)
+	poll("E3", 3)
+	poll("E4", 4)
+	poll("E2", 2)
+	poll("E1", 1)
+	if calls := len(base.Requests()); calls != 5 {
+		t.Fatalf("method LRU provider calls = %d, want 5", calls)
+	}
+}
+
+func TestCachedMethodProviderExpiryUsesRequestTime(t *testing.T) {
+	triggerSchema, err := StructSchema[runtimeTestTrade]("MethodCacheExpiryTrigger")
+	if err != nil {
+		t.Fatal(err)
+	}
+	methodSchema, err := StructSchema[methodSourceRow]("MethodCacheExpiryRow")
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := &recordingMethodProvider{schema: methodSchema}
+	cached, err := NewCachedMethodProvider(base, func(request MethodRequest) []any {
+		return []any{request.Trigger.Get("symbol").Any(), request.Trigger.Get("price").Any()}
+	}, MethodCacheConfig{MaxAge: 100 * time.Millisecond, PurgeInterval: 10 * time.Millisecond})
+	if err != nil {
+		t.Fatal(err)
+	}
+	trigger, err := newEvent(triggerSchema, runtimeTestTrade{Symbol: "E1", Price: 1}, time.Unix(0, 0).UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, now := range []time.Time{
+		time.Unix(1, 0).UTC(),
+		time.Unix(1, 50_000_000).UTC(),
+		time.Unix(1, 101_000_000).UTC(),
+	} {
+		if _, err := cached.Poll(context.Background(), MethodRequest{Trigger: trigger, Now: now}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if calls := len(base.Requests()); calls != 2 {
+		t.Fatalf("method expiry provider calls = %d, want 2", calls)
+	}
+}
+
+func TestCachedMethodProviderClonesHitResultsAndValidatesConfig(t *testing.T) {
+	schema, err := NewMapSchema("MethodCacheCloneRow", []FieldSpec{FieldDef("value", reflect.TypeOf(0))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var calls int
+	provider := MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		calls++
+		event, eventErr := newEvent(schema, map[string]any{"value": 7}, request.Now)
+		if eventErr != nil {
+			return nil, eventErr
+		}
+		return []Event{event}, nil
+	})
+	cached, err := NewCachedMethodProvider(provider, func(MethodRequest) []any { return []any{"same"} }, MethodCacheConfig{LRUSize: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := cached.Poll(context.Background(), MethodRequest{Now: time.Unix(2, 0).UTC()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first[0].Underlying().(map[string]any)["value"] = 99
+	second, err := cached.Poll(context.Background(), MethodRequest{Now: time.Unix(2, 0).UTC()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 || second[0].Get("value").Any() != 7 {
+		t.Fatalf("cached method clone calls=%d result=%#v", calls, second[0].Get("value"))
+	}
+	if _, err := NewCachedMethodProvider(provider, nil, MethodCacheConfig{LRUSize: 1}); err == nil {
+		t.Fatal("cached method without key was accepted")
+	}
+	for _, config := range []MethodCacheConfig{
+		{LRUSize: -1},
+		{MaxAge: time.Second},
+		{LRUSize: 1, MaxAge: time.Second},
+	} {
+		if _, err := NewCachedMethodProvider(provider, func(MethodRequest) []any { return []any{"key"} }, config); err == nil {
+			t.Fatalf("invalid method cache config %#v was accepted", config)
+		}
 	}
 }

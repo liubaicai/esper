@@ -595,7 +595,7 @@ func (e *Environment) Build(query Query) (Plan, error) {
 			}
 			parameterNames := append([]string(nil), operator.ParameterNames...)
 			sort.Strings(parameterNames)
-			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s:inputs=%s:outputs=%s:properties=%s:parameters=%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon, canonicalDataflowPorts(operator, false), canonicalDataflowPorts(operator, true), canonicalDataflowProperties(operator.Properties), strings.Join(parameterNames, ",")))
+			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s:join=%s:inputs=%s:outputs=%s:properties=%s:parameters=%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon, canonicalDataflowJoin(operator), canonicalDataflowPorts(operator, false), canonicalDataflowPorts(operator, true), canonicalDataflowProperties(operator.Properties), strings.Join(parameterNames, ",")))
 		}
 		edges := make([]string, 0, len(dataflow.edges))
 		for _, edge := range dataflow.edges {
@@ -612,6 +612,25 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		query:         query,
 		resultSchema:  resultSchema,
 	}, nil
+}
+
+func canonicalDataflowJoin(operator DataflowOperator) string {
+	if !operator.JoinConfigured {
+		return ""
+	}
+	conditions := make([]string, 0, len(operator.JoinOptions.Conditions))
+	for _, condition := range operator.JoinOptions.Conditions {
+		conditions = append(conditions, joinConditionDescription(condition))
+	}
+	windows := append([]DataflowJoinWindow(nil), operator.JoinOptions.Windows...)
+	sort.SliceStable(windows, func(left, right int) bool {
+		return windows[left].Input < windows[right].Input
+	})
+	windowParts := make([]string, 0, len(windows))
+	for _, window := range windows {
+		windowParts = append(windowParts, fmt.Sprintf("%d:length=%d:duration=%s", window.Input, window.Length, window.Duration))
+	}
+	return fmt.Sprintf("inputs=%d;kind=%d;retention=%d;conditions=%s;windows=%s", operator.JoinOptions.Inputs, operator.JoinOptions.Kind, operator.JoinOptions.Retention, strings.Join(conditions, ","), strings.Join(windowParts, ","))
 }
 
 func canonicalDataflowPorts(operator DataflowOperator, output bool) string {

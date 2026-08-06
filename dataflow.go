@@ -847,6 +847,15 @@ const (
 	DataflowJoinKeepAll
 )
 
+// DataflowJoinWindow overrides the retention policy for one SelectJoin input.
+// Exactly one of Length or Duration must be positive. Inputs without an
+// override continue to use DataflowJoinOptions.Retention.
+type DataflowJoinWindow struct {
+	Input    int
+	Length   int
+	Duration time.Duration
+}
+
 // DataflowJoinOptions describes the named input ports of SelectJoin. Input
 // port i is named "in<i>" and is connected with ConnectInput or ConnectPorts.
 type DataflowJoinOptions struct {
@@ -854,6 +863,7 @@ type DataflowJoinOptions struct {
 	Kind       DataflowJoinKind
 	Retention  DataflowJoinRetention
 	Conditions []JoinCondition
+	Windows    []DataflowJoinWindow
 }
 
 // On appends analyzable join predicates to a SelectJoin. Multiple predicates
@@ -861,6 +871,31 @@ type DataflowJoinOptions struct {
 // dataflow definition free of EPL strings.
 func (o DataflowJoinOptions) On(conditions ...JoinCondition) DataflowJoinOptions {
 	o.Conditions = append(cloneJoinConditions(o.Conditions), conditions...)
+	return o
+}
+
+// WithLength retains at most length events for one indexed input. A later
+// call for the same input replaces the previous override.
+func (o DataflowJoinOptions) WithLength(input, length int) DataflowJoinOptions {
+	return o.withWindow(DataflowJoinWindow{Input: input, Length: length})
+}
+
+// WithTime retains one indexed input for the supplied virtual-clock duration.
+// Expiration is driven by Engine.AdvanceTime and occurs at the exact boundary.
+func (o DataflowJoinOptions) WithTime(input int, duration time.Duration) DataflowJoinOptions {
+	return o.withWindow(DataflowJoinWindow{Input: input, Duration: duration})
+}
+
+func (o DataflowJoinOptions) withWindow(window DataflowJoinWindow) DataflowJoinOptions {
+	windows := append([]DataflowJoinWindow(nil), o.Windows...)
+	for index, existing := range windows {
+		if existing.Input == window.Input {
+			windows[index] = window
+			o.Windows = windows
+			return o
+		}
+	}
+	o.Windows = append(windows, window)
 	return o
 }
 
@@ -873,6 +908,25 @@ func (o DataflowJoinOptions) validate() error {
 	}
 	if o.Retention != DataflowJoinLastEvent && o.Retention != DataflowJoinKeepAll {
 		return NewError(ErrorInvalidRule, "unknown dataflow select join retention")
+	}
+	seenWindows := make(map[int]struct{}, len(o.Windows))
+	for index, window := range o.Windows {
+		if window.Input < 0 || window.Input >= o.Inputs {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join window %d references input %d outside [0,%d)", index, window.Input, o.Inputs))
+		}
+		if _, duplicate := seenWindows[window.Input]; duplicate {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join duplicates window for input %d", window.Input))
+		}
+		seenWindows[window.Input] = struct{}{}
+		if window.Length <= 0 && window.Duration <= 0 {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join window for input %d requires positive length or duration", window.Input))
+		}
+		if window.Length > 0 && window.Duration > 0 {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join window for input %d cannot combine length and duration", window.Input))
+		}
+		if window.Length < 0 || window.Duration < 0 {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join window for input %d cannot be negative", window.Input))
+		}
 	}
 	for index, condition := range o.Conditions {
 		if err := validateDataflowJoinCondition(condition, o.Inputs); err != nil {
@@ -1057,6 +1111,7 @@ func cloneJoinConditions(conditions []JoinCondition) []JoinCondition {
 
 func cloneDataflowJoinOptions(options DataflowJoinOptions) DataflowJoinOptions {
 	options.Conditions = cloneJoinConditions(options.Conditions)
+	options.Windows = append([]DataflowJoinWindow(nil), options.Windows...)
 	return options
 }
 
@@ -2906,7 +2961,7 @@ type dataflowSelectState struct {
 	iterateGroups  map[string]*dataflowSelectGroup
 	nextGroupOrder uint64
 	joinLatest     []*Event
-	joinAll        [][]Event
+	joinAll        [][]dataflowSelectEvent
 }
 
 type DataflowInstance struct {
@@ -3337,7 +3392,7 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 			}
 			if operator.JoinConfigured {
 				state.joinLatest = make([]*Event, operator.JoinOptions.Inputs)
-				state.joinAll = make([][]Event, operator.JoinOptions.Inputs)
+				state.joinAll = make([][]dataflowSelectEvent, operator.JoinOptions.Inputs)
 			}
 			instance.selectStates[operator.Name] = state
 		}
@@ -5311,29 +5366,12 @@ func (d *DataflowInstance) processDataflowSelectJoin(operator DataflowOperator, 
 	now := d.engine.Now()
 	variables := d.engine.Variables()
 	state.mu.Lock()
-	tuples := state.joinTuples(input, event)
-	if len(state.join.Conditions) > 0 {
-		matched := make([][]Event, 0, len(tuples))
-		for _, tuple := range tuples {
-			if joinConditionsMatchWithVariables(state.join.Conditions, tuple, now, variables) {
-				matched = append(matched, tuple)
-			}
-		}
-		// SelectJoin is insert-stream oriented. If an outer-edge input has no
-		// matching combination, emit its unmatched tuple once; rows emitted for
-		// earlier inputs are not replayed when a later side arrives.
-		outerEdge := state.join.Kind == DataflowJoinFullOuter ||
-			(state.join.Kind == DataflowJoinLeftOuter && input == 0) ||
-			(state.join.Kind == DataflowJoinRightOuter && input == state.join.Inputs-1)
-		if len(matched) == 0 && outerEdge {
-			unmatched := make([]Event, state.join.Inputs)
-			unmatched[input] = event
-			matched = append(matched, unmatched)
-		}
-		tuples = matched
-	}
-	rows := make([]any, 0, len(tuples))
-	for _, tuple := range tuples {
+	before := state.joinCurrentTuples(now, variables)
+	state.addJoinEvent(input, event, now)
+	after := state.joinCurrentTuples(now, variables)
+	delta := diffJoinTuples(before, after)
+	rows := make([]any, 0, len(delta.newTuples))
+	for _, tuple := range delta.newTuples {
 		joinEvent := newJoinTupleEvent(tuple, now)
 		output, err := d.evaluateDataflowSelectOutput(operator, joinEvent, nil, nil, true)
 		if err != nil {
@@ -5346,79 +5384,192 @@ func (d *DataflowInstance) processDataflowSelectJoin(operator DataflowOperator, 
 	return rows, nil
 }
 
-func (s *dataflowSelectState) joinTuples(input int, event Event) [][]Event {
+func (s *dataflowSelectState) joinWindow(input int) (DataflowJoinWindow, bool) {
+	if s == nil {
+		return DataflowJoinWindow{}, false
+	}
+	for _, window := range s.join.Windows {
+		if window.Input == input {
+			return window, true
+		}
+	}
+	return DataflowJoinWindow{}, false
+}
+
+func (s *dataflowSelectState) addJoinEvent(input int, event Event, at time.Time) {
+	if s == nil || input < 0 || input >= len(s.joinLatest) {
+		return
+	}
+	window, explicit := s.joinWindow(input)
+	if explicit || s.join.Retention == DataflowJoinKeepAll {
+		s.joinAll[input] = append(s.joinAll[input], dataflowSelectEvent{event: event, at: at})
+		if explicit && window.Length > 0 && len(s.joinAll[input]) > window.Length {
+			s.joinAll[input] = append([]dataflowSelectEvent(nil), s.joinAll[input][len(s.joinAll[input])-window.Length:]...)
+		}
+		return
+	}
+	copyEvent := event
+	s.joinLatest[input] = &copyEvent
+}
+
+func (s *dataflowSelectState) joinInputEvents(input int) []Event {
 	if s == nil || input < 0 || input >= len(s.joinLatest) {
 		return nil
 	}
-	if s.join.Retention == DataflowJoinKeepAll {
-		s.joinAll[input] = append(s.joinAll[input], event)
-		complete := true
-		for _, events := range s.joinAll {
-			if len(events) == 0 {
-				complete = false
-				break
-			}
+	if _, explicit := s.joinWindow(input); explicit || s.join.Retention == DataflowJoinKeepAll {
+		result := make([]Event, 0, len(s.joinAll[input]))
+		for _, stored := range s.joinAll[input] {
+			result = append(result, stored.event)
 		}
-		if s.join.Kind == DataflowJoinInner && !complete {
-			return nil
-		}
-		if s.join.Kind == DataflowJoinLeftOuter && len(s.joinAll[0]) == 0 {
-			return nil
-		}
-		if s.join.Kind == DataflowJoinRightOuter && len(s.joinAll[len(s.joinAll)-1]) == 0 {
-			return nil
-		}
-		lists := make([][]Event, len(s.joinAll))
-		for index, events := range s.joinAll {
-			if index == input {
-				// Only combinations containing the newly arrived event are
-				// new-stream rows. Replaying the full Cartesian product would
-				// duplicate rows whenever an existing input receives another
-				// event.
-				lists[index] = []Event{event}
-			} else if len(events) == 0 {
-				lists[index] = []Event{{}}
-			} else {
-				lists[index] = events
-			}
-		}
-		return cartesianDataflowJoinTuples(lists, 0, nil)
+		return result
 	}
+	if s.joinLatest[input] == nil {
+		return nil
+	}
+	return []Event{*s.joinLatest[input]}
+}
 
-	copyEvent := event
-	s.joinLatest[input] = &copyEvent
-	switch s.join.Kind {
-	case DataflowJoinInner:
-		for _, latest := range s.joinLatest {
-			if latest == nil {
+func (s *dataflowSelectState) joinCurrentTuples(now time.Time, variables map[string]Value) [][]Event {
+	if s == nil || s.join.Inputs < 2 {
+		return nil
+	}
+	sides := make([][]Event, s.join.Inputs)
+	for input := range sides {
+		sides[input] = s.joinInputEvents(input)
+	}
+	return dataflowJoinCurrentTuples(s.join, sides, now, variables)
+}
+
+func (s *dataflowSelectState) expireJoinAt(at time.Time) bool {
+	if s == nil {
+		return false
+	}
+	removed := false
+	for _, window := range s.join.Windows {
+		if window.Duration <= 0 || window.Input < 0 || window.Input >= len(s.joinAll) {
+			continue
+		}
+		stored := s.joinAll[window.Input]
+		kept := make([]dataflowSelectEvent, 0, len(stored))
+		for _, item := range stored {
+			if !item.at.Add(window.Duration).After(at) {
+				removed = true
+				continue
+			}
+			kept = append(kept, item)
+		}
+		if len(kept) != len(stored) {
+			s.joinAll[window.Input] = kept
+		}
+	}
+	return removed
+}
+
+func (s *dataflowSelectState) nextJoinExpiry() (time.Time, bool) {
+	if s == nil {
+		return time.Time{}, false
+	}
+	var next time.Time
+	for _, window := range s.join.Windows {
+		if window.Duration <= 0 || window.Input < 0 || window.Input >= len(s.joinAll) {
+			continue
+		}
+		for _, item := range s.joinAll[window.Input] {
+			expires := item.at.Add(window.Duration)
+			if next.IsZero() || expires.Before(next) {
+				next = expires
+			}
+		}
+	}
+	return next, !next.IsZero()
+}
+
+func dataflowJoinCurrentTuples(join DataflowJoinOptions, sides [][]Event, now time.Time, variables map[string]Value) [][]Event {
+	if len(sides) < 2 {
+		return nil
+	}
+	if len(sides) == 2 && join.Kind != DataflowJoinInner {
+		result := make([][]Event, 0)
+		matchedRight := make([]bool, len(sides[1]))
+		for _, left := range sides[0] {
+			matched := false
+			for rightIndex, right := range sides[1] {
+				tuple := []Event{left, right}
+				if joinConditionsMatchWithVariables(join.Conditions, tuple, now, variables) {
+					matched = true
+					matchedRight[rightIndex] = true
+					result = append(result, tuple)
+				}
+			}
+			if !matched && (join.Kind == DataflowJoinLeftOuter || join.Kind == DataflowJoinFullOuter) {
+				result = append(result, []Event{left, {}})
+			}
+		}
+		if join.Kind == DataflowJoinRightOuter || join.Kind == DataflowJoinFullOuter {
+			for rightIndex, right := range sides[1] {
+				if !matchedRight[rightIndex] {
+					result = append(result, []Event{{}, right})
+				}
+			}
+		}
+		return result
+	}
+	if join.Kind == DataflowJoinInner {
+		for _, side := range sides {
+			if len(side) == 0 {
 				return nil
 			}
 		}
-	case DataflowJoinLeftOuter:
-		if s.joinLatest[0] == nil {
-			return nil
-		}
-	case DataflowJoinRightOuter:
-		if s.joinLatest[len(s.joinLatest)-1] == nil {
-			return nil
-		}
-	}
-	tuple := make([]Event, len(s.joinLatest))
-	for index, latest := range s.joinLatest {
-		if latest != nil {
-			tuple[index] = *latest
-		}
-	}
-	return [][]Event{tuple}
-}
-
-func cartesianDataflowJoinTuples(lists [][]Event, index int, prefix []Event) [][]Event {
-	if index == len(lists) {
-		return [][]Event{append([]Event(nil), prefix...)}
 	}
 	result := make([][]Event, 0)
-	for _, event := range lists[index] {
-		result = append(result, cartesianDataflowJoinTuples(lists, index+1, append(prefix, event))...)
+	matched := make([][]bool, len(sides))
+	for index := range sides {
+		matched[index] = make([]bool, len(sides[index]))
+	}
+	current := make([]Event, 0, len(sides))
+	indexes := make([]int, 0, len(sides))
+	var visit func(int)
+	visit = func(input int) {
+		if input == len(sides) {
+			tuple := append([]Event(nil), current...)
+			if !joinConditionsMatchWithVariables(join.Conditions, tuple, now, variables) {
+				return
+			}
+			result = append(result, tuple)
+			for source, index := range indexes {
+				matched[source][index] = true
+			}
+			return
+		}
+		for index, event := range sides[input] {
+			current = append(current, event)
+			indexes = append(indexes, index)
+			visit(input + 1)
+			current = current[:len(current)-1]
+			indexes = indexes[:len(indexes)-1]
+		}
+	}
+	visit(0)
+	if join.Kind == DataflowJoinLeftOuter || join.Kind == DataflowJoinFullOuter {
+		for index, event := range sides[0] {
+			if matched[0][index] {
+				continue
+			}
+			tuple := make([]Event, len(sides))
+			tuple[0] = event
+			result = append(result, tuple)
+		}
+	}
+	if join.Kind == DataflowJoinRightOuter || join.Kind == DataflowJoinFullOuter {
+		last := len(sides) - 1
+		for index, event := range sides[last] {
+			if matched[last][index] {
+				continue
+			}
+			tuple := make([]Event, len(sides))
+			tuple[last] = event
+			result = append(result, tuple)
+		}
 	}
 	return result
 }
@@ -5469,8 +5620,36 @@ func (d *DataflowInstance) advanceDataflowSelect(operator DataflowOperator, at t
 	if state == nil {
 		return nil, nil
 	}
+	var joinVariables map[string]Value
+	if operator.JoinConfigured {
+		joinVariables = d.engine.Variables()
+	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
+	if operator.JoinConfigured {
+		rows := make([]any, 0)
+		for {
+			expiresAt, ok := state.nextJoinExpiry()
+			if !ok || expiresAt.After(at) {
+				break
+			}
+			before := state.joinCurrentTuples(expiresAt, joinVariables)
+			if !state.expireJoinAt(expiresAt) {
+				break
+			}
+			after := state.joinCurrentTuples(expiresAt, joinVariables)
+			delta := diffJoinTuples(before, after)
+			for _, tuple := range delta.newTuples {
+				joinEvent := newJoinTupleEvent(tuple, expiresAt)
+				row, err := d.evaluateDataflowSelectOutput(operator, joinEvent, nil, nil, false)
+				if err != nil {
+					return nil, err
+				}
+				rows = append(rows, row)
+			}
+		}
+		return rows, nil
+	}
 	if !state.started {
 		state.started = true
 		if state.options.OutputSnapshotEvery > 0 {
