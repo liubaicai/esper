@@ -1046,8 +1046,33 @@ func (e *Engine) NamedWindow(name string) (*NamedWindow, bool) {
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	window, ok := e.namedWindows[name]
-	return window, ok
+	return e.ensureNamedWindowLocked(name)
+}
+
+// ensureNamedWindowLocked keeps the runtime catalog in sync with the
+// environment catalog.  Environments are intentionally mutable during rule
+// assembly, and callers commonly create an Engine before registering a named
+// window; the first runtime lookup must still materialize that definition.
+// The engine mutex must be held by the caller.
+func (e *Engine) ensureNamedWindowLocked(name string) (*NamedWindow, bool) {
+	if e == nil {
+		return nil, false
+	}
+	if window, ok := e.namedWindows[name]; ok {
+		return window, true
+	}
+	if e.env == nil {
+		return nil, false
+	}
+	e.env.mu.RLock()
+	definition, ok := e.env.namedWindows[name]
+	e.env.mu.RUnlock()
+	if !ok {
+		return nil, false
+	}
+	window := newNamedWindow(definition, e)
+	e.namedWindows[name] = window
+	return window, true
 }
 
 func (e *Engine) InsertNamedWindow(ctx context.Context, name string, underlying any) error {
@@ -1062,7 +1087,7 @@ func (e *Engine) InsertNamedWindow(ctx context.Context, name string, underlying 
 		e.mu.Unlock()
 		return NewError(ErrorState, "engine is closed")
 	}
-	window, ok := e.namedWindows[name]
+	window, ok := e.ensureNamedWindowLocked(name)
 	if !ok {
 		e.mu.Unlock()
 		return NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", name))
@@ -10026,7 +10051,7 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 			current = everEvents[0]
 		}
 	}
-	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Now: now, Variables: variables, aggregatePluginStates: pluginStates}
+	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Now: now, Variables: variables, aggregatePluginStates: pluginStates, aggregateEvaluation: true}
 	if len(definition.groupBy) > 0 {
 		groupingEvent := current
 		if groupingEvent.Schema().Name() == "" {

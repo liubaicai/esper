@@ -54,8 +54,14 @@ type exprNode struct {
 	configurationError    string
 	expressionName        string
 	expressionEnvironment *Environment
-	children              []*exprNode
-	subquery              *subqueryDefinition
+	// expressionArguments are kept separate from children because children
+	// also contains the referenced definition body after validation.  Keeping
+	// the call-site arguments explicit lets the planner validate arity and
+	// types without mistaking the body for an argument.
+	expressionArguments []*exprNode
+	expressionBody      *exprNode
+	children            []*exprNode
+	subquery            *subqueryDefinition
 }
 
 type typedExpr[T any] struct {
@@ -288,6 +294,11 @@ type EvalContext struct {
 	// factories. It is set only while evaluating a result row and is keyed by
 	// expression node so each aggregate group owns an independent state.
 	aggregatePluginStates map[*exprNode]aggregatePluginState
+	// aggregateEvaluation distinguishes an explicitly empty aggregate group
+	// from an ordinary projection that has only a current Event. Access
+	// aggregates such as First use the latter as a one-row group, but an empty
+	// aggregate group must remain empty after removals.
+	aggregateEvaluation bool
 }
 
 const parameterValuesVariable = "\x00esper.parameters"
@@ -1418,6 +1429,47 @@ func Parameter[T any](name string) Expression[T] {
 // Param is a concise alias for Parameter for fluent rules that prefer the
 // shorter spelling.
 func Param[T any](name string) Expression[T] { return Parameter[T](name) }
+
+// ExpressionParam creates a parameter that is local to a named expression
+// definition.  It is deliberately distinct from Parameter: Parameter binds a
+// statement's prepared-query value, while ExpressionParam is substituted by
+// ExpressionRef at each named-expression call site.
+//
+// Example:
+//
+//	left := ExpressionParam[string]("left")
+//	right := ExpressionParam[string]("right")
+//	_ = DefineExpression(env, "join", Concat(left, right))
+//	call := ExpressionRef[string](env, "join", Field[Event, string]("a"), Literal("!"))
+func ExpressionParam[T any](name string) Expression[T] {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return makeExpr[T]("expression-parameter", "<invalid-expression-parameter>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{
+		kind:          "expression-parameter",
+		typ:           typeOf[T](),
+		description:   "expr-param(" + name + ":" + typeOf[T]().String() + ")",
+		parameterName: name,
+	}
+	return typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.Parameters == nil {
+			return Missing()
+		}
+		value, ok := ctx.Parameters[name]
+		if !ok {
+			return Missing()
+		}
+		return value
+	}}
+}
+
+// DeclaredExpressionParam is a descriptive alias for ExpressionParam.  It
+// is useful in larger rule modules where ordinary prepared-query parameters
+// and named-expression parameters appear in the same scope.
+func DeclaredExpressionParam[T any](name string) Expression[T] {
+	return ExpressionParam[T](name)
+}
 
 // Literal creates a constant expression.
 func Literal[T any](value T) Expression[T] {
@@ -3511,8 +3563,17 @@ func aggregatePosition[T any](kind string, expression Expression[T], index int, 
 		if index < 0 {
 			return Null()
 		}
-		values := make([]Value, 0, len(ctx.Group))
-		for _, event := range ctx.Group {
+		group := ctx.Group
+		// A first/last expression can be nested in an ordinary projection in
+		// the same way Esper permits an access aggregate on the current
+		// event.  Aggregate plans provide Group explicitly; scalar projection
+		// paths provide only Event, which is the one-row group for this
+		// access operation.
+		if len(group) == 0 && !ctx.aggregateEvaluation && ctx.Event.schema.valid() {
+			group = []Event{ctx.Event}
+		}
+		values := make([]Value, 0, len(group))
+		for _, event := range group {
 			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
 			if value.IsPresent() {
 				values = append(values, value)

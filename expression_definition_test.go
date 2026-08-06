@@ -16,6 +16,11 @@ type namedExpressionGroupEvent struct {
 	Amount int64  `esper:"amount"`
 }
 
+type parameterizedNamedExpressionEvent struct {
+	Left  string `esper:"left"`
+	Right string `esper:"right"`
+}
+
 func TestNamedExpressionReferenceEvaluatesAndEntersPlanIdentity(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[namedExpressionEvent](env, "NamedExpressionEvent"); err != nil {
@@ -132,6 +137,106 @@ func TestNamedExpressionReferenceRejectsInvalidDependencies(t *testing.T) {
 	}
 	if err := DefineExpression[int64](env, "nil-expression", nil); err == nil || !strings.Contains(err.Error(), "requires an expression") {
 		t.Fatalf("nil expression registration error = %v", err)
+	}
+}
+
+func TestParameterizedNamedExpressionReferenceMatchesJavaValueParameterSemantics(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[parameterizedNamedExpressionEvent](env, "ParameterizedNamedExpressionEvent"); err != nil {
+		t.Fatal(err)
+	}
+	left := ExpressionParam[string]("left")
+	right := ExpressionParam[string]("right")
+	if err := DefineExpression[string](env, "join-values", Concat(left, right)); err != nil {
+		t.Fatal(err)
+	}
+	value := ExpressionParam[string]("value")
+	if err := DefineExpression[string](env, "decorate-value", Concat(ExpressionRef[string](env, "join-values", value, Literal("!")), Literal("?"))); err != nil {
+		t.Fatal(err)
+	}
+
+	input := From[parameterizedNamedExpressionEvent](env, "ParameterizedNamedExpressionEvent")
+	plan, err := env.Build(Select(input,
+		Alias("joined", ExpressionRef[string](env, "join-values",
+			Field[parameterizedNamedExpressionEvent, string]("left"),
+			Field[parameterizedNamedExpressionEvent, string]("right"))),
+		Alias("decorated", ExpressionRef[string](env, "decorate-value",
+			Field[parameterizedNamedExpressionEvent, string]("left"))),
+	).Query(StatementName("parameterized-named-expression")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonical := string(plan.Canonical())
+	if !strings.Contains(canonical, "expression(join-values:string:left:string,right:string:") ||
+		!strings.Contains(canonical, "expression(decorate-value:string:value:string:") {
+		t.Fatalf("parameterized expression metadata missing from canonical plan: %s", canonical)
+	}
+
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) == 0 {
+			return nil
+		}
+		var ok bool
+		result, ok = batch.New[0].Row()
+		if !ok {
+			return NewError(ErrorTypeMismatch, "parameterized named expression result is not a row")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), parameterizedNamedExpressionEvent{Left: "A", Right: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	if !result.Get("joined").Equal(Present("AB")) || !result.Get("decorated").Equal(Present("A!?")) {
+		t.Fatalf("parameterized named expression result = %#v", result)
+	}
+
+	definition, ok := env.Expression("join-values")
+	if !ok || len(definition.Parameters) != 2 || definition.Parameters[0].Name != "left" || definition.Parameters[1].Name != "right" {
+		t.Fatalf("parameterized definition metadata = %#v", definition)
+	}
+}
+
+func TestParameterizedNamedExpressionReferenceRejectsArityAndTypeMismatch(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[parameterizedNamedExpressionEvent](env, "ParameterizedNamedExpressionInvalidEvent"); err != nil {
+		t.Fatal(err)
+	}
+	if err := DefineExpression[string](env, "join-values",
+		Concat(ExpressionParam[string]("left"), ExpressionParam[string]("right"))); err != nil {
+		t.Fatal(err)
+	}
+	input := From[parameterizedNamedExpressionEvent](env, "ParameterizedNamedExpressionInvalidEvent")
+	cases := []struct {
+		name string
+		expr Expr
+		want string
+	}{
+		{
+			name: "arity",
+			expr: ExpressionRef[string](env, "join-values", Literal("only")),
+			want: `expression definition "join-values" expects 2 arguments, received 1`,
+		},
+		{
+			name: "type",
+			expr: ExpressionRef[string](env, "join-values", Literal(int64(1)), Literal("ok")),
+			want: `expression definition "join-values" argument 0 (left) expects string, received int64`,
+		},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := env.Build(Select(input, Alias("value", testCase.expr)).Query(StatementName("parameterized-invalid-" + testCase.name)))
+			if err == nil || !strings.Contains(err.Error(), testCase.want) {
+				t.Fatalf("Build error = %v, want %q", err, testCase.want)
+			}
+		})
 	}
 }
 

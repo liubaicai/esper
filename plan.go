@@ -592,13 +592,17 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		definition := expressionDefinitions[name]
 		description := "<nil>"
 		resultType := "<nil>"
+		parameterTypes := make([]string, 0, len(definition.Parameters))
+		for _, parameter := range definition.Parameters {
+			parameterTypes = append(parameterTypes, fmt.Sprintf("%s:%s", parameter.Name, parameter.Type))
+		}
 		if definition.Expr != nil {
 			description = definition.Expr.Description()
 			if definition.Expr.Type() != nil {
 				resultType = definition.Expr.Type().String()
 			}
 		}
-		canonicalParts = append(canonicalParts, fmt.Sprintf("expression(%s:%s:%s)", name, resultType, description))
+		canonicalParts = append(canonicalParts, fmt.Sprintf("expression(%s:%s:%s:%s)", name, resultType, strings.Join(parameterTypes, ","), description))
 	}
 	for _, table := range e.Tables() {
 		columns := make([]string, 0, len(table.columns))
@@ -1557,12 +1561,33 @@ func (e *Environment) validateExpressionReferences(node *exprNode, visiting map[
 		if !expressionTypesCompatible(node.typ, definition.Expr.Type()) {
 			return NewError(ErrorTypeMismatch, fmt.Sprintf("expression definition %q returns %s, reference expects %s", name, definition.Expr.Type(), node.typ))
 		}
+		arguments := node.expressionArguments
+		if len(arguments) != len(definition.Parameters) {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("expression definition %q expects %d arguments, received %d", name, len(definition.Parameters), len(arguments)))
+		}
+		for index, parameter := range definition.Parameters {
+			argument := arguments[index]
+			if argument == nil {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("expression definition %q argument %d is required", name, index))
+			}
+			if !expressionTypesCompatible(parameter.Type, argument.typ) {
+				return NewError(ErrorTypeMismatch, fmt.Sprintf("expression definition %q argument %d (%s) expects %s, received %s", name, index, parameter.Name, parameter.Type, argument.typ))
+			}
+		}
 		if visiting[name] {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("expression definition %q has a cyclic dependency", name))
 		}
 		visiting[name] = true
-		if len(node.children) == 0 {
-			node.children = append(node.children, definition.Expr.node())
+		node.expressionBody = definition.Expr.node()
+		bodyPresent := false
+		for _, child := range node.children {
+			if child == node.expressionBody {
+				bodyPresent = true
+				break
+			}
+		}
+		if !bodyPresent {
+			node.children = append(node.children, node.expressionBody)
 		}
 		if err := e.validateExpressionReferences(definition.Expr.node(), visiting); err != nil {
 			delete(visiting, name)

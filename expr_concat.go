@@ -33,6 +33,7 @@ func concatExpression(kind string, values ...Expr) Expression[string] {
 	if len(values) == 0 {
 		node.configurationError = "concat requires at least one operand"
 	}
+	node.children = children
 	node.description = "concat(" + strings.Join(descriptions, ",") + ")"
 	return typedExpr[string]{n: node, fn: func(ctx EvalContext) Value {
 		var builder strings.Builder

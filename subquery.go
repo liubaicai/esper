@@ -1006,6 +1006,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 				Now:                  now,
 				Variables:            outer.Variables,
 				Parameters:           outer.Parameters,
+				aggregateEvaluation:  true,
 			}
 			if definition.grouped {
 				if definition.predicate != nil {
@@ -1069,17 +1070,18 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 			aggregateGroup = filtered
 		}
 		evaluation := EvalContext{
-			Engine:       e,
-			JoinEvents:   append([]Event(nil), outer.JoinEvents...),
-			OuterEvent:   outer.Event,
-			Group:        aggregateGroup,
-			EverGroup:    aggregateGroup,
-			AllGroup:     aggregateGroup,
-			AllEverGroup: aggregateGroup,
-			History:      aggregateGroup,
-			Now:          now,
-			Variables:    outer.Variables,
-			Parameters:   outer.Parameters,
+			Engine:              e,
+			JoinEvents:          append([]Event(nil), outer.JoinEvents...),
+			OuterEvent:          outer.Event,
+			Group:               aggregateGroup,
+			EverGroup:           aggregateGroup,
+			AllGroup:            aggregateGroup,
+			AllEverGroup:        aggregateGroup,
+			History:             aggregateGroup,
+			Now:                 now,
+			Variables:           outer.Variables,
+			Parameters:          outer.Parameters,
+			aggregateEvaluation: true,
 		}
 		if len(aggregateGroup) > 0 {
 			evaluation.Event = aggregateGroup[len(aggregateGroup)-1]
