@@ -48,6 +48,12 @@ func ModuloOf[T Numeric](left, right Expr) Expression[T] {
 		}
 		leftFloat, leftNumeric := numericValue(l)
 		rightFloat, rightNumeric := numericValue(r)
+		if !leftNumeric {
+			leftFloat, leftNumeric = mathRatFloat(leftNumber)
+		}
+		if !rightNumeric {
+			rightFloat, rightNumeric = mathRatFloat(rightNumber)
+		}
 		if !leftNumeric || !rightNumeric {
 			return Null()
 		}
@@ -91,7 +97,14 @@ func DivideWithOptions[T Numeric](left, right Expr, options ...DivisionOption) E
 			option(&config)
 		}
 	}
-	return mathExpression[T]("divide", "/", left, right, func(l, r Value) Value {
+	kind := "divide"
+	if config.integerDivision {
+		kind += "[integer]"
+	}
+	if config.divisionByZeroReturnsNull {
+		kind += "[null-zero]"
+	}
+	return mathExpression[T](kind, "/", left, right, func(l, r Value) Value {
 		leftNumber, leftOK := enumRatFromValue(l)
 		rightNumber, rightOK := enumRatFromValue(r)
 		if !leftOK || !rightOK {
@@ -106,7 +119,11 @@ func DivideWithOptions[T Numeric](left, right Expr, options ...DivisionOption) E
 		// The result is kept as a rational until the explicit result type is
 		// applied. This avoids losing large integral values through float64
 		// before AddOf/DivideWithOptions performs its final conversion.
-		return nativeRatResult[T](new(big.Rat).Quo(leftNumber, rightNumber))
+		result := new(big.Rat).Quo(leftNumber, rightNumber)
+		if config.integerDivision && mathOperandIsIntegral(l) && mathOperandIsIntegral(r) {
+			result.SetInt(new(big.Int).Quo(leftNumber.Num(), rightNumber.Num()))
+		}
+		return nativeRatResult[T](result)
 	})
 }
 
@@ -263,12 +280,48 @@ func nativeRatResult[T Numeric](number *big.Rat) Value {
 	return Present(converted)
 }
 
+func mathOperandIsIntegral(value Value) bool {
+	if !value.IsPresent() {
+		return false
+	}
+	raw := reflect.ValueOf(value.Any())
+	for raw.IsValid() && (raw.Kind() == reflect.Pointer || raw.Kind() == reflect.Interface) {
+		if raw.IsNil() {
+			return false
+		}
+		raw = raw.Elem()
+	}
+	if !raw.IsValid() {
+		return false
+	}
+	if raw.Type() == typeOf[big.Int]() {
+		return true
+	}
+	switch raw.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	default:
+		return false
+	}
+}
+
+func mathRatFloat(number *big.Rat) (float64, bool) {
+	if number == nil {
+		return 0, false
+	}
+	value, exact := number.Float64()
+	return value, !math.IsInf(value, 0) || exact
+}
+
 func divideByZeroResult[T Numeric](left, right Value) Value {
-	leftFloat, leftOK := numericValue(left)
-	rightFloat, rightOK := numericValue(right)
+	leftNumber, leftOK := enumRatFromValue(left)
+	rightNumber, rightOK := enumRatFromValue(right)
 	if !leftOK || !rightOK {
 		return Null()
 	}
+	leftFloat, _ := leftNumber.Float64()
+	rightFloat, _ := rightNumber.Float64()
 	if typeOf[T]().Kind() != reflect.Float32 && typeOf[T]().Kind() != reflect.Float64 {
 		return Null()
 	}

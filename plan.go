@@ -2099,6 +2099,9 @@ func (e *Environment) validateExprVariables(expression Expr) error {
 	if expression == nil || expression.node() == nil {
 		return fmt.Errorf("esper: nil expression")
 	}
+	if err := validateExpressionConfiguration(expression.node()); err != nil {
+		return err
+	}
 	if err := validateEnumExpressionNodes(expression.node()); err != nil {
 		return err
 	}
@@ -2115,6 +2118,25 @@ func (e *Environment) validateExprVariables(expression Expr) error {
 		}
 		if !definition.typ.AssignableTo(expressionType) && !expressionType.AssignableTo(definition.typ) && !numericTypes(definition.typ, expressionType) {
 			return NewError(ErrorTypeMismatch, fmt.Sprintf("variable %q has type %s, expression expects %s", name, definition.typ, expressionType))
+		}
+	}
+	return nil
+}
+
+// validateExpressionConfiguration walks all expression nodes for constructor
+// diagnostics. Specialized validators historically checked only selected node
+// families; keeping this generic pass here ensures an invalid nested fluent
+// operator cannot be hidden inside an otherwise valid parent expression.
+func validateExpressionConfiguration(node *exprNode) error {
+	if node == nil {
+		return nil
+	}
+	if node.configurationError != "" {
+		return NewError(ErrorInvalidRule, node.configurationError)
+	}
+	for _, child := range node.children {
+		if err := validateExpressionConfiguration(child); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -39,6 +39,9 @@ func TestMathExpressionsMatchJavaPromotionAndDivisionPolicies(t *testing.T) {
 	if got := DivideWithOptions[int](Literal(10), Literal(3), WithIntegerDivision(true), WithDivisionByZeroReturnsNull(true)).eval(EvalContext{}); !got.Equal(Present(3)) {
 		t.Fatalf("integer division = %v, want 3", got)
 	}
+	if got := DivideWithOptions[float64](Literal(10), Literal(3), WithIntegerDivision(true)).eval(EvalContext{}); !got.Equal(Present(float64(3))) {
+		t.Fatalf("integer division with float result = %v, want 3", got)
+	}
 	if got := DivideWithOptions[float64](Literal(10), Literal(3), WithDivisionByZeroReturnsNull(true)).eval(EvalContext{}); !got.Equal(Present(10.0 / 3.0)) {
 		t.Fatalf("configured floating division = %v, want %v", got, 10.0/3.0)
 	}
@@ -50,6 +53,19 @@ func TestMathExpressionsMatchJavaPromotionAndDivisionPolicies(t *testing.T) {
 	}
 	if got := DivideFloat(Literal(0), Literal(0)).eval(EvalContext{}); !got.IsPresent() || !math.IsNaN(got.Any().(float64)) {
 		t.Fatalf("zero divided by zero = %v, want NaN", got)
+	}
+
+	env := NewEnvironment()
+	defaultPlan, err := env.Build(SelectOnce(env, Alias("value", DivideFloat(Literal(10), Literal(3)))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	nullPlan, err := env.Build(SelectOnce(env, Alias("value", DivideFloat(Literal(10), Literal(3), WithDivisionByZeroReturnsNull(true)))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if defaultPlan.Hash() == nullPlan.Hash() {
+		t.Fatal("division-by-zero policy did not enter Plan identity")
 	}
 
 	var nilInt *int
@@ -213,6 +229,10 @@ func TestMathExpressionsBuildTypedPlanAndLiveProjection(t *testing.T) {
 	invalidNil := Select(input, Alias("bad", AddOf[int](nil, Literal(1)))).Query(StatementName("bad-math-nil"))
 	if _, err := env.Build(invalidNil); err == nil || !strings.Contains(err.Error(), "requires two operands") {
 		t.Fatalf("nil math builder error = %v", err)
+	}
+	nestedInvalid := Select(input, Alias("bad", AddOf[int](Literal(1), AddOf[int](nil, Literal(2))))).Query(StatementName("bad-math-nested"))
+	if _, err := env.Build(nestedInvalid); err == nil || !strings.Contains(err.Error(), "requires two operands") {
+		t.Fatalf("nested nil math builder error = %v", err)
 	}
 }
 
