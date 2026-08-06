@@ -2806,6 +2806,74 @@ func FilterAggregate[T any](aggregate AggregateExpression[T], predicate Expressi
 	})
 }
 
+// DistinctAggregate evaluates an aggregate over the first occurrence of each
+// input value in the current group. A nil input uses event identity, which is
+// the Go fluent equivalent of Esper's stream-wildcard/star parameter. Null and
+// Missing are retained as distinct logical values and only collapse with the
+// same state on another row.
+func DistinctAggregate[T any](aggregate AggregateExpression[T], input Expr) AggregateExpression[T] {
+	if aggregate == nil {
+		return makeAggregateExpr[T]("aggregate-distinct", "aggregate-distinct(<invalid>)", nil, func(EvalContext) Value { return Missing() })
+	}
+	children := []*exprNode{aggregate.node()}
+	description := "distinct(" + aggregate.Description()
+	if input != nil {
+		children = append(children, input.node())
+		description += "," + input.Description()
+	} else {
+		description += ",*)"
+		return makeAggregateExpr[T]("aggregate-distinct", description, children, func(ctx EvalContext) Value {
+			nested := ctx
+			nested.Group = distinctAggregateEvents(ctx.Group, nil, ctx)
+			nested.EverGroup = distinctAggregateEvents(ctx.EverGroup, nil, ctx)
+			nested.AllGroup = distinctAggregateEvents(ctx.AllGroup, nil, ctx)
+			nested.AllEverGroup = distinctAggregateEvents(ctx.AllEverGroup, nil, ctx)
+			nested.aggregateMultiScope = aggregateExpressionScope(ctx.aggregateMultiScope, description)
+			return aggregate.eval(nested)
+		})
+	}
+	description += ")"
+	return makeAggregateExpr[T]("aggregate-distinct", description, children, func(ctx EvalContext) Value {
+		nested := ctx
+		nested.Group = distinctAggregateEvents(ctx.Group, input, ctx)
+		nested.EverGroup = distinctAggregateEvents(ctx.EverGroup, input, ctx)
+		nested.AllGroup = distinctAggregateEvents(ctx.AllGroup, input, ctx)
+		nested.AllEverGroup = distinctAggregateEvents(ctx.AllEverGroup, input, ctx)
+		nested.aggregateMultiScope = aggregateExpressionScope(ctx.aggregateMultiScope, description)
+		return aggregate.eval(nested)
+	})
+}
+
+func distinctAggregateEvents(events []Event, input Expr, ctx EvalContext) []Event {
+	if len(events) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(events))
+	result := make([]Event, 0, len(events))
+	for _, event := range events {
+		key := eventIdentity(event)
+		if input != nil {
+			value := input.eval(EvalContext{
+				Event:                event,
+				JoinEvents:           joinTupleEvents(event),
+				OuterEvent:           ctx.OuterEvent,
+				ContainedParentEvent: ctx.ContainedParentEvent,
+				Engine:               ctx.Engine,
+				Now:                  ctx.Now,
+				Variables:            ctx.Variables,
+				Parameters:           ctx.Parameters,
+			})
+			key = encodeKey([]any{value})
+		}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, event)
+	}
+	return result
+}
+
 // LocalGroupBy evaluates an aggregate against the subset of the outer
 // aggregate group matching the current event's local key values. It is the
 // analyzable Go equivalent of Esper's aggregate(..., group_by: (...))

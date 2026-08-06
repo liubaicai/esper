@@ -3545,6 +3545,17 @@ func validateAggregateExpressionNodes(node *exprNode) error {
 			}
 		}
 	}
+	if node.kind == "aggregate-distinct" {
+		if len(node.children) < 1 || len(node.children) > 2 || node.children[0] == nil {
+			return NewError(ErrorInvalidRule, "distinct aggregate requires an aggregate expression")
+		}
+		if len(node.children) == 2 && node.children[1] == nil {
+			return NewError(ErrorInvalidRule, "distinct aggregate input expression is nil")
+		}
+		if len(node.children) == 2 && expressionNodeContainsAggregate(node.children[1]) {
+			return NewError(ErrorInvalidRule, "distinct aggregate input cannot contain an aggregate expression")
+		}
+	}
 	for _, child := range node.children {
 		if err := validateAggregateExpressionNodes(child); err != nil {
 			return err
@@ -3565,7 +3576,7 @@ func expressionNodeContainsAggregate(node *exprNode) bool {
 		return true
 	}
 	switch node.kind {
-	case "aggregate-filter", "aggregate-local-group", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "aggregate-plugin-access-ref", "aggregate-multi-plugin", "aggregate-multi-plugin-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "max-exact", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
+	case "aggregate-filter", "aggregate-local-group", "aggregate-distinct", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "aggregate-plugin-access-ref", "aggregate-multi-plugin", "aggregate-multi-plugin-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
 		return true
 	}
 	for _, child := range node.children {
