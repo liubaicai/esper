@@ -1957,10 +1957,7 @@ func Or(left, right Expression[bool]) Expression[bool] {
 func Not(value Expression[bool]) Expression[bool] {
 	return makeExpr[bool]("not", "(not "+value.Description()+")", []*exprNode{value.node()}, func(ctx EvalContext) Value {
 		result := value.eval(ctx)
-		if !result.IsPresent() {
-			return Null()
-		}
-		b, ok := result.Any().(bool)
+		b, ok := boolValue(result)
 		if !ok {
 			return Null()
 		}

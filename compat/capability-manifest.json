@@ -141,9 +141,9 @@
       "id": "expr.core",
       "domain": "expression",
       "level": "S",
-      "summary": "Go-native core expressions including searched/simple CASE, coalesce, bitwise operators, virtual-clock current timestamp and statement evaluation metadata, with ordered branches, null semantics and aggregate-aware evaluation",
-      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext"],
-      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
+      "summary": "Go-native core expressions including searched/simple CASE, coalesce, bitwise and logical operators, virtual-clock current timestamp and statement evaluation metadata, with ordered branches, null semantics and aggregate-aware evaluation",
+      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext"],
+      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
@@ -951,6 +951,17 @@
       "difference": "Go exposes ExpressionEvaluationContext and CurrentEvaluationContext() with explicit WithRuntimeURI/WithStatementUserObject query options. Ordinary live projections carry runtime URI, statement name, user object and non-context partition id -1 through deterministic typed metadata; direct expression evaluation also normalizes to -1. Java EPL/SODA text/model compilation and exact context-partition lifecycle payloads remain outside the fluent builder, and filter/FAF/trigger metadata propagation beyond the covered projection paths remains partial."
     },
     {
+      "id": "case.expr-core-logical",
+      "javaRuntimeIds": ["java-runtime-e48bf14356e3aeb838b5", "java-runtime-c63d599754acde7bb4dc", "java-runtime-b9d938f2dc52682b77c0"],
+      "javaNames": ["ExprCoreAndOrNotCombined", "ExprCoreNotWithVariable", "ExprCoreAndOrNotNull"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreAndOrNot.java"],
+      "goTests": ["TestLogicalExpressionsMatchJavaThreeValuedTruthTables", "TestLogicalExpressionVariableUpdatesMatchEsper"],
+      "tags": ["correctness", "expression", "logical", "and", "or", "not", "three-valued", "boxed", "variables", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go's typed And/Or/Not preserve Esper three-valued Null propagation for primitive and boxed boolean operands, and Property now dereferences nullable bean fields at the typed boundary; variable-backed logical expressions observe atomic runtime variable updates. Java EPL/SODA syntax and exact boxed type metadata/diagnostics remain outside the fluent builder, while broader filter/pattern/context/FAF combinations remain partial."
+    },
+    {
       "id": "case.expr-script-provider",
       "javaRuntimeIds": ["java-runtime-1010c63eb2330597a750", "java-runtime-a2b886734b1a2ad4cc28", "java-runtime-416f111d2368882ea644", "java-runtime-3834e7de0be8f481cea2", "java-runtime-76f900f81eab8fbb7068", "java-runtime-7b3d5e1ed4c6e5a98f89", "java-runtime-39ad2c583a5c307fdeaa", "java-runtime-c115e9369d2a342e8e7f", "java-runtime-97cf680e34e215878dae", "java-runtime-de45e4c09a85a606f39f", "java-runtime-e5e8e7be2d9e28ca1fcf"],
       "javaNames": ["EPLScriptScripts", "EPLScriptQuoteEscape", "EPLScriptDocSamples", "EPLScriptSubqueryParam", "EPLScriptReturnNullWhenNumeric", "EPLScriptGenericResultType", "EPLScriptExpressionConfiguration", "EPLScriptExpressionDisable", "EPLScriptSandboxJSR223", "EPLScriptSandboxMVEL", "EPLContainedScriptContextValue"],
@@ -1748,6 +1759,7 @@
     {"capabilityId": "expr.core", "caseId": "case.expr-core-current-timestamp"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-coalesce"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-current-evaluation-context"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-logical"},
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},

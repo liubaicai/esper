@@ -187,8 +187,17 @@ func boolValue(v Value) (bool, bool) {
 	if !v.IsPresent() {
 		return false, false
 	}
-	b, ok := v.data.(bool)
-	return b, ok
+	reflected := reflect.ValueOf(v.data)
+	for reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {
+		if reflected.IsNil() {
+			return false, false
+		}
+		reflected = reflected.Elem()
+	}
+	if !reflected.IsValid() || reflected.Kind() != reflect.Bool {
+		return false, false
+	}
+	return reflected.Bool(), true
 }
 
 func numericValue(v Value) (float64, bool) {
