@@ -1786,6 +1786,8 @@ const (
 	OutputEveryTimePolicy
 	OutputFirstEveryEventsPolicy
 	OutputFirstEveryTimePolicy
+	OutputLastEveryEventsPolicy
+	OutputLastEveryTimePolicy
 )
 
 type OutputAfterKind uint8
@@ -1856,6 +1858,19 @@ func OutputFirstEveryEvents(count int) OutputPolicy {
 // permits the next first result after interval on the engine's virtual clock.
 func OutputFirstEveryTime(interval time.Duration) OutputPolicy {
 	return OutputPolicy{Kind: OutputFirstEveryTimePolicy, Interval: interval}
+}
+
+// OutputLastEveryEvents emits the latest visible result after each count of
+// accepted input events. It can be composed with OutputAfterEvents to model
+// Esper's output-after plus last-every policy.
+func OutputLastEveryEvents(count int) OutputPolicy {
+	return OutputPolicy{Kind: OutputLastEveryEventsPolicy, Count: count}
+}
+
+// OutputLastEveryTime emits the latest pending result at each virtual-clock
+// interval. It never starts a wall-clock goroutine.
+func OutputLastEveryTime(interval time.Duration) OutputPolicy {
+	return OutputPolicy{Kind: OutputLastEveryTimePolicy, Interval: interval}
 }
 
 func OutputLast() OutputPolicy { return OutputPolicy{Kind: OutputLastPolicy, Count: 1} }
@@ -2606,6 +2621,10 @@ func outputDescription(policy OutputPolicy) string {
 		base = fmt.Sprintf("first-every-events(%d)", policy.Count)
 	case OutputFirstEveryTimePolicy:
 		base = fmt.Sprintf("first-every-time(%s)", policy.Interval)
+	case OutputLastEveryEventsPolicy:
+		base = fmt.Sprintf("last-every-events(%d)", policy.Count)
+	case OutputLastEveryTimePolicy:
+		base = fmt.Sprintf("last-every-time(%s)", policy.Interval)
 	case OutputLastPolicy:
 		base = "last"
 	case OutputSnapshotPolicy:

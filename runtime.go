@@ -2765,6 +2765,7 @@ type outputRuntimeState struct {
 	firstEmitted      int
 	firstEverySeen    int
 	firstEveryStarted bool
+	lastEverySeen     int
 	pending           *ResultBatch
 	pendingCount      int
 	whenPending       *ResultBatch
@@ -4323,6 +4324,10 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		return r.applyFirstEveryEvents(policy, batch, now, plans...)
 	case OutputFirstEveryTimePolicy:
 		return r.applyFirstEveryTime(policy, batch, now, plans...)
+	case OutputLastEveryEventsPolicy:
+		return r.applyLastEveryEvents(policy, batch, now, plans...)
+	case OutputLastEveryTimePolicy:
+		return r.applyLastEveryTime(policy, batch, flush, now, plans...)
 	case OutputLastPolicy, OutputSnapshotPolicy:
 		if !batch.empty() {
 			copyBatch := batch.clone()
@@ -4440,6 +4445,50 @@ func (r *statementRuntime) applyFirstEveryTime(policy OutputPolicy, batch Result
 	state.firstEveryStarted = true
 	state.nextOutputAt = now.Add(policy.Interval)
 	return r.finishOutput(policy, firstOutputResult(batch), now, plans...)
+}
+
+func (r *statementRuntime) applyLastEveryEvents(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
+	if r == nil || r.outputState == nil {
+		return ResultBatch{}
+	}
+	state := r.outputState
+	state.lastEverySeen += acceptedOutputEventCount(batch)
+	if !batch.empty() {
+		copyBatch := batch.clone()
+		state.pending = &copyBatch
+	}
+	if state.lastEverySeen < policy.Count {
+		return ResultBatch{}
+	}
+	state.lastEverySeen = 0
+	if state.pending == nil {
+		return ResultBatch{}
+	}
+	result := state.pending.clone()
+	state.pending = nil
+	return r.finishOutput(policy, result, now, plans...)
+}
+
+func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultBatch, flush bool, now time.Time, plans ...Plan) ResultBatch {
+	if r == nil || r.outputState == nil {
+		return ResultBatch{}
+	}
+	state := r.outputState
+	if !batch.empty() {
+		copyBatch := batch.clone()
+		state.pending = &copyBatch
+		if state.nextOutputAt.IsZero() {
+			state.nextOutputAt = now.Add(policy.Interval)
+		}
+	}
+	if !flush || state.pending == nil || state.nextOutputAt.IsZero() || now.Before(state.nextOutputAt) {
+		return ResultBatch{}
+	}
+	result := state.pending.clone()
+	result.Time = now
+	state.pending = nil
+	r.advanceOutputSchedule(policy, now)
+	return r.finishOutput(policy, result, now, plans...)
 }
 
 func acceptedOutputEventCount(batch ResultBatch) int {
@@ -5041,7 +5090,7 @@ func (r *statementRuntime) appendCronPending(batch ResultBatch) {
 }
 
 func (r *statementRuntime) scheduleOutput(policy OutputPolicy, at time.Time) {
-	if r == nil || r.outputState == nil || policy.Kind != OutputEveryTimePolicy || policy.Interval <= 0 {
+	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy) || policy.Interval <= 0 {
 		return
 	}
 	if r.outputState.nextOutputAt.IsZero() {
@@ -5077,7 +5126,7 @@ func (r *statementRuntime) ensureCronSchedule(policy OutputPolicy, now time.Time
 }
 
 func (r *statementRuntime) advanceOutputSchedule(policy OutputPolicy, now time.Time) {
-	if r == nil || r.outputState == nil || policy.Kind != OutputEveryTimePolicy || policy.Interval <= 0 {
+	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy) || policy.Interval <= 0 {
 		return
 	}
 	if r.outputState.nextOutputAt.IsZero() {
@@ -9853,7 +9902,7 @@ func deferOutputResultWindow(policy OutputPolicy) bool {
 		return false
 	}
 	switch policy.Kind {
-	case OutputEveryPolicy, OutputEveryTimePolicy:
+	case OutputEveryPolicy, OutputEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy:
 		return true
 	default:
 		return false
