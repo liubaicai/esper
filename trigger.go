@@ -806,7 +806,7 @@ func (r *statementRuntime) forEachTriggerCandidate(node *streamNode, event Event
 			if err != nil {
 				return err
 			}
-			children, err := expandContainedEvents(childSchema, node.contained, []Event{parent}, now, r.variables)
+			children, err := expandContainedEvents(r.query.env, childSchema, node.contained, []Event{parent}, now, r.variables)
 			if err != nil {
 				return err
 			}

@@ -44,10 +44,10 @@
       "level": "S",
       "summary": "Typed fluent expansion of slice/array-valued parent-event properties into child event streams",
       "javaRefs": ["EPLContainedEventSimple", "EPLContainedEventNested", "EPLContainedEventArray", "EPLContainedEventSplitExpr", "EPLContainedEventExample", "EventInfraContainedSimple", "EventInfraContainedNested", "EventInfraContainedNestedArray", "EventInfraContainedIndexedWithIndex", "InfraNamedWindowContainedEvent"],
-      "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "subquery.go", "contained_test.go", "contained_unidirectional_test.go"],
+      "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "trigger.go", "subquery.go", "contained_test.go", "contained_unidirectional_test.go", "contained_split_event_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["property-selection alias/fragment semantics across nested representations", "split expressions returning event records and @type materialization", "contained Table/FAF interactions and remaining Named Window representation combinations", "invalid diagnostics beyond the covered parent/depth cases and complete Java contained-event trace"]
+      "remaining": ["property-selection alias/fragment semantics across nested representations", "full split-expression representation matrix across ObjectArray/Avro/XML and arbitrary typed/raw collection adapters", "contained Table/FAF interactions and remaining Named Window representation combinations", "invalid diagnostics beyond the covered parent/depth cases and complete Java contained-event trace"]
     },
     {
       "id": "event.json-typed",
@@ -368,7 +368,7 @@
       "tags": ["correctness", "event", "contained", "unnest", "array", "old-new", "aggregate", "join", "unidirectional", "named-window", "split", "parent-scope"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
-      "difference": "Go adds a typed Unnest parent-to-child stream node requiring a registered child schema, preserving array order and allowing ordinary Filter/Window/Aggregate/Select/Join chaining; the mapped slice covers Java contained property projection, standalone count, insert/remove array-item behavior, ordinary two-stream contained join, string splitting through the analyzable Split expression, scalar-array child projection with immediate parent fields, and a typed subquery result collection routed through an intermediate event before Unnest. TestContainedUnidirectionalJoinMatchesEsper and TestContainedUnidirectionalJoinCountMatchesEsper additionally cover the Java three-source shape where one parent Order stream is transient and two child arrays are expanded as the current-event probe, preventing child rows from earlier parent events from leaking into later output; Join order-by now accepts analyzable JoinField/ResultField keys and preserves tuple scope for final output ordering. TestContainedNamedWindowUpdatesBeforeNextChildProbeMatchesEsper covers the Java preemptive contained-to-Named-Window insertion contract through an explicit two-stage route, while TestContainedNamedWindowDirectTriggerTraversalIsPreemptive locks the Go-native direct contained trigger path; each child action updates the window before the next child predicate is evaluated. Property-selection aliases/fragments, contained Table/FAF interactions, scalar @type/polymorphic split expressions, and the full TestSuiteEPLContained trace remain open under event.contained."
+      "difference": "Go adds a typed Unnest parent-to-child stream node requiring a registered child schema, preserving array order and allowing ordinary Filter/Window/Aggregate/Select/Join chaining; the mapped slice covers Java contained property projection, standalone count, insert/remove array-item behavior, ordinary two-stream contained join, string splitting through the analyzable Split expression, scalar-array child projection with immediate parent fields, and a typed subquery result collection routed through an intermediate event before Unnest. TestContainedUnidirectionalJoinMatchesEsper and TestContainedUnidirectionalJoinCountMatchesEsper additionally cover the Java three-source shape where one parent Order stream is transient and two child arrays are expanded as the current-event probe, preventing child rows from earlier parent events from leaking into later output; Join order-by now accepts analyzable JoinField/ResultField keys and preserves tuple scope for final output ordering. TestContainedNamedWindowUpdatesBeforeNextChildProbeMatchesEsper covers the Java preemptive contained-to-Named-Window insertion contract through an explicit two-stage route, while TestContainedNamedWindowDirectTriggerTraversalIsPreemptive locks the Go-native direct contained trigger path; each child action updates the window before the next child predicate is evaluated. The split/type subset is mapped separately in case.event-contained-split-type; property-selection aliases/fragments, contained Table/FAF interactions, the remaining representation matrix, and the full TestSuiteEPLContained trace remain open under event.contained."
     },
     {
       "id": "case.event-contained-nested-basic",
@@ -402,6 +402,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
       "difference": "Go exposes a typed FromNamedWindowAs[T] source and composes two Unnest stages for nested named-window consumers. The mapped slice covers retained-window nested review filtering, correlated aggregate subquery snapshots over contained children, and on-trigger selection of a second named window using the contained child as the trigger. Java's property-selection aliases/fragment metadata and exact raw representation matrix remain open; Pattern/Subselect/parent-selection/invalid coverage is registered in case.event-contained-nested-basic."
+    },
+    {
+      "id": "case.event-contained-split-type",
+      "javaRuntimeIds": ["java-runtime-e5e8e7be2d9e28ca1fcf", "java-runtime-924fb8270ad180facd44", "java-runtime-87c7b775b2f72a76c09e"],
+      "javaNames": ["EPLContainedScriptContextValue", "EPLContainedSplitExprReturnsEventBean", "EPLContainedSingleRowSplitAndType"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventSplitExpr.java"],
+      "goTests": ["TestContainedSplitEventArrayPreservesVariantMembersMatchesEsper", "TestContainedTypeMaterializesMapAndJSONElementsMatchesEsper", "TestContainedTypeRejectsUnknownAndIncompatibleTargets"],
+      "tags": ["correctness", "event", "contained", "split", "type", "variant", "map", "json", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
+      "difference": "Go introduces Go-native UnnestAs/UnnestEvents with an explicit registered target schema in place of EPL @type. Event-valued elements preserve concrete member identity and parent scope when routed through a predefined variant; raw map and JSON text elements are materialized through the target schema, and unknown/empty/incompatible targets fail at the appropriate build/runtime boundary. The mapped subset does not yet claim Java's script-context execution, ObjectArray/Avro/XML representation loops, wildcard method adapters, chained splitters, exact EventBean metadata or the complete split/type trace."
     },
     {
       "id": "case.event-json-typed",
@@ -1607,6 +1618,7 @@
     {"capabilityId": "event.contained", "caseId": "case.event-contained-nested-basic"},
     {"capabilityId": "event.contained", "caseId": "case.event-contained-array-basic"},
     {"capabilityId": "event.contained", "caseId": "case.event-contained-named-window-nested"},
+    {"capabilityId": "event.contained", "caseId": "case.event-contained-split-type"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-typed"},
     {"capabilityId": "event.xml-tree", "caseId": "case.event-xml-tree"},
     {"capabilityId": "event.inheritance", "caseId": "case.event-inheritance"},

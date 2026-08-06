@@ -2147,6 +2147,14 @@ func newEvent(schema Schema, underlying any, receivedAt time.Time) (Event, error
 	return Event{typeName: schema.name, schema: schema, underlying: underlying, receivedAt: receivedAt}, nil
 }
 
+// NewEvent creates a schema-bound Event envelope for Go extension functions
+// that return events from a contained split or method source. The schema is
+// still authoritative: variants require a routed member Event and ordinary
+// schemas validate/materialize the supplied underlying value.
+func NewEvent(schema Schema, underlying any, receivedAt time.Time) (Event, error) {
+	return newEvent(schema, underlying, receivedAt)
+}
+
 func variantMemberNames(members []Schema) []string {
 	names := make([]string, len(members))
 	for index, member := range members {

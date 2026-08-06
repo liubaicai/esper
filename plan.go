@@ -1310,6 +1310,14 @@ func (e *Environment) validateNode(node *streamNode) error {
 		if node.contained.elementType == nil || propertyType.Elem() != node.contained.elementType {
 			return fmt.Errorf("unnest property element type %s does not match child element type %s", propertyType.Elem(), node.contained.elementType)
 		}
+		if target := strings.TrimSpace(node.contained.targetSchemaName); target != "" {
+			if target == "<invalid>" {
+				return NewError(ErrorInvalidRule, "unnest target event type is required")
+			}
+			if _, ok := e.Schema(target); !ok {
+				return NewError(ErrorUnknownName, fmt.Sprintf("unnest target event type %q is not registered", target))
+			}
+		}
 		if _, err := e.sourceSchema(node); err != nil {
 			return err
 		}
@@ -1665,6 +1673,16 @@ func (e *Environment) sourceSchema(source *streamNode) (Schema, error) {
 		return Schema{}, NewError(ErrorDependency, "nil source")
 	}
 	if source.kind == streamContained {
+		if source.contained != nil && strings.TrimSpace(source.contained.targetSchemaName) != "" {
+			target := strings.TrimSpace(source.contained.targetSchemaName)
+			if target == "<invalid>" {
+				return Schema{}, NewError(ErrorInvalidRule, "unnest target event type is required")
+			}
+			if schema, ok := e.Schema(target); ok {
+				return schema, nil
+			}
+			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("unnest target event type %q is not registered", target))
+		}
 		if source.contained == nil || source.contained.childType == nil {
 			return Schema{}, NewError(ErrorDependency, fmt.Sprintf("unnest source %q has no child type", source.sourceName))
 		}

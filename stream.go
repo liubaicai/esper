@@ -39,10 +39,11 @@ type streamNode struct {
 }
 
 type containedDefinition struct {
-	property    Expr
-	childType   reflect.Type
-	elementType reflect.Type
-	wrap        func(reflect.Value) (any, error)
+	property         Expr
+	childType        reflect.Type
+	elementType      reflect.Type
+	targetSchemaName string
+	wrap             func(reflect.Value) (any, error)
 }
 
 func (n *streamNode) describe() string {
@@ -110,9 +111,16 @@ func (n *streamNode) describe() string {
 		if n.contained != nil && n.contained.property != nil {
 			property = n.contained.property.Description()
 		}
+		target := ""
+		if n.contained != nil {
+			target = n.contained.targetSchemaName
+		}
 		input := "<nil>"
 		if n.input != nil {
 			input = n.input.describe()
+		}
+		if target != "" {
+			return "unnest(" + input + ":" + property + ":type=" + target + ")"
 		}
 		return "unnest(" + input + ":" + property + ")"
 	default:
@@ -832,6 +840,48 @@ func Unnest[T, V any](input Stream[T], property Expression[[]V]) Stream[V] {
 			contained:  &containedDefinition{property: property, childType: childType, elementType: childType},
 		},
 	}
+}
+
+// UnnestAs expands a slice/array property and materializes each element as
+// the named event type. It is the explicit Go counterpart of Esper's
+// contained-event @type annotation. V may be a raw representation (for
+// example map[string]any, []any, string/[]byte JSON, or *AvroRecord) or Event.
+// When an element is already an Event, its concrete event identity and
+// underlying value are preserved after the target type is checked; this is
+// what allows a BaseEvent target to carry AEvent/BEvent members.
+//
+// The returned stream intentionally exposes Event rather than pretending that
+// a polymorphic @type result has one concrete Go struct type. Callers can use
+// EventValue[Event](), Field[Event, V](...), Property or Event.Get in the
+// following chain.
+func UnnestAs[T, V any](input Stream[T], property Expression[[]V], targetType string) Stream[Event] {
+	targetType = strings.TrimSpace(targetType)
+	definition := &containedDefinition{
+		property:         property,
+		childType:        typeOf[Event](),
+		elementType:      typeOf[V](),
+		targetSchemaName: targetType,
+	}
+	if targetType == "" {
+		definition.targetSchemaName = "<invalid>"
+	}
+	return Stream[Event]{
+		env: input.env,
+		node: &streamNode{
+			kind:       streamContained,
+			input:      input.node,
+			sourceName: "unnest-as:" + targetType,
+			sourceType: typeOf[Event](),
+			contained:  definition,
+		},
+	}
+}
+
+// UnnestEvents is the common EventBean[]/Event[] split form. The target type
+// is still explicit because one result array may contain different concrete
+// member schemas under a common parent or variant schema.
+func UnnestEvents[T any](input Stream[T], property Expression[[]Event], targetType string) Stream[Event] {
+	return UnnestAs[T, Event](input, property, targetType)
 }
 
 // ContainedValue is the explicit event shape used by UnnestValues for scalar

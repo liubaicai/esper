@@ -6509,11 +6509,11 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		if err != nil {
 			return eventDelta{}, err
 		}
-		newEvents, err := expandContainedEvents(childSchema, node.contained, inputDelta.newEvents, now, r.variables)
+		newEvents, err := expandContainedEvents(r.query.env, childSchema, node.contained, inputDelta.newEvents, now, r.variables)
 		if err != nil {
 			return eventDelta{}, err
 		}
-		oldEvents, err := expandContainedEvents(childSchema, node.contained, inputDelta.oldEvents, now, r.variables)
+		oldEvents, err := expandContainedEvents(r.query.env, childSchema, node.contained, inputDelta.oldEvents, now, r.variables)
 		if err != nil {
 			return eventDelta{}, err
 		}
@@ -6643,7 +6643,7 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 		if err != nil {
 			return eventDelta{}, err
 		}
-		oldEvents, err := expandContainedEvents(childSchema, node.contained, inputDelta.oldEvents, now, r.variables)
+		oldEvents, err := expandContainedEvents(r.query.env, childSchema, node.contained, inputDelta.oldEvents, now, r.variables)
 		if err != nil {
 			return eventDelta{}, err
 		}
@@ -6725,8 +6725,8 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 	}
 }
 
-func expandContainedEvents(schema Schema, definition *containedDefinition, parents []Event, now time.Time, variables map[string]Value) ([]Event, error) {
-	if !schema.valid() || definition == nil || definition.property == nil {
+func expandContainedEvents(env *Environment, schema Schema, definition *containedDefinition, parents []Event, now time.Time, variables map[string]Value) ([]Event, error) {
+	if env == nil || !schema.valid() || definition == nil || definition.property == nil {
 		return nil, NewError(ErrorInvalidRule, "unnest expansion is incomplete")
 	}
 	result := make([]Event, 0)
@@ -6755,7 +6755,7 @@ func expandContainedEvents(schema Schema, definition *containedDefinition, paren
 					return nil, fmt.Errorf("unnest child %d: %w", index, err)
 				}
 			}
-			child, err := newEvent(schema, underlying, parent.ReceivedAt())
+			child, err := materializeContainedEvent(env, schema, underlying, parent.ReceivedAt())
 			if err != nil {
 				return nil, fmt.Errorf("unnest child %d: %w", index, err)
 			}
@@ -6765,6 +6765,70 @@ func expandContainedEvents(schema Schema, definition *containedDefinition, paren
 		}
 	}
 	return result, nil
+}
+
+// materializeContainedEvent applies the target type of an @type-style
+// contained expansion. Event values are already adapted and therefore retain
+// their concrete schema/identity after the target accepts them. Raw values
+// are converted through the registered target schema, including JSON/XML
+// textual payloads and map-to-struct materialization.
+func materializeContainedEvent(env *Environment, schema Schema, value any, receivedAt time.Time) (Event, error) {
+	if event, ok := value.(Event); ok {
+		if !event.Schema().valid() {
+			return Event{}, NewError(ErrorTypeMismatch, "contained Event has no valid schema")
+		}
+		if schema.kind == SchemaVariant {
+			return newEvent(schema, event, receivedAt)
+		}
+		if !env.acceptsEventType(schema.Name(), event.TypeName()) {
+			return Event{}, NewError(ErrorTypeMismatch, fmt.Sprintf("contained event type %q is not accepted by target %q", event.TypeName(), schema.Name()))
+		}
+		// Preserve the concrete event type and its underlying identity. The
+		// expansion caller installs the immediate parent after this function.
+		event.receivedAt = receivedAt
+		return event, nil
+	}
+	if event, ok := value.(*Event); ok {
+		if event == nil {
+			return Event{}, NewError(ErrorTypeMismatch, "contained Event pointer is nil")
+		}
+		return materializeContainedEvent(env, schema, *event, receivedAt)
+	}
+
+	if schema.kind == SchemaVariant {
+		return Event{}, NewError(ErrorTypeMismatch, fmt.Sprintf("target variant %q requires contained Event values", schema.Name()))
+	}
+
+	// JSON and XML @type expressions may return their textual wire form. Parse
+	// it against the target schema before normal event construction so the
+	// target's declared fields and null policy remain authoritative.
+	if schema.kind == SchemaJSON || schema.kind == SchemaXML {
+		var data []byte
+		switch typed := value.(type) {
+		case string:
+			data = []byte(typed)
+		case []byte:
+			data = append([]byte(nil), typed...)
+		}
+		if data != nil {
+			if schema.kind == SchemaJSON {
+				return ParseJSON(schema, data, receivedAt)
+			}
+			return ParseXML(schema, data, receivedAt)
+		}
+	}
+
+	underlying := value
+	if schema.kind == SchemaStruct && schema.goType != nil {
+		if values, ok := value.(map[string]any); ok {
+			var err error
+			underlying, err = mergeSchemaUnderlying(schema, nil, values)
+			if err != nil {
+				return Event{}, err
+			}
+		}
+	}
+	return newEvent(schema, underlying, receivedAt)
 }
 
 func containedParentEvent(event Event) Event {
