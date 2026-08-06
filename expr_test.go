@@ -102,6 +102,9 @@ func TestExpressionArithmeticConditionalAndTimeFunctions(t *testing.T) {
 	if got := current.eval(ctx); !got.Equal(Present(now)) {
 		t.Fatalf("current time = %v", got)
 	}
+	if got := CurrentTimestamp().eval(ctx); !got.Equal(Present(now.UnixNano() / int64(time.Millisecond))) {
+		t.Fatalf("current timestamp = %v", got)
+	}
 	if got := Year(current).eval(ctx); !got.Equal(Present(int64(2026))) {
 		t.Fatalf("year = %v", got)
 	}
