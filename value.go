@@ -115,7 +115,17 @@ func numericValue(v Value) (float64, bool) {
 	if !v.IsPresent() {
 		return 0, false
 	}
-	switch n := v.data.(type) {
+	reflected := reflect.ValueOf(v.data)
+	for reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {
+		if reflected.IsNil() {
+			return 0, false
+		}
+		reflected = reflected.Elem()
+	}
+	if !reflected.IsValid() {
+		return 0, false
+	}
+	switch n := reflected.Interface().(type) {
 	case int:
 		return float64(n), true
 	case int8:
