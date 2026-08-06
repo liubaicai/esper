@@ -2308,6 +2308,9 @@ func (e *Environment) validateJoin(definition *joinDefinition, selections []Join
 			return fmt.Errorf("join source %d: %w", index, err)
 		}
 	}
+	if err := validateUnidirectionalJoin(definition, sources); err != nil {
+		return err
+	}
 	if err := e.validateJoinEdges(definition, sources); err != nil {
 		return err
 	}
@@ -2315,7 +2318,7 @@ func (e *Environment) validateJoin(definition *joinDefinition, selections []Join
 		return err
 	}
 	conditions := joinDefinitionConditions(definition)
-	if len(conditions) == 0 {
+	if len(conditions) == 0 && !joinDefinitionHasUnidirectional(definition) {
 		return fmt.Errorf("join requires at least one condition")
 	}
 	for index, condition := range conditions {
@@ -2338,6 +2341,44 @@ func (e *Environment) validateJoin(definition *joinDefinition, selections []Join
 	return nil
 }
 
+func validateUnidirectionalJoin(definition *joinDefinition, sources []*streamNode) error {
+	if definition == nil || !joinDefinitionHasUnidirectional(definition) {
+		return nil
+	}
+	if len(definition.unidirectional) != len(sources) {
+		return fmt.Errorf("unidirectional join has %d source flags for %d sources", len(definition.unidirectional), len(sources))
+	}
+	count := joinDefinitionUnidirectionalCount(definition)
+	for index, flagged := range definition.unidirectional {
+		if !flagged {
+			continue
+		}
+		for node := sources[index]; node != nil; node = node.input {
+			if node.kind == streamWindow {
+				return fmt.Errorf("unidirectional join source %d cannot declare a window view", index)
+			}
+		}
+	}
+	if count == 1 {
+		return nil
+	}
+	if count != len(sources) {
+		return fmt.Errorf("unidirectional must apply to exactly one source or every source of a full outer join")
+	}
+	if len(definition.edges) > 0 {
+		for index, edge := range definition.edges {
+			if edge.kind != JoinFullOuter {
+				return fmt.Errorf("all-unidirectional join edge %d must be full outer", index)
+			}
+		}
+		return nil
+	}
+	if definition.kind != JoinFullOuter {
+		return fmt.Errorf("all-unidirectional join must be full outer")
+	}
+	return nil
+}
+
 func (e *Environment) validateJoinEdges(definition *joinDefinition, sources []*streamNode) error {
 	if len(definition.edges) == 0 {
 		if definition.kind > JoinFullOuter {
@@ -2352,7 +2393,7 @@ func (e *Environment) validateJoinEdges(definition *joinDefinition, sources []*s
 		if edge.kind > JoinFullOuter {
 			return fmt.Errorf("join edge %d has unknown kind %d", edgeIndex, edge.kind)
 		}
-		if len(edge.conditions) == 0 {
+		if len(edge.conditions) == 0 && !joinDefinitionHasUnidirectional(definition) {
 			return fmt.Errorf("join edge %d requires at least one condition", edgeIndex)
 		}
 		introducedSource := edgeIndex + 1

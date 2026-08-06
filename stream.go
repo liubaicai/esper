@@ -226,19 +226,21 @@ type joinTuple struct {
 }
 
 type JoinStream[L, R any] struct {
-	env       *Environment
-	left      *streamNode
-	right     *streamNode
-	condition JoinCondition
-	kind      JoinKind
+	env            *Environment
+	left           *streamNode
+	right          *streamNode
+	condition      JoinCondition
+	kind           JoinKind
+	unidirectional [2]bool
 }
 
 // JoinInput is the type-erased source handle used by JoinMany. It preserves
 // the logical stream node while allowing streams with different Go event
 // types to participate in one analyzable join graph.
 type JoinInput struct {
-	env  *Environment
-	node *streamNode
+	env            *Environment
+	node           *streamNode
+	unidirectional bool
 }
 
 func JoinSource[T any](stream Stream[T]) JoinInput {
@@ -249,29 +251,42 @@ func JoinRecordSource(stream RecordStream) JoinInput {
 	return JoinInput{env: stream.env, node: stream.node}
 }
 
+// Unidirectional marks this source as a transient join driver. A single
+// driver probes retained passive sources; marking every source is valid only
+// for a full-outer join and emits one transient tuple per arriving event.
+func (input JoinInput) Unidirectional() JoinInput {
+	input.unidirectional = true
+	return input
+}
+
 type MultiJoinStream struct {
-	env        *Environment
-	sources    []*streamNode
-	conditions []JoinCondition
-	kind       JoinKind
+	env            *Environment
+	sources        []*streamNode
+	conditions     []JoinCondition
+	kind           JoinKind
+	unidirectional []bool
 }
 
 // ChainedJoinStream builds a left-deep join tree one edge at a time. Unlike
 // JoinMany's convenient single-kind form, each edge carries its own join kind
 // and ON conditions, allowing fluent mixed outer joins without EPL text.
 type ChainedJoinStream struct {
-	env     *Environment
-	sources []*streamNode
-	edges   []joinEdgeDefinition
+	env            *Environment
+	sources        []*streamNode
+	edges          []joinEdgeDefinition
+	unidirectional []bool
 }
 
 // JoinChain starts a left-deep multi-stream join from one source.
 func JoinChain(first JoinInput) ChainedJoinStream {
-	return ChainedJoinStream{env: first.env, sources: []*streamNode{first.node}}
+	return ChainedJoinStream{
+		env: first.env, sources: []*streamNode{first.node}, unidirectional: []bool{first.unidirectional},
+	}
 }
 
 func (j ChainedJoinStream) join(input JoinInput, kind JoinKind, conditions []JoinCondition) ChainedJoinStream {
 	j.sources = append(append([]*streamNode(nil), j.sources...), input.node)
+	j.unidirectional = append(append([]bool(nil), j.unidirectional...), input.unidirectional)
 	j.edges = append(append([]joinEdgeDefinition(nil), j.edges...), joinEdgeDefinition{
 		kind: kind, conditions: append([]JoinCondition(nil), conditions...),
 	})
@@ -298,8 +313,9 @@ func (j ChainedJoinStream) Select(selections ...JoinSelection) JoinQuery {
 	return JoinQuery{
 		env: j.env,
 		definition: &joinDefinition{
-			sources: append([]*streamNode(nil), j.sources...),
-			edges:   cloneJoinEdges(j.edges),
+			sources:        append([]*streamNode(nil), j.sources...),
+			edges:          cloneJoinEdges(j.edges),
+			unidirectional: cloneJoinUnidirectional(j.unidirectional),
 		},
 		selections: append([]JoinSelection(nil), selections...),
 	}
@@ -333,14 +349,16 @@ func (j ChainedJoinStream) GroupBy(keys ...Expr) AggregateStream {
 // Event placeholders for missing sources.
 func JoinMany(inputs ...JoinInput) MultiJoinStream {
 	sources := make([]*streamNode, 0, len(inputs))
+	unidirectional := make([]bool, 0, len(inputs))
 	var env *Environment
 	for _, input := range inputs {
 		if env == nil {
 			env = input.env
 		}
 		sources = append(sources, input.node)
+		unidirectional = append(unidirectional, input.unidirectional)
 	}
-	return MultiJoinStream{env: env, sources: sources, kind: JoinInner}
+	return MultiJoinStream{env: env, sources: sources, kind: JoinInner, unidirectional: unidirectional}
 }
 
 func (j MultiJoinStream) On(conditions ...JoinCondition) MultiJoinStream {
@@ -388,9 +406,10 @@ func (j MultiJoinStream) Select(selections ...JoinSelection) JoinQuery {
 	return JoinQuery{
 		env: j.env,
 		definition: &joinDefinition{
-			sources:    append([]*streamNode(nil), j.sources...),
-			conditions: append([]JoinCondition(nil), j.conditions...),
-			kind:       j.kind,
+			sources:        append([]*streamNode(nil), j.sources...),
+			conditions:     append([]JoinCondition(nil), j.conditions...),
+			kind:           j.kind,
+			unidirectional: cloneJoinUnidirectional(j.unidirectional),
 		},
 		selections: append([]JoinSelection(nil), selections...),
 	}
@@ -444,13 +463,14 @@ type JoinQuery struct {
 }
 
 type joinDefinition struct {
-	left       *streamNode
-	right      *streamNode
-	condition  JoinCondition
-	sources    []*streamNode
-	conditions []JoinCondition
-	kind       JoinKind
-	edges      []joinEdgeDefinition
+	left           *streamNode
+	right          *streamNode
+	condition      JoinCondition
+	sources        []*streamNode
+	conditions     []JoinCondition
+	kind           JoinKind
+	edges          []joinEdgeDefinition
+	unidirectional []bool
 }
 
 type joinEdgeDefinition struct {
@@ -467,6 +487,15 @@ func cloneJoinEdges(edges []joinEdgeDefinition) []joinEdgeDefinition {
 		cloned[index] = joinEdgeDefinition{kind: edge.kind, conditions: append([]JoinCondition(nil), edge.conditions...)}
 	}
 	return cloned
+}
+
+func cloneJoinUnidirectional(flags []bool) []bool {
+	for _, flag := range flags {
+		if flag {
+			return append([]bool(nil), flags...)
+		}
+	}
+	return nil
 }
 
 func Join[L, R any](left Stream[L], right Stream[R], condition JoinCondition) JoinStream[L, R] {
@@ -488,6 +517,17 @@ func (j JoinStream[L, R]) FullOuter() JoinStream[L, R] {
 	return j
 }
 
+// Unidirectional marks one side of a two-stream join as transient. Calling it
+// for both sides is valid only together with FullOuter.
+func (j JoinStream[L, R]) Unidirectional(side JoinSide) JoinStream[L, R] {
+	if side == JoinRight {
+		j.unidirectional[1] = true
+	} else {
+		j.unidirectional[0] = true
+	}
+	return j
+}
+
 // Aggregate starts a tuple-aware aggregate over the two-stream join result.
 // Use JoinField or JoinEventValue in aggregate expressions to keep source
 // scope explicit in the Go API.
@@ -502,7 +542,7 @@ func (j JoinStream[L, R]) GroupBy(keys ...Expr) AggregateStream {
 }
 
 func (j JoinStream[L, R]) Select(selections ...JoinSelection) JoinQuery {
-	return JoinQuery{env: j.env, definition: &joinDefinition{left: j.left, right: j.right, condition: j.condition, sources: []*streamNode{j.left, j.right}, conditions: []JoinCondition{j.condition}, kind: j.kind}, selections: append([]JoinSelection(nil), selections...)}
+	return JoinQuery{env: j.env, definition: &joinDefinition{left: j.left, right: j.right, condition: j.condition, sources: []*streamNode{j.left, j.right}, conditions: []JoinCondition{j.condition}, kind: j.kind, unidirectional: cloneJoinUnidirectional(j.unidirectional[:])}, selections: append([]JoinSelection(nil), selections...)}
 }
 
 func (j JoinStream[L, R]) Query(options ...QueryOption) Query {
@@ -2168,7 +2208,7 @@ func describeJoinDefinition(definition *joinDefinition) string {
 		if len(sources) == 0 {
 			return "join-chain(<empty>)"
 		}
-		parts := []string{sources[0].describe()}
+		parts := []string{describeJoinSource(definition, sources, 0)}
 		for index, edge := range definition.edges {
 			conditionDescriptions := make([]string, 0, len(edge.conditions))
 			for _, condition := range edge.conditions {
@@ -2176,7 +2216,7 @@ func describeJoinDefinition(definition *joinDefinition) string {
 			}
 			source := "<missing-source>"
 			if index+1 < len(sources) {
-				source = sources[index+1].describe()
+				source = describeJoinSource(definition, sources, index+1)
 			}
 			parts = append(parts, joinKindDescription(edge.kind)+"("+source+",on="+strings.Join(conditionDescriptions, " and ")+")")
 		}
@@ -2184,8 +2224,8 @@ func describeJoinDefinition(definition *joinDefinition) string {
 	}
 	joinName := joinKindDescription(definition.kind)
 	sourceDescriptions := make([]string, 0, len(sources))
-	for _, source := range sources {
-		sourceDescriptions = append(sourceDescriptions, source.describe())
+	for index := range sources {
+		sourceDescriptions = append(sourceDescriptions, describeJoinSource(definition, sources, index))
 	}
 	conditions := joinDefinitionConditions(definition)
 	conditionDescriptions := make([]string, 0, len(conditions))
@@ -2193,6 +2233,42 @@ func describeJoinDefinition(definition *joinDefinition) string {
 		conditionDescriptions = append(conditionDescriptions, joinConditionDescription(condition))
 	}
 	return joinName + "-join(" + strings.Join(sourceDescriptions, ",") + ") -> on(" + strings.Join(conditionDescriptions, " and ") + ")"
+}
+
+func describeJoinSource(definition *joinDefinition, sources []*streamNode, index int) string {
+	if index < 0 || index >= len(sources) || sources[index] == nil {
+		return "<missing-source>"
+	}
+	description := sources[index].describe()
+	if index < len(definition.unidirectional) && definition.unidirectional[index] {
+		description += ".unidirectional()"
+	}
+	return description
+}
+
+func joinDefinitionHasUnidirectional(definition *joinDefinition) bool {
+	if definition == nil {
+		return false
+	}
+	for _, flag := range definition.unidirectional {
+		if flag {
+			return true
+		}
+	}
+	return false
+}
+
+func joinDefinitionUnidirectionalCount(definition *joinDefinition) int {
+	if definition == nil {
+		return 0
+	}
+	count := 0
+	for _, flag := range definition.unidirectional {
+		if flag {
+			count++
+		}
+	}
+	return count
 }
 
 func joinKindDescription(kind JoinKind) string {

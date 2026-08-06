@@ -1177,6 +1177,9 @@ func (s *Statement) SnapshotWithSelector(ctx context.Context, selector ContextPa
 	if s == nil {
 		return QueryResult{}, NewError(ErrorState, "nil statement")
 	}
+	if joinDefinitionHasUnidirectional(s.plan.query.join) || (s.plan.query.aggregate != nil && joinDefinitionHasUnidirectional(s.plan.query.aggregate.join)) {
+		return QueryResult{}, fmt.Errorf("esper: iteration over a unidirectional join is not supported")
+	}
 	if selector != nil {
 		if s.plan.query.contextName == "" {
 			return QueryResult{}, NewError(ErrorInvalidRule, "context partition selector requires a context statement")
@@ -2527,6 +2530,10 @@ type joinDelta struct {
 	oldPairs  []eventPair
 	newTuples [][]Event
 	oldTuples [][]Event
+	// unidirectionalTrigger is true when at least one transient driver
+	// accepted the current event batch. Aggregate joins use it to reset their
+	// contribution set before evaluating the trigger's current probe rows.
+	unidirectionalTrigger bool
 }
 
 type joinRuntimeState struct {
@@ -4030,6 +4037,12 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 			joinDelta, joinErr := r.insertJoin(plan.query.aggregate.join, event, now)
 			err = joinErr
 			if err == nil {
+				if joinDelta.unidirectionalTrigger {
+					// A unidirectional aggregate represents the current
+					// trigger probe, not a retained contribution from prior
+					// trigger events. Passive events do not reach aggregateBatch.
+					r.aggregateState = nil
+				}
 				batch, err = r.aggregateBatch(joinDeltaEvents(joinDelta, now), plan, now)
 			}
 		} else {
@@ -5011,6 +5024,9 @@ func (r *statementRuntime) processNamedWindowDelta(plan Plan, now time.Time, del
 		if err != nil {
 			return ResultBatch{}, err
 		}
+		if joinDelta.unidirectionalTrigger {
+			r.aggregateState = nil
+		}
 		batch, err := r.aggregateBatch(joinDeltaEvents(joinDelta, now), plan, now)
 		if err != nil {
 			return ResultBatch{}, err
@@ -5256,6 +5272,9 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	if err != nil {
 		return joinDelta{}, err
 	}
+	if joinDefinitionHasUnidirectional(definition) {
+		return r.updateUnidirectionalJoin(definition, sources, evaluationOrder, now, newEvents, oldEvents)
+	}
 	before := joinTuples(definition, r.joinState, now, r)
 	for _, event := range newEvents {
 		// Historical and method results belong to exactly one trigger cycle.
@@ -5328,6 +5347,141 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	after := joinTuples(definition, r.joinState, now, r)
 	delta := diffJoinTuples(before, after)
 	return joinDeltaWithPairs(delta), nil
+}
+
+func (r *statementRuntime) updateUnidirectionalJoin(definition *joinDefinition, sources []*streamNode, evaluationOrder []int, now time.Time, newEvents, oldEvents []Event) (joinDelta, error) {
+	flags := definition.unidirectional
+	driverCount := joinDefinitionUnidirectionalCount(definition)
+	result := joinDelta{}
+	for _, event := range newEvents {
+		working := cloneJoinRuntimeState(r.joinState)
+		for index, source := range sources {
+			if containsHistoricalSource(source) && !flags[index] {
+				r.joinState.sides[index] = nil
+				working.sides[index] = nil
+			}
+		}
+		driverRows := make([][]storedEvent, len(sources))
+		for _, index := range evaluationOrder {
+			source := sources[index]
+			base, err := sourceNode(source)
+			if err != nil {
+				return joinDelta{}, err
+			}
+			if base.kind == streamTable {
+				side, snapshotErr := r.snapshotTableJoinSide(source, base, now)
+				if snapshotErr != nil {
+					return joinDelta{}, snapshotErr
+				}
+				if flags[index] {
+					driverRows[index] = r.assignJoinLineageIDs(side, nil)
+					working.sides[index] = driverRows[index]
+				} else {
+					r.joinState.sides[index] = r.assignJoinLineageIDs(side, r.joinState.sides[index])
+					working.sides[index] = r.joinState.sides[index]
+				}
+				continue
+			}
+			if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
+				invocations, invocationErr := methodDependencyInvocations(base.method.dependencies, sources, working)
+				if invocationErr != nil {
+					return joinDelta{}, invocationErr
+				}
+				for _, invocation := range invocations {
+					previous := r.methodDependencies
+					r.methodDependencies = invocation.events
+					delta, insertErr := r.insert(source, event, now)
+					r.methodDependencies = previous
+					if insertErr != nil {
+						return joinDelta{}, insertErr
+					}
+					stored := make([]storedEvent, 0, len(delta.newEvents))
+					for _, inserted := range delta.newEvents {
+						stored = append(stored, storedEvent{event: inserted, receivedAt: now, lineageID: r.nextJoinLineageID(), lineage: cloneMethodLineage(invocation.lineage)})
+					}
+					if flags[index] {
+						driverRows[index] = append(driverRows[index], stored...)
+					} else {
+						removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
+						r.joinState.sides[index] = append(r.joinState.sides[index], stored...)
+					}
+				}
+				if flags[index] {
+					working.sides[index] = driverRows[index]
+				} else {
+					working.sides[index] = r.joinState.sides[index]
+				}
+				continue
+			}
+			delta, insertErr := r.insert(source, event, now)
+			if insertErr != nil {
+				return joinDelta{}, insertErr
+			}
+			stored := make([]storedEvent, 0, len(delta.newEvents))
+			for _, inserted := range delta.newEvents {
+				stored = append(stored, storedEvent{event: inserted, receivedAt: now, lineageID: r.nextJoinLineageID()})
+			}
+			if flags[index] {
+				driverRows[index] = append(driverRows[index], stored...)
+				working.sides[index] = driverRows[index]
+				continue
+			}
+			removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
+			r.joinState.sides[index] = append(r.joinState.sides[index], stored...)
+			working.sides[index] = r.joinState.sides[index]
+		}
+
+		if driverCount == len(sources) {
+			anyDriverRow := false
+			for _, rows := range driverRows {
+				if len(rows) > 0 {
+					anyDriverRow = true
+					break
+				}
+			}
+			if anyDriverRow {
+				result.unidirectionalTrigger = true
+				for _, tuple := range joinTuples(definition, working, now, r) {
+					for index, event := range tuple {
+						if index < len(flags) && flags[index] && event.TypeName() != "" {
+							result.newTuples = append(result.newTuples, tuple)
+							break
+						}
+					}
+				}
+			}
+			continue
+		}
+		driver := -1
+		for index, flag := range flags {
+			if flag {
+				driver = index
+				break
+			}
+		}
+		if driver < 0 || len(driverRows[driver]) == 0 {
+			continue
+		}
+		result.unidirectionalTrigger = true
+		for _, tuple := range joinTuples(definition, working, now, r) {
+			if driver < len(tuple) && tuple[driver].TypeName() != "" {
+				result.newTuples = append(result.newTuples, tuple)
+			}
+		}
+	}
+	for _, event := range oldEvents {
+		for index, source := range sources {
+			if flags[index] {
+				continue
+			}
+			delta, err := r.remove(source, event, now)
+			if err != nil {
+				return joinDelta{}, err
+			}
+			removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
+		}
+	}
+	return joinDeltaWithPairs(result), nil
 }
 
 type methodDependencyInvocation struct {
@@ -5560,6 +5714,9 @@ func (r *statementRuntime) expireJoin(now time.Time) joinDelta {
 	delta := r.expire(now)
 	for index := range r.joinState.sides {
 		removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
+	}
+	if joinDefinitionHasUnidirectional(definition) {
+		return joinDelta{}
 	}
 	after := joinTuples(definition, r.joinState, now, r)
 	return joinDeltaWithPairs(diffJoinTuples(before, after))
