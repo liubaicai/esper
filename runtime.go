@@ -2506,6 +2506,7 @@ type statementRuntime struct {
 	joinState                *joinRuntimeState
 	aggregateState           *aggregateRuntimeState
 	patternState             *patternRuntimeState
+	patternJoinStates        map[*streamNode]*patternJoinRuntime
 	contextStartPatternState *patternRuntimeState
 	contextEndPatternState   *patternRuntimeState
 	contextPatternTags       map[string]Event
@@ -2745,6 +2746,7 @@ type patternTrigger struct {
 	event            Event
 	now              time.Time
 	isTimer          bool
+	env              *Environment
 	consumptionLevel int
 }
 
@@ -2776,7 +2778,7 @@ type outputRuntimeState struct {
 }
 
 func newStatementRuntime(query Query) statementRuntime {
-	runtime := statementRuntime{query: query, ctx: context.Background(), windows: make(map[*streamNode]*windowRuntimeState), partitions: make(map[string]*statementRuntime), variables: make(map[string]Value), seq: &atomic.Uint64{}}
+	runtime := statementRuntime{query: query, ctx: context.Background(), windows: make(map[*streamNode]*windowRuntimeState), partitions: make(map[string]*statementRuntime), patternJoinStates: make(map[*streamNode]*patternJoinRuntime), variables: make(map[string]Value), seq: &atomic.Uint64{}}
 	if query.join != nil {
 		runtime.joinState = &joinRuntimeState{}
 	}
@@ -3012,7 +3014,12 @@ func statementAcceptsEvent(query Query, event Event) bool {
 	}
 	input := query.input
 	if query.pattern != nil {
-		input = query.pattern.input
+		for _, source := range patternDefinitionInputs(query.pattern) {
+			if sourceNodeAcceptsEvent(query.env, source, event) {
+				return true
+			}
+		}
+		return false
 	}
 	if query.aggregate != nil {
 		input = query.aggregate.input
@@ -3026,6 +3033,14 @@ func statementAcceptsEvent(query Query, event Event) bool {
 func sourceNodeAcceptsEvent(env *Environment, node *streamNode, event Event) bool {
 	source, err := sourceNode(node)
 	if err != nil || source == nil {
+		return false
+	}
+	if source.kind == streamPattern {
+		for _, input := range patternDefinitionInputs(source.pattern) {
+			if sourceNodeAcceptsEvent(env, input, event) {
+				return true
+			}
+		}
 		return false
 	}
 	if source.kind == streamHistorical || source.kind == streamMethod {
@@ -3224,7 +3239,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 	if state == nil || definition == nil || definition.root == nil {
 		return nil
 	}
-	if definition.input != nil && !sourceNodeAcceptsEvent(env, definition.input, event) {
+	if !patternDefinitionAcceptsEvent(env, definition, event) {
 		return nil
 	}
 	if !patternGuardAllows(definition, event, now, variables) {
@@ -3261,7 +3276,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 	}
 	consumptionLevel := -1
 	if patternHasConsumption(definition.root) {
-		probe := patternTrigger{event: event, now: now, consumptionLevel: -1}
+		probe := patternTrigger{event: event, now: now, env: env, consumptionLevel: -1}
 		for _, match := range matches {
 			for _, transition := range advancePatternNodeTrigger(match.state, probe, variables) {
 				if transition.consumed && transition.consumptionLevel > consumptionLevel {
@@ -3277,7 +3292,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			}
 		}
 	}
-	trigger := patternTrigger{event: event, now: now, consumptionLevel: consumptionLevel}
+	trigger := patternTrigger{event: event, now: now, env: env, consumptionLevel: consumptionLevel}
 	completed := make([]patternMatch, 0)
 	nextActive := make([]patternMatch, 0, len(matches)+1)
 	terminal := false
@@ -4072,7 +4087,7 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 			batch = r.rowRecogBatch(delta, plan, now)
 		}
 	} else if plan.query.pattern != nil {
-		delta, insertErr := r.insert(plan.query.pattern.input, event, now)
+		delta, insertErr := r.insertPatternInputs(plan.query.pattern, event, now)
 		err = insertErr
 		if err == nil {
 			batch = r.patternBatch(delta, plan, now)
@@ -6122,6 +6137,8 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			return eventDelta{}, err
 		}
 		return eventDelta{newEvents: append([]Event(nil), events...)}, nil
+	case streamPattern:
+		return r.insertPatternSource(node, event, now)
 	case streamFilter:
 		inputDelta, err := r.insert(node.input, event, now)
 		if err != nil {
@@ -6215,6 +6232,8 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 	case streamHistorical:
 		return eventDelta{}, nil
 	case streamMethod:
+		return eventDelta{}, nil
+	case streamPattern:
 		return eventDelta{}, nil
 	case streamFilter:
 		inputDelta, err := r.remove(node.input, event, now)
@@ -8060,6 +8079,9 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 		if trigger.isTimer {
 			return []patternTransition{{state: next, complete: patternSatisfied(next)}}
 		}
+		if !patternEventSourceMatches(next.node, trigger) {
+			return []patternTransition{patternTransitionFor(next)}
+		}
 		if next.done {
 			return []patternTransition{patternTransitionFor(next)}
 		}
@@ -8510,6 +8532,16 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 	}
 }
 
+func patternEventSourceMatches(node *patternNode, trigger patternTrigger) bool {
+	if node == nil || node.source == nil || trigger.isTimer {
+		return true
+	}
+	if trigger.env != nil {
+		return sourceNodeAcceptsEvent(trigger.env, node.source, trigger.event)
+	}
+	return sourceNodeAcceptsEvent(nil, node.source, trigger.event)
+}
+
 func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Time) ResultBatch {
 	if plan.query.pattern == nil || r.patternState == nil {
 		return ResultBatch{}
@@ -8542,7 +8574,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 		startAllowed := definition.every || len(matches) == 0
 		consumptionLevel := -1
 		if hasConsumption {
-			probe := patternTrigger{event: event, now: now, consumptionLevel: -1}
+			probe := patternTrigger{event: event, now: now, env: r.query.env, consumptionLevel: -1}
 			for _, match := range matches {
 				for _, transition := range advancePatternNodeTrigger(match.state, probe, r.variables) {
 					if transition.consumed && transition.consumptionLevel > consumptionLevel {
@@ -8560,7 +8592,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				}
 			}
 		}
-		trigger := patternTrigger{event: event, now: now, consumptionLevel: consumptionLevel}
+		trigger := patternTrigger{event: event, now: now, env: r.query.env, consumptionLevel: consumptionLevel}
 		nextActive := make([]patternMatch, 0, len(matches)+1)
 		terminal := false
 		completed := false

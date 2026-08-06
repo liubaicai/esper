@@ -1233,6 +1233,35 @@ func (e *Environment) validateNode(node *streamNode) error {
 			}
 		}
 		return nil
+	case streamPattern:
+		if node.pattern == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("pattern source %q has no pattern definition", node.sourceName))
+		}
+		if err := validatePattern(node.pattern); err != nil {
+			return err
+		}
+		if _, err := patternJoinSchema(node.pattern); err != nil {
+			return err
+		}
+		for index, input := range patternDefinitionInputs(node.pattern) {
+			if err := e.validateNode(input); err != nil {
+				return fmt.Errorf("pattern source %d: %w", index, err)
+			}
+		}
+		if node.patternWindow != nil {
+			if err := node.patternWindow.validate(); err != nil {
+				return err
+			}
+		}
+		if node.pattern.root != nil {
+			return e.validatePatternNodeFields(node.pattern.input, node.pattern.root)
+		}
+		for _, step := range node.pattern.steps {
+			if err := e.validateExprFields(node.pattern.input, step.predicate); err != nil {
+				return err
+			}
+		}
+		return nil
 	case streamFilter:
 		if node.predicate == nil {
 			return fmt.Errorf("esper: filter predicate is required")
@@ -1569,6 +1598,9 @@ func (e *Environment) sourceSchema(source *streamNode) (Schema, error) {
 			return Schema{}, NewError(ErrorDependency, fmt.Sprintf("method source %q has no schema", source.sourceName))
 		}
 		return source.method.schema, nil
+	}
+	if source.kind == streamPattern {
+		return patternJoinSchema(source.pattern)
 	}
 	schema, ok := e.Schema(source.sourceName)
 	if !ok {
@@ -2137,7 +2169,7 @@ func isIntegralType(typ reflect.Type) bool {
 
 func sourceNode(node *streamNode) (*streamNode, error) {
 	for node != nil {
-		if node.kind == streamSource || node.kind == streamNamedWindow || node.kind == streamTable || node.kind == streamHistorical || node.kind == streamMethod {
+		if node.kind == streamSource || node.kind == streamNamedWindow || node.kind == streamTable || node.kind == streamHistorical || node.kind == streamMethod || node.kind == streamPattern {
 			return node, nil
 		}
 		node = node.input
@@ -3231,8 +3263,14 @@ func (e *Environment) validatePattern(definition *patternDefinition, selections 
 	if err := validatePattern(definition); err != nil {
 		return err
 	}
-	if err := e.validateNode(definition.input); err != nil {
-		return err
+	inputs := patternDefinitionInputs(definition)
+	if len(inputs) == 0 {
+		return NewError(ErrorInvalidRule, "pattern requires at least one source")
+	}
+	for index, input := range inputs {
+		if err := e.validateNode(input); err != nil {
+			return fmt.Errorf("pattern source %d: %w", index, err)
+		}
 	}
 	if definition.guard != nil {
 		if err := e.validateExprFields(definition.input, definition.guard); err != nil {
@@ -3275,7 +3313,11 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 	}
 	switch node.kind {
 	case patternEventNode:
-		return e.validateExprFields(input, node.predicate)
+		eventInput := node.source
+		if eventInput == nil {
+			eventInput = input
+		}
+		return e.validateExprFields(eventInput, node.predicate)
 	case patternSequenceNode, patternAndNode, patternOrNode:
 		if node.kind == patternSequenceNode && node.sequenceMaxExpr != nil {
 			if err := e.validateExprFields(input, node.sequenceMaxExpr); err != nil {

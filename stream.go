@@ -17,6 +17,7 @@ const (
 	streamTable
 	streamHistorical
 	streamMethod
+	streamPattern
 )
 
 type streamNode struct {
@@ -27,6 +28,8 @@ type streamNode struct {
 	configurationError string
 	historical         *historicalDefinition
 	method             *methodDefinition
+	pattern            *patternDefinition
+	patternWindow      WindowSpec
 	predicate          Expr
 	window             WindowSpec
 }
@@ -68,6 +71,15 @@ func (n *streamNode) describe() string {
 			dependencies = strings.Join(n.method.dependencies, ",")
 		}
 		return "method(" + n.sourceName + ":" + schemaName + ":trigger=" + triggerName + ":depends=" + dependencies + ")"
+	case streamPattern:
+		description := "pattern-source(" + n.sourceName
+		if n.pattern != nil {
+			description += ":" + n.pattern.description()
+		}
+		if n.patternWindow != nil {
+			description += ":window=" + n.patternWindow.description()
+		}
+		return description + ")"
 	default:
 		return "<unknown-stream>"
 	}
@@ -253,11 +265,56 @@ func JoinRecordSource(stream RecordStream) JoinInput {
 	return JoinInput{env: stream.env, node: stream.node}
 }
 
+// JoinPatternSource adapts a fluent PatternStream into a Join source. Pattern
+// matches are materialized as events whose properties are the captured tags;
+// use JoinPatternField or Property(JoinField[Event](...)) to address a tag
+// property from the tuple.
+func JoinPatternSource(pattern PatternStream) JoinInput {
+	input := JoinInput{env: pattern.env}
+	if pattern.def == nil {
+		input.node = &streamNode{kind: streamPattern, sourceName: "<nil-pattern>", sourceType: typeOf[any](), configurationError: "join pattern source requires a pattern"}
+		return input
+	}
+	sourceName := "pattern"
+	if pattern.def.input != nil {
+		sourceName = "pattern:" + pattern.def.input.describe()
+	}
+	input.node = &streamNode{
+		kind:       streamPattern,
+		sourceName: sourceName,
+		sourceType: typeOf[any](),
+		input:      pattern.def.input,
+		pattern:    pattern.def,
+	}
+	return input
+}
+
+// JoinPattern is a concise alias for JoinPatternSource.
+func JoinPattern(pattern PatternStream) JoinInput { return JoinPatternSource(pattern) }
+
 // Unidirectional marks this source as a transient join driver. A single
 // driver probes retained passive sources; marking every source is valid only
 // for a full-outer join and emits one transient tuple per arriving event.
 func (input JoinInput) Unidirectional() JoinInput {
 	input.unidirectional = true
+	return input
+}
+
+// Window retains completed Pattern matches on the Join side. It is kept on
+// JoinInput rather than PatternStream because a standalone Pattern query
+// emits matches directly and has no result-side data window.
+func (input JoinInput) Window(window WindowSpec) JoinInput {
+	if input.node == nil {
+		input.node = &streamNode{kind: streamPattern, sourceName: "<nil-pattern>", configurationError: "pattern join window requires a pattern source"}
+		return input
+	}
+	if input.node.kind == streamPattern {
+		cloned := cloneStreamNode(input.node)
+		cloned.patternWindow = window
+		input.node = cloned
+		return input
+	}
+	input.node = &streamNode{kind: streamWindow, input: input.node, window: window}
 	return input
 }
 
@@ -548,6 +605,13 @@ func (j JoinStream[L, R]) Unidirectional(side JoinSide) JoinStream[L, R] {
 func (j JoinStream[L, R]) Aggregate(selections ...Selection) AggregateStream {
 	definition := j.Select().definition
 	return AggregateStream{env: j.env, node: j.left, join: definition, selections: append([]Selection(nil), selections...)}
+}
+
+// JoinPatternField reads a property from a captured tag on a Pattern join
+// source. The source index addresses the Join tuple; tag and property keep
+// the nested Pattern scope explicit in the Go API.
+func JoinPatternField[V any](source int, tag, property string) Expression[V] {
+	return Property[V](JoinField[Event](source, tag), property)
 }
 
 func (j JoinStream[L, R]) GroupBy(keys ...Expr) AggregateStream {

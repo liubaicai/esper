@@ -38,6 +38,7 @@ type patternNode struct {
 	kind                   patternNodeKind
 	tag                    string
 	predicate              Expression[bool]
+	source                 *streamNode
 	consumeLevel           int
 	consumeLevelSet        bool
 	left                   *patternNode
@@ -231,6 +232,7 @@ func (n *patternNode) description() string {
 
 type patternDefinition struct {
 	input                  *streamNode
+	inputs                 []*streamNode
 	steps                  []patternStep
 	root                   *patternNode
 	sourceMismatch         bool
@@ -253,10 +255,11 @@ type PatternStream struct {
 }
 
 func PatternFrom[T any](stream Stream[T], tag string, predicate Expression[bool]) PatternStream {
-	definition := &patternDefinition{input: stream.node}
+	definition := &patternDefinition{input: stream.node, inputs: []*streamNode{stream.node}}
 	if strings.TrimSpace(tag) != "" && predicate != nil {
 		definition.steps = append(definition.steps, patternStep{tag: tag, predicate: predicate})
 		definition.root = patternEvent(tag, predicate)
+		definition.root.source = stream.node
 	}
 	return PatternStream{env: stream.env, def: definition}
 }
@@ -266,10 +269,11 @@ func PatternFrom[T any](stream Stream[T], tag string, predicate Expression[bool]
 // available at the call site; the predicate is still analyzed against the
 // source schema during Build.
 func PatternFromRecord(stream RecordStream, tag string, predicate Expression[bool]) PatternStream {
-	definition := &patternDefinition{input: stream.node}
+	definition := &patternDefinition{input: stream.node, inputs: []*streamNode{stream.node}}
 	if strings.TrimSpace(tag) != "" && predicate != nil {
 		definition.steps = append(definition.steps, patternStep{tag: tag, predicate: predicate})
 		definition.root = patternEvent(tag, predicate)
+		definition.root.source = stream.node
 	}
 	return PatternStream{env: stream.env, def: definition}
 }
@@ -544,10 +548,12 @@ func (p PatternStream) followedByWithMaximum(maximum int, maximumSet bool, maxim
 	}
 	copyDefinition := *p.def
 	copyDefinition.steps = append(append([]patternStep(nil), p.def.steps...), patternStep{tag: tag, predicate: predicate})
+	event := patternEvent(tag, predicate)
+	event.source = copyDefinition.input
 	copyDefinition.root = &patternNode{
 		kind:            patternSequenceNode,
 		left:            p.def.root,
-		right:           patternEvent(tag, predicate),
+		right:           event,
 		sequenceMax:     maximum,
 		sequenceMaxSet:  maximumSet,
 		sequenceMaxExpr: maximumExpr,
@@ -574,9 +580,10 @@ func (p PatternStream) Then(other PatternStream) PatternStream {
 		left:  patternBranchRoot(p.def),
 		right: patternBranchRoot(other.def),
 	}
-	if other.def == nil || p.env != other.env || p.def.input != other.def.input {
+	if other.def == nil || p.env != other.env {
 		copyDefinition.sourceMismatch = true
 	}
+	copyDefinition.inputs = mergePatternInputs(p.def, other.def)
 	return PatternStream{env: p.env, def: &copyDefinition}
 }
 
@@ -868,15 +875,17 @@ func (p PatternStream) Until(terminator PatternStream) PatternStream {
 	if p.def.root != nil && p.def.root.kind == patternMatchUntilNode && p.def.root.right == nil {
 		copyDefinition.root = clonePatternNode(p.def.root)
 		copyDefinition.root.right = patternBranchRoot(terminator.def)
-		if terminator.def == nil || p.env != terminator.env || p.def.input != terminator.def.input {
+		if terminator.def == nil || p.env != terminator.env {
 			copyDefinition.sourceMismatch = true
 		}
+		copyDefinition.inputs = mergePatternInputs(p.def, terminator.def)
 		return PatternStream{env: p.env, def: &copyDefinition}
 	}
 	copyDefinition.root = &patternNode{kind: patternUntilNode, child: patternBranchRoot(p.def), right: patternBranchRoot(terminator.def)}
-	if terminator.def == nil || p.env != terminator.env || p.def.input != terminator.def.input {
+	if terminator.def == nil || p.env != terminator.env {
 		copyDefinition.sourceMismatch = true
 	}
+	copyDefinition.inputs = mergePatternInputs(p.def, terminator.def)
 	return PatternStream{env: p.env, def: &copyDefinition}
 }
 
@@ -896,10 +905,88 @@ func (p PatternStream) combine(other PatternStream, kind patternNodeKind) Patter
 	copyDefinition.everyDistinctExpiry = 0
 	copyDefinition.everyDistinctExpirySet = false
 	copyDefinition.root = &patternNode{kind: kind, left: patternBranchRoot(p.def), right: patternBranchRoot(other.def)}
-	if other.def == nil || p.env != other.env || p.def.input != other.def.input {
+	if other.def == nil || p.env != other.env {
 		copyDefinition.sourceMismatch = true
 	}
+	copyDefinition.inputs = mergePatternInputs(p.def, other.def)
 	return PatternStream{env: p.env, def: &copyDefinition}
+}
+
+func mergePatternInputs(left, right *patternDefinition) []*streamNode {
+	result := make([]*streamNode, 0)
+	appendInputs := func(definition *patternDefinition) {
+		if definition == nil {
+			return
+		}
+		inputs := definition.inputs
+		if len(inputs) == 0 && definition.input != nil {
+			inputs = []*streamNode{definition.input}
+		}
+		for _, input := range inputs {
+			if input == nil {
+				continue
+			}
+			seen := false
+			for _, existing := range result {
+				if existing == input {
+					seen = true
+					break
+				}
+			}
+			if !seen {
+				result = append(result, input)
+			}
+		}
+	}
+	appendInputs(left)
+	appendInputs(right)
+	return result
+}
+
+func patternDefinitionInputs(definition *patternDefinition) []*streamNode {
+	if definition == nil {
+		return nil
+	}
+	if len(definition.inputs) > 0 {
+		return append([]*streamNode(nil), definition.inputs...)
+	}
+	if definition.input != nil {
+		return []*streamNode{definition.input}
+	}
+	return nil
+}
+
+func patternNodeTagNames(node *patternNode, result *[]string, seen map[string]struct{}) {
+	if node == nil {
+		return
+	}
+	if node.kind == patternEventNode {
+		if _, exists := seen[node.tag]; !exists && strings.TrimSpace(node.tag) != "" {
+			seen[node.tag] = struct{}{}
+			*result = append(*result, node.tag)
+		}
+	}
+	patternNodeTagNames(node.left, result, seen)
+	patternNodeTagNames(node.right, result, seen)
+	patternNodeTagNames(node.child, result, seen)
+}
+
+func patternDefinitionTagNames(definition *patternDefinition) []string {
+	if definition == nil {
+		return nil
+	}
+	result := make([]string, 0)
+	seen := make(map[string]struct{})
+	patternNodeTagNames(definition.root, &result, seen)
+	for _, step := range definition.steps {
+		if strings.TrimSpace(step.tag) != "" {
+			if _, exists := seen[step.tag]; !exists {
+				seen[step.tag] = struct{}{}
+				result = append(result, step.tag)
+			}
+		}
+	}
+	return result
 }
 
 func patternBranchRoot(definition *patternDefinition) *patternNode {

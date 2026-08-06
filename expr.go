@@ -925,6 +925,35 @@ func TagField[V any](tag, name string) Expression[V] {
 	}}
 }
 
+// PatternEvent returns the Event captured by a named event-pattern tag. It is
+// useful when a PatternStream is used as a Join source, where the tag itself
+// becomes a property of the materialized pattern result event.
+func PatternEvent(tag string) Expression[Event] {
+	tag = strings.TrimSpace(tag)
+	if tag == "" {
+		return makeExpr[Event]("pattern-event", "<invalid-pattern-event>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "pattern-event", typ: typeOf[Event](), description: "pattern." + tag, tagName: tag}
+	return typedExpr[Event]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.PreviousTagEvents != nil {
+			if event, ok := ctx.PreviousTagEvents[tag]; ok {
+				return Present(event)
+			}
+		}
+		if ctx.Tags != nil {
+			if event, ok := ctx.Tags[tag]; ok {
+				return Present(event)
+			}
+		}
+		if ctx.TagValues != nil {
+			if events := ctx.TagValues[tag]; len(events) > 0 {
+				return Present(events[len(events)-1])
+			}
+		}
+		return Null()
+	}}
+}
+
 // TagFieldAt reads a zero-based event from a repeated pattern tag and then
 // resolves one of its properties. A negative or out-of-range index evaluates
 // to Null, matching optional/repeated Match Recognize measures.
