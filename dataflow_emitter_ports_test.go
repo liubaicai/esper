@@ -69,6 +69,13 @@ func TestDataflowCaptiveEmitterNamedPortsMatchEsperSubmitPort(t *testing.T) {
 	if !ok {
 		t.Fatal("multi-port captive emitter is missing")
 	}
+	if emitter.Name() != "source" {
+		t.Fatalf("captive emitter name = %q", emitter.Name())
+	}
+	var nilEmitter *DataflowEmitter
+	if nilEmitter.Name() != "" {
+		t.Fatalf("nil captive emitter name = %q", nilEmitter.Name())
+	}
 	if err := emitter.Submit(context.Background(), dataflowEmitterPortText{Value: "ambiguous"}); err == nil || !errors.Is(err, ErrorInvalidRule) {
 		t.Fatalf("ambiguous Submit error = %v", err)
 	}

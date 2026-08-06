@@ -309,6 +309,15 @@ type DataflowEmitter struct {
 	allowRaw bool
 }
 
+// Name returns the definition-level operator name associated with this
+// captive emitter handle.
+func (e *DataflowEmitter) Name() string {
+	if e == nil {
+		return ""
+	}
+	return e.name
+}
+
 // DataflowCaptive is returned by StartCaptive. Emitters are caller-driven
 // graph entry points, while Runnables are source operators that the caller may
 // execute on its own goroutines. Captive sources never complete the instance
