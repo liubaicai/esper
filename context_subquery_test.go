@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -14,6 +15,11 @@ type contextSubqueryOuter struct {
 type contextSubqueryReference struct {
 	ID    int64  `esper:"id"`
 	Value string `esper:"value"`
+}
+
+type contextSubqueryGroupReference struct {
+	Group  string `esper:"group"`
+	Amount int64  `esper:"amount"`
 }
 
 func TestContextEventStreamSubqueryKeepsPartitionLocalLastEvent(t *testing.T) {
@@ -476,4 +482,88 @@ func TestContextSubquerySnapshotPreservesPartitionRegistry(t *testing.T) {
 			t.Fatalf("all context subquery B snapshot row = %#v", result)
 		}
 	}
+}
+
+func TestContextGroupedMultirowSubqueryKeepsPartitionLocalGroups(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[contextSubqueryOuter](env, "ContextGroupedOuter"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[contextSubqueryGroupReference](env, "ContextGroupedReference"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateKeyContext(env, "context-grouped-subquery", Field[contextSubqueryOuter, string]("symbol")); err != nil {
+		t.Fatal(err)
+	}
+
+	inner := Select(From[contextSubqueryGroupReference](env, "ContextGroupedReference"))
+	group := Field[any, string]("group")
+	amount := Field[any, int64]("amount")
+	groups := SubqueryGroupRows(inner, group, []Selection{
+		Alias("group", group),
+		Alias("total", Sum[int64](amount)),
+	})
+	query := Select(
+		From[contextSubqueryOuter](env, "ContextGroupedOuter").Window(LastEvent()),
+		Alias("symbol", Field[contextSubqueryOuter, string]("symbol")),
+		Alias("groups", EnumTake[map[string]any](groups, 10)),
+	).Query(StatementName("context-grouped-subquery"), WithContext("context-grouped-subquery"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("context grouped subquery result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sendOuter := func(symbol string) Row {
+		t.Helper()
+		before := len(rows)
+		if err := engine.SendEvent(context.Background(), contextSubqueryOuter{Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != before+1 {
+			t.Fatalf("context grouped outer %q rows = %#v", symbol, rows)
+		}
+		return rows[len(rows)-1]
+	}
+	sendReference := func(group string, amount int64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), contextSubqueryGroupReference{Group: group, Amount: amount}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertGroups := func(row Row, symbol string, want []map[string]any) {
+		t.Helper()
+		if row.Get("symbol").Any() != symbol {
+			t.Fatalf("context grouped symbol = %#v, want %q", row.Get("symbol"), symbol)
+		}
+		got, ok := row.Get("groups").Any().([]map[string]any)
+		if !ok || !reflect.DeepEqual(got, want) {
+			t.Fatalf("context grouped %s = %#v, want %#v", symbol, row.Get("groups"), want)
+		}
+	}
+
+	assertGroups(sendOuter("A"), "A", []map[string]any{})
+	sendReference("G1", 10)
+	assertGroups(sendOuter("A"), "A", []map[string]any{{"group": "G1", "total": int64(10)}})
+	assertGroups(sendOuter("B"), "B", []map[string]any{})
+	sendReference("G2", 20)
+	assertGroups(sendOuter("B"), "B", []map[string]any{{"group": "G2", "total": int64(20)}})
+	assertGroups(sendOuter("A"), "A", []map[string]any{{"group": "G1", "total": int64(10)}, {"group": "G2", "total": int64(20)}})
 }
