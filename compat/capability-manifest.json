@@ -209,7 +209,7 @@
       "level": "S",
       "summary": "Fluent pattern composition, tags, repetition, fixed/dynamic/calendar guards and virtual-time timer observers",
       "javaRefs": ["PatternMicrosecondResolution", "PatternOperatorEvery", "PatternOperatorMatchUntil", "PatternOperatorFollowedByMax", "PatternConsumingPattern", "PatternConsumingFilter", "PatternObserverTimerAt", "PatternObserverTimerInterval", "PatternObserverTimerSchedule"],
-      "goRefs": ["pattern.go", "pattern_test.go", "pattern_followed_by_max_test.go", "pattern_consumption_test.go"],
+      "goRefs": ["pattern.go", "pattern_limit.go", "pattern_test.go", "pattern_followed_by_max_test.go", "pattern_followed_by_max_listener_test.go", "pattern_consumption_test.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["complete guard/observer combination", "full nested @consume(N) trace across match-until/guard/observer and complete SODA/invalid matrix", "advanced Match Recognize integration is tracked by rowrecog.match-recognize"]
@@ -930,11 +930,11 @@
       "javaRuntimeIds": ["java-runtime-ab2b08d8274d0609885d", "java-runtime-862a2f5893ecc893cee3", "java-runtime-22ffb66490ffc2d07f4c"],
       "javaNames": ["PatternMultiple", "PatternMixed", "PatternSingleMaxSimple"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedByMax.java"],
-      "goTests": ["TestPatternFollowedByMaxLimitsActiveSubexpressionsMatchesEsper", "TestPatternFollowedByMaxSimpleMatchesEsper", "TestPatternFollowedByMaxRejectsNonPositiveMaximum", "TestPatternFollowedByMaxExpressionUsesVariableAndParameter", "TestPatternFollowedByMaxExpressionRejectsInvalidFieldAndRuntimeValue"],
-      "tags": ["correctness", "pattern", "concurrency", "resource-limit"],
+      "goTests": ["TestPatternFollowedByMaxLimitsActiveSubexpressionsMatchesEsper", "TestPatternFollowedByMaxSimpleMatchesEsper", "TestPatternFollowedByMaxRejectsNonPositiveMaximum", "TestPatternFollowedByMaxExpressionUsesVariableAndParameter", "TestPatternFollowedByMaxExpressionRejectsInvalidFieldAndRuntimeValue", "TestPatternFollowedByMaxReportsRejectedSubexpressionMatchesEsper", "TestPatternFollowedByMaxNestedEdgeDiagnosticIsCoalescedPerInput", "TestPatternSubexpressionLimitListenerRejectsNil"],
+      "tags": ["correctness", "pattern", "concurrency", "resource-limit", "condition-handler", "diagnostic", "listener"],
       "status": "mapped",
       "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
-      "difference": "Go exposes FollowedByMax(maximum, tag, predicate) and FollowedByMaxExpr(expression, tag, predicate) as chainable edge-scoped operators. Runtime capacity counts only active sequence branches waiting on that edge, so nested followed-by operators release and reuse capacity independently; static and resolved dynamic maxima must be positive, and Java-invalid event-field/tag maximum expressions are rejected at Build. Java additionally exposes condition-handler callbacks and runtime subexpression accounting/diagnostics, which remain open."
+      "difference": "Go exposes FollowedByMax(maximum, tag, predicate) and FollowedByMaxExpr(expression, tag, predicate) as chainable edge-scoped operators. Runtime capacity counts only active sequence branches waiting on that edge, so nested followed-by operators release and reuse capacity independently; static and resolved dynamic maxima must be positive, and Java-invalid event-field/tag maximum expressions are rejected at Build. PatternSubexpressionLimitListener reports rejected branches after the Engine lock is released with deployment, statement, canonical edge, resolved maximum and attempted count, coalescing duplicate rejections for one input transition. Java additionally exposes runtime-URI/factory-oriented static ConditionHandler hooks and broader Context/nested subexpression accounting; those remain open."
     },
     {
       "id": "case.pattern-consumption-policy",

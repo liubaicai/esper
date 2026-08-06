@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -146,38 +147,40 @@ func WithStartTime(start time.Time) EngineOption {
 
 // Engine owns deployed statements and the explicit processing clock.
 type Engine struct {
-	mu                                sync.Mutex
-	env                               *Environment
-	clock                             *VirtualClock
-	matchRecognizeStatePool           *rowRecogStatePool
-	matchRecognizeStateLimitListeners []MatchRecognizeStateLimitListener
-	pendingMatchRecognizeStateLimits  []MatchRecognizeStateLimitEvent
-	variables                         map[string]Value
-	contextVariables                  map[string]map[string]map[string]Value
-	contextPartitionRefs              map[string]map[string]int
-	contextPartitionIDs               map[string]map[string]int
-	contextPartitionNextIDs           map[string]int
-	contextPartitionInstanceNextIDs   map[string]uint64
-	contextPartitionDescriptors       map[string]map[string]ContextPartitionDescriptor
-	contextPartitionListeners         map[string][]ContextPartitionStateListener
-	contextTemporalOrigins            map[string]time.Time
-	contextStateListeners             []ContextStateListener
-	contextCreated                    map[string]bool
-	contextStatementRefs              map[string]int
-	pendingContextEvents              []contextNotification
-	variableChangeListeners           map[string][]VariableChangeListener
-	pendingVariableChanges            []VariableChangeEvent
-	tables                            map[string]*Table
-	namedWindows                      map[string]*NamedWindow
-	statements                        map[string]*Statement
-	deployments                       map[string]*Deployment
-	dataflows                         map[*DataflowInstance]struct{}
-	savedDataflowInstances            map[string]*DataflowInstance
-	pendingStatementDispatches        []statementDispatch
-	pendingNamedWindowDispatches      []namedWindowDispatch
-	pendingRoutedEvents               []Event
-	closed                            bool
-	nextID                            uint64
+	mu                                 sync.Mutex
+	env                                *Environment
+	clock                              *VirtualClock
+	matchRecognizeStatePool            *rowRecogStatePool
+	matchRecognizeStateLimitListeners  []MatchRecognizeStateLimitListener
+	pendingMatchRecognizeStateLimits   []MatchRecognizeStateLimitEvent
+	patternSubexpressionLimitListeners []PatternSubexpressionLimitListener
+	pendingPatternSubexpressionLimits  []PatternSubexpressionLimitEvent
+	variables                          map[string]Value
+	contextVariables                   map[string]map[string]map[string]Value
+	contextPartitionRefs               map[string]map[string]int
+	contextPartitionIDs                map[string]map[string]int
+	contextPartitionNextIDs            map[string]int
+	contextPartitionInstanceNextIDs    map[string]uint64
+	contextPartitionDescriptors        map[string]map[string]ContextPartitionDescriptor
+	contextPartitionListeners          map[string][]ContextPartitionStateListener
+	contextTemporalOrigins             map[string]time.Time
+	contextStateListeners              []ContextStateListener
+	contextCreated                     map[string]bool
+	contextStatementRefs               map[string]int
+	pendingContextEvents               []contextNotification
+	variableChangeListeners            map[string][]VariableChangeListener
+	pendingVariableChanges             []VariableChangeEvent
+	tables                             map[string]*Table
+	namedWindows                       map[string]*NamedWindow
+	statements                         map[string]*Statement
+	deployments                        map[string]*Deployment
+	dataflows                          map[*DataflowInstance]struct{}
+	savedDataflowInstances             map[string]*DataflowInstance
+	pendingStatementDispatches         []statementDispatch
+	pendingNamedWindowDispatches       []namedWindowDispatch
+	pendingRoutedEvents                []Event
+	closed                             bool
+	nextID                             uint64
 }
 
 func NewEngine(env *Environment, options ...EngineOption) *Engine {
@@ -1049,6 +1052,7 @@ func (e *Engine) InsertNamedWindow(ctx context.Context, name string, underlying 
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
 	e.pendingMatchRecognizeStateLimits = nil
+	e.pendingPatternSubexpressionLimits = nil
 	dispatches := make([]statementDispatch, 0, len(statements))
 	for _, statement := range statements {
 		batch, changed, processErr := statement.processNamedWindow(ctx, now, delta, variables)
@@ -1083,6 +1087,7 @@ func (e *Engine) InsertNamedWindow(ctx context.Context, name string, underlying 
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
 	e.dispatchMatchRecognizeStateLimitEvents()
+	e.dispatchPatternSubexpressionLimitEvents()
 	if err := dispatchAll(ctx, dispatches); err != nil {
 		return err
 	}
@@ -1751,6 +1756,7 @@ func (e *Engine) Send(ctx context.Context, eventType string, underlying any) err
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
 	e.pendingMatchRecognizeStateLimits = nil
+	e.pendingPatternSubexpressionLimits = nil
 	dispatches := make([]statementDispatch, 0)
 	routedQueue := []Event{event}
 	processedEvents := make([]Event, 0, 1)
@@ -1802,6 +1808,7 @@ func (e *Engine) Send(ctx context.Context, eventType string, underlying any) err
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
 	e.dispatchMatchRecognizeStateLimitEvents()
+	e.dispatchPatternSubexpressionLimitEvents()
 	if err := dispatchAll(ctx, dispatches); err != nil {
 		return err
 	}
@@ -2002,6 +2009,7 @@ func (e *Engine) AdvanceTime(ctx context.Context, at time.Time) error {
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
 	e.pendingMatchRecognizeStateLimits = nil
+	e.pendingPatternSubexpressionLimits = nil
 	dispatches := make([]statementDispatch, 0, len(statements))
 	namedWindowDispatches := make([]namedWindowDispatch, 0, len(e.namedWindows))
 	for _, name := range sortedNamedWindowNames(e.namedWindows) {
@@ -2061,6 +2069,7 @@ func (e *Engine) AdvanceTime(ctx context.Context, at time.Time) error {
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
 	e.dispatchMatchRecognizeStateLimitEvents()
+	e.dispatchPatternSubexpressionLimitEvents()
 	if err := dispatchAll(ctx, dispatches); err != nil {
 		return err
 	}
@@ -7425,23 +7434,67 @@ func patternCanContinueAfterMatch(progress *patternProgress) bool {
 // composed followed-by edges independent, matching Esper's subexpression
 // scope instead of treating every active root as one shared bucket.
 func patternMatchWithinLimits(active []patternMatch, candidate patternMatch, definition *patternDefinition) bool {
+	allowed, _ := patternMatchLimit(active, candidate, definition)
+	return allowed
+}
+
+type patternSequenceLimitViolation struct {
+	edge      string
+	maximum   int
+	attempted int
+}
+
+func patternMatchLimit(active []patternMatch, candidate patternMatch, definition *patternDefinition) (bool, *patternSequenceLimitViolation) {
 	if definition == nil {
-		return true
+		return true, nil
 	}
 	if definition.maxStates > 0 && len(active) >= definition.maxStates {
-		return false
+		return false, nil
 	}
 	counts := make(map[*patternNode]patternSequenceMaxCount)
 	for _, match := range active {
 		addPatternSequenceMaxCounts(counts, match.state)
 	}
 	addPatternSequenceMaxCounts(counts, candidate.state)
-	for _, count := range counts {
-		if count.maximum <= 0 || count.count > count.maximum {
-			return false
+	violations := make([]patternSequenceLimitViolation, 0)
+	for node, count := range counts {
+		if count.maximum <= 0 {
+			return false, nil
+		}
+		if count.count > count.maximum {
+			violations = append(violations, patternSequenceLimitViolation{
+				edge:      node.description(),
+				maximum:   count.maximum,
+				attempted: count.count,
+			})
 		}
 	}
-	return true
+	if len(violations) == 0 {
+		return true, nil
+	}
+	sort.Slice(violations, func(left, right int) bool {
+		if violations[left].edge != violations[right].edge {
+			return violations[left].edge < violations[right].edge
+		}
+		return violations[left].maximum < violations[right].maximum
+	})
+	return false, &violations[0]
+}
+
+func (r *statementRuntime) admitPatternMatch(active []patternMatch, candidate patternMatch, definition *patternDefinition) bool {
+	allowed, violation := patternMatchLimit(active, candidate, definition)
+	if allowed || violation == nil || r == nil || r.engine == nil {
+		return allowed
+	}
+	deploymentID, statementName, _ := strings.Cut(r.rowRecogOwner, ":")
+	r.engine.queuePatternSubexpressionLimitLocked(PatternSubexpressionLimitEvent{
+		DeploymentID:  deploymentID,
+		StatementName: statementName,
+		Edge:          violation.edge,
+		Maximum:       violation.maximum,
+		Attempted:     violation.attempted,
+	})
+	return false
 }
 
 type patternSequenceMaxCount struct {
@@ -8072,7 +8125,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 						batch.New = append(batch.New, resultRow(row))
 					}
-					if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
+					if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
 						nextActive = append(nextActive, candidate)
 					}
 					if patternWithinTerminal(transition.state) {
@@ -8083,7 +8136,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				if patternProgressTerminal(transition.state) {
 					terminal = true
 				}
-				if patternProgressActive(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
+				if patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 			}
@@ -8120,13 +8173,13 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					if row, visible := evaluatePatternMatch(definition, started, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, started) {
 						batch.New = append(batch.New, resultRow(row))
 					}
-					if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, started, definition) {
+					if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, started, definition) {
 						nextActive = append(nextActive, started)
 					}
 					if patternWithinTerminal(transition.state) {
 						terminal = true
 					}
-				} else if patternMatchWithinLimits(nextActive, started, definition) {
+				} else if r.admitPatternMatch(nextActive, started, definition) {
 					nextActive = append(nextActive, started)
 					if patternProgressTerminal(transition.state) {
 						terminal = true
@@ -8323,7 +8376,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 				if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 					batch.New = append(batch.New, resultRow(row))
 				}
-				if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
+				if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternWithinTerminal(transition.state) {
@@ -8333,7 +8386,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 					progress := newPatternProgress(definition.root)
 					armPatternProgressTimers(progress, now, r.variables)
 					candidate := patternMatch{state: progress, startedAt: now}
-					if patternProgressActive(progress) && patternMatchWithinLimits(nextActive, candidate, definition) {
+					if patternProgressActive(progress) && r.admitPatternMatch(nextActive, candidate, definition) {
 						nextActive = append(nextActive, candidate)
 					}
 				}
@@ -8342,7 +8395,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 			if patternWithinTerminal(transition.state) {
 				terminal = true
 			}
-			if patternProgressActive(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
+			if patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
