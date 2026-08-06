@@ -217,6 +217,75 @@ func TestMultiJoinSelectionCorrelatesSubqueryToAnyOuterSource(t *testing.T) {
 	}
 }
 
+func TestJoinAggregateCorrelatedSubqueryCarriesTupleScope(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[joinOrder](env, "JoinAggregateSubqueryOrder"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[joinPayment](env, "JoinAggregateSubqueryPayment"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[joinSubqueryReference](env, "JoinAggregateSubqueryReference"); err != nil {
+		t.Fatal(err)
+	}
+	inner := Select(From[joinSubqueryReference](env, "JoinAggregateSubqueryReference")).Window(LastEvent())
+	correlated := SubqueryValue[string](
+		inner,
+		Field[joinSubqueryReference, string]("value"),
+		Equal[string](
+			Field[joinSubqueryReference, string]("orderID"),
+			JoinField[string](0, "orderID"),
+		),
+	)
+	plan, err := env.Build(Join(
+		From[joinOrder](env, "JoinAggregateSubqueryOrder"),
+		From[joinPayment](env, "JoinAggregateSubqueryPayment"),
+		OnEqual(
+			Field[joinOrder, string]("orderID"),
+			Field[joinPayment, string]("orderID"),
+		),
+	).GroupBy(correlated).Select(
+		Alias("reference", correlated),
+		Alias("count", CountAll()),
+	).Query(StatementName("join-aggregate-correlated-subquery")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "JoinAggregateSubqueryReference", joinSubqueryReference{OrderID: "O1", Value: "v1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "JoinAggregateSubqueryOrder", joinOrder{OrderID: "O1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "JoinAggregateSubqueryPayment", joinPayment{OrderID: "O1", Amount: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("join aggregate correlated subquery rows = %#v", rows)
+	}
+	if rows[0].Get("reference").Any() != "v1" || rows[0].Get("count").Any() != int64(1) {
+		t.Fatalf("join aggregate correlated subquery tuple scope = %#v", rows[0].AsMap())
+	}
+}
+
 func TestContextJoinSelectionCorrelatedSubqueryKeepsPartitionLocalState(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[joinOrder](env, "ContextJoinSubqueryOrder"); err != nil {

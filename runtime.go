@@ -2445,6 +2445,13 @@ var joinTupleSchema = func() Schema {
 	return schema
 }()
 
+func joinTupleEvents(event Event) []Event {
+	if tuple, ok := event.Underlying().(joinTuple); ok {
+		return tuple.events
+	}
+	return nil
+}
+
 func newJoinTupleEvent(events []Event, receivedAt time.Time) Event {
 	return Event{
 		typeName:   "esper:join-tuple",
@@ -9164,7 +9171,7 @@ func aggregateGroupKey(groupBy []Expr, groupingSet []int, event Event, now time.
 			values = append(values, Null())
 			continue
 		}
-		values = append(values, expression.eval(EvalContext{Event: event, Now: now, Variables: variables}).Any())
+		values = append(values, expression.eval(EvalContext{Event: event, JoinEvents: joinTupleEvents(event), Now: now, Variables: variables}).Any())
 	}
 	return encodeKey(values)
 }
@@ -9196,7 +9203,7 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 			current = everEvents[0]
 		}
 	}
-	ctx := EvalContext{Event: current, Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Now: now, Variables: variables, aggregatePluginStates: pluginStates}
+	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Now: now, Variables: variables, aggregatePluginStates: pluginStates}
 	if len(definition.groupBy) > 0 {
 		groupingEvent := current
 		if groupingEvent.Schema().Name() == "" {
@@ -9223,7 +9230,7 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 			}
 			ctx.groupingPresent[key] = isPresent
 			if isPresent {
-				ctx.groupingValues[key] = expression.eval(EvalContext{Event: groupingEvent, Now: now, Variables: variables})
+				ctx.groupingValues[key] = expression.eval(EvalContext{Event: groupingEvent, JoinEvents: joinTupleEvents(groupingEvent), Now: now, Variables: variables})
 			} else {
 				ctx.groupingValues[key] = Null()
 			}
