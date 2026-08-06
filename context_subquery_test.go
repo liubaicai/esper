@@ -393,3 +393,87 @@ func TestContextNamedWindowSubqueryUsesGlobalState(t *testing.T) {
 	sendOuter("G1", 20, "S02", false)
 	sendOuter("G2", 20, "S02", false)
 }
+
+func TestContextSubquerySnapshotPreservesPartitionRegistry(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[contextSubqueryOuter](env, "ContextSnapshotOuter"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[contextSubqueryReference](env, "ContextSnapshotReference"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateKeyContext(env, "context-subquery-snapshot", Field[contextSubqueryOuter, string]("symbol")); err != nil {
+		t.Fatal(err)
+	}
+
+	inner := Select(From[contextSubqueryReference](env, "ContextSnapshotReference")).Window(LastEvent())
+	query := Select(
+		From[contextSubqueryOuter](env, "ContextSnapshotOuter").Window(LastEvent()),
+		Alias("symbol", Field[contextSubqueryOuter, string]("symbol")),
+		Alias("value", SubqueryValue[string](
+			inner,
+			Field[contextSubqueryReference, string]("value"),
+			Equal[int64](Field[contextSubqueryReference, int64]("id"), OuterField[int64]("id")),
+		)),
+	).Query(StatementName("context-subquery-snapshot"), WithContext("context-subquery-snapshot"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statement := deployment.Statements()[0]
+
+	if err := engine.SendEvent(context.Background(), contextSubqueryOuter{Symbol: "A", ID: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), contextSubqueryReference{ID: 1, Value: "A1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), contextSubqueryOuter{Symbol: "A", ID: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), contextSubqueryOuter{Symbol: "B", ID: 1}); err != nil {
+		t.Fatal(err)
+	}
+
+	keys := statement.ContextPartitionKeys()
+	if len(keys) != 2 {
+		t.Fatalf("context subquery snapshot partition keys = %v", keys)
+	}
+	selected, err := statement.SnapshotWithSelector(context.Background(), SelectContextPartitions(keys[0]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(selected.Results()) != 1 {
+		t.Fatalf("selected context subquery snapshot = %#v, keys=%v", selected.Results(), keys)
+	}
+	selectedRow, ok := selected.Results()[0].Row()
+	if !ok || selectedRow.Get("symbol").Any() != "A" || selectedRow.Get("value").Any() != "A1" {
+		t.Fatalf("selected context subquery snapshot row = %#v", selected.Results()[0])
+	}
+
+	all, err := statement.SnapshotWithSelector(context.Background(), ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all.Results()) != 2 {
+		t.Fatalf("all context subquery snapshot = %#v", all.Results())
+	}
+	for _, result := range all.Results() {
+		row, ok := result.Row()
+		if !ok {
+			t.Fatalf("all context subquery snapshot row = %#v", result)
+		}
+		if row.Get("symbol").Any() == "A" {
+			if row.Get("value").Any() != "A1" {
+				t.Fatalf("all context subquery A snapshot row = %#v", result)
+			}
+		} else if row.Get("symbol").Any() == "B" && !row.Get("value").IsNull() {
+			t.Fatalf("all context subquery B snapshot row = %#v", result)
+		}
+	}
+}
