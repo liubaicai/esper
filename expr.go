@@ -2347,20 +2347,13 @@ func InstanceOf[T any](value Expr) Expression[bool] {
 	})
 }
 
-// ArrayAt safely indexes a slice expression. Missing, Null and out-of-range
-// access return Null rather than panicking.
-func ArrayAt[T any](values Expression[[]T], index Expression[int64]) Expression[T] {
-	if values == nil || index == nil {
-		return makeExpr[T]("array-at", "array-at(<invalid>)", nil, func(EvalContext) Value { return Null() })
-	}
-	return makeExpr[T]("array-at", "array-at("+values.Description()+","+index.Description()+")", []*exprNode{values.node(), index.node()}, func(ctx EvalContext) Value {
-		items, itemsErr := As[[]T](values.eval(ctx))
-		position, positionErr := As[int64](index.eval(ctx))
-		if itemsErr != nil || positionErr != nil || position < 0 || position >= int64(len(items)) {
-			return Null()
-		}
-		return Present(items[position])
-	})
+// ArrayAt safely indexes an array or slice expression. The operands are Expr
+// rather than one fixed slice/index instantiation so a fluent rule can use an
+// int field, a fixed-size Go array, or a nested dynamic value as Esper's
+// indexed-property operation does. Missing, Null, invalid-index and
+// out-of-range access return Null rather than panicking.
+func ArrayAt[T any](values, index Expr) Expression[T] {
+	return arrayElementAt[T](values, index)
 }
 
 // MapAt safely reads one key from a map expression. Missing, Null, a
