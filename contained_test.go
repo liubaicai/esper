@@ -6,8 +6,14 @@ import (
 )
 
 type unnestBook struct {
-	ID    string  `esper:"id"`
-	Price float64 `esper:"price"`
+	ID      string         `esper:"id"`
+	Price   float64        `esper:"price"`
+	Reviews []unnestReview `esper:"reviews"`
+}
+
+type unnestReview struct {
+	ID     string `esper:"id"`
+	Rating int64  `esper:"rating"`
 }
 
 type unnestOrder struct {
@@ -154,5 +160,67 @@ func TestUnnestAggregateCountMatchesEsper(t *testing.T) {
 	row, ok := batches[0].New[0].Row()
 	if !ok || row.Get("count").Any() != int64(3) {
 		t.Fatalf("unnest aggregate row = %#v", batches[0].New[0])
+	}
+}
+
+func TestUnnestNestedStructsPreserveParentArrayOrder(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[unnestOrder](env, "UnnestOrder"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[unnestBook](env, "UnnestBook"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[unnestReview](env, "UnnestReview"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	books := buildUnnestBookStream(env)
+	reviews := Property[[]unnestReview](EventValue[unnestBook](), "reviews")
+	reviewStream := Unnest[unnestBook, unnestReview](books, reviews)
+	plan, err := env.Build(Select(reviewStream,
+		Alias("id", Field[unnestReview, string]("id")),
+		Alias("rating", Field[unnestReview, int64]("rating")),
+	).Query(StatementName("unnest-nested")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("nested unnest result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), unnestOrder{
+		OrderID: "O-nested",
+		Books: []unnestBook{
+			{ID: "B-1", Reviews: []unnestReview{{ID: "R-1", Rating: 5}, {ID: "R-2", Rating: 4}}},
+			{ID: "B-2", Reviews: []unnestReview{{ID: "R-3", Rating: 3}}},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 3 {
+		t.Fatalf("nested unnest rows = %#v", rows)
+	}
+	want := []struct {
+		id     string
+		rating int64
+	}{{"R-1", 5}, {"R-2", 4}, {"R-3", 3}}
+	for index, expected := range want {
+		if got := rows[index]; got.Get("id").Any() != expected.id || got.Get("rating").Any() != expected.rating {
+			t.Fatalf("nested unnest row %d = %#v, want %#v", index, got, expected)
+		}
 	}
 }
