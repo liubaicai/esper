@@ -20,14 +20,15 @@ const (
 )
 
 type streamNode struct {
-	kind       streamNodeKind
-	input      *streamNode
-	sourceName string
-	sourceType reflect.Type
-	historical *historicalDefinition
-	method     *methodDefinition
-	predicate  Expr
-	window     WindowSpec
+	kind               streamNodeKind
+	input              *streamNode
+	sourceName         string
+	sourceType         reflect.Type
+	configurationError string
+	historical         *historicalDefinition
+	method             *methodDefinition
+	predicate          Expr
+	window             WindowSpec
 }
 
 func (n *streamNode) describe() string {
@@ -58,13 +59,15 @@ func (n *streamNode) describe() string {
 	case streamMethod:
 		schemaName := "<nil>"
 		triggerName := ""
+		dependencies := ""
 		if n.method != nil && n.method.schema.valid() {
 			schemaName = n.method.schema.Name()
 		}
 		if n.method != nil {
 			triggerName = n.method.trigger
+			dependencies = strings.Join(n.method.dependencies, ",")
 		}
-		return "method(" + n.sourceName + ":" + schemaName + ":trigger=" + triggerName + ")"
+		return "method(" + n.sourceName + ":" + schemaName + ":trigger=" + triggerName + ":depends=" + dependencies + ")"
 	default:
 		return "<unknown-stream>"
 	}
@@ -527,6 +530,45 @@ func FromMethodOn[T any](env *Environment, sourceName, triggerType string, schem
 			method:     &methodDefinition{name: sourceName, trigger: triggerType, schema: schema, provider: provider},
 		},
 	}
+}
+
+// DependingOn declares lateral/subordinate method inputs by join source
+// name. During a join the provider is polled once for every compatible
+// dependency tuple and obtains those events through MethodRequest.Dependency.
+// Build rejects unknown, duplicate, cyclic and outer-join-incompatible
+// dependencies. The stream value is cloned, preserving fluent API immutability.
+func (s Stream[T]) DependingOn(sourceNames ...string) Stream[T] {
+	node := cloneStreamNode(s.node)
+	base, err := sourceNode(node)
+	if err != nil || base.kind != streamMethod || base.method == nil {
+		if node != nil {
+			node.configurationError = "DependingOn requires a method source"
+		}
+		return Stream[T]{env: s.env, node: node}
+	}
+	base.method.dependencies = make([]string, len(sourceNames))
+	for index, name := range sourceNames {
+		base.method.dependencies[index] = strings.TrimSpace(name)
+	}
+	return Stream[T]{env: s.env, node: node}
+}
+
+func cloneStreamNode(node *streamNode) *streamNode {
+	if node == nil {
+		return nil
+	}
+	cloned := *node
+	cloned.input = cloneStreamNode(node.input)
+	if node.historical != nil {
+		definition := *node.historical
+		cloned.historical = &definition
+	}
+	if node.method != nil {
+		definition := *node.method
+		definition.dependencies = append([]string(nil), node.method.dependencies...)
+		cloned.method = &definition
+	}
+	return &cloned
 }
 
 func (s Stream[T]) Filter(predicate Expression[bool]) Stream[T] {
@@ -1926,6 +1968,94 @@ func joinDefinitionSources(definition *joinDefinition) []*streamNode {
 		return definition.sources
 	}
 	return []*streamNode{definition.left, definition.right}
+}
+
+func streamHasMethodDependencies(node *streamNode) bool {
+	base, err := sourceNode(node)
+	return err == nil && base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0
+}
+
+// methodJoinEvaluationOrder validates explicit subordinate method
+// dependencies and returns a stable topological order. Source declaration
+// order remains untouched and therefore continues to define join indexes.
+func methodJoinEvaluationOrder(definition *joinDefinition) ([]int, error) {
+	sources := joinDefinitionSources(definition)
+	bases := make([]*streamNode, len(sources))
+	byName := make(map[string][]int, len(sources))
+	for index, source := range sources {
+		base, err := sourceNode(source)
+		if err != nil {
+			return nil, err
+		}
+		bases[index] = base
+		name := strings.TrimSpace(base.sourceName)
+		byName[name] = append(byName[name], index)
+	}
+
+	indegree := make([]int, len(sources))
+	edges := make([][]int, len(sources))
+	for methodIndex, base := range bases {
+		if base.kind != streamMethod || base.method == nil {
+			continue
+		}
+		seen := make(map[string]struct{}, len(base.method.dependencies))
+		for _, dependency := range base.method.dependencies {
+			name := strings.TrimSpace(dependency)
+			if name == "" {
+				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q has a blank dependency", base.sourceName))
+			}
+			if _, exists := seen[name]; exists {
+				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q duplicates dependency %q", base.sourceName, name))
+			}
+			seen[name] = struct{}{}
+			matches := byName[name]
+			if len(matches) == 0 {
+				return nil, NewError(ErrorUnknownName, fmt.Sprintf("method source %q references unknown dependency %q", base.sourceName, name))
+			}
+			if len(matches) > 1 {
+				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q is ambiguous", base.sourceName, name))
+			}
+			dependencyIndex := matches[0]
+			if dependencyIndex == methodIndex {
+				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q cannot depend on itself", base.sourceName))
+			}
+			switch definition.kind {
+			case JoinLeftOuter:
+				if dependencyIndex > methodIndex {
+					return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot be satisfied by the left outer join", base.sourceName, name))
+				}
+			case JoinRightOuter:
+				if dependencyIndex < methodIndex {
+					return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot be satisfied by the right outer join", base.sourceName, name))
+				}
+			case JoinFullOuter:
+				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot be guaranteed by the full outer join", base.sourceName, name))
+			}
+			edges[dependencyIndex] = append(edges[dependencyIndex], methodIndex)
+			indegree[methodIndex]++
+		}
+	}
+
+	order := make([]int, 0, len(sources))
+	used := make([]bool, len(sources))
+	for len(order) < len(sources) {
+		selected := -1
+		for index := range sources {
+			if !used[index] && indegree[index] == 0 {
+				selected = index
+				break
+			}
+		}
+		if selected < 0 {
+			return nil, NewError(ErrorInvalidRule, "method source dependencies contain a cycle")
+		}
+		used[selected] = true
+		order = append(order, selected)
+		for _, dependent := range edges[selected] {
+			indegree[dependent]--
+		}
+	}
+	return order, nil
 }
 
 func describeJoinDefinition(definition *joinDefinition) string {

@@ -420,6 +420,9 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	} else if err := e.validateNode(query.input); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "stream", err)
 	}
+	if query.join == nil && (query.aggregate == nil || query.aggregate.join == nil) && streamHasMethodDependencies(query.input) {
+		return Plan{}, WrapError(ErrorInvalidRule, "stream", NewError(ErrorInvalidRule, "method dependencies require a join"))
+	}
 	if query.contextName != "" {
 		definition, ok := e.Context(query.contextName)
 		if !ok {
@@ -1148,6 +1151,9 @@ func (e *Environment) validateQueryModifiers(query Query) error {
 func (e *Environment) validateNode(node *streamNode) error {
 	if node == nil {
 		return fmt.Errorf("esper: nil stream node")
+	}
+	if node.configurationError != "" {
+		return NewError(ErrorInvalidRule, node.configurationError)
 	}
 	switch node.kind {
 	case streamSource:
@@ -2301,6 +2307,9 @@ func (e *Environment) validateJoin(definition *joinDefinition, selections []Join
 		if err := e.validateNode(source); err != nil {
 			return fmt.Errorf("join source %d: %w", index, err)
 		}
+	}
+	if _, err := methodJoinEvaluationOrder(definition); err != nil {
+		return err
 	}
 	conditions := joinDefinitionConditions(definition)
 	if len(conditions) == 0 {

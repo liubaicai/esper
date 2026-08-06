@@ -2433,6 +2433,8 @@ type storedEvent struct {
 	event      Event
 	receivedAt time.Time
 	expiresAt  time.Time
+	lineageID  uint64
+	lineage    map[int]uint64
 }
 
 var joinTupleSchema = func() Schema {
@@ -2508,6 +2510,8 @@ type statementRuntime struct {
 	nextPartitionID          int
 	contextProperties        map[string]Value
 	variables                map[string]Value
+	methodDependencies       map[string]Event
+	joinLineageSeq           uint64
 	subqueryRegistry         *subqueryRuntimeRegistry
 	seq                      *atomic.Uint64
 	pendingOutputAssignments []VariableAssignment
@@ -4514,7 +4518,7 @@ func (r *statementRuntime) snapshotJoinBatch(plan Plan, now time.Time) ResultBat
 		if index >= len(state.sides) {
 			state.sides = append(state.sides, make([][]storedEvent, index-len(state.sides)+1)...)
 		}
-		state.sides[index] = side
+		state.sides[index] = r.assignJoinLineageIDs(side, state.sides[index])
 	}
 	tuples := joinTuples(plan.query.join, state, now, r)
 	result.New = projectJoinTuples(tuples, plan.query, plan.resultSchema, now, r.variables, false)
@@ -4531,7 +4535,11 @@ func cloneJoinRuntimeState(state *joinRuntimeState) *joinRuntimeState {
 	}
 	copyState := &joinRuntimeState{sides: make([][]storedEvent, len(state.sides))}
 	for index, side := range state.sides {
-		copyState.sides[index] = append([]storedEvent(nil), side...)
+		copyState.sides[index] = make([]storedEvent, len(side))
+		for eventIndex, stored := range side {
+			copyState.sides[index][eventIndex] = stored
+			copyState.sides[index][eventIndex].lineage = cloneMethodLineage(stored.lineage)
+		}
 	}
 	return copyState
 }
@@ -5244,9 +5252,22 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	if len(r.joinState.sides) != len(sources) {
 		r.joinState.sides = make([][]storedEvent, len(sources))
 	}
+	evaluationOrder, err := methodJoinEvaluationOrder(definition)
+	if err != nil {
+		return joinDelta{}, err
+	}
 	before := joinTuples(definition, r.joinState, now, r)
 	for _, event := range newEvents {
+		// Historical and method results belong to exactly one trigger cycle.
+		// Clear all such sides before evaluating the dependency graph so a
+		// subordinate source can never observe a previous trigger's rows.
 		for index, source := range sources {
+			if containsHistoricalSource(source) {
+				r.joinState.sides[index] = nil
+			}
+		}
+		for _, index := range evaluationOrder {
+			source := sources[index]
 			base, baseErr := sourceNode(source)
 			if baseErr != nil {
 				return joinDelta{}, baseErr
@@ -5260,14 +5281,30 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 				if snapshotErr != nil {
 					return joinDelta{}, snapshotErr
 				}
-				r.joinState.sides[index] = side
+				r.joinState.sides[index] = r.assignJoinLineageIDs(side, r.joinState.sides[index])
 				continue
 			}
-			if containsHistoricalSource(source) {
-				// A historical poll is a per-trigger result set, not a retained
-				// event window. Replace the previous poll before evaluating the
-				// current join tuple.
-				r.joinState.sides[index] = nil
+			if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
+				invocations, invocationErr := methodDependencyInvocations(base.method.dependencies, sources, r.joinState)
+				if invocationErr != nil {
+					return joinDelta{}, invocationErr
+				}
+				for _, invocation := range invocations {
+					previous := r.methodDependencies
+					r.methodDependencies = invocation.events
+					delta, insertErr := r.insert(source, event, now)
+					r.methodDependencies = previous
+					if insertErr != nil {
+						return joinDelta{}, insertErr
+					}
+					removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
+					for _, newEvent := range delta.newEvents {
+						r.joinState.sides[index] = append(r.joinState.sides[index], storedEvent{
+							event: newEvent, receivedAt: now, lineageID: r.nextJoinLineageID(), lineage: cloneMethodLineage(invocation.lineage),
+						})
+					}
+				}
+				continue
 			}
 			delta, err := r.insert(source, event, now)
 			if err != nil {
@@ -5275,7 +5312,7 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 			}
 			removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
 			for _, newEvent := range delta.newEvents {
-				r.joinState.sides[index] = append(r.joinState.sides[index], storedEvent{event: newEvent, receivedAt: now})
+				r.joinState.sides[index] = append(r.joinState.sides[index], storedEvent{event: newEvent, receivedAt: now, lineageID: r.nextJoinLineageID()})
 			}
 		}
 	}
@@ -5291,6 +5328,98 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	after := joinTuples(definition, r.joinState, now, r)
 	delta := diffJoinTuples(before, after)
 	return joinDeltaWithPairs(delta), nil
+}
+
+type methodDependencyInvocation struct {
+	events  map[string]Event
+	lineage map[int]uint64
+}
+
+func methodDependencyInvocations(dependencies []string, sources []*streamNode, state *joinRuntimeState) ([]methodDependencyInvocation, error) {
+	if len(dependencies) == 0 {
+		return []methodDependencyInvocation{{}}, nil
+	}
+	byName := make(map[string]int, len(sources))
+	for index, source := range sources {
+		base, err := sourceNode(source)
+		if err != nil {
+			return nil, err
+		}
+		byName[strings.TrimSpace(base.sourceName)] = index
+	}
+	invocations := []methodDependencyInvocation{{events: make(map[string]Event), lineage: make(map[int]uint64)}}
+	for _, rawName := range dependencies {
+		name := strings.TrimSpace(rawName)
+		dependencyIndex, ok := byName[name]
+		if !ok || dependencyIndex < 0 || dependencyIndex >= len(state.sides) {
+			return nil, NewError(ErrorUnknownName, fmt.Sprintf("unknown method dependency %q", name))
+		}
+		if len(state.sides[dependencyIndex]) == 0 {
+			return nil, nil
+		}
+		next := make([]methodDependencyInvocation, 0, len(invocations)*len(state.sides[dependencyIndex]))
+		for _, invocation := range invocations {
+			for _, selected := range state.sides[dependencyIndex] {
+				lineage := cloneMethodLineage(invocation.lineage)
+				if !mergeMethodLineage(lineage, selected.lineage) || !mergeMethodLineage(lineage, map[int]uint64{dependencyIndex: selected.lineageID}) {
+					continue
+				}
+				events := cloneMethodDependencies(invocation.events)
+				events[name] = selected.event
+				next = append(next, methodDependencyInvocation{events: events, lineage: lineage})
+			}
+		}
+		invocations = next
+	}
+	return invocations, nil
+}
+
+func mergeMethodLineage(target map[int]uint64, additions map[int]uint64) bool {
+	for index, lineageID := range additions {
+		if existing, exists := target[index]; exists && existing != lineageID {
+			return false
+		}
+		target[index] = lineageID
+	}
+	return true
+}
+
+func cloneMethodLineage(lineage map[int]uint64) map[int]uint64 {
+	cloned := make(map[int]uint64, len(lineage))
+	for index, lineageID := range lineage {
+		cloned[index] = lineageID
+	}
+	return cloned
+}
+
+func cloneMethodDependencies(dependencies map[string]Event) map[string]Event {
+	cloned := make(map[string]Event, len(dependencies))
+	for name, event := range dependencies {
+		cloned[name] = event
+	}
+	return cloned
+}
+
+func (r *statementRuntime) nextJoinLineageID() uint64 {
+	r.joinLineageSeq++
+	return r.joinLineageSeq
+}
+
+func (r *statementRuntime) assignJoinLineageIDs(events, previous []storedEvent) []storedEvent {
+	used := make([]bool, len(previous))
+	for index := range events {
+		for previousIndex, stored := range previous {
+			if !used[previousIndex] && sameEvent(events[index].event, stored.event) {
+				events[index].lineageID = stored.lineageID
+				used[previousIndex] = true
+				break
+			}
+		}
+		if events[index].lineageID == 0 {
+			events[index].lineageID = r.nextJoinLineageID()
+		}
+	}
+	return events
 }
 
 func (r *statementRuntime) snapshotTableJoinSide(source, base *streamNode, now time.Time) ([]storedEvent, error) {
@@ -5449,6 +5578,10 @@ func joinTuples(definition *joinDefinition, state *joinRuntimeState, now time.Ti
 		for _, left := range state.sides[0] {
 			matched := false
 			for rightIndex, right := range state.sides[1] {
+				storedTuple := []storedEvent{left, right}
+				if !joinStoredTupleMatchesLineage(storedTuple) {
+					continue
+				}
 				tuple := []Event{left.event, right.event}
 				if joinConditionsMatch(conditions, tuple, now, runtime) {
 					matched = true
@@ -5479,9 +5612,13 @@ func joinTuples(definition *joinDefinition, state *joinRuntimeState, now time.Ti
 	}
 	result := make([][]Event, 0)
 	current := make([]Event, 0, len(sources))
+	currentStored := make([]storedEvent, 0, len(sources))
 	var visit func(int)
 	visit = func(index int) {
 		if index == len(state.sides) {
+			if !joinStoredTupleMatchesLineage(currentStored) {
+				return
+			}
 			candidate := append([]Event(nil), current...)
 			if joinConditionsMatch(conditions, candidate, now, runtime) {
 				result = append(result, candidate)
@@ -5490,8 +5627,10 @@ func joinTuples(definition *joinDefinition, state *joinRuntimeState, now time.Ti
 		}
 		for _, stored := range state.sides[index] {
 			current = append(current, stored.event)
+			currentStored = append(currentStored, stored)
 			visit(index + 1)
 			current = current[:len(current)-1]
+			currentStored = currentStored[:len(currentStored)-1]
 		}
 	}
 	visit(0)
@@ -5511,10 +5650,14 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 		matched[index] = make([]bool, len(state.sides[index]))
 	}
 	current := make([]Event, 0, len(sources))
+	currentStored := make([]storedEvent, 0, len(sources))
 	currentIndexes := make([]int, 0, len(sources))
 	var visit func(int)
 	visit = func(index int) {
 		if index == len(state.sides) {
+			if !joinStoredTupleMatchesLineage(currentStored) {
+				return
+			}
 			candidate := append([]Event(nil), current...)
 			if !joinConditionsMatch(conditions, candidate, now, runtime) {
 				return
@@ -5527,9 +5670,11 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 		}
 		for sideIndex, stored := range state.sides[index] {
 			current = append(current, stored.event)
+			currentStored = append(currentStored, stored)
 			currentIndexes = append(currentIndexes, sideIndex)
 			visit(index + 1)
 			current = current[:len(current)-1]
+			currentStored = currentStored[:len(currentStored)-1]
 			currentIndexes = currentIndexes[:len(currentIndexes)-1]
 		}
 	}
@@ -5557,6 +5702,17 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 		}
 	}
 	return result
+}
+
+func joinStoredTupleMatchesLineage(tuple []storedEvent) bool {
+	for _, stored := range tuple {
+		for dependencyIndex, dependencyLineageID := range stored.lineage {
+			if dependencyIndex < 0 || dependencyIndex >= len(tuple) || tuple[dependencyIndex].lineageID != dependencyLineageID {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func joinConditionsMatch(conditions []JoinCondition, events []Event, now time.Time, runtime *statementRuntime) bool {
@@ -5684,7 +5840,11 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		if node.method.trigger != "" && node.method.trigger != event.TypeName() {
 			return eventDelta{}, nil
 		}
-		events, err := node.method.provider.Poll(r.context(), MethodRequest{Trigger: event, Now: now, Variables: visibleVariableValues(r.variables), Parameters: parameterValuesFromVariables(r.variables)})
+		events, err := node.method.provider.Poll(r.context(), MethodRequest{
+			Trigger: event, Now: now,
+			Variables: visibleVariableValues(r.variables), Parameters: parameterValuesFromVariables(r.variables),
+			Dependencies: cloneMethodDependencies(r.methodDependencies),
+		})
 		if err != nil {
 			return eventDelta{}, err
 		}

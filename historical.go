@@ -34,10 +34,19 @@ type HistoricalProvider interface {
 // fire-and-forget snapshot. Variables and Parameters are immutable snapshots
 // for the current evaluation.
 type MethodRequest struct {
-	Trigger    Event
-	Now        time.Time
-	Variables  map[string]Value
-	Parameters map[string]Value
+	Trigger      Event
+	Now          time.Time
+	Variables    map[string]Value
+	Parameters   map[string]Value
+	Dependencies map[string]Event
+}
+
+// Dependency returns the event selected for one explicitly declared method
+// source dependency. The map is a per-invocation snapshot; providers should
+// use this helper instead of relying on join source indexes.
+func (r MethodRequest) Dependency(sourceName string) (Event, bool) {
+	event, ok := r.Dependencies[strings.TrimSpace(sourceName)]
+	return event, ok
 }
 
 // MethodProvider is the Go-native counterpart to Esper's method stream. The
@@ -334,10 +343,11 @@ type historicalDefinition struct {
 }
 
 type methodDefinition struct {
-	name     string
-	trigger  string
-	schema   Schema
-	provider MethodProvider
+	name         string
+	trigger      string
+	schema       Schema
+	provider     MethodProvider
+	dependencies []string
 }
 
 // SQLHistoricalProvider adapts a prepared database/sql query to a historical
