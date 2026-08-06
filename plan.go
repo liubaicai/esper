@@ -2611,7 +2611,7 @@ func expressionNodeContainsAggregate(node *exprNode) bool {
 		return true
 	}
 	switch node.kind {
-	case "aggregate-filter", "aggregate-local-group", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "sum", "avg", "min", "max", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
+	case "aggregate-filter", "aggregate-local-group", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "max-exact", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
 		return true
 	}
 	for _, child := range node.children {
@@ -2902,7 +2902,7 @@ func rowRecogIsRegularAggregateKind(kind string) bool {
 		return true
 	}
 	switch kind {
-	case "count", "sum", "avg", "min", "max", "first", "last", "first-ever", "last-ever", "count-ever", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "correlation", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "sorted", "set", "count-min-frequency", "count-min-total":
+	case "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "max-exact", "first", "last", "first-ever", "last-ever", "count-ever", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "correlation", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "sorted", "set", "count-min-frequency", "count-min-total":
 		return true
 	default:
 		return false

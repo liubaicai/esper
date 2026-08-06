@@ -143,10 +143,10 @@
       "level": "S",
       "summary": "Reusable filtered aggregate expressions with explicit predicate binding",
       "javaRefs": ["ResultSetAggregateFiltered", "ResultSetAggregateFilterNamedParameter", "ResultSetAggregateFilteredWMathContext"],
-      "goRefs": ["expr.go", "plan.go", "aggregate_test.go", "aggregate_filtered_java_trace_test.go"],
+      "goRefs": ["expr.go", "plan.go", "aggregate_test.go", "aggregate_filtered_java_trace_test.go", "aggregate_exact_test.go"],
       "phase": 3,
       "status": "partial",
-      "remaining": ["all aggregate/access-method families", "named filter parameters and math-context/decimal policy", "aggregate state/index reuse and full Java trace parity"]
+      "remaining": ["all aggregate/access-method families", "named filter-parameter syntax/registration and Java MathContext/BigDecimal scale and rounding policy", "aggregate state/index reuse and full Java trace parity"]
     },
     {
       "id": "resultset.aggregate-ever",
@@ -745,11 +745,11 @@
       "javaRuntimeIds": ["java-runtime-7528fc808c92f7364d11", "java-runtime-658dc7c3a941e98e2f37", "java-runtime-2287285f8221e7fc14d4", "java-runtime-619cdf3a6b43200abe95", "java-runtime-fa8b6d5d6fb58a905f23", "java-runtime-ca66d0a1432d0f335f32", "java-runtime-91d16a8b9722f61ef6dd", "java-runtime-7bc068fcf2ea07b9c1f7", "java-runtime-276a60a1f8e8298c32ec", "java-runtime-a51c567d50d5dcc85cc3", "java-runtime-b0bb13d3ec34da10ce59", "java-runtime-a6411903efb42f2d4f07", "java-runtime-c7eaf464f0bcc2aacf4f", "java-runtime-266d4a5228f486cdaff8", "java-runtime-92a88b128a322dc2b3e4", "java-runtime-d3beb8b21b9647fcdfbc"],
       "javaNames": ["ResultSetAggregateBlackWhitePercent", "ResultSetAggregateCountVariations", "ResultSetAggregateAllAggFunctions", "ResultSetAggregateInvalid", "ResultSetAggregateFilteredWMathContext", "ResultSetAggregateFirstAggSODA{soda=false}", "ResultSetAggregateFirstAggSODA{soda=true}", "ResultSetAggregateMethodAggLeaving", "ResultSetAggregateLeaving", "ResultSetAggregateMethodAggSQLAll", "ResultSetAggregateMethodAggSQLMixedFilter", "ResultSetAggregateAccessAggLinearBound{join=false}", "ResultSetAggregateAccessAggLinearUnbound{join=false}", "ResultSetAggregateAccessAggLinearWIndex", "ResultSetAggregateAccessAggSortedBound{join=false}", "ResultSetAggregateAccessAggSortedUnbound{join=false}"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFiltered.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilteredWMathContext.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java"],
-      "goTests": ["TestFilteredAggregatesReuseGroupRowsAndIgnoreNullPredicates", "TestFilteredAggregateAccessMethodsReuseFilteredGroup", "TestFilteredAggregateRejectsMissingPredicate", "TestAggregateLeavingRetainsWindowEvictionStateAndFilter", "TestFilteredAggregateAllFunctionsJavaTrace", "TestFilteredAggregateDistinctAndNullPredicateJavaTrace"],
+      "goTests": ["TestFilteredAggregatesReuseGroupRowsAndIgnoreNullPredicates", "TestFilteredAggregateAccessMethodsReuseFilteredGroup", "TestFilteredAggregateRejectsMissingPredicate", "TestAggregateLeavingRetainsWindowEvictionStateAndFilter", "TestFilteredAggregateAllFunctionsJavaTrace", "TestFilteredAggregateDistinctAndNullPredicateJavaTrace", "TestFilteredExactAggregatesMatchJavaBigNumberTrace", "TestExactAggregatesDoNotRoundLargeIntegers"],
       "tags": ["correctness", "invalid", "aggregate", "filter"],
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
-      "difference": "Go now covers the Java filtered scalar family (avedev/avg/min/max/median/stddev/sum), max/min-ever, distinct counting, null predicate exclusion, singleton stddev Null semantics, scalar/access aggregate reuse and stateful Leaving. Java also covers exact named filter-parameter forms, math-context/decimal behavior, plugin methods, joins/tables and complete invalid-rule parity; those remain open."
+      "difference": "Go now covers the Java filtered scalar family (avedev/avg/min/max/median/stddev/sum), max/min-ever, distinct counting, null predicate exclusion, singleton stddev Null semantics, scalar/access aggregate reuse and stateful Leaving. The explicit SumExact/AvgExact/MinExact/MaxExact and LessExact family now covers filtered big.Int/big.Rat arithmetic without float64 rounding, including the Java BigInteger/BigDecimal window trace and large-integer boundary. Java named filter-parameter registration/syntax, MathContext and BigDecimal scale/rounding policy, plugin methods, joins/tables and complete invalid-rule parity remain open."
     },
     {
       "id": "case.aggregate-rate",

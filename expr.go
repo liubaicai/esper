@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math"
+	"math/big"
 	"reflect"
 	"regexp"
 	"sort"
@@ -1414,6 +1415,15 @@ type Numeric interface {
 		~float32 | ~float64
 }
 
+// ExactNumeric is the arbitrary-precision numeric set supported by the
+// exact aggregate family. big.Int corresponds to Java BigInteger and
+// big.Rat is the Go representation used for exact decimal/rational values
+// corresponding to Java BigDecimal without routing arithmetic through
+// float64.
+type ExactNumeric interface {
+	big.Int | big.Rat
+}
+
 func Greater[T Ordered](left, right Expression[T]) Expression[bool] {
 	return compareExpression[T]("gt", ">", left, right, func(c int) bool { return c > 0 })
 }
@@ -1428,6 +1438,54 @@ func Less[T Ordered](left, right Expression[T]) Expression[bool] {
 
 func LessOrEqual[T Ordered](left, right Expression[T]) Expression[bool] {
 	return compareExpression[T]("lte", "<=", left, right, func(c int) bool { return c <= 0 })
+}
+
+// LessExact compares arbitrary-precision numeric expressions without a
+// float64 conversion. It is the explicit Go counterpart for BigInteger and
+// BigDecimal predicates used by exact aggregate filters.
+func LessExact[T ExactNumeric](left, right Expression[T]) Expression[bool] {
+	return exactCompareExpression[T]("exact-lt", "<", left, right, func(comparison int) bool { return comparison < 0 })
+}
+
+// LessOrEqualExact compares arbitrary-precision numeric expressions without
+// losing precision.
+func LessOrEqualExact[T ExactNumeric](left, right Expression[T]) Expression[bool] {
+	return exactCompareExpression[T]("exact-lte", "<=", left, right, func(comparison int) bool { return comparison <= 0 })
+}
+
+// GreaterExact compares arbitrary-precision numeric expressions without a
+// float64 conversion.
+func GreaterExact[T ExactNumeric](left, right Expression[T]) Expression[bool] {
+	return exactCompareExpression[T]("exact-gt", ">", left, right, func(comparison int) bool { return comparison > 0 })
+}
+
+// GreaterOrEqualExact compares arbitrary-precision numeric expressions
+// without losing precision.
+func GreaterOrEqualExact[T ExactNumeric](left, right Expression[T]) Expression[bool] {
+	return exactCompareExpression[T]("exact-gte", ">=", left, right, func(comparison int) bool { return comparison >= 0 })
+}
+
+func exactCompareExpression[T ExactNumeric](kind, symbol string, left, right Expression[T], matches func(int) bool) Expression[bool] {
+	if left == nil || right == nil {
+		return makeExpr[bool](kind, "<invalid-exact-comparison>", nil, func(EvalContext) Value { return Null() })
+	}
+	description := "(" + left.Description() + " " + symbol + " " + right.Description() + ")"
+	return makeExpr[bool](kind, description, []*exprNode{left.node(), right.node()}, func(ctx EvalContext) Value {
+		comparison, ok := exactNumericCompare(left.eval(ctx), right.eval(ctx))
+		if !ok {
+			return Null()
+		}
+		return Present(matches(comparison))
+	})
+}
+
+func exactNumericCompare(left, right Value) (int, bool) {
+	leftNumber, leftOK := enumRatFromValue(left)
+	rightNumber, rightOK := enumRatFromValue(right)
+	if !leftOK || !rightOK {
+		return 0, false
+	}
+	return leftNumber.Cmp(rightNumber), true
 }
 
 func Between[T Ordered](value, lower, upper Expression[T]) Expression[bool] {
@@ -2851,6 +2909,107 @@ func Avg[T Numeric](expression Expression[T]) AggregateExpression[float64] {
 			return Null()
 		}
 		return Present(total / float64(count))
+	})
+}
+
+// SumExact accumulates big.Int or big.Rat values with arbitrary precision.
+// For big.Int input the result remains a big.Int; for big.Rat input the
+// result remains a big.Rat. Missing and null values are ignored, matching the
+// ordinary Sum aggregate's input policy.
+func SumExact[T ExactNumeric](expression Expression[T]) AggregateExpression[T] {
+	if expression == nil {
+		return invalidAggregate[T]("sum-exact", expression, "sum-exact(<nil>)")
+	}
+	return makeAggregateExpr[T]("sum-exact", "sum-exact("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		total := new(big.Rat)
+		found := false
+		for _, event := range ctx.Group {
+			number, ok := enumRatFromValue(expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+			if !ok {
+				continue
+			}
+			total.Add(total, number)
+			found = true
+		}
+		if !found {
+			return Null()
+		}
+		result, ok := enumRatTo[T](total)
+		if !ok {
+			return Null()
+		}
+		return Present(result)
+	})
+}
+
+// AvgExact computes an arbitrary-precision average and returns a big.Rat.
+// Returning a rational keeps recurring decimals and very large operands
+// exact; callers can choose a presentation scale at the edge of their
+// application with big.Rat.FloatString or conversion to another decimal
+// representation.
+func AvgExact[T ExactNumeric](expression Expression[T]) AggregateExpression[big.Rat] {
+	if expression == nil {
+		return invalidAggregate[big.Rat]("avg-exact", expression, "avg-exact(<nil>)")
+	}
+	return makeAggregateExpr[big.Rat]("avg-exact", "avg-exact("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		total := new(big.Rat)
+		count := int64(0)
+		for _, event := range ctx.Group {
+			number, ok := enumRatFromValue(expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+			if !ok {
+				continue
+			}
+			total.Add(total, number)
+			count++
+		}
+		if count == 0 {
+			return Null()
+		}
+		average := new(big.Rat).Quo(total, new(big.Rat).SetInt64(count))
+		return Present(*average)
+	})
+}
+
+// MinExact returns the smallest arbitrary-precision numeric value in the
+// current group while preserving the input type.
+func MinExact[T ExactNumeric](expression Expression[T]) AggregateExpression[T] {
+	return exactExtreme[T]("min-exact", expression, true)
+}
+
+// MaxExact returns the largest arbitrary-precision numeric value in the
+// current group while preserving the input type.
+func MaxExact[T ExactNumeric](expression Expression[T]) AggregateExpression[T] {
+	return exactExtreme[T]("max-exact", expression, false)
+}
+
+func exactExtreme[T ExactNumeric](kind string, expression Expression[T], minimum bool) AggregateExpression[T] {
+	if expression == nil {
+		return invalidAggregate[T](kind, expression, kind+"(<nil>)")
+	}
+	return makeAggregateExpr[T](kind, kind+"("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		var result T
+		var resultNumber *big.Rat
+		found := false
+		for _, event := range ctx.Group {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			number, ok := enumRatFromValue(value)
+			if !ok {
+				continue
+			}
+			candidate, err := As[T](value)
+			if err != nil {
+				continue
+			}
+			if !found || (minimum && number.Cmp(resultNumber) < 0) || (!minimum && number.Cmp(resultNumber) > 0) {
+				result = candidate
+				resultNumber = number
+				found = true
+			}
+		}
+		if !found {
+			return Null()
+		}
+		return Present(result)
 	})
 }
 
