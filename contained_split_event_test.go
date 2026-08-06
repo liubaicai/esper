@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -293,6 +294,49 @@ func TestContainedTypeRejectsUnknownAndIncompatibleTargets(t *testing.T) {
 	if err := engine.SendEvent(context.Background(), containedSplitInput{Value: "x"}); err == nil {
 		t.Fatal("expected incompatible contained Event target to fail at runtime")
 	}
+}
+
+func TestContainedSplitRejectsUnsupportedExpressionForms(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[containedSplitInput](env, "ContainedInvalidSplitInput"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[containedSplitA](env, "ContainedInvalidSplitWord"); err != nil {
+		t.Fatal(err)
+	}
+	innerSchema, err := RegisterMap(env, "ContainedInvalidSplitInner", []FieldSpec{
+		FieldDef("value", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "ContainedInvalidSplitInnerWindow", innerSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+
+	input := From[containedSplitInput](env, "ContainedInvalidSplitInput")
+	assertInvalid := func(name string, property Expression[[]string], want string) {
+		t.Helper()
+		_, buildErr := env.Build(UnnestAs[containedSplitInput, string](input, property, "ContainedInvalidSplitWord").Query(StatementName(name)))
+		if buildErr == nil || !strings.Contains(buildErr.Error(), want) {
+			t.Fatalf("contained invalid rule %s error = %v, want substring %q", name, buildErr, want)
+		}
+	}
+
+	assertInvalid("contained-invalid-subquery", SubqueryValues[string](
+		FromNamedWindow(env, "ContainedInvalidSplitInnerWindow"),
+		Field[any, string]("value"),
+	), "does not support subqueries")
+	assertInvalid("contained-invalid-aggregate", Func1[int64, []string](
+		"aggregate-split",
+		func(int64) []string { return nil },
+		CountAll(),
+	), "does not support aggregation")
+	assertInvalid("contained-invalid-previous", Func1[string, []string](
+		"previous-split",
+		func(string) []string { return nil },
+		Prev[string](0, Field[containedSplitInput, string]("value")),
+	), "does not support previous or prior access")
 }
 
 func envMustSchema(env *Environment, name string) Schema {

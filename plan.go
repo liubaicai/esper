@@ -1321,6 +1321,9 @@ func (e *Environment) validateNode(node *streamNode) error {
 		if _, err := e.sourceSchema(node); err != nil {
 			return err
 		}
+		if err := validateContainedPropertyExpression(node.contained.property); err != nil {
+			return err
+		}
 		return e.validateExprFields(node.input, node.contained.property)
 	case streamFilter:
 		if node.predicate == nil {
@@ -1445,6 +1448,40 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 		}
 	}
 	return e.validateExpressionSubqueries(expression.node())
+}
+
+// validateContainedPropertyExpression enforces the same evaluation boundary
+// as Esper's contained-event property selection: the collection expression is
+// evaluated once for the current parent event and cannot depend on aggregate
+// state, a subquery snapshot, or previous/prior window navigation. Ordinary
+// fields, deterministic Go UDFs and string/collection combinators remain
+// analyzable and are intentionally allowed.
+func validateContainedPropertyExpression(expression Expr) error {
+	if expression == nil || expression.node() == nil {
+		return NewError(ErrorInvalidRule, "contained event expression is required")
+	}
+	var visit func(*exprNode) error
+	visit = func(node *exprNode) error {
+		if node == nil {
+			return nil
+		}
+		if strings.HasPrefix(node.kind, "subquery-") || node.subquery != nil {
+			return NewError(ErrorInvalidRule, "contained event expression does not support subqueries")
+		}
+		if expressionNodeContainsAggregate(node) {
+			return NewError(ErrorInvalidRule, "contained event expression does not support aggregation")
+		}
+		if strings.HasPrefix(node.kind, "prev") || strings.HasPrefix(node.kind, "prior") {
+			return NewError(ErrorInvalidRule, "contained event expression does not support previous or prior access")
+		}
+		for _, child := range node.children {
+			if err := visit(child); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return visit(expression.node())
 }
 
 func (e *Environment) containedAncestorSchema(input *streamNode, level int) (Schema, error) {
