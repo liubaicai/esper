@@ -675,6 +675,17 @@
       "difference": "Go adds typed EnumMinOf/EnumMaxOf selector-value results, EnumOrderByNatural ascending/descending forms, and analyzable Expression[int64]-backed EnumTakeExpr/EnumTakeLastExpr with runtime variable updates. Static count/order and selector-returning MinBy/MaxBy remain source-compatible; Java's broader lambda arity, null/type diagnostics and collection metadata are still open."
     },
     {
+      "id": "case.expr-enum-subquery-udf",
+      "javaRuntimeIds": ["java-runtime-385eff1ed2a658d97cc5", "java-runtime-41005ef10624c5d74430", "java-runtime-1cb9b928361d501cdfc4"],
+      "javaNames": ["ExprEnumSubquery", "ExprEnumNamedWindow", "ExprEnumUDFStaticMethod"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDocSamples.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDataSources.java"],
+      "goTests": ["TestEnumerableSubqueryAndZeroArgumentUDFFSources"],
+      "tags": ["correctness", "expression", "enum", "subquery", "udf", "named-window"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go adds SubqueryValues/SubqueryEvents for typed multi-row named-window snapshots with predicate options and adds Func0 for zero-argument collection-producing UDFs; both feed normal analyzable EnumSelect/EnumSum chains. Java additionally covers event-stream subqueries, declared expressions, access aggregation, context/table/pattern sources, generic component metadata and exact invalid diagnostics, which remain open."
+    },
+    {
       "id": "case.aggregate-dimensional",
       "javaRuntimeIds": ["java-runtime-3b6467afa76b0966c475", "java-runtime-994120aef6b9ff1c0e75", "java-runtime-20c08346e2644a7201e5", "java-runtime-ecabb70fc72a216efb7b", "java-runtime-52a4f853b6052fb47437", "java-runtime-5ccb697c664c60c24d55", "java-runtime-baf0f83e8ce48d8263ca", "java-runtime-4b2ccf46d294315b6887", "java-runtime-e05055ebcdc695131b2a", "java-runtime-71fb38d67af471287089"],
       "javaNames": ["ResultSetQueryTypeBoundRollup2Dim", "ResultSetQueryTypeBoundCube3Dim", "ResultSetQueryTypeUnboundGroupingSet2LevelUnenclosed", "ResultSetQueryTypeInvalid", "ResultSetQueryTypeDocSampleCarEventAndGroupingFunc", "ResultSetQueryTypeRollupPlanningAndSODA", "ResultSet3OutputLimitAll", "InfraRollupOneDim", "InfraRollupTwoDim", "ResultSetQueryTypeContextPartitionAlsoRollup"],
@@ -1308,6 +1319,7 @@
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-invalid"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-footprints"},
+    {"capabilityId": "expr.enum", "caseId": "case.expr-enum-subquery-udf"},
     {"capabilityId": "resultset.aggregate-dimensional", "caseId": "case.aggregate-dimensional"},
     {"capabilityId": "resultset.aggregate-filtered", "caseId": "case.aggregate-filtered"},
     {"capabilityId": "resultset.aggregate-ever", "caseId": "case.aggregate-ever"},

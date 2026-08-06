@@ -1959,6 +1959,19 @@ func makeBinaryBool(kind, description string, left, right Expr, operation func(V
 	})
 }
 
+// Func0 registers a named zero-argument function. The function is intentionally
+// explicit rather than an opaque callback hidden inside a rule, so the Plan
+// retains a stable UDF node while the returned collection remains chainable.
+func Func0[T any](name string, function func() T) Expression[T] {
+	description := name + "()"
+	return makeExpr[T]("udf", description, nil, func(EvalContext) Value {
+		if function == nil {
+			return Null()
+		}
+		return Present(function())
+	})
+}
+
 // Func1 registers a named unary function. The function is intentionally an
 // explicit top-level UDF instead of an opaque field callback, so the Plan can
 // retain its stable name and dependency metadata.

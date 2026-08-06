@@ -414,6 +414,79 @@ func TestEnumerableCollectsMapValuesAndIterators(t *testing.T) {
 	}
 }
 
+func TestEnumerableSubqueryAndZeroArgumentUDFFSources(t *testing.T) {
+	env := NewEnvironment()
+	itemSchema, err := RegisterStruct[enumExpressionItem](env, "EnumSourceItem")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[enumExpressionContainer](env, "EnumSourceTrigger"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "EnumSourceWindow", itemSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+
+	window := FromNamedWindow(env, "EnumSourceWindow")
+	filteredEvents := SubqueryEvents(window, SubqueryWhere(
+		Greater[int64](Field[any, int64]("score"), Literal(int64(1))),
+	))
+	scores := SubqueryValues[int64](window, Field[any, int64]("score"))
+	udfValues := Func0[[]int64]("enum-values", func() []int64 { return []int64{4, 5, 6} })
+	query := Select(
+		From[enumExpressionContainer](env, "EnumSourceTrigger"),
+		Alias("ids", EnumSelect[Event, string](filteredEvents, EnumField[Event, string]("id"))),
+		Alias("score-sum", EnumSum[int64](scores)),
+		Alias("udf-sum", EnumSum[int64](udfValues)),
+	).Query(StatementName("enum-subquery-udf"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("subquery/UDF result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.InsertNamedWindow(context.Background(), "EnumSourceWindow", enumExpressionItem{ID: "E1", Score: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.InsertNamedWindow(context.Background(), "EnumSourceWindow", enumExpressionItem{ID: "E2", Score: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), enumExpressionContainer{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("subquery/UDF row count = %d", len(rows))
+	}
+	ids, err := As[[]string](rows[0].Get("ids"))
+	if err != nil || !reflect.DeepEqual(ids, []string{"E2"}) {
+		t.Fatalf("subquery event ids = %#v, err=%v", ids, err)
+	}
+	scoreSum, err := As[int64](rows[0].Get("score-sum"))
+	if err != nil || scoreSum != 4 {
+		t.Fatalf("subquery projected sum = %d, err=%v", scoreSum, err)
+	}
+	udfSum, err := As[int64](rows[0].Get("udf-sum"))
+	if err != nil || udfSum != 15 {
+		t.Fatalf("zero-argument UDF sum = %d, err=%v", udfSum, err)
+	}
+}
+
 func TestEnumerableBuildRejectsMissingRequiredExpressions(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[enumExpressionContainer](env, "EnumInvalidContainer"); err != nil {

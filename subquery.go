@@ -348,6 +348,54 @@ func SubqueryValueWithOptions[T any](source RecordStream, projection Expression[
 	})
 }
 
+// SubqueryValues returns every projected row from a subquery as a typed Go
+// slice. A nil projection selects the inner Event envelope, which is the
+// chain-friendly counterpart of Esper's `(select * from ... )` collection
+// source. Predicate, ordering, offset and limit options apply before the
+// slice is materialized.
+func SubqueryValues[T any](source RecordStream, projection Expression[T], options ...SubqueryOption) Expression[[]T] {
+	config := SubqueryConfig{Cardinality: SubqueryFirst}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	definition := &subqueryDefinition{
+		source:              source.node,
+		predicate:           config.Predicate,
+		projection:          projection,
+		aggregateProjection: isAggregateExpression(projection),
+		orderBy:             append([]SubqueryOrderKey(nil), config.OrderBy...),
+		offset:              config.Offset,
+		limit:               config.Limit,
+		limitSet:            config.LimitSet,
+	}
+	return makeSubqueryExpr[[]T]("subquery-values", "values("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		result := make([]T, 0, len(values))
+		for _, value := range values {
+			if !value.IsPresent() {
+				var zero T
+				result = append(result, zero)
+				continue
+			}
+			converted, err := As[T](value)
+			if err != nil {
+				return Null()
+			}
+			result = append(result, converted)
+		}
+		return Present(result)
+	})
+}
+
+// SubqueryEvents is the no-projection convenience for a collection of inner
+// Event envelopes. Property and Method expressions can continue from each
+// item through EnumField/Property in the normal enumerable lambda context.
+func SubqueryEvents(source RecordStream, options ...SubqueryOption) Expression[[]Event] {
+	return SubqueryValues[Event](source, nil, options...)
+}
+
 // SubqueryIn compares value with the projected values of a named-window or
 // table subquery. It follows the engine's three-valued comparison contract:
 // a null/missing outer value yields Null, a matching value yields true, and a
