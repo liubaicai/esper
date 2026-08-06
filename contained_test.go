@@ -21,6 +21,10 @@ type unnestOrder struct {
 	Books   []unnestBook `esper:"books"`
 }
 
+type unnestIntContainer struct {
+	IDs []int64 `esper:"ids"`
+}
+
 func buildUnnestBookStream(env *Environment) Stream[unnestBook] {
 	books := Property[[]unnestBook](EventValue[unnestOrder](), "books")
 	return Unnest[unnestOrder, unnestBook](From[unnestOrder](env, "UnnestOrder"), books)
@@ -221,6 +225,53 @@ func TestUnnestNestedStructsPreserveParentArrayOrder(t *testing.T) {
 	for index, expected := range want {
 		if got := rows[index]; got.Get("id").Any() != expected.id || got.Get("rating").Any() != expected.rating {
 			t.Fatalf("nested unnest row %d = %#v, want %#v", index, got, expected)
+		}
+	}
+}
+
+func TestUnnestValuesProjectsScalarArrayElements(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[unnestIntContainer](env, "UnnestIntContainer"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[ContainedValue[int64]](env, "UnnestInt"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ids := Property[[]int64](EventValue[unnestIntContainer](), "ids")
+	values := UnnestValues[unnestIntContainer, int64](From[unnestIntContainer](env, "UnnestIntContainer"), ids)
+	plan, err := env.Build(Select(values,
+		Alias("value", Field[ContainedValue[int64], int64]("value")),
+	).Query(StatementName("unnest-values")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("scalar unnest result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), unnestIntContainer{IDs: []int64{2, 4, 8}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 3 {
+		t.Fatalf("scalar unnest rows = %#v", rows)
+	}
+	for index, expected := range []int64{2, 4, 8} {
+		if got := rows[index].Get("value").Any(); got != expected {
+			t.Fatalf("scalar unnest row %d = %#v, want %d", index, got, expected)
 		}
 	}
 }

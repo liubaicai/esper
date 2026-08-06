@@ -39,8 +39,10 @@ type streamNode struct {
 }
 
 type containedDefinition struct {
-	property  Expr
-	childType reflect.Type
+	property    Expr
+	childType   reflect.Type
+	elementType reflect.Type
+	wrap        func(reflect.Value) (any, error)
 }
 
 func (n *streamNode) describe() string {
@@ -819,7 +821,45 @@ func Unnest[T, V any](input Stream[T], property Expression[[]V]) Stream[V] {
 			input:      input.node,
 			sourceName: "unnest:" + childType.String(),
 			sourceType: childType,
-			contained:  &containedDefinition{property: property, childType: childType},
+			contained:  &containedDefinition{property: property, childType: childType, elementType: childType},
+		},
+	}
+}
+
+// ContainedValue is the explicit event shape used by UnnestValues for scalar
+// array elements. A caller registers ContainedValue[T] under the desired
+// child event name before building the rule.
+type ContainedValue[T any] struct {
+	Value T `esper:"value"`
+}
+
+// UnnestValues expands scalar slice/array elements into ContainedValue events.
+// It keeps scalar contained data inside the same typed event-stream model as
+// struct children, so the result can continue through Filter, Window,
+// Aggregate, Select and Join.
+func UnnestValues[T, V any](input Stream[T], property Expression[[]V]) Stream[ContainedValue[V]] {
+	childType := typeOf[ContainedValue[V]]()
+	elementType := typeOf[V]()
+	return Stream[ContainedValue[V]]{
+		env: input.env,
+		node: &streamNode{
+			kind:       streamContained,
+			input:      input.node,
+			sourceName: "unnest-values:" + elementType.String(),
+			sourceType: childType,
+			contained: &containedDefinition{
+				property:    property,
+				childType:   childType,
+				elementType: elementType,
+				wrap: func(value reflect.Value) (any, error) {
+					if value.Kind() == reflect.Interface && !value.IsNil() {
+						value = value.Elem()
+					}
+					wrapped := reflect.New(childType).Elem()
+					wrapped.FieldByName("Value").Set(value)
+					return wrapped.Interface(), nil
+				},
+			},
 		},
 	}
 }

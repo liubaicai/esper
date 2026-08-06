@@ -6661,7 +6661,15 @@ func expandContainedEvents(schema Schema, definition *containedDefinition, paren
 			if !item.IsValid() || (item.Kind() == reflect.Pointer && item.IsNil()) {
 				continue
 			}
-			child, err := newEvent(schema, item.Interface(), parent.ReceivedAt())
+			underlying := any(item.Interface())
+			var err error
+			if definition.wrap != nil {
+				underlying, err = definition.wrap(item)
+				if err != nil {
+					return nil, fmt.Errorf("unnest child %d: %w", index, err)
+				}
+			}
+			child, err := newEvent(schema, underlying, parent.ReceivedAt())
 			if err != nil {
 				return nil, fmt.Errorf("unnest child %d: %w", index, err)
 			}

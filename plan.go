@@ -1287,8 +1287,8 @@ func (e *Environment) validateNode(node *streamNode) error {
 		if propertyType == nil || (propertyType.Kind() != reflect.Slice && propertyType.Kind() != reflect.Array) {
 			return fmt.Errorf("unnest property must return a slice or array, got %s", propertyType)
 		}
-		if node.contained.childType == nil || propertyType.Elem() != node.contained.childType {
-			return fmt.Errorf("unnest property element type %s does not match child type %s", propertyType.Elem(), node.contained.childType)
+		if node.contained.elementType == nil || propertyType.Elem() != node.contained.elementType {
+			return fmt.Errorf("unnest property element type %s does not match child element type %s", propertyType.Elem(), node.contained.elementType)
 		}
 		if _, err := e.sourceSchema(node); err != nil {
 			return err

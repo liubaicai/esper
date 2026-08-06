@@ -382,6 +382,17 @@
       "difference": "Go composes Unnest twice over registered struct slices and preserves parent/child array order while projecting the terminal child fields. Nested Named Window, Pattern, Subquery, underlying-event and invalid-expression variants remain open."
     },
     {
+      "id": "case.event-contained-array-basic",
+      "javaRuntimeIds": ["java-runtime-4528359bf8f2f87a61fb"],
+      "javaNames": ["EPLContainedEventIntArray"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventArray.java"],
+      "goTests": ["TestUnnestValuesProjectsScalarArrayElements"],
+      "tags": ["correctness", "event", "contained", "scalar", "array"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
+      "difference": "Go adds a typed ContainedValue[T] wrapper and UnnestValues API so scalar arrays enter the same registered event-stream model; the mapped case covers ordered int-array expansion and typed projection. String-array where/type materialization, split expressions and scalar contained joins remain open."
+    },
+    {
       "id": "case.event-json-typed",
       "javaRuntimeIds": ["java-runtime-2a9ab449dc6c154c4bd9", "java-runtime-00295d15a1fc312fa613", "java-runtime-f8d1feaef05d05ca41cd", "java-runtime-ef46f7ea4f9794e18c69", "java-runtime-a215c31d2bb72b3b2ab1", "java-runtime-28a5c4655a02a1f63c94", "java-runtime-012a8fca6adf03eabea6", "java-runtime-66966dd54cf7a8a0e89e", "java-runtime-289d7b4aa3c75268e0ce", "java-runtime-87b96405a27531c7cb2b", "java-runtime-b29f4bdcb4600ab8762a", "java-runtime-e824266bc7fecae339ab", "java-runtime-5c391dd553ff9f15b1bd", "java-runtime-f8caad80187e7ded865d", "java-runtime-386bbfa5be563784e6ee", "java-runtime-2b9f862a759e003111e2", "java-runtime-e7b1011ebb32a1e154e4", "java-runtime-c0cec9e7ba622382f277", "java-runtime-a6908202f4cb486435ef", "java-runtime-d3d5b5ba496b0735a61b", "java-runtime-2f68294b1da96a2e3f90", "java-runtime-a2600511fe0e3be96834", "java-runtime-1182e58bfcc657daee47", "java-runtime-cd8c61ed37826b1b502f", "java-runtime-83a86df1a0c3c3bdc618", "java-runtime-c57d15938ce078e8fdb2", "java-runtime-8429ade85dcab518acc7", "java-runtime-316afd77d3ddea93e527", "java-runtime-582b2ea85237c3f96ef7", "java-runtime-95b8ec5aa766b4fb6d77", "java-runtime-ff9997e0d311c63214fc", "java-runtime-54a78b2fb1795e68c336", "java-runtime-b4f44c810d9b07c611c2", "java-runtime-c536b11ccb517315c96c", "java-runtime-a0172d69cfcb5690624f", "java-runtime-dcb85f0676d5a483dad6", "java-runtime-ec311f056e15567d43f8", "java-runtime-cdd1fd2aeac01afa6b5b"],
       "javaNames": ["EventJsonTypingParseBasicType", "EventJsonTypingParseBasicTypeArray", "EventJsonTypingParseBasicTypeArray2Dim", "EventJsonTypingParseEnumType", "EventJsonTypingParseBigDecimalBigInt", "EventJsonTypingParseObjectType", "EventJsonTypingParseObjectArrayType", "EventJsonTypingParseMapType", "EventJsonTypingParseDynamicPropJsonTypes", "EventJsonTypingParseDynamicPropMixedOjectArray", "EventJsonTypingParseDynamicPropNestedArray", "EventJsonTypingParseDynamicPropNumberFormat", "EventJsonTypingWriteBasicType", "EventJsonTypingWriteBasicTypeArray", "EventJsonTypingWriteBasicTypeArray2Dim", "EventJsonTypingWriteEnumType", "EventJsonTypingWriteBigDecimalBigInt", "EventJsonTypingWriteObjectType", "EventJsonTypingWriteObjectArrayType", "EventJsonTypingWriteMapType", "EventJsonTypingParseDynamicPropJsonTypes", "EventJsonTypingWriteDynamicPropMixedOjectArray", "EventJsonTypingWriteDynamicPropNestedArray", "EventJsonTypingWriteDynamicPropNumberFormat", "EventJsonTypingWriteNested", "EventJsonTypingWriteNestedArray", "EventJsonTypingClassSimple", "EventJsonTypingListBuiltinType", "EventJsonTypingListEnumType", "EventJsonTypingVMClass", "EventJsonTypingClassWArrayAndColl", "EventJsonTypingNestedRecursive", "EventJsonParserMalformedJson", "EventJsonParserLaxnessStringType", "EventJsonParserLaxnessNumberType", "EventJsonParserLaxnessBooleanType", "EventJsonParserLaxnessObjectType", "EventJsonParserUndeclaredContent"],
@@ -1572,6 +1583,7 @@
     {"capabilityId": "event.property-access-render", "caseId": "case.event-property-access-render"},
     {"capabilityId": "event.contained", "caseId": "case.event-contained-simple"},
     {"capabilityId": "event.contained", "caseId": "case.event-contained-nested-basic"},
+    {"capabilityId": "event.contained", "caseId": "case.event-contained-array-basic"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-typed"},
     {"capabilityId": "event.xml-tree", "caseId": "case.event-xml-tree"},
     {"capabilityId": "event.inheritance", "caseId": "case.event-inheritance"},
