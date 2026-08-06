@@ -1554,6 +1554,8 @@ RowRecog 入口拆分如下，后续必须以此表逐项消项，不能以 `Tes
 
 method source 的组合矩阵再补两条 Go-native 证据：多个 `FromMethodOn` 可按同一个 typed trigger 独立返回并参与 `JoinMany` 三路条件组合，两个 method source 也可直接做 `FullOuter` 并保留 Null 缺侧；`TestMethodSourceIndependentNStreamJoinMatchesEsperShape` 与 `TestMethodSourceIndependentFullOuterJoinEmitsNullSides` 对照 Java `EPLFromClauseMethodNStream`/`EPLFromClauseMethodOuterNStream` 的独立 method 分支。依赖前一 subordinate method 结果作为下一次调用参数的动态绑定、Context 组合和 UDF/script 仍保持 partial。
 
+本轮补齐 method source 的 Context Fire-and-Forget 组合：分区型 Context 先对 method/historical provider 做一次无 trigger 快照，再把已物化事件接入分区内的普通 filter/window/projection，避免按每一行重新轮询 provider；`TestMethodSourceContextFireAndForgetPartitionsRows` 固定多行、多分区和单次调用边界。initiated-terminated 生命周期 Context、Context Join、依赖前一 subordinate method 结果的动态绑定以及 UDF/script 组合仍保持 partial。
+
 反向 capability 审计又发现 `join.basic` 已是 partial 且已有完整 Go 实现/测试，却没有任何 case 证据；现新增 `case.join-basic`，关联 Java `EPLJoin2StreamSimple`、无 on/where 基础 Join、三流 unique Join 和三流 Full Outer Join 的 6 个 runtime execution，并登记 Go 的 inner/left-outer/N-way/range、aggregate old/new、Context、FAF 和 InsertInto representation 测试。清单校验进一步要求所有非 `planned` capability 至少拥有一条 case mapping，只有 `serde.full` 这类明确 planned 项允许暂时无 case；`TestCapabilityManifestRejectsNonPlannedCapabilityWithoutCaseMapping` 固定该反向约束。
 
 本轮补齐 Java `EPDataFlowEmitterOperator.getName()` 的公共 handle 元数据：Go `DataflowEmitter.Name()` 返回定义级 operator 名称，普通和多端口 captive emitter 均可脱离 map key 自描述，nil receiver 稳定返回空串。该入口并入多端口 captive emitter 对照测试；Java deployment ID 与运行时反射参数 map 仍由 Go 的 Environment ownership、`InstanceID`、`DataflowParameterProvider` 和显式 factory context 替代。

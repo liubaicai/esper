@@ -463,9 +463,6 @@ func (e *Engine) executeContextFireAndForget(ctx context.Context, plan Plan, sel
 	now := e.clock.Now()
 	variables := bindParameterValues(cloneValues(e.variables), parameters)
 	e.mu.Unlock()
-	if source.kind == streamHistorical || source.kind == streamMethod {
-		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context queries do not support historical or method sources")
-	}
 	events, err := e.snapshotFireAndForgetSource(ctx, source, now, variables)
 	if err != nil {
 		return QueryResult{}, err
@@ -509,8 +506,14 @@ func (e *Engine) executeContextFireAndForget(ctx context.Context, plan Plan, sel
 		runtime.variables = runtime.withContextVariables(variablesWithEngine(cloneValues(variables), e))
 		runtime.variables = runtime.withContextProperties(runtime.variables)
 		delta := eventDelta{}
+		input := query.input
+		if source.kind == streamHistorical {
+			input = replaceStreamBase(input, source, &streamNode{kind: streamSource, sourceName: source.historical.schema.Name(), sourceType: typeOf[any]()})
+		} else if source.kind == streamMethod {
+			input = replaceStreamBase(input, source, &streamNode{kind: streamSource, sourceName: source.method.schema.Name(), sourceType: typeOf[any]()})
+		}
 		for _, event := range grouped[key] {
-			inserted, insertErr := runtime.insert(query.input, event, now)
+			inserted, insertErr := runtime.insert(input, event, now)
 			if insertErr != nil {
 				return QueryResult{}, insertErr
 			}
