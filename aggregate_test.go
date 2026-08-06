@@ -24,6 +24,14 @@ type runtimeDeleteSignal struct {
 	ID string `esper:"id"`
 }
 
+type sortedAccessTableTrigger struct {
+	Price float64 `esper:"price"`
+}
+
+func sortedTableMethod[T any](field Expr, name string, arguments ...Expr) Expression[T] {
+	return Method[T](field, name, arguments...)
+}
+
 func TestGroupedAggregateAndHaving(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	trade := From[runtimeTestTrade](env, "Trade")
@@ -964,6 +972,15 @@ func TestSortedAccessValueNavigableSnapshotAndIteratorMatchesEsper(t *testing.T)
 	}
 	if !reflect.DeepEqual(access.Keys(), []float64{10, 20, 30}) {
 		t.Fatalf("sorted access keys = %#v", access.Keys())
+	}
+	if entry, found := access.FirstEntry(); !found || entry.Key != 10 || len(entry.Values) != 2 || entry.Values[0].Symbol != "A" {
+		t.Fatalf("first sorted access entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := access.LastEntry(); !found || entry.Key != 30 || len(entry.Values) != 1 || entry.Values[0].Symbol != "D" {
+		t.Fatalf("last sorted access entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := access.Entry(20); !found || len(entry.Values) != 1 || entry.Values[0].Symbol != "C" {
+		t.Fatalf("exact sorted access entry = %#v, found=%t", entry, found)
 	}
 	buckets := access.Buckets()
 	if len(buckets) != 3 || len(buckets[0]) != 2 || buckets[0][0].Symbol != "A" || buckets[0][1].Symbol != "B" {
@@ -2236,6 +2253,145 @@ func TestWindowAccessTableMethodChainTracksEviction(t *testing.T) {
 	assertWindowAccessRow(0, events[0], events[0], []runtimeTestTrade{events[0]})
 	assertWindowAccessRow(1, events[0], events[1], []runtimeTestTrade{events[0], events[1]})
 	assertWindowAccessRow(2, events[1], events[2], []runtimeTestTrade{events[1], events[2]})
+}
+
+func TestSortedAccessTableMethodChainMatchesJavaAndPreservesNulls(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[sortedAccessTableTrigger](env, "SortedAccessTrigger"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "SortedTable", []TableColumn{
+		TableColumnOf[SortedAccessValue[float64, runtimeTestTrade]]("sortcol"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	price := Field[runtimeTestTrade, float64]("price")
+	sorted := SortedAccessBy[runtimeTestTrade, float64](EventValue[runtimeTestTrade](), price)
+	aggregatePlan, err := env.Build(From[runtimeTestTrade](env, "Trade").
+		Window(LengthWindow(4)).
+		Aggregate(Alias("sortcol", sorted)).
+		IntoTable("SortedTable", StatementName("sorted-table-access")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	triggerPrice := Field[sortedAccessTableTrigger, float64]("price")
+	sortedField := TableField[SortedAccessValue[float64, runtimeTestTrade]]("sortcol")
+	descending := sortedTableMethod[SortedAccessValue[float64, runtimeTestTrade]](sortedField, "Descending")
+	triggerPlan, err := env.Build(OnEvent(From[sortedAccessTableTrigger](env, "SortedAccessTrigger")).
+		SelectFromTableWhere("SortedTable", Literal(true),
+			Alias("first", sortedTableMethod[runtimeTestTrade](sortedField, "FirstEvent")),
+			Alias("last", sortedTableMethod[runtimeTestTrade](sortedField, "LastEvent")),
+			Alias("firstKey", sortedTableMethod[float64](sortedField, "FirstKey")),
+			Alias("lastKey", sortedTableMethod[float64](sortedField, "LastKey")),
+			Alias("get", sortedTableMethod[runtimeTestTrade](sortedField, "GetEvent", Literal(20.0))),
+			Alias("getEvents", sortedTableMethod[[]runtimeTestTrade](sortedField, "GetEvents", Literal(20.0))),
+			Alias("lower", sortedTableMethod[runtimeTestTrade](sortedField, "LowerEvent", triggerPrice)),
+			Alias("higher", sortedTableMethod[runtimeTestTrade](sortedField, "HigherEvent", triggerPrice)),
+			Alias("between", sortedTableMethod[[]runtimeTestTrade](sortedField, "EventsBetween", Literal(10.0), Literal(true), Literal(20.0), Literal(true))),
+			Alias("submap", sortedTableMethod[SortedAccessValue[float64, runtimeTestTrade]](sortedField, "SubMap", Literal(10.0), Literal(true), Literal(20.0), Literal(true))),
+			Alias("descendingKeys", Method[[]float64](descending, "Keys")),
+			Alias("countEvents", sortedTableMethod[int64](sortedField, "CountEvents")),
+			Alias("countKeys", sortedTableMethod[int64](sortedField, "CountKeys")),
+			Alias("values", sortedTableMethod[[]runtimeTestTrade](sortedField, "Values")),
+		).Query(StatementName("sorted-table-trigger")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), triggerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := make([]Row, 0, 2)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := engine.SendEvent(context.Background(), sortedAccessTableTrigger{Price: 25}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("empty sorted table rows = %d", len(rows))
+	}
+	for _, name := range []string{"first", "last", "firstKey", "lastKey", "get", "getEvents", "lower", "higher"} {
+		if !rows[0].Get(name).IsNull() {
+			t.Fatalf("empty sorted table %s = %#v", name, rows[0].Get(name))
+		}
+	}
+	if rows[0].Get("countEvents").Any() != int64(0) || rows[0].Get("countKeys").Any() != int64(0) {
+		t.Fatalf("empty sorted table counts = %#v", rows[0].AsMap())
+	}
+
+	for _, event := range []runtimeTestTrade{
+		{Symbol: "A", Price: 10},
+		{Symbol: "B", Price: 20},
+		{Symbol: "C", Price: 20},
+		{Symbol: "D", Price: 30},
+	} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := engine.SendEvent(context.Background(), sortedAccessTableTrigger{Price: 25}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("populated sorted table rows = %d", len(rows))
+	}
+	row := rows[1]
+	if first, ok := row.Get("first").Any().(runtimeTestTrade); !ok || first.Symbol != "A" || first.Price != 10 {
+		t.Fatalf("sorted table first = %#v", row.Get("first").Any())
+	}
+	if last, ok := row.Get("last").Any().(runtimeTestTrade); !ok || last.Symbol != "D" || last.Price != 30 {
+		t.Fatalf("sorted table last = %#v", row.Get("last").Any())
+	}
+	if row.Get("firstKey").Any() != float64(10) || row.Get("lastKey").Any() != float64(30) {
+		t.Fatalf("sorted table key range = %#v", row.AsMap())
+	}
+	if get, ok := row.Get("get").Any().(runtimeTestTrade); !ok || get.Symbol != "B" {
+		t.Fatalf("sorted table get = %#v", row.Get("get").Any())
+	}
+	if lower, ok := row.Get("lower").Any().(runtimeTestTrade); !ok || lower.Symbol != "B" {
+		t.Fatalf("sorted table lower = %#v", row.Get("lower").Any())
+	}
+	if higher, ok := row.Get("higher").Any().(runtimeTestTrade); !ok || higher.Symbol != "D" {
+		t.Fatalf("sorted table higher = %#v", row.Get("higher").Any())
+	}
+	if events, ok := row.Get("getEvents").Any().([]runtimeTestTrade); !ok || len(events) != 2 || events[0].Symbol != "B" || events[1].Symbol != "C" {
+		t.Fatalf("sorted table get events = %#v", row.Get("getEvents").Any())
+	}
+	if events, ok := row.Get("between").Any().([]runtimeTestTrade); !ok || len(events) != 3 || events[0].Symbol != "A" || events[2].Symbol != "C" {
+		t.Fatalf("sorted table between = %#v", row.Get("between").Any())
+	}
+	if keys, ok := row.Get("descendingKeys").Any().([]float64); !ok || !reflect.DeepEqual(keys, []float64{30, 20, 10}) {
+		t.Fatalf("sorted table descending keys = %#v", row.Get("descendingKeys").Any())
+	}
+	if row.Get("countEvents").Any() != int64(4) || row.Get("countKeys").Any() != int64(3) {
+		t.Fatalf("sorted table counts = %#v", row.AsMap())
+	}
+	if values, ok := row.Get("values").Any().([]runtimeTestTrade); !ok || len(values) != 4 || values[1].Symbol != "B" || values[2].Symbol != "C" {
+		t.Fatalf("sorted table values = %#v", row.Get("values").Any())
+	}
+	submap, ok := row.Get("submap").Any().(SortedAccessValue[float64, runtimeTestTrade])
+	if !ok || !reflect.DeepEqual(submap.Keys(), []float64{10, 20}) || submap.CountEvents() != 3 {
+		t.Fatalf("sorted table submap = %#v", row.Get("submap").Any())
+	}
 }
 
 func TestAggregateFirstLastWindowRecomputesAfterNamedWindowDelete(t *testing.T) {

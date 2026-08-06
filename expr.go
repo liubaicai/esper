@@ -604,7 +604,9 @@ func Property[T any](object Expr, name string) Expression[T] {
 // expression. It is the explicit Go counterpart of chained event-method
 // access such as first().myMethod(), while keeping the receiver and argument
 // expressions visible in the AST. A missing method, incompatible argument or
-// non-nil error return evaluates to Missing.
+// non-nil error return evaluates to Missing. Go accessors returning
+// (value, bool) use the bool as an optional-value flag: false evaluates to
+// Null instead of exposing the value type's zero value.
 func Method[T any](object Expr, name string, arguments ...Expr) Expression[T] {
 	return methodExpression[T]("method", object, name, arguments...)
 }
@@ -674,6 +676,14 @@ func methodExpression[T any](kind string, object Expr, name string, arguments ..
 	}}
 }
 
+type reflectMethodStatus uint8
+
+const (
+	reflectMethodMissing reflectMethodStatus = iota
+	reflectMethodValue
+	reflectMethodNull
+)
+
 func invokeMethod[T any](underlying any, name string, arguments []Value) (result Value) {
 	defer func() {
 		if recover() != nil {
@@ -685,8 +695,11 @@ func invokeMethod[T any](underlying any, name string, arguments []Value) (result
 		targets = append([]any{event.Underlying()}, targets...)
 	}
 	for _, target := range targets {
-		value, ok := invokeReflectMethod(target, name, arguments)
-		if !ok {
+		value, status := invokeReflectMethod(target, name, arguments)
+		switch status {
+		case reflectMethodNull:
+			return Null()
+		case reflectMethodMissing:
 			continue
 		}
 		return reflectMethodResult[T](value)
@@ -694,9 +707,9 @@ func invokeMethod[T any](underlying any, name string, arguments []Value) (result
 	return Missing()
 }
 
-func invokeReflectMethod(underlying any, name string, arguments []Value) (reflect.Value, bool) {
+func invokeReflectMethod(underlying any, name string, arguments []Value) (reflect.Value, reflectMethodStatus) {
 	if underlying == nil {
-		return reflect.Value{}, false
+		return reflect.Value{}, reflectMethodMissing
 	}
 	target := reflect.ValueOf(underlying)
 	method := target.MethodByName(name)
@@ -706,11 +719,11 @@ func invokeReflectMethod(underlying any, name string, arguments []Value) (reflec
 		method = address.MethodByName(name)
 	}
 	if !method.IsValid() {
-		return reflect.Value{}, false
+		return reflect.Value{}, reflectMethodMissing
 	}
 	methodType := method.Type()
 	if !methodType.IsVariadic() && methodType.NumIn() != len(arguments) {
-		return reflect.Value{}, false
+		return reflect.Value{}, reflectMethodMissing
 	}
 	callArguments := make([]reflect.Value, 0, len(arguments))
 	for index, argument := range arguments {
@@ -727,7 +740,7 @@ func invokeReflectMethod(underlying any, name string, arguments []Value) (reflec
 				callArguments = append(callArguments, reflect.Zero(parameterType))
 				continue
 			}
-			return reflect.Value{}, false
+			return reflect.Value{}, reflectMethodMissing
 		}
 		value := reflect.ValueOf(argument.Any())
 		if value.Type().AssignableTo(parameterType) {
@@ -738,25 +751,30 @@ func invokeReflectMethod(underlying any, name string, arguments []Value) (reflec
 			callArguments = append(callArguments, value.Convert(parameterType))
 			continue
 		}
-		return reflect.Value{}, false
+		return reflect.Value{}, reflectMethodMissing
 	}
 	results := method.Call(callArguments)
 	if len(results) == 0 {
-		return reflect.Value{}, false
+		return reflect.Value{}, reflectMethodMissing
 	}
 	if len(results) > 1 {
 		errorType := reflect.TypeOf((*error)(nil)).Elem()
 		if results[1].Type().Implements(errorType) {
 			if isNilableType(results[1].Type()) {
 				if !results[1].IsNil() {
-					return reflect.Value{}, false
+					return reflect.Value{}, reflectMethodMissing
 				}
 			} else if !results[1].IsZero() {
-				return reflect.Value{}, false
+				return reflect.Value{}, reflectMethodMissing
 			}
+		} else if results[1].Kind() == reflect.Bool && !results[1].Bool() {
+			// Go accessors commonly use (value, bool) to distinguish an absent
+			// value from the type's zero value. Preserve that distinction in a
+			// rule projection as Null, matching Esper access-aggregate behavior.
+			return reflect.Value{}, reflectMethodNull
 		}
 	}
-	return results[0], true
+	return results[0], reflectMethodValue
 }
 
 func reflectMethodResult[T any](value reflect.Value) Value {
@@ -4685,6 +4703,114 @@ func (s SortedAccessValue[K, V]) ValuesForKey(key K) []V {
 func (s SortedAccessValue[K, V]) ContainsKey(key K) bool {
 	_, ok := s.findKey(key, sortedAccessExact)
 	return ok
+}
+
+// FirstEntry returns a defensive copy of the first key bucket in view order.
+func (s SortedAccessValue[K, V]) FirstEntry() (SortedAccessEntry[K, V], bool) {
+	if len(s.entries) == 0 {
+		return SortedAccessEntry[K, V]{}, false
+	}
+	return cloneSortedAccessEntry(s.entries[0]), true
+}
+
+// LastEntry returns a defensive copy of the last key bucket in view order.
+func (s SortedAccessValue[K, V]) LastEntry() (SortedAccessEntry[K, V], bool) {
+	if len(s.entries) == 0 {
+		return SortedAccessEntry[K, V]{}, false
+	}
+	return cloneSortedAccessEntry(s.entries[len(s.entries)-1]), true
+}
+
+// Entry returns a defensive copy of the exact key bucket, when present.
+func (s SortedAccessValue[K, V]) Entry(key K) (SortedAccessEntry[K, V], bool) {
+	index, ok := s.findKey(key, sortedAccessExact)
+	if !ok {
+		return SortedAccessEntry[K, V]{}, false
+	}
+	return cloneSortedAccessEntry(s.entries[index]), true
+}
+
+// Sorted and ListReference expose the detached value sequence used by the
+// corresponding aggregate access methods. They are useful when a sorted
+// access value has been materialized in a Table and is read through TableField.
+func (s SortedAccessValue[K, V]) Sorted() []V { return s.Values() }
+
+func (s SortedAccessValue[K, V]) ListReference() []V { return s.Values() }
+
+// NavigableMapReference returns another detached typed view of this snapshot.
+func (s SortedAccessValue[K, V]) NavigableMapReference() SortedAccessValue[K, V] {
+	return SortedAccessValue[K, V]{entries: s.Entries(), descending: s.descending}
+}
+
+func (s SortedAccessValue[K, V]) GetEvent(key K) (V, bool) {
+	return s.eventAt(key, sortedAccessExact, false)
+}
+
+func (s SortedAccessValue[K, V]) GetEvents(key K) ([]V, bool) {
+	return s.eventsAt(key, sortedAccessExact)
+}
+
+func (s SortedAccessValue[K, V]) LowerEvent(key K) (V, bool) {
+	return s.eventAt(key, sortedAccessLower, false)
+}
+
+func (s SortedAccessValue[K, V]) FloorEvent(key K) (V, bool) {
+	return s.eventAt(key, sortedAccessFloor, false)
+}
+
+func (s SortedAccessValue[K, V]) HigherEvent(key K) (V, bool) {
+	return s.eventAt(key, sortedAccessHigher, false)
+}
+
+func (s SortedAccessValue[K, V]) CeilingEvent(key K) (V, bool) {
+	return s.eventAt(key, sortedAccessCeiling, false)
+}
+
+func (s SortedAccessValue[K, V]) LowerEvents(key K) ([]V, bool) {
+	return s.eventsAt(key, sortedAccessLower)
+}
+
+func (s SortedAccessValue[K, V]) FloorEvents(key K) ([]V, bool) {
+	return s.eventsAt(key, sortedAccessFloor)
+}
+
+func (s SortedAccessValue[K, V]) HigherEvents(key K) ([]V, bool) {
+	return s.eventsAt(key, sortedAccessHigher)
+}
+
+func (s SortedAccessValue[K, V]) CeilingEvents(key K) ([]V, bool) {
+	return s.eventsAt(key, sortedAccessCeiling)
+}
+
+func (s SortedAccessValue[K, V]) MinBy() (V, bool) { return s.FirstEvent() }
+
+func (s SortedAccessValue[K, V]) MaxBy() (V, bool) { return s.LastEvent() }
+
+// EventsBetween returns all values in the requested inclusive/exclusive key
+// range, retaining this view's key order and duplicate-key insertion order.
+func (s SortedAccessValue[K, V]) EventsBetween(from K, fromInclusive bool, to K, toInclusive bool) []V {
+	return s.SubMap(from, fromInclusive, to, toInclusive).Values()
+}
+
+func (s SortedAccessValue[K, V]) eventAt(key K, mode sortedAccessKeyMode, last bool) (V, bool) {
+	index, ok := s.findKey(key, mode)
+	if !ok || index < 0 || index >= len(s.entries) || len(s.entries[index].Values) == 0 {
+		var zero V
+		return zero, false
+	}
+	values := s.entries[index].Values
+	if last {
+		return values[len(values)-1], true
+	}
+	return values[0], true
+}
+
+func (s SortedAccessValue[K, V]) eventsAt(key K, mode sortedAccessKeyMode) ([]V, bool) {
+	index, ok := s.findKey(key, mode)
+	if !ok || index < 0 || index >= len(s.entries) {
+		return nil, false
+	}
+	return append([]V(nil), s.entries[index].Values...), true
 }
 
 func (s SortedAccessValue[K, V]) IsEmpty() bool { return len(s.entries) == 0 }

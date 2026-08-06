@@ -1751,9 +1751,12 @@ func invokeRegisteredPropertyMethod(underlying any, method string, accessors []p
 			value, ok = Missing(), false
 		}
 	}()
-	result, ok := invokeReflectMethod(underlying, method, arguments)
-	if !ok {
+	result, status := invokeReflectMethod(underlying, method, arguments)
+	if status == reflectMethodMissing {
 		return Missing(), false
+	}
+	if status == reflectMethodNull {
+		return Null(), true
 	}
 	return reflectValueToValue(result), true
 }

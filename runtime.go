@@ -1605,6 +1605,13 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 	statement.runtime.subqueryRegistry = newSubqueryRuntimeRegistry(e.env, e, plan.query)
 	statement.runtime.variables = statement.runtime.subqueryRegistry.attachVariables(statement.runtime.variables)
 	statement.runtime.initializeAt(e.clock.Now())
+	if plan.query.tableTarget != "" {
+		if err := statement.runtime.persistAggregateTable(plan, e.clock.Now()); err != nil {
+			e.matchRecognizeStatePool.removeOwner(statement.id)
+			e.mu.Unlock()
+			return nil, err
+		}
+	}
 	if plan.query.contextName != "" {
 		if definition, ok := e.env.Context(plan.query.contextName); ok && definition.kind == ContextInitiatedTerminated && definition.startPattern != nil {
 			// Anchor pure timer-root Context patterns at deployment time, just
@@ -9906,6 +9913,18 @@ func (r *statementRuntime) persistAggregateTable(plan Plan, now time.Time) error
 		}
 		rows = append(rows, row)
 	}
+	if len(definition.groupBy) == 0 && len(rows) == 0 {
+		values, visible := evaluateEmptyAggregateGroup(definition, now, r.variables)
+		if visible {
+			row := make(map[string]any, len(definition.selections))
+			for index, selection := range definition.selections {
+				if index < len(values) {
+					row[selection.Name] = values[index].Any()
+				}
+			}
+			rows = append(rows, row)
+		}
+	}
 	primaryKey := table.Definition().PrimaryKey()
 	sort.SliceStable(rows, func(left, right int) bool {
 		leftValues := make([]any, 0, len(primaryKey))
@@ -10025,7 +10044,15 @@ func aggregateGroupKey(groupBy []Expr, groupingSet []int, event Event, now time.
 }
 
 func evaluateAggregateGroup(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState) ([]Value, bool) {
-	if len(events) == 0 && len(everEvents) == 0 && current.Schema().Name() == "" {
+	return evaluateAggregateGroupInternal(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, allEvents, allEverEvents, now, variables, pluginStates, false)
+}
+
+func evaluateEmptyAggregateGroup(definition *aggregateDefinition, now time.Time, variables map[string]Value) ([]Value, bool) {
+	return evaluateAggregateGroupInternal(definition, nil, nil, nil, false, nil, Event{}, nil, nil, now, variables, nil, true)
+}
+
+func evaluateAggregateGroupInternal(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState, allowEmpty bool) ([]Value, bool) {
+	if len(events) == 0 && len(everEvents) == 0 && current.Schema().Name() == "" && !allowEmpty {
 		return nil, false
 	}
 	ctx := aggregateGroupContext(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, allEvents, allEverEvents, now, variables, pluginStates)
