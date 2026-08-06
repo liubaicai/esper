@@ -274,8 +274,8 @@
       "domain": "join",
       "level": "S",
       "summary": "Inner, outer and N-way join state with context and Named Window snapshots",
-      "javaRefs": ["EPLJoin20Stream", "EPLOuterInnerJoin3Stream", "EPLOuterInnerJoin4Stream", "EPLJoinSingleOp3Stream", "EPLJoinInheritAndInterface", "EPLJoinNoTableName", "EPLJoinDerivedValueViews", "EPLJoin2StreamInKeywordPerformance", "EPLJoin3StreamInKeywordPerformance", "EPLJoinPatterns", "EPLJoinMultiKeyAndRange", "EPLJoinPropertyAccess", "EPLJoinEventRepresentation", "EPLJoinUniqueIndex", "EPLJoinSelectClause", "EPLJoinStartStop", "EPLJoinCoercion"],
-      "goRefs": ["stream.go", "plan.go", "runtime.go", "value.go", "expr.go", "pattern_join.go", "join_test.go", "join_where_test.go", "join_chain_test.go", "subquery_join_test.go", "join_aggregate_context_test.go", "join_pattern_test.go", "join_multikey_range_test.go", "join_property_test.go", "join_representation_test.go", "join_unique_index_test.go", "join_select_test.go", "join_coercion_test.go", "join_inherit_test.go", "join_no_table_test.go", "join_derived_view_test.go", "join_in_keyword_test.go", "join_20_stream_test.go", "join_outer_four_stream_test.go", "join_outer_mixed_test.go", "expr_test.go"],
+      "javaRefs": ["EPLJoin20Stream", "EPLOuterInnerJoin3Stream", "EPLOuterInnerJoin4Stream", "EPLOuterJoin6Stream", "EPLJoinSingleOp3Stream", "EPLJoinInheritAndInterface", "EPLJoinNoTableName", "EPLJoinDerivedValueViews", "EPLJoin2StreamInKeywordPerformance", "EPLJoin3StreamInKeywordPerformance", "EPLJoinPatterns", "EPLJoinMultiKeyAndRange", "EPLJoinPropertyAccess", "EPLJoinEventRepresentation", "EPLJoinUniqueIndex", "EPLJoinSelectClause", "EPLJoinStartStop", "EPLJoinCoercion"],
+      "goRefs": ["stream.go", "plan.go", "runtime.go", "value.go", "expr.go", "pattern_join.go", "join_test.go", "join_where_test.go", "join_chain_test.go", "subquery_join_test.go", "join_aggregate_context_test.go", "join_pattern_test.go", "join_multikey_range_test.go", "join_property_test.go", "join_representation_test.go", "join_unique_index_test.go", "join_select_test.go", "join_coercion_test.go", "join_inherit_test.go", "join_no_table_test.go", "join_derived_view_test.go", "join_in_keyword_test.go", "join_20_stream_test.go", "join_outer_four_stream_test.go", "join_outer_six_stream_test.go", "join_outer_mixed_test.go", "expr_test.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["Join aggregate correlation across old/new, outer, multi-row/cardinality and fragment combinations, plus broader Context lifecycle combinations", "full index plans", "advanced pattern/unidirectional joins, non-left-deep/bushy topology and complete ordering/index-plan matrix"]
@@ -586,6 +586,39 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
       "difference": "The Go fluent Join/full-outer path now covers left/right/full variants, two-property plus numeric coercion predicates, range-and-where filtering, and array-key unmatched/matched cardinality. Full iterator/group-by, multi-column OM/compile variants, event-type diagnostics and the complete range/coercion matrix remain partial."
+    },
+    {
+      "id": "case.join-outer-unidirectional",
+      "javaRuntimeIds": ["java-runtime-b6d9df8c8a5f5fc1c42a", "java-runtime-7a4dcfaec713e4deddc3", "java-runtime-890c1a8fc5bb954e5696", "java-runtime-309cba78bc3eeca1fa1f", "java-runtime-7381306bc209ca963643", "java-runtime-d46d09fe001bfa477088"],
+      "javaNames": ["EPLJoin2Stream", "EPLJoin3StreamAllUnidirectional{soda=false}", "EPLJoin3StreamAllUnidirectional{soda=true}", "EPLJoin3StreamMixed", "EPLJoin4StreamWhereClause", "EPLJoinOuterInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLOuterJoinUnidirectional.java"],
+      "goTests": ["TestUnidirectionalFullOuterAllDriversEmitTransientRowsMatchesEsper", "TestUnidirectionalMultiJoinAndFullOuterProbe", "TestUnidirectionalFullOuterWhereFiltersCurrentDriverTuple", "TestPatternUnidirectionalTimerJoinMatchesEsper", "TestPatternUnidirectionalTimerJoinOutputRateMatchesEsper", "TestUnidirectionalJoinValidation"],
+      "tags": ["correctness", "join", "outer-join", "unidirectional", "pattern", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go fluent API covers all-driver two/three-stream full outer transient rows, retained-passive single-driver and N-way probes, full-outer tuple Where filtering, timer Pattern drivers and invalid window/iteration boundaries. The Java mixed Pattern + Named Window full-outer sequence, exact SODA/diagnostic text and broader four-stream event/cardinality matrix remain partial."
+    },
+    {
+      "id": "case.join-outer-six",
+      "javaRuntimeIds": ["java-runtime-c20943f8d685d2832498", "java-runtime-253f106149aa10251bb4", "java-runtime-3ff2b7931a92766b7610", "java-runtime-a251741155535aa14269", "java-runtime-cf35d36d2dcdb4cdc8b8", "java-runtime-7ddd5ce74a8c827271b2"],
+      "javaNames": ["EPLJoinRootS0", "EPLJoinRootS1", "EPLJoinRootS2", "EPLJoinRootS3", "EPLJoinRootS4", "EPLJoinRootS5"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLOuterJoin6Stream.java"],
+      "goTests": ["TestSixStreamOuterRootVariantsMatchesEsper"],
+      "tags": ["correctness", "join", "outer-join", "multi-stream", "root-variants"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go JoinChain reproduces all six Java six-stream root plans with source-indexed typed edge conditions and a matched-key final tuple. The Java event-order matrix, intermediate unmatched rows, multi-row Cartesian cardinality, window eviction and physical plan/index behavior remain partial."
+    },
+    {
+      "id": "case.join-outer-six-stream",
+      "javaRuntimeIds": ["java-runtime-c20943f8d685d2832498", "java-runtime-253f106149aa10251bb4", "java-runtime-3ff2b7931a92766b7610", "java-runtime-a251741155535aa14269", "java-runtime-cf35d36d2dcdb4cdc8b8", "java-runtime-7ddd5ce74a8c827271b2"],
+      "javaNames": ["EPLJoinRootS0", "EPLJoinRootS1", "EPLJoinRootS2", "EPLJoinRootS3", "EPLJoinRootS4", "EPLJoinRootS5"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLOuterJoin6Stream.java"],
+      "goTests": ["TestSixStreamOuterRootVariantsMatchesEsper"],
+      "tags": ["correctness", "join", "outer-join", "multi-stream", "join-chain", "root-order"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go JoinChain reproduces the six Java source/root orders and their left/right edge conditions for one complete keyed tuple per source. Intermediate unmatched rows, exact arrival-order old/new cardinality, broad six-stream event permutations and physical index-plan details remain partial."
     },
     {
       "id": "case.dataflow-typed-ports",
@@ -1448,6 +1481,9 @@
     {"capabilityId": "join.basic", "caseId": "case.join-20-stream"},
     {"capabilityId": "join.basic", "caseId": "case.join-outer-four"},
     {"capabilityId": "join.basic", "caseId": "case.join-outer-two-stream"},
+    {"capabilityId": "join.basic", "caseId": "case.join-outer-unidirectional"},
+    {"capabilityId": "join.basic", "caseId": "case.join-outer-six-stream"},
+    {"capabilityId": "join.basic", "caseId": "case.join-outer-six"},
     {"capabilityId": "context.partition", "caseId": "case.context-partitioning"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
