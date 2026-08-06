@@ -253,3 +253,84 @@ func TestAggregateMultiPluginReplaysLengthWindowLeaveLifecycle(t *testing.T) {
 		t.Fatalf("window multi events = %#v", last.Get("events").Any())
 	}
 }
+
+func TestAggregateMultiPluginTableAccessMatchesJava(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	type trigger struct {
+		ID int `esper:"id"`
+	}
+	if _, err := RegisterStruct[trigger](env, "AggregateMultiTrigger"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "MultiTable", []TableColumn{
+		TableColumnOf[[]Event]("events"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := RegisterAggregateMultiPlugin(env, "table-multi", []AggregateMultiPluginMethod{
+		AggregateMultiMethod[[]Event]("ee"),
+	}, func(AggregateMultiPluginFactoryContext) AggregateMultiPluginState {
+		return &testAggregateMultiState{}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	aggregatePlan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(2)).Aggregate(
+		Alias("events", PluginAggregateMultiRef[[]Event](env, "table-multi", "ee", nil)),
+	).IntoTable("MultiTable", StatementName("aggregate-multi-table")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	triggerPlan, err := env.Build(OnEvent(From[trigger](env, "AggregateMultiTrigger")).SelectFromTableWhere(
+		"MultiTable", Literal(true), Alias("events", TableField[[]Event]("events")),
+	).Query(StatementName("aggregate-multi-table-trigger")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), triggerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	rows := make([]Row, 0, 3)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	trades := []runtimeTestTrade{{Symbol: "E1", Price: 1}, {Symbol: "E2", Price: 2}, {Symbol: "E3", Price: 3}}
+	for index, trade := range trades {
+		if err := engine.SendEvent(context.Background(), trade); err != nil {
+			t.Fatal(err)
+		}
+		if err := engine.SendEvent(context.Background(), trigger{ID: index + 1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 3 {
+		t.Fatalf("multi table rows = %d", len(rows))
+	}
+	want := [][]string{{"E1"}, {"E1", "E2"}, {"E2", "E3"}}
+	for index, row := range rows {
+		events, ok := row.Get("events").Any().([]Event)
+		if !ok || len(events) != len(want[index]) {
+			t.Fatalf("multi table row %d events = %#v", index, row.Get("events").Any())
+		}
+		for eventIndex, event := range events {
+			if event.Get("symbol").Any() != want[index][eventIndex] {
+				t.Fatalf("multi table row %d event %d = %#v", index, eventIndex, event.Underlying())
+			}
+		}
+	}
+}
