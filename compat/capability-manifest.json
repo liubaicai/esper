@@ -300,7 +300,7 @@
       "goRefs": ["trigger.go", "trigger_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["full index/transaction semantics", "table no-primary-key/no-where merge and wildcard/multi-action projection matrix", "all Java on-trigger cases", "persistence"]
+      "remaining": ["full index/transaction semantics", "wildcard/multi-action projection and nested/array assignment matrix", "all Java on-trigger cases", "persistence"]
     },
     {
       "id": "context.partition",
@@ -529,11 +529,11 @@
       "javaRuntimeIds": ["java-runtime-0dc6b8eb05a1d3989b23", "java-runtime-c6f6bda40f34d29acb8c"],
       "javaNames": ["InfraNoWhereClause"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
-      "goTests": ["TestNamedWindowMergeWithoutWhereUsesMatchedBranch", "TestSingleSidedMergeBranchesAndConvenienceConstructors"],
+      "goTests": ["TestNamedWindowMergeWithoutWhereUsesMatchedBranch", "TestTableMergeWithoutPrimaryKeyUsesExistingRowAsMatch", "TestSingleSidedMergeBranchesAndConvenienceConstructors"],
       "tags": ["correctness", "infra", "table", "named-window", "merge", "no-where"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "Go's nil named-window match predicate treats every existing target event as matched and routes an empty target to the not-matched branch, matching the covered Java no-where lifecycle. Table merges still require explicit primary-key expressions; Java's no-primary-key table/no-where form, delete-trigger interaction, and full multi-clause trace remain open."
+      "difference": "Go's nil named-window match predicate treats every existing target event as matched and routes an empty target to the not-matched branch. A no-primary-key Table now uses the empty key as the same single-row no-where state, with A/B not-matched branches, C matched update, separate reset-event delete-all and new/old lifecycle coverage. Java's wildcard/multi-action projection, representation metadata and full shared trace remain open."
     },
     {
       "id": "case.named-window-unique-merge",

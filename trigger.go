@@ -150,7 +150,8 @@ func (s TriggerStream[T]) MergeIntoTable(table string, assignments ...TableAssig
 }
 
 // MergeIntoTableWhen exposes ordered conditional merge branches. Keys must
-// correspond to the table primary key columns.
+// correspond to the table primary-key columns. For a table without primary
+// keys, pass a nil or empty key slice to use its single-row no-where state.
 func (s TriggerStream[T]) MergeIntoTableWhen(table string, keys []Expr, clauses ...TableMergeClause) TriggerQuery {
 	return TriggerQuery{
 		env: s.env,
@@ -584,7 +585,11 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 		}
 	}
 	if definition.action == triggerMergeTable {
-		if len(definition.keys) != len(table.primaryKey) || len(definition.keys) == 0 {
+		if len(table.primaryKey) == 0 {
+			if len(definition.keys) != 0 {
+				return NewError(ErrorInvalidRule, "table merge target has no primary-key columns; omit key expressions")
+			}
+		} else if len(definition.keys) != len(table.primaryKey) {
 			return fmt.Errorf("table merge requires one key expression for each primary-key column")
 		}
 		for index, expression := range definition.keys {

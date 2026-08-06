@@ -4,7 +4,12 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 )
+
+type triggerTestReset struct {
+	ID string `esper:"id"`
+}
 
 func TestTableTriggerBuilderAndLifecycle(t *testing.T) {
 	env := NewEnvironment()
@@ -859,6 +864,132 @@ func TestConditionalTableMergeBranches(t *testing.T) {
 	send(0)
 	if _, found, err := table.Get(context.Background(), "A"); err != nil || found {
 		t.Fatalf("matched delete merge row found=%v, err=%v", found, err)
+	}
+}
+
+func TestTableMergeWithoutPrimaryKeyUsesExistingRowAsMatch(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.RegisterTable("no-key-table", []TableColumn{
+		TableColumnOf[string]("symbol"),
+		TableColumnOf[float64]("price"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	source := From[runtimeTestTrade](env, "Trade")
+	if _, err := RegisterStruct[triggerTestReset](env, "TriggerReset"); err != nil {
+		t.Fatal(err)
+	}
+	resetSource := From[triggerTestReset](env, "TriggerReset")
+	symbol := Field[runtimeTestTrade, string]("symbol")
+	price := Field[runtimeTestTrade, float64]("price")
+	mergePlan, err := env.Build(OnEvent(source).MergeIntoTableWhen("no-key-table", nil,
+		WhenNotMatched(LikeOf(symbol, Literal("A%")),
+			SetColumn("symbol", symbol),
+			SetColumn("price", price),
+		),
+		WhenNotMatched(LikeOf(symbol, Literal("B%")),
+			SetColumn("symbol", symbol),
+			SetColumn("price", price),
+		),
+		WhenMatched(LikeOf(symbol, Literal("C%")),
+			SetColumn("symbol", Literal("Z")),
+			SetColumn("price", Literal(-1.0)),
+		),
+		WhenNotMatchedAny(
+			SetColumn("symbol", ConcatOf(Literal("x"), symbol, Literal("x"))),
+			SetColumn("price", Negate[float64](price)),
+		),
+	).Query(StatementName("no-key-merge")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.Build(OnEvent(source).MergeIntoTableWhen("no-key-table", []Expr{symbol},
+		WhenNotMatchedAny(SetColumn("symbol", symbol), SetColumn("price", price)),
+	).Query()); err == nil {
+		t.Fatal("table merge with a key expression against a no-key table was accepted")
+	}
+	deletePlan, err := env.Build(OnEvent(resetSource).DeleteAllFromTable("no-key-table").Query(StatementName("no-key-delete-all")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	mergeDeployment, err := engine.Deploy(context.Background(), mergePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mergeDeployment.Undeploy(context.Background())
+	var mergeBatches []ResultBatch
+	if _, err := mergeDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		mergeBatches = append(mergeBatches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	send := func(symbol string, price float64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol, Price: price}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send("E1", 2)
+	if len(mergeBatches) != 1 || len(mergeBatches[0].New) != 1 || len(mergeBatches[0].Old) != 0 ||
+		mergeBatches[0].New[0].Get("symbol").Any() != "xE1x" || mergeBatches[0].New[0].Get("price").Any() != float64(-2) {
+		t.Fatalf("no-key fallback insert batch = %#v", mergeBatches)
+	}
+	send("A1", 3)
+	if len(mergeBatches) != 1 {
+		t.Fatalf("no-key matched row allowed not-matched branch = %#v", mergeBatches)
+	}
+
+	deleteDeployment, err := engine.Deploy(context.Background(), deletePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var deleteBatches []ResultBatch
+	if _, err := deleteDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		deleteBatches = append(deleteBatches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), triggerTestReset{ID: "clear"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(deleteBatches) != 1 || len(deleteBatches[0].Old) != 1 || len(deleteBatches[0].New) != 0 ||
+		deleteBatches[0].Old[0].Get("symbol").Any() != "xE1x" {
+		t.Fatalf("no-key delete-all batch = %#v", deleteBatches)
+	}
+	if err := deleteDeployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	send("A1", 4)
+	send("B1", 5)
+	if len(mergeBatches) != 2 || len(mergeBatches[1].New) != 1 || mergeBatches[1].New[0].Get("symbol").Any() != "A1" {
+		t.Fatalf("no-key A branch lifecycle = %#v", mergeBatches)
+	}
+	if table, ok := engine.Table("no-key-table"); !ok {
+		t.Fatal("no-key table is missing")
+	} else if rows, err := table.Snapshot(context.Background()); err != nil || len(rows) != 1 || rows[0].Get("symbol").Any() != "A1" {
+		t.Fatalf("no-key A branch snapshot = %#v, err=%v", rows, err)
+	}
+	if table, ok := engine.Table("no-key-table"); ok {
+		if _, err := table.Clear(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		t.Fatal("no-key table disappeared before B branch")
+	}
+	send("B1", 5)
+	send("C", 6)
+	if len(mergeBatches) != 4 || len(mergeBatches[2].New) != 1 || len(mergeBatches[3].Old) != 1 || len(mergeBatches[3].New) != 1 ||
+		mergeBatches[2].New[0].Get("symbol").Any() != "B1" || mergeBatches[3].Old[0].Get("price").Any() != float64(5) ||
+		mergeBatches[3].New[0].Get("symbol").Any() != "Z" || mergeBatches[3].New[0].Get("price").Any() != float64(-1) {
+		t.Fatalf("no-key B/C branch lifecycle = %#v", mergeBatches)
 	}
 }
 
