@@ -2320,6 +2320,9 @@ func TypeName(value Expr) Expression[string] {
 		if !current.IsPresent() {
 			return Null()
 		}
+		if event, ok := current.Any().(Event); ok {
+			return Present(event.TypeName())
+		}
 		return Present(reflect.TypeOf(current.Any()).String())
 	})
 }

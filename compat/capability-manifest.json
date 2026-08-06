@@ -141,9 +141,9 @@
       "id": "expr.core",
       "domain": "expression",
       "level": "S",
-      "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates and property presence checks, with ordered branches, null semantics and aggregate-aware evaluation",
-      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists"],
-      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
+      "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates, property presence checks and runtime type names, with ordered branches, null semantics and aggregate-aware evaluation",
+      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
+      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
@@ -984,6 +984,17 @@
       "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not) and Cast[A,B] for typed numeric/string conversion; the mapped-schema test covers dynamic, nested and missing property paths in a live fluent projection. Java EPL optional-property syntax, SODA/compile text paths and exact dynamic getter/diagnostic metadata remain outside the Go builder."
     },
     {
+      "id": "case.expr-core-type-name",
+      "javaRuntimeIds": ["java-runtime-eeeacbe2c7669e1e1207", "java-runtime-e2b1dfb02a3ef7fb8ba3", "java-runtime-7811d3bb8fcadbda3937", "java-runtime-a4ad7a90bf65d6ae817f", "java-runtime-c3573f2b2f4f979ab963"],
+      "javaNames": ["ExprCoreTypeOfFragment", "ExprCoreTypeOfNamedUnnamedPOJO", "ExprCoreTypeOfInvalid", "ExprCoreTypeOfDynamicProps", "ExprCoreTypeOfVariantStream"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreTypeOf.java"],
+      "goTests": ["TestTypeNameExpressionsMatchDynamicValuesAndEventTypeIdentity", "TestExpressionCastExistenceTypeAndArrayAccess"],
+      "tags": ["correctness", "expression", "type-of", "dynamic", "event-type", "fragment", "null", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go's TypeName(Expr) returns the schema TypeName for an Event envelope and the Go reflect type string for ordinary dynamic values, preserving Null and Plan identity; dynamic Map values are covered live. Java fragment/variant names, POJO simple-name rules, representation-specific metadata and exact invalid diagnostics remain partial because the Go builder has no EPL/SODA type-name parser."
+    },
+    {
       "id": "case.expr-script-provider",
       "javaRuntimeIds": ["java-runtime-1010c63eb2330597a750", "java-runtime-a2b886734b1a2ad4cc28", "java-runtime-416f111d2368882ea644", "java-runtime-3834e7de0be8f481cea2", "java-runtime-76f900f81eab8fbb7068", "java-runtime-7b3d5e1ed4c6e5a98f89", "java-runtime-39ad2c583a5c307fdeaa", "java-runtime-c115e9369d2a342e8e7f", "java-runtime-97cf680e34e215878dae", "java-runtime-de45e4c09a85a606f39f", "java-runtime-e5e8e7be2d9e28ca1fcf"],
       "javaNames": ["EPLScriptScripts", "EPLScriptQuoteEscape", "EPLScriptDocSamples", "EPLScriptSubqueryParam", "EPLScriptReturnNullWhenNumeric", "EPLScriptGenericResultType", "EPLScriptExpressionConfiguration", "EPLScriptExpressionDisable", "EPLScriptSandboxJSR223", "EPLScriptSandboxMVEL", "EPLContainedScriptContextValue"],
@@ -1784,6 +1795,7 @@
     {"capabilityId": "expr.core", "caseId": "case.expr-core-logical"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-instanceof"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-exists-cast"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-type-name"},
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
