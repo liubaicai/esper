@@ -50,6 +50,7 @@ type exprNode struct {
 	enumInputRequired     bool
 	enumParameterRequired bool
 	enumInvalidReason     string
+	configurationError    string
 	children              []*exprNode
 	subquery              *subqueryDefinition
 }

@@ -766,7 +766,10 @@ func isAggregateExpression(expression Expr) bool {
 		return false
 	}
 	_, ok := expression.(interface{ aggregateMarker() })
-	return ok
+	if ok {
+		return true
+	}
+	return expressionNodeContainsAggregate(expression.node())
 }
 
 func evaluateQuantifiedSubquery(left Value, values []Value, comparison SubqueryComparison, all bool) Value {

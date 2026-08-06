@@ -138,6 +138,17 @@
       "remaining": ["complete Java method-footprint and type matrix", "Java collection metadata and generic component descriptors", "complete invalid-rule diagnostics and Java error-text parity", "nested/subquery/access-aggregate/UDF source matrix"]
     },
     {
+      "id": "expr.core",
+      "domain": "expression",
+      "level": "S",
+      "summary": "Go-native searched and simple CASE expressions with ordered branches, null semantics and aggregate-aware evaluation",
+      "javaRefs": ["ExprCoreCase", "TestExprCaseNode"],
+      "goRefs": ["expr_case.go", "expr_case_test.go", "expr.go", "subquery.go", "plan.go"],
+      "phase": 1,
+      "status": "partial",
+      "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
+    },
+    {
       "id": "resultset.aggregate-dimensional",
       "domain": "resultset.aggregate",
       "level": "S",
@@ -850,6 +861,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
       "difference": "The Go fluent SelectJoin/DataflowJoinOptions/ConnectInput API supports explicit indexed input ports, basic source-order permutations, three-way inner latest-event joins, LeftOuter/RightOuter/FullOuter row availability for latest-event and keep-all retention, immutable per-input WithLength/WithTime overrides, and SelectJoinEvent output to all registered native representations. Insert and exact virtual-time expiration transitions diff the complete result set, emitting each newly established Cartesian match or outer unmatched row once, while window, output and Select state definitions participate in stable Plan v2 identity. The API also supports analyzable OnSourcesEqual/OnSourcesCompare predicates with AllJoin/AnyJoin composition, conditional filtering, and Null missing-side fields through JoinField. Java additionally covers broader mixed-view combinations, internal old-state/removal behavior that Dataflow Select's insert-stream output does not expose, the remaining operator representation/invalid matrix and performance traces; those remain open."
+    },
+    {
+      "id": "case.expr-core-case",
+      "javaRuntimeIds": ["java-runtime-18fd4fbfe79972f255b1", "java-runtime-7cb695abac8afa4a897a", "java-runtime-713a8ef21a965d6f18e7", "java-runtime-e9ae8d32b9f6155877ef", "java-runtime-d59f7b5b80664b315e83", "java-runtime-19e88b50151bc70f9ee7", "java-runtime-725a9999f48d69d792a2", "java-runtime-0f635579498bb6de3a4c", "java-runtime-dcec1e227821cf742c35", "java-runtime-aba043761205179d1b90", "java-runtime-d103cb7bd76e5f474148", "java-runtime-ad52e9daaa1d1b1d0cd6", "java-runtime-bb68d1e6dc376b9fae45", "java-runtime-0cc013b6e004ade0bec9", "java-runtime-5bdf1dc0ec2ef175e7b1", "java-runtime-db2a3011af63391357cd", "java-runtime-6c239f3cd09281ad0e16", "java-runtime-c2c6bf0ea06eb636887b", "java-runtime-b07c297c4a8bf27ec549", "java-runtime-fc0271da62a419f54da8", "java-runtime-2e1724deff45bf4e415b", "java-runtime-cc6d316134776bd925de", "java-runtime-28f013fdebb8e529c1bc", "java-runtime-69ed44c556ec0b754fa0"],
+      "javaNames": ["ExprCoreCaseSyntax1Sum", "ExprCoreCaseSyntax1SumOM", "ExprCoreCaseSyntax1SumCompile", "ExprCoreCaseSyntax1WithElse", "ExprCoreCaseSyntax1WithElseOM", "ExprCoreCaseSyntax1WithElseCompile", "ExprCoreCaseSyntax1Branches3", "ExprCoreCaseSyntax2", "ExprCoreCaseSyntax2StringsNBranches", "ExprCoreCaseSyntax2NoElseWithNull", "ExprCoreCaseSyntax1WithNull", "ExprCoreCaseSyntax2WithNullOM", "ExprCoreCaseSyntax2WithNullCompile", "ExprCoreCaseSyntax2WithNull", "ExprCoreCaseSyntax2WithNullBool", "ExprCoreCaseSyntax2WithCoercion", "ExprCoreCaseSyntax2WithinExpression", "ExprCoreCaseSyntax2Sum", "ExprCoreCaseSyntax2EnumChecks", "ExprCoreCaseSyntax2EnumResult", "ExprCoreCaseSyntax2NoAsName", "ExprCoreCaseWithArrayResult", "ExprCoreCaseWithTypeParameterizedProperty", "ExprCoreCaseWithTypeParameterizedPropertyInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCase.java", "common/src/test/java/com/espertech/esper/common/internal/epl/expression/funcs/TestExprCaseNode.java"],
+      "goTests": ["TestCaseExpressionsMatchJavaNullAndShortCircuitSemantics", "TestCaseExpressionsBuildFluentQueriesAndPlanIdentity", "TestCaseExpressionsPreserveAggregateContext", "TestCaseExpressionsRejectInvalidBuildersAtBuild"],
+      "tags": ["correctness", "expression", "case", "searched", "simple", "null", "coercion", "aggregate", "array", "enum", "invalid", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go exposes typed CaseWhen[T] and CaseValue[T] builders with explicit branch-result type, declaration-order evaluation, lazy selected branches, Null/Missing condition handling, Null simple-value matching, numeric match coercion through Value semantics, arrays/enums, aggregate-context evaluation and Build-time invalid-builder diagnostics. Heterogeneous Java result branches require an explicit Go Cast at the branch boundary; the Go port intentionally has no EPL parser or SODA/compile deployment path, and Java parameterized event-type metadata and exact compiler diagnostics remain open."
     },
     {
       "id": "case.expr-enum-aggregate",
@@ -1633,6 +1655,7 @@
     {"capabilityId": "event.variant", "caseId": "case.variant-supertypes-interfaces"},
     {"capabilityId": "query.insert-into-route", "caseId": "case.insert-into-chain"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-case"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-invalid"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-footprints"},
