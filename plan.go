@@ -1811,6 +1811,11 @@ func collectExpressionParameterTypes(expression Expr, parameterTypes map[string]
 			if err := collectExpressionParameterTypes(node.subquery.projection, parameterTypes); err != nil {
 				return err
 			}
+			for _, selection := range node.subquery.columns {
+				if err := collectExpressionParameterTypes(selection.Expr, parameterTypes); err != nil {
+					return err
+				}
+			}
 			if err := collectExpressionParameterTypes(node.subquery.groupBy, parameterTypes); err != nil {
 				return err
 			}
