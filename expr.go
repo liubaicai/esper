@@ -1654,18 +1654,7 @@ func exactNumericCompare(left, right Value) (int, bool) {
 }
 
 func Between[T Ordered](value, lower, upper Expression[T]) Expression[bool] {
-	description := "(" + value.Description() + " between " + lower.Description() + " and " + upper.Description() + ")"
-	return makeExpr[bool]("between", description, []*exprNode{value.node(), lower.node(), upper.node()}, func(ctx EvalContext) Value {
-		current := value.eval(ctx)
-		low := lower.eval(ctx)
-		high := upper.eval(ctx)
-		lowerComparison, lowerOK := compareValues(current, low)
-		upperComparison, upperOK := compareValues(current, high)
-		if !lowerOK || !upperOK {
-			return Null()
-		}
-		return Present(lowerComparison >= 0 && upperComparison <= 0)
-	})
+	return BetweenOf(value, lower, upper)
 }
 
 func In[T comparable](value Expression[T], candidates ...Expression[T]) Expression[bool] {
