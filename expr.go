@@ -1955,6 +1955,34 @@ func ArrayAt[T any](values Expression[[]T], index Expression[int64]) Expression[
 	})
 }
 
+// MapAt safely reads one key from a map expression. Missing, Null, a
+// non-string key and an absent key return Null rather than panicking. The
+// expression remains analyzable through its child expression, so callers can
+// use it in Join conditions and projections without encoding a closure.
+func MapAt[T any](values Expr, key Expression[string]) Expression[T] {
+	if values == nil || key == nil {
+		return makeExpr[T]("map-at", "map-at(<invalid>)", nil, func(EvalContext) Value { return Null() })
+	}
+	return makeExpr[T]("map-at", "map-at("+values.Description()+","+key.Description()+")", []*exprNode{values.node(), key.node()}, func(ctx EvalContext) Value {
+		base := values.eval(ctx)
+		keyValue := key.eval(ctx)
+		if !base.IsPresent() || !keyValue.IsPresent() {
+			return Null()
+		}
+		mapKey, ok := keyValue.Any().(string)
+		if !ok || mapKey == "" {
+			return Null()
+		}
+		return castValue[T](propertyValue(base.Any(), mapKey))
+	})
+}
+
+// MapValue is a descriptive alias for MapAt when the expression reads like a
+// named map property rather than an array index.
+func MapValue[T any](values Expr, key Expression[string]) Expression[T] {
+	return MapAt[T](values, key)
+}
+
 func castValue[T any](value Value) Value {
 	if !value.IsPresent() {
 		return value
