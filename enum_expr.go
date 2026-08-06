@@ -385,6 +385,72 @@ func EnumSelect[T any, R any](values Expression[[]T], selector Expression[R]) Ex
 	})
 }
 
+// EnumSelectMap projects each collection item into a Go-native named row.
+// It is the chainable counterpart of Esper's selectFrom footprint that
+// returns an anonymous multi-column object. Selectors run with EnumElement,
+// EnumIndex and EnumSize active, so index/size-aware projections remain
+// analyzable expressions rather than runtime callbacks.
+func EnumSelectMap[T any](values Expression[[]T], selections ...Selection) Expression[[]map[string]any] {
+	children := enumExpressionChildren[T](values, nil)
+	parts := make([]string, 0, len(selections))
+	seen := make(map[string]struct{}, len(selections))
+	invalidReason := ""
+	for _, selection := range selections {
+		name := strings.TrimSpace(selection.Name)
+		if name == "" {
+			invalidReason = "enumeration select-from requires a non-empty column name"
+		}
+		if _, exists := seen[name]; exists {
+			invalidReason = fmt.Sprintf("enumeration select-from duplicates column alias %q", name)
+		}
+		seen[name] = struct{}{}
+		if selection.Expr == nil {
+			invalidReason = fmt.Sprintf("enumeration select-from column %q has a nil expression", name)
+			parts = append(parts, name+"=<nil>")
+			continue
+		}
+		children = append(children, selection.Expr.node())
+		parts = append(parts, selection.description())
+	}
+	if len(selections) == 0 {
+		invalidReason = "enumeration select-from requires at least one column"
+	}
+	description := "select-from(" + enumInputDescription[T](values)
+	if len(parts) > 0 {
+		description += "," + strings.Join(parts, ",")
+	}
+	description += ")"
+	expression := makeEnumExpr[[]map[string]any]("enum-select-from", description, children, values, true, func(ctx EvalContext) Value {
+		items, input, ok := enumItems[T](values, ctx)
+		if !ok {
+			return input
+		}
+		if len(selections) == 0 {
+			return Null()
+		}
+		result := make([]map[string]any, 0, len(items))
+		for index, item := range items {
+			nested := enumElementContext(ctx, item, index, len(items))
+			row := make(map[string]any, len(selections))
+			for _, selection := range selections {
+				if selection.Expr == nil {
+					return Null()
+				}
+				value := selection.Expr.eval(nested)
+				if value.IsPresent() {
+					row[selection.Name] = value.Any()
+				} else {
+					row[selection.Name] = nil
+				}
+			}
+			result = append(result, row)
+		}
+		return Present(result)
+	})
+	expression.node().enumInvalidReason = invalidReason
+	return expression
+}
+
 // EnumArrayOf is the explicit Go counterpart of Esper's arrayOf method. Go
 // slices are already the natural ordered collection/array representation, so
 // the no-selector form makes a defensive copy while the selector form is

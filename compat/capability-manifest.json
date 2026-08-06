@@ -669,10 +669,11 @@
       "javaRuntimeIds": ["java-runtime-261031703bf2144ad372", "java-runtime-0df0665028286b839c88"],
       "javaNames": ["ExprEnumAggregateScalar", "ExprEnumSelectFromEventsWithNew"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumAggregate.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumSelectFrom.java"],
-      "goTests": ["TestEnumerableNumericMethodsAndPlanIntegration", "TestEnumerableEventElementsAndOrdering", "TestEnumerableSupportsExactBigNumbersAndArrayCollections"],
+      "goTests": ["TestEnumerableNumericMethodsAndPlanIntegration", "TestEnumerableEventElementsAndOrdering", "TestEnumerableSupportsExactBigNumbersAndArrayCollections", "TestEnumerableSelectFromProjectsNamedRowsWithIndexAndSize", "TestEnumerableSelectFromBuildAndRuntimeProjection"],
       "tags": ["correctness", "expression", "enum"],
       "status": "mapped",
-      "evidence": ["go-unit"]
+      "evidence": ["go-unit"],
+      "difference": "Go now adds EnumSelectMap for multi-column Go-native anonymous rows, including EnumIndex/EnumSize-aware selectors, null/empty collection preservation and duplicate/nil column Build validation. Java still exposes richer parameterized anonymous-row metadata, broader source representations and exact lambda/type diagnostics."
     },
     {
       "id": "case.expr-enum-sources",
@@ -1003,6 +1004,7 @@
     },
     {
       "id": "case.dataflow-signal",
+      "javaRuntimeIds": ["java-98ad6f7cdc7876aaf6b3"],
       "javaNames": ["EPLDataflowAPIStartCaptive", "EPLDataflowOpSelect"],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIStartCaptive.java",
@@ -1011,11 +1013,11 @@
         "common/src/main/java/com/espertech/esper/common/client/dataflow/util/EPDataFlowSignalFinalMarker.java",
         "common/src/main/java/com/espertech/esper/common/client/dataflow/util/EPDataFlowSignalWindowMarker.java"
       ],
-      "goTests": ["TestDataflowSignalsPropagateAndCanBeSubmitted", "TestDataflowCustomOperatorFactoryAndLifecycle", "TestDataflowCustomOperatorNamedPortsRouteEmissions", "TestDataflowGraphValidation", "TestDataflowOptionsExceptionsAndSavedConfiguration", "TestDataflowArrayKeySubqueryWindowMatchesEsper"],
-      "tags": ["correctness", "dataflow", "signal", "marker", "lifecycle"],
+      "goTests": ["TestDataflowSignalsPropagateAndCanBeSubmitted", "TestDataflowCustomOperatorFactoryAndLifecycle", "TestDataflowCustomOperatorNamedPortsRouteEmissions", "TestDataflowGraphValidation", "TestDataflowOptionsExceptionsAndSavedConfiguration", "TestDataflowArrayKeySubqueryWindowMatchesEsper", "TestDataflowStartCaptiveEmitterMatchesEsper", "TestDataflowStartCaptiveReturnsCallerRunSources", "TestDataflowStartCaptiveReturnsBeaconRunnable"],
+      "tags": ["correctness", "dataflow", "signal", "marker", "lifecycle", "start-captive", "emitter", "source-runnable"],
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
-      "difference": "Go exposes public FinalMarker, WindowMarker and CustomSignal values, OnSignal handlers, graph propagation, terminal Emitter observation, captive Emitter handles with Submit/SubmitSignal, per-instance custom operator factories with optional Open/Close/OnSignal lifecycle, named custom ports, instance ID/user object options, in-process saved configuration lookup, structured exception handling and error/drop statistics. Java also covers arbitrary signal listeners, typed event/row port coercion, persisted saved instances, concurrent signal delivery and broader operator exception recovery; those remain outside this slice."
+      "difference": "Go exposes public FinalMarker, WindowMarker and CustomSignal values, OnSignal handlers, graph propagation and terminal Emitter observation. DataflowInstance.StartCaptive opens operator/source lifecycle once and returns a DataflowCaptive containing a defensive named-emitter map plus definition-ordered, single-use Beacon/custom-source runnables; sources are never launched automatically and their normal return leaves the instance Running until explicit Cancel, matching Java EPDataFlowInstanceCaptive. Captive emitter Submit/SubmitSignal remains usable after a final marker, and instance cancellation closes runtimes and invalidates submission. Per-instance custom factories, named ports, instance ID/user object options, saved configuration lookup, structured exception handling and error/drop statistics remain shared with ordinary Start. Java additionally covers lower-level GraphSourceRunnable listeners, typed EventBean/object-array coercion, persisted saved instances, concurrent signal delivery and broader exception recovery."
     },
     {
       "id": "case.rowrecog-basic-ops",
