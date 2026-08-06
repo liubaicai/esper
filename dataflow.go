@@ -82,19 +82,24 @@ type DataflowBeaconFactory func(context.Context, DataflowBeaconContext) (any, er
 
 // DataflowBeaconOptions configures a repeating BeaconSource. Iterations zero
 // means repeat until the dataflow is canceled; a positive value emits exactly
-// that many values and then submits FinalMarker before completing. Events are
-// selected cyclically when Factory is nil, while an empty Events slice emits
-// an empty []any value on each iteration.
+// that many values and then submits FinalMarker before completing. An optional
+// IterationsExpression is evaluated once from registered variables when the
+// instance is created. Events are selected cyclically when Factory is nil,
+// while an empty Events slice emits an empty []any value on each iteration.
 type DataflowBeaconOptions struct {
-	Iterations   int
-	InitialDelay time.Duration
-	Interval     time.Duration
-	Factory      DataflowBeaconFactory
+	Iterations           int
+	IterationsExpression Expr
+	InitialDelay         time.Duration
+	Interval             time.Duration
+	Factory              DataflowBeaconFactory
 }
 
 func (o DataflowBeaconOptions) validate() error {
 	if o.Iterations < 0 {
 		return NewError(ErrorInvalidRule, "dataflow beacon iterations cannot be negative")
+	}
+	if o.Iterations > 0 && o.IterationsExpression != nil {
+		return NewError(ErrorInvalidRule, "dataflow beacon iterations and iterations expression cannot both be configured")
 	}
 	if o.InitialDelay < 0 {
 		return NewError(ErrorInvalidRule, "dataflow beacon initial delay cannot be negative")
@@ -711,6 +716,8 @@ type DataflowOperator struct {
 	SourceFactory             DataflowSourceFactory
 	BeaconOptions             DataflowBeaconOptions
 	BeaconConfigured          bool
+	BeaconEventConfigured     bool
+	BeaconUnderlying          bool
 	Properties                map[string]any
 	ParameterNames            []string
 	SourceFilter              Expr
@@ -842,6 +849,35 @@ func (b DataflowBuilder) BeaconSourceWithOptions(name string, options DataflowBe
 		Events:           append([]any(nil), events...),
 		BeaconOptions:    options,
 		BeaconConfigured: true,
+	})
+}
+
+// BeaconEventSource constructs a registered Event from source-less field
+// expressions on every beacon iteration. Expressions may use literals,
+// registered variables and Go functions; the optional beacon Factory may
+// return a base Event, Row, map or native schema value before field overrides
+// are applied. The Event envelope is emitted downstream.
+func (b DataflowBuilder) BeaconEventSource(name, eventType string, options DataflowBeaconOptions, fields ...Selection) DataflowBuilder {
+	return b.beaconEventSource(name, eventType, options, false, fields)
+}
+
+// BeaconEventSourceWithUnderlying is the native-representation form of
+// BeaconEventSource. Struct, map, object-array, JSON, XML and Avro schemas
+// emit their registered Go underlying value instead of an Event envelope.
+func (b DataflowBuilder) BeaconEventSourceWithUnderlying(name, eventType string, options DataflowBeaconOptions, fields ...Selection) DataflowBuilder {
+	return b.beaconEventSource(name, eventType, options, true, fields)
+}
+
+func (b DataflowBuilder) beaconEventSource(name, eventType string, options DataflowBeaconOptions, underlying bool, fields []Selection) DataflowBuilder {
+	return b.add(DataflowOperator{
+		Name:                  name,
+		Kind:                  BeaconSourceKind,
+		EventType:             strings.TrimSpace(eventType),
+		Selections:            append([]Selection(nil), fields...),
+		BeaconOptions:         options,
+		BeaconConfigured:      true,
+		BeaconEventConfigured: true,
+		BeaconUnderlying:      underlying,
 	})
 }
 
@@ -1474,6 +1510,34 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 				if err := operator.BeaconOptions.validate(); err != nil {
 					return DataflowDefinition{}, WrapError(ErrorInvalidRule, "dataflow beacon source "+operator.Name, err)
 				}
+				if err := validateDataflowBeaconIterationsExpression(b.env, operator); err != nil {
+					return DataflowDefinition{}, err
+				}
+			}
+			if operator.BeaconEventConfigured && operator.EventType == "" {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("typed dataflow beacon source %q requires event type", operator.Name))
+			}
+			if operator.EventType != "" {
+				schema, ok := b.env.Schema(operator.EventType)
+				if !ok {
+					return DataflowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("dataflow beacon source %q references unknown event type %q", operator.Name, operator.EventType))
+				}
+				if schema.Kind() == SchemaVariant {
+					return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow beacon source %q cannot construct variant event type %q without a member identity", operator.Name, operator.EventType))
+				}
+				if err := validateDataflowBeaconFields(b.env, operator, schema); err != nil {
+					return DataflowDefinition{}, err
+				}
+				if operator.OutputPortTypes == nil {
+					operator.OutputPortTypes = make(map[string]reflect.Type)
+				}
+				if operator.BeaconUnderlying {
+					operator.OutputPortTypes["out"] = dataflowSchemaUnderlyingType(schema)
+				} else {
+					operator.OutputPortTypes["out"] = reflect.TypeOf(Event{})
+				}
+				operators[len(operators)-1] = operator
+				operatorsByName[operator.Name] = operator
 			}
 		case LogSinkKind:
 			if operator.LogOptions != nil {
@@ -2019,6 +2083,111 @@ func dataflowBeaconValueType(values []any) reflect.Type {
 	return result
 }
 
+func dataflowSchemaUnderlyingType(schema Schema) reflect.Type {
+	if schema.goType != nil {
+		return schema.goType
+	}
+	if schema.Kind() == SchemaObjectArray {
+		return reflect.TypeOf([]any{})
+	}
+	return reflect.TypeOf(map[string]any{})
+}
+
+func validateDataflowBeaconFields(env *Environment, operator DataflowOperator, schema Schema) error {
+	seen := make(map[string]struct{}, len(operator.Selections))
+	for index, selection := range operator.Selections {
+		name := strings.TrimSpace(selection.Name)
+		if name == "" || selection.Expr == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow beacon source %q field %d requires a name and expression", operator.Name, index))
+		}
+		if _, duplicate := seen[name]; duplicate {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow beacon source %q duplicates field %q", operator.Name, name))
+		}
+		seen[name] = struct{}{}
+		field, exists := schema.Field(name)
+		if !exists && !schema.AllowsDynamicProperties() {
+			return NewError(ErrorUnknownName, fmt.Sprintf("dataflow beacon source %q references unknown event field %q", operator.Name, name))
+		}
+		if err := env.validateExprVariables(selection.Expr); err != nil {
+			return WrapError(ErrorInvalidRule, fmt.Sprintf("dataflow beacon source %q field %q", operator.Name, name), err)
+		}
+		var referencedFields []string
+		selection.Expr.node().referencedFields(&referencedFields)
+		if len(referencedFields) > 0 {
+			return NewError(ErrorDependency, fmt.Sprintf("dataflow beacon source %q field %q cannot reference input event fields", operator.Name, name))
+		}
+		var referencedParameters []string
+		selection.Expr.node().referencedParameters(&referencedParameters)
+		if len(referencedParameters) > 0 {
+			return NewError(ErrorDependency, fmt.Sprintf("dataflow beacon source %q field %q cannot reference query parameters", operator.Name, name))
+		}
+		if exists && field.Type != nil && selection.Expr.Type() != nil && field.Type != typeOf[any]() &&
+			!field.Type.AssignableTo(selection.Expr.Type()) && !selection.Expr.Type().AssignableTo(field.Type) && !numericTypes(field.Type, selection.Expr.Type()) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow beacon source %q field %q has expression type %s, event type expects %s", operator.Name, name, selection.Expr.Type(), field.Type))
+		}
+	}
+	return nil
+}
+
+func validateDataflowBeaconIterationsExpression(env *Environment, operator DataflowOperator) error {
+	expression := operator.BeaconOptions.IterationsExpression
+	if expression == nil {
+		return nil
+	}
+	if err := env.validateExprVariables(expression); err != nil {
+		return WrapError(ErrorInvalidRule, fmt.Sprintf("dataflow beacon source %q iterations expression", operator.Name), err)
+	}
+	var referencedFields []string
+	expression.node().referencedFields(&referencedFields)
+	if len(referencedFields) > 0 {
+		return NewError(ErrorDependency, fmt.Sprintf("dataflow beacon source %q iterations expression cannot reference input event fields", operator.Name))
+	}
+	var referencedParameters []string
+	expression.node().referencedParameters(&referencedParameters)
+	if len(referencedParameters) > 0 {
+		return NewError(ErrorDependency, fmt.Sprintf("dataflow beacon source %q iterations expression cannot reference query parameters", operator.Name))
+	}
+	typ := expression.Type()
+	if typ == nil {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow beacon source %q iterations expression requires an integer type", operator.Name))
+	}
+	switch typ.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return nil
+	default:
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow beacon source %q iterations expression requires an integer type, got %s", operator.Name, typ))
+	}
+}
+
+func evaluateDataflowBeaconIterations(expression Expr, evaluation EvalContext) (int, error) {
+	value := expression.eval(evaluation)
+	if !value.IsPresent() {
+		return 0, NewError(ErrorTypeMismatch, "dataflow beacon iterations expression must evaluate to a non-null integer")
+	}
+	reflected := reflect.ValueOf(value.Any())
+	if !reflected.IsValid() {
+		return 0, NewError(ErrorTypeMismatch, "dataflow beacon iterations expression must evaluate to a non-null integer")
+	}
+	maxInt := uint64(^uint(0) >> 1)
+	switch reflected.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		number := reflected.Int()
+		if number < 0 || uint64(number) > maxInt {
+			return 0, NewError(ErrorInvalidRule, "dataflow beacon iterations expression must evaluate to a non-negative int")
+		}
+		return int(number), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		number := reflected.Uint()
+		if number > maxInt {
+			return 0, NewError(ErrorInvalidRule, "dataflow beacon iterations expression exceeds int range")
+		}
+		return int(number), nil
+	default:
+		return 0, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow beacon iterations expression evaluated to %T, want integer", value.Any()))
+	}
+}
+
 func dataflowFilterOutputPorts(operator DataflowOperator) (string, string) {
 	if len(operator.OutputPorts) == 0 {
 		return "out", ""
@@ -2394,6 +2563,22 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 	registered, ok := e.env.Dataflow(definition.name)
 	if !ok || registered.name != definition.name {
 		return nil, NewError(ErrorDependency, "dataflow is not registered in engine environment")
+	}
+	registered = cloneDataflowDefinition(registered)
+	for index := range registered.operators {
+		operator := registered.operators[index]
+		if operator.Kind != BeaconSourceKind || operator.BeaconOptions.IterationsExpression == nil {
+			continue
+		}
+		iterations, err := evaluateDataflowBeaconIterations(operator.BeaconOptions.IterationsExpression, EvalContext{
+			Now:       e.Now(),
+			Variables: e.Variables(),
+		})
+		if err != nil {
+			return nil, WrapError(ErrorInvalidRule, "dataflow beacon source "+operator.Name, err)
+		}
+		operator.BeaconOptions.Iterations = iterations
+		registered.operators[index] = operator
 	}
 	if options.InstanceID == "" {
 		options.InstanceID = registered.name
@@ -3156,19 +3341,97 @@ func waitDataflowBeacon(ctx context.Context, duration time.Duration) error {
 }
 
 func (d *DataflowInstance) beaconValue(ctx context.Context, operator DataflowOperator, iteration int) (any, error) {
+	var raw any
+	hasRaw := false
 	if operator.BeaconOptions.Factory != nil {
-		return operator.BeaconOptions.Factory(ctx, DataflowBeaconContext{
+		value, err := operator.BeaconOptions.Factory(ctx, DataflowBeaconContext{
 			DataflowName: d.definition.name,
 			InstanceID:   d.options.InstanceID,
 			OperatorName: operator.Name,
 			Iteration:    iteration,
 			Now:          d.engine.Now(),
 		})
+		if err != nil {
+			return nil, err
+		}
+		raw = value
+		hasRaw = true
+	} else if len(operator.Events) > 0 {
+		raw = operator.Events[iteration%len(operator.Events)]
+		hasRaw = true
 	}
-	if len(operator.Events) == 0 {
+	if operator.EventType != "" {
+		return d.materializeDataflowBeaconEvent(operator, raw, hasRaw)
+	}
+	if !hasRaw {
 		return []any{}, nil
 	}
-	return operator.Events[iteration%len(operator.Events)], nil
+	return raw, nil
+}
+
+func (d *DataflowInstance) materializeDataflowBeaconEvent(operator DataflowOperator, raw any, hasRaw bool) (any, error) {
+	if d == nil || d.engine == nil || d.engine.env == nil {
+		return nil, NewError(ErrorDependency, "dataflow beacon event source requires an engine environment")
+	}
+	schema, ok := d.engine.env.Schema(operator.EventType)
+	if !ok {
+		return nil, NewError(ErrorUnknownName, fmt.Sprintf("dataflow beacon event type %q is not registered", operator.EventType))
+	}
+	now := d.engine.Now()
+	var underlying any
+	var err error
+	if hasRaw && raw != nil {
+		switch value := raw.(type) {
+		case Event:
+			underlying, err = projectEventUnderlying(schema, value)
+		case Row:
+			underlying, err = projectRowUnderlying(schema, value)
+		case map[string]any:
+			underlying, err = projectMapToSchema(schema, value)
+		default:
+			var event Event
+			event, err = newEvent(schema, value, now)
+			if err == nil {
+				underlying = event.Underlying()
+			}
+		}
+		if err != nil {
+			return nil, WrapError(ErrorTypeMismatch, "dataflow beacon base value", err)
+		}
+	}
+
+	updates := make(map[string]any, len(operator.Selections))
+	evaluation := EvalContext{Now: now, Variables: d.engine.Variables()}
+	for _, selection := range operator.Selections {
+		value := selection.Expr.eval(evaluation)
+		if value.IsMissing() {
+			return nil, NewError(ErrorDependency, fmt.Sprintf("dataflow beacon field %q resolved to Missing", selection.Name))
+		}
+		updates[selection.Name] = value.Any()
+	}
+	if underlying == nil {
+		underlying, err = projectMapToSchema(schema, updates)
+	} else if len(updates) > 0 {
+		underlying, err = mergeSchemaUnderlying(schema, underlying, updates)
+	}
+	if err != nil {
+		return nil, WrapError(ErrorTypeMismatch, "dataflow beacon fields", err)
+	}
+	event, err := newEvent(schema, underlying, now)
+	if err != nil {
+		return nil, WrapError(ErrorTypeMismatch, "dataflow beacon event", err)
+	}
+	if operator.BeaconUnderlying {
+		value := event.Underlying()
+		if schema.goType != nil {
+			reflected := reflect.ValueOf(value)
+			if reflected.IsValid() && reflected.Kind() == reflect.Pointer && !reflected.IsNil() && reflected.Elem().Type() == schema.goType {
+				return reflected.Elem().Interface(), nil
+			}
+		}
+		return value, nil
+	}
+	return event, nil
 }
 
 func (d *DataflowInstance) submitBeaconValue(ctx context.Context, operator DataflowOperator, value any) error {
@@ -4732,6 +4995,11 @@ func (d *DataflowInstance) applyGraphOperator(ctx context.Context, operator Data
 			if err := operator.Signal(ctx, signal); err != nil {
 				return nil, err
 			}
+		}
+		if operator.Kind == LogSinkKind || operator.Kind == EventBusSinkKind {
+			// Terminal sinks may observe control signals through their optional
+			// signal handler, but never forward them on an undeclared output.
+			return nil, nil
 		}
 		if operator.Kind == SelectKind && operator.SelectOptions.IterateOnFinalMarker && isDataflowFinalMarker(signal) {
 			rows, err := d.processDataflowSelectFinalMarker(operator)

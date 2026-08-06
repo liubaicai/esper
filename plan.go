@@ -561,7 +561,15 @@ func (e *Environment) Build(query Query) (Plan, error) {
 			if operator.Statement != nil {
 				statement = operator.Statement.Name()
 			}
-			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement))
+			beacon := ""
+			if operator.Kind == BeaconSourceKind && operator.BeaconConfigured {
+				iterationsExpression := ""
+				if operator.BeaconOptions.IterationsExpression != nil {
+					iterationsExpression = operator.BeaconOptions.IterationsExpression.Description()
+				}
+				beacon = fmt.Sprintf("iterations=%d;iterationsExpr=%s;initial=%s;interval=%s;factory=%t;event=%t;underlying=%t", operator.BeaconOptions.Iterations, iterationsExpression, operator.BeaconOptions.InitialDelay, operator.BeaconOptions.Interval, operator.BeaconOptions.Factory != nil, operator.BeaconEventConfigured, operator.BeaconUnderlying)
+			}
+			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon))
 		}
 		edges := make([]string, 0, len(dataflow.edges))
 		for _, edge := range dataflow.edges {

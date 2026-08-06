@@ -559,11 +559,11 @@
       "javaRuntimeIds": ["java-runtime-5438f7be9b56ca119b0c", "java-runtime-f54de0ae037b90b24551", "java-runtime-aac755fc7592bf62718d", "java-runtime-f1fc7e290467bab36366"],
       "javaNames": ["EPLDataflowBeaconWithBeans", "EPLDataflowBeaconVariable", "EPLDataflowBeaconFields", "EPLDataflowBeaconNoType"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpBeaconSource.java"],
-      "goTests": ["TestDataflowBeaconOptionsIterationsAndFinalMarkerMatchesEsper", "TestDataflowBeaconFactoryReceivesStableIterationContext", "TestDataflowBeaconWithoutIterationLimitRunsUntilCanceled", "TestDataflowBeaconOptionsRejectNegativeTiming"],
-      "tags": ["correctness", "dataflow", "beacon", "timing", "termination"],
+      "goTests": ["TestDataflowBeaconOptionsIterationsAndFinalMarkerMatchesEsper", "TestDataflowBeaconFactoryReceivesStableIterationContext", "TestDataflowBeaconWithoutIterationLimitRunsUntilCanceled", "TestDataflowBeaconOptionsRejectNegativeTiming", "TestDataflowBeaconEventFieldsMaterializeAllRepresentationsMatchesEsper", "TestDataflowBeaconEventFactoryMaterializesPerIterationBaseValues", "TestDataflowBeaconIterationsExpressionUsesVariableAtInstantiationMatchesEsper", "TestDataflowBeaconEventFieldsFlowIntoEventBusSinkMatchesEsper", "TestDataflowBeaconEventFieldsRejectInvalidDefinitions"],
+      "tags": ["correctness", "dataflow", "beacon", "timing", "termination", "expression", "representation", "eventbus"],
       "status": "mapped",
-      "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "Go adds BeaconSourceWithOptions with structured iteration, initial-delay and interval controls, cyclic values or a Go factory with stable per-iteration context, FinalMarker on finite completion and context cancellation for unlimited sources. Java additionally constructs typed Bean/Map/ObjectArray/Avro values from EPL property evaluators, runtime variables and additional parameter writers; those representation and expression-injection forms remain open."
+      "evidence": ["java-baseline", "java-runtime-inventory", "go-unit"],
+      "difference": "Go provides structured BeaconSourceWithOptions plus typed BeaconEventSource/BeaconEventSourceWithUnderlying. Iteration count can be fixed or evaluated once from registered variables at instantiation; typed source-less fields support literals, variables and Go expressions, optional per-iteration factory base values, Event envelopes or native Struct/Map/ObjectArray/JSON/XML/Avro representations, and direct EventBusSink routing. Finite sources submit FinalMarker and unlimited sources honor cancellation. Java's URI-based per-field parameter writer, exact JavaBean constructor/setter discovery, GenericData.Record Avro underlying, reflective operator injection metadata and the full invalid/diagnostic matrix remain open."
     },
     {
       "id": "case.dataflow-feedback",
