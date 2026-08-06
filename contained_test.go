@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"reflect"
 	"testing"
 )
 
@@ -28,6 +29,15 @@ type unnestIntContainer struct {
 type unnestPayment struct {
 	BookID string `esper:"bookId"`
 	Amount int64  `esper:"amount"`
+}
+
+type containedNestedSupportBean struct {
+	TheString    string `esper:"theString"`
+	IntPrimitive int64  `esper:"intPrimitive"`
+}
+
+type containedNestedSubqueryEvent struct {
+	TheString string `esper:"theString"`
 }
 
 func buildUnnestBookStream(env *Environment) Stream[unnestBook] {
@@ -231,6 +241,254 @@ func TestUnnestNestedStructsPreserveParentArrayOrder(t *testing.T) {
 		if got := rows[index]; got.Get("id").Any() != expected.id || got.Get("rating").Any() != expected.rating {
 			t.Fatalf("nested unnest row %d = %#v, want %#v", index, got, expected)
 		}
+	}
+}
+
+func TestUnnestNestedNamedWindowFilterMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	orderSchema, err := RegisterStruct[unnestOrder](env, "ContainedNestedNamedOrder")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[unnestBook](env, "ContainedNestedNamedBook"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[unnestReview](env, "ContainedNestedNamedReview"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "ContainedNestedNamedWindow", orderSchema, NamedWindowRetention(LastEvent())); err != nil {
+		t.Fatal(err)
+	}
+
+	orders := From[unnestOrder](env, "ContainedNestedNamedOrder")
+	insertPlan, err := env.Build(OnEvent(orders).InsertIntoNamedWindow(
+		"ContainedNestedNamedWindow",
+		SetColumn("orderId", Field[unnestOrder, string]("orderId")),
+		SetColumn("books", Field[unnestOrder, []unnestBook]("books")),
+	).Query(StatementName("contained-nested-named-insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	windowOrders := FromNamedWindowAs[unnestOrder](env, "ContainedNestedNamedWindow")
+	books := Unnest[unnestOrder, unnestBook](windowOrders, Property[[]unnestBook](EventValue[unnestOrder](), "books"))
+	reviews := Unnest[unnestBook, unnestReview](books, Property[[]unnestReview](EventValue[unnestBook](), "reviews"))
+	consumerPlan, err := env.Build(Select(reviews,
+		Alias("id", Field[unnestReview, string]("id")),
+	).Query(
+		StatementName("contained-nested-named-consumer"),
+		OrderBy(Ascending(Field[unnestReview, string]("id"))),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = consumerDeployment.Undeploy(context.Background()) }()
+	insertDeployment, err := engine.Deploy(context.Background(), insertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = insertDeployment.Undeploy(context.Background()) }()
+	var rows []string
+	if _, err := consumerDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("nested named-window result is not a row: %#v", result)
+			}
+			rows = append(rows, row.Get("id").Any().(string))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := engine.SendEvent(context.Background(), unnestOrder{
+		OrderID: "O-nwf-1",
+		Books: []unnestBook{
+			{ID: "B-1", Reviews: []unnestReview{{ID: "R01"}, {ID: "R02"}}},
+			{ID: "B-2", Reviews: []unnestReview{{ID: "R10"}}},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), unnestOrder{
+		OrderID: "O-nwf-2",
+		Books:   []unnestBook{{ID: "B-3", Reviews: []unnestReview{{ID: "R201"}}}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"R01", "R02", "R10", "R201"}; !reflect.DeepEqual(rows, want) {
+		t.Fatalf("nested named-window review rows = %#v, want %#v", rows, want)
+	}
+}
+
+func TestUnnestNestedNamedWindowSubqueryMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	orderSchema, err := RegisterStruct[unnestOrder](env, "ContainedNestedSubqueryOrder")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[unnestBook](env, "ContainedNestedSubqueryBook"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[containedNestedSubqueryEvent](env, "ContainedNestedSubqueryEvent"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "ContainedNestedSubqueryWindow", orderSchema, NamedWindowRetention(LastEvent())); err != nil {
+		t.Fatal(err)
+	}
+
+	orders := From[unnestOrder](env, "ContainedNestedSubqueryOrder")
+	insertPlan, err := env.Build(OnEvent(orders).InsertIntoNamedWindow(
+		"ContainedNestedSubqueryWindow",
+		SetColumn("orderId", Field[unnestOrder, string]("orderId")),
+		SetColumn("books", Field[unnestOrder, []unnestBook]("books")),
+	).Query(StatementName("contained-nested-subquery-insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	windowOrders := FromNamedWindowAs[unnestOrder](env, "ContainedNestedSubqueryWindow")
+	books := Unnest[unnestOrder, unnestBook](windowOrders, Property[[]unnestBook](EventValue[unnestOrder](), "books"))
+	totalPrice := SubquerySum[float64](books.AsRecord(), Field[any, float64]("price"))
+	outer := From[containedNestedSubqueryEvent](env, "ContainedNestedSubqueryEvent")
+	outerPlan, err := env.Build(Select(outer,
+		Alias("theString", Field[containedNestedSubqueryEvent, string]("theString")),
+		Alias("totalPrice", totalPrice),
+	).Query(StatementName("contained-nested-subquery-consumer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	outerDeployment, err := engine.Deploy(context.Background(), outerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = outerDeployment.Undeploy(context.Background()) }()
+	insertDeployment, err := engine.Deploy(context.Background(), insertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = insertDeployment.Undeploy(context.Background()) }()
+	var rows []Row
+	if _, err := outerDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("nested named-window subquery result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := engine.SendEvent(context.Background(), unnestOrder{
+		OrderID: "O-nws-1",
+		Books: []unnestBook{
+			{ID: "B-1", Price: 24},
+			{ID: "B-2", Price: 35},
+			{ID: "B-3", Price: 27},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), containedNestedSubqueryEvent{TheString: "E1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), unnestOrder{
+		OrderID: "O-nws-2",
+		Books: []unnestBook{
+			{ID: "B-4", Price: 15},
+			{ID: "B-5", Price: 13},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), containedNestedSubqueryEvent{TheString: "E2"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[0].Get("theString").Any() != "E1" || rows[0].Get("totalPrice").Any() != float64(86) ||
+		rows[1].Get("theString").Any() != "E2" || rows[1].Get("totalPrice").Any() != float64(28) {
+		t.Fatalf("nested named-window subquery rows = %#v", rows)
+	}
+}
+
+func TestUnnestNestedNamedWindowOnTriggerMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	orderSchema, err := RegisterStruct[unnestOrder](env, "ContainedNestedTriggerOrder")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[unnestBook](env, "ContainedNestedTriggerBook"); err != nil {
+		t.Fatal(err)
+	}
+	supportSchema, err := RegisterStruct[containedNestedSupportBean](env, "ContainedNestedTriggerSupport")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "ContainedNestedTriggerOrders", orderSchema, NamedWindowRetention(LastEvent())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "ContainedNestedTriggerSupportWindow", supportSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+
+	windowOrders := FromNamedWindowAs[unnestOrder](env, "ContainedNestedTriggerOrders")
+	books := Unnest[unnestOrder, unnestBook](windowOrders, Property[[]unnestBook](EventValue[unnestOrder](), "books"))
+	trigger, err := env.Build(OnEvent(books).SelectFromNamedWindow(
+		"ContainedNestedTriggerSupportWindow",
+		Equal[string](NamedWindowField[string]("theString"), Field[unnestBook, string]("id")),
+		Alias("theString", NamedWindowField[string]("theString")),
+		Alias("intPrimitive", NamedWindowField[int64]("intPrimitive")),
+	).Query(StatementName("contained-nested-named-on-trigger")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), trigger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deployment.Undeploy(context.Background()) }()
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("nested named-window on-trigger result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.InsertNamedWindow(context.Background(), "ContainedNestedTriggerSupportWindow", containedNestedSupportBean{TheString: "B-2", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.InsertNamedWindow(context.Background(), "ContainedNestedTriggerOrders", unnestOrder{OrderID: "O-trigger-1", Books: []unnestBook{{ID: "B-1"}, {ID: "B-2"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("theString").Any() != "B-2" || rows[0].Get("intPrimitive").Any() != int64(1) {
+		t.Fatalf("nested named-window on-trigger rows = %#v, want B-2/1", rows)
+	}
+	if err := engine.InsertNamedWindow(context.Background(), "ContainedNestedTriggerSupportWindow", containedNestedSupportBean{TheString: "B-1", IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.InsertNamedWindow(context.Background(), "ContainedNestedTriggerOrders", unnestOrder{OrderID: "O-trigger-2", Books: []unnestBook{{ID: "B-3"}, {ID: "B-1"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[1].Get("theString").Any() != "B-1" || rows[1].Get("intPrimitive").Any() != int64(2) {
+		t.Fatalf("nested named-window on-trigger rows = %#v, want second B-1/2", rows)
 	}
 }
 

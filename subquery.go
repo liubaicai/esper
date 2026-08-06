@@ -47,7 +47,7 @@ func newSubqueryRuntimeRegistry(env *Environment, engine *Engine, query Query) *
 		states: make(map[*subqueryDefinition]*subqueryRuntimeState),
 	}
 	for _, definition := range definitions {
-		base, err := sourceNode(definition.source)
+		base, err := subqueryRootSource(definition.source)
 		if err != nil || base.kind != streamSource {
 			continue
 		}
@@ -60,6 +60,23 @@ func newSubqueryRuntimeRegistry(env *Environment, engine *Engine, query Query) *
 		return nil
 	}
 	return registry
+}
+
+// subqueryRootSource unwraps the fluent operators that transform the rows
+// visible to a subquery. sourceNode intentionally stops at a contained node
+// because that node owns the child schema; subqueries also need the logical
+// parent source so they can snapshot a named window or register an event
+// stream runtime before applying the contained expansion.
+func subqueryRootSource(node *streamNode) (*streamNode, error) {
+	for current := node; current != nil; current = current.input {
+		switch current.kind {
+		case streamFilter, streamWindow, streamContained:
+			continue
+		default:
+			return current, nil
+		}
+	}
+	return nil, fmt.Errorf("esper: subquery has no root source")
 }
 
 func querySubqueryDefinitions(query Query) []*subqueryDefinition {
@@ -891,7 +908,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 	if e == nil {
 		return nil
 	}
-	base, err := sourceNode(definition.source)
+	base, err := subqueryRootSource(definition.source)
 	if err != nil {
 		return nil
 	}

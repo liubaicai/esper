@@ -47,7 +47,7 @@
       "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "contained_test.go", "contained_unidirectional_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["nested contained interactions beyond basic typed composition and child projection aliases", "scalar/string/array split expressions and @type materialization", "contained Named Window/Table/FAF interactions", "fragment metadata, invalid diagnostics and complete Java contained-event trace"]
+      "remaining": ["nested contained Pattern/Subselect/underlying and property-selection alias/fragment semantics", "scalar/string/array split expressions and @type materialization", "contained Table/FAF interactions and remaining Named Window representation combinations", "invalid diagnostics and complete Java contained-event trace"]
     },
     {
       "id": "event.json-typed",
@@ -391,6 +391,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
       "difference": "Go adds a typed ContainedValue[T] wrapper and UnnestValues API so scalar arrays enter the same registered event-stream model; the mapped case covers ordered int-array expansion and typed projection. String-array where/type materialization, split expressions and scalar contained joins remain open."
+    },
+    {
+      "id": "case.event-contained-named-window-nested",
+      "javaRuntimeIds": ["java-runtime-a4e24efd666f3a3e090d", "java-runtime-3135ceeab450330b26eb", "java-runtime-0459edb44c2dc0ce4633"],
+      "javaNames": ["EPLContainedNamedWindowFilter", "EPLContainedNamedWindowSubquery", "EPLContainedNamedWindowOnTrigger"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventNested.java"],
+      "goTests": ["TestUnnestNestedNamedWindowFilterMatchesEsper", "TestUnnestNestedNamedWindowSubqueryMatchesEsper", "TestUnnestNestedNamedWindowOnTriggerMatchesEsper"],
+      "tags": ["correctness", "event", "contained", "nested", "named-window", "subquery", "on-trigger"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
+      "difference": "Go exposes a typed FromNamedWindowAs[T] source and composes two Unnest stages for nested named-window consumers. The mapped slice covers retained-window nested review filtering, correlated aggregate subquery snapshots over contained children, and on-trigger selection of a second named window using the contained child as the trigger. Java's property-selection aliases/fragment metadata, Pattern/Subselect/underlying variants and exact invalid diagnostics remain open."
     },
     {
       "id": "case.event-json-typed",
@@ -1595,6 +1606,7 @@
     {"capabilityId": "event.contained", "caseId": "case.event-contained-simple"},
     {"capabilityId": "event.contained", "caseId": "case.event-contained-nested-basic"},
     {"capabilityId": "event.contained", "caseId": "case.event-contained-array-basic"},
+    {"capabilityId": "event.contained", "caseId": "case.event-contained-named-window-nested"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-typed"},
     {"capabilityId": "event.xml-tree", "caseId": "case.event-xml-tree"},
     {"capabilityId": "event.inheritance", "caseId": "case.event-inheritance"},

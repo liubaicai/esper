@@ -1469,7 +1469,7 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 	if definition.limitSet && definition.limit < 0 {
 		return NewError(ErrorInvalidRule, "subquery limit cannot be negative")
 	}
-	base, err := sourceNode(definition.source)
+	base, err := subqueryRootSource(definition.source)
 	if err != nil {
 		return err
 	}

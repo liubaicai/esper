@@ -751,6 +751,14 @@ func FromNamedWindow(env *Environment, windowName string) RecordStream {
 	return RecordStream{env: env, node: &streamNode{kind: streamNamedWindow, sourceName: windowName, sourceType: typeOf[any]()}}
 }
 
+// FromNamedWindowAs creates a typed consumer stream for a named window. It
+// keeps the named-window source in the same generic chain as From, allowing
+// contained properties to be expanded with Unnest and then passed through
+// typed filters, windows, joins and projections.
+func FromNamedWindowAs[T any](env *Environment, windowName string) Stream[T] {
+	return Stream[T]{env: env, node: &streamNode{kind: streamNamedWindow, sourceName: windowName, sourceType: typeOf[T]()}}
+}
+
 // FromTable creates a read-only record stream over a registered table. Table
 // sources are evaluated by Fire-and-Forget execution and are not fed by
 // ordinary event delivery.
@@ -943,6 +951,14 @@ func (s Stream[T]) Window(window WindowSpec) Stream[T] {
 		env:  s.env,
 		node: &streamNode{kind: streamWindow, input: s.node, window: window},
 	}
+}
+
+// AsRecord exposes a typed stream through the dynamic RecordStream view while
+// preserving the same source graph. It is useful when a typed contained or
+// method source becomes the input of a subquery API whose result shape is
+// intentionally dynamic.
+func (s Stream[T]) AsRecord() RecordStream {
+	return RecordStream{env: s.env, node: s.node}
 }
 
 func (s Stream[T]) Query(options ...QueryOption) Query {
