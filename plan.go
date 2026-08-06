@@ -567,7 +567,9 @@ func (e *Environment) Build(query Query) (Plan, error) {
 				if operator.BeaconOptions.IterationsExpression != nil {
 					iterationsExpression = operator.BeaconOptions.IterationsExpression.Description()
 				}
-				beacon = fmt.Sprintf("iterations=%d;iterationsExpr=%s;initial=%s;interval=%s;factory=%t;event=%t;underlying=%t", operator.BeaconOptions.Iterations, iterationsExpression, operator.BeaconOptions.InitialDelay, operator.BeaconOptions.Interval, operator.BeaconOptions.Factory != nil, operator.BeaconEventConfigured, operator.BeaconUnderlying)
+				fieldParameters := append([]string(nil), operator.BeaconOptions.FieldParameters...)
+				sort.Strings(fieldParameters)
+				beacon = fmt.Sprintf("iterations=%d;iterationsExpr=%s;initial=%s;interval=%s;factory=%t;event=%t;underlying=%t;fieldParameters=%s", operator.BeaconOptions.Iterations, iterationsExpression, operator.BeaconOptions.InitialDelay, operator.BeaconOptions.Interval, operator.BeaconOptions.Factory != nil, operator.BeaconEventConfigured, operator.BeaconUnderlying, strings.Join(fieldParameters, ","))
 			}
 			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon))
 		}

@@ -167,6 +167,147 @@ func TestDataflowBeaconIterationsExpressionUsesVariableAtInstantiationMatchesEsp
 	}
 }
 
+func TestDataflowBeaconFieldParametersOverridePerInstanceAndRouteEventBusMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[dataflowBeaconFieldEvent](env, "BeaconParameterizedEvent"); err != nil {
+		t.Fatal(err)
+	}
+	parameterNames := []string{" p0 ", "p1"}
+	definition, err := DefineDataflow(env, "beacon-field-parameters").
+		BeaconEventSourceWithUnderlying("source", "BeaconParameterizedEvent", DataflowBeaconOptions{
+			Iterations:      1,
+			FieldParameters: parameterNames,
+		},
+			Alias("p0", Literal("default")),
+			Alias("p1", Literal(int64(10))),
+			Alias("p2", Literal(float64(1))),
+		).
+		EventBusSink("sink", "BeaconParameterizedEvent").
+		Connect("source", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	parameterNames[0] = "missing"
+	operators := definition.Operators()
+	if got := operators[0].BeaconOptions.FieldParameters; !reflect.DeepEqual(got, []string{"p0", "p1"}) {
+		t.Fatalf("beacon field parameter copy = %#v", got)
+	}
+
+	consumerPlan, err := env.Build(From[dataflowBeaconFieldEvent](env, "BeaconParameterizedEvent").Query(StatementName("beacon-parameter-consumer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	consumer, err := engine.Deploy(context.Background(), consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var received []dataflowBeaconFieldEvent
+	if _, err := consumer.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			event, ok := result.Event()
+			if !ok {
+				continue
+			}
+			switch value := event.Underlying().(type) {
+			case dataflowBeaconFieldEvent:
+				received = append(received, value)
+			case *dataflowBeaconFieldEvent:
+				received = append(received, *value)
+			default:
+				return fmt.Errorf("parameterized event underlying = %T", event.Underlying())
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	var contexts []DataflowParameterContext
+	run := func(instanceID, p0 string, p1 any, provideP1 bool) {
+		t.Helper()
+		instance, instantiateErr := engine.InstantiateDataflowWithOptions(context.Background(), definition, DataflowOptions{
+			InstanceID: instanceID,
+			ParameterProvider: func(parameter DataflowParameterContext) (any, bool) {
+				contexts = append(contexts, parameter)
+				switch parameter.ParameterName {
+				case "p0":
+					return p0, true
+				case "p1":
+					return p1, provideP1
+				default:
+					return nil, false
+				}
+			},
+		})
+		if instantiateErr != nil {
+			t.Fatal(instantiateErr)
+		}
+		if runErr := instance.Run(context.Background()); runErr != nil {
+			t.Fatal(runErr)
+		}
+	}
+	run("beacon-parameter-one", "E1", nil, false)
+	run("beacon-parameter-two", "E2", int64(20), true)
+
+	want := []dataflowBeaconFieldEvent{
+		{P0: "E1", P1: 10, P2: 1},
+		{P0: "E2", P1: 20, P2: 1},
+	}
+	if !reflect.DeepEqual(received, want) {
+		t.Fatalf("parameterized beacon events = %#v, want %#v", received, want)
+	}
+	if len(contexts) != 4 {
+		t.Fatalf("beacon parameter contexts = %#v", contexts)
+	}
+	for index, parameter := range contexts {
+		if parameter.OperatorName != "source" || parameter.OperatorNum != 0 || parameter.DefaultValue != nil {
+			t.Fatalf("beacon parameter context[%d] = %#v", index, parameter)
+		}
+		if parameter.ParameterName != []string{"p0", "p1"}[index%2] {
+			t.Fatalf("beacon parameter order[%d] = %#v", index, parameter)
+		}
+	}
+	if len(definition.Operators()[0].Properties) != 0 {
+		t.Fatalf("definition was mutated by instance parameters: %#v", definition.Operators()[0].Properties)
+	}
+}
+
+func TestDataflowBeaconFieldParametersHaveStablePlanIdentity(t *testing.T) {
+	build := func(parameters []string) Plan {
+		t.Helper()
+		env := NewEnvironment()
+		if _, err := RegisterStruct[dataflowBeaconFieldEvent](env, "BeaconParameterPlanEvent"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := DefineDataflow(env, "beacon-parameter-plan").
+			BeaconEventSource("source", "BeaconParameterPlanEvent", DataflowBeaconOptions{
+				Iterations:      1,
+				FieldParameters: parameters,
+			}).
+			Emitter("sink").
+			Connect("source", "sink").
+			Build(); err != nil {
+			t.Fatal(err)
+		}
+		plan, err := env.Build(From[dataflowBeaconFieldEvent](env, "BeaconParameterPlanEvent").Query())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return plan
+	}
+	forward := build([]string{"p0", "p1"})
+	reversed := build([]string{"p1", "p0"})
+	different := build([]string{"p0"})
+	if forward.Hash() != reversed.Hash() {
+		t.Fatalf("field parameter order changed plan identity: %s != %s", forward.Hash(), reversed.Hash())
+	}
+	if forward.Hash() == different.Hash() {
+		t.Fatalf("different field parameters share plan identity %s", forward.Hash())
+	}
+}
+
 func TestDataflowBeaconEventFieldsFlowIntoEventBusSinkMatchesEsper(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[dataflowBeaconFieldEvent](env, "BeaconBusEvent"); err != nil {
@@ -263,6 +404,32 @@ func TestDataflowBeaconEventFieldsRejectInvalidDefinitions(t *testing.T) {
 		BeaconSourceWithOptions("source", DataflowBeaconOptions{IterationsExpression: Literal(1.5)}).
 		Build(); err == nil {
 		t.Fatal("beacon accepted a non-integer iterations expression")
+	}
+	if _, err := DefineDataflow(env, "beacon-untyped-field-parameter").
+		BeaconSourceWithOptions("source", DataflowBeaconOptions{Iterations: 1, FieldParameters: []string{"p0"}}).
+		Build(); err == nil {
+		t.Fatal("untyped beacon accepted a field parameter")
+	}
+	if _, err := DefineDataflow(env, "beacon-unknown-field-parameter").
+		BeaconEventSource("source", "BeaconValidation", DataflowBeaconOptions{Iterations: 1, FieldParameters: []string{"missing"}}).
+		Build(); err == nil {
+		t.Fatal("typed beacon accepted an unknown field parameter")
+	}
+	if _, err := DefineDataflow(env, "beacon-duplicate-field-parameter").
+		BeaconEventSource("source", "BeaconValidation", DataflowBeaconOptions{Iterations: 1, FieldParameters: []string{"p0", " p0 "}}).
+		Build(); err == nil {
+		t.Fatal("typed beacon accepted duplicate field parameters")
+	}
+	parameterized, err := DefineDataflow(env, "beacon-invalid-field-parameter-value").
+		BeaconEventSource("source", "BeaconValidation", DataflowBeaconOptions{Iterations: 1, FieldParameters: []string{"p1"}}).
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewEngine(env).InstantiateDataflowWithOptions(context.Background(), parameterized, DataflowOptions{
+		ParameterProvider: func(DataflowParameterContext) (any, bool) { return "wrong", true },
+	}); err == nil {
+		t.Fatal("typed beacon accepted an incompatible field parameter value")
 	}
 	member, err := RegisterMap(env, "BeaconMember", []FieldSpec{FieldDef("p0", reflect.TypeOf(""))})
 	if err != nil {
