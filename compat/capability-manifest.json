@@ -152,12 +152,12 @@
       "id": "expr.declared",
       "domain": "expression",
       "level": "S",
-      "summary": "Named expression definitions and typed references with inferred value-parameter substitution and dependency validation",
+      "summary": "Named expression definitions and typed references with inferred value/event-parameter substitution and dependency validation",
       "javaRefs": ["EPLSubselectAggregatedMultirowAndColumn", "EPLOtherCreateExpression"],
       "goRefs": ["expression_definition.go", "expression_definition_test.go", "expr.go", "plan.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["event-valued parameter and subquery/pattern/context parameter matrix", "overload/name-collision rules", "module/deployment visibility and lifecycle replacement", "complete iterator/cardinality/fragment/context/pattern/Dataflow combinations", "full Java invalid-rule and shared trace parity"]
+      "remaining": ["Map-backed event parameters and full subquery/pattern/context multi-row parameter matrix", "overload/name-collision rules", "module/deployment visibility and lifecycle replacement", "complete iterator/cardinality/fragment/context/pattern/Dataflow combinations", "full Java invalid-rule and shared trace parity"]
     },
     {
       "id": "expr.script",
@@ -897,14 +897,14 @@
     },
     {
       "id": "case.expr-declared",
-      "javaRuntimeIds": ["java-runtime-fe88aa9f7b78478355ae", "java-runtime-11c39858b2fb936c60bb", "java-runtime-48b280bc6b857cf5fa3a"],
-      "javaNames": ["EPLSubselectMultirowGroupedUncorrelatedIteratorAndExpressionDef", "ExprDefineValueParameterV", "ExprDefineValueParameterInvalid"],
-      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedMultirowAndColumn.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineValueParameter.java"],
-      "goTests": ["TestNamedExpressionReferenceEvaluatesAndEntersPlanIdentity", "TestNamedExpressionReferenceRejectsInvalidDependencies", "TestNamedExpressionGroupedSubquerySnapshotAndEnumChainMatchEsper", "TestParameterizedNamedExpressionReferenceMatchesJavaValueParameterSemantics", "TestParameterizedNamedExpressionReferenceRejectsArityAndTypeMismatch"],
-      "tags": ["correctness", "expression", "declared-expression", "subquery", "named-window", "enum", "dependency", "plan-identity"],
+      "javaRuntimeIds": ["java-runtime-fe88aa9f7b78478355ae", "java-runtime-11c39858b2fb936c60bb", "java-runtime-48b280bc6b857cf5fa3a", "java-runtime-b787900abf907e4d27c7", "java-runtime-c80bac042daa8019b9f3", "java-runtime-9916c8da4f513eb522c1", "java-runtime-e13d8266311bca7fc491"],
+      "javaNames": ["EPLSubselectMultirowGroupedUncorrelatedIteratorAndExpressionDef", "ExprDefineValueParameterV", "ExprDefineValueParameterInvalid", "ExprDefineValueParameterEV", "ExprDefineValueParameterVEVE", "ExprDefineEventParamPatternPOJO", "ExprDefineEventParamSubqueryPOJO"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedMultirowAndColumn.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineValueParameter.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineEventParameterNonStream.java"],
+      "goTests": ["TestNamedExpressionReferenceEvaluatesAndEntersPlanIdentity", "TestNamedExpressionReferenceRejectsInvalidDependencies", "TestNamedExpressionGroupedSubquerySnapshotAndEnumChainMatchEsper", "TestParameterizedNamedExpressionReferenceMatchesJavaValueParameterSemantics", "TestParameterizedNamedExpressionReferenceRejectsArityAndTypeMismatch", "TestParameterizedNamedExpressionReferenceSupportsEventValueParameters", "TestParameterizedNamedExpressionReferenceSupportsJoinedEventValues", "TestParameterizedNamedExpressionReferenceSupportsPatternEventValues", "TestParameterizedNamedExpressionReferenceSupportsSubqueryEventValues"],
+      "tags": ["correctness", "expression", "declared-expression", "event-parameter", "subquery", "pattern", "named-window", "enum", "dependency", "plan-identity"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "Go exposes typed DefineExpression[T] plus ExpressionParam[T]/variadic ExpressionRef[T] nodes instead of EPL create-expression syntax. Value-parameter calls substitute at runtime while preserving the caller event, variables, prepared parameters, aggregate state and Engine snapshot; nested calls, inferred declaration order, arity/type diagnostics and parameter metadata in Plan canonical/hash are covered. Event-valued parameters, the broader subquery/pattern/context matrix, overload/module visibility, lifecycle replacement and the complete Java iterator/cardinality/fragment trace remain open."
+      "difference": "Go exposes typed DefineExpression[T] plus ExpressionParam[T]/variadic ExpressionRef[T] nodes instead of EPL create-expression syntax. Value and typed Event parameters substitute at runtime while preserving the caller event, Join tuple, Pattern capture, LastEvent subquery, variables, prepared parameters, aggregate state and Engine snapshot; nested calls, inferred declaration order, arity/type diagnostics and parameter metadata in Plan canonical/hash are covered. Map-backed event parameters, the broader multi-row subquery/Pattern/Context matrix, overload/module visibility, lifecycle replacement and the complete Java iterator/cardinality/fragment trace remain open."
     },
     {
       "id": "case.expr-core-bitwise",
