@@ -949,6 +949,24 @@ func tableRowEvent(table *Table, tableName string, row TableRow, now time.Time) 
 	for name, value := range row.values {
 		values[name] = value.Any()
 	}
+	return tableEventFromValues(table, tableName, values, now)
+}
+
+// tableNullRowEvent creates the target-row scope used by a primary-key lookup
+// that has no matching row.  A table selector still emits its projected row in
+// this case; every table column must therefore be present-but-null rather than
+// missing, so chained methods preserve Esper's null result semantics. The
+// triggering event is retained as the explicit outer scope for expressions
+// that need both sides of the lookup.
+func tableNullRowEvent(table *Table, tableName string, now time.Time) (Event, error) {
+	values := make(map[string]any, len(table.Definition().Columns()))
+	for _, column := range table.Definition().Columns() {
+		values[column.Name] = nil
+	}
+	return tableEventFromValues(table, tableName, values, now)
+}
+
+func tableEventFromValues(table *Table, tableName string, values map[string]any, now time.Time) (Event, error) {
 	event, err := newEvent(table.Definition().schema, values, now)
 	if err != nil {
 		return Event{}, err
@@ -1009,21 +1027,28 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 		return ResultBatch{}, err
 	}
 	row, found, err := table.Get(ctx, keys...)
-	if err != nil || !found {
+	if err != nil {
 		return ResultBatch{Time: now}, err
 	}
-	values := make(map[string]any, len(row.values))
-	for name, value := range row.values {
-		values[name] = value.Any()
+	var tableEvent Event
+	if found {
+		tableEvent, err = tableRowEvent(table, definition.table, row, now)
+	} else {
+		tableEvent, err = tableNullRowEvent(table, definition.table, now)
 	}
-	tableEvent, err := newEvent(table.Definition().schema, values, now)
 	if err != nil {
 		return ResultBatch{}, err
 	}
-	tableEvent.typeName = definition.table
 	projected := make([]Value, 0, len(definition.selections))
+	evaluation = EvalContext{
+		Event:      tableEvent,
+		OuterEvent: event,
+		Group:      []Event{tableEvent},
+		Now:        now,
+		Variables:  variables,
+	}
 	for _, selection := range definition.selections {
-		projected = append(projected, selection.Expr.eval(EvalContext{Event: tableEvent, Now: now, Variables: variables}))
+		projected = append(projected, selection.Expr.eval(evaluation))
 	}
 	return ResultBatch{Time: now, New: []Result{resultRow(newRow(resultSchema, projected))}}, nil
 }

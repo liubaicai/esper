@@ -997,7 +997,7 @@ func TestTableSelectTriggerEmitsProjectedRow(t *testing.T) {
 	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 1 || rows[0].Get("price").Any() != float64(7.5) {
+	if len(rows) != 2 || rows[0].Get("price").State() != ValueNull || rows[1].Get("price").Any() != float64(7.5) {
 		t.Fatalf("on-select rows = %#v", rows)
 	}
 }

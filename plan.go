@@ -3432,6 +3432,16 @@ func validateAggregateExpressionNodes(node *exprNode) error {
 			return NewError(ErrorInvalidRule, "plugin aggregate factory accepts at most one input expression")
 		}
 	}
+	if node.kind == "aggregate-plugin-inputs" {
+		for index, child := range node.children {
+			if child == nil {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("aggregate plugin input %d is nil", index))
+			}
+			if expressionNodeContainsAggregate(child) {
+				return NewError(ErrorInvalidRule, "aggregate plugin input cannot contain an aggregate expression")
+			}
+		}
+	}
 	if node.kind == "aggregate-filter" {
 		if len(node.children) != 2 || node.children[0] == nil || node.children[1] == nil {
 			return NewError(ErrorInvalidRule, "filtered aggregate requires an aggregate and predicate")

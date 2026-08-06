@@ -3005,6 +3005,41 @@ func makeAggregateExpr[T any](kind, description string, children []*exprNode, fn
 	}}
 }
 
+// AggregatePluginInputs evaluates a typed argument vector once per retained
+// event. It is the Go-native counterpart of a plug-in aggregation function's
+// multiple parameters: constants, event fields, EventValue, and array values
+// can be combined without hiding their expression nodes behind reflection.
+// The resulting []Value preserves Missing and Null for each argument.
+func AggregatePluginInputs(inputs ...Expr) Expression[[]Value] {
+	children := make([]*exprNode, len(inputs))
+	valid := true
+	for index, input := range inputs {
+		if input == nil {
+			valid = false
+			continue
+		}
+		children[index] = input.node()
+	}
+	return typedExpr[[]Value]{
+		n: &exprNode{
+			kind:        "aggregate-plugin-inputs",
+			typ:         typeOf[[]Value](),
+			description: "aggregate-plugin-inputs()",
+			children:    children,
+		},
+		fn: func(ctx EvalContext) Value {
+			if !valid {
+				return Missing()
+			}
+			values := make([]Value, len(inputs))
+			for index, input := range inputs {
+				values[index] = input.eval(ctx)
+			}
+			return Present(values)
+		},
+	}
+}
+
 // PluginAggregate exposes a named Go aggregate extension without hiding its
 // position in the analyzable expression tree. The evaluator receives the
 // current and ever-retained group in EvalContext and returns (value, true) for

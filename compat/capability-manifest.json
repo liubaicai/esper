@@ -1236,6 +1236,17 @@
       "difference": "Go provides explicit RegisterDateTimePlugin/DateTimePluginRef/DateTimePlugin builders with typed DateTimePluginOps, time.Time and epoch-millisecond input families, operation selection by input/result type, defensive footprints, Build/Plan validation and transform/reformat tests. It intentionally replaces Java forge class loading and EPL dot syntax; Calendar.roll's full field/calendar overflow matrix, Java Date/Calendar/LocalDateTime/ZonedDateTime metadata, configuration lifecycle, exact compiler diagnostics and broader date-time method family remain open."
     },
     {
+      "id": "case.expr-aggregate-plugin",
+      "javaRuntimeIds": ["java-runtime-699f7e50946343b40747", "java-runtime-2f8eafe5d6781756ea68", "java-runtime-78c6721a092243f67923", "java-runtime-28164b5f1bc02c9ca038", "java-runtime-808d3ada01cf1f65561d", "java-runtime-6c6eeaac4016d8646e02", "java-runtime-2097af5fa19c6e1cad7d", "java-runtime-3cffb0d975bc79ad882f", "java-runtime-00022802c424f578793e", "java-runtime-5299e87569f383b25716", "java-runtime-018a64701748265e5476", "java-runtime-23e6068bb60077ea9855", "java-runtime-0a6a7484402ea51f86a3"],
+      "javaNames": ["ClientExtendAggregationManagedWindow", "ClientExtendAggregationManagedGrouped", "ClientExtendAggregationManagedDistinctAndStarParam", "ClientExtendAggregationManagedDotMethod", "ClientExtendAggregationManagedMappedPropertyLookAlike", "ClientExtendAggregationMultiParamMulti", "ClientExtendAggregationMultiParamNoParam", "ClientExtendAggregationMultiParamSingleArray", "ClientExtendAggregationCodegeneratedCount", "ClientExtendAggregationFailedValidation", "ClientExtendAggregationInvalidUse", "ClientExtendAggregationInvalidCannotResolve", "ClientExtendAggregationTable"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendAggregationFunction.java"],
+      "goTests": ["TestPluginAggregateEvaluatesCurrentAndEverGroups", "TestPluginAggregateFactoryIsGroupScopedAndComposable", "TestAggregatePluginInputsMatchJavaMultiParameterAndNoParameter", "TestSortedAccessTableMethodChainMatchesJavaAndPreservesNulls"],
+      "tags": ["correctness", "expression", "aggregate", "plugin", "extension", "table", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go maps the stateful aggregate factory lifecycle to explicit typed factories, including independent group/window state, event/field/constant/array argument vectors, zero-argument input vectors, registered references, Table materialization and Go Build validation. It intentionally does not expose Java EPL names, reflection/classloader registration, SODA serialization, code-generation forge callbacks, Java distinct/star compiler sugar, dot-method return descriptors or exact invalid diagnostic text; those broader configuration and compiler matrices remain partial."
+    },
+    {
       "id": "case.expr-enum-subquery-udf",
       "javaRuntimeIds": ["java-runtime-385eff1ed2a658d97cc5", "java-runtime-41005ef10624c5d74430", "java-runtime-1cb9b928361d501cdfc4"],
       "javaNames": ["ExprEnumSubquery", "ExprEnumNamedWindow", "ExprEnumUDFStaticMethod"],
@@ -1311,6 +1322,17 @@
       "status": "mapped",
       "evidence": ["java-baseline", "java-junit", "go-unit"],
       "difference": "Go covers indexed first/last, nth, retained Event access, current/ever min/max-by, multi-criteria sorted events, lower/floor/higher/ceiling event-bucket navigation including duplicate-key last-element composition, immutable typed navigable snapshots with Keys/Buckets, head/tail/descending views, lower/floor/higher/ceiling Entry and Key access, detached bucket iteration, and Fire-and-Forget sorted snapshot/navigation, navigable sorted access with duplicate-key buckets/submaps, window eviction, named-window delete recomputation to the empty aggregate row, filtered scalar/access columns materialized into a Table, one typed WindowAccess table method chain, source-indexed inner and left-outer Join-to-Aggregate tuple paths with matched/unmatched old/new recomputation, named and environment-registered Go plugin aggregate/access evaluation, an explicit per-group stateful plugin factory with input replay and enter/leave lifecycle, the chainable PluginAggregateAccess event-list form with an analyzable named-filter predicate, and the registered PluginAggregateAccessRef form with explicit access-category registration, named-filter filtering, stable Plan identity, wrong-category/type and duplicate-registration Build checks, deterministic Count-Min Sketch frequency/total and table-column trigger access, atomic aggregate IntoTable snapshot replacement/removal, the TableSink adapter, live table snapshot joins and projected aggregate result ordering with HAVING. Java also covers factory forge type validation, configuration/serde/HA lifecycle, full table access method/property chaining, typed aliases/descriptors, on-demand/FAF variants, self/multi-way join aggregates, row-remove and broader invalid/iterator/trace matrices; those remain open."
+    },
+    {
+      "id": "case.aggregate-sorted-table-selector",
+      "javaRuntimeIds": ["java-runtime-b4a220f64f3dadba4a1d", "java-runtime-51c0889164a08e1bf283", "java-runtime-3ffe177eb6a90acb699a", "java-runtime-2ec322fbd681b83590f1"],
+      "javaNames": ["ResultSetAggregateSortedDocSample", "ResultSetAggregateSortedInvalid", "ResultSetAggregateSortedGrouped", "ResultSetAggregateSortedFirstLast"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodSorted.java"],
+      "goTests": ["TestSortedAccessNavigationAndDuplicateKeyBuckets", "TestSortedAccessTableMethodChainMatchesJavaAndPreservesNulls", "TestSortedAccessGroupedTableSelectorMatchesJavaAndPreservesMissingGroupNulls"],
+      "tags": ["correctness", "invalid", "aggregate", "access", "table", "selector"],
+      "status": "mapped",
+      "evidence": ["java-baseline", "java-junit", "go-unit"],
+      "difference": "Go now covers the grouped sorted table primary-key selector, binds the target row for TableField and Method projections, and emits a projected row with Null table access for a missing group. The existing sorted table chain covers a representative first/last/key/value path. Java's doc sample, standalone first/last variant, exact invalid compiler diagnostics, full table/property method chain, typed metadata and iterator/type matrix remain open."
     },
     {
       "id": "case.aggregate-local-group",
@@ -1975,6 +1997,7 @@
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-case"},
     {"capabilityId": "expr.core", "caseId": "case.expr-datetime-plugin"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-aggregate-plugin"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-bitwise"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-current-timestamp"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-coalesce"},
@@ -2011,6 +2034,7 @@
     {"capabilityId": "resultset.aggregate-filtered", "caseId": "case.aggregate-rate"},
     {"capabilityId": "resultset.aggregate-ever", "caseId": "case.aggregate-ever"},
     {"capabilityId": "resultset.aggregate-access", "caseId": "case.aggregate-access"},
+    {"capabilityId": "resultset.aggregate-access", "caseId": "case.aggregate-sorted-table-selector"},
     {"capabilityId": "resultset.aggregate-local-group", "caseId": "case.aggregate-local-group"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-basic"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-context"},

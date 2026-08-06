@@ -28,6 +28,10 @@ type sortedAccessTableTrigger struct {
 	Price float64 `esper:"price"`
 }
 
+type sortedGroupedTableTrigger struct {
+	Symbol string `esper:"symbol"`
+}
+
 func sortedTableMethod[T any](field Expr, name string, arguments ...Expr) Expression[T] {
 	return Method[T](field, name, arguments...)
 }
@@ -1755,6 +1759,161 @@ func TestPluginAggregateEvaluatesCurrentAndEverGroups(t *testing.T) {
 	}
 }
 
+type testAggregatePluginInputsState struct {
+	accepted []float64
+}
+
+func (state *testAggregatePluginInputsState) Enter(value Value) {
+	inputs, err := As[[]Value](value)
+	if err != nil || len(inputs) < 5 {
+		return
+	}
+	if _, err := As[runtimeTestTrade](inputs[3]); err != nil {
+		return
+	}
+	if array, err := As[[]int](inputs[4]); err != nil || len(array) != 2 || array[0] != 1 || array[1] != 2 {
+		return
+	}
+	minimum, minimumOK := numericValue(inputs[0])
+	maximum, maximumOK := numericValue(inputs[1])
+	current, currentOK := numericValue(inputs[2])
+	if !minimumOK || !maximumOK || !currentOK || current < minimum || current > maximum {
+		return
+	}
+	state.accepted = append(state.accepted, current)
+}
+
+func (state *testAggregatePluginInputsState) Leave(value Value) {
+	inputs, err := As[[]Value](value)
+	if err != nil || len(inputs) < 5 {
+		return
+	}
+	if _, err := As[runtimeTestTrade](inputs[3]); err != nil {
+		return
+	}
+	if array, err := As[[]int](inputs[4]); err != nil || len(array) != 2 || array[0] != 1 || array[1] != 2 {
+		return
+	}
+	current, currentOK := numericValue(inputs[2])
+	if !currentOK {
+		return
+	}
+	for index, accepted := range state.accepted {
+		if accepted == current {
+			state.accepted = append(state.accepted[:index], state.accepted[index+1:]...)
+			return
+		}
+	}
+}
+
+func (state *testAggregatePluginInputsState) Value() (int64, bool) {
+	return int64(len(state.accepted)), true
+}
+
+func (state *testAggregatePluginInputsState) Clear() {
+	state.accepted = state.accepted[:0]
+}
+
+type testAggregatePluginNoInputState struct {
+	count int64
+}
+
+func (state *testAggregatePluginNoInputState) Enter(value Value) {
+	inputs, err := As[[]Value](value)
+	if err == nil && len(inputs) == 0 {
+		state.count++
+	}
+}
+
+func (state *testAggregatePluginNoInputState) Leave(value Value) {
+	inputs, err := As[[]Value](value)
+	if err == nil && len(inputs) == 0 {
+		state.count--
+	}
+}
+
+func (state *testAggregatePluginNoInputState) Value() (int64, bool) {
+	return state.count, true
+}
+
+func (state *testAggregatePluginNoInputState) Clear() { state.count = 0 }
+
+func TestAggregatePluginInputsMatchJavaMultiParameterAndNoParameter(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	price := Field[runtimeTestTrade, float64]("price")
+	inputVector := AggregatePluginInputs(Literal(1.0), Literal(10.0), price, EventValue[runtimeTestTrade](), Literal([]int{1, 2}))
+	factory := func(_ AggregatePluginFactoryContext) AggregatePluginState[int64] {
+		return &testAggregatePluginInputsState{}
+	}
+	if err := RegisterAggregatePluginFactory[int64](env, "registered-count-boundary", factory); err != nil {
+		t.Fatal(err)
+	}
+	noInput := AggregatePluginInputs()
+	noInputFactory := func(_ AggregatePluginFactoryContext) AggregatePluginState[int64] {
+		return &testAggregatePluginNoInputState{}
+	}
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(4)).Aggregate(
+		Alias("boundary", PluginAggregateWithFactory[int64]("count-boundary", inputVector, factory)),
+		Alias("registered", PluginAggregateFactoryRef[int64](env, "registered-count-boundary", inputVector)),
+		Alias("noParam", PluginAggregateWithFactory[int64]("count-no-param", noInput, noInputFactory)),
+	).Query(StatementName("plugin-aggregate-inputs")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := make([]Row, 0, 4)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []runtimeTestTrade{
+		{Symbol: "A", Price: 5},
+		{Symbol: "A", Price: 0},
+		{Symbol: "A", Price: 11},
+		{Symbol: "A", Price: 1},
+	} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 4 {
+		t.Fatalf("plugin input rows = %d", len(rows))
+	}
+	for index, row := range rows {
+		wantBoundary := int64(0)
+		if index >= 0 {
+			wantBoundary = 1
+		}
+		if index == 3 {
+			wantBoundary = 2
+		}
+		for _, name := range []string{"boundary", "registered"} {
+			if row.Get(name).Any() != wantBoundary {
+				t.Fatalf("row %d %s = %#v, want %d", index, name, row.Get(name).Any(), wantBoundary)
+			}
+		}
+		if row.Get("noParam").Any() != int64(index+1) {
+			t.Fatalf("row %d noParam = %#v, want %d", index, row.Get("noParam").Any(), index+1)
+		}
+	}
+
+	_, err = env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("bad", PluginAggregateWithFactory[int64]("bad-inputs", AggregatePluginInputs(nil), factory)),
+	).Query(StatementName("invalid-plugin-inputs")))
+	if err == nil {
+		t.Fatal("nil aggregate plugin input unexpectedly built")
+	}
+}
+
 type testAggregatePluginConcatState struct {
 	values []string
 	leaves int
@@ -2392,6 +2551,131 @@ func TestSortedAccessTableMethodChainMatchesJavaAndPreservesNulls(t *testing.T) 
 	if !ok || !reflect.DeepEqual(submap.Keys(), []float64{10, 20}) || submap.CountEvents() != 3 {
 		t.Fatalf("sorted table submap = %#v", row.Get("submap").Any())
 	}
+}
+
+func TestSortedAccessGroupedTableSelectorMatchesJavaAndPreservesMissingGroupNulls(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[sortedGroupedTableTrigger](env, "SortedGroupedTableTrigger"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "SortedGroupedTable", []TableColumn{
+		PrimaryKeyColumn[string]("symbol"),
+		TableColumnOf[SortedAccessValue[float64, runtimeTestTrade]]("sortcol"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	symbol := Field[runtimeTestTrade, string]("symbol")
+	price := Field[runtimeTestTrade, float64]("price")
+	sorted := SortedAccessBy[runtimeTestTrade, float64](EventValue[runtimeTestTrade](), price)
+	aggregatePlan, err := env.Build(From[runtimeTestTrade](env, "Trade").
+		GroupBy(symbol).
+		Select(
+			Alias("symbol", symbol),
+			Alias("sortcol", sorted),
+		).
+		IntoTable("SortedGroupedTable", StatementName("sorted-grouped-table")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	triggerSymbol := Field[sortedGroupedTableTrigger, string]("symbol")
+	sortedField := TableField[SortedAccessValue[float64, runtimeTestTrade]]("sortcol")
+	triggerPlan, err := env.Build(OnEvent(From[sortedGroupedTableTrigger](env, "SortedGroupedTableTrigger")).
+		SelectFromTable("SortedGroupedTable", []Expr{triggerSymbol},
+			Alias("firstKey", Method[float64](sortedField, "FirstKey")),
+			Alias("lastKey", Method[float64](sortedField, "LastKey")),
+			Alias("sorted", Method[[]runtimeTestTrade](sortedField, "Sorted")),
+		).
+		Query(StatementName("sorted-grouped-table-trigger")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), triggerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := make([]Row, 0, 8)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("grouped sorted table result is not a row")
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	assertNullGroup := func(index int) {
+		if rows[index].Get("firstKey").State() != ValueNull || rows[index].Get("lastKey").State() != ValueNull || rows[index].Get("sorted").State() != ValueNull {
+			t.Fatalf("missing grouped sorted table row = %#v", rows[index].AsMap())
+		}
+	}
+	assertKeys := func(index int, first, last float64, expectedPrices ...float64) {
+		if rows[index].Get("firstKey").Any() != first || rows[index].Get("lastKey").Any() != last {
+			t.Fatalf("grouped sorted table keys = %#v", rows[index].AsMap())
+		}
+		sortedValue, ok := rows[index].Get("sorted").Any().([]runtimeTestTrade)
+		if !ok || len(sortedValue) != len(expectedPrices) {
+			t.Fatalf("grouped sorted table sorted value = %#v", rows[index].Get("sorted").Any())
+		}
+		for position, expected := range expectedPrices {
+			if sortedValue[position].Price != expected {
+				t.Fatalf("grouped sorted table sorted value = %#v", rows[index].Get("sorted").Any())
+			}
+		}
+	}
+
+	if err := engine.SendEvent(context.Background(), sortedGroupedTableTrigger{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("initial grouped selector rows = %d", len(rows))
+	}
+	assertNullGroup(0)
+
+	for _, event := range []runtimeTestTrade{{Symbol: "A", Price: 10}, {Symbol: "A", Price: 20}} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := engine.SendEvent(context.Background(), sortedGroupedTableTrigger{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("populated grouped selector rows = %d", len(rows))
+	}
+	assertKeys(1, 10, 20, 10, 20)
+
+	if err := engine.SendEvent(context.Background(), sortedGroupedTableTrigger{Symbol: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 3 {
+		t.Fatalf("missing second grouped selector rows = %d", len(rows))
+	}
+	assertNullGroup(2)
+
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "B", Price: 100}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), sortedGroupedTableTrigger{Symbol: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 4 {
+		t.Fatalf("second populated grouped selector rows = %d", len(rows))
+	}
+	assertKeys(3, 100, 100, 100)
 }
 
 func TestAggregateFirstLastWindowRecomputesAfterNamedWindowDelete(t *testing.T) {
