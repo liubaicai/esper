@@ -40,6 +40,12 @@ func TestQuantifiedExpressionsMatchJavaAnyAllSomeTruthTables(t *testing.T) {
 	if got := AllOf(Literal(2), QuantifierGreater, Literal(1), NullLiteral[int]()).eval(EvalContext{}); !got.IsNull() {
 		t.Fatalf("relational all with null = %v, want null", got)
 	}
+	if got := AllOf(Literal(2), QuantifierGreater, NullLiteral[int](), Literal(3)).eval(EvalContext{}); !got.Equal(Present(false)) {
+		t.Fatalf("relational all definite false after null = %v, want false", got)
+	}
+	if got := AllOf(Literal(2), QuantifierGreater, Literal(3), NullLiteral[int]()).eval(EvalContext{}); !got.Equal(Present(false)) {
+		t.Fatalf("relational all definite false before null = %v, want false", got)
+	}
 	if got := AnyOf(Literal(0), QuantifierGreater, Literal(1), NullLiteral[int]()).eval(EvalContext{}); !got.Equal(Present(false)) {
 		t.Fatalf("relational any with null = %v, want false", got)
 	}

@@ -181,9 +181,13 @@ func evaluateQuantifiedValues(left Value, rows []Value, comparison QuantifierCom
 	hasNull := false
 	nullAffectsAny := comparison == SubqueryEqual || comparison == SubqueryNotEqual
 	for _, right := range rows {
-		if !right.IsPresent() && !nullAffectsAny {
-			if all {
-				return Null()
+		if !right.IsPresent() {
+			// A relational NULL is ignored by ANY/SOME, but remains an
+			// unresolved value for ALL. Equality and inequality NULLs affect
+			// both quantifiers. Keep scanning so a definite result later in
+			// the collection can win regardless of candidate order.
+			if all || nullAffectsAny {
+				hasNull = true
 			}
 			continue
 		}

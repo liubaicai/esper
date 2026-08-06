@@ -142,8 +142,8 @@
       "domain": "expression",
       "level": "S",
       "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, arithmetic/exact numeric operations, scalar min/max and ANY/ALL/SOME quantifiers, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates, property presence checks and runtime type names, with ordered branches, null semantics and aggregate-aware evaluation",
-      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreMath", "ExprCoreMathDivisionRules", "ExprCoreBigNumberSupportMathContext", "ExprCoreMinMaxNonAgg", "ExprCoreAnyAllSome", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
-      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_math.go", "expr_math_test.go", "expr_minmax.go", "expr_minmax_test.go", "expr_quantifier.go", "expr_quantifier_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "enum_expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
+      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreMath", "ExprCoreMathDivisionRules", "ExprCoreBigNumberSupportMathContext", "ExprCoreMinMaxNonAgg", "ExprCoreRelOp", "ExprCoreAnyAllSome", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
+      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_math.go", "expr_math_test.go", "expr_minmax.go", "expr_minmax_test.go", "expr_relop.go", "expr_relop_test.go", "expr_quantifier.go", "expr_quantifier_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "enum_expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "complete MathContext/decimal scale and rounding policy, mixed BigDecimal/BigInteger result metadata and division configuration matrix", "complete ANY/ALL/SOME mixed representation, collection typing and invalid-diagnostic matrix", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
@@ -1028,6 +1028,17 @@
       "difference": "Go exposes AnyOf/SomeOf/AllOf with explicit QuantifierEqual/NotEqual/Greater... comparisons. Candidate scalar expressions, arrays, slices and map keys are expanded in a Go-native plan, numeric values (including BigInteger) use shared coercion, and equality/relational Null behavior follows the Java three-valued cases for scalar and collection candidates; invalid collection left operands, nil candidates and operators are rejected at Build. Java EPL/SODA/compile syntax, implicit common-type inference, exact non-numeric collection filtering and the full representation/type diagnostic matrix remain partial; SubqueryAny/Some/All stays a separate source-backed API."
     },
     {
+      "id": "case.expr-core-relop",
+      "javaRuntimeIds": ["java-runtime-615cb125ab25e488f40c", "java-runtime-402d95bd69d700735100"],
+      "javaNames": ["ExprCoreRelOpTypes", "ExprCoreRelOpNull"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreRelOp.java"],
+      "goTests": ["TestMixedRelationalExpressionsMatchJavaNumericStringAndNullSemantics", "TestMixedRelationalExpressionsBuildLiveProjectionAndPlanIdentity", "TestMixedRelationalExpressionsRejectInvalidBuilders"],
+      "tags": ["correctness", "expression", "relational", "numeric-coercion", "big-integer", "big-decimal", "string", "null", "invalid", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go adds explicit mixed-type GreaterOf/GreaterOrEqualOf/LessOf/LessOrEqualOf builders. They compare native integers/floats, strings and big.Int/big.Rat through a single analyzable AST, preserve Null/typed-nil propagation, and expose stable boolean result metadata and Plan identity; existing same-typed Greater/Less and exact comparison constructors remain available. Java EPL/SODA/compile paths, implicit parser type inference and the broader array/object equality/diagnostic matrix remain outside this fluent slice."
+    },
+    {
       "id": "case.expr-script-provider",
       "javaRuntimeIds": ["java-runtime-1010c63eb2330597a750", "java-runtime-a2b886734b1a2ad4cc28", "java-runtime-416f111d2368882ea644", "java-runtime-3834e7de0be8f481cea2", "java-runtime-76f900f81eab8fbb7068", "java-runtime-7b3d5e1ed4c6e5a98f89", "java-runtime-39ad2c583a5c307fdeaa", "java-runtime-c115e9369d2a342e8e7f", "java-runtime-97cf680e34e215878dae", "java-runtime-de45e4c09a85a606f39f", "java-runtime-e5e8e7be2d9e28ca1fcf"],
       "javaNames": ["EPLScriptScripts", "EPLScriptQuoteEscape", "EPLScriptDocSamples", "EPLScriptSubqueryParam", "EPLScriptReturnNullWhenNumeric", "EPLScriptGenericResultType", "EPLScriptExpressionConfiguration", "EPLScriptExpressionDisable", "EPLScriptSandboxJSR223", "EPLScriptSandboxMVEL", "EPLContainedScriptContextValue"],
@@ -1832,6 +1843,7 @@
     {"capabilityId": "expr.core", "caseId": "case.expr-core-math"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-minmax"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-any-all-some"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-relop"},
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
