@@ -5882,8 +5882,10 @@ func joinChainedTuples(definition *joinDefinition, state *joinRuntimeState, now 
 
 // joinOuterTuples enumerates matching N-way tuples first, then emits one
 // placeholder tuple for every unmatched event on the selected outer edge.
-// This is intentionally a semantic reference implementation; optimized
-// indexed joins can replace it without changing the public contract.
+// A full outer join emits unmatched events from every source, including
+// sources between the first and last positions. This is intentionally a
+// semantic reference implementation; optimized indexed joins can replace it
+// without changing the public contract.
 func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) [][]Event {
 	sources := joinDefinitionSources(definition)
 	conditions := joinDefinitionConditions(definition)
@@ -5923,7 +5925,7 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 	}
 	visit(0)
 
-	if definition.kind == JoinLeftOuter || definition.kind == JoinFullOuter {
+	if definition.kind == JoinLeftOuter {
 		for index, stored := range state.sides[0] {
 			if matched[0][index] {
 				continue
@@ -5933,7 +5935,7 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 			result = append(result, tuple)
 		}
 	}
-	if definition.kind == JoinRightOuter || definition.kind == JoinFullOuter {
+	if definition.kind == JoinRightOuter {
 		last := len(sources) - 1
 		for index, stored := range state.sides[last] {
 			if matched[last][index] {
@@ -5942,6 +5944,18 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 			tuple := make([]Event, len(sources))
 			tuple[last] = stored.event
 			result = append(result, tuple)
+		}
+	}
+	if definition.kind == JoinFullOuter {
+		for sourceIndex, side := range state.sides {
+			for index, stored := range side {
+				if matched[sourceIndex][index] {
+					continue
+				}
+				tuple := make([]Event, len(sources))
+				tuple[sourceIndex] = stored.event
+				result = append(result, tuple)
+			}
 		}
 	}
 	return result

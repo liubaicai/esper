@@ -1026,3 +1026,74 @@ func TestMultiJoinLeftOuterEmitsUnmatchedAndMatchedTransitions(t *testing.T) {
 		t.Fatalf("matched three-way row = %#v", newRow.AsMap())
 	}
 }
+
+func TestMultiJoinFullOuterEmitsUnmatchedEverySource(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[joinOrder](env, "FullOuterOrder"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[joinPayment](env, "FullOuterPayment"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[joinShipment](env, "FullOuterShipment"); err != nil {
+		t.Fatal(err)
+	}
+	multi := JoinMany(
+		JoinSource(From[joinOrder](env, "FullOuterOrder")),
+		JoinSource(From[joinPayment](env, "FullOuterPayment")),
+		JoinSource(From[joinShipment](env, "FullOuterShipment")),
+	).On(
+		OnSourcesEqual(0, Field[joinOrder, string]("orderID"), 1, Field[joinPayment, string]("orderID")),
+		OnSourcesEqual(0, Field[joinOrder, string]("orderID"), 2, Field[joinShipment, string]("orderID")),
+	).FullOuter()
+	plan, err := env.Build(multi.Select(
+		SelectFrom(0, "orderID", Field[joinOrder, string]("orderID")),
+		SelectFrom(1, "amount", Field[joinPayment, float64]("amount")),
+		SelectFrom(2, "carrier", Field[joinShipment, string]("carrier")),
+	).Query(StatementName("three-way-full-outer"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := env.NewEngine()
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	send := func(source string, value any) {
+		t.Helper()
+		if err := engine.Send(context.Background(), source, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send("FullOuterPayment", joinPayment{OrderID: "F-1", Amount: 7})
+	if len(batches) != 1 || len(batches[0].New) != 1 {
+		t.Fatalf("middle full-outer unmatched row = %#v", batches)
+	}
+	row, ok := batches[0].New[0].Row()
+	if !ok || !row.Get("orderID").IsNull() || row.Get("amount").Any() != float64(7) || !row.Get("carrier").IsNull() {
+		t.Fatalf("middle full-outer row = %#v", row.AsMap())
+	}
+	send("FullOuterShipment", joinShipment{OrderID: "F-1", Carrier: "go"})
+	if len(batches) != 2 || len(batches[1].Old) != 0 || len(batches[1].New) != 1 {
+		t.Fatalf("right full-outer unmatched transition = %#v", batches)
+	}
+	row, ok = batches[1].New[0].Row()
+	if !ok || !row.Get("orderID").IsNull() || !row.Get("amount").IsNull() || row.Get("carrier").Any() != "go" {
+		t.Fatalf("right full-outer row = %#v", row.AsMap())
+	}
+	send("FullOuterOrder", joinOrder{OrderID: "F-1"})
+	if len(batches) != 3 || len(batches[2].Old) != 2 || len(batches[2].New) != 1 {
+		t.Fatalf("full-outer completion transition = %#v", batches)
+	}
+	row, ok = batches[2].New[0].Row()
+	if !ok || row.Get("orderID").Any() != "F-1" || row.Get("amount").Any() != float64(7) || row.Get("carrier").Any() != "go" {
+		t.Fatalf("full-outer completed row = %#v", row.AsMap())
+	}
+}
