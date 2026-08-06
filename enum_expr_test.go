@@ -433,11 +433,30 @@ func TestEnumerableSubqueryAndZeroArgumentUDFFSources(t *testing.T) {
 	))
 	scores := SubqueryValues[int64](window, Field[any, int64]("score"))
 	udfValues := Func0[[]int64]("enum-values", func() []int64 { return []int64{4, 5, 6} })
+	udfValuesWithLimit := Func1[int64, []int64]("enum-values-limit", func(limit int64) []int64 {
+		values := []int64{4, 5, 6}
+		if limit < 0 {
+			return nil
+		}
+		if limit > int64(len(values)) {
+			limit = int64(len(values))
+		}
+		return values[:limit]
+	}, Literal(int64(2)))
+	udfValuesWithRange := Func2[int64, int64, []int64]("enum-values-range", func(start, count int64) []int64 {
+		result := make([]int64, 0, count)
+		for offset := int64(0); offset < count; offset++ {
+			result = append(result, start+offset)
+		}
+		return result
+	}, Literal(int64(7)), Literal(int64(2)))
 	query := Select(
 		From[enumExpressionContainer](env, "EnumSourceTrigger"),
 		Alias("ids", EnumSelect[Event, string](filteredEvents, EnumField[Event, string]("id"))),
 		Alias("score-sum", EnumSum[int64](scores)),
 		Alias("udf-sum", EnumSum[int64](udfValues)),
+		Alias("udf-arg-sum", EnumSum[int64](udfValuesWithLimit)),
+		Alias("udf-two-arg-sum", EnumSum[int64](udfValuesWithRange)),
 	).Query(StatementName("enum-subquery-udf"))
 	plan, err := env.Build(query)
 	if err != nil {
@@ -484,6 +503,14 @@ func TestEnumerableSubqueryAndZeroArgumentUDFFSources(t *testing.T) {
 	udfSum, err := As[int64](rows[0].Get("udf-sum"))
 	if err != nil || udfSum != 15 {
 		t.Fatalf("zero-argument UDF sum = %d, err=%v", udfSum, err)
+	}
+	udfArgSum, err := As[int64](rows[0].Get("udf-arg-sum"))
+	if err != nil || udfArgSum != 9 {
+		t.Fatalf("one-argument UDF sum = %d, err=%v", udfArgSum, err)
+	}
+	udfTwoArgSum, err := As[int64](rows[0].Get("udf-two-arg-sum"))
+	if err != nil || udfTwoArgSum != 15 {
+		t.Fatalf("two-argument UDF sum = %d, err=%v", udfTwoArgSum, err)
 	}
 }
 

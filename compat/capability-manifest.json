@@ -683,7 +683,7 @@
       "tags": ["correctness", "expression", "enum", "subquery", "udf", "named-window"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "Go adds SubqueryValues/SubqueryEvents for typed multi-row named-window snapshots with predicate options and adds Func0 for zero-argument collection-producing UDFs; both feed normal analyzable EnumSelect/EnumSum chains. Java additionally covers event-stream subqueries, declared expressions, access aggregation, context/table/pattern sources, generic component metadata and exact invalid diagnostics, which remain open."
+      "difference": "Go adds SubqueryValues/SubqueryEvents for typed multi-row named-window snapshots with predicate options and typed Func0/Func1/Func2 collection-producing UDFs; all feed normal analyzable EnumSelect/EnumSum chains. Java additionally covers event-stream subqueries, declared expressions, access aggregation, context/table/pattern sources, generic component metadata and exact invalid diagnostics, which remain open."
     },
     {
       "id": "case.expr-enum-groupby",

@@ -1977,8 +1977,16 @@ func Func0[T any](name string, function func() T) Expression[T] {
 // explicit top-level UDF instead of an opaque field callback, so the Plan can
 // retain its stable name and dependency metadata.
 func Func1[A, B any](name string, function func(A) B, argument Expression[A]) Expression[B] {
-	description := name + "(" + argument.Description() + ")"
-	return makeExpr[B]("udf", description, []*exprNode{argument.node()}, func(ctx EvalContext) Value {
+	description := name + "(<nil>)"
+	var children []*exprNode
+	if argument != nil {
+		description = name + "(" + argument.Description() + ")"
+		children = []*exprNode{argument.node()}
+	}
+	return makeExpr[B]("udf", description, children, func(ctx EvalContext) Value {
+		if function == nil || argument == nil {
+			return Null()
+		}
 		input := argument.eval(ctx)
 		if !input.IsPresent() {
 			return Null()
@@ -1988,6 +1996,37 @@ func Func1[A, B any](name string, function func(A) B, argument Expression[A]) Ex
 			return Null()
 		}
 		return Present(function(value))
+	})
+}
+
+// Func2 registers a named binary function while retaining both argument
+// expressions in the analyzable plan. It is useful for collection-producing
+// UDFs whose range, limit, or lookup key is supplied by a rule expression.
+func Func2[A, B, C any](name string, function func(A, B) C, first Expression[A], second Expression[B]) Expression[C] {
+	description := name + "(<nil>,<nil>)"
+	children := make([]*exprNode, 0, 2)
+	if first != nil && second != nil {
+		description = name + "(" + first.Description() + "," + second.Description() + ")"
+		children = []*exprNode{first.node(), second.node()}
+	}
+	return makeExpr[C]("udf", description, children, func(ctx EvalContext) Value {
+		if function == nil || first == nil || second == nil {
+			return Null()
+		}
+		firstValue := first.eval(ctx)
+		secondValue := second.eval(ctx)
+		if !firstValue.IsPresent() || !secondValue.IsPresent() {
+			return Null()
+		}
+		firstArgument, err := As[A](firstValue)
+		if err != nil {
+			return Null()
+		}
+		secondArgument, err := As[B](secondValue)
+		if err != nil {
+			return Null()
+		}
+		return Present(function(firstArgument, secondArgument))
 	})
 }
 
