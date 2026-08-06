@@ -79,3 +79,58 @@ func TestMethodSourceContextFireAndForgetPartitionsRows(t *testing.T) {
 		t.Fatalf("method context FAF partition rows = %#v", valuesBySymbol)
 	}
 }
+
+func TestMethodSourceInvocationContextCarriesStatementAndPartitionMetadata(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	schema, err := StructSchema[methodContextRow]("MethodInvocationContextRow")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateKeyContext(env, "method-invocation-by-symbol", Field[methodContextRow, string]("symbol")); err != nil {
+		t.Fatal(err)
+	}
+	var invocations []MethodInvocationContext
+	provider := MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		invocations = append(invocations, request.Invocation)
+		symbol, _ := request.Trigger.Get("symbol").Any().(string)
+		event, eventErr := newEvent(schema, methodContextRow{Symbol: symbol, Value: 1}, request.Now)
+		return []Event{event}, eventErr
+	})
+	method := FromMethodOn[methodContextRow](env, "context-aware-method", "Trade", schema, provider)
+	plan, err := env.Build(method.Query(
+		StatementName("method-invocation-context"),
+		WithContext("method-invocation-by-symbol"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	if _, err := deployment.Statements()[0].Subscribe(func(context.Context, ResultBatch) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	for _, symbol := range []string{"A", "B"} {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(invocations) != 2 {
+		t.Fatalf("method invocation contexts = %#v", invocations)
+	}
+	seenPartitions := map[int]bool{}
+	for _, invocation := range invocations {
+		if invocation.DeploymentID != deployment.ID() || invocation.StatementName != "method-invocation-context" {
+			t.Fatalf("method statement invocation = %#v", invocation)
+		}
+		if invocation.SourceName != "context-aware-method" || invocation.ContextName != "method-invocation-by-symbol" || invocation.ContextPartitionID < 0 {
+			t.Fatalf("method partition invocation = %#v", invocation)
+		}
+		seenPartitions[invocation.ContextPartitionID] = true
+	}
+	if len(seenPartitions) != 2 {
+		t.Fatalf("method partition ids = %#v", seenPartitions)
+	}
+}

@@ -5400,6 +5400,22 @@ func cloneMethodDependencies(dependencies map[string]Event) map[string]Event {
 	return cloned
 }
 
+func (r *statementRuntime) methodInvocationContext(sourceName string) MethodInvocationContext {
+	invocation := MethodInvocationContext{SourceName: sourceName, ContextPartitionID: -1}
+	if r == nil {
+		return invocation
+	}
+	invocation.DeploymentID, invocation.StatementName, _ = strings.Cut(r.rowRecogOwner, ":")
+	if invocation.StatementName == "" {
+		invocation.StatementName = r.query.name
+	}
+	invocation.ContextName = r.partitionContextName
+	if invocation.ContextName != "" {
+		invocation.ContextPartitionID = r.partitionID
+	}
+	return invocation
+}
+
 func (r *statementRuntime) nextJoinLineageID() uint64 {
 	r.joinLineageSeq++
 	return r.joinLineageSeq
@@ -5844,6 +5860,7 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			Trigger: event, Now: now,
 			Variables: visibleVariableValues(r.variables), Parameters: parameterValuesFromVariables(r.variables),
 			Dependencies: cloneMethodDependencies(r.methodDependencies),
+			Invocation:   r.methodInvocationContext(node.sourceName),
 		})
 		if err != nil {
 			return eventDelta{}, err

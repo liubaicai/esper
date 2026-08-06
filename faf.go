@@ -626,6 +626,9 @@ func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source
 			Now:        now,
 			Variables:  visibleVariableValues(variables),
 			Parameters: parameterValuesFromVariables(variables),
+			Invocation: MethodInvocationContext{
+				SourceName: source.sourceName, ContextPartitionID: -1,
+			},
 		})
 	default:
 		return nil, NewError(ErrorInvalidRule, fmt.Sprintf("fire-and-forget source %q is not a named window, table, historical source, or method source", source.sourceName))

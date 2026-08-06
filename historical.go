@@ -39,6 +39,19 @@ type MethodRequest struct {
 	Variables    map[string]Value
 	Parameters   map[string]Value
 	Dependencies map[string]Event
+	Invocation   MethodInvocationContext
+}
+
+// MethodInvocationContext is the Go-native statement metadata supplied to a
+// method provider. ContextPartitionID is -1 outside a live context partition.
+// SourceName identifies the fluent method source and is the counterpart to
+// Esper's method/function name without requiring reflective method lookup.
+type MethodInvocationContext struct {
+	DeploymentID       string
+	StatementName      string
+	SourceName         string
+	ContextName        string
+	ContextPartitionID int
 }
 
 // Dependency returns the event selected for one explicitly declared method

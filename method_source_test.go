@@ -221,6 +221,9 @@ func TestMethodSourceFireAndForgetUsesEmptyTriggerSnapshot(t *testing.T) {
 	if requests[0].Parameters["wanted"].Any() != 7 {
 		t.Fatalf("method source FAF parameters = %#v", requests[0].Parameters)
 	}
+	if requests[0].Invocation.SourceName != "method-faf" || requests[0].Invocation.ContextPartitionID != -1 || requests[0].Invocation.DeploymentID != "" {
+		t.Fatalf("method source FAF invocation = %#v", requests[0].Invocation)
+	}
 }
 
 func TestMethodSourceValidationRequiresProviderAndKnownTrigger(t *testing.T) {
