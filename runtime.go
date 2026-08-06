@@ -6529,7 +6529,14 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
 		}
 		for _, candidate := range inputDelta.newEvents {
-			value := node.predicate.eval(EvalContext{Event: candidate, History: historyForEvent(inputDelta, candidate), Now: now, Variables: r.variables})
+			value := node.predicate.eval(EvalContext{
+				Event:      candidate,
+				OuterEvent: candidate,
+				Engine:     r.engine,
+				History:    historyForEvent(inputDelta, candidate),
+				Now:        now,
+				Variables:  r.variables,
+			})
 			if ok, isBool := boolValue(value); isBool && ok {
 				filtered.newEvents = append(filtered.newEvents, candidate)
 			}

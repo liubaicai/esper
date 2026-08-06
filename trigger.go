@@ -758,6 +758,102 @@ func (s *Statement) processTrigger(ctx context.Context, now time.Time, event Eve
 	return err
 }
 
+// triggerInputSupportsContainedTraversal reports whether a trigger input can
+// be evaluated one contained child at a time without changing the state
+// contract of an intermediate operator. Filters and contained expansions are
+// stateless for this purpose; windows, patterns and derived streams need the
+// existing batch insert path because they own state across the whole delta.
+func triggerInputSupportsContainedTraversal(node *streamNode) bool {
+	if node == nil {
+		return false
+	}
+	switch node.kind {
+	case streamSource, streamNamedWindow, streamTable, streamHistorical, streamMethod:
+		return true
+	case streamContained, streamFilter:
+		return triggerInputSupportsContainedTraversal(node.input)
+	default:
+		return false
+	}
+}
+
+func triggerInputContainsContained(node *streamNode) bool {
+	for current := node; current != nil; current = current.input {
+		if current.kind == streamContained {
+			return true
+		}
+	}
+	return false
+}
+
+// forEachTriggerCandidate visits new events produced by a contained/filter
+// trigger input in evaluation order. Esper's contained-event operator is
+// preemptive: an action caused by one child is visible before the next child
+// is evaluated. Keeping the traversal callback-based lets the action run at
+// the exact point where the child is produced while preserving parent-array
+// order and nested contained expansion order.
+func (r *statementRuntime) forEachTriggerCandidate(node *streamNode, event Event, now time.Time, visit func(Event) error) error {
+	if r == nil || node == nil || visit == nil {
+		return NewError(ErrorDependency, "contained trigger traversal is incomplete")
+	}
+	switch node.kind {
+	case streamContained:
+		if node.contained == nil || node.contained.property == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("unnest source %q has no contained property", node.sourceName))
+		}
+		return r.forEachTriggerCandidate(node.input, event, now, func(parent Event) error {
+			childSchema, err := r.query.env.sourceSchema(node)
+			if err != nil {
+				return err
+			}
+			children, err := expandContainedEvents(childSchema, node.contained, []Event{parent}, now, r.variables)
+			if err != nil {
+				return err
+			}
+			for _, child := range children {
+				if err := contextErr(r.context()); err != nil {
+					return err
+				}
+				if err := visit(child); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	case streamFilter:
+		if node.predicate == nil {
+			return NewError(ErrorInvalidRule, "contained trigger filter has no predicate")
+		}
+		return r.forEachTriggerCandidate(node.input, event, now, func(candidate Event) error {
+			value := node.predicate.eval(EvalContext{
+				Event:      candidate,
+				OuterEvent: candidate,
+				Engine:     r.engine,
+				Now:        now,
+				Variables:  r.variables,
+			})
+			if ok, isBool := boolValue(value); !isBool || !ok {
+				return nil
+			}
+			return visit(candidate)
+		})
+	default:
+		delta, err := r.insert(node, event, now)
+		if err != nil {
+			return err
+		}
+		for _, candidate := range delta.newEvents {
+			if err := contextErr(r.context()); err != nil {
+				return err
+			}
+			if err := visit(candidate); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
 func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statementRuntime, now time.Time, event Event, variables map[string]Value) (ResultBatch, error) {
 	definition := s.plan.query.trigger
 	if definition == nil || s.engine == nil || runtime == nil {
@@ -767,12 +863,8 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 	runtime.variables = runtime.withContextVariables(variablesWithEngine(variables, runtime.engine))
 	runtime.variables = runtime.withContextProperties(runtime.variables)
 	variables = runtime.variables
-	delta, err := runtime.insert(definition.input, event, now)
-	if err != nil {
-		return ResultBatch{}, err
-	}
 	result := ResultBatch{Time: now}
-	for _, candidate := range delta.newEvents {
+	processCandidate := func(candidate Event) error {
 		if definition.action == triggerSelectTable {
 			var batch ResultBatch
 			var selectErr error
@@ -782,30 +874,48 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 				batch, selectErr = executeSelectTableAction(ctx, s.engine, definition, candidate, now, variables, s.plan.resultSchema)
 			}
 			if selectErr != nil {
-				return ResultBatch{}, selectErr
+				return selectErr
 			}
 			result.New = append(result.New, batch.New...)
 			result.Old = append(result.Old, batch.Old...)
-			continue
+			return nil
 		}
 		mutation, err := executeTriggerAction(ctx, s.engine, definition, candidate, now, variables, s, runtime)
 		if err != nil {
-			return ResultBatch{}, err
+			return err
 		}
 		result.Old = append(result.Old, eventsToResults(mutation.oldEvents)...)
 		result.New = append(result.New, eventsToResults(mutation.newEvents)...)
 		if len(mutation.oldRows) > 0 || len(mutation.newRows) > 0 {
 			oldResults, convertErr := tableRowsToResults(s.engine.tables[definition.table], definition.table, mutation.oldRows, now)
 			if convertErr != nil {
-				return ResultBatch{}, convertErr
+				return convertErr
 			}
 			newResults, convertErr := tableRowsToResults(s.engine.tables[definition.table], definition.table, mutation.newRows, now)
 			if convertErr != nil {
-				return ResultBatch{}, convertErr
+				return convertErr
 			}
 			result.Old = append(result.Old, oldResults...)
 			result.New = append(result.New, newResults...)
 		}
+		return nil
+	}
+	var err error
+	if triggerInputContainsContained(definition.input) && triggerInputSupportsContainedTraversal(definition.input) {
+		err = runtime.forEachTriggerCandidate(definition.input, event, now, processCandidate)
+	} else {
+		var delta eventDelta
+		delta, err = runtime.insert(definition.input, event, now)
+		if err == nil {
+			for _, candidate := range delta.newEvents {
+				if err = processCandidate(candidate); err != nil {
+					break
+				}
+			}
+		}
+	}
+	if err != nil {
+		return ResultBatch{}, err
 	}
 	result = runtime.applyOutput(s.plan.query.output, result, false, now, s.plan)
 	if !result.empty() {
