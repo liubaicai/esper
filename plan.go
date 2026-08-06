@@ -1140,6 +1140,9 @@ func (e *Environment) validateContextLifecycleExpression(expression Expr) error 
 	if err := validateBitwiseExpressionNodes(expression.node()); err != nil {
 		return err
 	}
+	if err := validateCoalesceExpressionNodes(expression.node()); err != nil {
+		return err
+	}
 	if err := validateMethodNodes(expression.node()); err != nil {
 		return err
 	}
@@ -1477,6 +1480,9 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 	if err := validateBitwiseExpressionNodes(node); err != nil {
 		return err
 	}
+	if err := validateCoalesceExpressionNodes(node); err != nil {
+		return err
+	}
 	if err := validateMethodNodes(node); err != nil {
 		return err
 	}
@@ -1696,6 +1702,78 @@ func bitwiseTypeDescription(typ reflect.Type) string {
 		return "any"
 	}
 	return typ.String()
+}
+
+func validateCoalesceExpressionNodes(node *exprNode) error {
+	if node == nil {
+		return nil
+	}
+	if node.kind == "coalesce" {
+		if len(node.children) < 2 {
+			return NewError(ErrorInvalidRule, "coalesce requires at least two operands")
+		}
+		for index, child := range node.children {
+			if child == nil {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("coalesce operand %d is required", index))
+			}
+			if !coalesceTypesCompatible(node.typ, child.typ) {
+				return NewError(ErrorTypeMismatch, fmt.Sprintf("coalesce operand %d has type %s, expected %s", index, bitwiseTypeDescription(child.typ), bitwiseTypeDescription(node.typ)))
+			}
+		}
+	}
+	for _, child := range node.children {
+		if err := validateCoalesceExpressionNodes(child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func coalesceTypesCompatible(expected, actual reflect.Type) bool {
+	if expected == nil || actual == nil || expected == typeOf[any]() || actual == typeOf[any]() {
+		return true
+	}
+	if actual == expected || actual.AssignableTo(expected) || expected.AssignableTo(actual) {
+		return true
+	}
+	if actual.Kind() == reflect.Interface {
+		return true
+	}
+	for actual.Kind() == reflect.Pointer {
+		actual = actual.Elem()
+	}
+	if actual == nil {
+		return false
+	}
+	if actual.Kind() == reflect.Interface {
+		return true
+	}
+	if isNumericType(expected) && isNumericType(actual) {
+		return coalesceNumericRank(actual) <= coalesceNumericRank(expected)
+	}
+	return actual == expected || actual.AssignableTo(expected) || expected.AssignableTo(actual)
+}
+
+func coalesceNumericRank(typ reflect.Type) int {
+	if typ == nil {
+		return -1
+	}
+	switch typ.Kind() {
+	case reflect.Int8, reflect.Uint8:
+		return 1
+	case reflect.Int16, reflect.Uint16:
+		return 2
+	case reflect.Int, reflect.Int32, reflect.Uint, reflect.Uint32:
+		return 3
+	case reflect.Int64, reflect.Uint64:
+		return 4
+	case reflect.Float32:
+		return 5
+	case reflect.Float64:
+		return 6
+	default:
+		return -1
+	}
 }
 
 func (e *Environment) validateScriptNodes(node *exprNode) error {
@@ -3041,6 +3119,9 @@ func (e *Environment) validateJoinScopedExpression(definition *joinDefinition, e
 	if err := validateBitwiseExpressionNodes(expression.node()); err != nil {
 		return err
 	}
+	if err := validateCoalesceExpressionNodes(expression.node()); err != nil {
+		return err
+	}
 	if err := validateMethodNodes(expression.node()); err != nil {
 		return err
 	}
@@ -3927,6 +4008,9 @@ func (e *Environment) validateSourceLess(selections []Selection) error {
 		if err := validateBitwiseExpressionNodes(selection.Expr.node()); err != nil {
 			return err
 		}
+		if err := validateCoalesceExpressionNodes(selection.Expr.node()); err != nil {
+			return err
+		}
 		var fields []string
 		selection.Expr.node().referencedFields(&fields)
 		if len(fields) > 0 {
@@ -4001,6 +4085,9 @@ func (e *Environment) validateOutputExpressions(policy OutputPolicy) error {
 		if err := e.validateExprVariables(policy.When); err != nil {
 			return err
 		}
+		if err := validateCoalesceExpressionNodes(policy.When.node()); err != nil {
+			return err
+		}
 		if typ := policy.When.Type(); typ != nil && typ != typeOf[any]() && typ != typeOf[bool]() {
 			return NewError(ErrorTypeMismatch, fmt.Sprintf("output when condition must be boolean, got %s", typ))
 		}
@@ -4030,6 +4117,9 @@ func (e *Environment) validateOutputExpressions(policy OutputPolicy) error {
 		if err := e.validateExprVariables(assignment.Expr); err != nil {
 			return err
 		}
+		if err := validateCoalesceExpressionNodes(assignment.Expr.node()); err != nil {
+			return err
+		}
 		var fields []string
 		assignment.Expr.node().referencedFields(&fields)
 		if len(fields) > 0 {
@@ -4043,6 +4133,9 @@ func (e *Environment) validateOutputExpressions(policy OutputPolicy) error {
 	}
 	if policy.TerminationWhen != nil {
 		if err := e.validateExprVariables(policy.TerminationWhen); err != nil {
+			return err
+		}
+		if err := validateCoalesceExpressionNodes(policy.TerminationWhen.node()); err != nil {
 			return err
 		}
 		if typ := policy.TerminationWhen.Type(); typ != nil && typ != typeOf[any]() && typ != typeOf[bool]() {
@@ -4072,6 +4165,9 @@ func (e *Environment) validateOutputExpressions(policy OutputPolicy) error {
 			return NewError(ErrorState, fmt.Sprintf("termination output assignment cannot update constant variable %q", name))
 		}
 		if err := e.validateExprVariables(assignment.Expr); err != nil {
+			return err
+		}
+		if err := validateCoalesceExpressionNodes(assignment.Expr.node()); err != nil {
 			return err
 		}
 		var fields []string

@@ -1693,23 +1693,96 @@ func InSlice[T comparable](value Expression[T], candidates Expression[[]T]) Expr
 }
 
 func Coalesce[T any](values ...Expression[T]) Expression[T] {
+	operands := make([]Expr, len(values))
+	for index, value := range values {
+		if value != nil {
+			operands[index] = value
+		}
+	}
+	return coalesceExpressionOf[T](operands...)
+}
+
+// CoalesceOf is the explicit-result-type form of Coalesce. It accepts
+// compatible expressions of different concrete Go types, including nullable
+// numeric pointers, and converts the first present value to T. This models
+// Esper's numeric coalesce promotion while keeping the target type visible in
+// Go source.
+func CoalesceOf[T any](values ...Expr) Expression[T] {
+	return coalesceExpressionOf[T](values...)
+}
+
+func coalesceExpressionOf[T any](values ...Expr) Expression[T] {
 	descriptionParts := make([]string, 0, len(values))
 	children := make([]*exprNode, 0, len(values))
 	for _, value := range values {
+		if value == nil {
+			descriptionParts = append(descriptionParts, "<nil>")
+			children = append(children, nil)
+			continue
+		}
 		descriptionParts = append(descriptionParts, value.Description())
 		children = append(children, value.node())
 	}
-	return makeExpr[T]("coalesce", "coalesce("+strings.Join(descriptionParts, ",")+")", children, func(ctx EvalContext) Value {
+	node := &exprNode{
+		kind:        "coalesce",
+		typ:         typeOf[T](),
+		description: "coalesce(" + strings.Join(descriptionParts, ",") + ")",
+		children:    children,
+	}
+	if len(values) < 2 {
+		node.configurationError = "coalesce requires at least two operands"
+	} else {
 		for _, value := range values {
-			result := value.eval(ctx)
-			if result.IsPresent() {
-				return result
+			if value == nil || value.node() == nil {
+				node.configurationError = "coalesce operands are required"
+				break
 			}
 		}
+	}
+	return typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		for _, value := range values {
+			if value == nil {
+				continue
+			}
+			result := value.eval(ctx)
+			if !result.IsPresent() {
+				continue
+			}
+			if isNilReflectValue(reflect.ValueOf(result.Any())) {
+				continue
+			}
+			return coalesceCastValue[T](result)
+		}
 		return Null()
-	})
+	}}
 }
 
+func coalesceCastValue[T any](value Value) Value {
+	if !value.IsPresent() {
+		return value
+	}
+	target := typeOf[T]()
+	source := reflect.ValueOf(value.Any())
+	if isNilReflectValue(source) {
+		return Null()
+	}
+	if !source.IsValid() {
+		return Null()
+	}
+	if source.Type().AssignableTo(target) || source.Type().ConvertibleTo(target) || target == typeOf[any]() {
+		return castValue[T](value)
+	}
+	for source.IsValid() && (source.Kind() == reflect.Pointer || source.Kind() == reflect.Interface) {
+		if source.IsNil() {
+			return Null()
+		}
+		source = source.Elem()
+	}
+	if !source.IsValid() {
+		return Null()
+	}
+	return castValue[T](Present(source.Interface()))
+}
 func Like(value, pattern Expression[string]) Expression[bool] {
 	return makeExpr[bool]("like", "("+value.Description()+" like "+pattern.Description()+")", []*exprNode{value.node(), pattern.node()}, func(ctx EvalContext) Value {
 		leftValue := value.eval(ctx)

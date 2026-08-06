@@ -141,9 +141,9 @@
       "id": "expr.core",
       "domain": "expression",
       "level": "S",
-      "summary": "Go-native searched and simple CASE expressions with ordered branches, null semantics and aggregate-aware evaluation",
-      "javaRefs": ["ExprCoreCase", "TestExprCaseNode"],
-      "goRefs": ["expr_case.go", "expr_case_test.go", "expr.go", "subquery.go", "plan.go"],
+      "summary": "Go-native core expressions including searched/simple CASE, coalesce, bitwise operators and virtual-clock current timestamp, with ordered branches, null semantics and aggregate-aware evaluation",
+      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreCurrentTimestamp"],
+      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_current_timestamp_test.go", "expr.go", "subquery.go", "plan.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
@@ -927,6 +927,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
       "difference": "Go exposes CurrentTimestamp() as a typed int64 epoch-millisecond expression backed by EvalContext.Now, so live statements and fire-and-forget evaluation remain deterministic under VirtualClock; repeated references and arithmetic preserve the same value and plan identity. Java EPL, SODA and compile paths are represented by the fluent constructor rather than a text parser, and exact Java event-property naming/type metadata and compiler diagnostics remain open."
+    },
+    {
+      "id": "case.expr-core-coalesce",
+      "javaRuntimeIds": ["java-runtime-6464df255cd4e23a89e7", "java-runtime-0a352fd0c30e1b3a175c", "java-runtime-0ee4f2c3f1d9129e2598", "java-runtime-7cac5278b06087f8e7f2", "java-runtime-9341a1983c1f4fb3fdda", "java-runtime-c9475d47ffbc6275e330", "java-runtime-32ea122af7f0205bcb19"],
+      "javaNames": ["ExprCoreCoalesceBeans", "ExprCoreCoalesceLong", "ExprCoreCoalesceLongOM", "ExprCoreCoalesceLongCompile", "ExprCoreCoalesceDouble", "ExprCoreCoalesceNull", "ExprCoreCoalesceInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCoalesce.java"],
+      "goTests": ["TestCoalesceExpressionsMatchJavaNumericAndNullSemantics", "TestCoalesceExpressionsPreserveBeansAndRejectInvalidBuilders", "TestCoalesceExpressionsPreservePatternEventIdentity"],
+      "tags": ["correctness", "expression", "coalesce", "numeric", "bean", "null", "missing", "invalid", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go exposes Coalesce[T] for same-typed expressions and CoalesceOf[T](...Expr) when the explicit result type must widen nullable numeric operands or preserve a bean/event value. It returns the first non-Null/non-Missing value, skips typed-nil boxed pointers, preserves numeric widening through byte/short/int/long/float/double ranks, and rejects fewer than two operands, nil operands, incompatible types and narrowing during Build; CoalesceOf[any] represents Java's all-null dynamic result. Java EPL, SODA and compile paths are represented by the fluent constructor, and exact Java boxed metadata, parser diagnostics and implicit result-type inference remain open."
     },
     {
       "id": "case.expr-script-provider",
@@ -1724,6 +1735,7 @@
     {"capabilityId": "expr.core", "caseId": "case.expr-core-case"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-bitwise"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-current-timestamp"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-coalesce"},
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
