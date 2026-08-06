@@ -1208,6 +1208,8 @@ CI 分别报告 capability coverage、source-test disposition coverage 和 case 
 
 本轮新增的 Go `subquery_test.go` 将其中可先落地的语义拆成独立 case：Named Window 相关 `exists`、Named Window 标量子查询、Table `in`、参数化谓词、普通事件源非法校验、Fire-and-Forget 一致快照、嵌套子查询中 `OuterField` 指向外层子查询候选事件、Named Window `count/sum/avg` 与 `any/some/all` 比较量词，以及标量 `order/offset/limit` 和多行 cardinality 选项。该映射已登记为 `query.subquery-basic` / `case.subquery-basic`；它证明聚合/量词/标量选项的基础 builder/runtime 形态和 null 处理可运行，不覆盖 Java 的分组/having、多行/多列、上下文/模式源、迭代器/错误诊断和完整 query-plan/trace 语义。
 
+本轮继续对照 Java `EPLSubselectMulticolumn` 的 `FragmentEventType` 形状，为 `SubqueryRow`、`SubqueryRows` 和 `SubqueryGroupRows` 增加静态 `SubqueryMetadata`：列别名、Go 类型、可空性、nested fragment、indexed/native 标记和 defensive-copy 查询接口均来自可分析 AST，不读取运行时状态，也不改变现有 Go-native map/slice 结果类型。`TestSubqueryMultiColumnMetadataMatchesEsperFragmentShape` 覆盖多列聚合、多行结果、嵌套多行 fragment、单列结果不暴露 fragment 以及元数据副本隔离；Java 的完整 iterator/enum-method/cardinality/error trace 与动态 representation 组合仍保持 partial。
+
 随后以固定 Java 17/Maven 3.9.16 环境直接执行 `mvn -pl regression-run -Dtest=TestSuiteEPLSubselect -DfailIfNoTests=false test`，该套件本次 19/19 通过；这只是 Java 侧回归入口可复现证据，Go 端仍按 capability manifest 的逐 case 差分口径推进，不能把整套子查询标记为已完成。
 
 本次又定向执行了 Java `regression-run` 的 `TestSuiteRowRecog`：23 个 JUnit 入口全部通过，覆盖连续序列、reluctant/skip、interval、分区、measure aggregation、repetition、prev、variant stream、窗口和 Named Window delete 等入口。Go 已将其中基础连续序列、交替、可选/重复、有限和无限组合重复、reluctant、固定/日历 interval、Statement snapshot、长度窗口淘汰、Named Window 乱序删除重算、分区、重复变量、基础 measure aggregation 和无效规则切片映射到 `rowrecog_test.go`；这只是 Java case 到 Go 测试的关联证据，尚未执行共享场景 trace，因此 capability manifest 仍使用 `mapped` 或 `partial`，而不是 `passing`。

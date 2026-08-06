@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -225,6 +226,106 @@ type subqueryDefinition struct {
 	offset               int
 	limit                int
 	limitSet             bool
+}
+
+// SubqueryColumnMetadata describes one named column in a multi-column
+// subquery result. Type is the statically declared Go result type of the
+// column expression. Fragment is set when the column itself is another
+// multi-column subquery result, preserving the nested fragment shape without
+// requiring reflection over a runtime map value.
+type SubqueryColumnMetadata struct {
+	Name     string
+	Type     reflect.Type
+	Optional bool
+	Fragment *SubqueryResultMetadata
+}
+
+// SubqueryResultMetadata is the Go-native counterpart of Esper's fragment
+// event type metadata for SubqueryRow/SubqueryRows results. Native indicates
+// that the runtime representation is a Go map or slice of maps; Indexed is
+// true for a multi-row result. The value returned by SubqueryMetadata is a
+// defensive copy and can be retained by callers.
+type SubqueryResultMetadata struct {
+	ResultType reflect.Type
+	Columns    []SubqueryColumnMetadata
+	Indexed    bool
+	Native     bool
+}
+
+// Column returns one column descriptor by alias. Nested metadata is copied so
+// callers cannot mutate the metadata retained by the expression node.
+func (metadata SubqueryResultMetadata) Column(name string) (SubqueryColumnMetadata, bool) {
+	for _, column := range metadata.Columns {
+		if column.Name == name {
+			return cloneSubqueryColumnMetadata(column), true
+		}
+	}
+	return SubqueryColumnMetadata{}, false
+}
+
+// SubqueryMetadata returns static fragment-shaped metadata for a
+// multi-column subquery expression. Scalar, aggregate, quantified and
+// single-column subqueries return false. The function never evaluates the
+// subquery or reads runtime state.
+func SubqueryMetadata(expression Expr) (SubqueryResultMetadata, bool) {
+	if expression == nil || expression.node() == nil {
+		return SubqueryResultMetadata{}, false
+	}
+	metadata, ok := subqueryMetadataForNode(expression.node())
+	if !ok {
+		return SubqueryResultMetadata{}, false
+	}
+	return cloneSubqueryResultMetadata(metadata), true
+}
+
+func subqueryMetadataForNode(node *exprNode) (SubqueryResultMetadata, bool) {
+	if node == nil || node.subquery == nil || !node.subquery.multiColumn {
+		return SubqueryResultMetadata{}, false
+	}
+	metadata := SubqueryResultMetadata{
+		ResultType: node.typ,
+		Indexed:    node.kind == "subquery-rows" || node.kind == "subquery-group-rows",
+		Native:     true,
+	}
+	metadata.Columns = make([]SubqueryColumnMetadata, 0, len(node.subquery.columns))
+	for _, selection := range node.subquery.columns {
+		column := SubqueryColumnMetadata{Name: selection.Name}
+		if selection.Expr != nil {
+			column.Type = selection.Expr.Type()
+			// A subquery can legally project a null value, an empty aggregate,
+			// or a missing dynamic property. Keep this fact in metadata while
+			// retaining the expression's concrete result type.
+			column.Optional = true
+			if nested, ok := subqueryMetadataForNode(selection.Expr.node()); ok {
+				nestedCopy := cloneSubqueryResultMetadata(nested)
+				column.Fragment = &nestedCopy
+			}
+		}
+		metadata.Columns = append(metadata.Columns, column)
+	}
+	return metadata, true
+}
+
+func cloneSubqueryColumnMetadata(column SubqueryColumnMetadata) SubqueryColumnMetadata {
+	clone := column
+	if column.Fragment != nil {
+		fragment := cloneSubqueryResultMetadata(*column.Fragment)
+		clone.Fragment = &fragment
+	}
+	return clone
+}
+
+func cloneSubqueryResultMetadata(metadata SubqueryResultMetadata) SubqueryResultMetadata {
+	clone := metadata
+	if len(metadata.Columns) == 0 {
+		clone.Columns = nil
+		return clone
+	}
+	clone.Columns = make([]SubqueryColumnMetadata, len(metadata.Columns))
+	for index, column := range metadata.Columns {
+		clone.Columns[index] = cloneSubqueryColumnMetadata(column)
+	}
+	return clone
 }
 
 type subqueryGroupValue struct {
