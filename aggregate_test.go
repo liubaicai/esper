@@ -987,6 +987,34 @@ func TestSortedAccessValueNavigableSnapshotAndIteratorMatchesEsper(t *testing.T)
 	if !reflect.DeepEqual(access.Descending().Keys(), []float64{30, 20, 10}) {
 		t.Fatalf("descending keys = %#v", access.Descending().Keys())
 	}
+	descending := access.Descending()
+	if entry, found := descending.LowerEntry(25); !found || entry.Key != 30 || entry.Values[0].Symbol != "D" {
+		t.Fatalf("descending lower entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := descending.FloorEntry(25); !found || entry.Key != 30 || entry.Values[0].Symbol != "D" {
+		t.Fatalf("descending floor entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := descending.HigherEntry(25); !found || entry.Key != 20 || entry.Values[0].Symbol != "C" {
+		t.Fatalf("descending higher entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := descending.CeilingEntry(25); !found || entry.Key != 20 || entry.Values[0].Symbol != "C" {
+		t.Fatalf("descending ceiling entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := descending.LowerEntry(15); !found || entry.Key != 20 || entry.Values[0].Symbol != "C" {
+		t.Fatalf("descending lower multi-candidate entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := descending.FloorEntry(15); !found || entry.Key != 20 || entry.Values[0].Symbol != "C" {
+		t.Fatalf("descending floor multi-candidate entry = %#v, found=%t", entry, found)
+	}
+	if entry, found := descending.HigherEntry(15); !found || entry.Key != 10 || entry.Values[0].Symbol != "A" {
+		t.Fatalf("descending higher multi-candidate entry = %#v, found=%t", entry, found)
+	}
+	if !reflect.DeepEqual(descending.HeadMap(20, true).Keys(), []float64{30, 20}) || !reflect.DeepEqual(descending.TailMap(20, false).Keys(), []float64{10}) {
+		t.Fatalf("descending head/tail maps = %#v / %#v", descending.HeadMap(20, true).Keys(), descending.TailMap(20, false).Keys())
+	}
+	if !reflect.DeepEqual(descending.SubMap(30, true, 10, true).Keys(), []float64{30, 20, 10}) || !reflect.DeepEqual(descending.Descending().Keys(), []float64{10, 20, 30}) {
+		t.Fatalf("descending submap/toggle = %#v / %#v", descending.SubMap(30, true, 10, true).Keys(), descending.Descending().Keys())
+	}
 	iterator := access.Iterator()
 	var iterated []float64
 	for {
@@ -2603,5 +2631,62 @@ func TestFireAndForgetAggregateAccessSnapshotAndGrouping(t *testing.T) {
 	}
 	if groupedRows[0].Get("symbol").Any() != "E1" || groupedRows[0].Get("first").Any() != float64(10) || groupedRows[0].Get("last").Any() != float64(12) {
 		t.Fatalf("grouped aggregate FAF first row = %#v", groupedRows[0].AsMap())
+	}
+}
+
+func TestFireAndForgetSortedAccessSnapshotAndNavigation(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	schema, ok := env.Schema("Trade")
+	if !ok {
+		t.Fatal("Trade schema is missing")
+	}
+	if _, err := CreateNamedWindow(env, "aggregate-faf-sorted-window", schema); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	for _, event := range []runtimeTestTrade{
+		{Symbol: "A", Price: 10},
+		{Symbol: "B", Price: 20},
+		{Symbol: "C", Price: 20},
+		{Symbol: "D", Price: 30},
+	} {
+		if err := engine.InsertNamedWindow(context.Background(), "aggregate-faf-sorted-window", event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	price := Field[any, float64]("price")
+	sorted := SortedAccessBy[float64, float64](price, price)
+	plan, err := env.Build(FromNamedWindow(env, "aggregate-faf-sorted-window").Aggregate(
+		Alias("sorted", sorted),
+		Alias("lower", sorted.LowerEvent(Literal(25.0))),
+		Alias("between", sorted.EventsBetween(Literal(10.0), true, Literal(20.0), true)),
+		Alias("map", sorted.NavigableMapReference()),
+	).Query(StatementName("aggregate-faf-sorted-access")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := engine.ExecuteFireAndForget(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Results()) != 1 {
+		t.Fatalf("sorted aggregate FAF result count = %d", len(result.Results()))
+	}
+	row, ok := result.Results()[0].Row()
+	if !ok {
+		t.Fatalf("sorted aggregate FAF result is not a row: %#v", result.Results()[0])
+	}
+	if values, ok := row.Get("sorted").Any().(SortedAccessValue[float64, float64]); !ok || !reflect.DeepEqual(values.Keys(), []float64{10, 20, 30}) || values.CountEvents() != 4 {
+		t.Fatalf("sorted aggregate FAF value = %#v", row.Get("sorted").Any())
+	}
+	if lower, ok := row.Get("lower").Any().(float64); !ok || lower != 20 {
+		t.Fatalf("sorted aggregate FAF lower event = %#v", row.Get("lower").Any())
+	}
+	if between, ok := row.Get("between").Any().([]float64); !ok || !reflect.DeepEqual(between, []float64{10, 20, 20}) {
+		t.Fatalf("sorted aggregate FAF events between = %#v", row.Get("between").Any())
+	}
+	mapValue, ok := row.Get("map").Any().(SortedAccessValue[float64, float64])
+	if !ok || !reflect.DeepEqual(mapValue.Descending().Keys(), []float64{30, 20, 10}) || len(mapValue.Buckets()) != 3 {
+		t.Fatalf("sorted aggregate FAF navigable map = %#v", row.Get("map").Any())
 	}
 }

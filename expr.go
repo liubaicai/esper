@@ -4585,7 +4585,8 @@ type SortedAccessEntry[K Ordered, V any] struct {
 // It intentionally exposes copies so callers cannot mutate aggregate state
 // held by a deployed statement.
 type SortedAccessValue[K Ordered, V any] struct {
-	entries []SortedAccessEntry[K, V]
+	entries    []SortedAccessEntry[K, V]
+	descending bool
 }
 
 func (s SortedAccessValue[K, V]) Entries() []SortedAccessEntry[K, V] {
@@ -4688,7 +4689,7 @@ func (s SortedAccessValue[K, V]) ContainsKey(key K) bool {
 
 func (s SortedAccessValue[K, V]) IsEmpty() bool { return len(s.entries) == 0 }
 
-// Keys returns the ascending key set as a defensive copy.
+// Keys returns keys in this view's iteration order as a defensive copy.
 func (s SortedAccessValue[K, V]) Keys() []K {
 	keys := make([]K, len(s.entries))
 	for index, entry := range s.entries {
@@ -4697,8 +4698,8 @@ func (s SortedAccessValue[K, V]) Keys() []K {
 	return keys
 }
 
-// Buckets returns the map-style collection of values, preserving ascending
-// key order and insertion order within each duplicate-key bucket.
+// Buckets returns the map-style collection of values, preserving view key
+// order and insertion order within each duplicate-key bucket.
 func (s SortedAccessValue[K, V]) Buckets() [][]V {
 	buckets := make([][]V, len(s.entries))
 	for index, entry := range s.entries {
@@ -4715,25 +4716,25 @@ func (s SortedAccessValue[K, V]) Descending() SortedAccessValue[K, V] {
 	for index := range s.entries {
 		entries[len(s.entries)-1-index] = cloneSortedAccessEntry(s.entries[index])
 	}
-	return SortedAccessValue[K, V]{entries: entries}
+	return SortedAccessValue[K, V]{entries: entries, descending: !s.descending}
 }
 
 func (s SortedAccessValue[K, V]) HeadMap(to K, inclusive bool) SortedAccessValue[K, V] {
 	entries := make([]SortedAccessEntry[K, V], 0, len(s.entries))
 	for _, entry := range s.entries {
-		comparison, ok := compareValues(Present(entry.Key), Present(to))
+		comparison, ok := s.orderCompare(entry.Key, to)
 		if !ok || comparison > 0 || (comparison == 0 && !inclusive) {
 			break
 		}
 		entries = append(entries, cloneSortedAccessEntry(entry))
 	}
-	return SortedAccessValue[K, V]{entries: entries}
+	return SortedAccessValue[K, V]{entries: entries, descending: s.descending}
 }
 
 func (s SortedAccessValue[K, V]) TailMap(from K, inclusive bool) SortedAccessValue[K, V] {
 	entries := make([]SortedAccessEntry[K, V], 0, len(s.entries))
 	for _, entry := range s.entries {
-		comparison, ok := compareValues(Present(entry.Key), Present(from))
+		comparison, ok := s.orderCompare(entry.Key, from)
 		if !ok {
 			continue
 		}
@@ -4742,7 +4743,7 @@ func (s SortedAccessValue[K, V]) TailMap(from K, inclusive bool) SortedAccessVal
 		}
 		entries = append(entries, cloneSortedAccessEntry(entry))
 	}
-	return SortedAccessValue[K, V]{entries: entries}
+	return SortedAccessValue[K, V]{entries: entries, descending: s.descending}
 }
 
 func (s SortedAccessValue[K, V]) LowerEntry(key K) (SortedAccessEntry[K, V], bool) {
@@ -4814,8 +4815,8 @@ func (iterator *SortedAccessIterator[K, V]) Next() (SortedAccessEntry[K, V], boo
 func (s SortedAccessValue[K, V]) SubMap(from K, fromInclusive bool, to K, toInclusive bool) SortedAccessValue[K, V] {
 	result := SortedAccessValue[K, V]{entries: make([]SortedAccessEntry[K, V], 0, len(s.entries))}
 	for _, entry := range s.entries {
-		lower, lowerOK := compareValues(Present(entry.Key), Present(from))
-		upper, upperOK := compareValues(Present(entry.Key), Present(to))
+		lower, lowerOK := s.orderCompare(entry.Key, from)
+		upper, upperOK := s.orderCompare(entry.Key, to)
 		if !lowerOK || !upperOK {
 			continue
 		}
@@ -4824,13 +4825,22 @@ func (s SortedAccessValue[K, V]) SubMap(from K, fromInclusive bool, to K, toIncl
 		}
 		result.entries = append(result.entries, cloneSortedAccessEntry(entry))
 	}
+	result.descending = s.descending
 	return result
+}
+
+func (s SortedAccessValue[K, V]) orderCompare(left, right K) (int, bool) {
+	comparison, ok := compareValues(Present(left), Present(right))
+	if s.descending {
+		comparison = -comparison
+	}
+	return comparison, ok
 }
 
 func (s SortedAccessValue[K, V]) findKey(key K, mode sortedAccessKeyMode) (int, bool) {
 	best := -1
 	for index, entry := range s.entries {
-		comparison, ok := compareValues(Present(entry.Key), Present(key))
+		comparison, ok := s.orderCompare(entry.Key, key)
 		if !ok {
 			continue
 		}
@@ -4841,23 +4851,43 @@ func (s SortedAccessValue[K, V]) findKey(key K, mode sortedAccessKeyMode) (int, 
 			}
 		case sortedAccessLower:
 			if comparison < 0 {
-				best = index
+				best = s.preferNavigationCandidate(best, index, s.descending)
 			}
 		case sortedAccessFloor:
 			if comparison <= 0 {
-				best = index
+				best = s.preferNavigationCandidate(best, index, s.descending)
 			}
 		case sortedAccessHigher:
 			if comparison > 0 {
-				return index, true
+				best = s.preferNavigationCandidate(best, index, !s.descending)
 			}
 		case sortedAccessCeiling:
 			if comparison >= 0 {
-				return index, true
+				best = s.preferNavigationCandidate(best, index, !s.descending)
 			}
 		}
 	}
 	return best, best >= 0
+}
+
+func (s SortedAccessValue[K, V]) preferNavigationCandidate(best, candidate int, preferLowerNatural bool) int {
+	if best < 0 {
+		return candidate
+	}
+	comparison, ok := compareValues(Present(s.entries[candidate].Key), Present(s.entries[best].Key))
+	if !ok {
+		return best
+	}
+	if preferLowerNatural {
+		if comparison < 0 {
+			return candidate
+		}
+		return best
+	}
+	if comparison > 0 {
+		return candidate
+	}
+	return best
 }
 
 type sortedAccessKeyMode uint8
