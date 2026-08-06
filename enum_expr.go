@@ -197,6 +197,15 @@ func EnumCollect[T any](values Expr) Expression[[]T] {
 	})
 }
 
+// ToArray is the concise Go spelling for materializing an enumerable value as
+// an ordered typed slice. It is the fluent counterpart of Esper's
+// collection.toArray() family; the element type is explicit at the rule
+// boundary and the underlying source may be an array, slice, iter.Seq or
+// EnumIterator.
+func ToArray[T any](values Expr) Expression[[]T] {
+	return EnumCollect[T](values)
+}
+
 func enumRatFromValue(value Value) (*big.Rat, bool) {
 	if !value.IsPresent() {
 		return nil, false
