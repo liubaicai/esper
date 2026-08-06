@@ -907,6 +907,17 @@
       "difference": "Go exposes no-argument DefineExpression[T]/ExpressionRef[T] nodes instead of EPL create-expression syntax. References evaluate against the current event and Engine snapshot, can continue through EnumTake, and reject unknown, foreign-environment, type-mismatched, duplicate and cyclic definitions during Build; definitions and references participate in Plan canonical/hash. Parameterized declarations, module/deployment visibility, lifecycle replacement and the complete Java iterator/cardinality/fragment trace remain open."
     },
     {
+      "id": "case.expr-core-bitwise",
+      "javaRuntimeIds": ["java-runtime-b0d354033a204970cb26", "java-runtime-7819faeecbb3e817d49d", "java-runtime-e1ecced8a0b539b7ba84"],
+      "javaNames": ["ExprCoreBitWiseOp", "ExprCoreBitWiseOpOM", "ExprCoreBitWiseInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreBitWiseOperators.java"],
+      "goTests": ["TestBitwiseExpressionsPreserveIntegerWidthAndBooleanSemantics", "TestBitwiseExpressionsPropagateNullAndRejectInvalidBuilders"],
+      "tags": ["correctness", "expression", "bitwise", "boolean", "numeric", "null", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go exposes typed BitwiseAnd/BitwiseOr/BitwiseXor (and Binary* aliases) for integer and boolean expressions. Integer width/signedness is preserved, boolean operands use AND/OR/XOR semantics, and Null/Missing propagates to Null; non-bitwise types are rejected by the Go generic constraint while nil operands fail at Build. Java SODA/EPL syntax and exact compiler diagnostics have no direct Go parser equivalent; wider numeric promotion and mixed boxed/primitive metadata remain open."
+    },
+    {
       "id": "case.expr-script-provider",
       "javaRuntimeIds": ["java-runtime-1010c63eb2330597a750", "java-runtime-a2b886734b1a2ad4cc28", "java-runtime-416f111d2368882ea644", "java-runtime-3834e7de0be8f481cea2", "java-runtime-76f900f81eab8fbb7068", "java-runtime-7b3d5e1ed4c6e5a98f89", "java-runtime-39ad2c583a5c307fdeaa", "java-runtime-c115e9369d2a342e8e7f", "java-runtime-97cf680e34e215878dae", "java-runtime-de45e4c09a85a606f39f", "java-runtime-e5e8e7be2d9e28ca1fcf"],
       "javaNames": ["EPLScriptScripts", "EPLScriptQuoteEscape", "EPLScriptDocSamples", "EPLScriptSubqueryParam", "EPLScriptReturnNullWhenNumeric", "EPLScriptGenericResultType", "EPLScriptExpressionConfiguration", "EPLScriptExpressionDisable", "EPLScriptSandboxJSR223", "EPLScriptSandboxMVEL", "EPLContainedScriptContextValue"],
@@ -1700,6 +1711,7 @@
     {"capabilityId": "query.insert-into-route", "caseId": "case.insert-into-chain"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-case"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-bitwise"},
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},

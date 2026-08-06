@@ -1859,6 +1859,137 @@ func Not(value Expression[bool]) Expression[bool] {
 	})
 }
 
+// BitwiseOperand is the set of Go values accepted by the binary bitwise
+// operators. Boolean operands use Java/Esper's logical binary semantics:
+// &, | and ^ map to AND, OR and XOR respectively. Integer operands preserve
+// their declared Go width and signedness in the result.
+type BitwiseOperand interface {
+	~bool |
+		~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+}
+
+// BitwiseAnd applies a binary & operation to integer or boolean expressions.
+// The typed Go API prevents floating-point, string and arbitrary object
+// operands at compile time; a Null or Missing operand evaluates to Null.
+func BitwiseAnd[T BitwiseOperand](left, right Expression[T]) Expression[T] {
+	return bitwiseExpression[T]("bitwise-and", "&", left, right)
+}
+
+// BitwiseOr applies a binary | operation to integer or boolean expressions.
+func BitwiseOr[T BitwiseOperand](left, right Expression[T]) Expression[T] {
+	return bitwiseExpression[T]("bitwise-or", "|", left, right)
+}
+
+// BitwiseXor applies a binary ^ operation to integer or boolean expressions.
+func BitwiseXor[T BitwiseOperand](left, right Expression[T]) Expression[T] {
+	return bitwiseExpression[T]("bitwise-xor", "^", left, right)
+}
+
+// BinaryAnd, BinaryOr and BinaryXor are descriptive aliases for callers that
+// want the operator terminology used by Esper's expression model.
+func BinaryAnd[T BitwiseOperand](left, right Expression[T]) Expression[T] {
+	return BitwiseAnd[T](left, right)
+}
+
+func BinaryOr[T BitwiseOperand](left, right Expression[T]) Expression[T] {
+	return BitwiseOr[T](left, right)
+}
+
+func BinaryXor[T BitwiseOperand](left, right Expression[T]) Expression[T] {
+	return BitwiseXor[T](left, right)
+}
+
+func bitwiseExpression[T BitwiseOperand](kind, symbol string, left, right Expression[T]) Expression[T] {
+	if left == nil || right == nil {
+		node := &exprNode{
+			kind:               kind,
+			typ:                typeOf[T](),
+			description:        "<invalid-" + kind + ">",
+			configurationError: "bitwise operator requires two operands",
+		}
+		return typedExpr[T]{n: node, fn: func(EvalContext) Value { return Null() }}
+	}
+	description := "(" + left.Description() + " " + symbol + " " + right.Description() + ")"
+	return makeExpr[T](kind, description, []*exprNode{left.node(), right.node()}, func(ctx EvalContext) Value {
+		return applyBitwise[T](left.eval(ctx), right.eval(ctx), symbol)
+	})
+}
+
+func applyBitwise[T BitwiseOperand](left, right Value, symbol string) Value {
+	if !left.IsPresent() || !right.IsPresent() {
+		return Null()
+	}
+	var zero T
+	target := reflect.TypeOf(zero)
+	if target == nil {
+		return Null()
+	}
+	leftValue := reflect.ValueOf(left.Any())
+	rightValue := reflect.ValueOf(right.Any())
+	if !leftValue.IsValid() || !rightValue.IsValid() {
+		return Null()
+	}
+	if leftValue.Type() != target {
+		if !leftValue.Type().ConvertibleTo(target) {
+			return Null()
+		}
+		leftValue = leftValue.Convert(target)
+	}
+	if rightValue.Type() != target {
+		if !rightValue.Type().ConvertibleTo(target) {
+			return Null()
+		}
+		rightValue = rightValue.Convert(target)
+	}
+	result := reflect.New(target).Elem()
+	switch target.Kind() {
+	case reflect.Bool:
+		leftBool, rightBool := leftValue.Bool(), rightValue.Bool()
+		switch symbol {
+		case "&":
+			result.SetBool(leftBool && rightBool)
+		case "|":
+			result.SetBool(leftBool || rightBool)
+		case "^":
+			result.SetBool(leftBool != rightBool)
+		default:
+			return Null()
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		leftInt, rightInt := leftValue.Int(), rightValue.Int()
+		var value int64
+		switch symbol {
+		case "&":
+			value = leftInt & rightInt
+		case "|":
+			value = leftInt | rightInt
+		case "^":
+			value = leftInt ^ rightInt
+		default:
+			return Null()
+		}
+		result.SetInt(value)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		leftUint, rightUint := leftValue.Uint(), rightValue.Uint()
+		var value uint64
+		switch symbol {
+		case "&":
+			value = leftUint & rightUint
+		case "|":
+			value = leftUint | rightUint
+		case "^":
+			value = leftUint ^ rightUint
+		default:
+			return Null()
+		}
+		result.SetUint(value)
+	default:
+		return Null()
+	}
+	return Present(result.Interface())
+}
+
 func IsNull[T any](value Expression[T]) Expression[bool] {
 	return makeExpr[bool]("is-null", "("+value.Description()+" is null)", []*exprNode{value.node()}, func(ctx EvalContext) Value {
 		return Present(value.eval(ctx).IsNull())
