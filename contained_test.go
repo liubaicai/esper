@@ -31,6 +31,15 @@ type unnestStringContainer struct {
 	IDsAfter  []string `esper:"idsAfter"`
 }
 
+type containedSentence struct {
+	Sentence string `esper:"sentence"`
+}
+
+type containedStringArrayBean struct {
+	TopID        string   `esper:"topId"`
+	ContainedIDs []string `esper:"containedIds"`
+}
+
 type unnestPayment struct {
 	BookID string `esper:"bookId"`
 	Amount int64  `esper:"amount"`
@@ -606,6 +615,99 @@ func TestUnnestStringArrayWhereMatchesEsper(t *testing.T) {
 		got := append([]string(nil), rows[start:]...)
 		if !reflect.DeepEqual(got, current.want) {
 			t.Fatalf("string-array where case %d = %#v, want %#v", index, got, current.want)
+		}
+	}
+}
+
+func TestUnnestSplitWordsMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[containedSentence](env, "ContainedSentence"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[ContainedValue[string]](env, "ContainedWord"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	words := Split(
+		Field[containedSentence, string]("sentence"),
+		Literal(" "),
+	)
+	values := UnnestValues[containedSentence, string](From[containedSentence](env, "ContainedSentence"), words)
+	plan, err := env.Build(Select(values,
+		Alias("word", Field[ContainedValue[string], string]("value")),
+	).Query(StatementName("unnest-split-words")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []string
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("split word result is not a row: %#v", result)
+			}
+			rows = append(rows, row.Get("word").Any().(string))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), containedSentence{Sentence: "I am testing this"}); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"I", "am", "testing", "this"}; !reflect.DeepEqual(rows, want) {
+		t.Fatalf("split words = %#v, want %#v", rows, want)
+	}
+}
+
+func TestUnnestArrayPropertyCarriesParentFieldsMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[containedStringArrayBean](env, "ContainedStringArrayBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[ContainedValue[string]](env, "ContainedId"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ids := Property[[]string](EventValue[containedStringArrayBean](), "containedIds")
+	values := UnnestValues[containedStringArrayBean, string](From[containedStringArrayBean](env, "ContainedStringArrayBean"), ids)
+	plan, err := env.Build(Select(values,
+		Alias("topId", ContainedParentField[string]("topId")),
+		Alias("id", Field[ContainedValue[string], string]("value")),
+	).Query(StatementName("unnest-array-property")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("array property result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), containedStringArrayBean{TopID: "A", ContainedIDs: []string{"one", "two", "three"}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 3 {
+		t.Fatalf("array property rows = %#v", rows)
+	}
+	for index, expected := range []string{"one", "two", "three"} {
+		if rows[index].Get("topId").Any() != "A" || rows[index].Get("id").Any() != expected {
+			t.Fatalf("array property row %d = %#v, want A/%s", index, rows[index], expected)
 		}
 	}
 }

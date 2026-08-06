@@ -1761,6 +1761,16 @@ func StringLength(value Expression[string]) Expression[int64] {
 	return Func1[string, int64]("length", func(input string) int64 { return int64(len([]rune(input))) }, value)
 }
 
+// Split returns the ordered string elements produced by splitting value on
+// separator. It is the Go-style, analyzable counterpart of a string split
+// function used as a contained-event source expression; the resulting slice
+// can be passed directly to UnnestValues.
+func Split(value, separator Expression[string]) Expression[[]string] {
+	return Func2[string, string, []string]("split", func(input, delimiter string) []string {
+		return strings.Split(input, delimiter)
+	}, value, separator)
+}
+
 func Contains(value, fragment Expression[string]) Expression[bool] {
 	return makeBinaryBool("contains", "contains("+value.Description()+","+fragment.Description()+")", value, fragment, func(left, right Value) Value {
 		l, lok := As[string](left)

@@ -13,6 +13,7 @@ type containedAdvancedReview struct {
 
 type containedAdvancedBook struct {
 	BookID  string                    `esper:"bookId"`
+	Title   string                    `esper:"title"`
 	Reviews []containedAdvancedReview `esper:"reviews"`
 }
 
@@ -112,6 +113,76 @@ func TestContainedNestedPatternSelectMatchesEsper(t *testing.T) {
 	}
 	if want := []int64{1, 10}; !reflect.DeepEqual(rows, want) {
 		t.Fatalf("contained pattern rows = %#v, want %#v", rows, want)
+	}
+}
+
+func TestContainedNestedWhereMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	registerContainedAdvancedTypes(t, env)
+	orders := From[containedAdvancedOrder](env, "ContainedAdvancedOrder")
+	books := Unnest[containedAdvancedOrder, containedAdvancedBook](orders, Property[[]containedAdvancedBook](EventValue[containedAdvancedOrder](), "books"))
+	reviews := Unnest[containedAdvancedBook, containedAdvancedReview](books, Property[[]containedAdvancedReview](EventValue[containedAdvancedBook](), "reviews"))
+	bookTitle := Equal[string](Field[containedAdvancedBook, string]("title"), Literal("Enders Game"))
+	reviewID := Field[containedAdvancedReview, int64]("reviewId")
+	reviewSet := InSlice[int64](reviewID, Literal([]int64{1, 10}))
+
+	build := func(name string, stream Stream[containedAdvancedReview]) (*Engine, *Deployment, *[]int64) {
+		t.Helper()
+		plan, err := env.Build(Select(stream, Alias("reviewId", reviewID)).Query(StatementName(name), OrderBy(Ascending(reviewID))))
+		if err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env)
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows := make([]int64, 0)
+		if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+			for _, result := range batch.New {
+				row, ok := result.Row()
+				if !ok {
+					return nil
+				}
+				rows = append(rows, row.Get("reviewId").Any().(int64))
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return engine, deployment, &rows
+	}
+
+	rootEngine, rootFiltered, rootRows := build("contained-nested-where-root", Unnest[containedAdvancedBook, containedAdvancedReview](books.Filter(bookTitle), Property[[]containedAdvancedReview](EventValue[containedAdvancedBook](), "reviews")))
+	defer func() { _ = rootFiltered.Undeploy(context.Background()) }()
+	leafEngine, leafFiltered, leafRows := build("contained-nested-where-leaf", reviews.Filter(reviewSet))
+	defer func() { _ = leafFiltered.Undeploy(context.Background()) }()
+	combinedEngine, combined, combinedRows := build("contained-nested-where-combined", reviews.Filter(And(
+		reviewSet,
+		Equal[string](ContainedParentField[string]("title"), Literal("Enders Game")),
+	)))
+	defer func() { _ = combined.Undeploy(context.Background()) }()
+
+	order := containedAdvancedOrder{
+		OrderID: "O-where",
+		Books: []containedAdvancedBook{
+			{BookID: "B-1", Title: "Enders Game", Reviews: []containedAdvancedReview{{ReviewID: 1}, {ReviewID: 2}}},
+			{BookID: "B-2", Title: "Other", Reviews: []containedAdvancedReview{{ReviewID: 10}}},
+		},
+	}
+	for _, engine := range []*Engine{rootEngine, leafEngine, combinedEngine} {
+		if err := engine.SendEvent(context.Background(), order); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if want := []int64{1, 2}; !reflect.DeepEqual(*rootRows, want) {
+		t.Fatalf("contained root where rows = %#v, want %#v", *rootRows, want)
+	}
+	if want := []int64{1, 10}; !reflect.DeepEqual(*leafRows, want) {
+		t.Fatalf("contained leaf where rows = %#v, want %#v", *leafRows, want)
+	}
+	if want := []int64{1}; !reflect.DeepEqual(*combinedRows, want) {
+		t.Fatalf("contained combined where rows = %#v, want %#v", *combinedRows, want)
 	}
 }
 
