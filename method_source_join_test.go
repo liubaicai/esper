@@ -328,6 +328,162 @@ func TestMethodSourceDependentLeftOuterPreservesMissingResult(t *testing.T) {
 	}
 }
 
+func TestMethodSourceDependentRightOuterPreservesMissingResult(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	dependentSchema, err := StructSchema[methodDependentValue]("MethodDependentOuterRightDependent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	preservedSchema, err := StructSchema[methodDependentValue]("MethodDependentOuterRightPreserved")
+	if err != nil {
+		t.Fatal(err)
+	}
+	preserved := FromMethodOn[methodDependentValue](env, "right-preserved", "Trade", preservedSchema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		var result []Event
+		for _, value := range []int{1, 2} {
+			event, eventErr := newEvent(preservedSchema, methodDependentValue{Value: value, Group: 1}, request.Now)
+			if eventErr != nil {
+				return nil, eventErr
+			}
+			result = append(result, event)
+		}
+		return result, nil
+	}))
+	dependent := FromMethodOn[methodDependentValue](env, "left-dependent", "Trade", dependentSchema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		parent, _ := request.Dependency("right-preserved")
+		value := parent.Underlying().(methodDependentValue).Value
+		if value == 2 {
+			return nil, nil
+		}
+		event, eventErr := newEvent(dependentSchema, methodDependentValue{Value: value * 10, Group: 1}, request.Now)
+		return []Event{event}, eventErr
+	})).DependingOn("right-preserved")
+	query := Join(dependent, preserved, OnEqual(
+		Field[methodDependentValue, int]("group"),
+		Field[methodDependentValue, int]("group"),
+	)).RightOuter().Select(
+		SelectLeft("left", Field[methodDependentValue, int]("value")),
+		SelectRight("right", Field[methodDependentValue, int]("value")),
+	).Query(StatementName("method-dependent-right-outer"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	if _, err := deployment.Statements()[0].Subscribe(func(context.Context, ResultBatch) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "trigger"}); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := deployment.Statements()[0].Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Results()) != 2 {
+		t.Fatalf("dependent right-outer rows = %#v", snapshot.Results())
+	}
+	foundMatched, foundMissing := false, false
+	for _, result := range snapshot.Results() {
+		row, _ := result.Row()
+		switch {
+		case row.Get("left").Any() == 10 && row.Get("right").Any() == 1:
+			foundMatched = true
+		case row.Get("left").IsNull() && row.Get("right").Any() == 2:
+			foundMissing = true
+		}
+	}
+	if !foundMatched || !foundMissing {
+		t.Fatalf("dependent right-outer rows = %#v", snapshot.Results())
+	}
+}
+
+func TestMethodSourceDependentFullOuterMatchesEsper(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	leftSchema, err := StructSchema[methodDependentValue]("MethodDependentFullOuterLeft")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rightSchema, err := StructSchema[methodDependentValue]("MethodDependentFullOuterRight")
+	if err != nil {
+		t.Fatal(err)
+	}
+	left := FromMethodOn[methodDependentValue](env, "full-left", "Trade", leftSchema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		result := make([]Event, 0, 2)
+		for _, value := range []int{1, 2} {
+			event, eventErr := newEvent(leftSchema, methodDependentValue{Value: value, Group: 1}, request.Now)
+			if eventErr != nil {
+				return nil, eventErr
+			}
+			result = append(result, event)
+		}
+		return result, nil
+	}))
+	right := FromMethodOn[methodDependentValue](env, "full-right", "Trade", rightSchema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		parent, ok := request.Dependency("full-left")
+		if !ok {
+			return nil, NewError(ErrorDependency, "full outer method dependency is missing")
+		}
+		value := parent.Underlying().(methodDependentValue).Value
+		if value == 1 {
+			value = 3
+		}
+		event, eventErr := newEvent(rightSchema, methodDependentValue{Value: value, Group: 1}, request.Now)
+		return []Event{event}, eventErr
+	})).DependingOn("full-left")
+	query := Join(left, right, OnEqual(
+		Field[methodDependentValue, int]("value"),
+		Field[methodDependentValue, int]("value"),
+	)).FullOuter().Select(
+		SelectLeft("left", Field[methodDependentValue, int]("value")),
+		SelectRight("right", Field[methodDependentValue, int]("value")),
+	).Query(StatementName("method-dependent-full-outer"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	if _, err := deployment.Statements()[0].Subscribe(func(context.Context, ResultBatch) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "trigger"}); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := deployment.Statements()[0].Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Results()) != 3 {
+		t.Fatalf("dependent full outer rows = %#v", snapshot.Results())
+	}
+	seen := map[string]bool{}
+	for _, result := range snapshot.Results() {
+		row, ok := result.Row()
+		if !ok {
+			t.Fatalf("dependent full outer result = %#v", result)
+		}
+		switch {
+		case row.Get("left").Any() == 1 && row.Get("right").IsNull():
+			seen["1/null"] = true
+		case row.Get("left").Any() == 2 && row.Get("right").Any() == 2:
+			seen["2/2"] = true
+		case row.Get("left").IsNull() && row.Get("right").Any() == 3:
+			seen["null/3"] = true
+		}
+	}
+	if len(seen) != 3 {
+		t.Fatalf("dependent full outer rows = %#v", snapshot.Results())
+	}
+}
+
 func TestMethodSourceDependencyValidationAndPlanIdentity(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	schema, err := StructSchema[methodDependentValue]("MethodDependentValidation")
@@ -360,7 +516,11 @@ func TestMethodSourceDependencyValidationAndPlanIdentity(t *testing.T) {
 		JoinSource(makeMethod("ambiguous-dependent").DependingOn("shared")),
 	).On(OnSourcesEqual(0, Field[methodDependentValue, int]("group"), 1, Field[methodDependentValue, int]("group"))).Query(), "is ambiguous")
 	assertBuildError("left outer direction", Join(makeMethod("outer-a").DependingOn("outer-b"), makeMethod("outer-b"), condition).LeftOuter().Query(), "cannot be satisfied")
-	assertBuildError("full outer", Join(makeMethod("full-a"), makeMethod("full-b").DependingOn("full-a"), condition).FullOuter().Query(), "cannot be guaranteed")
+	if _, buildErr := env.Build(Join(makeMethod("full-a"), makeMethod("full-b").DependingOn("full-a"), condition).FullOuter().Select(
+		SelectLeft("value", Field[methodDependentValue, int]("value")),
+	).Query()); buildErr != nil {
+		t.Fatalf("full outer dependency rejected: %v", buildErr)
+	}
 
 	base := makeMethod("hash-base")
 	plainPlan, err := env.Build(Join(base, makeMethod("hash-dependent"), condition).Select(

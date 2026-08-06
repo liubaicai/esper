@@ -2028,8 +2028,6 @@ func methodJoinEvaluationOrder(definition *joinDefinition) ([]int, error) {
 				if dependencyIndex < methodIndex {
 					return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot be satisfied by the right outer join", base.sourceName, name))
 				}
-			case JoinFullOuter:
-				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot be guaranteed by the full outer join", base.sourceName, name))
 			}
 			edges[dependencyIndex] = append(edges[dependencyIndex], methodIndex)
 			indegree[methodIndex]++
