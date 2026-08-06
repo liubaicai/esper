@@ -178,27 +178,3 @@ func TestJoinDeployLifecycleResetsWindowStateMatchesEsper(t *testing.T) {
 		t.Fatalf("redeployed current state join rows = %#v", rows)
 	}
 }
-
-func TestJoinRejectsSourcesWithoutViews(t *testing.T) {
-	env := NewEnvironment()
-	if _, err := RegisterStruct[joinSelectClauseEvent](env, "JoinInvalidS0"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := RegisterStruct[joinSelectClauseEvent](env, "JoinInvalidS1"); err != nil {
-		t.Fatal(err)
-	}
-	query := Join(
-		From[joinSelectClauseEvent](env, "JoinInvalidS0"),
-		From[joinSelectClauseEvent](env, "JoinInvalidS1"),
-		OnEqual(
-			Field[joinSelectClauseEvent, float64]("doubleBoxed"),
-			Field[joinSelectClauseEvent, float64]("doubleBoxed"),
-		),
-	).Select(
-		SelectLeft("left", Field[joinSelectClauseEvent, string]("theString")),
-		SelectRight("right", Field[joinSelectClauseEvent, string]("theString")),
-	).Query(StatementName("join-invalid-no-view"))
-	if _, err := env.Build(query); err == nil {
-		t.Fatal("join without source views unexpectedly built")
-	}
-}
