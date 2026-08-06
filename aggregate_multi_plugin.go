@@ -339,7 +339,7 @@ func evaluateAggregateMultiPlugin(ctx EvalContext, node *exprNode, input Expr, f
 		// identity for that invocation.
 		stateKey = fmt.Sprintf("isolated:%p", node)
 	}
-	key := node.aggregateMultiPluginName + "|" + stateKey + "|" + ctx.aggregateMultiScope
+	key := encodeKey([]any{node.aggregateMultiPluginName, stateKey, ctx.aggregateMultiScope})
 	state := aggregateMultiPluginState(nil)
 	if ctx.aggregateMultiPluginStates != nil {
 		state = ctx.aggregateMultiPluginStates[key]

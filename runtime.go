@@ -10086,7 +10086,7 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 			current = everEvents[0]
 		}
 	}
-	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Now: now, Variables: variables, aggregatePluginStates: pluginStates, aggregateMultiPluginStates: multiPluginStates, aggregateEvaluation: true}
+	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Engine: aggregateEngineFromVariables(variables), Now: now, Variables: variables, aggregatePluginStates: pluginStates, aggregateMultiPluginStates: multiPluginStates, aggregateEvaluation: true}
 	if len(definition.groupBy) > 0 {
 		groupingEvent := current
 		if groupingEvent.Schema().Name() == "" {
@@ -10120,6 +10120,21 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 		}
 	}
 	return ctx
+}
+
+func aggregateEngineFromVariables(variables map[string]Value) *Engine {
+	if variables == nil {
+		return nil
+	}
+	value, ok := variables[subqueryEngineVariable]
+	if !ok || !value.IsPresent() {
+		return nil
+	}
+	reference, ok := value.Any().(*subqueryEngineRef)
+	if !ok {
+		return nil
+	}
+	return reference.engine
 }
 
 func orderAggregateResults(entries []aggregateResultEntry, keys []SortKey, definition *aggregateDefinition, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, leaving bool) {
