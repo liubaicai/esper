@@ -15,8 +15,8 @@ import (
 )
 
 // AccessorStyle controls how Go struct properties are exposed. PUBLIC derives
-// properties from exported fields, JAVABEAN discovers GetX/IsX methods, and
-// EXPLICIT exposes only properties registered with schema options.
+// properties from exported fields, JAVABEAN discovers GetX/IsX and SetX
+// methods, and EXPLICIT exposes only properties registered with schema options.
 type AccessorStyle uint8
 
 const (
@@ -101,6 +101,11 @@ func OptionalFieldDef(name string, typ reflect.Type) FieldSpec {
 // may be returned when the accessor needs to preserve Esper's value state.
 type PropertyGetter func(underlying any) (Value, error)
 
+// PropertySetter writes one property on an addressable event underlying
+// value. Struct materialization passes a pointer to the newly allocated Go
+// value so callbacks can preserve setter-side validation and normalization.
+type PropertySetter func(underlying any, value any) error
+
 type schemaGetterSpec struct {
 	name     string
 	typ      reflect.Type
@@ -108,6 +113,13 @@ type schemaGetterSpec struct {
 	getter   PropertyGetter
 	method   string
 	path     string
+}
+
+type schemaSetterSpec struct {
+	name   string
+	typ    reflect.Type
+	setter PropertySetter
+	method string
 }
 
 // SchemaOption changes event property resolution, accessor behavior, or
@@ -120,6 +132,7 @@ type schemaConfig struct {
 	allowDynamic bool
 	parents      []Schema
 	getters      []schemaGetterSpec
+	setters      []schemaSetterSpec
 	nested       map[string]Schema
 }
 
@@ -154,6 +167,29 @@ func WithTypedPropertyGetter[T any](name string, getter func(any) (T, error)) Sc
 	})
 }
 
+// WithPropertySetter registers an explicit property writer. The declared
+// type participates in schema metadata validation and value conversion.
+func WithPropertySetter(name string, typ reflect.Type, setter PropertySetter) SchemaOption {
+	return func(cfg *schemaConfig) {
+		cfg.setters = append(cfg.setters, schemaSetterSpec{name: name, typ: typ, setter: setter})
+	}
+}
+
+// WithTypedPropertySetter is the type-safe convenience form of
+// WithPropertySetter.
+func WithTypedPropertySetter[T any](name string, setter func(any, T) error) SchemaOption {
+	return WithPropertySetter(name, typeOf[T](), func(underlying any, value any) error {
+		if setter == nil {
+			return fmt.Errorf("esper: property setter %q is nil", name)
+		}
+		converted, err := assignReflectValue(typeOf[T](), value)
+		if err != nil {
+			return err
+		}
+		return setter(underlying, converted.Interface().(T))
+	})
+}
+
 // WithPropertyMethod maps a property to an exported Go method. A method may
 // be a JavaBean-style zero-argument getter, or accept indexed/mapped path
 // arguments. When typ is omitted, the schema derives it from the method when
@@ -165,6 +201,18 @@ func WithPropertyMethod(name, method string, typ ...reflect.Type) SchemaOption {
 	}
 	return func(cfg *schemaConfig) {
 		cfg.getters = append(cfg.getters, schemaGetterSpec{name: name, typ: declared, method: method})
+	}
+}
+
+// WithPropertySetterMethod maps a property to an exported Go method taking
+// one value and returning either nothing or error.
+func WithPropertySetterMethod(name, method string, typ ...reflect.Type) SchemaOption {
+	var declared reflect.Type
+	if len(typ) > 0 {
+		declared = typ[0]
+	}
+	return func(cfg *schemaConfig) {
+		cfg.setters = append(cfg.setters, schemaSetterSpec{name: name, typ: declared, method: method})
 	}
 }
 
@@ -210,6 +258,7 @@ type Schema struct {
 	fields         []FieldSpec
 	fieldIndex     map[string]int
 	getters        map[string]schemaGetterSpec
+	setters        map[string]schemaSetterSpec
 	nested         map[string]Schema
 	goType         reflect.Type
 	resolution     PropertyResolutionStyle
@@ -445,6 +494,7 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 	copyFields := make([]FieldSpec, 0, len(fields))
 	parentNames := make([]string, 0, len(cfg.parents))
 	getters := make(map[string]schemaGetterSpec)
+	setters := make(map[string]schemaSetterSpec)
 	nestedSchemas := make(map[string]Schema)
 	inheritedFields := make(map[string]FieldSpec)
 	for index, parent := range cfg.parents {
@@ -468,12 +518,18 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		for getterName, getter := range parent.getters {
 			getters[getterName] = getter
 		}
+		for setterName, setter := range parent.setters {
+			setters[setterName] = setter
+		}
 		for nestedName, nested := range parent.nested {
 			nestedSchemas[nestedName] = nested
 		}
 		cfg.allowDynamic = cfg.allowDynamic || parent.allowDynamic
 	}
 	copyFields = append(copyFields, fields...)
+	if len(cfg.setters) > 0 && goType == nil {
+		return Schema{}, fmt.Errorf("esper: schema %q property setters require a Go struct underlying type", name)
+	}
 
 	for getterIndex, configured := range cfg.getters {
 		getter, err := normalizeGetterSpec(configured, goType)
@@ -486,6 +542,21 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		getters[getter.name] = getter
 		copyFields = mergeGetterField(copyFields, getter)
 	}
+	for setterIndex, configured := range cfg.setters {
+		setter, err := normalizeSetterSpec(configured, goType)
+		if err != nil {
+			return Schema{}, fmt.Errorf("esper: schema %q property setter %d: %w", name, setterIndex, err)
+		}
+		if _, exists := setters[setter.name]; exists {
+			return Schema{}, fmt.Errorf("esper: schema %q duplicates property setter %q", name, setter.name)
+		}
+		setters[setter.name] = setter
+		var mergeErr error
+		copyFields, mergeErr = mergeSetterField(copyFields, setter)
+		if mergeErr != nil {
+			return Schema{}, fmt.Errorf("esper: schema %q: %w", name, mergeErr)
+		}
+	}
 
 	if cfg.accessor == AccessorJavaBean && goType != nil {
 		for _, discovered := range discoverJavaBeanGetters(goType) {
@@ -494,6 +565,23 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 			}
 			getters[discovered.name] = discovered
 			copyFields = mergeGetterField(copyFields, discovered)
+		}
+		for _, discovered := range discoverJavaBeanSetters(goType) {
+			if !schemaFieldsContain(copyFields, discovered.name) {
+				// JavaBeans write-only descriptors are not event properties.
+				// A setter augments an existing field/getter but never makes a
+				// setter-only property readable through event metadata.
+				continue
+			}
+			if _, exists := setters[discovered.name]; exists {
+				continue
+			}
+			setters[discovered.name] = discovered
+			var mergeErr error
+			copyFields, mergeErr = mergeSetterField(copyFields, discovered)
+			if mergeErr != nil {
+				return Schema{}, fmt.Errorf("esper: schema %q: %w", name, mergeErr)
+			}
 		}
 	}
 	for nestedName, nested := range cfg.nested {
@@ -530,6 +618,7 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		fields:       copyFields,
 		fieldIndex:   index,
 		getters:      getters,
+		setters:      setters,
 		nested:       nestedSchemas,
 		goType:       goType,
 		resolution:   cfg.resolution,
@@ -538,6 +627,15 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		parents:      append([]Schema(nil), cfg.parents...),
 		parentNames:  parentNames,
 	}, nil
+}
+
+func schemaFieldsContain(fields []FieldSpec, name string) bool {
+	for _, field := range fields {
+		if field.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeGetterSpec(spec schemaGetterSpec, goType reflect.Type) (schemaGetterSpec, error) {
@@ -586,6 +684,40 @@ func normalizeGetterSpec(spec schemaGetterSpec, goType reflect.Type) (schemaGett
 	return spec, nil
 }
 
+func normalizeSetterSpec(spec schemaSetterSpec, goType reflect.Type) (schemaSetterSpec, error) {
+	spec.name = strings.TrimSpace(spec.name)
+	if spec.name == "" {
+		return schemaSetterSpec{}, fmt.Errorf("property setter name is required")
+	}
+	segments, err := parsePropertyPath(spec.name)
+	if err != nil || len(segments) != 1 || segments[0].name != spec.name || len(segments[0].accessors) != 0 {
+		return schemaSetterSpec{}, fmt.Errorf("property setter name %q must be a simple root property", spec.name)
+	}
+	spec.method = strings.TrimSpace(spec.method)
+	if spec.setter == nil && spec.method == "" {
+		return schemaSetterSpec{}, fmt.Errorf("property setter %q has no callback or method", spec.name)
+	}
+	if spec.setter != nil && spec.method != "" {
+		return schemaSetterSpec{}, fmt.Errorf("property setter %q combines callback and method forms", spec.name)
+	}
+	if spec.method != "" && goType != nil {
+		methodType, err := propertySetterMethodType(goType, spec.method)
+		if err != nil {
+			return schemaSetterSpec{}, err
+		}
+		if spec.typ == nil {
+			spec.typ = methodType
+		} else if spec.typ != typeOf[any]() && methodType != typeOf[any]() &&
+			!spec.typ.AssignableTo(methodType) && !methodType.AssignableTo(spec.typ) && !numericTypes(spec.typ, methodType) {
+			return schemaSetterSpec{}, fmt.Errorf("property setter %q declares %s but method accepts %s", spec.name, spec.typ, methodType)
+		}
+	}
+	if spec.typ == nil {
+		spec.typ = typeOf[any]()
+	}
+	return spec, nil
+}
+
 func isOptionalReflectType(typ reflect.Type) bool {
 	if typ == nil {
 		return true
@@ -605,6 +737,23 @@ func mergeGetterField(fields []FieldSpec, getter schemaGetterSpec) []FieldSpec {
 		return fields
 	}
 	return append(fields, FieldSpec{Name: getter.name, Type: getter.typ, Optional: getter.optional})
+}
+
+func mergeSetterField(fields []FieldSpec, setter schemaSetterSpec) ([]FieldSpec, error) {
+	for index, field := range fields {
+		if field.Name != setter.name {
+			continue
+		}
+		if field.Type != nil && field.Type != typeOf[any]() && setter.typ != nil && setter.typ != typeOf[any]() &&
+			!field.Type.AssignableTo(setter.typ) && !setter.typ.AssignableTo(field.Type) && !numericTypes(field.Type, setter.typ) {
+			return nil, fmt.Errorf("property %q getter/field type %s conflicts with setter type %s", setter.name, field.Type, setter.typ)
+		}
+		if (field.Type == nil || field.Type == typeOf[any]()) && setter.typ != nil {
+			fields[index].Type = setter.typ
+		}
+		return fields, nil
+	}
+	return append(fields, FieldSpec{Name: setter.name, Type: setter.typ, Optional: isOptionalReflectType(setter.typ)}), nil
 }
 
 func propertyMethodReturnType(typ reflect.Type, methodName string) (reflect.Type, error) {
@@ -627,6 +776,32 @@ func propertyMethodReturnType(typ reflect.Type, methodName string) (reflect.Type
 		return methodType.Out(0), nil
 	}
 	return nil, fmt.Errorf("property method %q is not exported on %s", methodName, typ)
+}
+
+func propertySetterMethodType(typ reflect.Type, methodName string) (reflect.Type, error) {
+	candidates := []reflect.Type{typ}
+	if typ.Kind() != reflect.Pointer {
+		candidates = append(candidates, reflect.PointerTo(typ))
+	}
+	errorType := reflect.TypeOf((*error)(nil)).Elem()
+	for _, candidate := range candidates {
+		method, ok := candidate.MethodByName(methodName)
+		if !ok {
+			continue
+		}
+		methodType := method.Type
+		if methodType.NumIn() != 2 || methodType.NumOut() > 1 {
+			return nil, fmt.Errorf("property setter method %q must accept one value and return nothing or error", methodName)
+		}
+		if methodType.In(0).Kind() != reflect.Pointer {
+			return nil, fmt.Errorf("property setter method %q must use a pointer receiver", methodName)
+		}
+		if methodType.NumOut() == 1 && !methodType.Out(0).Implements(errorType) {
+			return nil, fmt.Errorf("property setter method %q return value must implement error", methodName)
+		}
+		return methodType.In(1), nil
+	}
+	return nil, fmt.Errorf("property setter method %q is not exported on %s", methodName, typ)
 }
 
 func discoverJavaBeanGetters(typ reflect.Type) []schemaGetterSpec {
@@ -662,6 +837,37 @@ func discoverJavaBeanGetters(typ reflect.Type) []schemaGetterSpec {
 	return properties
 }
 
+func discoverJavaBeanSetters(typ reflect.Type) []schemaSetterSpec {
+	candidates := []reflect.Type{typ}
+	if typ.Kind() != reflect.Pointer {
+		candidates = append(candidates, reflect.PointerTo(typ))
+	}
+	errorType := reflect.TypeOf((*error)(nil)).Elem()
+	byName := make(map[string]schemaSetterSpec)
+	for _, candidate := range candidates {
+		for index := 0; index < candidate.NumMethod(); index++ {
+			method := candidate.Method(index)
+			property, ok := javaBeanSetterPropertyName(method.Name)
+			if !ok || method.Type.NumIn() != 2 || method.Type.NumOut() > 1 {
+				continue
+			}
+			if method.Type.In(0).Kind() != reflect.Pointer {
+				continue
+			}
+			if method.Type.NumOut() == 1 && !method.Type.Out(0).Implements(errorType) {
+				continue
+			}
+			byName[property] = schemaSetterSpec{name: property, typ: method.Type.In(1), method: method.Name}
+		}
+	}
+	properties := make([]schemaSetterSpec, 0, len(byName))
+	for _, setter := range byName {
+		properties = append(properties, setter)
+	}
+	sort.Slice(properties, func(i, j int) bool { return properties[i].name < properties[j].name })
+	return properties
+}
+
 func javaBeanPropertyName(methodName string) (string, bool) {
 	prefix := ""
 	switch {
@@ -680,6 +886,13 @@ func javaBeanPropertyName(methodName string) (string, bool) {
 		return name, true
 	}
 	return strings.ToLower(name[:1]) + name[1:], true
+}
+
+func javaBeanSetterPropertyName(methodName string) (string, bool) {
+	if !strings.HasPrefix(methodName, "Set") || len(methodName) == len("Set") {
+		return "", false
+	}
+	return javaBeanPropertyName("Get" + methodName[len("Set"):])
 }
 
 func inferPropertyPathType(root reflect.Type, path string) reflect.Type {
@@ -947,6 +1160,32 @@ func (s Schema) lookupGetter(name string) (schemaGetterSpec, string, bool) {
 	}
 	if match == nil {
 		return schemaGetterSpec{}, "", false
+	}
+	return *match, matchedName, true
+}
+
+func (s Schema) lookupSetter(name string) (schemaSetterSpec, string, bool) {
+	if setter, ok := s.setters[name]; ok {
+		return setter, name, true
+	}
+	if s.resolution == PropertyCaseSensitive {
+		return schemaSetterSpec{}, "", false
+	}
+	var match *schemaSetterSpec
+	matchedName := ""
+	for propertyName, setter := range s.setters {
+		if !strings.EqualFold(propertyName, name) {
+			continue
+		}
+		if match != nil && s.resolution == PropertyDistinctCaseInsensitive {
+			return schemaSetterSpec{}, "", false
+		}
+		copySetter := setter
+		match = &copySetter
+		matchedName = propertyName
+	}
+	if match == nil {
+		return schemaSetterSpec{}, "", false
 	}
 	return *match, matchedName, true
 }
@@ -2009,11 +2248,62 @@ func mergeSchemaUnderlying(schema Schema, original any, updates map[string]any) 
 		}
 	}
 	for name, update := range updates {
+		if setter, canonicalName, ok := schema.lookupSetter(name); ok {
+			if err := invokeRegisteredSetter(value, setter, update); err != nil {
+				return nil, fmt.Errorf("target property %q: %w", canonicalName, err)
+			}
+			continue
+		}
 		if err := setStructField(value, name, update, schema.resolution); err != nil {
 			return nil, err
 		}
 	}
 	return value.Interface(), nil
+}
+
+func invokeRegisteredSetter(value reflect.Value, setter schemaSetterSpec, update any) (err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = fmt.Errorf("setter panicked: %v", recovered)
+		}
+	}()
+	if setter.setter != nil {
+		if !value.CanAddr() {
+			return fmt.Errorf("underlying %s is not addressable", value.Type())
+		}
+		converted := update
+		if setter.typ != nil && setter.typ != typeOf[any]() {
+			reflected, conversionErr := assignReflectValue(setter.typ, update)
+			if conversionErr != nil {
+				return conversionErr
+			}
+			converted = reflected.Interface()
+		}
+		return setter.setter(value.Addr().Interface(), converted)
+	}
+	if setter.method == "" {
+		return fmt.Errorf("setter is not configured")
+	}
+	target := value
+	if target.Kind() != reflect.Pointer {
+		if !target.CanAddr() {
+			return fmt.Errorf("underlying %s is not addressable", target.Type())
+		}
+		target = target.Addr()
+	}
+	method := target.MethodByName(setter.method)
+	if !method.IsValid() || method.Type().NumIn() != 1 {
+		return fmt.Errorf("setter method %q is unavailable", setter.method)
+	}
+	converted, conversionErr := assignReflectValue(method.Type().In(0), update)
+	if conversionErr != nil {
+		return conversionErr
+	}
+	results := method.Call([]reflect.Value{converted})
+	if len(results) == 1 && !results[0].IsNil() {
+		return results[0].Interface().(error)
+	}
+	return nil
 }
 
 func setStructField(value reflect.Value, target string, update any, resolution PropertyResolutionStyle) error {

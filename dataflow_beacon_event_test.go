@@ -13,6 +13,15 @@ type dataflowBeaconFieldEvent struct {
 	P2 float64 `esper:"p2"`
 }
 
+type dataflowBeaconSetterBean struct {
+	myfield string
+}
+
+func (event dataflowBeaconSetterBean) GetMyfield() string { return event.myfield }
+func (event *dataflowBeaconSetterBean) SetMyfield(value string) {
+	event.myfield = value
+}
+
 func TestDataflowBeaconEventFieldsMaterializeAllRepresentationsMatchesEsper(t *testing.T) {
 	representations := []struct {
 		name string
@@ -93,6 +102,38 @@ func TestDataflowBeaconEventFieldsMaterializeAllRepresentationsMatchesEsper(t *t
 				}
 			})
 		}
+	}
+}
+
+func TestDataflowBeaconJavaBeanSetterMaterializationMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[dataflowBeaconSetterBean](env, "BeaconSetterBean", WithAccessorStyle(AccessorJavaBean)); err != nil {
+		t.Fatal(err)
+	}
+	definition, err := DefineDataflow(env, "beacon-setter-bean").
+		BeaconEventSourceWithUnderlying("source", "BeaconSetterBean", DataflowBeaconOptions{Iterations: 1},
+			Alias("myfield", Literal("abc")),
+		).
+		Emitter("sink").
+		Connect("source", "sink").
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	instance, err := NewEngine(env).InstantiateDataflow(context.Background(), definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := instance.Run(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	outputs := instance.Outputs()
+	if len(outputs) != 1 {
+		t.Fatalf("setter beacon outputs = %#v", outputs)
+	}
+	bean, ok := outputs[0].(dataflowBeaconSetterBean)
+	if !ok || bean.GetMyfield() != "abc" {
+		t.Fatalf("setter beacon underlying = %#v", outputs[0])
 	}
 }
 

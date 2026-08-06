@@ -495,6 +495,20 @@ func (e *Environment) Build(query Query) (Plan, error) {
 			}
 			getters = append(getters, fmt.Sprintf("%s:%s:%t:%s", getter.name, getter.typ, getter.optional, source))
 		}
+		setterNames := make([]string, 0, len(schema.setters))
+		for name := range schema.setters {
+			setterNames = append(setterNames, name)
+		}
+		sort.Strings(setterNames)
+		setters := make([]string, 0, len(setterNames))
+		for _, name := range setterNames {
+			setter := schema.setters[name]
+			source := "callback"
+			if setter.method != "" {
+				source = "method:" + setter.method
+			}
+			setters = append(setters, fmt.Sprintf("%s:%s:%s", setter.name, setter.typ, source))
+		}
 		nestedNames := make([]string, 0, len(schema.nested))
 		for name, nested := range schema.nested {
 			nestedNames = append(nestedNames, name+"="+nested.Name())
@@ -502,7 +516,7 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		sort.Strings(nestedNames)
 		members := strings.Join(schema.variantMembers, ",")
 		parents := strings.Join(schema.parentNames, ",")
-		canonicalParts = append(canonicalParts, fmt.Sprintf("schema(%s:%d:%d:%d:%t:variant=%d:parents=%s:%s:fields=%s:getters=%s:nested=%s)", schema.Name(), schema.kind, schema.resolution, schema.accessor, schema.allowDynamic, schema.variantMode, parents, members, strings.Join(fields, ","), strings.Join(getters, ","), strings.Join(nestedNames, ",")))
+		canonicalParts = append(canonicalParts, fmt.Sprintf("schema(%s:%d:%d:%d:%t:variant=%d:parents=%s:%s:fields=%s:getters=%s:setters=%s:nested=%s)", schema.Name(), schema.kind, schema.resolution, schema.accessor, schema.allowDynamic, schema.variantMode, parents, members, strings.Join(fields, ","), strings.Join(getters, ","), strings.Join(setters, ","), strings.Join(nestedNames, ",")))
 	}
 	for _, variable := range e.Variables() {
 		canonicalParts = append(canonicalParts, fmt.Sprintf("variable(%s:%s:%s:%s:%t)", variable.name, variable.context, variable.typ, variable.initial.String(), variable.constant))

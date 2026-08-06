@@ -1,6 +1,7 @@
 package esper
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 	"strings"
@@ -213,6 +214,109 @@ func TestJavaBeanGetterFallbackForDynamicProperty(t *testing.T) {
 	}
 	if got := event.Get("value"); !got.IsPresent() || got.Any() != "getter" {
 		t.Fatalf("getter property = %v (%v)", got.Any(), got.State())
+	}
+}
+
+type schemaTestSetterBean struct {
+	value string
+}
+
+func (e schemaTestSetterBean) GetValue() string { return e.value }
+func (e *schemaTestSetterBean) SetValue(value string) error {
+	if value == "reject" {
+		return fmt.Errorf("rejected value")
+	}
+	e.value = value
+	return nil
+}
+
+type schemaTestConflictingSetterBean struct{}
+
+func (schemaTestConflictingSetterBean) GetValue() string { return "" }
+func (*schemaTestConflictingSetterBean) SetValue(int)    {}
+
+type schemaTestWriteOnlyBean struct{}
+
+func (*schemaTestWriteOnlyBean) SetValue(string) {}
+
+func TestJavaBeanSetterMaterializesGetterOnlyStruct(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterStruct[schemaTestSetterBean](env, "SetterBean", WithAccessorStyle(AccessorJavaBean))
+	if err != nil {
+		t.Fatal(err)
+	}
+	underlying, err := projectMapToSchema(schema, map[string]any{"value": "abc"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bean, ok := underlying.(schemaTestSetterBean)
+	if !ok || bean.GetValue() != "abc" {
+		t.Fatalf("setter-backed underlying = %#v", underlying)
+	}
+	event, err := newEvent(schema, underlying, time.Unix(0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := event.Get("value"); !got.IsPresent() || got.Any() != "abc" {
+		t.Fatalf("setter-backed getter value = %v (%v)", got.Any(), got.State())
+	}
+	if _, err := projectMapToSchema(schema, map[string]any{"value": "reject"}); err == nil || !strings.Contains(err.Error(), "rejected value") {
+		t.Fatalf("setter error = %v", err)
+	}
+	plan, err := env.Build(From[schemaTestSetterBean](env, "SetterBean").Query())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonical := string(plan.Canonical()); !strings.Contains(canonical, "setters=value:string:method:SetValue") {
+		t.Fatalf("setter missing from plan canonical: %s", canonical)
+	}
+	if _, err := StructSchema[schemaTestConflictingSetterBean]("ConflictingSetterBean", WithAccessorStyle(AccessorJavaBean)); err == nil {
+		t.Fatal("JavaBean schema accepted conflicting getter and setter types")
+	}
+}
+
+func TestJavaBeanWriteOnlySetterIsNotReadableProperty(t *testing.T) {
+	schema, err := StructSchema[schemaTestWriteOnlyBean]("WriteOnlyBean", WithAccessorStyle(AccessorJavaBean))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := schema.PropertyNames(); len(names) != 0 {
+		t.Fatalf("write-only JavaBean properties = %#v, want none", names)
+	}
+	event, err := newEvent(schema, schemaTestWriteOnlyBean{}, time.Unix(0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !event.Get("value").IsMissing() {
+		t.Fatalf("write-only JavaBean value = %v, want Missing", event.Get("value"))
+	}
+}
+
+func TestExplicitPropertySetterCallbackMaterializesStruct(t *testing.T) {
+	schema, err := StructSchema[schemaTestGetterOnly]("ExplicitSetterBean",
+		WithAccessorStyle(AccessorExplicit),
+		WithPropertyMethod("value", "GetValue"),
+		WithTypedPropertySetter[string]("value", func(underlying any, value string) error {
+			bean, ok := underlying.(*schemaTestGetterOnly)
+			if !ok {
+				return fmt.Errorf("setter underlying = %T", underlying)
+			}
+			bean.value = value
+			return nil
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	underlying, err := projectMapToSchema(schema, map[string]any{"value": "callback"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bean, ok := underlying.(schemaTestGetterOnly); !ok || bean.GetValue() != "callback" {
+		t.Fatalf("callback setter underlying = %#v", underlying)
+	}
+	if _, err := NewMapSchema("InvalidMapSetter", nil, WithTypedPropertySetter[string]("value", func(any, string) error { return nil })); err == nil {
+		t.Fatal("map schema accepted a struct property setter")
 	}
 }
 
