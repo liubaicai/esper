@@ -113,7 +113,7 @@
       "goRefs": ["enum_expr.go", "enum_expr_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["complete Java type matrix", "map/iterator-backed collection sources and Java collection metadata", "invalid-rule parity"]
+      "remaining": ["complete Java type matrix", "Java collection metadata and generic component descriptors", "invalid-rule parity", "nested/subquery/access-aggregate/UDF source matrix"]
     },
     {
       "id": "resultset.aggregate-dimensional",
@@ -640,6 +640,17 @@
       "tags": ["correctness", "expression", "enum"],
       "status": "mapped",
       "evidence": ["go-unit"]
+    },
+    {
+      "id": "case.expr-enum-sources",
+      "javaRuntimeIds": ["java-62aa90c3249a161c5f38"],
+      "javaNames": ["ExprEnumProperty"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDataSources.java"],
+      "goTests": ["TestEnumerableCollectsMapValuesAndIterators", "TestEnumerableSupportsExactBigNumbersAndArrayCollections"],
+      "tags": ["correctness", "expression", "enum", "collection", "iterator"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "The Go EnumCollect API normalizes arrays, slices, iter.Seq, maps.Values-backed sources and explicit pull iterators into []T without inventing map order; Java additionally exposes collection generic/component metadata and covers method/UDF/property/subquery/aggregate sources in the same execution, which remain open."
     },
     {
       "id": "case.aggregate-dimensional",
@@ -1272,6 +1283,7 @@
     {"capabilityId": "event.variant", "caseId": "case.variant-dynamic-map"},
     {"capabilityId": "query.insert-into-route", "caseId": "case.insert-into-chain"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
+    {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
     {"capabilityId": "resultset.aggregate-dimensional", "caseId": "case.aggregate-dimensional"},
     {"capabilityId": "resultset.aggregate-filtered", "caseId": "case.aggregate-filtered"},
     {"capabilityId": "resultset.aggregate-ever", "caseId": "case.aggregate-ever"},

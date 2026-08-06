@@ -2,6 +2,7 @@ package esper
 
 import (
 	"fmt"
+	"iter"
 	"math/big"
 	"reflect"
 	"sort"
@@ -97,10 +98,51 @@ func enumItems[T any](expression Expression[[]T], ctx EvalContext) ([]T, Value, 
 	return items, input, true
 }
 
-// EnumCollect normalizes an analyzable Go array, slice, or named slice into
-// the ordered slice representation consumed by the enumeration methods. It
-// is useful for event properties declared as [N]T or a named slice type while
-// keeping the rest of the fluent API strongly typed as []T.
+// EnumIterator is the pull-style iterator accepted by EnumCollect. The
+// boolean is true while an item was returned and false at end of input. It is
+// intentionally small so existing Go iterators can be adapted without
+// exposing a Java-style collection abstraction in the rule API.
+type EnumIterator[T any] interface {
+	Next() (T, bool)
+}
+
+func enumCollectIterator[T any](raw any) ([]T, bool, bool) {
+	if sequence, ok := raw.(iter.Seq[T]); ok {
+		if sequence == nil {
+			return nil, true, true
+		}
+		result := make([]T, 0)
+		sequence(func(item T) bool {
+			result = append(result, item)
+			return true
+		})
+		return result, true, false
+	}
+	if iterator, ok := raw.(EnumIterator[T]); ok {
+		if iterator == nil {
+			return nil, true, true
+		}
+		result := make([]T, 0)
+		for {
+			item, ok := iterator.Next()
+			if !ok {
+				break
+			}
+			result = append(result, item)
+		}
+		return result, true, false
+	}
+	return nil, false, false
+}
+
+// EnumCollect normalizes an analyzable Go array, slice, named slice,
+// iter.Seq, or pull-style EnumIterator into the ordered slice representation
+// consumed by the enumeration methods. iter.Seq is the standard Go adapter
+// for reusable iterable sources; maps.Values(map) can be used when the source
+// is map-backed. Map iteration order remains unspecified, as it does in Go,
+// so order-sensitive enumeration methods should receive an ordered source.
+// The result type is []T, making the collection element type explicit in the
+// fluent API and in the expression metadata.
 func EnumCollect[T any](values Expr) Expression[[]T] {
 	description := "collect(<nil>)"
 	var children []*exprNode
@@ -118,6 +160,12 @@ func EnumCollect[T any](values Expr) Expression[[]T] {
 		}
 		if items, err := As[[]T](input); err == nil {
 			return Present(enumCopy(items))
+		}
+		if items, recognized, isNull := enumCollectIterator[T](input.Any()); recognized {
+			if isNull {
+				return Null()
+			}
+			return Present(items)
 		}
 		raw := reflect.ValueOf(input.Any())
 		if !raw.IsValid() {

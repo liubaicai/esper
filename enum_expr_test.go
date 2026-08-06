@@ -2,6 +2,8 @@ package esper
 
 import (
 	"context"
+	"iter"
+	"maps"
 	"math/big"
 	"reflect"
 	"strings"
@@ -25,6 +27,20 @@ type enumDecimalItem struct {
 }
 
 type enumExpressionNumbers []int64
+
+type enumExpressionIterator struct {
+	values []int64
+	index  int
+}
+
+func (iterator *enumExpressionIterator) Next() (int64, bool) {
+	if iterator.index >= len(iterator.values) {
+		return 0, false
+	}
+	value := iterator.values[iterator.index]
+	iterator.index++
+	return value, true
+}
 
 func TestEnumerableExpressionsUseElementIndexAndSize(t *testing.T) {
 	values := Literal([]int64{1, 2, 3})
@@ -277,6 +293,35 @@ func TestEnumerableSupportsExactBigNumbersAndArrayCollections(t *testing.T) {
 	namedSlice := EnumCollect[int64](Literal(enumExpressionNumbers{7, 8, 9}))
 	if got := EnumCount[int64](namedSlice).eval(EvalContext{}); !got.Equal(Present(int64(3))) {
 		t.Fatalf("named slice collection count = %v", got)
+	}
+}
+
+func TestEnumerableCollectsMapValuesAndIterators(t *testing.T) {
+	mapValues := map[string]int64{"a": 4, "b": 5, "c": 6}
+	collectedMap := EnumCollect[int64](Literal(maps.Values(mapValues)))
+	if got := EnumSum[int64](collectedMap).eval(EvalContext{}); !got.Equal(Present(int64(15))) {
+		t.Fatalf("map-backed collection sum = %v", got)
+	}
+	if got := EnumCount[int64](collectedMap).eval(EvalContext{}); !got.Equal(Present(int64(3))) {
+		t.Fatalf("map-backed collection count = %v", got)
+	}
+
+	sequence := Literal(iter.Seq[int64](func(yield func(int64) bool) {
+		for _, value := range []int64{2, 4, 6} {
+			if !yield(value) {
+				return
+			}
+		}
+	}))
+	collectedSequence := EnumCollect[int64](sequence)
+	if got := EnumSelect[int64, int64](collectedSequence, Add[int64](EnumElement[int64](), EnumIndex())).eval(EvalContext{}); !got.Equal(Present([]int64{2, 5, 8})) {
+		t.Fatalf("iter.Seq collection = %v", got)
+	}
+
+	pullIterator := &enumExpressionIterator{values: []int64{3, 1, 2}}
+	collectedIterator := EnumCollect[int64](Literal(pullIterator))
+	if got := EnumReverse[int64](collectedIterator).eval(EvalContext{}); !got.Equal(Present([]int64{2, 1, 3})) {
+		t.Fatalf("pull iterator collection = %v", got)
 	}
 }
 
