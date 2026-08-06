@@ -3041,6 +3041,26 @@ func PluginAggregateWithFactory[T any](name string, input Expr, factory Aggregat
 	}}
 }
 
+// PluginAggregateAccess is the chainable Go form for an access-style
+// aggregation plug-in. The factory still owns the typed state, while the
+// optional filter is expressed as a normal analyzable predicate instead of a
+// string named parameter. A nil input makes the factory receive the retained
+// Event value, which is useful for plug-ins such as events-as-list that keep
+// the source event rather than the scalar argument.
+func PluginAggregateAccess[T any](name string, input Expr, factory AggregatePluginFactory[T], filter ...Expression[bool]) AggregateExpression[T] {
+	aggregate := PluginAggregateWithFactory[T](name, input, factory)
+	if len(filter) == 0 {
+		return aggregate
+	}
+	if len(filter) != 1 || filter[0] == nil {
+		// Reuse the regular filtered-aggregate validator so malformed
+		// variadic filter input fails during Build instead of becoming a
+		// silently unevaluable custom node.
+		return FilterAggregate[T](aggregate, nil)
+	}
+	return FilterAggregate[T](aggregate, filter[0])
+}
+
 // RegisterAggregatePlugin registers a named, typed aggregate extension in an
 // Environment. It is the configuration-backed counterpart to PluginAggregate
 // and lets multiple plans refer to the same extension by stable name.

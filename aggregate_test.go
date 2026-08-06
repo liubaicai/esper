@@ -1591,6 +1591,98 @@ func TestPluginAggregateFactoryIsGroupScopedAndComposable(t *testing.T) {
 	}
 }
 
+func TestPluginAggregateAccessWithNamedFilter(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	symbol := Field[runtimeTestTrade, string]("symbol")
+	factory := func(_ AggregatePluginFactoryContext) AggregatePluginState[[]Event] {
+		return &testAggregatePluginEventListState{}
+	}
+	query := From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("events", PluginAggregateAccess[[]Event]("events-as-list", nil, factory, StartsWith(symbol, Literal("A")))),
+	).Query(StatementName("plugin-access-filter"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := make([]Row, 0, 4)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []runtimeTestTrade{
+		{Symbol: "X1", Price: 0},
+		{Symbol: "A1", Price: 0},
+		{Symbol: "A2", Price: 0},
+		{Symbol: "X2", Price: 0},
+	} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 4 {
+		t.Fatalf("plugin access rows = %d", len(rows))
+	}
+	wantSymbols := [][]string{{}, {"A1"}, {"A1", "A2"}, {"A1", "A2"}}
+	for index, want := range wantSymbols {
+		values, ok := rows[index].Get("events").Any().([]Event)
+		if !ok {
+			t.Fatalf("plugin access row %d type = %T", index, rows[index].Get("events").Any())
+		}
+		if len(values) != len(want) {
+			t.Fatalf("plugin access row %d length = %d, want %d", index, len(values), len(want))
+		}
+		for valueIndex, event := range values {
+			got, ok := event.Get("symbol").Any().(string)
+			if !ok || got != want[valueIndex] {
+				t.Fatalf("plugin access row %d event %d = %v, want %q", index, valueIndex, got, want[valueIndex])
+			}
+		}
+	}
+}
+
+type testAggregatePluginEventListState struct {
+	events []Event
+}
+
+func (state *testAggregatePluginEventListState) Enter(value Value) {
+	event, err := As[Event](value)
+	if err == nil {
+		state.events = append(state.events, event)
+	}
+}
+
+func (state *testAggregatePluginEventListState) Leave(value Value) {
+	event, err := As[Event](value)
+	if err != nil {
+		return
+	}
+	identity := eventIdentity(event)
+	for index, current := range state.events {
+		if eventIdentity(current) == identity {
+			state.events = append(state.events[:index], state.events[index+1:]...)
+			return
+		}
+	}
+}
+
+func (state *testAggregatePluginEventListState) Value() ([]Event, bool) {
+	return append([]Event(nil), state.events...), true
+}
+
+func (state *testAggregatePluginEventListState) Clear() {
+	state.events = state.events[:0]
+}
+
 func TestCountMinSketchAggregateTracksFilteredFrequency(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	symbol := Field[runtimeTestTrade, string]("symbol")
