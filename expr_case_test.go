@@ -199,6 +199,9 @@ func TestCaseExpressionsPreserveAggregateContext(t *testing.T) {
 	value := CaseValue[float64](kind, Literal(1), Sum[float64](price)).
 		When(Literal(2), Cast[int64, float64](CountAll())).
 		Else(Avg[float64](price))
+	if !isAggregateExpression(value) {
+		t.Fatal("CASE containing aggregate branches was not classified as aggregate")
+	}
 	plan, err := env.Build(stream.Aggregate(Alias("value", value)).Query(StatementName("expr-case-aggregate")))
 	if err != nil {
 		t.Fatal(err)
