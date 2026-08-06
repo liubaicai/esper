@@ -121,7 +121,7 @@
       "level": "S",
       "summary": "Analyzable chained collection and enumeration expressions",
       "javaRefs": ["ExprEnumAggregate", "ExprEnumSelectFrom", "ExprEnumExceptIntersectUnion"],
-      "goRefs": ["enum_expr.go", "enum_expr_test.go"],
+      "goRefs": ["enum_expr.go", "enum_expr_test.go", "enum_select_from_test.go", "enum_table_source_test.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["complete Java method-footprint and type matrix", "Java collection metadata and generic component descriptors", "complete invalid-rule diagnostics and Java error-text parity", "nested/subquery/access-aggregate/UDF source matrix"]
@@ -680,11 +680,11 @@
       "javaRuntimeIds": ["java-62aa90c3249a161c5f38"],
       "javaNames": ["ExprEnumProperty"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDataSources.java"],
-      "goTests": ["TestEnumerableCollectsMapValuesAndIterators", "TestEnumerableSupportsExactBigNumbersAndArrayCollections"],
+      "goTests": ["TestEnumerableCollectsMapValuesAndIterators", "TestEnumerableSupportsExactBigNumbersAndArrayCollections", "TestEnumerableTableWindowSourceMatchesJava"],
       "tags": ["correctness", "expression", "enum", "collection", "iterator"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "The Go EnumCollect API normalizes arrays, slices, iter.Seq, maps.Values-backed sources and explicit pull iterators into []T without inventing map order; Java additionally exposes collection generic/component metadata and covers method/UDF/property/subquery/aggregate sources in the same execution, which remain open."
+      "difference": "The Go EnumCollect API normalizes arrays, slices, iter.Seq, maps.Values-backed sources and explicit pull iterators into []T without inventing map order. Table-backed WindowAccessValue rows can be unwrapped through the typed Values method and consumed by EnumAnyOf/other chain operators, matching the Java table-row source trace. Java additionally exposes collection generic/component metadata and covers method/UDF/property/subquery/aggregate sources in the same execution, which remain open."
     },
     {
       "id": "case.expr-enum-invalid",
@@ -1013,11 +1013,11 @@
         "common/src/main/java/com/espertech/esper/common/client/dataflow/util/EPDataFlowSignalFinalMarker.java",
         "common/src/main/java/com/espertech/esper/common/client/dataflow/util/EPDataFlowSignalWindowMarker.java"
       ],
-      "goTests": ["TestDataflowSignalsPropagateAndCanBeSubmitted", "TestDataflowCustomOperatorFactoryAndLifecycle", "TestDataflowCustomOperatorNamedPortsRouteEmissions", "TestDataflowGraphValidation", "TestDataflowOptionsExceptionsAndSavedConfiguration", "TestDataflowArrayKeySubqueryWindowMatchesEsper", "TestDataflowStartCaptiveEmitterMatchesEsper", "TestDataflowStartCaptiveReturnsCallerRunSources", "TestDataflowStartCaptiveReturnsBeaconRunnable"],
-      "tags": ["correctness", "dataflow", "signal", "marker", "lifecycle", "start-captive", "emitter", "source-runnable"],
+      "goTests": ["TestDataflowSignalsPropagateAndCanBeSubmitted", "TestDataflowCustomOperatorFactoryAndLifecycle", "TestDataflowCustomOperatorNamedPortsRouteEmissions", "TestDataflowGraphValidation", "TestDataflowOptionsExceptionsAndSavedConfiguration", "TestDataflowArrayKeySubqueryWindowMatchesEsper", "TestDataflowStartCaptiveEmitterMatchesEsper", "TestDataflowStartCaptiveReturnsCallerRunSources", "TestDataflowStartCaptiveReturnsBeaconRunnable", "TestDataflowCaptiveRunnableAsyncShutdownAndWait", "TestDataflowCaptiveRunnableStopsWhenInstanceIsCanceled"],
+      "tags": ["correctness", "dataflow", "signal", "marker", "lifecycle", "start-captive", "emitter", "source-runnable", "completion-listener", "shutdown", "async"],
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
-      "difference": "Go exposes public FinalMarker, WindowMarker and CustomSignal values, OnSignal handlers, graph propagation and terminal Emitter observation. DataflowInstance.StartCaptive opens operator/source lifecycle once and returns a DataflowCaptive containing a defensive named-emitter map plus definition-ordered, single-use Beacon/custom-source runnables; sources are never launched automatically and their normal return leaves the instance Running until explicit Cancel, matching Java EPDataFlowInstanceCaptive. Captive emitter Submit/SubmitSignal remains usable after a final marker, and instance cancellation closes runtimes and invalidates submission. Per-instance custom factories, named ports, instance ID/user object options, saved configuration lookup, structured exception handling and error/drop statistics remain shared with ordinary Start. Java additionally covers lower-level GraphSourceRunnable listeners, typed EventBean/object-array coercion, persisted saved instances, concurrent signal delivery and broader exception recovery."
+      "difference": "Go exposes public FinalMarker, WindowMarker and CustomSignal values, OnSignal handlers, graph propagation and terminal Emitter observation. DataflowInstance.StartCaptive opens operator/source lifecycle once and returns a DataflowCaptive containing a defensive named-emitter map plus definition-ordered, single-use Beacon/custom-source runnables; sources are never launched automatically and their normal return leaves the instance Running until explicit Cancel, matching Java EPDataFlowInstanceCaptive. Each runnable supports synchronous Run, asynchronous Start, Wait/Done, source-only idempotent Shutdown, IsShutdown and completion listeners carrying name/error/canceled state; late listeners receive the retained completion immediately, and instance cancellation propagates to running sources. Captive emitter Submit/SubmitSignal remains usable after a final marker, while instance cancellation closes runtimes and invalidates submission. Java additionally exposes next()-level stepping/audit hooks; typed EventBean/object-array coercion, persisted saved instances, concurrent signal delivery and broader exception recovery remain open."
     },
     {
       "id": "case.rowrecog-basic-ops",
