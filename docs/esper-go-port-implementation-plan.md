@@ -1628,3 +1628,5 @@ method source 的组合矩阵再补两条 Go-native 证据：多个 `FromMethodO
 本轮补齐 Java `EPLOuterJoin7Stream` 的 7 个 root runtime：`TestSevenStreamOuterRootVariantsMatchesEsper` 用 Go `JoinChain` 复现 S0–S6 的 source order、left/right edge 和依赖树，并验证七侧同 key tuple 收敛。`EPLJoinKeyPerStream` 的双属性 key 条件、各阶段 Null/old/new cardinality、多行组合、更多到达序列及物理索引计划仍保持 partial。
 
 本轮补齐 Java `EPLOuterJoinCart4Stream`/`EPLOuterJoinCart5Stream` 的 13 个 Cartesian hub/root runtime：`TestCartesianOuterHubVariantsMatchEsper` 以 Go `JoinChain` 覆盖四流 4 个 root、五流 9 个 root/order 变体及对应 left/right edge。当前证据锁定拓扑和同 key 最终 tuple；多行 Cartesian cardinality、中间 unmatched old/new、完整到达顺序和物理索引计划仍保持 partial。
+
+本轮补齐 Java `EPLOuterJoinVarA3Stream`/`EPLOuterJoinVarB3Stream`/`EPLOuterJoinVarC3Stream` 的 14 个三流 outer runtime：`TestThreeStreamOuterVarRootVariantsMatchEsper` 用 Go `JoinChain` 覆盖 VarA/VarB/VarC 的 9 个 root source order、left/right edge 组合，并让每侧两行同 key 收敛为 8 行完整组合，验证多行 cardinality。Java 的 Map 未排序属性、精确复合列矩阵、SODA/compile 入口与 invalid 诊断文本仍作为 approved difference，后续补齐更宽的事件到达序列。
