@@ -599,17 +599,6 @@
       "difference": "The Go fluent API covers all-driver two/three-stream full outer transient rows, retained-passive single-driver and N-way probes, full-outer tuple Where filtering, timer Pattern drivers and invalid window/iteration boundaries. The Java mixed Pattern + Named Window full-outer sequence, exact SODA/diagnostic text and broader four-stream event/cardinality matrix remain partial."
     },
     {
-      "id": "case.join-outer-six",
-      "javaRuntimeIds": ["java-runtime-c20943f8d685d2832498", "java-runtime-253f106149aa10251bb4", "java-runtime-3ff2b7931a92766b7610", "java-runtime-a251741155535aa14269", "java-runtime-cf35d36d2dcdb4cdc8b8", "java-runtime-7ddd5ce74a8c827271b2"],
-      "javaNames": ["EPLJoinRootS0", "EPLJoinRootS1", "EPLJoinRootS2", "EPLJoinRootS3", "EPLJoinRootS4", "EPLJoinRootS5"],
-      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLOuterJoin6Stream.java"],
-      "goTests": ["TestSixStreamOuterRootVariantsMatchesEsper"],
-      "tags": ["correctness", "join", "outer-join", "multi-stream", "root-variants"],
-      "status": "mapped",
-      "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "The Go JoinChain reproduces all six Java six-stream root plans with source-indexed typed edge conditions and a matched-key final tuple. The Java event-order matrix, intermediate unmatched rows, multi-row Cartesian cardinality, window eviction and physical plan/index behavior remain partial."
-    },
-    {
       "id": "case.join-outer-six-stream",
       "javaRuntimeIds": ["java-runtime-c20943f8d685d2832498", "java-runtime-253f106149aa10251bb4", "java-runtime-3ff2b7931a92766b7610", "java-runtime-a251741155535aa14269", "java-runtime-cf35d36d2dcdb4cdc8b8", "java-runtime-7ddd5ce74a8c827271b2"],
       "javaNames": ["EPLJoinRootS0", "EPLJoinRootS1", "EPLJoinRootS2", "EPLJoinRootS3", "EPLJoinRootS4", "EPLJoinRootS5"],
@@ -1483,7 +1472,6 @@
     {"capabilityId": "join.basic", "caseId": "case.join-outer-two-stream"},
     {"capabilityId": "join.basic", "caseId": "case.join-outer-unidirectional"},
     {"capabilityId": "join.basic", "caseId": "case.join-outer-six-stream"},
-    {"capabilityId": "join.basic", "caseId": "case.join-outer-six"},
     {"capabilityId": "context.partition", "caseId": "case.context-partitioning"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
