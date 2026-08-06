@@ -1632,3 +1632,7 @@ method source 的组合矩阵再补两条 Go-native 证据：多个 `FromMethodO
 本轮补齐 Java `EPLOuterJoinVarA3Stream`/`EPLOuterJoinVarB3Stream`/`EPLOuterJoinVarC3Stream` 的 14 个三流 outer runtime：`TestThreeStreamOuterVarRootVariantsMatchEsper` 用 Go `JoinChain` 覆盖 VarA/VarB/VarC 的 9 个 root source order、left/right edge 组合，并让每侧两行同 key 收敛为 8 行完整组合，验证多行 cardinality。Java 的 Map 未排序属性、精确复合列矩阵、SODA/compile 入口与 invalid 诊断文本仍作为 approved difference，后续补齐更宽的事件到达序列。
 
 本轮补强 Java `EPLOuterJoinChain4Stream` 的四流 cardinality 对照：`TestFourStreamOuterChainCardinalityMatchesEsper` 覆盖 S0–S3 四个 root、单行/多行/中间缺侧/尾侧多行七种场景，并验证每个新批次的唯一组合数。该测试补充了原有 root 收敛测试没有锁定的多行笛卡尔基数；完整 old-stream、Bushy 拓扑和物理索引计划仍保持 partial。
+
+本轮补齐 Join 性能类 runtime 的 Go 语义基线：`TestJoinPerformanceBaseline` 分别覆盖两流高/低选择率、范围与数值 coercion、三流 inner/outer coercion、五流 readiness 以及 unidirectional range probe，并在有界样本上记录耗时与结果 cardinality。Java 的 10k–100k 负载、JVM 毫秒阈值、merge/nested/index hint、静态 UDF/变量表达式和物理计划不跨语言硬等价，全部作为 approved difference 保留在清单中。
+
+本轮补齐 Java `EPLOuterFullJoin3Stream` 的 full-outer hub cardinality：`TestThreeStreamFullOuterStarCardinalityMatchesEsper` 覆盖单键与复合键、hub 两侧多行组合、下游先到后由 hub 行替换 unmatched 结果，以及复合键不误合并的 mismatch 行；统计同时按行内 source key 出现次数校验 4/2/3/12 与复合 mismatch cardinality。更完整的 Java representation、old/new listener 序列和 iterator 矩阵仍保持 partial。
