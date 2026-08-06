@@ -274,8 +274,8 @@
       "domain": "join",
       "level": "S",
       "summary": "Inner, outer and N-way join state with context and Named Window snapshots",
-      "javaRefs": ["EPLJoin20Stream", "EPLOuterInnerJoin3Stream", "EPLJoinSingleOp3Stream", "EPLJoinInheritAndInterface", "EPLJoinNoTableName", "EPLJoinDerivedValueViews", "EPLJoin2StreamInKeywordPerformance", "EPLJoin3StreamInKeywordPerformance", "EPLJoinPatterns", "EPLJoinMultiKeyAndRange", "EPLJoinPropertyAccess", "EPLJoinEventRepresentation", "EPLJoinUniqueIndex", "EPLJoinSelectClause", "EPLJoinStartStop", "EPLJoinCoercion"],
-      "goRefs": ["stream.go", "plan.go", "runtime.go", "value.go", "expr.go", "pattern_join.go", "join_test.go", "join_where_test.go", "join_chain_test.go", "subquery_join_test.go", "join_aggregate_context_test.go", "join_pattern_test.go", "join_multikey_range_test.go", "join_property_test.go", "join_representation_test.go", "join_unique_index_test.go", "join_select_test.go", "join_coercion_test.go", "join_inherit_test.go", "join_no_table_test.go", "join_derived_view_test.go", "join_in_keyword_test.go", "join_20_stream_test.go", "join_outer_mixed_test.go", "expr_test.go"],
+      "javaRefs": ["EPLJoin20Stream", "EPLOuterInnerJoin3Stream", "EPLOuterInnerJoin4Stream", "EPLJoinSingleOp3Stream", "EPLJoinInheritAndInterface", "EPLJoinNoTableName", "EPLJoinDerivedValueViews", "EPLJoin2StreamInKeywordPerformance", "EPLJoin3StreamInKeywordPerformance", "EPLJoinPatterns", "EPLJoinMultiKeyAndRange", "EPLJoinPropertyAccess", "EPLJoinEventRepresentation", "EPLJoinUniqueIndex", "EPLJoinSelectClause", "EPLJoinStartStop", "EPLJoinCoercion"],
+      "goRefs": ["stream.go", "plan.go", "runtime.go", "value.go", "expr.go", "pattern_join.go", "join_test.go", "join_where_test.go", "join_chain_test.go", "subquery_join_test.go", "join_aggregate_context_test.go", "join_pattern_test.go", "join_multikey_range_test.go", "join_property_test.go", "join_representation_test.go", "join_unique_index_test.go", "join_select_test.go", "join_coercion_test.go", "join_inherit_test.go", "join_no_table_test.go", "join_derived_view_test.go", "join_in_keyword_test.go", "join_20_stream_test.go", "join_outer_four_stream_test.go", "join_outer_mixed_test.go", "expr_test.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["Join aggregate correlation across old/new, outer, multi-row/cardinality and fragment combinations, plus broader Context lifecycle combinations", "full index plans", "advanced pattern/unidirectional joins, non-left-deep/bushy topology and complete ordering/index-plan matrix"]
@@ -564,6 +564,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
       "difference": "The Go fluent JoinMany API constructs twenty independent LastEvent sources with typed filters and emits only after all source slots are populated, matching the Java EPLJoin20Stream readiness boundary. Java's generated EPL text and engine-specific query-plan details remain intentionally outside the Go API surface."
+    },
+    {
+      "id": "case.join-outer-four",
+      "javaRuntimeIds": ["java-runtime-6c7339d69ca7de08c58f", "java-runtime-ff3ec0bd70b29ff153a3", "java-runtime-a8ab2da4a0ff55fe1810", "java-runtime-a1334257e2c901bcdb7a", "java-runtime-3264e970709b690bcf72", "java-runtime-5585b319aa81ffe2ef24"],
+      "javaNames": ["EPLJoinFullMiddleJoinVariantTwo", "EPLJoinFullMiddleJoinVariantOne", "EPLJoinFullSidedJoinVariantTwo", "EPLJoinFullSidedJoinVariantOne", "EPLJoinStarJoinVariantTwo", "EPLJoinStarJoinVariantOne"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLOuterInnerJoin4Stream.java"],
+      "goTests": ["TestFourStreamMixedOuterVariantsMatchesEsper"],
+      "tags": ["correctness", "join", "outer-join", "multi-stream", "join-chain"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go JoinChain reproduces all six Java four-stream middle/sided/star outer topology variants with source-indexed fluent edge conditions and a common matched-key projection. Intermediate unmatched-row emission, exact per-arrival old/new cardinality, broad event-order permutations, bushy plans and physical index-plan details remain partial."
     },
     {
       "id": "case.dataflow-typed-ports",
@@ -1424,6 +1435,7 @@
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-pattern"},
     {"capabilityId": "join.basic", "caseId": "case.join-basic"},
     {"capabilityId": "join.basic", "caseId": "case.join-20-stream"},
+    {"capabilityId": "join.basic", "caseId": "case.join-outer-four"},
     {"capabilityId": "context.partition", "caseId": "case.context-partitioning"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
