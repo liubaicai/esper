@@ -84,6 +84,9 @@ func TestAggregateMultiPluginRegisteredLifecycleAndSharing(t *testing.T) {
 	factoryCount := 0
 	factory := func(ctx AggregateMultiPluginFactoryContext) AggregateMultiPluginState {
 		factoryCount++
+		if ctx.Engine == nil {
+			t.Fatal("multi plugin factory context lost its engine")
+		}
 		for _, method := range []string{"count", "sum", "vectorWidth", "se1", "se2"} {
 			if _, ok := ctx.Methods[method]; !ok {
 				t.Fatalf("multi plugin factory did not receive method %q", method)
@@ -1141,6 +1144,12 @@ func TestSortedAccessMultiCriteriaMatchesEsper(t *testing.T) {
 	assertKey("higherKey", "E4b", 4)
 	if !reflect.DeepEqual(NewSortedMultiKey("E4b", 4.0).Parts(), []any{"E4b", 4.0}) {
 		t.Fatalf("multi-key defensive parts = %#v", NewSortedMultiKey("E4b", 4.0).Parts())
+	}
+	var missingPrice Expression[float64]
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("invalid", SortedAccessByMulti[runtimeTestTrade, string, float64](EventValue[runtimeTestTrade](), symbol, missingPrice).FirstKey()),
+	).Query(StatementName("invalid-sorted-access-multi"))); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("invalid sorted multi-key Build error = %v", err)
 	}
 }
 

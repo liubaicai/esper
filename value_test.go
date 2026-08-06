@@ -2,6 +2,9 @@ package esper
 
 import "testing"
 
+type valueAliasInt int
+type valueAliasString string
+
 func TestValueDistinguishesMissingNullAndPresent(t *testing.T) {
 	missing := Missing()
 	null := Null()
@@ -36,5 +39,14 @@ func TestThreeValuedLogic(t *testing.T) {
 	}
 	if got := orValues(Present(false), Null()); !got.IsNull() {
 		t.Fatalf("false OR null = %v", got)
+	}
+}
+
+func TestCompareValuesSupportsOrderedAliases(t *testing.T) {
+	if comparison, ok := compareValues(Present(valueAliasInt(1)), Present(valueAliasInt(2))); !ok || comparison >= 0 {
+		t.Fatalf("ordered integer alias comparison = %d, %v", comparison, ok)
+	}
+	if comparison, ok := compareValues(Present(valueAliasString("a")), Present(valueAliasString("b"))); !ok || comparison >= 0 {
+		t.Fatalf("ordered string alias comparison = %d, %v", comparison, ok)
 	}
 }

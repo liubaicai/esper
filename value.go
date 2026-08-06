@@ -214,31 +214,13 @@ func numericValue(v Value) (float64, bool) {
 	if !reflected.IsValid() {
 		return 0, false
 	}
-	switch n := reflected.Interface().(type) {
-	case int:
-		return float64(n), true
-	case int8:
-		return float64(n), true
-	case int16:
-		return float64(n), true
-	case int32:
-		return float64(n), true
-	case int64:
-		return float64(n), true
-	case uint:
-		return float64(n), true
-	case uint8:
-		return float64(n), true
-	case uint16:
-		return float64(n), true
-	case uint32:
-		return float64(n), true
-	case uint64:
-		return float64(n), true
-	case float32:
-		return float64(n), true
-	case float64:
-		return n, true
+	switch reflected.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return float64(reflected.Int()), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return float64(reflected.Uint()), true
+	case reflect.Float32, reflect.Float64:
+		return reflected.Float(), true
 	default:
 		return 0, false
 	}
@@ -267,16 +249,16 @@ func compareValues(left, right Value) (int, bool) {
 			}
 		}
 	}
-	if l, ok := left.data.(string); ok {
-		if r, ok := right.data.(string); ok {
-			switch {
-			case l < r:
-				return -1, true
-			case l > r:
-				return 1, true
-			default:
-				return 0, true
-			}
+	leftString, leftStringOK := reflectStringValue(left.data)
+	rightString, rightStringOK := reflectStringValue(right.data)
+	if leftStringOK && rightStringOK {
+		switch {
+		case leftString < rightString:
+			return -1, true
+		case leftString > rightString:
+			return 1, true
+		default:
+			return 0, true
 		}
 	}
 	if reflect.TypeOf(left.data) != reflect.TypeOf(right.data) {
@@ -286,6 +268,20 @@ func compareValues(left, right Value) (int, bool) {
 		return 0, true
 	}
 	return 0, false
+}
+
+func reflectStringValue(value any) (string, bool) {
+	reflected := reflect.ValueOf(value)
+	for reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {
+		if reflected.IsNil() {
+			return "", false
+		}
+		reflected = reflected.Elem()
+	}
+	if !reflected.IsValid() || reflected.Kind() != reflect.String {
+		return "", false
+	}
+	return reflected.String(), true
 }
 
 func compareSortedMultiKeys(left, right SortedMultiKey) (int, bool) {
