@@ -121,7 +121,7 @@
       "level": "S",
       "summary": "Analyzable chained collection and enumeration expressions",
       "javaRefs": ["ExprEnumAggregate", "ExprEnumSelectFrom", "ExprEnumExceptIntersectUnion"],
-      "goRefs": ["enum_expr.go", "enum_expr_test.go", "enum_select_from_test.go", "enum_table_source_test.go"],
+      "goRefs": ["enum_expr.go", "enum_expr_test.go", "enum_select_from_test.go", "enum_table_source_test.go", "enum_access_aggregate_source_test.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["complete Java method-footprint and type matrix", "Java collection metadata and generic component descriptors", "complete invalid-rule diagnostics and Java error-text parity", "nested/subquery/access-aggregate/UDF source matrix"]
@@ -680,11 +680,11 @@
       "javaRuntimeIds": ["java-62aa90c3249a161c5f38"],
       "javaNames": ["ExprEnumProperty"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDataSources.java"],
-      "goTests": ["TestEnumerableCollectsMapValuesAndIterators", "TestEnumerableSupportsExactBigNumbersAndArrayCollections", "TestEnumerableTableWindowSourceMatchesJava"],
+      "goTests": ["TestEnumerableCollectsMapValuesAndIterators", "TestEnumerableSupportsExactBigNumbersAndArrayCollections", "TestEnumerableTableWindowSourceMatchesJava", "TestEnumerableWindowAccessAggregateSourceMatchesJava"],
       "tags": ["correctness", "expression", "enum", "collection", "iterator"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "The Go EnumCollect API normalizes arrays, slices, iter.Seq, maps.Values-backed sources and explicit pull iterators into []T without inventing map order. Table-backed WindowAccessValue rows can be unwrapped through the typed Values method and consumed by EnumAnyOf/other chain operators, matching the Java table-row source trace. Java additionally exposes collection generic/component metadata and covers method/UDF/property/subquery/aggregate sources in the same execution, which remain open."
+      "difference": "The Go EnumCollect API normalizes arrays, slices, iter.Seq, maps.Values-backed sources and explicit pull iterators into []T without inventing map order. Table-backed WindowAccessValue rows can be unwrapped through the typed Values method, and WindowValues access aggregates can be consumed by EnumAnyOf/EnumAllOf and other chain operators, matching the Java table-row and window(*) source traces. Java additionally exposes collection generic/component metadata and covers method/UDF/property/subquery sources in the same execution, which remain open."
     },
     {
       "id": "case.expr-enum-invalid",
