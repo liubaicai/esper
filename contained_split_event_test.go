@@ -211,6 +211,51 @@ func TestContainedTypeMaterializesMapAndJSONElementsMatchesEsper(t *testing.T) {
 	}
 }
 
+func TestContainedTypeMaterializesMapElementsInFireAndForgetMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	inputSchema, err := RegisterStruct[containedSplitRawInput](env, "ContainedSplitFAFInput")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[containedSplitA](env, "ContainedSplitFAFWord"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "ContainedSplitFAFWindow", inputSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if err := engine.InsertNamedWindow(context.Background(), "ContainedSplitFAFWindow", containedSplitRawInput{
+		Rows: []map[string]any{{"p0": "faf-1"}, {"p0": "faf-2"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	stream := UnnestAs[containedSplitRawInput, map[string]any](
+		FromNamedWindowAs[containedSplitRawInput](env, "ContainedSplitFAFWindow"),
+		Property[[]map[string]any](EventValue[containedSplitRawInput](), "rows"),
+		"ContainedSplitFAFWord",
+	)
+	plan, err := env.Build(Select(stream,
+		Alias("value", Field[Event, string]("p0")),
+	).Query(StatementName("contained-type-faf-map")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := engine.ExecuteFireAndForget(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Results()) != 2 {
+		t.Fatalf("contained FAF map results = %#v", result.Results())
+	}
+	for index, want := range []string{"faf-1", "faf-2"} {
+		row, ok := result.Results()[index].Row()
+		if !ok || row.Get("value").Any() != want {
+			t.Fatalf("contained FAF map row %d = %#v, want %s", index, result.Results()[index], want)
+		}
+	}
+}
+
 func TestContainedTypeRejectsUnknownAndIncompatibleTargets(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[containedSplitInput](env, "ContainedSplitInput"); err != nil {

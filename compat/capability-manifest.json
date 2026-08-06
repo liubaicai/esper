@@ -44,10 +44,10 @@
       "level": "S",
       "summary": "Typed fluent expansion of slice/array-valued parent-event properties into child event streams",
       "javaRefs": ["EPLContainedEventSimple", "EPLContainedEventNested", "EPLContainedEventArray", "EPLContainedEventSplitExpr", "EPLContainedEventExample", "EventInfraContainedSimple", "EventInfraContainedNested", "EventInfraContainedNestedArray", "EventInfraContainedIndexedWithIndex", "InfraNamedWindowContainedEvent"],
-      "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "trigger.go", "subquery.go", "contained_test.go", "contained_unidirectional_test.go", "contained_split_event_test.go"],
+      "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "trigger.go", "subquery.go", "contained_test.go", "contained_unidirectional_test.go", "contained_split_event_test.go", "contained_split_representation_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["property-selection alias/fragment semantics across nested representations", "full split-expression representation matrix across ObjectArray/Avro/XML and arbitrary typed/raw collection adapters", "contained Table/FAF interactions and remaining Named Window representation combinations", "invalid diagnostics beyond the covered parent/depth cases and complete Java contained-event trace"]
+      "remaining": ["property-selection alias/fragment semantics across nested representations", "full split-expression adapter matrix beyond the covered raw ObjectArray/Avro/XML rows, including script/UDF, wildcard method, chained splitter and arbitrary typed/raw collection cases", "contained Table/FAF interactions and remaining Named Window representation combinations", "invalid diagnostics beyond the covered parent/depth cases and complete Java contained-event trace"]
     },
     {
       "id": "event.json-typed",
@@ -408,11 +408,11 @@
       "javaRuntimeIds": ["java-runtime-e5e8e7be2d9e28ca1fcf", "java-runtime-924fb8270ad180facd44", "java-runtime-87c7b775b2f72a76c09e"],
       "javaNames": ["EPLContainedScriptContextValue", "EPLContainedSplitExprReturnsEventBean", "EPLContainedSingleRowSplitAndType"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventSplitExpr.java"],
-      "goTests": ["TestContainedSplitEventArrayPreservesVariantMembersMatchesEsper", "TestContainedTypeMaterializesMapAndJSONElementsMatchesEsper", "TestContainedTypeRejectsUnknownAndIncompatibleTargets"],
-      "tags": ["correctness", "event", "contained", "split", "type", "variant", "map", "json", "invalid"],
+      "goTests": ["TestContainedSplitEventArrayPreservesVariantMembersMatchesEsper", "TestContainedTypeMaterializesMapAndJSONElementsMatchesEsper", "TestContainedTypeMaterializesMapElementsInFireAndForgetMatchesEsper", "TestContainedTypeMaterializesObjectArrayAvroAndXMLRows", "TestContainedTypeRejectsUnknownAndIncompatibleTargets"],
+      "tags": ["correctness", "event", "contained", "split", "type", "variant", "map", "json", "object-array", "avro", "xml", "invalid"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
-      "difference": "Go introduces Go-native UnnestAs/UnnestEvents with an explicit registered target schema in place of EPL @type. Event-valued elements preserve concrete member identity and parent scope when routed through a predefined variant; raw map and JSON text elements are materialized through the target schema, and unknown/empty/incompatible targets fail at the appropriate build/runtime boundary. The mapped subset does not yet claim Java's script-context execution, ObjectArray/Avro/XML representation loops, wildcard method adapters, chained splitters, exact EventBean metadata or the complete split/type trace."
+      "difference": "Go introduces Go-native UnnestAs/UnnestEvents with an explicit registered target schema in place of EPL @type. Event-valued elements preserve concrete member identity and parent scope when routed through a predefined variant; raw map, JSON text, ObjectArray, Avro and XML elements are materialized through the target schema, and unknown/empty/incompatible targets fail at the appropriate build/runtime boundary. The mapped subset does not yet claim Java's script-context execution, wildcard method adapters, chained splitters, arbitrary collection adapter shapes, exact EventBean metadata or the complete split/type trace."
     },
     {
       "id": "case.event-json-typed",

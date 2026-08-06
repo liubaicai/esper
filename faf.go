@@ -238,6 +238,15 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 		input = replaceStreamBase(input, source, &streamNode{kind: streamSource, sourceName: source.historical.schema.Name(), sourceType: typeOf[any]()})
 	} else if source.kind == streamMethod {
 		input = replaceStreamBase(input, source, &streamNode{kind: streamSource, sourceName: source.method.schema.Name(), sourceType: typeOf[any]()})
+	} else if source.kind == streamContained {
+		childSchema, schemaErr := e.env.sourceSchema(source)
+		if schemaErr != nil {
+			return QueryResult{}, schemaErr
+		}
+		// snapshotFireAndForgetSource has already expanded the contained node.
+		// Replace that node at the runtime input boundary so the expanded child
+		// is not interpreted as a new parent and expanded a second time.
+		input = replaceStreamBase(input, source, &streamNode{kind: streamSource, sourceName: childSchema.Name(), sourceType: typeOf[any]()})
 	}
 	for _, event := range events {
 		inserted, insertErr := runtime.insert(input, event, now)
@@ -610,6 +619,12 @@ func (e *Engine) executeContextFireAndForget(ctx context.Context, plan Plan, sel
 			input = replaceStreamBase(input, source, &streamNode{kind: streamSource, sourceName: source.historical.schema.Name(), sourceType: typeOf[any]()})
 		} else if source.kind == streamMethod {
 			input = replaceStreamBase(input, source, &streamNode{kind: streamSource, sourceName: source.method.schema.Name(), sourceType: typeOf[any]()})
+		} else if source.kind == streamContained {
+			childSchema, schemaErr := e.env.sourceSchema(source)
+			if schemaErr != nil {
+				return QueryResult{}, schemaErr
+			}
+			input = replaceStreamBase(input, source, &streamNode{kind: streamSource, sourceName: childSchema.Name(), sourceType: typeOf[any]()})
 		}
 		for _, event := range grouped[key] {
 			inserted, insertErr := runtime.insert(input, event, now)
