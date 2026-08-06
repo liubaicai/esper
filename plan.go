@@ -2329,9 +2329,6 @@ func (e *Environment) validateJoin(definition *joinDefinition, selections []Join
 		return err
 	}
 	conditions := joinDefinitionConditions(definition)
-	if len(conditions) == 0 && !joinDefinitionHasUnidirectional(definition) {
-		return fmt.Errorf("join requires at least one condition")
-	}
 	for index, condition := range conditions {
 		if err := e.validateJoinCondition(condition, sources); err != nil {
 			return fmt.Errorf("join condition %d: %w", index, err)

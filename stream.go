@@ -499,7 +499,18 @@ func cloneJoinUnidirectional(flags []bool) []bool {
 	return nil
 }
 
-func Join[L, R any](left Stream[L], right Stream[R], condition JoinCondition) JoinStream[L, R] {
+// Join constructs a two-stream join. With no condition it is a Cartesian join;
+// multiple conditions are combined with logical AND for a compact fluent form.
+func Join[L, R any](left Stream[L], right Stream[R], conditions ...JoinCondition) JoinStream[L, R] {
+	var condition JoinCondition
+	switch len(conditions) {
+	case 0:
+		// An omitted condition is an explicit Cartesian join.
+	case 1:
+		condition = conditions[0]
+	default:
+		condition = AllJoin(conditions...)
+	}
 	return JoinStream[L, R]{env: left.env, left: left.node, right: right.node, condition: condition, kind: JoinInner}
 }
 
@@ -543,7 +554,11 @@ func (j JoinStream[L, R]) GroupBy(keys ...Expr) AggregateStream {
 }
 
 func (j JoinStream[L, R]) Select(selections ...JoinSelection) JoinQuery {
-	return JoinQuery{env: j.env, definition: &joinDefinition{left: j.left, right: j.right, condition: j.condition, sources: []*streamNode{j.left, j.right}, conditions: []JoinCondition{j.condition}, kind: j.kind, unidirectional: cloneJoinUnidirectional(j.unidirectional[:])}, selections: append([]JoinSelection(nil), selections...)}
+	definition := &joinDefinition{left: j.left, right: j.right, condition: j.condition, sources: []*streamNode{j.left, j.right}, kind: j.kind, unidirectional: cloneJoinUnidirectional(j.unidirectional[:])}
+	if joinConditionPresent(j.condition) {
+		definition.conditions = []JoinCondition{j.condition}
+	}
+	return JoinQuery{env: j.env, definition: definition, selections: append([]JoinSelection(nil), selections...)}
 }
 
 func (j JoinStream[L, R]) Query(options ...QueryOption) Query {
@@ -2314,7 +2329,14 @@ func joinDefinitionConditions(definition *joinDefinition) []JoinCondition {
 	if len(definition.conditions) > 0 {
 		return definition.conditions
 	}
+	if !joinConditionPresent(definition.condition) {
+		return nil
+	}
 	return []JoinCondition{definition.condition}
+}
+
+func joinConditionPresent(condition JoinCondition) bool {
+	return condition.Left != nil || condition.Right != nil || condition.sourceSet || len(condition.all) > 0 || len(condition.any) > 0
 }
 
 func joinConditionDescription(condition JoinCondition) string {

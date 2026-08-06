@@ -820,6 +820,121 @@ func TestMultiJoinProducesCrossStreamTuple(t *testing.T) {
 	}
 }
 
+func TestMultiJoinWithoutOnProducesCartesianTuples(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[joinOrder](env, "CartesianOrder"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[joinPayment](env, "CartesianPayment"); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(JoinMany(
+		JoinSource(From[joinOrder](env, "CartesianOrder")),
+		JoinSource(From[joinPayment](env, "CartesianPayment")),
+	).Select(
+		SelectFrom(0, "orderID", Field[joinOrder, string]("orderID")),
+		SelectFrom(1, "amount", Field[joinPayment, float64]("amount")),
+	).Query(StatementName("cartesian-join")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "CartesianOrder", joinOrder{OrderID: "O1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "CartesianOrder", joinOrder{OrderID: "O2"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "CartesianPayment", joinPayment{OrderID: "P1", Amount: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("cartesian join rows = %#v", rows)
+	}
+	if rows[0].Get("orderID").Any() != "O1" || rows[1].Get("orderID").Any() != "O2" || rows[0].Get("amount").Any() != float64(1) || rows[1].Get("amount").Any() != float64(1) {
+		t.Fatalf("cartesian join tuple values = %#v", rows)
+	}
+}
+
+func TestTwoStreamJoinWithoutConditionProducesCartesianTuples(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[joinOrder](env, "TwoStreamCartesianOrder"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[joinPayment](env, "TwoStreamCartesianPayment"); err != nil {
+		t.Fatal(err)
+	}
+	withoutCondition, err := env.Build(Join(
+		From[joinOrder](env, "TwoStreamCartesianOrder"),
+		From[joinPayment](env, "TwoStreamCartesianPayment"),
+	).Select(
+		SelectLeft("orderID", Field[joinOrder, string]("orderID")),
+		SelectRight("amount", Field[joinPayment, float64]("amount")),
+	).Query(StatementName("two-stream-cartesian")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	withCondition, err := env.Build(Join(
+		From[joinOrder](env, "TwoStreamCartesianOrder"),
+		From[joinPayment](env, "TwoStreamCartesianPayment"),
+		OnEqual(Field[joinOrder, string]("orderID"), Field[joinPayment, string]("orderID")),
+	).Select(
+		SelectLeft("orderID", Field[joinOrder, string]("orderID")),
+		SelectRight("amount", Field[joinPayment, float64]("amount")),
+	).Query(StatementName("two-stream-equality")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withoutCondition.Hash() == withCondition.Hash() {
+		t.Fatal("two-stream Cartesian and equality joins must have different plan identities")
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), withoutCondition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "TwoStreamCartesianOrder", joinOrder{OrderID: "O1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "TwoStreamCartesianOrder", joinOrder{OrderID: "O2"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "TwoStreamCartesianPayment", joinPayment{OrderID: "P1", Amount: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[0].Get("orderID").Any() != "O1" || rows[1].Get("orderID").Any() != "O2" {
+		t.Fatalf("two-stream Cartesian rows = %#v", rows)
+	}
+}
+
 func TestMultiJoinRejectsInvalidSource(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[joinOrder](env, "Order"); err != nil {
