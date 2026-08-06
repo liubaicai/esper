@@ -1650,6 +1650,106 @@ func TestPluginAggregateAccessWithNamedFilter(t *testing.T) {
 	}
 }
 
+func TestRegisteredAggregateAccessPluginMatchesJavaAndPreservesCategory(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	symbol := Field[runtimeTestTrade, string]("symbol")
+	eventFactory := func(_ AggregatePluginFactoryContext) AggregatePluginState[[]Event] {
+		return &testAggregatePluginEventListState{}
+	}
+	if err := RegisterAggregateAccessPlugin[[]Event](env, "registered-events-as-list", eventFactory); err != nil {
+		t.Fatal(err)
+	}
+	methodFactory := func(_ AggregatePluginFactoryContext) AggregatePluginState[string] {
+		return &testAggregatePluginConcatState{}
+	}
+	if err := RegisterAggregatePluginFactory[string](env, "registered-method-only", methodFactory); err != nil {
+		t.Fatal(err)
+	}
+
+	access := PluginAggregateAccessRef[[]Event](env, "registered-events-as-list", nil, StartsWith(symbol, Literal("A")))
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("events", access),
+	).Query(StatementName("registered-plugin-access")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonical := string(plan.Canonical())
+	if !strings.Contains(canonical, "aggregate-plugin(registered-events-as-list:") || !strings.Contains(canonical, "access=true") || !strings.Contains(canonical, "access=false") {
+		t.Fatalf("aggregate plugin category missing from plan canonical: %s", canonical)
+	}
+	second, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("events", PluginAggregateAccessRef[[]Event](env, "registered-events-as-list", nil, StartsWith(symbol, Literal("A")))),
+	).Query(StatementName("registered-plugin-access")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Hash() != second.Hash() || !reflect.DeepEqual(plan.Canonical(), second.Canonical()) {
+		t.Fatal("registered access plugin plan identity is unstable")
+	}
+
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("wrong", PluginAggregateFactoryRef[[]Event](env, "registered-events-as-list", nil)),
+	).Query(StatementName("access-as-method"))); err == nil {
+		t.Fatal("access plugin was accepted by the method-style factory reference")
+	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("wrong", PluginAggregateAccessRef[string](env, "registered-method-only", nil)),
+	).Query(StatementName("method-as-access"))); err == nil {
+		t.Fatal("method plugin was accepted by the access-style reference")
+	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("wrong", PluginAggregateAccessRef[[]Event](env, "registered-events-as-list", nil,
+			StartsWith(symbol, Literal("A")), StartsWith(symbol, Literal("B")))),
+	).Query(StatementName("access-multiple-filters"))); err == nil {
+		t.Fatal("access plugin accepted multiple named-filter predicates")
+	}
+	if err := RegisterAggregateAccessPlugin[[]Event](env, "registered-events-as-list", eventFactory); err == nil {
+		t.Fatal("duplicate access plugin registration succeeded")
+	}
+
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := make([]Row, 0, 4)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []runtimeTestTrade{
+		{Symbol: "X1"},
+		{Symbol: "A1"},
+		{Symbol: "A2"},
+		{Symbol: "X2"},
+	} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	wantSymbols := [][]string{{}, {"A1"}, {"A1", "A2"}, {"A1", "A2"}}
+	if len(rows) != len(wantSymbols) {
+		t.Fatalf("registered access plugin rows = %d, want %d", len(rows), len(wantSymbols))
+	}
+	for rowIndex, want := range wantSymbols {
+		values, ok := rows[rowIndex].Get("events").Any().([]Event)
+		if !ok || len(values) != len(want) {
+			t.Fatalf("registered access plugin row %d = %#v, want %v", rowIndex, rows[rowIndex].Get("events").Any(), want)
+		}
+		for valueIndex, event := range values {
+			got, ok := event.Get("symbol").Any().(string)
+			if !ok || got != want[valueIndex] {
+				t.Fatalf("registered access plugin row %d event %d = %v, want %q", rowIndex, valueIndex, got, want[valueIndex])
+			}
+		}
+	}
+}
+
 type testAggregatePluginEventListState struct {
 	events []Event
 }

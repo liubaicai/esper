@@ -27,6 +27,7 @@ type Environment struct {
 	variables        map[string]VariableDefinition
 	aggregatePlugins map[string]aggregatePluginDefinition
 	enumPlugins      map[string]enumPluginDefinition
+	dateTimePlugins  map[string]dateTimePluginDefinition
 	scripts          map[string]scriptDefinition
 	tables           map[string]TableDefinition
 	namedWindows     map[string]NamedWindowDefinition
@@ -43,6 +44,7 @@ func NewEnvironment() *Environment {
 		variables:        make(map[string]VariableDefinition),
 		aggregatePlugins: make(map[string]aggregatePluginDefinition),
 		enumPlugins:      make(map[string]enumPluginDefinition),
+		dateTimePlugins:  make(map[string]dateTimePluginDefinition),
 		scripts:          make(map[string]scriptDefinition),
 		tables:           make(map[string]TableDefinition),
 		namedWindows:     make(map[string]NamedWindowDefinition),
@@ -550,15 +552,17 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	pluginNames := make([]string, 0, len(e.aggregatePlugins))
 	pluginTypes := make(map[string]reflect.Type, len(e.aggregatePlugins))
 	pluginFactoryFlags := make(map[string]bool, len(e.aggregatePlugins))
+	pluginAccessFlags := make(map[string]bool, len(e.aggregatePlugins))
 	for name, plugin := range e.aggregatePlugins {
 		pluginNames = append(pluginNames, name)
 		pluginTypes[name] = plugin.resultType
 		pluginFactoryFlags[name] = plugin.factory != nil
+		pluginAccessFlags[name] = plugin.access
 	}
 	e.mu.RUnlock()
 	sort.Strings(pluginNames)
 	for _, name := range pluginNames {
-		canonicalParts = append(canonicalParts, fmt.Sprintf("aggregate-plugin(%s:%s:factory=%t)", name, pluginTypes[name], pluginFactoryFlags[name]))
+		canonicalParts = append(canonicalParts, fmt.Sprintf("aggregate-plugin(%s:%s:factory=%t:access=%t)", name, pluginTypes[name], pluginFactoryFlags[name], pluginAccessFlags[name]))
 	}
 	e.mu.RLock()
 	enumPluginNames := make([]string, 0, len(e.enumPlugins))
@@ -572,6 +576,19 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	for _, name := range enumPluginNames {
 		definition := enumPluginDefinitions[name]
 		canonicalParts = append(canonicalParts, fmt.Sprintf("enum-plugin(%s:%s:%s)", name, definition.resultType, enumPluginFootprintsCanonical(definition.footprints)))
+	}
+	e.mu.RLock()
+	dateTimePluginNames := make([]string, 0, len(e.dateTimePlugins))
+	dateTimePluginDefinitions := make(map[string]dateTimePluginDefinition, len(e.dateTimePlugins))
+	for name, definition := range e.dateTimePlugins {
+		dateTimePluginNames = append(dateTimePluginNames, name)
+		dateTimePluginDefinitions[name] = definition
+	}
+	e.mu.RUnlock()
+	sort.Strings(dateTimePluginNames)
+	for _, name := range dateTimePluginNames {
+		definition := dateTimePluginDefinitions[name]
+		canonicalParts = append(canonicalParts, fmt.Sprintf("datetime-plugin(%s:%s)", name, dateTimePluginFootprintsCanonical(definition.footprints)))
 	}
 	e.mu.RLock()
 	scriptNames := make([]string, 0, len(e.scripts))
@@ -2148,6 +2165,9 @@ func (e *Environment) validateExprVariables(expression Expr) error {
 	if err := e.validateEnumPluginNodes(expression.node()); err != nil {
 		return err
 	}
+	if err := e.validateDateTimePluginNodes(expression.node()); err != nil {
+		return err
+	}
 	var variables []string
 	expression.node().referencedVariables(&variables)
 	for _, name := range variables {
@@ -3288,7 +3308,7 @@ func (e *Environment) validateAggregatePluginNodes(node *exprNode) error {
 	if node == nil {
 		return nil
 	}
-	if node.kind == "aggregate-plugin-ref" || node.kind == "aggregate-plugin-factory-ref" {
+	if node.kind == "aggregate-plugin-ref" || node.kind == "aggregate-plugin-factory-ref" || node.kind == "aggregate-plugin-access-ref" {
 		if node.pluginEnvironment == nil || node.pluginEnvironment != e {
 			return NewError(ErrorDependency, fmt.Sprintf("aggregate plugin %q belongs to a different environment", node.pluginName))
 		}
@@ -3302,8 +3322,14 @@ func (e *Environment) validateAggregatePluginNodes(node *exprNode) error {
 			!definition.resultType.AssignableTo(node.typ) && !node.typ.AssignableTo(definition.resultType) && !numericTypes(definition.resultType, node.typ) {
 			return NewError(ErrorTypeMismatch, fmt.Sprintf("aggregate plugin %q returns %s, expression expects %s", node.pluginName, definition.resultType, node.typ))
 		}
-		if node.kind == "aggregate-plugin-factory-ref" && definition.factory == nil {
+		if (node.kind == "aggregate-plugin-factory-ref" || node.kind == "aggregate-plugin-access-ref") && definition.factory == nil {
 			return NewError(ErrorTypeMismatch, fmt.Sprintf("aggregate plugin %q is not a stateful factory", node.pluginName))
+		}
+		if node.kind == "aggregate-plugin-access-ref" && !definition.access {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("aggregate plugin %q is not registered as an access plugin", node.pluginName))
+		}
+		if node.kind == "aggregate-plugin-factory-ref" && definition.access {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("aggregate plugin %q is registered as an access plugin", node.pluginName))
 		}
 		if node.kind == "aggregate-plugin-ref" && definition.evaluate == nil {
 			return NewError(ErrorTypeMismatch, fmt.Sprintf("aggregate plugin %q is not a callback evaluator", node.pluginName))
@@ -3395,14 +3421,14 @@ func validateAggregateExpressionNodes(node *exprNode) error {
 			return NewError(ErrorTypeMismatch, "leaving filter predicate must return bool")
 		}
 	}
-	if node.kind == "aggregate-plugin" || node.kind == "aggregate-plugin-ref" || node.kind == "aggregate-plugin-factory" || node.kind == "aggregate-plugin-factory-ref" {
+	if node.kind == "aggregate-plugin" || node.kind == "aggregate-plugin-ref" || node.kind == "aggregate-plugin-factory" || node.kind == "aggregate-plugin-factory-ref" || node.kind == "aggregate-plugin-access-ref" {
 		if strings.TrimSpace(node.pluginName) == "" {
 			return NewError(ErrorInvalidRule, "plugin aggregate name is required")
 		}
 		if (node.kind == "aggregate-plugin" || node.kind == "aggregate-plugin-factory") && !node.pluginReady {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("plugin aggregate %q has no evaluator", node.pluginName))
 		}
-		if (node.kind == "aggregate-plugin-factory" || node.kind == "aggregate-plugin-factory-ref") && len(node.children) > 1 {
+		if (node.kind == "aggregate-plugin-factory" || node.kind == "aggregate-plugin-factory-ref" || node.kind == "aggregate-plugin-access-ref") && len(node.children) > 1 {
 			return NewError(ErrorInvalidRule, "plugin aggregate factory accepts at most one input expression")
 		}
 	}
@@ -3447,7 +3473,7 @@ func expressionNodeContainsAggregate(node *exprNode) bool {
 		return true
 	}
 	switch node.kind {
-	case "aggregate-filter", "aggregate-local-group", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "max-exact", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
+	case "aggregate-filter", "aggregate-local-group", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "aggregate-plugin-access-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "max-exact", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
 		return true
 	}
 	for _, child := range node.children {

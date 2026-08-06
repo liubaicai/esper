@@ -40,6 +40,7 @@ type exprNode struct {
 	parameterName         string
 	pluginName            string
 	pluginReady           bool
+	pluginAccess          bool
 	pluginFactory         aggregatePluginFactory
 	pluginEnvironment     *Environment
 	scriptName            string
@@ -54,16 +55,23 @@ type exprNode struct {
 	// enumMetadata mirrors Esper's enumeration method footprint and component
 	// type metadata. It is derived entirely from the typed builder AST and is
 	// never consulted as mutable runtime state.
-	enumMetadata          *EnumMethodMetadata
-	enumPluginName        string
-	enumPluginEnvironment *Environment
-	enumPluginFactory     enumPluginFactory
-	enumPluginReady       bool
-	enumPluginFootprints  []EnumMethodFootprint
-	enumPluginArguments   []enumPluginArgumentMeta
-	configurationError    string
-	expressionName        string
-	expressionEnvironment *Environment
+	enumMetadata              *EnumMethodMetadata
+	enumPluginName            string
+	enumPluginEnvironment     *Environment
+	enumPluginFactory         enumPluginFactory
+	enumPluginReady           bool
+	enumPluginFootprints      []EnumMethodFootprint
+	enumPluginArguments       []enumPluginArgumentMeta
+	dateTimePluginName        string
+	dateTimePluginEnvironment *Environment
+	dateTimePluginFactory     dateTimePluginFactory
+	dateTimePluginReady       bool
+	dateTimePluginFootprints  []DateTimeMethodFootprint
+	dateTimePluginArguments   []dateTimePluginArgumentMeta
+	dateTimePluginMetadata    *DateTimePluginMetadata
+	configurationError        string
+	expressionName            string
+	expressionEnvironment     *Environment
 	// expressionArguments are kept separate from children because children
 	// also contains the referenced definition body after validation.  Keeping
 	// the call-site arguments explicit lets the planner validate arity and
@@ -2878,6 +2886,7 @@ type aggregatePluginDefinition struct {
 	resultType reflect.Type
 	evaluate   func(EvalContext) (Value, bool)
 	factory    aggregatePluginFactory
+	access     bool
 }
 
 // AggregatePluginState is the Go lifecycle contract for a stateful aggregate
@@ -3061,6 +3070,15 @@ func PluginAggregateAccess[T any](name string, input Expr, factory AggregatePlug
 	return FilterAggregate[T](aggregate, filter[0])
 }
 
+// RegisterAggregateAccessPlugin registers a named access-style aggregation
+// extension. Access plugins use the same per-group state lifecycle as a
+// stateful aggregate factory, but the registration is deliberately marked so
+// PluginAggregateAccessRef cannot accidentally bind a method-style plugin to
+// an access expression (or vice versa).
+func RegisterAggregateAccessPlugin[T any](env *Environment, name string, factory AggregatePluginFactory[T]) error {
+	return registerAggregatePluginFactory[T](env, name, factory, true)
+}
+
 // RegisterAggregatePlugin registers a named, typed aggregate extension in an
 // Environment. It is the configuration-backed counterpart to PluginAggregate
 // and lets multiple plans refer to the same extension by stable name.
@@ -3096,6 +3114,10 @@ func RegisterAggregatePlugin[T any](env *Environment, name string, evaluate func
 // RegisterAggregatePluginFactory registers a stateful aggregate factory in an
 // Environment. Each aggregate group receives a separate state instance.
 func RegisterAggregatePluginFactory[T any](env *Environment, name string, factory AggregatePluginFactory[T]) error {
+	return registerAggregatePluginFactory[T](env, name, factory, false)
+}
+
+func registerAggregatePluginFactory[T any](env *Environment, name string, factory AggregatePluginFactory[T], access bool) error {
 	if env == nil {
 		return NewError(ErrorDependency, "nil environment")
 	}
@@ -3114,6 +3136,7 @@ func RegisterAggregatePluginFactory[T any](env *Environment, name string, factor
 	env.aggregatePlugins[name] = aggregatePluginDefinition{
 		resultType: typeOf[T](),
 		factory:    adaptAggregatePluginFactory(factory),
+		access:     access,
 	}
 	return nil
 }
@@ -3152,21 +3175,48 @@ func PluginAggregateRef[T any](env *Environment, name string) AggregateExpressio
 // registered stateful factory. The input expression may be nil, matching
 // PluginAggregateWithFactory's event-aware mode.
 func PluginAggregateFactoryRef[T any](env *Environment, name string, input Expr) AggregateExpression[T] {
+	return pluginAggregateFactoryRef[T](env, name, input, false)
+}
+
+// PluginAggregateAccessRef creates a typed access-aggregation expression
+// backed by an access plugin registered in env. The optional filter is the
+// Go-native equivalent of Esper's named `filter:` parameter.
+func PluginAggregateAccessRef[T any](env *Environment, name string, input Expr, filter ...Expression[bool]) AggregateExpression[T] {
+	aggregate := pluginAggregateFactoryRef[T](env, name, input, true)
+	if len(filter) == 0 {
+		return aggregate
+	}
+	if len(filter) != 1 || filter[0] == nil {
+		return FilterAggregate[T](aggregate, nil)
+	}
+	return FilterAggregate[T](aggregate, filter[0])
+}
+
+func pluginAggregateFactoryRef[T any](env *Environment, name string, input Expr, access bool) AggregateExpression[T] {
 	name = strings.TrimSpace(name)
 	description := "plugin-aggregate-factory(<invalid>)"
 	if name != "" {
 		description = "plugin-aggregate-factory(" + name + ")"
+	}
+	kind := "aggregate-plugin-factory-ref"
+	if access {
+		kind = "aggregate-plugin-access-ref"
+		description = "plugin-aggregate-access-ref(<invalid>)"
+		if name != "" {
+			description = "plugin-aggregate-access-ref(" + name + ")"
+		}
 	}
 	var children []*exprNode
 	if input != nil {
 		children = []*exprNode{input.node()}
 	}
 	node := &exprNode{
-		kind:              "aggregate-plugin-factory-ref",
+		kind:              kind,
 		typ:               typeOf[T](),
 		description:       description,
 		pluginName:        name,
 		pluginEnvironment: env,
+		pluginAccess:      access,
 		children:          children,
 	}
 	return aggregateExpr[T]{typedExpr: typedExpr[T]{
