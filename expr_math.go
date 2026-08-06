@@ -97,14 +97,7 @@ func DivideWithOptions[T Numeric](left, right Expr, options ...DivisionOption) E
 			option(&config)
 		}
 	}
-	kind := "divide"
-	if config.integerDivision {
-		kind += "[integer]"
-	}
-	if config.divisionByZeroReturnsNull {
-		kind += "[null-zero]"
-	}
-	return mathExpression[T](kind, "/", left, right, func(l, r Value) Value {
+	expression := mathExpression[T]("divide", "/", left, right, func(l, r Value) Value {
 		leftNumber, leftOK := enumRatFromValue(l)
 		rightNumber, rightOK := enumRatFromValue(r)
 		if !leftOK || !rightOK {
@@ -125,6 +118,10 @@ func DivideWithOptions[T Numeric](left, right Expr, options ...DivisionOption) E
 		}
 		return nativeRatResult[T](result)
 	})
+	if config.integerDivision || config.divisionByZeroReturnsNull {
+		expression.node().description += fmt.Sprintf("[integer=%t,zero-null=%t]", config.integerDivision, config.divisionByZeroReturnsNull)
+	}
+	return expression
 }
 
 // DivideFloat is a concise default-configuration division expression. It is
