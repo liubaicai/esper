@@ -25,6 +25,11 @@ type unnestIntContainer struct {
 	IDs []int64 `esper:"ids"`
 }
 
+type unnestPayment struct {
+	BookID string `esper:"bookId"`
+	Amount int64  `esper:"amount"`
+}
+
 func buildUnnestBookStream(env *Environment) Stream[unnestBook] {
 	books := Property[[]unnestBook](EventValue[unnestOrder](), "books")
 	return Unnest[unnestOrder, unnestBook](From[unnestOrder](env, "UnnestOrder"), books)
@@ -273,5 +278,63 @@ func TestUnnestValuesProjectsScalarArrayElements(t *testing.T) {
 		if got := rows[index].Get("value").Any(); got != expected {
 			t.Fatalf("scalar unnest row %d = %#v, want %d", index, got, expected)
 		}
+	}
+}
+
+func TestUnnestParticipatesInJoin(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[unnestOrder](env, "UnnestOrder"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[unnestBook](env, "UnnestBook"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[unnestPayment](env, "UnnestPayment"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	books := buildUnnestBookStream(env)
+	payments := From[unnestPayment](env, "UnnestPayment")
+	query := Join(books, payments, OnEqual(
+		Field[unnestBook, string]("id"),
+		Field[unnestPayment, string]("bookId"),
+	)).Select(
+		SelectFrom(0, "bookID", JoinField[string](0, "id")),
+		SelectFrom(1, "amount", JoinField[int64](1, "amount")),
+	).Query(StatementName("unnest-join"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), unnestOrder{
+		OrderID: "O-join",
+		Books:   []unnestBook{{ID: "B-1"}, {ID: "B-2"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("incomplete contained join emitted: %#v", rows)
+	}
+	if err := engine.SendEvent(context.Background(), unnestPayment{BookID: "B-2", Amount: 19}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("bookID").Any() != "B-2" || rows[0].Get("amount").Any() != int64(19) {
+		t.Fatalf("contained join rows = %#v", rows)
 	}
 }

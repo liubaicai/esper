@@ -1652,3 +1652,5 @@ method source 的组合矩阵再补两条 Go-native 证据：多个 `FromMethodO
 在此基础上补齐一条 nested 基础证据：`TestUnnestNestedStructsPreserveParentArrayOrder` 将 `Order → []Book → []Review` 两级 `Unnest` 串联，覆盖 Java `EPLContainedEventNested` 的 simple/column-select 形态；这只证明结构体数组的递归组合，不改变 `event.contained` 对 Named Window、Pattern、Subquery、scalar split 和 `@type` materialization 的 partial 结论。
 
 随后增加 scalar-array 入口：`ContainedValue[T]` 与 `UnnestValues` 将 `[]T` 包装成显式注册的 typed child event，`TestUnnestValuesProjectsScalarArrayElements` 对照 Java `EPLContainedEventIntArray` 的有序 int 数组展开。该设计保持 Go 的类型/Schema 边界清晰；String-array `where`、`@type` 事件 materialization、split expression 和标量 contained join 仍未宣称完成。
+
+另外以 `TestUnnestParticipatesInJoin` 验证展开后的 child stream 可以作为普通 Join 左侧，与后续事件流按 child 字段匹配；该证据登记到 Java `EPLContainedJoin`，但不等价于 Java 的 unidirectional、Named Window、outer/self/full-join 全矩阵。
