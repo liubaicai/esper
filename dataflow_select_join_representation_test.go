@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"strings"
@@ -256,6 +257,17 @@ func TestDataflowSelectOptionsEnterPlanIdentity(t *testing.T) {
 	canonical := string(ascending.Canonical())
 	if ascending.SchemaVersion() != "esper-go-plan/v2" {
 		t.Fatalf("Select Plan schema version = %q, want v2", ascending.SchemaVersion())
+	}
+	legacyArtifact, err := json.Marshal(PlanArtifact{
+		SchemaVersion: "esper-go-plan/v1",
+		Hash:          ascending.Hash(),
+		Canonical:     ascending.Canonical(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadPlanArtifact(legacyArtifact); err == nil || !errors.Is(err, ErrorDependency) {
+		t.Fatalf("legacy Select Plan artifact error = %v", err)
 	}
 	for _, token := range []string{"select=output=", "preserve=false", "iterate=true", "group=", "order="} {
 		if !strings.Contains(canonical, token) {
