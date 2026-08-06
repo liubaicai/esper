@@ -113,7 +113,7 @@
       "goRefs": ["enum_expr.go", "enum_expr_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["complete Java type matrix", "Java collection metadata and generic component descriptors", "invalid-rule parity", "nested/subquery/access-aggregate/UDF source matrix"]
+      "remaining": ["complete Java type matrix", "Java collection metadata and generic component descriptors", "complete invalid-rule diagnostics and Java error-text parity", "nested/subquery/access-aggregate/UDF source matrix"]
     },
     {
       "id": "resultset.aggregate-dimensional",
@@ -651,6 +651,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
       "difference": "The Go EnumCollect API normalizes arrays, slices, iter.Seq, maps.Values-backed sources and explicit pull iterators into []T without inventing map order; Java additionally exposes collection generic/component metadata and covers method/UDF/property/subquery/aggregate sources in the same execution, which remain open."
+    },
+    {
+      "id": "case.expr-enum-invalid",
+      "javaRuntimeIds": ["java-5a117b08f2037d0e6133", "java-e13263e2eb138bd9f692", "java-d854379572241786dd56", "java-96a5c897c1d7f67d851f", "java-167415d6e7af87a7a111"],
+      "javaNames": ["ExprEnumInvalid", "ExprEnumAllOfAnyOfInvalid", "ExprEnumExceptIntersectUnion.ExprEnumInvalid", "ExprEnumToMapInvalid", "ExprEnumMinMax.ExprEnumInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumInvalid.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumAllOfAnyOf.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumExceptIntersectUnion.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumToMap.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java"],
+      "goTests": ["TestEnumerableBuildRejectsMissingRequiredExpressions"],
+      "tags": ["correctness", "expression", "enum", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go now rejects missing collection inputs, required selectors/predicates and pair operands during Build, while Go generic signatures provide compile-time type rejection for many Java invalid cases. Complete invalid expression-body/property diagnostics and Java error-text parity remain open."
     },
     {
       "id": "case.aggregate-dimensional",
@@ -1284,6 +1295,7 @@
     {"capabilityId": "query.insert-into-route", "caseId": "case.insert-into-chain"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
+    {"capabilityId": "expr.enum", "caseId": "case.expr-enum-invalid"},
     {"capabilityId": "resultset.aggregate-dimensional", "caseId": "case.aggregate-dimensional"},
     {"capabilityId": "resultset.aggregate-filtered", "caseId": "case.aggregate-filtered"},
     {"capabilityId": "resultset.aggregate-ever", "caseId": "case.aggregate-ever"},

@@ -325,6 +325,32 @@ func TestEnumerableCollectsMapValuesAndIterators(t *testing.T) {
 	}
 }
 
+func TestEnumerableBuildRejectsMissingRequiredExpressions(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[enumExpressionContainer](env, "EnumInvalidContainer"); err != nil {
+		t.Fatal(err)
+	}
+	stream := From[enumExpressionContainer](env, "EnumInvalidContainer")
+	values := Field[enumExpressionContainer, []int64]("values")
+	invalid := []struct {
+		name string
+		expr Expr
+	}{
+		{name: "where-predicate", expr: EnumWhere[int64](values, nil)},
+		{name: "select-selector", expr: EnumSelect[int64, int64](values, nil)},
+		{name: "union-right", expr: EnumUnion[int64](values, nil)},
+		{name: "min-by-selector", expr: EnumMinBy[int64, int64](values, nil)},
+		{name: "to-map-value", expr: EnumToMap[int64, string, int64](values, Literal("key"), nil)},
+	}
+	for _, testCase := range invalid {
+		t.Run(testCase.name, func(t *testing.T) {
+			if _, err := env.Build(Select(stream, Alias("invalid", testCase.expr)).Query(StatementName("enum-invalid-" + testCase.name))); err == nil {
+				t.Fatal("Build accepted an enumeration expression with a missing required expression")
+			}
+		})
+	}
+}
+
 func TestEnumerableSetFoldGroupMapAndFrequencyMethods(t *testing.T) {
 	left := Literal([]int64{1, 2, 2, 3})
 	right := Literal([]int64{2, 3})

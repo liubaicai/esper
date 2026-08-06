@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
+	"strings"
 )
 
 // EnumOrdered is the ordered value set supported by enumeration methods.
@@ -296,11 +297,46 @@ func enumDescription[T any](name string, values Expression[[]T], predicate Expr)
 	return name + "(" + input + "," + predicate.Description() + ")"
 }
 
+// makeEnumExpr attaches the small amount of declaration metadata needed for
+// build-time enumeration validation. Generic Go signatures already enforce
+// most type rules; these flags cover the Java invalid-rule cases that would
+// otherwise be represented by a nil expression at runtime.
+func makeEnumExpr[T any](kind, description string, children []*exprNode, input Expr, parameterRequired bool, fn func(EvalContext) Value) Expression[T] {
+	expression := makeExpr[T](kind, description, children, fn)
+	expression.node().enumInputRequired = input != nil
+	expression.node().enumParameterRequired = parameterRequired
+	return expression
+}
+
+func validateEnumExpressionNodes(node *exprNode) error {
+	if node == nil {
+		return nil
+	}
+	if node.enumInputRequired && len(node.children) == 0 {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("enumeration method %q requires a collection expression", strings.TrimPrefix(node.kind, "enum-")))
+	}
+	if node.enumParameterRequired {
+		minimumChildren := 2
+		if node.kind == "enum-to-map" {
+			minimumChildren = 3
+		}
+		if len(node.children) < minimumChildren {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("enumeration method %q requires all selector expressions", strings.TrimPrefix(node.kind, "enum-")))
+		}
+	}
+	for _, child := range node.children {
+		if err := validateEnumExpressionNodes(child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // EnumWhere filters a collection while retaining input order. A null or
 // missing collection remains null or missing; an empty collection is a
 // present empty collection.
 func EnumWhere[T any](values Expression[[]T], predicate Expression[bool]) Expression[[]T] {
-	return makeExpr[[]T]("enum-where", enumDescription[T]("where", values, predicate), enumExpressionChildren[T](values, predicate), func(ctx EvalContext) Value {
+	return makeEnumExpr[[]T]("enum-where", enumDescription[T]("where", values, predicate), enumExpressionChildren[T](values, predicate), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -317,7 +353,7 @@ func EnumWhere[T any](values Expression[[]T], predicate Expression[bool]) Expres
 
 // EnumSelect projects each collection item into a new ordered collection.
 func EnumSelect[T any, R any](values Expression[[]T], selector Expression[R]) Expression[[]R] {
-	return makeExpr[[]R]("enum-select", enumDescription[T]("select", values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
+	return makeEnumExpr[[]R]("enum-select", enumDescription[T]("select", values, selector), enumExpressionChildren[T](values, selector), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -346,7 +382,7 @@ func EnumSelect[T any, R any](values Expression[[]T], selector Expression[R]) Ex
 // the no-selector form makes a defensive copy while the selector form is
 // exposed as EnumArrayOfSelect.
 func EnumArrayOf[T any](values Expression[[]T]) Expression[[]T] {
-	return makeExpr[[]T]("enum-array-of", "array-of("+enumInputDescription[T](values)+")", enumExpressionChildren[T](values, nil), func(ctx EvalContext) Value {
+	return makeEnumExpr[[]T]("enum-array-of", "array-of("+enumInputDescription[T](values)+")", enumExpressionChildren[T](values, nil), values, false, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -356,7 +392,7 @@ func EnumArrayOf[T any](values Expression[[]T]) Expression[[]T] {
 }
 
 func EnumArrayOfSelect[T any, R any](values Expression[[]T], selector Expression[R]) Expression[[]R] {
-	return makeExpr[[]R]("enum-array-of", enumDescription[T]("array-of", values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
+	return makeEnumExpr[[]R]("enum-array-of", enumDescription[T]("array-of", values, selector), enumExpressionChildren[T](values, selector), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -382,7 +418,7 @@ func EnumArrayOfSelect[T any, R any](values Expression[[]T], selector Expression
 
 // EnumCount counts all items, including null-valued items.
 func EnumCount[T any](values Expression[[]T]) Expression[int64] {
-	return makeExpr[int64]("enum-count", enumDescription[T]("count", values, nil), enumExpressionChildren[T](values, nil), func(ctx EvalContext) Value {
+	return makeEnumExpr[int64]("enum-count", enumDescription[T]("count", values, nil), enumExpressionChildren[T](values, nil), values, false, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -393,7 +429,7 @@ func EnumCount[T any](values Expression[[]T]) Expression[int64] {
 
 // EnumCountOf counts items for which the optional predicate is true.
 func EnumCountOf[T any](values Expression[[]T], predicate Expression[bool]) Expression[int64] {
-	return makeExpr[int64]("enum-count-of", enumDescription[T]("count-of", values, predicate), enumExpressionChildren[T](values, predicate), func(ctx EvalContext) Value {
+	return makeEnumExpr[int64]("enum-count-of", enumDescription[T]("count-of", values, predicate), enumExpressionChildren[T](values, predicate), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -412,7 +448,7 @@ func EnumCountOf[T any](values Expression[[]T], predicate Expression[bool]) Expr
 // missing predicate results do not match an item. A null input collection
 // remains null; empty any/all are false/true respectively.
 func EnumAnyOf[T any](values Expression[[]T], predicate Expression[bool]) Expression[bool] {
-	return makeExpr[bool]("enum-any-of", enumDescription[T]("any-of", values, predicate), enumExpressionChildren[T](values, predicate), func(ctx EvalContext) Value {
+	return makeEnumExpr[bool]("enum-any-of", enumDescription[T]("any-of", values, predicate), enumExpressionChildren[T](values, predicate), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -427,7 +463,7 @@ func EnumAnyOf[T any](values Expression[[]T], predicate Expression[bool]) Expres
 }
 
 func EnumAllOf[T any](values Expression[[]T], predicate Expression[bool]) Expression[bool] {
-	return makeExpr[bool]("enum-all-of", enumDescription[T]("all-of", values, predicate), enumExpressionChildren[T](values, predicate), func(ctx EvalContext) Value {
+	return makeEnumExpr[bool]("enum-all-of", enumDescription[T]("all-of", values, predicate), enumExpressionChildren[T](values, predicate), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -442,7 +478,7 @@ func EnumAllOf[T any](values Expression[[]T], predicate Expression[bool]) Expres
 }
 
 func enumFirstLast[T any](kind string, values Expression[[]T], predicate Expression[bool], last bool) Expression[T] {
-	return makeExpr[T]("enum-"+kind, enumDescription[T](kind, values, predicate), enumExpressionChildren[T](values, predicate), func(ctx EvalContext) Value {
+	return makeEnumExpr[T]("enum-"+kind, enumDescription[T](kind, values, predicate), enumExpressionChildren[T](values, predicate), values, false, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -483,15 +519,15 @@ func optionalEnumPredicate(predicate []Expression[bool]) Expression[bool] {
 // equality rather than requiring comparable T, matching array/object element
 // behavior and allowing event values with slice fields.
 func EnumDistinct[T any](values Expression[[]T]) Expression[[]T] {
-	return enumDistinctBy[T](values, nil)
+	return enumDistinctBy[T](values, nil, false)
 }
 
 func EnumDistinctBy[T any, K any](values Expression[[]T], selector Expression[K]) Expression[[]T] {
-	return enumDistinctBy[T](values, selector)
+	return enumDistinctBy[T](values, selector, true)
 }
 
-func enumDistinctBy[T any](values Expression[[]T], selector Expr) Expression[[]T] {
-	return makeExpr[[]T]("enum-distinct", enumDescription[T]("distinct", values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
+func enumDistinctBy[T any](values Expression[[]T], selector Expr, parameterRequired bool) Expression[[]T] {
+	return makeEnumExpr[[]T]("enum-distinct", enumDescription[T]("distinct", values, selector), enumExpressionChildren[T](values, selector), values, parameterRequired, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -530,7 +566,7 @@ func EnumTakeLast[T any](values Expression[[]T], count int) Expression[[]T] {
 }
 
 func enumSlice[T any](kind string, values Expression[[]T], count int, last bool) Expression[[]T] {
-	return makeExpr[[]T]("enum-"+kind, fmt.Sprintf("%s(%s,%d)", kind, enumInputDescription[T](values), count), enumExpressionChildren[T](values, nil), func(ctx EvalContext) Value {
+	return makeEnumExpr[[]T]("enum-"+kind, fmt.Sprintf("%s(%s,%d)", kind, enumInputDescription[T](values), count), enumExpressionChildren[T](values, nil), values, false, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -562,7 +598,7 @@ func enumTakeWhile[T any](values Expression[[]T], predicate Expression[bool], la
 	if last {
 		kind = "take-while-last"
 	}
-	return makeExpr[[]T]("enum-"+kind, enumDescription[T](kind, values, predicate), enumExpressionChildren[T](values, predicate), func(ctx EvalContext) Value {
+	return makeEnumExpr[[]T]("enum-"+kind, enumDescription[T](kind, values, predicate), enumExpressionChildren[T](values, predicate), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -592,7 +628,7 @@ func enumTakeWhile[T any](values Expression[[]T], predicate Expression[bool], la
 }
 
 func EnumReverse[T any](values Expression[[]T]) Expression[[]T] {
-	return makeExpr[[]T]("enum-reverse", "reverse("+enumInputDescription[T](values)+")", enumExpressionChildren[T](values, nil), func(ctx EvalContext) Value {
+	return makeEnumExpr[[]T]("enum-reverse", "reverse("+enumInputDescription[T](values)+")", enumExpressionChildren[T](values, nil), values, false, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -606,23 +642,23 @@ func EnumReverse[T any](values Expression[[]T]) Expression[[]T] {
 }
 
 func EnumMin[T EnumOrdered](values Expression[[]T]) Expression[T] {
-	return enumExtreme[T]("min", values, nil, true)
+	return enumExtreme[T]("min", values, nil, true, false)
 }
 
 func EnumMax[T EnumOrdered](values Expression[[]T]) Expression[T] {
-	return enumExtreme[T]("max", values, nil, false)
+	return enumExtreme[T]("max", values, nil, false, false)
 }
 
 func EnumMinBy[T any, K EnumOrdered](values Expression[[]T], selector Expression[K]) Expression[T] {
-	return enumExtreme[T]("min-by", values, selector, true)
+	return enumExtreme[T]("min-by", values, selector, true, true)
 }
 
 func EnumMaxBy[T any, K EnumOrdered](values Expression[[]T], selector Expression[K]) Expression[T] {
-	return enumExtreme[T]("max-by", values, selector, false)
+	return enumExtreme[T]("max-by", values, selector, false, true)
 }
 
-func enumExtreme[T any](kind string, values Expression[[]T], selector Expr, minimum bool) Expression[T] {
-	return makeExpr[T]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
+func enumExtreme[T any](kind string, values Expression[[]T], selector Expr, minimum, parameterRequired bool) Expression[T] {
+	return makeEnumExpr[T]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), values, parameterRequired, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -661,7 +697,7 @@ func EnumOrderBy[T any, K EnumOrdered](values Expression[[]T], selector Expressi
 	if descending {
 		kind = "order-by-desc"
 	}
-	return makeExpr[[]T]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
+	return makeEnumExpr[[]T]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -696,15 +732,15 @@ func EnumOrderBy[T any, K EnumOrdered](values Expression[[]T], selector Expressi
 }
 
 func EnumSum[T EnumNumeric](values Expression[[]T]) Expression[T] {
-	return enumSumOf[T, T](values, nil)
+	return enumSumOf[T, T](values, nil, false)
 }
 
 func EnumSumOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K]) Expression[K] {
-	return enumSumOf[T, K](values, selector)
+	return enumSumOf[T, K](values, selector, true)
 }
 
-func enumSumOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K]) Expression[K] {
-	return makeExpr[K]("enum-sum", enumDescription[T]("sum-of", values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
+func enumSumOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K], parameterRequired bool) Expression[K] {
+	return makeEnumExpr[K]("enum-sum", enumDescription[T]("sum-of", values, selector), enumExpressionChildren[T](values, selector), values, parameterRequired, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -735,11 +771,15 @@ func enumSumOf[T any, K EnumNumeric](values Expression[[]T], selector Expression
 }
 
 func EnumAverage[T EnumNumeric](values Expression[[]T]) Expression[float64] {
-	return EnumAverageOf[T, T](values, nil)
+	return enumAverageOf[T, T](values, nil, false)
 }
 
 func EnumAverageOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K]) Expression[float64] {
-	return makeExpr[float64]("enum-average", enumDescription[T]("average", values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
+	return enumAverageOf[T, K](values, selector, true)
+}
+
+func enumAverageOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K], parameterRequired bool) Expression[float64] {
+	return makeEnumExpr[float64]("enum-average", enumDescription[T]("average", values, selector), enumExpressionChildren[T](values, selector), values, parameterRequired, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -771,13 +811,17 @@ func EnumAverageOf[T any, K EnumNumeric](values Expression[[]T], selector Expres
 // counterpart for Esper enumeration averages over BigDecimal/BigInteger
 // values; callers can render the result as a decimal with big.Rat.FloatString.
 func EnumAverageExact[T EnumNumeric](values Expression[[]T]) Expression[big.Rat] {
-	return EnumAverageExactOf[T, T](values, nil)
+	return enumAverageExactOf[T, T](values, nil, false)
 }
 
 // EnumAverageExactOf applies an analyzable numeric selector and retains the
 // exact rational result instead of narrowing to float64.
 func EnumAverageExactOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K]) Expression[big.Rat] {
-	return makeExpr[big.Rat]("enum-average-exact", enumDescription[T]("average-exact", values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
+	return enumAverageExactOf[T, K](values, selector, true)
+}
+
+func enumAverageExactOf[T any, K EnumNumeric](values Expression[[]T], selector Expression[K], parameterRequired bool) Expression[big.Rat] {
+	return makeEnumExpr[big.Rat]("enum-average-exact", enumDescription[T]("average-exact", values, selector), enumExpressionChildren[T](values, selector), values, parameterRequired, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -807,7 +851,7 @@ func EnumAverageExactOf[T any, K EnumNumeric](values Expression[[]T], selector E
 // accumulator expression can use EnumAccumulator, EnumElement, EnumIndex and
 // EnumSize, so the entire fold remains visible in the AST.
 func EnumAggregate[T any, R any](values Expression[[]T], initial R, accumulator Expression[R]) Expression[R] {
-	return makeExpr[R]("enum-aggregate", enumDescription[T]("aggregate", values, accumulator), enumExpressionChildren[T](values, accumulator), func(ctx EvalContext) Value {
+	return makeEnumExpr[R]("enum-aggregate", enumDescription[T]("aggregate", values, accumulator), enumExpressionChildren[T](values, accumulator), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -845,7 +889,7 @@ func EnumIntersect[T any](left, right Expression[[]T]) Expression[[]T] {
 }
 
 func EnumUnion[T any](left, right Expression[[]T]) Expression[[]T] {
-	return makeExpr[[]T]("enum-union", fmt.Sprintf("union(%s,%s)", enumInputDescription[T](left), enumInputDescription[T](right)), enumPairChildren[T](left, right), func(ctx EvalContext) Value {
+	return makeEnumExpr[[]T]("enum-union", fmt.Sprintf("union(%s,%s)", enumInputDescription[T](left), enumInputDescription[T](right)), enumPairChildren[T](left, right), left, true, func(ctx EvalContext) Value {
 		leftItems, leftValue, leftOK := enumItems[T](left, ctx)
 		if !leftOK {
 			return leftValue
@@ -862,7 +906,7 @@ func EnumUnion[T any](left, right Expression[[]T]) Expression[[]T] {
 }
 
 func enumSetOperation[T any](kind string, left, right Expression[[]T], keep func(bool, bool) bool) Expression[[]T] {
-	return makeExpr[[]T]("enum-"+kind, fmt.Sprintf("%s(%s,%s)", kind, enumInputDescription[T](left), enumInputDescription[T](right)), enumPairChildren[T](left, right), func(ctx EvalContext) Value {
+	return makeEnumExpr[[]T]("enum-"+kind, fmt.Sprintf("%s(%s,%s)", kind, enumInputDescription[T](left), enumInputDescription[T](right)), enumPairChildren[T](left, right), left, true, func(ctx EvalContext) Value {
 		leftItems, leftValue, leftOK := enumItems[T](left, ctx)
 		if !leftOK {
 			return leftValue
@@ -905,7 +949,7 @@ func enumContains[T any](items []T, candidate T) bool {
 // EnumSequenceEqual compares two collections element-by-element, preserving
 // null/missing input state as the third-valued result used by Esper.
 func EnumSequenceEqual[T any](left, right Expression[[]T]) Expression[bool] {
-	return makeExpr[bool]("enum-sequence-equal", fmt.Sprintf("sequence-equal(%s,%s)", enumInputDescription[T](left), enumInputDescription[T](right)), enumPairChildren[T](left, right), func(ctx EvalContext) Value {
+	return makeEnumExpr[bool]("enum-sequence-equal", fmt.Sprintf("sequence-equal(%s,%s)", enumInputDescription[T](left), enumInputDescription[T](right)), enumPairChildren[T](left, right), left, true, func(ctx EvalContext) Value {
 		leftItems, leftValue, leftOK := enumItems[T](left, ctx)
 		rightItems, rightValue, rightOK := enumItems[T](right, ctx)
 		if !leftOK || !rightOK {
@@ -930,7 +974,7 @@ func EnumSequenceEqual[T any](left, right Expression[[]T]) Expression[bool] {
 // key maps to the zero value of K; callers that need to retain null distinctly
 // can use K=any.
 func EnumGroupBy[T any, K comparable](values Expression[[]T], key Expression[K]) Expression[map[K][]T] {
-	return makeExpr[map[K][]T]("enum-group-by", enumDescription[T]("group-by", values, key), enumExpressionChildren[T](values, key), func(ctx EvalContext) Value {
+	return makeEnumExpr[map[K][]T]("enum-group-by", enumDescription[T]("group-by", values, key), enumExpressionChildren[T](values, key), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -962,7 +1006,7 @@ func EnumToMap[T any, K comparable, V any](values Expression[[]T], key Expressio
 	if value != nil {
 		children = append(children, value.node())
 	}
-	return makeExpr[map[K]V]("enum-to-map", fmt.Sprintf("to-map(%s,%s,%s)", enumInputDescription[T](values), expressionDescription(key), expressionDescription(value)), children, func(ctx EvalContext) Value {
+	return makeEnumExpr[map[K]V]("enum-to-map", fmt.Sprintf("to-map(%s,%s,%s)", enumInputDescription[T](values), expressionDescription(key), expressionDescription(value)), children, values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -1004,8 +1048,8 @@ func expressionDescription(expression Expr) string {
 	return expression.Description()
 }
 
-func enumFrequency[T any](kind string, values Expression[[]T], selector Expr, most bool) Expression[T] {
-	return makeExpr[T]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), func(ctx EvalContext) Value {
+func enumFrequency[T any](kind string, values Expression[[]T], selector Expr, most, parameterRequired bool) Expression[T] {
+	return makeEnumExpr[T]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), values, parameterRequired, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
@@ -1047,19 +1091,19 @@ func enumFrequency[T any](kind string, values Expression[[]T], selector Expr, mo
 }
 
 func EnumMostFrequent[T comparable](values Expression[[]T]) Expression[T] {
-	return enumFrequency[T]("most-frequent", values, nil, true)
+	return enumFrequency[T]("most-frequent", values, nil, true, false)
 }
 
 func EnumLeastFrequent[T comparable](values Expression[[]T]) Expression[T] {
-	return enumFrequency[T]("least-frequent", values, nil, false)
+	return enumFrequency[T]("least-frequent", values, nil, false, false)
 }
 
 func EnumMostFrequentBy[T any, K any](values Expression[[]T], selector Expression[K]) Expression[T] {
-	return enumFrequency[T]("most-frequent", values, selector, true)
+	return enumFrequency[T]("most-frequent", values, selector, true, true)
 }
 
 func EnumLeastFrequentBy[T any, K any](values Expression[[]T], selector Expression[K]) Expression[T] {
-	return enumFrequency[T]("least-frequent", values, selector, false)
+	return enumFrequency[T]("least-frequent", values, selector, false, true)
 }
 
 func enumInputDescription[T any](values Expression[[]T]) string {

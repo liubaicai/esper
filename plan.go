@@ -1278,6 +1278,9 @@ func (e *Environment) validateExprVariables(expression Expr) error {
 	if expression == nil || expression.node() == nil {
 		return fmt.Errorf("esper: nil expression")
 	}
+	if err := validateEnumExpressionNodes(expression.node()); err != nil {
+		return err
+	}
 	var variables []string
 	expression.node().referencedVariables(&variables)
 	for _, name := range variables {

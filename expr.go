@@ -31,22 +31,24 @@ type Expression[T any] interface {
 }
 
 type exprNode struct {
-	kind              string
-	typ               reflect.Type
-	description       string
-	fieldName         string
-	tagName           string
-	variableName      string
-	parameterName     string
-	pluginName        string
-	pluginReady       bool
-	pluginFactory     aggregatePluginFactory
-	pluginEnvironment *Environment
-	methodName        string
-	joinSource        int
-	previousOffset    int
-	children          []*exprNode
-	subquery          *subqueryDefinition
+	kind                  string
+	typ                   reflect.Type
+	description           string
+	fieldName             string
+	tagName               string
+	variableName          string
+	parameterName         string
+	pluginName            string
+	pluginReady           bool
+	pluginFactory         aggregatePluginFactory
+	pluginEnvironment     *Environment
+	methodName            string
+	joinSource            int
+	previousOffset        int
+	enumInputRequired     bool
+	enumParameterRequired bool
+	children              []*exprNode
+	subquery              *subqueryDefinition
 }
 
 type typedExpr[T any] struct {
