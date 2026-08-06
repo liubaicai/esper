@@ -610,6 +610,28 @@
       "difference": "The Go JoinChain reproduces the six Java source/root orders and their left/right edge conditions for one complete keyed tuple per source. Intermediate unmatched rows, exact arrival-order old/new cardinality, broad six-stream event permutations and physical index-plan details remain partial."
     },
     {
+      "id": "case.join-outer-seven-stream",
+      "javaRuntimeIds": ["java-runtime-6343086668bf9a400d4e", "java-runtime-87c719730a50416755f6", "java-runtime-6974edc37acc46e2f54a", "java-runtime-fcdaf4cc44d8f97cb304", "java-runtime-b25c87b6947afdb7400e", "java-runtime-47f8ec2ede5f9085f866", "java-runtime-996249dfdd1ce99805f5", "java-runtime-506c2417f29b802ac8a4"],
+      "javaNames": ["EPLJoinKeyPerStream", "EPLJoinRootS0", "EPLJoinRootS1", "EPLJoinRootS2", "EPLJoinRootS3", "EPLJoinRootS4", "EPLJoinRootS5", "EPLJoinRootS6"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLOuterJoin7Stream.java"],
+      "goTests": ["TestSevenStreamOuterRootVariantsMatchesEsper"],
+      "tags": ["correctness", "join", "outer-join", "multi-stream", "root-variants"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go JoinChain reproduces the seven Java root source orders and their left/right edge dependency topologies for one complete keyed tuple per source. The EPLJoinKeyPerStream two-property key matrix, intermediate unmatched rows, multi-row cardinality, broader event permutations and physical index-plan behavior remain partial."
+    },
+    {
+      "id": "case.join-outer-cartesian",
+      "javaRuntimeIds": ["java-runtime-0df807fbc6e13da4043f", "java-runtime-ca3bc1e04076dd832017", "java-runtime-713eb63a058df5e824f5", "java-runtime-4a3fbb1ad7bb01351f3e", "java-runtime-f0165d9b78ddd29e0fdf", "java-runtime-a9b32ea549f0f0c93d1d", "java-runtime-9d170ff249278c72bfc4", "java-runtime-8e7f05cbe7b2885e517b", "java-runtime-96702ff75783ee18e584", "java-runtime-d300dfbfc6e391a59da7", "java-runtime-338f3dedb09c4fcdc521", "java-runtime-85b1ad5969a2d83d6535", "java-runtime-5391a3be1b13018fd7e9"],
+      "javaNames": ["EPLJoinRootS0", "EPLJoinRootS1", "EPLJoinRootS2", "EPLJoinRootS3", "EPLJoinRootS0", "EPLJoinRootS1", "EPLJoinRootS1Order2", "EPLJoinRootS2", "EPLJoinRootS2Order2", "EPLJoinRootS3", "EPLJoinRootS3Order2", "EPLJoinRootS4", "EPLJoinRootS4Order2"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLOuterJoinCart4Stream.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLOuterJoinCart5Stream.java"],
+      "goTests": ["TestCartesianOuterHubVariantsMatchEsper"],
+      "tags": ["correctness", "join", "outer-join", "cartesian", "multi-stream", "root-variants"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go JoinChain covers the four-stream and five-stream Cartesian hub root/order variants with source-indexed outer edges and same-key final tuple convergence. Multi-row Cartesian cardinality, intermediate unmatched old/new transitions, broader event order and physical index-plan behavior remain partial."
+    },
+    {
       "id": "case.dataflow-typed-ports",
       "javaRuntimeIds": ["java-runtime-6309a6b7e0f0ba981a97"],
       "javaNames": ["EPLDataflowFanInOut"],
@@ -1472,6 +1494,8 @@
     {"capabilityId": "join.basic", "caseId": "case.join-outer-two-stream"},
     {"capabilityId": "join.basic", "caseId": "case.join-outer-unidirectional"},
     {"capabilityId": "join.basic", "caseId": "case.join-outer-six-stream"},
+    {"capabilityId": "join.basic", "caseId": "case.join-outer-seven-stream"},
+    {"capabilityId": "join.basic", "caseId": "case.join-outer-cartesian"},
     {"capabilityId": "context.partition", "caseId": "case.context-partitioning"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},

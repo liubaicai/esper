@@ -1624,3 +1624,7 @@ method source 的组合矩阵再补两条 Go-native 证据：多个 `FromMethodO
 本轮补齐 Java `EPLOuterJoinUnidirectional` 的全 driver full-outer readiness：`TestUnidirectionalFullOuterAllDriversEmitTransientRowsMatchesEsper` 以 2/3 流分别验证 A/B/C 每次到达都只产生当前 transient tuple，不把任何 driver 事件错误保留到下一次；并关联已有的单 driver N-way/full outer、tuple Where、timer Pattern 和 invalid validation 对照。该 Java 类 6 个 runtime 已登记；Pattern + Named Window 混合 full outer、精确 SODA/诊断和更宽四流 cardinality 仍保持 partial。
 
 本轮补齐 Java `EPLOuterJoin6Stream` 的六个 root 方向：`TestSixStreamOuterRootVariantsMatchesEsper` 用 Go `JoinChain` 复现六路 source order、left/right edge 条件和完整 keyed tuple 收敛，覆盖 `s0` 到 `s5` 的 root 变体。六个 Java runtime、源文件和 Go 测试已登记；中间 unmatched old/new cardinality、更多到达序列、七流/笛卡尔 outer 及物理索引计划仍保持 partial。
+
+本轮补齐 Java `EPLOuterJoin7Stream` 的 7 个 root runtime：`TestSevenStreamOuterRootVariantsMatchesEsper` 用 Go `JoinChain` 复现 S0–S6 的 source order、left/right edge 和依赖树，并验证七侧同 key tuple 收敛。`EPLJoinKeyPerStream` 的双属性 key 条件、各阶段 Null/old/new cardinality、多行组合、更多到达序列及物理索引计划仍保持 partial。
+
+本轮补齐 Java `EPLOuterJoinCart4Stream`/`EPLOuterJoinCart5Stream` 的 13 个 Cartesian hub/root runtime：`TestCartesianOuterHubVariantsMatchEsper` 以 Go `JoinChain` 覆盖四流 4 个 root、五流 9 个 root/order 变体及对应 left/right edge。当前证据锁定拓扑和同 key 最终 tuple；多行 Cartesian cardinality、中间 unmatched old/new、完整到达顺序和物理索引计划仍保持 partial。
