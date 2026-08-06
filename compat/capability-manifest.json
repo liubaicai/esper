@@ -141,12 +141,12 @@
       "id": "expr.core",
       "domain": "expression",
       "level": "S",
-      "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, arithmetic/exact numeric operations, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates, property presence checks and runtime type names, with ordered branches, null semantics and aggregate-aware evaluation",
-      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreMath", "ExprCoreMathDivisionRules", "ExprCoreBigNumberSupportMathContext", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
-      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_math.go", "expr_math_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "enum_expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
+      "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, arithmetic/exact numeric operations, scalar min/max and ANY/ALL/SOME quantifiers, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates, property presence checks and runtime type names, with ordered branches, null semantics and aggregate-aware evaluation",
+      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreMath", "ExprCoreMathDivisionRules", "ExprCoreBigNumberSupportMathContext", "ExprCoreMinMaxNonAgg", "ExprCoreAnyAllSome", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
+      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_math.go", "expr_math_test.go", "expr_minmax.go", "expr_minmax_test.go", "expr_quantifier.go", "expr_quantifier_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "enum_expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "complete MathContext/decimal scale and rounding policy, mixed BigDecimal/BigInteger result metadata and division configuration matrix", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
+      "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "complete MathContext/decimal scale and rounding policy, mixed BigDecimal/BigInteger result metadata and division configuration matrix", "complete ANY/ALL/SOME mixed representation, collection typing and invalid-diagnostic matrix", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
     },
     {
       "id": "expr.declared",
@@ -1006,6 +1006,28 @@
       "difference": "Go adds explicit-result AddOf/SubtractOf/MultiplyOf/ModuloOf and configurable DivideWithOptions/DivideFloat builders for mixed native numeric operands, preserving exact integral arithmetic until conversion, Null/typed-nil propagation and Esper division-by-zero policies. AddExact/SubtractExact/MultiplyExact/DivideExact use big.Int/big.Rat without float64 loss and cover Java BigInteger/BigDecimal value semantics. Java compiler-level default type inference, EPL/SODA/compile paths, MathContext DECIMAL32 rounding/scale, BigDecimal serialization and the complete mixed-type diagnostic matrix remain partial."
     },
     {
+      "id": "case.expr-core-minmax",
+      "javaRuntimeIds": ["java-runtime-26aacdff1f3bf613a79f", "java-runtime-7483301bc5adaf192da1", "java-runtime-5b4de929979c2a7c9abf"],
+      "javaNames": ["ExecCoreMinMax", "ExecCoreMinMaxOM", "ExecCoreMinMaxCompile"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreMinMaxNonAgg.java"],
+      "goTests": ["TestScalarMinMaxExpressionsMatchJavaNullAndPromotionSemantics", "TestScalarMinMaxExpressionsBuildTypedLiveProjectionAndPlanIdentity", "TestScalarMinMaxExpressionsRejectInvalidBuilders"],
+      "tags": ["correctness", "expression", "min", "max", "numeric-promotion", "string", "null", "invalid", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go exposes explicit-result MinOf[T](...Expr) and MaxOf[T](...Expr) for two-or-more scalar operands, including mixed native numeric pointer fields and strings; it preserves Null/Missing propagation, exact numeric comparison through the shared rational conversion path, typed result metadata and canonical Plan identity, while aggregate Min/Max remain separate stateful APIs. Java EPL/SODA/compile paths and compiler-inferred result types are represented by the fluent constructor; BigDecimal/BigInteger scalar ordering and complete representation/diagnostic matrices remain open."
+    },
+    {
+      "id": "case.expr-core-any-all-some",
+      "javaRuntimeIds": ["java-runtime-f619266cc0d44fed0e2b", "java-runtime-9ed5cc931cf3c4e887b1", "java-runtime-edcf2086ed2560747725", "java-runtime-464e2e46f36dd9cc74e5", "java-runtime-7f89b8d41ca7a4d2580c", "java-runtime-4210d93d10c1f5508166", "java-runtime-147cc012ddbd3ce9f8ca", "java-runtime-c1d2e4a73ddf7f55c84d", "java-runtime-1f9dd4106dd5bafc7429", "java-runtime-18d022f4379b6ed5de07", "java-runtime-28c1b89f9ab9081289d9", "java-runtime-ff2973917414f7e7ad76"],
+      "javaNames": ["ExprCoreAnyAllSomeEqualsAll", "ExprCoreEqualsAllArray", "ExprCoreEqualsAny", "ExprCoreEqualsAnyBigInt", "ExprCoreEqualsAnyArray", "ExprCoreRelationalOpAllArray", "ExprCoreRelationalOpNullOrNoRows", "ExprCoreRelationalOpAnyArray", "ExprCoreRelationalOpAll", "ExprCoreRelationalOpAny", "ExprCoreEqualsInNullOrNoRows", "ExprCoreAnyAllSomeInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreAnyAllSome.java"],
+      "goTests": ["TestQuantifiedExpressionsMatchJavaAnyAllSomeTruthTables", "TestQuantifiedExpressionsExpandArraysCollectionsAndMaps"],
+      "tags": ["correctness", "expression", "quantifier", "any", "some", "all", "array", "collection", "map", "numeric-coercion", "null", "empty", "invalid", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go exposes AnyOf/SomeOf/AllOf with explicit QuantifierEqual/NotEqual/Greater... comparisons. Candidate scalar expressions, arrays, slices and map keys are expanded in a Go-native plan, numeric values (including BigInteger) use shared coercion, and equality/relational Null behavior follows the Java three-valued cases for scalar and collection candidates; invalid collection left operands, nil candidates and operators are rejected at Build. Java EPL/SODA/compile syntax, implicit common-type inference, exact non-numeric collection filtering and the full representation/type diagnostic matrix remain partial; SubqueryAny/Some/All stays a separate source-backed API."
+    },
+    {
       "id": "case.expr-script-provider",
       "javaRuntimeIds": ["java-runtime-1010c63eb2330597a750", "java-runtime-a2b886734b1a2ad4cc28", "java-runtime-416f111d2368882ea644", "java-runtime-3834e7de0be8f481cea2", "java-runtime-76f900f81eab8fbb7068", "java-runtime-7b3d5e1ed4c6e5a98f89", "java-runtime-39ad2c583a5c307fdeaa", "java-runtime-c115e9369d2a342e8e7f", "java-runtime-97cf680e34e215878dae", "java-runtime-de45e4c09a85a606f39f", "java-runtime-e5e8e7be2d9e28ca1fcf"],
       "javaNames": ["EPLScriptScripts", "EPLScriptQuoteEscape", "EPLScriptDocSamples", "EPLScriptSubqueryParam", "EPLScriptReturnNullWhenNumeric", "EPLScriptGenericResultType", "EPLScriptExpressionConfiguration", "EPLScriptExpressionDisable", "EPLScriptSandboxJSR223", "EPLScriptSandboxMVEL", "EPLContainedScriptContextValue"],
@@ -1808,6 +1830,8 @@
     {"capabilityId": "expr.core", "caseId": "case.expr-core-exists-cast"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-type-name"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-math"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-minmax"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-any-all-some"},
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
