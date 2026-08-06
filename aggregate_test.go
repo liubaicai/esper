@@ -759,6 +759,64 @@ func TestSortedAccessNavigationAndDuplicateKeyBuckets(t *testing.T) {
 	}
 }
 
+func TestSortedAccessEventBucketNavigationMatchesEsper(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	price := Field[runtimeTestTrade, float64]("price")
+	sorted := SortedAccessBy[runtimeTestTrade, float64](EventValue[runtimeTestTrade](), price)
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(4)).Aggregate(
+		Alias("lowerEvents", sorted.LowerEvents(Literal(15.0))),
+		Alias("floorEvents", sorted.FloorEvents(Literal(15.0))),
+		Alias("higherEvents", sorted.HigherEvents(Literal(15.0))),
+		Alias("ceilingEvents", sorted.CeilingEvents(Literal(15.0))),
+		Alias("lowerLast", EnumLastOf[runtimeTestTrade](sorted.LowerEvents(Literal(15.0)))),
+	).Query(StatementName("sorted-access-event-buckets")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var last Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) == 0 {
+			return nil
+		}
+		last, _ = batch.New[len(batch.New)-1].Row()
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []runtimeTestTrade{
+		{Symbol: "A", Price: 10},
+		{Symbol: "B", Price: 10},
+		{Symbol: "C", Price: 20},
+		{Symbol: "D", Price: 30},
+	} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertBucket := func(name string, want ...string) {
+		values, ok := last.Get(name).Any().([]runtimeTestTrade)
+		if !ok || len(values) != len(want) {
+			t.Fatalf("%s = %#v, want %v", name, last.Get(name).Any(), want)
+		}
+		for index, symbol := range want {
+			if values[index].Symbol != symbol {
+				t.Fatalf("%s[%d] = %#v, want symbol %q", name, index, values[index], symbol)
+			}
+		}
+	}
+	assertBucket("lowerEvents", "A", "B")
+	assertBucket("floorEvents", "A", "B")
+	assertBucket("higherEvents", "C")
+	assertBucket("ceilingEvents", "C")
+	if value, ok := last.Get("lowerLast").Any().(runtimeTestTrade); !ok || value.Symbol != "B" {
+		t.Fatalf("lowerLast = %#v", last.Get("lowerLast").Any())
+	}
+}
+
 func TestAggregateToTableSinkPersistsSortedAccessState(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {

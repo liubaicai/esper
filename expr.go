@@ -5033,6 +5033,30 @@ func (s SortedAccessExpression[V, K]) CeilingEvent(key Expression[K]) AggregateE
 	})
 }
 
+func (s SortedAccessExpression[V, K]) LowerEvents(key Expression[K]) AggregateExpression[[]V] {
+	return sortedAccessMethod[V, K, []V](s, "sorted-access-lower-events", "sorted-access.lower-events()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessEventsAt[V, K](access, values, sortedAccessLower)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) FloorEvents(key Expression[K]) AggregateExpression[[]V] {
+	return sortedAccessMethod[V, K, []V](s, "sorted-access-floor-events", "sorted-access.floor-events()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessEventsAt[V, K](access, values, sortedAccessFloor)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) HigherEvents(key Expression[K]) AggregateExpression[[]V] {
+	return sortedAccessMethod[V, K, []V](s, "sorted-access-higher-events", "sorted-access.higher-events()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessEventsAt[V, K](access, values, sortedAccessHigher)
+	})
+}
+
+func (s SortedAccessExpression[V, K]) CeilingEvents(key Expression[K]) AggregateExpression[[]V] {
+	return sortedAccessMethod[V, K, []V](s, "sorted-access-ceiling-events", "sorted-access.ceiling-events()", []Expr{key}, func(access SortedAccessValue[K, V], values []Value) Value {
+		return sortedAccessEventsAt[V, K](access, values, sortedAccessCeiling)
+	})
+}
+
 func (s SortedAccessExpression[V, K]) EventsBetween(from Expression[K], fromInclusive bool, to Expression[K], toInclusive bool) AggregateExpression[[]V] {
 	return sortedAccessMethod[V, K, []V](s, "sorted-access-events-between", "sorted-access.events-between()", []Expr{from, to}, func(access SortedAccessValue[K, V], values []Value) Value {
 		fromKey, fromOK := sortedAccessKey[V, K]([]Value{values[0]})
