@@ -274,7 +274,7 @@
       "domain": "join",
       "level": "S",
       "summary": "Inner, outer and N-way join state with context and Named Window snapshots",
-      "javaRefs": ["EPLJoin20Stream", "EPLOuterInnerJoin3Stream", "EPLOuterInnerJoin4Stream", "EPLOuterJoin6Stream", "EPLOuterJoinVarA3Stream", "EPLOuterJoinVarB3Stream", "EPLOuterJoinVarC3Stream", "EPLJoinUnidirectionalStream", "EPLJoin2StreamAndPropertyPerformance", "EPLJoin2StreamExprPerformance", "EPLJoin2StreamRangePerformance", "EPLJoin2StreamSimpleCoercionPerformance", "EPLJoin2StreamSimplePerformance", "EPLJoin3StreamAndPropertyPerformance", "EPLJoin3StreamCoercionPerformance", "EPLJoin3StreamOuterJoinCoercionPerformance", "EPLJoin3StreamRangePerformance", "EPLJoin5StreamPerformance", "EPLJoinSingleOp3Stream", "EPLJoinInheritAndInterface", "EPLJoinNoTableName", "EPLJoinDerivedValueViews", "EPLJoin2StreamInKeywordPerformance", "EPLJoin3StreamInKeywordPerformance", "EPLJoinPatterns", "EPLJoinMultiKeyAndRange", "EPLJoinPropertyAccess", "EPLJoinEventRepresentation", "EPLJoinUniqueIndex", "EPLJoinSelectClause", "EPLJoinStartStop", "EPLJoinCoercion"],
+      "javaRefs": ["EPLJoin20Stream", "EPLJoin2StreamSimple", "EPLOuterInnerJoin3Stream", "EPLOuterInnerJoin4Stream", "EPLOuterFullJoin3Stream", "EPLOuterJoinChain4Stream", "EPLOuterJoinLeftWWhere", "EPLOuterJoin6Stream", "EPLOuterJoinVarA3Stream", "EPLOuterJoinVarB3Stream", "EPLOuterJoinVarC3Stream", "EPLJoinUnidirectionalStream", "EPLJoin2StreamAndPropertyPerformance", "EPLJoin2StreamExprPerformance", "EPLJoin2StreamRangePerformance", "EPLJoin2StreamSimpleCoercionPerformance", "EPLJoin2StreamSimplePerformance", "EPLJoin3StreamAndPropertyPerformance", "EPLJoin3StreamCoercionPerformance", "EPLJoin3StreamOuterJoinCoercionPerformance", "EPLJoin3StreamRangePerformance", "EPLJoin5StreamPerformance", "EPLJoinSingleOp3Stream", "EPLJoinInheritAndInterface", "EPLJoinNoTableName", "EPLJoinNoWhereClause", "EPLJoinDerivedValueViews", "EPLJoin2StreamInKeywordPerformance", "EPLJoin3StreamInKeywordPerformance", "EPLJoinPatterns", "EPLJoinMultiKeyAndRange", "EPLJoinPropertyAccess", "EPLJoinEventRepresentation", "EPLJoinUniqueIndex", "EPLJoinSelectClause", "EPLJoinStartStop", "EPLJoinCoercion"],
       "goRefs": ["stream.go", "plan.go", "runtime.go", "value.go", "expr.go", "pattern_join.go", "join_test.go", "join_where_test.go", "join_chain_test.go", "subquery_join_test.go", "join_aggregate_context_test.go", "join_pattern_test.go", "join_multikey_range_test.go", "join_property_test.go", "join_representation_test.go", "join_unique_index_test.go", "join_select_test.go", "join_coercion_test.go", "join_inherit_test.go", "join_no_table_test.go", "join_derived_view_test.go", "join_in_keyword_test.go", "join_20_stream_test.go", "join_outer_four_stream_test.go", "join_outer_six_stream_test.go", "join_outer_var_test.go", "join_outer_mixed_test.go", "join_outer_chain_four_test.go", "join_outer_full_three_test.go", "join_unidirectional_test.go", "join_unidirectional_outer_test.go", "join_unidirectional_parity_test.go", "join_performance_test.go", "expr_test.go"],
       "phase": 1,
       "status": "partial",
@@ -1025,6 +1025,17 @@
       "difference": "Go adds OutputFirstEveryEvents/OutputFirstEveryTime chain policies with first-visible activation, input-event throttling and virtual-time throttling, covering ungrouped HAVING aggregate traces. Java's raw and two-stream join variants, exact expression typing/diagnostics and full output-first composition matrix remain open."
     },
     {
+      "id": "case.output-group-policies",
+      "javaRuntimeIds": ["java-runtime-decf2ff614722c1273d1", "java-runtime-fbb40900955b851741c6", "java-runtime-34a8b14ea96443475b9c", "java-runtime-080737b1c181da82710e"],
+      "javaNames": ["ResultSetUnaggregatedOutputFirst", "ResultSetLastNoDataWindow", "ResultSetWildcardRowPerGroup", "ResultSetOutputLastMultikeyWArray"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAggregateGrouped.java"],
+      "goTests": ["TestOutputFirstEveryTimeIsIndependentPerGroupMatchesEsper", "TestOutputLastEveryEventsKeepsLatestRowPerGroupMatchesEsper", "TestOutputLastEveryTimeKeepsLatestRowsPerGroupAndSupportsMultikey"],
+      "tags": ["correctness", "output", "group", "first", "last", "multikey"],
+      "status": "mapped",
+      "evidence": ["java-baseline", "go-unit"],
+      "difference": "Go carries aggregate group keys through result batches and applies first/last throttling independently per group, including composite keys, latest-row replacement, virtual-clock flushing and deterministic projected ordering. Java's full row-per-group default/all/first/last/snapshot matrix, Join variants and remove-stream/iterator traces remain open."
+    },
+    {
       "id": "case.pattern-every",
       "javaRuntimeIds": ["java-runtime-1599ec33f3b19e7b7688", "java-runtime-bb8113cb979826cff927", "java-runtime-f0649272cfb528ce731b", "java-runtime-2fe5370a7c1599bfb424", "java-runtime-66d65309509fac58bbfc", "java-runtime-36ef6f15f14a0e86ab93", "java-runtime-6a5e8128ae184e8a7249", "java-runtime-34555c4a9823a346d710", "java-runtime-78d9e9fcf78678c48ff9", "java-runtime-56116a3e1351bcc4dc23", "java-runtime-a0ae611c1bd46c4407d9", "java-runtime-9b41fb5951301c0de979", "java-runtime-d5ad6ad9d226628f8383", "java-runtime-bbb75d6bcc54f29c7652", "java-runtime-97c5e6b5e4c46cc0adb4", "java-runtime-ea394f5795b88ddd71c9", "java-runtime-28fc7f508485cbc765a2", "java-runtime-6155a2b0181e2169f2a4", "java-runtime-d74fc320152752b79c83"],
       "javaNames": ["PatternEverySimple", "PatternOp", "PatternInterval10Min", "PatternInterval10MinVariable", "PatternIntervalPrepared", "PatternWithinFromExpression", "PatternPatternNotFollowedBy", "PatternWithinMayMaxMonthScoped", "PatternGuardTimerWithinOrMax", "PatternTimerWithinOverDistinct", "PatternEveryDistinctOverTimerWithin", "PatternIntervalSpec", "PatternIntervalSpecVariables", "PatternIntervalSpecExpression", "PatternIntervalSpecExpressionWithProperty", "PatternIntervalSpecPreparedStmt", "PatternMonthScoped", "PatternIntervalSpecExpressionWithPropertyArray", "PatternMicrosecondResolution"],
@@ -1576,6 +1587,7 @@
     {"capabilityId": "output.when-basic", "caseId": "case.output-row-limit-batch"},
     {"capabilityId": "output.when-basic", "caseId": "case.output-after-basic"},
     {"capabilityId": "output.when-basic", "caseId": "case.output-first-having"},
+    {"capabilityId": "output.when-basic", "caseId": "case.output-group-policies"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-every"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-followed-by-max"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-consumption-policy"},

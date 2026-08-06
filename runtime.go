@@ -86,6 +86,8 @@ type ResultBatch struct {
 	outputCountsSet bool
 	outputInserted  int64
 	outputRemoved   int64
+	outputKeysNew   []string
+	outputKeysOld   []string
 }
 
 func (b ResultBatch) empty() bool { return len(b.New) == 0 && len(b.Old) == 0 }
@@ -93,6 +95,8 @@ func (b ResultBatch) empty() bool { return len(b.New) == 0 && len(b.Old) == 0 }
 func (b ResultBatch) clone() ResultBatch {
 	b.New = append([]Result(nil), b.New...)
 	b.Old = append([]Result(nil), b.Old...)
+	b.outputKeysNew = append([]string(nil), b.outputKeysNew...)
+	b.outputKeysOld = append([]string(nil), b.outputKeysOld...)
 	return b
 }
 
@@ -2573,6 +2577,7 @@ type aggregateGroup struct {
 type aggregateResultEntry struct {
 	result Result
 	group  *aggregateGroup
+	key    string
 }
 
 type patternRuntimeState struct {
@@ -2765,6 +2770,8 @@ type outputRuntimeState struct {
 	firstEmitted      int
 	firstEverySeen    int
 	firstEveryStarted bool
+	firstEveryGroups  map[string]struct{}
+	firstEveryNext    map[string]time.Time
 	lastEverySeen     int
 	pending           *ResultBatch
 	pendingCount      int
@@ -4330,7 +4337,7 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		return r.applyLastEveryTime(policy, batch, flush, now, plans...)
 	case OutputLastPolicy, OutputSnapshotPolicy:
 		if !batch.empty() {
-			copyBatch := batch.clone()
+			copyBatch := mergeLastOutputBatch(r.outputState.pending, batch)
 			r.outputState.pending = &copyBatch
 		}
 		if !flush || r.outputState.pending == nil {
@@ -4415,23 +4422,40 @@ func (r *statementRuntime) applyFirstEveryEvents(policy OutputPolicy, batch Resu
 		return ResultBatch{}
 	}
 	state := r.outputState
+	if state.firstEveryGroups == nil {
+		state.firstEveryGroups = make(map[string]struct{})
+	}
 	if !state.firstEveryStarted {
 		if batch.empty() {
 			return ResultBatch{}
 		}
 		state.firstEveryStarted = true
 		state.firstEverySeen = 0
-		return r.finishOutput(policy, firstOutputResult(batch), now, plans...)
+		result := selectFirstOutputByGroup(batch, func(key string) bool {
+			if _, exists := state.firstEveryGroups[key]; exists {
+				return false
+			}
+			state.firstEveryGroups[key] = struct{}{}
+			return true
+		})
+		return r.finishOutput(policy, result, now, plans...)
 	}
 	state.firstEverySeen += acceptedOutputEventCount(batch)
-	if state.firstEverySeen < policy.Count {
-		return ResultBatch{}
+	if state.firstEverySeen >= policy.Count {
+		state.firstEverySeen = 0
+		clearOutputGroupSet(state.firstEveryGroups)
 	}
-	state.firstEverySeen = 0
 	if batch.empty() {
 		return ResultBatch{}
 	}
-	return r.finishOutput(policy, firstOutputResult(batch), now, plans...)
+	result := selectFirstOutputByGroup(batch, func(key string) bool {
+		if _, exists := state.firstEveryGroups[key]; exists {
+			return false
+		}
+		state.firstEveryGroups[key] = struct{}{}
+		return true
+	})
+	return r.finishOutput(policy, result, now, plans...)
 }
 
 func (r *statementRuntime) applyFirstEveryTime(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
@@ -4439,12 +4463,18 @@ func (r *statementRuntime) applyFirstEveryTime(policy OutputPolicy, batch Result
 		return ResultBatch{}
 	}
 	state := r.outputState
-	if state.firstEveryStarted && !state.nextOutputAt.IsZero() && now.Before(state.nextOutputAt) {
-		return ResultBatch{}
+	if state.firstEveryNext == nil {
+		state.firstEveryNext = make(map[string]time.Time)
 	}
-	state.firstEveryStarted = true
-	state.nextOutputAt = now.Add(policy.Interval)
-	return r.finishOutput(policy, firstOutputResult(batch), now, plans...)
+	result := selectFirstOutputByGroup(batch, func(key string) bool {
+		next, exists := state.firstEveryNext[key]
+		if exists && now.Before(next) {
+			return false
+		}
+		state.firstEveryNext[key] = now.Add(policy.Interval)
+		return true
+	})
+	return r.finishOutput(policy, result, now, plans...)
 }
 
 func (r *statementRuntime) applyLastEveryEvents(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
@@ -4454,7 +4484,7 @@ func (r *statementRuntime) applyLastEveryEvents(policy OutputPolicy, batch Resul
 	state := r.outputState
 	state.lastEverySeen += acceptedOutputEventCount(batch)
 	if !batch.empty() {
-		copyBatch := batch.clone()
+		copyBatch := mergeLastOutputBatch(state.pending, batch)
 		state.pending = &copyBatch
 	}
 	if state.lastEverySeen < policy.Count {
@@ -4475,7 +4505,7 @@ func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultB
 	}
 	state := r.outputState
 	if !batch.empty() {
-		copyBatch := batch.clone()
+		copyBatch := mergeLastOutputBatch(state.pending, batch)
 		state.pending = &copyBatch
 		if state.nextOutputAt.IsZero() {
 			state.nextOutputAt = now.Add(policy.Interval)
@@ -4505,13 +4535,112 @@ func firstOutputResult(batch ResultBatch) ResultBatch {
 	result := batch.clone()
 	if len(result.New) > 0 {
 		result.New = result.New[:1]
+		if len(result.outputKeysNew) > 1 {
+			result.outputKeysNew = result.outputKeysNew[:1]
+		}
 		result.Old = nil
+		result.outputKeysOld = nil
 		return result
 	}
 	if len(result.Old) > 1 {
 		result.Old = result.Old[:1]
+		if len(result.outputKeysOld) > 1 {
+			result.outputKeysOld = result.outputKeysOld[:1]
+		}
 	}
 	return result
+}
+
+func selectFirstOutputByGroup(batch ResultBatch, allow func(string) bool) ResultBatch {
+	result := ResultBatch{Time: batch.Time}
+	selected := make(map[string]struct{})
+	appendNew := func(index int) {
+		key := outputGroupKey(batch.outputKeysNew, index)
+		if _, exists := selected[key]; exists || !allow(key) {
+			return
+		}
+		selected[key] = struct{}{}
+		result.New = append(result.New, batch.New[index])
+		if len(batch.outputKeysNew) > index {
+			result.outputKeysNew = append(result.outputKeysNew, key)
+		}
+	}
+	appendOld := func(index int) {
+		key := outputGroupKey(batch.outputKeysOld, index)
+		if _, exists := selected[key]; exists || !allow(key) {
+			return
+		}
+		selected[key] = struct{}{}
+		result.Old = append(result.Old, batch.Old[index])
+		if len(batch.outputKeysOld) > index {
+			result.outputKeysOld = append(result.outputKeysOld, key)
+		}
+	}
+	for index := range batch.New {
+		appendNew(index)
+	}
+	for index := range batch.Old {
+		appendOld(index)
+	}
+	return result
+}
+
+func clearOutputGroupSet(groups map[string]struct{}) {
+	for key := range groups {
+		delete(groups, key)
+	}
+}
+
+func outputGroupKey(keys []string, index int) string {
+	if index >= 0 && index < len(keys) && keys[index] != "" {
+		return keys[index]
+	}
+	return "\x00esper-output-global"
+}
+
+func mergeLastOutputBatch(existing *ResultBatch, incoming ResultBatch) ResultBatch {
+	if incoming.empty() {
+		if existing == nil {
+			return ResultBatch{}
+		}
+		return existing.clone()
+	}
+	if existing == nil || (len(existing.outputKeysNew) == 0 && len(existing.outputKeysOld) == 0 && len(incoming.outputKeysNew) == 0 && len(incoming.outputKeysOld) == 0) {
+		return incoming.clone()
+	}
+	result := existing.clone()
+	result.New, result.outputKeysNew = mergeLastOutputSide(result.New, incoming.New, result.outputKeysNew, incoming.outputKeysNew)
+	result.Old, result.outputKeysOld = mergeLastOutputSide(result.Old, incoming.Old, result.outputKeysOld, incoming.outputKeysOld)
+	result.Time = incoming.Time
+	return result
+}
+
+func mergeLastOutputSide(existing, incoming []Result, existingKeys, incomingKeys []string) ([]Result, []string) {
+	if len(incoming) == 0 {
+		return existing, existingKeys
+	}
+	if len(existing) == 0 && len(existingKeys) == 0 {
+		return append([]Result(nil), incoming...), append([]string(nil), incomingKeys...)
+	}
+	result := append([]Result(nil), existing...)
+	keys := append([]string(nil), existingKeys...)
+	positions := make(map[string]int, len(result))
+	for index := range result {
+		positions[outputGroupKey(keys, index)] = index
+	}
+	for index, item := range incoming {
+		key := outputGroupKey(incomingKeys, index)
+		if position, exists := positions[key]; exists {
+			result[position] = item
+			continue
+		}
+		positions[key] = len(result)
+		result = append(result, item)
+		if len(incomingKeys) > index || len(keys) > 0 {
+			keys = append(keys, key)
+		}
+	}
+	return result, keys
 }
 
 // outputAtTermination produces the result associated with an initiated
@@ -4655,13 +4784,14 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 		if !visible {
 			continue
 		}
-		entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), group: group})
+		entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), group: group, key: key})
 	}
 	if len(plan.query.orderBy) > 0 {
 		orderAggregateResults(entries, plan.query.orderBy, definition, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, false)
 	}
 	for _, entry := range entries {
 		result.New = append(result.New, entry.result)
+		result.outputKeysNew = append(result.outputKeysNew, entry.key)
 	}
 	if plan.query.distinct {
 		result.New = distinctSnapshotResults(result.New)
@@ -4829,7 +4959,7 @@ func (r *statementRuntime) applyCronOutput(policy OutputPolicy, batch ResultBatc
 	if !batch.empty() {
 		switch policy.Kind {
 		case OutputLastPolicy:
-			copyBatch := batch.clone()
+			copyBatch := mergeLastOutputBatch(state.pending, batch)
 			state.pending = &copyBatch
 		case OutputSnapshotPolicy:
 			// A snapshot is reconstructed from the current source state at the
@@ -9280,6 +9410,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			oldEntries = append(oldEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, group.previous)),
 				group:  group,
+				key:    key,
 			})
 		}
 		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates)
@@ -9287,6 +9418,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			newEntries = append(newEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, newValues)),
 				group:  group,
+				key:    key,
 			})
 		}
 		if visible {
@@ -9306,9 +9438,11 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	}
 	for _, entry := range newEntries {
 		batch.New = append(batch.New, entry.result)
+		batch.outputKeysNew = append(batch.outputKeysNew, entry.key)
 	}
 	for _, entry := range oldEntries {
 		batch.Old = append(batch.Old, entry.result)
+		batch.outputKeysOld = append(batch.outputKeysOld, entry.key)
 	}
 	if !batch.empty() {
 		if plan.query.distinct {
@@ -9902,7 +10036,7 @@ func deferOutputResultWindow(policy OutputPolicy) bool {
 		return false
 	}
 	switch policy.Kind {
-	case OutputEveryPolicy, OutputEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy:
+	case OutputEveryPolicy, OutputEveryTimePolicy, OutputFirstEveryEventsPolicy, OutputFirstEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy:
 		return true
 	default:
 		return false
