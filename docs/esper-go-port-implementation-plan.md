@@ -1654,3 +1654,5 @@ method source 的组合矩阵再补两条 Go-native 证据：多个 `FromMethodO
 随后增加 scalar-array 入口：`ContainedValue[T]` 与 `UnnestValues` 将 `[]T` 包装成显式注册的 typed child event，`TestUnnestValuesProjectsScalarArrayElements` 对照 Java `EPLContainedEventIntArray` 的有序 int 数组展开。该设计保持 Go 的类型/Schema 边界清晰；String-array `where`、`@type` 事件 materialization、split expression 和标量 contained join 仍未宣称完成。
 
 另外以 `TestUnnestParticipatesInJoin` 验证展开后的 child stream 可以作为普通 Join 左侧，与后续事件流按 child 字段匹配；该证据登记到 Java `EPLContainedJoin`，但不等价于 Java 的 unidirectional、Named Window、outer/self/full-join 全矩阵。
+
+output-when 另外补了一条表达式矩阵：`TestOutputWhenExpressionLikeAndThenAssignmentMatchesEsper` 使用 Go `And`/`Like` 变量表达式，在 `OutputAll` 待输出批次满足条件时 flush，并通过 then assignment 读取 `OutputCountInsert`；该用例登记 Java `ResultSetOutputWhenExpression`/`ResultSetOutputWhenThenExpression`，SODA round-trip、同一变量多语句时间协调和精确 invalid diagnostics 仍保持 partial。

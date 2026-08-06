@@ -697,3 +697,69 @@ func TestOutputWhenSnapshotEmitsCurrentWindowAndThenUpdatesVariable(t *testing.T
 		t.Fatalf("snapshot-when second row = %#v", batches[1].New[0])
 	}
 }
+
+func TestOutputWhenExpressionLikeAndThenAssignmentMatchesEsper(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	for name, initial := range map[string]any{
+		"output-expression-int":    int64(0),
+		"output-expression-string": "",
+		"output-expression-count":  int64(0),
+	} {
+		if err := env.RegisterVariable(name, initial); err != nil {
+			t.Fatal(err)
+		}
+	}
+	condition := And(
+		Equal[int64](VariableRef[int64]("output-expression-int"), Literal(int64(1))),
+		Like(VariableRef[string]("output-expression-string"), Literal("F%")),
+	)
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(
+		StatementName("output-when-expression"),
+		WithOutput(OutputWhenWith(
+			OutputAll(),
+			condition,
+			SetOutputVariable("output-expression-int", Literal(int64(0))),
+			SetOutputVariable("output-expression-count", OutputCountInsert()),
+		)),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, symbol := range []string{"S1", "S2"} {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(batches) != 0 {
+		t.Fatalf("output-when expression fired before variables matched = %#v", batches)
+	}
+	if err := engine.SetVariable(context.Background(), "output-expression-int", int64(1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SetVariable(context.Background(), "output-expression-string", "F1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "F1"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(batches) != 1 || len(batches[0].New) != 3 {
+		t.Fatalf("output-when expression batch = %#v", batches)
+	}
+	if value, ok := engine.GetVariable("output-expression-int"); !ok || !value.Equal(Present(int64(0))) {
+		t.Fatalf("output-when expression then int = %#v", value)
+	}
+	if value, ok := engine.GetVariable("output-expression-count"); !ok || !value.Equal(Present(int64(3))) {
+		t.Fatalf("output-when expression then count = %#v", value)
+	}
+}

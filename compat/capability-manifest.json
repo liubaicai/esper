@@ -1004,6 +1004,17 @@
       "evidence": ["java-baseline", "go-unit"]
     },
     {
+      "id": "case.output-when-expression",
+      "javaRuntimeIds": ["java-runtime-c2d3ed98db375e91de2f", "java-runtime-a8adf32d83300b3351bf"],
+      "javaNames": ["ResultSetOutputWhenExpression", "ResultSetOutputWhenThenExpression"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitCrontabWhen.java"],
+      "goTests": ["TestOutputWhenExpressionLikeAndThenAssignmentMatchesEsper"],
+      "tags": ["correctness", "output", "when", "like", "then", "variable"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-baseline", "go-unit"],
+      "difference": "Go covers a variable-only AND/LIKE gate with a buffered OutputAll batch and then assignments reading the insert counter. ObjectModel/SODA round-trip, shared-variable multi-statement timing and exact invalid diagnostics remain open."
+    },
+    {
       "id": "case.output-when-then-snapshot",
       "javaRuntimeIds": ["java-runtime-3c9bdbb7369e2841388f", "java-runtime-4b19317271be7df8b569", "java-runtime-ea6fd826ff841fc4b10b"],
       "javaNames": ["ResultSetOutputWhenThenWVariable", "ContextInitTermOutputSnapshotWhenTerminated", "ContextInitTermFilterInitiatedFilterTerminatedCorrelatedOutputSnapshot"],
@@ -1628,6 +1639,7 @@
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-variable"},
     {"capabilityId": "output.when-basic", "caseId": "case.output-when-counters"},
+    {"capabilityId": "output.when-basic", "caseId": "case.output-when-expression"},
     {"capabilityId": "output.when-basic", "caseId": "case.output-when-then-snapshot"},
     {"capabilityId": "output.when-basic", "caseId": "case.output-snapshot-state"},
     {"capabilityId": "output.when-basic", "caseId": "case.output-when-then-count"},
