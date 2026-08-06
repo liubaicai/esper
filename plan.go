@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-const planSchemaVersion = "esper-go-plan/v1"
+const planSchemaVersion = "esper-go-plan/v2"
 
 // Environment is the compile-time catalog for schemas and future extension
 // registrations. It is safe to share for concurrent Plan construction.
@@ -595,7 +595,7 @@ func (e *Environment) Build(query Query) (Plan, error) {
 			}
 			parameterNames := append([]string(nil), operator.ParameterNames...)
 			sort.Strings(parameterNames)
-			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s:join=%s:inputs=%s:outputs=%s:properties=%s:parameters=%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon, canonicalDataflowJoin(operator), canonicalDataflowPorts(operator, false), canonicalDataflowPorts(operator, true), canonicalDataflowProperties(operator.Properties), strings.Join(parameterNames, ",")))
+			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s:select=%s:join=%s:inputs=%s:outputs=%s:properties=%s:parameters=%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon, canonicalDataflowSelect(operator), canonicalDataflowJoin(operator), canonicalDataflowPorts(operator, false), canonicalDataflowPorts(operator, true), canonicalDataflowProperties(operator.Properties), strings.Join(parameterNames, ",")))
 		}
 		edges := make([]string, 0, len(dataflow.edges))
 		for _, edge := range dataflow.edges {
@@ -612,6 +612,38 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		query:         query,
 		resultSchema:  resultSchema,
 	}, nil
+}
+
+func canonicalDataflowSelect(operator DataflowOperator) string {
+	if operator.Kind != SelectKind {
+		return ""
+	}
+	options := operator.SelectOptions
+	groups := make([]string, 0, len(options.GroupBy))
+	for _, expression := range options.GroupBy {
+		if expression == nil {
+			groups = append(groups, "<nil>")
+			continue
+		}
+		groups = append(groups, expression.Description())
+	}
+	ordering := make([]string, 0, len(options.OrderBy))
+	for _, key := range options.OrderBy {
+		description := "<nil>"
+		if key.Expr != nil {
+			description = key.Expr.Description()
+		}
+		ordering = append(ordering, fmt.Sprintf("%s:%t", description, key.Descending))
+	}
+	return fmt.Sprintf("output=%s;preserve=%t;time=%s;snapshot=%s;iterate=%t;group=%s;order=%s",
+		options.OutputEventType,
+		options.PreserveInput,
+		options.TimeWindow,
+		options.OutputSnapshotEvery,
+		options.IterateOnFinalMarker,
+		strings.Join(groups, ","),
+		strings.Join(ordering, ","),
+	)
 }
 
 func canonicalDataflowJoin(operator DataflowOperator) string {

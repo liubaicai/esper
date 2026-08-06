@@ -772,16 +772,20 @@ const (
 // when OutputEventType is set. This models Esper's select-star and wrapper
 // output without exposing EPL or Java EventBean internals.
 type DataflowSelectOptions struct {
-	TimeWindow           time.Duration
-	OutputSnapshotEvery  time.Duration
-	IterateOnFinalMarker bool
-	GroupBy              []Expr
-	OrderBy              []SortKey
-	OutputEventType      string
-	PreserveInput        bool
+	TimeWindow            time.Duration
+	OutputSnapshotEvery   time.Duration
+	IterateOnFinalMarker  bool
+	GroupBy               []Expr
+	OrderBy               []SortKey
+	OutputEventType       string
+	PreserveInput         bool
+	outputEventConfigured bool
 }
 
 func (o DataflowSelectOptions) validate() error {
+	if o.outputEventConfigured && strings.TrimSpace(o.OutputEventType) == "" {
+		return NewError(ErrorInvalidRule, "dataflow select event output requires an event type")
+	}
 	if o.TimeWindow < 0 {
 		return NewError(ErrorInvalidRule, "dataflow select time window cannot be negative")
 	}
@@ -1694,8 +1698,9 @@ func (b DataflowBuilder) SelectPassThrough(name string) DataflowBuilder {
 // properties such as `hello` while retaining the source fields.
 func (b DataflowBuilder) SelectEvent(name, eventType string, selections ...Selection) DataflowBuilder {
 	return b.SelectWithOptions(name, DataflowSelectOptions{
-		OutputEventType: eventType,
-		PreserveInput:   true,
+		OutputEventType:       eventType,
+		PreserveInput:         true,
+		outputEventConfigured: true,
 	}, selections...)
 }
 
@@ -1731,6 +1736,18 @@ func (b DataflowBuilder) SelectIterateOnFinalMarker(name string, selections ...S
 // JoinEventValue use the same zero-based input index as the generated in<i>
 // ports, keeping source scope explicit in Go code.
 func (b DataflowBuilder) SelectJoin(name string, options DataflowJoinOptions, selections ...Selection) DataflowBuilder {
+	return b.selectJoin(name, "", false, options, selections)
+}
+
+// SelectJoinEvent is the typed-output form of SelectJoin. Each joined tuple
+// is projected into the registered event schema instead of the default Row
+// representation, preserving the schema's native Struct, Map, ObjectArray,
+// JSON, XML or Avro underlying value.
+func (b DataflowBuilder) SelectJoinEvent(name, eventType string, options DataflowJoinOptions, selections ...Selection) DataflowBuilder {
+	return b.selectJoin(name, eventType, true, options, selections)
+}
+
+func (b DataflowBuilder) selectJoin(name, eventType string, eventConfigured bool, options DataflowJoinOptions, selections []Selection) DataflowBuilder {
 	capacity := 0
 	if options.Inputs > 0 {
 		capacity = options.Inputs
@@ -1746,6 +1763,10 @@ func (b DataflowBuilder) SelectJoin(name string, options DataflowJoinOptions, se
 		InputPorts:     ports,
 		JoinOptions:    cloneDataflowJoinOptions(options),
 		JoinConfigured: true,
+		SelectOptions: DataflowSelectOptions{
+			OutputEventType:       eventType,
+			outputEventConfigured: eventConfigured,
+		},
 	})
 }
 
