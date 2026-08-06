@@ -581,9 +581,17 @@ func (e *Environment) Build(query Query) (Plan, error) {
 				if operator.BeaconOptions.IterationsExpression != nil {
 					iterationsExpression = operator.BeaconOptions.IterationsExpression.Description()
 				}
+				initialDelayExpression := ""
+				if operator.BeaconOptions.InitialDelayExpression != nil {
+					initialDelayExpression = operator.BeaconOptions.InitialDelayExpression.Description()
+				}
+				intervalExpression := ""
+				if operator.BeaconOptions.IntervalExpression != nil {
+					intervalExpression = operator.BeaconOptions.IntervalExpression.Description()
+				}
 				fieldParameters := append([]string(nil), operator.BeaconOptions.FieldParameters...)
 				sort.Strings(fieldParameters)
-				beacon = fmt.Sprintf("iterations=%d;iterationsExpr=%s;initial=%s;interval=%s;factory=%t;event=%t;underlying=%t;fieldParameters=%s", operator.BeaconOptions.Iterations, iterationsExpression, operator.BeaconOptions.InitialDelay, operator.BeaconOptions.Interval, operator.BeaconOptions.Factory != nil, operator.BeaconEventConfigured, operator.BeaconUnderlying, strings.Join(fieldParameters, ","))
+				beacon = fmt.Sprintf("iterations=%d;iterationsExpr=%s;initial=%s;initialExpr=%s;interval=%s;intervalExpr=%s;factory=%t;event=%t;underlying=%t;fieldParameters=%s", operator.BeaconOptions.Iterations, iterationsExpression, operator.BeaconOptions.InitialDelay, initialDelayExpression, operator.BeaconOptions.Interval, intervalExpression, operator.BeaconOptions.Factory != nil, operator.BeaconEventConfigured, operator.BeaconUnderlying, strings.Join(fieldParameters, ","))
 			}
 			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon))
 		}

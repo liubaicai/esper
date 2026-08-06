@@ -80,21 +80,36 @@ type DataflowBeaconContext struct {
 // as a normal beacon value.
 type DataflowBeaconFactory func(context.Context, DataflowBeaconContext) (any, error)
 
+// BeaconSource timing parameter names exposed to DataflowParameterProvider.
+// Durations use time.Duration values; iterations accepts any non-negative Go
+// integer type that fits int.
+const (
+	DataflowBeaconIterationsParameter   = "iterations"
+	DataflowBeaconInitialDelayParameter = "initialDelay"
+	DataflowBeaconIntervalParameter     = "interval"
+)
+
 // DataflowBeaconOptions configures a repeating BeaconSource. Iterations zero
 // means repeat until the dataflow is canceled; a positive value emits exactly
 // that many values and then submits FinalMarker before completing. An optional
 // IterationsExpression is evaluated once from registered variables when the
-// instance is created. Events are selected cyclically when Factory is nil,
-// while an empty Events slice emits an empty []any value on each iteration.
+// instance is created. InitialDelayExpression and IntervalExpression provide
+// the equivalent typed time.Duration form for timing. A
+// DataflowParameterProvider is consulted first for all three built-in timing
+// names, matching Esper's instance parameter resolution. Events are selected
+// cyclically when Factory is nil, while an empty Events slice emits an empty
+// []any value on each iteration.
 // FieldParameters declares typed event fields that a DataflowParameterProvider
 // may override independently for each instantiated dataflow.
 type DataflowBeaconOptions struct {
-	Iterations           int
-	IterationsExpression Expr
-	InitialDelay         time.Duration
-	Interval             time.Duration
-	Factory              DataflowBeaconFactory
-	FieldParameters      []string
+	Iterations             int
+	IterationsExpression   Expr
+	InitialDelay           time.Duration
+	InitialDelayExpression Expr
+	Interval               time.Duration
+	IntervalExpression     Expr
+	Factory                DataflowBeaconFactory
+	FieldParameters        []string
 }
 
 func (o DataflowBeaconOptions) validate() error {
@@ -109,6 +124,12 @@ func (o DataflowBeaconOptions) validate() error {
 	}
 	if o.Interval < 0 {
 		return NewError(ErrorInvalidRule, "dataflow beacon interval cannot be negative")
+	}
+	if o.InitialDelay > 0 && o.InitialDelayExpression != nil {
+		return NewError(ErrorInvalidRule, "dataflow beacon initial delay and initial delay expression cannot both be configured")
+	}
+	if o.Interval > 0 && o.IntervalExpression != nil {
+		return NewError(ErrorInvalidRule, "dataflow beacon interval and interval expression cannot both be configured")
 	}
 	seen := make(map[string]struct{}, len(o.FieldParameters))
 	for _, original := range o.FieldParameters {
@@ -1567,6 +1588,12 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 				if err := validateDataflowBeaconIterationsExpression(b.env, operator); err != nil {
 					return DataflowDefinition{}, err
 				}
+				if err := validateDataflowBeaconDurationExpression(b.env, operator, DataflowBeaconInitialDelayParameter, operator.BeaconOptions.InitialDelayExpression); err != nil {
+					return DataflowDefinition{}, err
+				}
+				if err := validateDataflowBeaconDurationExpression(b.env, operator, DataflowBeaconIntervalParameter, operator.BeaconOptions.IntervalExpression); err != nil {
+					return DataflowDefinition{}, err
+				}
 			}
 			if len(operator.BeaconOptions.FieldParameters) > 0 && !operator.BeaconEventConfigured {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("untyped dataflow beacon source %q cannot declare field parameters", operator.Name))
@@ -2165,6 +2192,9 @@ func validateDataflowBeaconFields(env *Environment, operator DataflowOperator, s
 			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow beacon source %q duplicates field %q", operator.Name, name))
 		}
 		seen[name] = struct{}{}
+		if isDataflowBeaconTimingParameter(name) {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow beacon source %q field %q uses a reserved timing parameter name", operator.Name, name))
+		}
 		field, exists := schema.Field(name)
 		if !exists && !schema.AllowsDynamicProperties() {
 			return NewError(ErrorUnknownName, fmt.Sprintf("dataflow beacon source %q references unknown event field %q", operator.Name, name))
@@ -2189,6 +2219,9 @@ func validateDataflowBeaconFields(env *Environment, operator DataflowOperator, s
 	}
 	for _, original := range operator.BeaconOptions.FieldParameters {
 		name := strings.TrimSpace(original)
+		if isDataflowBeaconTimingParameter(name) {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow beacon source %q field parameter %q uses a reserved timing parameter name", operator.Name, name))
+		}
 		if _, exists := schema.Field(name); !exists && !schema.AllowsDynamicProperties() {
 			return NewError(ErrorUnknownName, fmt.Sprintf("dataflow beacon source %q field parameter references unknown event field %q", operator.Name, name))
 		}
@@ -2248,31 +2281,82 @@ func validateDataflowBeaconIterationsExpression(env *Environment, operator Dataf
 	}
 }
 
+func validateDataflowBeaconDurationExpression(env *Environment, operator DataflowOperator, name string, expression Expr) error {
+	if expression == nil {
+		return nil
+	}
+	if err := env.validateExprVariables(expression); err != nil {
+		return WrapError(ErrorInvalidRule, fmt.Sprintf("dataflow beacon source %q %s expression", operator.Name, name), err)
+	}
+	var referencedFields []string
+	expression.node().referencedFields(&referencedFields)
+	if len(referencedFields) > 0 {
+		return NewError(ErrorDependency, fmt.Sprintf("dataflow beacon source %q %s expression cannot reference input event fields", operator.Name, name))
+	}
+	var referencedParameters []string
+	expression.node().referencedParameters(&referencedParameters)
+	if len(referencedParameters) > 0 {
+		return NewError(ErrorDependency, fmt.Sprintf("dataflow beacon source %q %s expression cannot reference query parameters", operator.Name, name))
+	}
+	if expression.Type() != typeOf[time.Duration]() {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow beacon source %q %s expression requires time.Duration, got %v", operator.Name, name, expression.Type()))
+	}
+	return nil
+}
+
 func evaluateDataflowBeaconIterations(expression Expr, evaluation EvalContext) (int, error) {
 	value := expression.eval(evaluation)
 	if !value.IsPresent() {
 		return 0, NewError(ErrorTypeMismatch, "dataflow beacon iterations expression must evaluate to a non-null integer")
 	}
-	reflected := reflect.ValueOf(value.Any())
+	return dataflowBeaconIterationsValue(value.Any(), "dataflow beacon iterations expression")
+}
+
+func dataflowBeaconIterationsValue(value any, source string) (int, error) {
+	reflected := reflect.ValueOf(value)
 	if !reflected.IsValid() {
-		return 0, NewError(ErrorTypeMismatch, "dataflow beacon iterations expression must evaluate to a non-null integer")
+		return 0, NewError(ErrorTypeMismatch, source+" must provide a non-null integer")
 	}
 	maxInt := uint64(^uint(0) >> 1)
 	switch reflected.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		number := reflected.Int()
 		if number < 0 || uint64(number) > maxInt {
-			return 0, NewError(ErrorInvalidRule, "dataflow beacon iterations expression must evaluate to a non-negative int")
+			return 0, NewError(ErrorInvalidRule, source+" must provide a non-negative int")
 		}
 		return int(number), nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		number := reflected.Uint()
 		if number > maxInt {
-			return 0, NewError(ErrorInvalidRule, "dataflow beacon iterations expression exceeds int range")
+			return 0, NewError(ErrorInvalidRule, source+" exceeds int range")
 		}
 		return int(number), nil
 	default:
-		return 0, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow beacon iterations expression evaluated to %T, want integer", value.Any()))
+		return 0, NewError(ErrorTypeMismatch, fmt.Sprintf("%s provided %T, want integer", source, value))
+	}
+}
+
+func evaluateDataflowBeaconDuration(expression Expr, evaluation EvalContext, name string) (time.Duration, error) {
+	value := expression.eval(evaluation)
+	if !value.IsPresent() {
+		return 0, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow beacon %s expression must evaluate to a non-null time.Duration", name))
+	}
+	duration, ok := value.Any().(time.Duration)
+	if !ok {
+		return 0, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow beacon %s expression evaluated to %T, want time.Duration", name, value.Any()))
+	}
+	if duration < 0 {
+		return 0, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow beacon %s expression must evaluate to a non-negative duration", name))
+	}
+	return duration, nil
+}
+
+func isDataflowBeaconTimingParameter(name string) bool {
+	switch name {
+	case DataflowBeaconIterationsParameter, DataflowBeaconInitialDelayParameter, DataflowBeaconIntervalParameter:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -2484,7 +2568,12 @@ type DataflowInstance struct {
 	lastError              error
 }
 
-func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowOperator, number int, options DataflowOptions) DataflowOperatorContext {
+type dataflowOperatorContextResult struct {
+	context  DataflowOperatorContext
+	provided map[string]struct{}
+}
+
+func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowOperator, number int, options DataflowOptions) dataflowOperatorContextResult {
 	factory := dataflowFactoryMetadata(operator)
 	properties := maps.Clone(operator.Properties)
 	if properties == nil {
@@ -2496,6 +2585,19 @@ func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowO
 		seen[name] = struct{}{}
 		names = append(names, name)
 	}
+	if operator.Kind == BeaconSourceKind {
+		for name, value := range map[string]any{
+			DataflowBeaconInitialDelayParameter: operator.BeaconOptions.InitialDelay,
+			DataflowBeaconIntervalParameter:     operator.BeaconOptions.Interval,
+			DataflowBeaconIterationsParameter:   operator.BeaconOptions.Iterations,
+		} {
+			properties[name] = value
+			if _, exists := seen[name]; !exists {
+				seen[name] = struct{}{}
+				names = append(names, name)
+			}
+		}
+	}
 	for _, name := range operator.ParameterNames {
 		if _, exists := seen[name]; exists {
 			continue
@@ -2504,6 +2606,7 @@ func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowO
 		names = append(names, name)
 	}
 	sort.Strings(names)
+	providedParameters := make(map[string]struct{})
 	if options.ParameterProvider != nil {
 		for _, name := range names {
 			defaultValue := properties[name]
@@ -2518,20 +2621,84 @@ func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowO
 			})
 			if provided {
 				properties[name] = value
+				providedParameters[name] = struct{}{}
 			}
 		}
 	}
-	return DataflowOperatorContext{
-		DataflowName: dataflowName,
-		InstanceID:   instanceID,
-		UserObject:   options.UserObject,
-		OperatorName: operator.Name,
-		OperatorNum:  number,
-		Factory:      factory,
-		InputPorts:   dataflowOperatorContextPorts(operator, false),
-		OutputPorts:  dataflowOperatorContextPorts(operator, true),
-		Properties:   properties,
+	return dataflowOperatorContextResult{
+		context: DataflowOperatorContext{
+			DataflowName: dataflowName,
+			InstanceID:   instanceID,
+			UserObject:   options.UserObject,
+			OperatorName: operator.Name,
+			OperatorNum:  number,
+			Factory:      factory,
+			InputPorts:   dataflowOperatorContextPorts(operator, false),
+			OutputPorts:  dataflowOperatorContextPorts(operator, true),
+			Properties:   properties,
+		},
+		provided: providedParameters,
 	}
+}
+
+func resolveDataflowBeaconParameters(operator DataflowOperator, properties map[string]any, provided map[string]struct{}, evaluation EvalContext) (DataflowOperator, error) {
+	resolved := maps.Clone(properties)
+	iterations := operator.BeaconOptions.Iterations
+	if _, overridden := provided[DataflowBeaconIterationsParameter]; overridden {
+		value, err := dataflowBeaconIterationsValue(resolved[DataflowBeaconIterationsParameter], "dataflow beacon iterations parameter")
+		if err != nil {
+			return DataflowOperator{}, err
+		}
+		iterations = value
+	} else if operator.BeaconOptions.IterationsExpression != nil {
+		value, err := evaluateDataflowBeaconIterations(operator.BeaconOptions.IterationsExpression, evaluation)
+		if err != nil {
+			return DataflowOperator{}, err
+		}
+		iterations = value
+	}
+	initialDelay := operator.BeaconOptions.InitialDelay
+	if _, overridden := provided[DataflowBeaconInitialDelayParameter]; overridden {
+		value, ok := resolved[DataflowBeaconInitialDelayParameter].(time.Duration)
+		if !ok {
+			return DataflowOperator{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow beacon initialDelay parameter provided %T, want time.Duration", resolved[DataflowBeaconInitialDelayParameter]))
+		}
+		initialDelay = value
+	} else if operator.BeaconOptions.InitialDelayExpression != nil {
+		value, err := evaluateDataflowBeaconDuration(operator.BeaconOptions.InitialDelayExpression, evaluation, DataflowBeaconInitialDelayParameter)
+		if err != nil {
+			return DataflowOperator{}, err
+		}
+		initialDelay = value
+	}
+	if initialDelay < 0 {
+		return DataflowOperator{}, NewError(ErrorInvalidRule, "dataflow beacon initialDelay parameter cannot be negative")
+	}
+	interval := operator.BeaconOptions.Interval
+	if _, overridden := provided[DataflowBeaconIntervalParameter]; overridden {
+		value, ok := resolved[DataflowBeaconIntervalParameter].(time.Duration)
+		if !ok {
+			return DataflowOperator{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow beacon interval parameter provided %T, want time.Duration", resolved[DataflowBeaconIntervalParameter]))
+		}
+		interval = value
+	} else if operator.BeaconOptions.IntervalExpression != nil {
+		value, err := evaluateDataflowBeaconDuration(operator.BeaconOptions.IntervalExpression, evaluation, DataflowBeaconIntervalParameter)
+		if err != nil {
+			return DataflowOperator{}, err
+		}
+		interval = value
+	}
+	if interval < 0 {
+		return DataflowOperator{}, NewError(ErrorInvalidRule, "dataflow beacon interval parameter cannot be negative")
+	}
+	delete(resolved, DataflowBeaconIterationsParameter)
+	delete(resolved, DataflowBeaconInitialDelayParameter)
+	delete(resolved, DataflowBeaconIntervalParameter)
+	operator.BeaconOptions.Iterations = iterations
+	operator.BeaconOptions.InitialDelay = initialDelay
+	operator.BeaconOptions.Interval = interval
+	operator.Properties = resolved
+	return operator, nil
 }
 
 func dataflowFactoryMetadata(operator DataflowOperator) DataflowFactoryMetadata {
@@ -2666,21 +2833,6 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 		return nil, NewError(ErrorDependency, "dataflow is not registered in engine environment")
 	}
 	registered = cloneDataflowDefinition(registered)
-	for index := range registered.operators {
-		operator := registered.operators[index]
-		if operator.Kind != BeaconSourceKind || operator.BeaconOptions.IterationsExpression == nil {
-			continue
-		}
-		iterations, err := evaluateDataflowBeaconIterations(operator.BeaconOptions.IterationsExpression, EvalContext{
-			Now:       e.Now(),
-			Variables: e.Variables(),
-		})
-		if err != nil {
-			return nil, WrapError(ErrorInvalidRule, "dataflow beacon source "+operator.Name, err)
-		}
-		operator.BeaconOptions.Iterations = iterations
-		registered.operators[index] = operator
-	}
 	if options.InstanceID == "" {
 		options.InstanceID = registered.name
 	}
@@ -2701,10 +2853,19 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 		statementSubscriptions: make(map[string]*Subscription),
 		done:                   make(chan struct{}),
 	}
+	beaconEvaluation := EvalContext{Now: e.Now(), Variables: e.Variables()}
 	for operatorNumber, operator := range registered.operators {
-		operatorContext := dataflowOperatorContext(registered.name, options.InstanceID, operator, operatorNumber, options)
-		if operator.Kind == BeaconSourceKind && operator.BeaconEventConfigured && len(operator.ParameterNames) > 0 {
-			operator.Properties = maps.Clone(operatorContext.Properties)
+		operatorContextResult := dataflowOperatorContext(registered.name, options.InstanceID, operator, operatorNumber, options)
+		operatorContext := operatorContextResult.context
+		if operator.Kind == BeaconSourceKind {
+			var resolveErr error
+			operator, resolveErr = resolveDataflowBeaconParameters(operator, operatorContext.Properties, operatorContextResult.provided, beaconEvaluation)
+			if resolveErr != nil {
+				return nil, resolveErr
+			}
+			registered.operators[operatorNumber] = operator
+		}
+		if operator.Kind == BeaconSourceKind && operator.BeaconEventConfigured && len(operator.Properties) > 0 {
 			schema, ok := e.env.Schema(operator.EventType)
 			if !ok {
 				return nil, NewError(ErrorUnknownName, fmt.Sprintf("dataflow beacon source %q references unknown event type %q", operator.Name, operator.EventType))
@@ -2712,7 +2873,6 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 			if err := validateDataflowBeaconParameterValues(operator, schema); err != nil {
 				return nil, err
 			}
-			registered.operators[operatorNumber] = operator
 		}
 		instance.operators[operator.Name] = operator
 		instance.operatorStats[operator.Name] = newDataflowOperatorStatState(operator)

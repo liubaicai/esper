@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 )
 
 type dataflowBeaconFieldEvent struct {
@@ -299,18 +300,33 @@ func TestDataflowBeaconFieldParametersOverridePerInstanceAndRouteEventBusMatches
 	if !reflect.DeepEqual(received, want) {
 		t.Fatalf("parameterized beacon events = %#v, want %#v", received, want)
 	}
-	if len(contexts) != 4 {
+	if len(contexts) != 10 {
 		t.Fatalf("beacon parameter contexts = %#v", contexts)
 	}
+	wantParameterNames := []string{"initialDelay", "interval", "iterations", "p0", "p1"}
 	for index, parameter := range contexts {
-		if parameter.OperatorName != "source" || parameter.OperatorNum != 0 || parameter.DefaultValue != nil {
+		if parameter.OperatorName != "source" || parameter.OperatorNum != 0 {
 			t.Fatalf("beacon parameter context[%d] = %#v", index, parameter)
 		}
 		if parameter.Factory.Kind != BeaconSourceKind || !parameter.Factory.IsBuiltin() || parameter.Factory.OperatorFactory != nil || parameter.Factory.SourceFactory != nil {
 			t.Fatalf("beacon parameter factory context[%d] = %#v", index, parameter.Factory)
 		}
-		if parameter.ParameterName != []string{"p0", "p1"}[index%2] {
+		if parameter.ParameterName != wantParameterNames[index%len(wantParameterNames)] {
 			t.Fatalf("beacon parameter order[%d] = %#v", index, parameter)
+		}
+		switch parameter.ParameterName {
+		case DataflowBeaconInitialDelayParameter, DataflowBeaconIntervalParameter:
+			if value, ok := parameter.DefaultValue.(time.Duration); !ok || value != 0 {
+				t.Fatalf("beacon duration default[%d] = %#v", index, parameter.DefaultValue)
+			}
+		case DataflowBeaconIterationsParameter:
+			if parameter.DefaultValue != 1 {
+				t.Fatalf("beacon iterations default[%d] = %#v", index, parameter.DefaultValue)
+			}
+		default:
+			if parameter.DefaultValue != nil {
+				t.Fatalf("beacon field default[%d] = %#v", index, parameter.DefaultValue)
+			}
 		}
 	}
 	if len(definition.Operators()[0].Properties) != 0 {
@@ -471,7 +487,12 @@ func TestDataflowBeaconEventFieldsRejectInvalidDefinitions(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := NewEngine(env).InstantiateDataflowWithOptions(context.Background(), parameterized, DataflowOptions{
-		ParameterProvider: func(DataflowParameterContext) (any, bool) { return "wrong", true },
+		ParameterProvider: func(parameter DataflowParameterContext) (any, bool) {
+			if parameter.ParameterName == "p1" {
+				return "wrong", true
+			}
+			return nil, false
+		},
 	}); err == nil {
 		t.Fatal("typed beacon accepted an incompatible field parameter value")
 	}
@@ -486,6 +507,14 @@ func TestDataflowBeaconEventFieldsRejectInvalidDefinitions(t *testing.T) {
 		BeaconEventSource("source", "BeaconVariant", DataflowBeaconOptions{Iterations: 1}, Alias("p0", Literal("x"))).
 		Build(); err == nil {
 		t.Fatal("typed beacon accepted a variant target without member identity")
+	}
+	if _, err := RegisterMap(env, "BeaconReservedField", []FieldSpec{FieldDef("interval", reflect.TypeOf(time.Duration(0)))}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DefineDataflow(env, "beacon-reserved-field").
+		BeaconEventSource("source", "BeaconReservedField", DataflowBeaconOptions{Iterations: 1}, Alias("interval", Literal(time.Second))).
+		Build(); err == nil {
+		t.Fatal("typed beacon accepted a reserved timing parameter as an event field")
 	}
 }
 

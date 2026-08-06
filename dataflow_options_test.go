@@ -89,13 +89,22 @@ func TestDataflowParameterProviderMatchesEsperInstantiationOptions(t *testing.T)
 	if !reflect.DeepEqual(captured.Properties, map[string]any{"propOne": "abc", "propTwo": "def", "propThree": "xyz"}) {
 		t.Fatalf("resolved properties = %#v", captured.Properties)
 	}
-	if len(contexts) != 3 {
-		t.Fatalf("parameter callback count = %d, want 3: %#v", len(contexts), contexts)
+	if len(contexts) != 6 {
+		t.Fatalf("parameter callback count = %d, want 6: %#v", len(contexts), contexts)
 	}
-	if got := []string{contexts[0].ParameterName, contexts[1].ParameterName, contexts[2].ParameterName}; !sort.StringsAreSorted(got) {
+	if got := []string{contexts[0].ParameterName, contexts[1].ParameterName, contexts[2].ParameterName}; !reflect.DeepEqual(got, []string{"initialDelay", "interval", "iterations"}) {
+		t.Fatalf("built-in parameter callback order = %#v", got)
+	}
+	for _, parameter := range contexts[:3] {
+		if parameter.OperatorName != "source" || parameter.OperatorNum != 0 || parameter.Factory.Kind != BeaconSourceKind || !parameter.Factory.IsBuiltin() {
+			t.Fatalf("built-in parameter context = %#v", parameter)
+		}
+	}
+	customContexts := contexts[3:]
+	if got := []string{customContexts[0].ParameterName, customContexts[1].ParameterName, customContexts[2].ParameterName}; !sort.StringsAreSorted(got) {
 		t.Fatalf("parameter callback order = %#v, want deterministic order", got)
 	}
-	for _, parameter := range contexts {
+	for _, parameter := range customContexts {
 		if parameter.DataflowName != "parameter-options-flow" || parameter.InstanceID != "parameter-instance" || parameter.OperatorName != "custom" || parameter.OperatorNum != 1 {
 			t.Fatalf("parameter context = %#v", parameter)
 		}
