@@ -8927,6 +8927,10 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	if definition == nil {
 		return ResultBatch{}, NewError(ErrorInvalidRule, "aggregate runtime has no definition")
 	}
+	if definition.where != nil {
+		delta.newEvents = filterAggregateEvents(delta.newEvents, definition.where, now, r.variables, r.engine)
+		delta.oldEvents = filterAggregateEvents(delta.oldEvents, definition.where, now, r.variables, r.engine)
+	}
 	if r.aggregateState == nil {
 		r.aggregateState = &aggregateRuntimeState{groups: make(map[string]*aggregateGroup)}
 	}
@@ -9036,6 +9040,33 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		}
 	}
 	return batch, nil
+}
+
+// filterAggregateEvents applies a pre-aggregate WHERE to the incoming delta.
+// For join aggregates the wrapper Event keeps the complete source tuple
+// available to JoinField, including when the tuple contains an outer-join null
+// side; ordinary aggregates evaluate the same predicate against Event.
+func filterAggregateEvents(events []Event, predicate Expr, now time.Time, variables map[string]Value, engine *Engine) []Event {
+	if predicate == nil || len(events) == 0 {
+		return events
+	}
+	filtered := make([]Event, 0, len(events))
+	for _, event := range events {
+		tuple := joinTupleEvents(event)
+		value := predicate.eval(EvalContext{
+			Event:      event,
+			JoinEvents: tuple,
+			OuterEvent: event,
+			Engine:     engine,
+			Now:        now,
+			Variables:  variables,
+		})
+		matched, ok := boolValue(value)
+		if ok && matched {
+			filtered = append(filtered, event)
+		}
+	}
+	return filtered
 }
 
 func (r *statementRuntime) persistAggregateTable(plan Plan, now time.Time) error {

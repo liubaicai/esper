@@ -95,6 +95,7 @@ type AggregateStream struct {
 	grouping     aggregateGroupingMode
 	groupingSets [][]Expr
 	selections   []Selection
+	where        Expression[bool]
 	having       Expression[bool]
 }
 
@@ -114,6 +115,7 @@ type aggregateDefinition struct {
 	grouping     aggregateGroupingMode
 	groupingSets [][]int
 	selections   []Selection
+	where        Expr
 	having       Expression[bool]
 }
 
@@ -904,6 +906,16 @@ func (a AggregateStream) Having(predicate Expression[bool]) AggregateStream {
 	return a
 }
 
+// Where filters the current stream or join tuples before grouping and
+// aggregation. For a Join aggregate the predicate must use JoinField or
+// JoinEventValue so the complete tuple scope remains analyzable. On ordinary
+// streams, Filter is the more explicit equivalent and this method is kept as
+// a compact aggregate-chain form.
+func (a AggregateStream) Where(predicate Expression[bool]) AggregateStream {
+	a.where = predicate
+	return a
+}
+
 func (a AggregateStream) Query(options ...QueryOption) Query {
 	spec := querySpec{selector: SelectIStream}
 	for _, option := range options {
@@ -925,6 +937,7 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 			grouping:     a.grouping,
 			groupingSets: groupingSets,
 			selections:   append([]Selection(nil), a.selections...),
+			where:        a.where,
 			having:       a.having,
 		},
 		name:                       spec.name,
@@ -2015,6 +2028,9 @@ func (q Query) description() string {
 		parts = append(parts, "aggregate("+strings.Join(selections, ",")+")")
 		if q.tableTarget != "" {
 			parts = append(parts, "into-table("+q.tableTarget+")")
+		}
+		if q.aggregate.where != nil {
+			parts = append(parts, "where("+q.aggregate.where.Description()+")")
 		}
 		if q.aggregate.having != nil {
 			parts = append(parts, "having("+q.aggregate.having.Description()+")")

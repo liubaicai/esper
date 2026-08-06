@@ -369,7 +369,15 @@ func (e *Engine) executeJoinFireAndForget(ctx context.Context, plan Plan, parame
 		}
 	}
 	tuples := joinTuples(plan.query.join, runtime.joinState, now, &runtime)
-	batch := runtime.joinBatch(joinDeltaWithPairs(joinDelta{newTuples: tuples}), plan, now)
+	var batch ResultBatch
+	if plan.query.aggregate != nil {
+		batch, err = runtime.aggregateBatch(joinDeltaEvents(joinDelta{newTuples: tuples}, now), plan, now)
+		if err != nil {
+			return QueryResult{}, err
+		}
+	} else {
+		batch = runtime.joinBatch(joinDeltaWithPairs(joinDelta{newTuples: tuples}), plan, now)
+	}
 	batch = runtime.applyOutput(plan.query.output, batch, false, now, plan)
 	return QueryResult{Batch: batch}, nil
 }
@@ -519,7 +527,15 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 			}
 		}
 		tuples := joinTuples(query.join, runtime.joinState, now, &runtime)
-		batch := runtime.joinBatch(joinDeltaWithPairs(joinDelta{newTuples: tuples}), partitionPlan, now)
+		var batch ResultBatch
+		if query.aggregate != nil {
+			batch, err = runtime.aggregateBatch(joinDeltaEvents(joinDelta{newTuples: tuples}, now), partitionPlan, now)
+			if err != nil {
+				return QueryResult{}, err
+			}
+		} else {
+			batch = runtime.joinBatch(joinDeltaWithPairs(joinDelta{newTuples: tuples}), partitionPlan, now)
+		}
 		batch = runtime.applyOutput(query.output, batch, false, now, partitionPlan)
 		result.New = append(result.New, batch.New...)
 		result.Old = append(result.Old, batch.Old...)

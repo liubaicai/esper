@@ -70,6 +70,49 @@ func TestGroupedAggregateAndHaving(t *testing.T) {
 	}
 }
 
+func TestAggregateWhereFiltersOrdinaryEventsBeforeGrouping(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	symbol := Field[runtimeTestTrade, string]("symbol")
+	price := Field[runtimeTestTrade, float64]("price")
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").GroupBy(symbol).Select(
+		Alias("symbol", symbol),
+		Alias("count", CountAll()),
+		Alias("sum", Sum[float64](price)),
+	).Where(GreaterOrEqual[float64](price, Literal(10.0))).Query(
+		StatementName("ordinary-aggregate-where"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []runtimeTestTrade{{Symbol: "A", Price: 2}, {Symbol: "A", Price: 10}, {Symbol: "A", Price: 20}} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(batches) != 2 || len(batches[0].Old) != 0 || len(batches[1].Old) != 1 || len(batches[1].New) != 1 {
+		t.Fatalf("ordinary aggregate Where batches = %#v", batches)
+	}
+	first, ok := batches[0].New[0].Row()
+	if !ok || first.Get("count").Any() != int64(1) || first.Get("sum").Any() != float64(10) {
+		t.Fatalf("ordinary aggregate Where first row = %#v", batches[0].New)
+	}
+	current, ok := batches[1].New[0].Row()
+	if !ok || current.Get("count").Any() != int64(2) || current.Get("sum").Any() != float64(30) {
+		t.Fatalf("ordinary aggregate Where current row = %#v", batches[1].New)
+	}
+}
+
 func TestExtendedAggregateFunctions(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	trade := From[runtimeTestTrade](env, "Trade")

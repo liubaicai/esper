@@ -1731,6 +1731,9 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 		if err := visitSelectionsExpressions(query.aggregate.selections, visit); err != nil {
 			return err
 		}
+		if err := visit(query.aggregate.where); err != nil {
+			return err
+		}
 		if err := visit(query.aggregate.having); err != nil {
 			return err
 		}
@@ -2512,6 +2515,18 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 	}
 	if len(definition.selections) == 0 {
 		return NewError(ErrorInvalidRule, "aggregate requires at least one projection")
+	}
+	if definition.where != nil {
+		if definition.where.Type() != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "aggregate where expression must return bool")
+		}
+		if definition.join != nil {
+			if err := e.validateJoinScopedExpression(definition.join, definition.where, "join aggregate where"); err != nil {
+				return err
+			}
+		} else if err := e.validateExprFields(definition.input, definition.where); err != nil {
+			return err
+		}
 	}
 	seen := make(map[string]struct{}, len(definition.selections))
 	for _, selection := range definition.selections {

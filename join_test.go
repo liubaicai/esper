@@ -285,6 +285,90 @@ func TestOuterJoinAggregateCountsOnlyMatchedSourceValues(t *testing.T) {
 	}
 }
 
+func TestJoinAggregateWhereFiltersTuplesBeforeGrouping(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[joinOrder](env, "AggregateWhereOrder"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[joinPayment](env, "AggregateWherePayment"); err != nil {
+		t.Fatal(err)
+	}
+	amount := JoinField[float64](1, "amount")
+	symbol := JoinField[string](0, "symbol")
+	plan, err := env.Build(Join(
+		From[joinOrder](env, "AggregateWhereOrder").Window(KeepAll()),
+		From[joinPayment](env, "AggregateWherePayment").Window(KeepAll()),
+		OnEqual(
+			Field[joinOrder, string]("orderID"),
+			Field[joinPayment, string]("orderID"),
+		),
+	).LeftOuter().GroupBy(symbol).Select(
+		Alias("symbol", symbol),
+		Alias("count", Count[float64](amount)),
+		Alias("total", Sum[float64](amount)),
+	).Where(
+		GreaterOrEqual[float64](amount, Literal(10.0)),
+	).Query(StatementName("join-aggregate-where"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sendOrder := func(orderID, value string) {
+		t.Helper()
+		if err := engine.Send(context.Background(), "AggregateWhereOrder", joinOrder{OrderID: orderID, Symbol: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendPayment := func(orderID string, value float64) {
+		t.Helper()
+		if err := engine.Send(context.Background(), "AggregateWherePayment", joinPayment{OrderID: orderID, Amount: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// The unmatched outer tuple and a below-threshold match are both filtered
+	// before they can create a group.
+	sendOrder("O1", "A")
+	sendPayment("O1", 5)
+	if len(batches) != 0 {
+		t.Fatalf("filtered aggregate emitted early = %#v", batches)
+	}
+
+	// A later qualifying tuple creates the group, and a second qualifying row
+	// emits the previous and current aggregate values.
+	sendPayment("O1", 10)
+	if len(batches) != 1 || len(batches[0].New) != 1 || len(batches[0].Old) != 0 {
+		t.Fatalf("first filtered aggregate batch = %#v", batches)
+	}
+	row, ok := batches[0].New[0].Row()
+	if !ok || row.Get("symbol").Any() != "A" || row.Get("count").Any() != int64(1) || row.Get("total").Any() != float64(10) {
+		t.Fatalf("first filtered aggregate row = %#v", row.AsMap())
+	}
+	sendPayment("O1", 20)
+	if len(batches) != 2 || len(batches[1].Old) != 1 || len(batches[1].New) != 1 {
+		t.Fatalf("filtered aggregate old/new batch = %#v", batches)
+	}
+	oldRow, oldOK := batches[1].Old[0].Row()
+	newRow, newOK := batches[1].New[0].Row()
+	if !oldOK || !newOK || oldRow.Get("count").Any() != int64(1) || oldRow.Get("total").Any() != float64(10) ||
+		newRow.Get("count").Any() != int64(2) || newRow.Get("total").Any() != float64(30) {
+		t.Fatalf("filtered aggregate totals old=%#v new=%#v", oldRow.AsMap(), newRow.AsMap())
+	}
+}
+
 func TestMultiJoinAggregateReadsIndexedTupleSources(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[joinOrder](env, "Order"); err != nil {
@@ -415,6 +499,121 @@ func TestFireAndForgetNamedWindowJoinUsesSnapshotSources(t *testing.T) {
 	row, ok := result.Results()[0].Row()
 	if !ok || row.Get("left-price").Any() != float64(1) || row.Get("right-price").Any() != float64(3) {
 		t.Fatalf("named-window join row = %#v", result.Results()[0])
+	}
+}
+
+func TestFireAndForgetJoinAggregateWhereFiltersSnapshotTuples(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "JoinAggregateFAFTrade"); err != nil {
+		t.Fatal(err)
+	}
+	schema, ok := env.Schema("JoinAggregateFAFTrade")
+	if !ok {
+		t.Fatal("JoinAggregateFAFTrade schema is missing")
+	}
+	if _, err := CreateNamedWindow(env, "join-aggregate-faf-left", schema); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "join-aggregate-faf-right", schema); err != nil {
+		t.Fatal(err)
+	}
+	price := JoinField[float64](1, "price")
+	plan, err := env.Build(JoinMany(
+		JoinRecordSource(FromNamedWindow(env, "join-aggregate-faf-left")),
+		JoinRecordSource(FromNamedWindow(env, "join-aggregate-faf-right")),
+	).On(
+		OnSourcesEqual(0, Field[any, string]("symbol"), 1, Field[any, string]("symbol")),
+	).GroupBy(JoinField[string](0, "symbol")).Select(
+		Alias("symbol", JoinField[string](0, "symbol")),
+		Alias("count", Count[float64](price)),
+		Alias("sum", Sum[float64](price)),
+	).Where(GreaterOrEqual[float64](price, Literal(10.0))).Query(
+		StatementName("join-aggregate-faf-where")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	for _, item := range []struct {
+		window string
+		trade  runtimeTestTrade
+	}{
+		{window: "join-aggregate-faf-left", trade: runtimeTestTrade{Symbol: "A", Price: 1}},
+		{window: "join-aggregate-faf-right", trade: runtimeTestTrade{Symbol: "A", Price: 5}},
+		{window: "join-aggregate-faf-right", trade: runtimeTestTrade{Symbol: "A", Price: 15}},
+	} {
+		if err := engine.InsertNamedWindow(context.Background(), item.window, item.trade); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := engine.ExecuteFireAndForget(context.Background(), plan)
+	if err != nil || len(result.Results()) != 1 {
+		t.Fatalf("join aggregate FAF result = %#v, err=%v", result.Results(), err)
+	}
+	row, ok := result.Results()[0].Row()
+	if !ok || row.Get("symbol").Any() != "A" || row.Get("count").Any() != int64(1) || row.Get("sum").Any() != float64(15) {
+		t.Fatalf("join aggregate FAF row = %#v", result.Results()[0])
+	}
+}
+
+func TestContextFireAndForgetJoinAggregateWhereHonorsPartitionSelector(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "ContextJoinAggregateFAFTrade"); err != nil {
+		t.Fatal(err)
+	}
+	schema, ok := env.Schema("ContextJoinAggregateFAFTrade")
+	if !ok {
+		t.Fatal("ContextJoinAggregateFAFTrade schema is missing")
+	}
+	if _, err := CreateNamedWindow(env, "context-join-aggregate-faf-left", schema); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "context-join-aggregate-faf-right", schema); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateKeyContext(env, "context-join-aggregate-faf", Field[any, string]("symbol")); err != nil {
+		t.Fatal(err)
+	}
+	price := JoinField[float64](1, "price")
+	plan, err := env.Build(JoinMany(
+		JoinRecordSource(FromNamedWindow(env, "context-join-aggregate-faf-left")),
+		JoinRecordSource(FromNamedWindow(env, "context-join-aggregate-faf-right")),
+	).On(
+		OnSourcesEqual(0, Field[any, string]("symbol"), 1, Field[any, string]("symbol")),
+	).GroupBy(JoinField[string](0, "symbol")).Select(
+		Alias("symbol", JoinField[string](0, "symbol")),
+		Alias("count", Count[float64](price)),
+		Alias("sum", Sum[float64](price)),
+	).Where(GreaterOrEqual[float64](price, Literal(10.0))).Query(
+		StatementName("context-join-aggregate-faf-where"), WithContext("context-join-aggregate-faf")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	for _, item := range []struct {
+		window string
+		trade  runtimeTestTrade
+	}{
+		{window: "context-join-aggregate-faf-left", trade: runtimeTestTrade{Symbol: "A", Price: 1}},
+		{window: "context-join-aggregate-faf-left", trade: runtimeTestTrade{Symbol: "B", Price: 1}},
+		{window: "context-join-aggregate-faf-right", trade: runtimeTestTrade{Symbol: "A", Price: 15}},
+		{window: "context-join-aggregate-faf-right", trade: runtimeTestTrade{Symbol: "B", Price: 5}},
+	} {
+		if err := engine.InsertNamedWindow(context.Background(), item.window, item.trade); err != nil {
+			t.Fatal(err)
+		}
+	}
+	all, err := engine.ExecuteFireAndForgetWithSelector(context.Background(), plan, ContextPartitionSelectorAll{})
+	if err != nil || len(all.Results()) != 1 {
+		t.Fatalf("context join aggregate FAF all result = %#v, err=%v", all.Results(), err)
+	}
+	row, ok := all.Results()[0].Row()
+	if !ok || row.Get("symbol").Any() != "A" || row.Get("sum").Any() != float64(15) {
+		t.Fatalf("context join aggregate FAF all row = %#v", all.Results()[0])
+	}
+	keyB := encodeKey([]any{ValuePresent, "B"})
+	selected, err := engine.ExecuteFireAndForgetWithSelector(context.Background(), plan, SelectContextPartitions(keyB))
+	if err != nil || len(selected.Results()) != 0 {
+		t.Fatalf("context join aggregate FAF selected B result = %#v, err=%v", selected.Results(), err)
 	}
 }
 
