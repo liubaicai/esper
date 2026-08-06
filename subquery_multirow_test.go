@@ -300,3 +300,106 @@ func TestSubqueryMultirowEmptyCollectionsRemainEnumerable(t *testing.T) {
 		t.Fatalf("enumerable subquery chain = %#v", row)
 	}
 }
+
+// TestSubqueryGroupedSnapshotExposesIteratorView covers the Java
+// getGroups().take(10) plus statement-iterator shape. Go keeps the public
+// result as an immutable slice and Statement.Snapshot returns the current
+// last-event projection without dispatching another listener batch.
+func TestSubqueryGroupedSnapshotExposesIteratorView(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[subqueryMultirowValue](env, "SubqueryIteratorValue"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[subqueryMultirowTrigger](env, "SubqueryIteratorTrigger"); err != nil {
+		t.Fatal(err)
+	}
+
+	inner := Select(From[subqueryMultirowValue](env, "SubqueryIteratorValue"))
+	key := Field[any, string]("key")
+	value := Field[any, int64]("value")
+	groups := SubqueryGroupRows(inner, key, []Selection{
+		Alias("key", key),
+		Alias("total", Sum[int64](value)),
+	})
+	limited := EnumTake[map[string]any](groups, 1)
+	query := Select(
+		From[subqueryMultirowTrigger](env, "SubqueryIteratorTrigger").Window(LastEvent()),
+		Alias("groups", groups),
+		Alias("limited", limited),
+	).Query(StatementName("subquery-grouped-iterator"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statement := deployment.Statements()[0]
+	var rows []Row
+	if _, err := statement.Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("grouped iterator result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sendTrigger := func() Row {
+		t.Helper()
+		before := len(rows)
+		if err := engine.SendEvent(context.Background(), subqueryMultirowTrigger{}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != before+1 {
+			t.Fatalf("grouped iterator listener rows = %#v", rows)
+		}
+		return rows[len(rows)-1]
+	}
+	snapshotRow := func() Row {
+		t.Helper()
+		result, err := statement.Snapshot(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(result.Results()) != 1 {
+			t.Fatalf("grouped iterator snapshot = %#v", result.Results())
+		}
+		row, ok := result.Results()[0].Row()
+		if !ok {
+			t.Fatalf("grouped iterator snapshot result = %#v", result.Results()[0])
+		}
+		return row
+	}
+
+	row := sendTrigger()
+	if groupsValue, ok := row.Get("groups").Any().([]map[string]any); !ok || !reflect.DeepEqual(groupsValue, []map[string]any{}) {
+		t.Fatalf("empty grouped iterator groups = %#v", row.Get("groups"))
+	}
+	if snapshot := snapshotRow(); !reflect.DeepEqual(snapshot.AsMap(), row.AsMap()) {
+		t.Fatalf("empty grouped iterator snapshot = %#v, listener = %#v", snapshot.AsMap(), row.AsMap())
+	}
+
+	for _, value := range []subqueryMultirowValue{{Key: "E1", Value: 20}, {Key: "E2", Value: 30}} {
+		if err := engine.SendEvent(context.Background(), value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	row = sendTrigger()
+	wantGroups := []map[string]any{{"key": "E1", "total": int64(20)}, {"key": "E2", "total": int64(30)}}
+	if got, ok := row.Get("groups").Any().([]map[string]any); !ok || !reflect.DeepEqual(got, wantGroups) {
+		t.Fatalf("grouped iterator groups = %#v, want %#v", row.Get("groups"), wantGroups)
+	}
+	if got, ok := row.Get("limited").Any().([]map[string]any); !ok || !reflect.DeepEqual(got, wantGroups[:1]) {
+		t.Fatalf("grouped iterator limited = %#v, want %#v", row.Get("limited"), wantGroups[:1])
+	}
+	if snapshot := snapshotRow(); !reflect.DeepEqual(snapshot.AsMap(), row.AsMap()) {
+		t.Fatalf("grouped iterator populated snapshot = %#v, listener = %#v", snapshot.AsMap(), row.AsMap())
+	}
+}

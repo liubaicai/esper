@@ -1266,6 +1266,13 @@ func (s *Statement) SnapshotWithSelector(ctx context.Context, selector ContextPa
 		now = time.Now()
 		variables = variablesWithEngineLockState(statementVariables(cloneValues(s.runtime.variables), s.parameters), s.engine, true)
 	}
+	if s.plan.query.contextName == "" && s.runtime.subqueryRegistry != nil {
+		// Snapshot rebuilds the evaluation variables instead of reusing the
+		// variables attached during event processing. Keep the statement-owned
+		// event-stream subquery state visible so iterator results agree with the
+		// listener path for unbounded/grouped subqueries.
+		variables = s.runtime.subqueryRegistry.attachVariables(variables)
+	}
 	var result ResultBatch
 	if s.plan.query.contextName != "" {
 		result = ResultBatch{Time: now}
@@ -1283,7 +1290,11 @@ func (s *Statement) SnapshotWithSelector(ctx context.Context, selector ContextPa
 			if !contextPartitionSelectedWithDescriptor(selector, descriptor) {
 				continue
 			}
-			partBatch := partition.snapshotQuery(s.plan, now, variables)
+			partVariables := variables
+			if s.plan.query.contextName != "" {
+				partVariables = s.contextPartitionVariables(partition, variables)
+			}
+			partBatch := partition.snapshotQuery(s.plan, now, partVariables)
 			result.New = append(result.New, partBatch.New...)
 			result.Old = append(result.Old, partBatch.Old...)
 		}
