@@ -1618,3 +1618,5 @@ method source 的组合矩阵再补两条 Go-native 证据：多个 `FromMethodO
 本轮补齐 Java `EPLJoin20Stream` 的高路数 readiness 边界：`TestTwentyStreamLastEventJoinMatchesEsper` 用 Go `JoinMany` 构造 20 个独立的 `LastEvent` source，每路先按固定 ID 过滤，前 19 路到达时保持静默，第 20 路到达后才产生一条完整 tuple。该 runtime 以独立 `case.join-20-stream` 登记，避免把生成 EPL 文本或 Java 物理计划细节误写成 Go API；更高路数的 outer/cardinality、索引选择和性能矩阵仍保持 partial。
 
 本轮补齐 Java `EPLOuterInnerJoin4Stream` 的 6 个四流拓扑 runtime：`TestFourStreamMixedOuterVariantsMatchesEsper` 用 Go `JoinChain` 按 Java 的 middle/sided/star 变体复现 source-indexed edge 条件，覆盖正向/反向链和四流全部匹配的 projection。该类的 6 个 runtime、源文件和 Go 测试已登记；每次到达时的中间 Null 行、old/new cardinality、全事件序列和 bushy/物理索引矩阵仍保持 partial。
+
+本轮补齐 Java `EPLOuterJoin2Stream` 的两流 outer 语义切片：`TestTwoStreamOuterJoinVariantsMatchesEsper` 覆盖 left/right/full 的 Null 行与 matched old/new transition，`TestTwoStreamOuterCompositeAndCoercionMatchesEsper` 覆盖多列条件及 int/long/float 数值提升，`TestTwoStreamOuterRangeAndArrayMatchesEsper` 覆盖 range + where 边界和 typed `[]int` full-outer unmatched/matched cardinality。该类 11 个 runtime、源文件和 Go 测试已登记到独立 case；完整 order/iterator/group-by、多列 OM/compile、event-type 和更宽 coercion 组合仍保持 partial。

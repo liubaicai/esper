@@ -577,6 +577,17 @@
       "difference": "The Go JoinChain reproduces all six Java four-stream middle/sided/star outer topology variants with source-indexed fluent edge conditions and a common matched-key projection. Intermediate unmatched-row emission, exact per-arrival old/new cardinality, broad event-order permutations, bushy plans and physical index-plan details remain partial."
     },
     {
+      "id": "case.join-outer-two-stream",
+      "javaRuntimeIds": ["java-runtime-85784cf139137b2057e8", "java-runtime-8e957145f05b446d777d", "java-runtime-7e36232dc5729f059687", "java-runtime-7de2184bbabccb0c481c", "java-runtime-7c2c89349a8c82e55c65", "java-runtime-ffa82aaeec09d7c77c63", "java-runtime-463403daca677fb18557", "java-runtime-d01b596e7f1a3ba5c8bb", "java-runtime-f17ca9882a19146087b4", "java-runtime-2cf850e8049429c85460", "java-runtime-3c2e09f1951c5a963536"],
+      "javaNames": ["EPLJoinRangeOuterJoin", "EPLJoinFullOuterIteratorGroupBy", "EPLJoinFullOuterJoin", "EPLJoinMultiColumnLeftOM", "EPLJoinMultiColumnLeft", "EPLJoinMultiColumnRight", "EPLJoinMultiColumnRightCoercion", "EPLJoinRightOuterJoin", "EPLJoinLeftOuterJoin", "EPLJoinEventType", "EPLJoinFullOuterMultikeyWArrayPrimitive"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLOuterJoin2Stream.java"],
+      "goTests": ["TestTwoStreamOuterJoinVariantsMatchesEsper", "TestTwoStreamOuterCompositeAndCoercionMatchesEsper", "TestTwoStreamOuterRangeAndArrayMatchesEsper"],
+      "tags": ["correctness", "join", "outer-join", "array", "range", "coercion", "cardinality"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "The Go fluent Join/full-outer path now covers left/right/full variants, two-property plus numeric coercion predicates, range-and-where filtering, and array-key unmatched/matched cardinality. Full iterator/group-by, multi-column OM/compile variants, event-type diagnostics and the complete range/coercion matrix remain partial."
+    },
+    {
       "id": "case.dataflow-typed-ports",
       "javaRuntimeIds": ["java-runtime-6309a6b7e0f0ba981a97"],
       "javaNames": ["EPLDataflowFanInOut"],
@@ -1436,6 +1447,7 @@
     {"capabilityId": "join.basic", "caseId": "case.join-basic"},
     {"capabilityId": "join.basic", "caseId": "case.join-20-stream"},
     {"capabilityId": "join.basic", "caseId": "case.join-outer-four"},
+    {"capabilityId": "join.basic", "caseId": "case.join-outer-two-stream"},
     {"capabilityId": "context.partition", "caseId": "case.context-partitioning"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
