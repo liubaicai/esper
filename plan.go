@@ -15,16 +15,24 @@ const planSchemaVersion = "esper-go-plan/v2"
 // Environment is the compile-time catalog for schemas and future extension
 // registrations. It is safe to share for concurrent Plan construction.
 type Environment struct {
-	mu               sync.RWMutex
+	mu sync.RWMutex
+	// buildMu serializes plan construction for one environment. Expression
+	// references are expanded lazily during validation and may add the
+	// definition node to the reference AST; keeping that one-time expansion
+	// under a build lock preserves the concurrent-plan safety promised by the
+	// Environment API without exposing mutable AST state to callers.
+	buildMu          sync.Mutex
 	schemas          map[string]Schema
 	typeToName       map[reflect.Type]string
 	variables        map[string]VariableDefinition
 	aggregatePlugins map[string]aggregatePluginDefinition
+	scripts          map[string]scriptDefinition
 	tables           map[string]TableDefinition
 	namedWindows     map[string]NamedWindowDefinition
 	contexts         map[string]ContextDefinition
 	dataflows        map[string]DataflowDefinition
 	savedDataflows   map[string]DataflowDefinition
+	expressions      map[string]ExpressionDefinition
 }
 
 func NewEnvironment() *Environment {
@@ -33,11 +41,13 @@ func NewEnvironment() *Environment {
 		typeToName:       make(map[reflect.Type]string),
 		variables:        make(map[string]VariableDefinition),
 		aggregatePlugins: make(map[string]aggregatePluginDefinition),
+		scripts:          make(map[string]scriptDefinition),
 		tables:           make(map[string]TableDefinition),
 		namedWindows:     make(map[string]NamedWindowDefinition),
 		contexts:         make(map[string]ContextDefinition),
 		dataflows:        make(map[string]DataflowDefinition),
 		savedDataflows:   make(map[string]DataflowDefinition),
+		expressions:      make(map[string]ExpressionDefinition),
 	}
 }
 
@@ -374,6 +384,8 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	if e == nil {
 		return Plan{}, NewError(ErrorInvalidRule, "nil environment")
 	}
+	e.buildMu.Lock()
+	defer e.buildMu.Unlock()
 	if query.env == nil || query.env != e {
 		return Plan{}, NewError(ErrorDependency, "query belongs to a different or nil environment")
 	}
@@ -545,6 +557,48 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	sort.Strings(pluginNames)
 	for _, name := range pluginNames {
 		canonicalParts = append(canonicalParts, fmt.Sprintf("aggregate-plugin(%s:%s:factory=%t)", name, pluginTypes[name], pluginFactoryFlags[name]))
+	}
+	e.mu.RLock()
+	scriptNames := make([]string, 0, len(e.scripts))
+	scriptDefinitions := make(map[string]scriptDefinition, len(e.scripts))
+	for name, definition := range e.scripts {
+		scriptNames = append(scriptNames, name)
+		scriptDefinitions[name] = definition
+	}
+	e.mu.RUnlock()
+	sort.Strings(scriptNames)
+	for _, name := range scriptNames {
+		definition := scriptDefinitions[name]
+		argumentTypes := make([]string, 0, len(definition.argumentTypes))
+		for _, argumentType := range definition.argumentTypes {
+			if argumentType == nil {
+				argumentTypes = append(argumentTypes, "any")
+				continue
+			}
+			argumentTypes = append(argumentTypes, argumentType.String())
+		}
+		canonicalParts = append(canonicalParts, fmt.Sprintf("script(%s:%s:%s:%t:%s)", name, definition.dialect, definition.resultType, definition.argumentTypesSet, strings.Join(argumentTypes, ",")))
+	}
+	e.mu.RLock()
+	expressionNames := make([]string, 0, len(e.expressions))
+	expressionDefinitions := make(map[string]ExpressionDefinition, len(e.expressions))
+	for name, definition := range e.expressions {
+		expressionNames = append(expressionNames, name)
+		expressionDefinitions[name] = definition
+	}
+	e.mu.RUnlock()
+	sort.Strings(expressionNames)
+	for _, name := range expressionNames {
+		definition := expressionDefinitions[name]
+		description := "<nil>"
+		resultType := "<nil>"
+		if definition.Expr != nil {
+			description = definition.Expr.Description()
+			if definition.Expr.Type() != nil {
+				resultType = definition.Expr.Type().String()
+			}
+		}
+		canonicalParts = append(canonicalParts, fmt.Sprintf("expression(%s:%s:%s)", name, resultType, description))
 	}
 	for _, table := range e.Tables() {
 		columns := make([]string, 0, len(table.columns))
@@ -1414,7 +1468,13 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 	if node.configurationError != "" {
 		return NewError(ErrorInvalidRule, node.configurationError)
 	}
+	if err := e.validateExpressionReferences(node, make(map[string]bool)); err != nil {
+		return err
+	}
 	if err := validateMethodNodes(node); err != nil {
+		return err
+	}
+	if err := e.validateScriptNodes(node); err != nil {
 		return err
 	}
 	if err := e.validateExprVariables(expression); err != nil {
@@ -1464,6 +1524,46 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 		}
 	}
 	return e.validateExpressionSubqueries(node)
+}
+
+func (e *Environment) validateExpressionReferences(node *exprNode, visiting map[string]bool) error {
+	if node == nil {
+		return nil
+	}
+	if node.kind == "expression-ref" {
+		name := strings.TrimSpace(node.expressionName)
+		if name == "" {
+			return NewError(ErrorInvalidRule, "expression reference name is required")
+		}
+		if node.expressionEnvironment != nil && node.expressionEnvironment != e {
+			return NewError(ErrorDependency, fmt.Sprintf("expression definition %q belongs to a different environment", name))
+		}
+		definition, ok := e.Expression(name)
+		if !ok || definition.Expr == nil || definition.Expr.node() == nil {
+			return NewError(ErrorUnknownName, fmt.Sprintf("expression definition %q is not registered", name))
+		}
+		if !expressionTypesCompatible(node.typ, definition.Expr.Type()) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("expression definition %q returns %s, reference expects %s", name, definition.Expr.Type(), node.typ))
+		}
+		if visiting[name] {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("expression definition %q has a cyclic dependency", name))
+		}
+		visiting[name] = true
+		if len(node.children) == 0 {
+			node.children = append(node.children, definition.Expr.node())
+		}
+		if err := e.validateExpressionReferences(definition.Expr.node(), visiting); err != nil {
+			delete(visiting, name)
+			return err
+		}
+		delete(visiting, name)
+	}
+	for _, child := range node.children {
+		if err := e.validateExpressionReferences(child, visiting); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // validateContainedPropertyExpression enforces the same evaluation boundary
@@ -1539,6 +1639,52 @@ func validateMethodNodes(node *exprNode) error {
 	}
 	for _, child := range node.children {
 		if err := validateMethodNodes(child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e *Environment) validateScriptNodes(node *exprNode) error {
+	if node == nil {
+		return nil
+	}
+	if node.kind == "script" {
+		if node.scriptEnvironment == nil || node.scriptEnvironment != e {
+			return NewError(ErrorDependency, fmt.Sprintf("script %q belongs to a different or nil environment", node.scriptName))
+		}
+		e.mu.RLock()
+		definition, ok := e.scripts[node.scriptName]
+		e.mu.RUnlock()
+		if !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("script %q is not registered", node.scriptName))
+		}
+		if definition.provider == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("script %q has no provider", node.scriptName))
+		}
+		if definition.resultType != nil && node.typ != nil && definition.resultType != node.typ &&
+			!definition.resultType.AssignableTo(node.typ) && !node.typ.AssignableTo(definition.resultType) && !numericTypes(definition.resultType, node.typ) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("script %q returns %s, expression expects %s", node.scriptName, definition.resultType, node.typ))
+		}
+		if definition.argumentTypesSet {
+			if len(definition.argumentTypes) != len(node.children) {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("script %q expects %d arguments, received %d", node.scriptName, len(definition.argumentTypes), len(node.children)))
+			}
+			for index, expected := range definition.argumentTypes {
+				child := node.children[index]
+				if child == nil {
+					return NewError(ErrorInvalidRule, fmt.Sprintf("script %q argument %d is required", node.scriptName, index))
+				}
+				actual := child.typ
+				if expected != nil && actual != nil && expected != typeOf[any]() && actual != typeOf[any]() &&
+					!expected.AssignableTo(actual) && !actual.AssignableTo(expected) && !numericTypes(expected, actual) {
+					return NewError(ErrorTypeMismatch, fmt.Sprintf("script %q argument %d expects %s, received %s", node.scriptName, index, expected, actual))
+				}
+			}
+		}
+	}
+	for _, child := range node.children {
+		if err := e.validateScriptNodes(child); err != nil {
 			return err
 		}
 	}

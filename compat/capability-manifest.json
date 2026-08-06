@@ -47,7 +47,7 @@
       "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "trigger.go", "subquery.go", "contained_test.go", "contained_unidirectional_test.go", "contained_split_event_test.go", "contained_split_representation_test.go", "contained_split_chain_test.go", "contained_split_sequence_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["property-selection alias/fragment semantics across nested representations", "full split-expression adapter matrix beyond the covered raw ObjectArray/Avro/XML rows, basic two-level chain and iter.Seq adapter, including script/UDF, wildcard method and additional collection shapes", "contained Table/FAF interactions and remaining Named Window representation combinations", "invalid diagnostics beyond the covered parent/depth cases and complete Java contained-event trace"]
+      "remaining": ["property-selection alias/fragment semantics across nested representations", "full split-expression adapter matrix beyond the covered raw ObjectArray/Avro/XML rows, basic two-level chain and iter.Seq adapter, including Java dialect scripts, wildcard method adapters and additional collection shapes", "contained Table/FAF interactions and remaining Named Window representation combinations", "invalid diagnostics beyond the covered parent/depth cases and complete Java contained-event trace"]
     },
     {
       "id": "event.json-typed",
@@ -147,6 +147,28 @@
       "phase": 1,
       "status": "partial",
       "remaining": ["automatic heterogeneous branch-result coercion and parameterized array metadata", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
+    },
+    {
+      "id": "expr.declared",
+      "domain": "expression",
+      "level": "S",
+      "summary": "Named no-argument expression definitions and typed references with dependency validation",
+      "javaRefs": ["EPLSubselectAggregatedMultirowAndColumn", "EPLOtherCreateExpression"],
+      "goRefs": ["expression_definition.go", "expression_definition_test.go", "expr.go", "plan.go"],
+      "phase": 1,
+      "status": "partial",
+      "remaining": ["parameterized declared expressions and overload/name-collision rules", "module/deployment visibility and lifecycle replacement", "complete iterator/cardinality/fragment/context/pattern/Dataflow combinations", "full Java invalid-rule and shared trace parity"]
+    },
+    {
+      "id": "expr.script",
+      "domain": "expression",
+      "level": "S",
+      "summary": "Go-native typed ScriptProvider registration and analyzable script-call expressions",
+      "javaRefs": ["EPLScriptExpression", "EPLScriptExpressionConfiguration", "EPLScriptExpressionDisable", "EPLScriptSandboxJSR223", "EPLScriptSandboxMVEL", "EPLContainedScriptContextValue"],
+      "goRefs": ["script.go", "script_test.go", "expr.go", "plan.go", "stream.go"],
+      "phase": 1,
+      "status": "partial",
+      "remaining": ["JavaScript/MVEL/JVM dialect runtimes and parser/compiler diagnostics", "script event-return/generic metadata and full contained adapter matrix", "panic/error propagation policy, cancellation, timeout, memory budget and sandbox/process isolation", "UDF/Pattern/Context/Dataflow/FAF combinations and full Java trace parity"]
     },
     {
       "id": "resultset.aggregate-dimensional",
@@ -419,11 +441,11 @@
       "javaRuntimeIds": ["java-runtime-e5e8e7be2d9e28ca1fcf", "java-runtime-924fb8270ad180facd44", "java-runtime-87c7b775b2f72a76c09e"],
       "javaNames": ["EPLContainedScriptContextValue", "EPLContainedSplitExprReturnsEventBean", "EPLContainedSingleRowSplitAndType"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventSplitExpr.java"],
-      "goTests": ["TestContainedSplitEventArrayPreservesVariantMembersMatchesEsper", "TestContainedTypeMaterializesMapAndJSONElementsMatchesEsper", "TestContainedTypeMaterializesMapElementsInFireAndForgetMatchesEsper", "TestContainedTypeMaterializesObjectArrayAvroAndXMLRows", "TestContainedSplitChainPreservesNestedParentScopeMatchesEsper", "TestContainedSplitSequenceMaterializesGoIterSeqInOrder", "TestContainedSplitRejectsUnsupportedExpressionForms", "TestContainedTypeRejectsUnknownAndIncompatibleTargets"],
-      "tags": ["correctness", "event", "contained", "split", "type", "variant", "map", "json", "object-array", "avro", "xml", "chained", "sequence", "invalid"],
+      "goTests": ["TestContainedSplitEventArrayPreservesVariantMembersMatchesEsper", "TestContainedTypeMaterializesMapAndJSONElementsMatchesEsper", "TestContainedTypeMaterializesMapElementsInFireAndForgetMatchesEsper", "TestContainedTypeMaterializesObjectArrayAvroAndXMLRows", "TestContainedSplitChainPreservesNestedParentScopeMatchesEsper", "TestContainedSplitSequenceMaterializesGoIterSeqInOrder", "TestContainedSplitRejectsUnsupportedExpressionForms", "TestContainedTypeRejectsUnknownAndIncompatibleTargets", "TestScriptProviderContextAndContainedExpansionMatchEsper"],
+      "tags": ["correctness", "event", "contained", "split", "type", "variant", "map", "json", "object-array", "avro", "xml", "chained", "sequence", "script-provider", "invalid"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
-      "difference": "Go introduces Go-native UnnestAs/UnnestEvents with an explicit registered target schema in place of EPL @type. Event-valued elements preserve concrete member identity and parent scope when routed through a predefined variant; raw map, JSON text, ObjectArray, Avro and XML elements are materialized through the target schema, a two-level UnnestAs chain preserves immediate parent and grandparent Event scope, and UnnestSeqAs/UnnestSeqEvents adapt ordered Go iter.Seq yields. Build rejects contained property expressions that contain subqueries, aggregation or previous/prior access, while ordinary analyzable UDF/string collection expressions remain valid. Unknown/empty/incompatible targets fail at the appropriate build/runtime boundary. The mapped subset does not yet claim Java's script-context execution, wildcard method adapters, additional collection adapter shapes, exact EventBean metadata or the complete split/type trace."
+      "difference": "Go introduces Go-native UnnestAs/UnnestEvents with an explicit registered target schema in place of EPL @type. Event-valued elements preserve concrete member identity and parent scope when routed through a predefined variant; raw map, JSON text, ObjectArray, Avro and XML elements are materialized through the target schema, a two-level UnnestAs chain preserves immediate parent and grandparent Event scope, and UnnestSeqAs/UnnestSeqEvents adapt ordered Go iter.Seq yields. Build rejects contained property expressions that contain subqueries, aggregation or previous/prior access, while ordinary analyzable UDF/string collection expressions remain valid. ScriptProvider now covers the Go invocation/context contract and script-returned child expansion, but it is not a JavaScript/MVEL/JVM interpreter. Unknown/empty/incompatible targets fail at the appropriate build/runtime boundary. Wildcard method adapters, additional collection adapter shapes, exact EventBean metadata and the complete split/type trace remain open."
     },
     {
       "id": "case.event-json-typed",
@@ -872,6 +894,28 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
       "difference": "Go exposes typed CaseWhen[T] and CaseValue[T] builders with explicit branch-result type, declaration-order evaluation, lazy selected branches, Null/Missing condition handling, Null simple-value matching, numeric match coercion through Value semantics, arrays/enums, aggregate-context evaluation and Build-time invalid-builder diagnostics. Heterogeneous Java result branches require an explicit Go Cast at the branch boundary; the Go port intentionally has no EPL parser or SODA/compile deployment path, and Java parameterized event-type metadata and exact compiler diagnostics remain open."
+    },
+    {
+      "id": "case.expr-declared",
+      "javaRuntimeIds": ["java-runtime-fe88aa9f7b78478355ae"],
+      "javaNames": ["EPLSubselectMultirowGroupedUncorrelatedIteratorAndExpressionDef"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedMultirowAndColumn.java"],
+      "goTests": ["TestNamedExpressionReferenceEvaluatesAndEntersPlanIdentity", "TestNamedExpressionReferenceRejectsInvalidDependencies", "TestNamedExpressionGroupedSubquerySnapshotAndEnumChainMatchEsper"],
+      "tags": ["correctness", "expression", "declared-expression", "subquery", "named-window", "enum", "dependency", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go exposes no-argument DefineExpression[T]/ExpressionRef[T] nodes instead of EPL create-expression syntax. References evaluate against the current event and Engine snapshot, can continue through EnumTake, and reject unknown, foreign-environment, type-mismatched, duplicate and cyclic definitions during Build; definitions and references participate in Plan canonical/hash. Parameterized declarations, module/deployment visibility, lifecycle replacement and the complete Java iterator/cardinality/fragment trace remain open."
+    },
+    {
+      "id": "case.expr-script-provider",
+      "javaRuntimeIds": ["java-runtime-1010c63eb2330597a750", "java-runtime-a2b886734b1a2ad4cc28", "java-runtime-416f111d2368882ea644", "java-runtime-3834e7de0be8f481cea2", "java-runtime-76f900f81eab8fbb7068", "java-runtime-7b3d5e1ed4c6e5a98f89", "java-runtime-39ad2c583a5c307fdeaa", "java-runtime-c115e9369d2a342e8e7f", "java-runtime-97cf680e34e215878dae", "java-runtime-de45e4c09a85a606f39f", "java-runtime-e5e8e7be2d9e28ca1fcf"],
+      "javaNames": ["EPLScriptScripts", "EPLScriptQuoteEscape", "EPLScriptDocSamples", "EPLScriptSubqueryParam", "EPLScriptReturnNullWhenNumeric", "EPLScriptGenericResultType", "EPLScriptExpressionConfiguration", "EPLScriptExpressionDisable", "EPLScriptSandboxJSR223", "EPLScriptSandboxMVEL", "EPLContainedScriptContextValue"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/script/EPLScriptExpression.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/script/EPLScriptExpressionConfiguration.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/script/EPLScriptExpressionDisable.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/script/EPLScriptSandboxJSR223.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/script/EPLScriptSandboxMVEL.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventSplitExpr.java"],
+      "goTests": ["TestScriptProviderContextAndContainedExpansionMatchEsper", "TestScriptProviderPlanIdentityAndRuntimeNull", "TestScriptProviderAttributesPersistAndPreserveNull", "TestScriptProviderRejectsMissingAndMismatchedDefinitionsAtBuild"],
+      "tags": ["correctness", "expression", "script", "provider", "contained", "attributes", "invalid", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go maps the invocation/context contract to explicit typed ScriptProvider callbacks, preserving Value states, EvalContext, dialect metadata, provider-local attribute read/write state, contained expansion and Null-on-provider-error behavior; nil argument nodes are retained for Build-time arity diagnostics and script metadata enters Plan canonical identity. It intentionally does not embed JavaScript, MVEL or a JVM runtime. Java configuration/disable behavior, dialect/parser/compiler diagnostics, event-return and generic metadata, sandbox/timeout/resource policy, UDF/Pattern/Context/Dataflow/FAF combinations and complete trace parity remain open under expr.script."
     },
     {
       "id": "case.expr-enum-aggregate",
@@ -1656,6 +1700,8 @@
     {"capabilityId": "query.insert-into-route", "caseId": "case.insert-into-chain"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-aggregate"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-case"},
+    {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
+    {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-invalid"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-footprints"},

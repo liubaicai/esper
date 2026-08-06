@@ -43,6 +43,8 @@ type exprNode struct {
 	pluginReady           bool
 	pluginFactory         aggregatePluginFactory
 	pluginEnvironment     *Environment
+	scriptName            string
+	scriptEnvironment     *Environment
 	methodName            string
 	containedParentLevels int
 	joinSource            int
@@ -51,6 +53,8 @@ type exprNode struct {
 	enumParameterRequired bool
 	enumInvalidReason     string
 	configurationError    string
+	expressionName        string
+	expressionEnvironment *Environment
 	children              []*exprNode
 	subquery              *subqueryDefinition
 }
