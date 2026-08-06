@@ -6735,12 +6735,11 @@ func expandContainedEvents(env *Environment, schema Schema, definition *containe
 		if value.IsMissing() || value.IsNull() {
 			continue
 		}
-		collection := reflect.ValueOf(value.Any())
-		if !collection.IsValid() || (collection.Kind() != reflect.Slice && collection.Kind() != reflect.Array) {
-			return nil, fmt.Errorf("unnest property evaluated to %T, expected slice or array", value.Any())
+		items, err := containedCollectionItems(value.Any(), definition.sequence)
+		if err != nil {
+			return nil, err
 		}
-		for index := 0; index < collection.Len(); index++ {
-			item := collection.Index(index)
+		for index, item := range items {
 			if item.Kind() == reflect.Interface && !item.IsNil() {
 				item = item.Elem()
 			}
@@ -6765,6 +6764,42 @@ func expandContainedEvents(env *Environment, schema Schema, definition *containe
 		}
 	}
 	return result, nil
+}
+
+func containedCollectionItems(value any, sequence bool) ([]reflect.Value, error) {
+	collection := reflect.ValueOf(value)
+	if !collection.IsValid() {
+		return nil, fmt.Errorf("unnest property evaluated to %T, expected slice, array or iter.Seq", value)
+	}
+	if sequence {
+		if collection.Kind() != reflect.Func {
+			return nil, fmt.Errorf("unnest sequence property evaluated to %T, expected iter.Seq", value)
+		}
+		if collection.IsNil() {
+			return nil, nil
+		}
+		yieldType := collection.Type().In(0)
+		if yieldType.Kind() != reflect.Func || yieldType.NumIn() != 1 || yieldType.NumOut() != 1 || yieldType.Out(0).Kind() != reflect.Bool {
+			return nil, fmt.Errorf("unnest sequence property evaluated to %T, expected iter.Seq", value)
+		}
+		items := make([]reflect.Value, 0)
+		yield := reflect.MakeFunc(yieldType, func(args []reflect.Value) []reflect.Value {
+			if len(args) == 1 {
+				items = append(items, args[0])
+			}
+			return []reflect.Value{reflect.ValueOf(true)}
+		})
+		collection.Call([]reflect.Value{yield})
+		return items, nil
+	}
+	if collection.Kind() != reflect.Slice && collection.Kind() != reflect.Array {
+		return nil, fmt.Errorf("unnest property evaluated to %T, expected slice or array", value)
+	}
+	items := make([]reflect.Value, collection.Len())
+	for index := 0; index < collection.Len(); index++ {
+		items[index] = collection.Index(index)
+	}
+	return items, nil
 }
 
 // materializeContainedEvent applies the target type of an @type-style

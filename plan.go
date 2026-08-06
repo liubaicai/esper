@@ -1304,11 +1304,20 @@ func (e *Environment) validateNode(node *streamNode) error {
 			return err
 		}
 		propertyType := node.contained.property.Type()
-		if propertyType == nil || (propertyType.Kind() != reflect.Slice && propertyType.Kind() != reflect.Array) {
-			return fmt.Errorf("unnest property must return a slice or array, got %s", propertyType)
+		if propertyType == nil {
+			return fmt.Errorf("unnest property must return a slice, array or iter.Seq")
 		}
-		if node.contained.elementType == nil || propertyType.Elem() != node.contained.elementType {
-			return fmt.Errorf("unnest property element type %s does not match child element type %s", propertyType.Elem(), node.contained.elementType)
+		if node.contained.sequence {
+			if !isContainedSequenceType(propertyType, node.contained.elementType) {
+				return fmt.Errorf("unnest sequence element type %s does not match child element type %s", propertyType, node.contained.elementType)
+			}
+		} else {
+			if propertyType.Kind() != reflect.Slice && propertyType.Kind() != reflect.Array {
+				return fmt.Errorf("unnest property must return a slice or array, got %s", propertyType)
+			}
+			if node.contained.elementType == nil || propertyType.Elem() != node.contained.elementType {
+				return fmt.Errorf("unnest property element type %s does not match child element type %s", propertyType.Elem(), node.contained.elementType)
+			}
 		}
 		if target := strings.TrimSpace(node.contained.targetSchemaName); target != "" {
 			if target == "<invalid>" {
@@ -1398,14 +1407,21 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 	if expression == nil {
 		return fmt.Errorf("esper: nil expression")
 	}
-	if err := validateMethodNodes(expression.node()); err != nil {
+	node := expression.node()
+	if node == nil {
+		return fmt.Errorf("esper: expression has no analyzable node")
+	}
+	if node.configurationError != "" {
+		return NewError(ErrorInvalidRule, node.configurationError)
+	}
+	if err := validateMethodNodes(node); err != nil {
 		return err
 	}
 	if err := e.validateExprVariables(expression); err != nil {
 		return err
 	}
 	var fields []string
-	expression.node().referencedLocalFields(&fields)
+	node.referencedLocalFields(&fields)
 	source, err := sourceNode(input)
 	if err != nil {
 		return err
@@ -1427,7 +1443,7 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 		}
 	}
 	var parentFields []containedParentFieldReference
-	expression.node().referencedContainedParentFields(&parentFields)
+	node.referencedContainedParentFields(&parentFields)
 	for _, reference := range parentFields {
 		if reference.level <= 0 {
 			return NewError(ErrorInvalidRule, "contained ancestor level must be positive")
@@ -1440,14 +1456,14 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 		if !exists {
 			return fmt.Errorf("esper: contained ancestor references unknown field %q on schema %q", reference.name, parentSchema.Name())
 		}
-		expressionType := expressionFieldType(expression.node(), reference.name)
+		expressionType := expressionFieldType(node, reference.name)
 		if expressionType != nil && field.Type != nil && field.Type != typeOf[any]() {
 			if !field.Type.AssignableTo(expressionType) && !expressionType.AssignableTo(field.Type) && !numericTypes(field.Type, expressionType) {
 				return fmt.Errorf("esper: contained ancestor field %q has type %s, expression expects %s", reference.name, field.Type, expressionType)
 			}
 		}
 	}
-	return e.validateExpressionSubqueries(expression.node())
+	return e.validateExpressionSubqueries(node)
 }
 
 // validateContainedPropertyExpression enforces the same evaluation boundary
@@ -1482,6 +1498,18 @@ func validateContainedPropertyExpression(expression Expr) error {
 		return nil
 	}
 	return visit(expression.node())
+}
+
+func isContainedSequenceType(sequenceType, elementType reflect.Type) bool {
+	if sequenceType == nil || elementType == nil || sequenceType.Kind() != reflect.Func || sequenceType.NumIn() != 1 || sequenceType.NumOut() != 0 {
+		return false
+	}
+	yieldType := sequenceType.In(0)
+	if yieldType.Kind() != reflect.Func || yieldType.NumIn() != 1 || yieldType.NumOut() != 1 || yieldType.Out(0).Kind() != reflect.Bool {
+		return false
+	}
+	itemType := yieldType.In(0)
+	return itemType == elementType || itemType.AssignableTo(elementType) || elementType.AssignableTo(itemType)
 }
 
 func (e *Environment) containedAncestorSchema(input *streamNode, level int) (Schema, error) {

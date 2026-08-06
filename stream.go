@@ -2,6 +2,7 @@ package esper
 
 import (
 	"fmt"
+	"iter"
 	"reflect"
 	"strings"
 	"time"
@@ -43,6 +44,7 @@ type containedDefinition struct {
 	childType        reflect.Type
 	elementType      reflect.Type
 	targetSchemaName string
+	sequence         bool
 	wrap             func(reflect.Value) (any, error)
 }
 
@@ -120,7 +122,11 @@ func (n *streamNode) describe() string {
 			input = n.input.describe()
 		}
 		if target != "" {
-			return "unnest(" + input + ":" + property + ":type=" + target + ")"
+			kind := "type=" + target
+			if n.contained != nil && n.contained.sequence {
+				kind += ":sequence"
+			}
+			return "unnest(" + input + ":" + property + ":" + kind + ")"
 		}
 		return "unnest(" + input + ":" + property + ")"
 	default:
@@ -855,12 +861,17 @@ func Unnest[T, V any](input Stream[T], property Expression[[]V]) Stream[V] {
 // EventValue[Event](), Field[Event, V](...), Property or Event.Get in the
 // following chain.
 func UnnestAs[T, V any](input Stream[T], property Expression[[]V], targetType string) Stream[Event] {
+	return newUnnestAsStream(input, property, typeOf[V](), targetType, false)
+}
+
+func newUnnestAsStream[T any](input Stream[T], property Expr, elementType reflect.Type, targetType string, sequence bool) Stream[Event] {
 	targetType = strings.TrimSpace(targetType)
 	definition := &containedDefinition{
 		property:         property,
 		childType:        typeOf[Event](),
-		elementType:      typeOf[V](),
+		elementType:      elementType,
 		targetSchemaName: targetType,
+		sequence:         sequence,
 	}
 	if targetType == "" {
 		definition.targetSchemaName = "<invalid>"
@@ -877,11 +888,25 @@ func UnnestAs[T, V any](input Stream[T], property Expression[[]V], targetType st
 	}
 }
 
+// UnnestSeqAs expands a Go iter.Seq-valued property and materializes each
+// yielded element as the named event type. iter.Seq is the Go-native
+// equivalent of Esper's Collection/Iterable return shape; yield order is
+// preserved and the result remains a normal Event stream for further fluent
+// operators.
+func UnnestSeqAs[T, V any](input Stream[T], property Expression[iter.Seq[V]], targetType string) Stream[Event] {
+	return newUnnestAsStream(input, property, typeOf[V](), targetType, true)
+}
+
 // UnnestEvents is the common EventBean[]/Event[] split form. The target type
 // is still explicit because one result array may contain different concrete
 // member schemas under a common parent or variant schema.
 func UnnestEvents[T any](input Stream[T], property Expression[[]Event], targetType string) Stream[Event] {
 	return UnnestAs[T, Event](input, property, targetType)
+}
+
+// UnnestSeqEvents is the iter.Seq counterpart of UnnestEvents.
+func UnnestSeqEvents[T any](input Stream[T], property Expression[iter.Seq[Event]], targetType string) Stream[Event] {
+	return UnnestSeqAs[T, Event](input, property, targetType)
 }
 
 // ContainedValue is the explicit event shape used by UnnestValues for scalar
