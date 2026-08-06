@@ -251,3 +251,102 @@ func TestDataflowOperatorOptionsRejectNonCanonicalNames(t *testing.T) {
 		}
 	}
 }
+
+func TestDataflowCustomPropertiesAreTypedAndInstanceIsolated(t *testing.T) {
+	env := NewEnvironment()
+	settings := map[string]any{
+		"parameterOne": "ValueOne",
+		"labels":       []string{"a", "b"},
+	}
+	properties := map[string]any{
+		"enabled":  true,
+		"settings": settings,
+		"catchAll": map[string]int{"limit": 10},
+	}
+	var contexts []DataflowOperatorContext
+	definition, err := DefineDataflow(env, "custom-properties-flow").
+		CustomWithOptions("custom", func(operator DataflowOperatorContext) (DataflowOperatorRuntime, error) {
+			contexts = append(contexts, operator)
+			return dataflowOptionRuntime{}, nil
+		}, DataflowOperatorOptions{Properties: properties}).
+		Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	settings["parameterOne"] = "mutated-after-build"
+	settings["labels"].([]string)[0] = "mutated-after-build"
+	properties["enabled"] = false
+	engine := NewEngine(env)
+	if _, err := engine.InstantiateDataflow(context.Background(), definition); err != nil {
+		t.Fatal(err)
+	}
+	if len(contexts) != 1 {
+		t.Fatalf("custom property contexts = %#v", contexts)
+	}
+	if enabled, ok := DataflowProperty[bool](contexts[0], "enabled"); !ok || !enabled {
+		t.Fatalf("typed enabled property = %v, %t", enabled, ok)
+	}
+	if parameter, ok := DataflowProperty[string](contexts[0], "settings", "parameterOne"); !ok || parameter != "ValueOne" {
+		t.Fatalf("typed nested property = %q, %t", parameter, ok)
+	}
+	labels, ok := DataflowProperty[[]string](contexts[0], "settings", "labels")
+	if !ok || !reflect.DeepEqual(labels, []string{"a", "b"}) {
+		t.Fatalf("typed array property = %#v, %t", labels, ok)
+	}
+	if limit, ok := DataflowProperty[int](contexts[0], "catchAll", "limit"); !ok || limit != 10 {
+		t.Fatalf("typed catch-all property = %d, %t", limit, ok)
+	}
+	if _, ok := DataflowProperty[string](contexts[0], "settings", "missing"); ok {
+		t.Fatal("missing nested property was reported present")
+	}
+
+	contexts[0].Properties["settings"].(map[string]any)["parameterOne"] = "mutated-instance"
+	labels[0] = "mutated-instance"
+	if _, err := engine.InstantiateDataflow(context.Background(), definition); err != nil {
+		t.Fatal(err)
+	}
+	if parameter, ok := DataflowProperty[string](contexts[1], "settings", "parameterOne"); !ok || parameter != "ValueOne" {
+		t.Fatalf("second instance nested property = %q, %t", parameter, ok)
+	}
+	if labels, ok := DataflowProperty[[]string](contexts[1], "settings", "labels"); !ok || !reflect.DeepEqual(labels, []string{"a", "b"}) {
+		t.Fatalf("second instance array property = %#v, %t", labels, ok)
+	}
+	definitionProperties := definition.Operators()[0].Properties
+	definitionProperties["settings"].(map[string]any)["parameterOne"] = "mutated-view"
+	if parameter := definition.Operators()[0].Properties["settings"].(map[string]any)["parameterOne"]; parameter != "ValueOne" {
+		t.Fatalf("definition property view leaked nested mutation: %#v", parameter)
+	}
+}
+
+func TestDataflowCustomPropertiesHaveStablePlanIdentity(t *testing.T) {
+	build := func(properties map[string]any, parameters []string) Plan {
+		t.Helper()
+		env := NewEnvironment()
+		if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := DefineDataflow(env, "custom-property-plan").
+			CustomWithOptions("custom", func(DataflowOperatorContext) (DataflowOperatorRuntime, error) {
+				return dataflowOptionRuntime{}, nil
+			}, DataflowOperatorOptions{Properties: properties, ParameterNames: parameters}).
+			Build(); err != nil {
+			t.Fatal(err)
+		}
+		plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Query())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return plan
+	}
+	first := build(map[string]any{"mode": "one", "nested": map[string]any{"values": []int{1, 2}}}, []string{"second", "first"})
+	reordered := build(map[string]any{"nested": map[string]any{"values": []int{1, 2}}, "mode": "one"}, []string{"first", "second"})
+	differentValue := build(map[string]any{"mode": "two", "nested": map[string]any{"values": []int{1, 2}}}, []string{"first", "second"})
+	differentParameter := build(map[string]any{"mode": "one", "nested": map[string]any{"values": []int{1, 2}}}, []string{"first"})
+	if first.Hash() != reordered.Hash() {
+		t.Fatalf("custom property insertion order changed plan hash: %s != %s", first.Hash(), reordered.Hash())
+	}
+	if first.Hash() == differentValue.Hash() || first.Hash() == differentParameter.Hash() {
+		t.Fatalf("different custom property configuration shares plan hash %s", first.Hash())
+	}
+}

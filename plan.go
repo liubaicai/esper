@@ -593,7 +593,9 @@ func (e *Environment) Build(query Query) (Plan, error) {
 				sort.Strings(fieldParameters)
 				beacon = fmt.Sprintf("iterations=%d;iterationsExpr=%s;initial=%s;initialExpr=%s;interval=%s;intervalExpr=%s;factory=%t;event=%t;underlying=%t;fieldParameters=%s", operator.BeaconOptions.Iterations, iterationsExpression, operator.BeaconOptions.InitialDelay, initialDelayExpression, operator.BeaconOptions.Interval, intervalExpression, operator.BeaconOptions.Factory != nil, operator.BeaconEventConfigured, operator.BeaconUnderlying, strings.Join(fieldParameters, ","))
 			}
-			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon))
+			parameterNames := append([]string(nil), operator.ParameterNames...)
+			sort.Strings(parameterNames)
+			operators = append(operators, fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%s:properties=%s:parameters=%s", operator.Name, operator.Kind, operator.EventType, predicate, sourceFilter, strings.Join(selections, ","), statement, beacon, canonicalDataflowProperties(operator.Properties), strings.Join(parameterNames, ",")))
 		}
 		edges := make([]string, 0, len(dataflow.edges))
 		for _, edge := range dataflow.edges {
@@ -610,6 +612,100 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		query:         query,
 		resultSchema:  resultSchema,
 	}, nil
+}
+
+type canonicalDataflowReference struct {
+	typ  reflect.Type
+	kind reflect.Kind
+	ptr  uintptr
+}
+
+func canonicalDataflowProperties(properties map[string]any) string {
+	if properties == nil {
+		return "nil"
+	}
+	names := make([]string, 0, len(properties))
+	for name := range properties {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	parts := make([]string, 0, len(names))
+	for _, name := range names {
+		parts = append(parts, fmt.Sprintf("%q=%s", name, canonicalDataflowPropertyValue(reflect.ValueOf(properties[name]), make(map[canonicalDataflowReference]bool))))
+	}
+	return "{" + strings.Join(parts, ",") + "}"
+}
+
+func canonicalDataflowPropertyValue(value reflect.Value, visiting map[canonicalDataflowReference]bool) string {
+	if !value.IsValid() {
+		return "nil"
+	}
+	if value.CanInterface() {
+		if expression, ok := value.Interface().(Expr); ok && expression != nil {
+			return "expr(" + expression.Description() + ")"
+		}
+	}
+	typ := value.Type().String()
+	switch value.Kind() {
+	case reflect.Interface:
+		if value.IsNil() {
+			return typ + "(nil)"
+		}
+		return typ + "(" + canonicalDataflowPropertyValue(value.Elem(), visiting) + ")"
+	case reflect.Bool:
+		return fmt.Sprintf("%s(%t)", typ, value.Bool())
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return fmt.Sprintf("%s(%d)", typ, value.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return fmt.Sprintf("%s(%d)", typ, value.Uint())
+	case reflect.Float32, reflect.Float64:
+		return fmt.Sprintf("%s(%g)", typ, value.Float())
+	case reflect.Complex64, reflect.Complex128:
+		return fmt.Sprintf("%s(%g)", typ, value.Complex())
+	case reflect.String:
+		return fmt.Sprintf("%s(%q)", typ, value.String())
+	case reflect.Pointer, reflect.Map, reflect.Slice:
+		if value.IsNil() {
+			return typ + "(nil)"
+		}
+		reference := canonicalDataflowReference{typ: value.Type(), kind: value.Kind(), ptr: value.Pointer()}
+		if visiting[reference] {
+			return typ + "(<cycle>)"
+		}
+		visiting[reference] = true
+		defer delete(visiting, reference)
+		if value.Kind() == reflect.Pointer {
+			return typ + "(&" + canonicalDataflowPropertyValue(value.Elem(), visiting) + ")"
+		}
+		if value.Kind() == reflect.Slice {
+			parts := make([]string, value.Len())
+			for index := 0; index < value.Len(); index++ {
+				parts[index] = canonicalDataflowPropertyValue(value.Index(index), visiting)
+			}
+			return typ + "([" + strings.Join(parts, ",") + "])"
+		}
+		parts := make([]string, 0, value.Len())
+		iterator := value.MapRange()
+		for iterator.Next() {
+			parts = append(parts, canonicalDataflowPropertyValue(iterator.Key(), visiting)+"="+canonicalDataflowPropertyValue(iterator.Value(), visiting))
+		}
+		sort.Strings(parts)
+		return typ + "({" + strings.Join(parts, ",") + "})"
+	case reflect.Array:
+		parts := make([]string, value.Len())
+		for index := 0; index < value.Len(); index++ {
+			parts[index] = canonicalDataflowPropertyValue(value.Index(index), visiting)
+		}
+		return typ + "([" + strings.Join(parts, ",") + "])"
+	case reflect.Struct:
+		parts := make([]string, value.NumField())
+		for index := 0; index < value.NumField(); index++ {
+			parts[index] = value.Type().Field(index).Name + "=" + canonicalDataflowPropertyValue(value.Field(index), visiting)
+		}
+		return typ + "({" + strings.Join(parts, ",") + "})"
+	default:
+		return typ
+	}
 }
 
 func (e *Environment) validateNamedWindowTriggerContext(definition *triggerDefinition, contextName string) error {

@@ -242,6 +242,41 @@ type DataflowOperatorContext struct {
 	Properties   map[string]any
 }
 
+// DataflowProperty returns one typed property from a custom operator context.
+// Additional path components traverse nested string-keyed maps. This is the
+// Go-style counterpart to Esper's annotated simple, nested and catch-all
+// operator properties without reflection-based field injection.
+func DataflowProperty[T any](operator DataflowOperatorContext, path ...string) (T, bool) {
+	var zero T
+	if len(path) == 0 {
+		return zero, false
+	}
+	var current any = operator.Properties
+	for _, name := range path {
+		mapping := reflect.ValueOf(current)
+		for mapping.IsValid() && (mapping.Kind() == reflect.Interface || mapping.Kind() == reflect.Pointer) {
+			if mapping.IsNil() {
+				return zero, false
+			}
+			mapping = mapping.Elem()
+		}
+		if !mapping.IsValid() || mapping.Kind() != reflect.Map || mapping.Type().Key().Kind() != reflect.String {
+			return zero, false
+		}
+		key := reflect.ValueOf(name)
+		if !key.Type().AssignableTo(mapping.Type().Key()) {
+			key = key.Convert(mapping.Type().Key())
+		}
+		value := mapping.MapIndex(key)
+		if !value.IsValid() {
+			return zero, false
+		}
+		current = value.Interface()
+	}
+	typed, ok := current.(T)
+	return typed, ok
+}
+
 // DataflowEmission is one value emitted from a custom operator. Port defaults
 // to "out" when empty, which keeps the common case concise while allowing
 // explicit multi-port routing.
@@ -682,9 +717,85 @@ func (o DataflowOperatorOptions) validate() error {
 }
 
 func cloneDataflowOperatorOptions(options DataflowOperatorOptions) DataflowOperatorOptions {
-	options.Properties = maps.Clone(options.Properties)
+	options.Properties = cloneDataflowProperties(options.Properties)
 	options.ParameterNames = append([]string(nil), options.ParameterNames...)
 	return options
+}
+
+type dataflowPropertyCloneReference struct {
+	typ  reflect.Type
+	kind reflect.Kind
+	ptr  uintptr
+}
+
+func cloneDataflowProperties(properties map[string]any) map[string]any {
+	if properties == nil {
+		return nil
+	}
+	cloned := make(map[string]any, len(properties))
+	visited := make(map[dataflowPropertyCloneReference]reflect.Value)
+	for name, value := range properties {
+		copy := cloneDataflowPropertyReflect(reflect.ValueOf(value), visited)
+		if copy.IsValid() {
+			cloned[name] = copy.Interface()
+		} else {
+			cloned[name] = nil
+		}
+	}
+	return cloned
+}
+
+func cloneDataflowPropertyReflect(value reflect.Value, visited map[dataflowPropertyCloneReference]reflect.Value) reflect.Value {
+	if !value.IsValid() {
+		return reflect.Value{}
+	}
+	switch value.Kind() {
+	case reflect.Interface:
+		if value.IsNil() {
+			return reflect.Zero(value.Type())
+		}
+		copy := cloneDataflowPropertyReflect(value.Elem(), visited)
+		result := reflect.New(value.Type()).Elem()
+		result.Set(copy)
+		return result
+	case reflect.Map:
+		if value.IsNil() {
+			return reflect.Zero(value.Type())
+		}
+		reference := dataflowPropertyCloneReference{typ: value.Type(), kind: value.Kind(), ptr: value.Pointer()}
+		if copy, exists := visited[reference]; exists {
+			return copy
+		}
+		copy := reflect.MakeMapWithSize(value.Type(), value.Len())
+		visited[reference] = copy
+		iterator := value.MapRange()
+		for iterator.Next() {
+			copy.SetMapIndex(iterator.Key(), cloneDataflowPropertyReflect(iterator.Value(), visited))
+		}
+		return copy
+	case reflect.Slice:
+		if value.IsNil() {
+			return reflect.Zero(value.Type())
+		}
+		reference := dataflowPropertyCloneReference{typ: value.Type(), kind: value.Kind(), ptr: value.Pointer()}
+		if copy, exists := visited[reference]; exists {
+			return copy
+		}
+		copy := reflect.MakeSlice(value.Type(), value.Len(), value.Len())
+		visited[reference] = copy
+		for index := 0; index < value.Len(); index++ {
+			copy.Index(index).Set(cloneDataflowPropertyReflect(value.Index(index), visited))
+		}
+		return copy
+	case reflect.Array:
+		copy := reflect.New(value.Type()).Elem()
+		for index := 0; index < value.Len(); index++ {
+			copy.Index(index).Set(cloneDataflowPropertyReflect(value.Index(index), visited))
+		}
+		return copy
+	default:
+		return value
+	}
 }
 
 func validateDataflowJoinCondition(condition JoinCondition, inputs int) error {
@@ -834,7 +945,7 @@ func (d DataflowDefinition) Operators() []DataflowOperator {
 		result[index].InputPortTypes = cloneDataflowPortTypes(result[index].InputPortTypes)
 		result[index].OutputPortTypes = cloneDataflowPortTypes(result[index].OutputPortTypes)
 		result[index].BeaconOptions = cloneDataflowBeaconOptions(result[index].BeaconOptions)
-		result[index].Properties = maps.Clone(result[index].Properties)
+		result[index].Properties = cloneDataflowProperties(result[index].Properties)
 		result[index].ParameterNames = append([]string(nil), result[index].ParameterNames...)
 		result[index].SelectOptions = cloneDataflowSelectOptions(result[index].SelectOptions)
 		result[index].JoinOptions = cloneDataflowJoinOptions(result[index].JoinOptions)
@@ -1413,7 +1524,7 @@ func (b DataflowBuilder) CustomPortsWithOptions(name string, factory DataflowOpe
 		Factory:        factory,
 		InputPorts:     append([]string(nil), inputs...),
 		OutputPorts:    append([]string(nil), outputs...),
-		Properties:     maps.Clone(options.Properties),
+		Properties:     cloneDataflowProperties(options.Properties),
 		ParameterNames: append([]string(nil), options.ParameterNames...),
 	})
 }
@@ -1438,7 +1549,7 @@ func (b DataflowBuilder) CustomTypedPortsWithOptions(name string, factory Datafl
 		OutputPorts:     outputNames,
 		InputPortTypes:  inputTypes,
 		OutputPortTypes: outputTypes,
-		Properties:      maps.Clone(options.Properties),
+		Properties:      cloneDataflowProperties(options.Properties),
 		ParameterNames:  append([]string(nil), options.ParameterNames...),
 	})
 }
@@ -1474,7 +1585,7 @@ func (b DataflowBuilder) CustomTypedSourceWithOptions(name string, factory Dataf
 		OutputPorts:     outputNames,
 		OutputPortTypes: outputTypes,
 		SourceFactory:   factory,
-		Properties:      maps.Clone(options.Properties),
+		Properties:      cloneDataflowProperties(options.Properties),
 		ParameterNames:  append([]string(nil), options.ParameterNames...),
 	})
 }
@@ -1927,7 +2038,7 @@ func cloneDataflowDefinition(definition DataflowDefinition) DataflowDefinition {
 		result.operators[index].InputPortTypes = cloneDataflowPortTypes(result.operators[index].InputPortTypes)
 		result.operators[index].OutputPortTypes = cloneDataflowPortTypes(result.operators[index].OutputPortTypes)
 		result.operators[index].BeaconOptions = cloneDataflowBeaconOptions(result.operators[index].BeaconOptions)
-		result.operators[index].Properties = maps.Clone(result.operators[index].Properties)
+		result.operators[index].Properties = cloneDataflowProperties(result.operators[index].Properties)
 		result.operators[index].ParameterNames = append([]string(nil), result.operators[index].ParameterNames...)
 		if result.operators[index].LogOptions != nil {
 			options := *result.operators[index].LogOptions
@@ -2575,7 +2686,7 @@ type dataflowOperatorContextResult struct {
 
 func dataflowOperatorContext(dataflowName, instanceID string, operator DataflowOperator, number int, options DataflowOptions) dataflowOperatorContextResult {
 	factory := dataflowFactoryMetadata(operator)
-	properties := maps.Clone(operator.Properties)
+	properties := cloneDataflowProperties(operator.Properties)
 	if properties == nil {
 		properties = make(map[string]any)
 	}

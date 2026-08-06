@@ -577,6 +577,17 @@
       "difference": "Go DataflowError now carries dataflow/instance/operator name, operator number, operator pretty-print and the original error for errors.Is/Unwrap. Fail-policy operator errors invoke the handler once, preserve LastError and terminate the instance as Complete; Continue-policy errors drop only the failed work item and allow finite graphs to complete. Java's exact wrapper exception text, asynchronous handler scheduling and the broader source/operator backpressure and recovery matrix remain open."
     },
     {
+      "id": "case.dataflow-custom-properties",
+      "javaRuntimeIds": ["java-88f76182eb9661badb9d", "java-b8709f812fb06cfa80b1", "java-e4d74dd55d150cd17138"],
+      "javaNames": ["EPLDataflowNestedProps", "EPLDataflowCatchAllProps", "EPLDataflowCustomProps"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowCustomProperties.java"],
+      "goTests": ["TestDataflowCustomPropertiesAreTypedAndInstanceIsolated", "TestDataflowCustomPropertiesHaveStablePlanIdentity"],
+      "tags": ["correctness", "dataflow", "custom-operator", "properties", "nested-properties", "catch-all", "plan-identity", "isolation"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Go keeps custom configuration explicit in DataflowOperatorOptions.Properties and exposes typed DataflowProperty[T](context, path...) traversal for simple, array, nested-map and catch-all values instead of Java annotation/reflection field injection. Definition, returned metadata and instance contexts recursively clone map/slice/array containers, so callers and sibling instances cannot mutate each other's configuration. Property trees and sorted parameter names now participate in deterministic Plan identity. Arbitrary Java class-name construction, setter coercion, ExprNode injection and exact EPL parser diagnostics remain intentionally replaced by direct Go values and factories."
+    },
+    {
       "id": "case.dataflow-beacon",
       "javaRuntimeIds": ["java-runtime-5438f7be9b56ca119b0c", "java-runtime-f54de0ae037b90b24551", "java-runtime-aac755fc7592bf62718d", "java-runtime-f1fc7e290467bab36366"],
       "javaNames": ["EPLDataflowBeaconWithBeans", "EPLDataflowBeaconVariable", "EPLDataflowBeaconFields", "EPLDataflowBeaconNoType"],
@@ -1382,6 +1393,7 @@
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-signal"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-feedback"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-exceptions"},
+    {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-custom-properties"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-beacon"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-typed-ports"},
     {"capabilityId": "dataflow.graph", "caseId": "case.dataflow-select-state"},
