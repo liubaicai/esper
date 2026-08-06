@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -468,5 +469,106 @@ func TestSubqueryScalarOptionsOrderLimitOffsetAndCardinality(t *testing.T) {
 	))).Query(StatementName("invalid-subquery-limit"))
 	if _, err := env.Build(invalid); err == nil {
 		t.Fatal("negative subquery limit must be rejected")
+	}
+}
+
+func TestSubqueryGroupByAggregateAndHaving(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	schema, ok := env.Schema("Trade")
+	if !ok {
+		t.Fatal("Trade schema is missing")
+	}
+	if _, err := CreateNamedWindow(env, "Prices", schema); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	for _, trade := range []runtimeTestTrade{
+		{Symbol: "A", Price: 5},
+		{Symbol: "A", Price: 10},
+		{Symbol: "B", Price: 20},
+		{Symbol: "C", Price: 2},
+	} {
+		if err := engine.InsertNamedWindow(context.Background(), "Prices", trade); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	prices := FromNamedWindow(env, "Prices")
+	price := Field[any, float64]("price")
+	sum := Sum[float64](price)
+	query := Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("groups", SubqueryGroupBy[string, float64](
+			prices,
+			Field[any, string]("symbol"),
+			sum,
+			SubqueryGroupWhere(Greater[float64](price, Literal(3.0))),
+			SubqueryGroupHaving(GreaterOrEqual[float64](sum, Literal(15.0))),
+		)),
+		Alias("raw_groups", SubqueryGroupBy[string, float64](
+			prices,
+			Field[any, string]("symbol"),
+			price,
+			SubqueryGroupWhere(Greater[float64](price, Literal(3.0))),
+		)),
+	).Query(StatementName("subquery-group-by"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("grouped subquery result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "outer", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("grouped subquery rows = %#v", rows)
+	}
+	groups, ok := rows[0].Get("groups").Any().(map[string][]float64)
+	if !ok {
+		t.Fatalf("grouped subquery aggregate type = %#v", rows[0].Get("groups"))
+	}
+	rawGroups, ok := rows[0].Get("raw_groups").Any().(map[string][]float64)
+	if !ok {
+		t.Fatalf("grouped subquery scalar type = %#v", rows[0].Get("raw_groups"))
+	}
+	if !reflect.DeepEqual(groups, map[string][]float64{"A": {15}, "B": {20}}) {
+		t.Fatalf("grouped subquery aggregate values = %#v", groups)
+	}
+	if !reflect.DeepEqual(rawGroups, map[string][]float64{"A": {5, 10}, "B": {20}}) {
+		t.Fatalf("grouped subquery scalar values = %#v", rawGroups)
+	}
+	invalid := Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("bad", SubqueryGroupBy[string, float64](
+			prices,
+			Field[any, string]("missing"),
+			price,
+		)),
+	).Query(StatementName("invalid-subquery-group-key"))
+	if _, err := env.Build(invalid); err == nil {
+		t.Fatal("grouped subquery unknown key must be rejected")
+	}
+	invalid = Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("bad", SubqueryGroupBy[float64, float64](prices, sum, price)),
+	).Query(StatementName("invalid-subquery-aggregate-key"))
+	if _, err := env.Build(invalid); err == nil {
+		t.Fatal("grouped subquery aggregate key must be rejected")
 	}
 }

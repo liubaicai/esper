@@ -682,6 +682,12 @@ func expressionContainsKind(node *exprNode, kind string) bool {
 		if node.subquery.projection != nil && expressionContainsKind(node.subquery.projection.node(), kind) {
 			return true
 		}
+		if node.subquery.groupBy != nil && expressionContainsKind(node.subquery.groupBy.node(), kind) {
+			return true
+		}
+		if node.subquery.having != nil && expressionContainsKind(node.subquery.having.node(), kind) {
+			return true
+		}
 		for _, order := range node.subquery.orderBy {
 			if order.Expression != nil && expressionContainsKind(order.Expression.node(), kind) {
 				return true
@@ -1176,7 +1182,7 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 	if base.kind != streamSource && base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical {
 		return NewError(ErrorInvalidRule, "subquery source must be an event stream, named window, table, or historical source")
 	}
-	if base.kind == streamSource && !subquerySourceContainsWindow(definition.source) && !definition.aggregateProjection {
+	if base.kind == streamSource && !subquerySourceContainsWindow(definition.source) && !definition.aggregateProjection && !definition.grouped {
 		return NewError(ErrorInvalidRule, "non-aggregated event-stream subquery requires a window")
 	}
 	if base.kind == streamNamedWindow && subquerySourceContainsWindow(definition.source) {
@@ -1196,6 +1202,28 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 	if definition.projection != nil {
 		if err := e.validateExprFields(definition.source, definition.projection); err != nil {
 			return WrapError(ErrorInvalidRule, "subquery projection", err)
+		}
+	}
+	if definition.grouped {
+		if definition.groupBy == nil {
+			return NewError(ErrorInvalidRule, "grouped subquery key is required")
+		}
+		if definition.projection == nil {
+			return NewError(ErrorInvalidRule, "grouped subquery projection is required")
+		}
+		if err := e.validateExprFields(definition.source, definition.groupBy); err != nil {
+			return WrapError(ErrorInvalidRule, "subquery group-by key", err)
+		}
+		if isAggregateExpression(definition.groupBy) {
+			return NewError(ErrorInvalidRule, "subquery group-by key cannot be an aggregate")
+		}
+		if definition.having != nil {
+			if definition.having.Type() != typeOf[bool]() {
+				return NewError(ErrorTypeMismatch, "subquery having predicate must return bool")
+			}
+			if err := e.validateExprFields(definition.source, definition.having); err != nil {
+				return WrapError(ErrorInvalidRule, "subquery having", err)
+			}
 		}
 	}
 	for index, order := range definition.orderBy {
@@ -1728,6 +1756,12 @@ func collectExpressionParameterTypes(expression Expr, parameterTypes map[string]
 				return err
 			}
 			if err := collectExpressionParameterTypes(node.subquery.projection, parameterTypes); err != nil {
+				return err
+			}
+			if err := collectExpressionParameterTypes(node.subquery.groupBy, parameterTypes); err != nil {
+				return err
+			}
+			if err := collectExpressionParameterTypes(node.subquery.having, parameterTypes); err != nil {
 				return err
 			}
 			for _, order := range node.subquery.orderBy {

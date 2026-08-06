@@ -80,6 +80,12 @@ func querySubqueryDefinitions(query Query) []*subqueryDefinition {
 			if node.subquery.projection != nil {
 				visitNode(node.subquery.projection.node())
 			}
+			if node.subquery.groupBy != nil {
+				visitNode(node.subquery.groupBy.node())
+			}
+			if node.subquery.having != nil {
+				visitNode(node.subquery.having.node())
+			}
 			for _, order := range node.subquery.orderBy {
 				if order.Expression != nil {
 					visitNode(order.Expression.node())
@@ -182,6 +188,9 @@ type subqueryDefinition struct {
 	source              *streamNode
 	predicate           Expr
 	projection          Expr
+	groupBy             Expr
+	having              Expr
+	grouped             bool
 	aggregateProjection bool
 	quantified          bool
 	comparison          SubqueryComparison
@@ -190,6 +199,16 @@ type subqueryDefinition struct {
 	offset              int
 	limit               int
 	limitSet            bool
+}
+
+type subqueryGroupValue struct {
+	key   Value
+	value Value
+}
+
+type subqueryCandidate struct {
+	value      Value
+	evaluation EvalContext
 }
 
 // SubqueryComparison selects the scalar comparison used by a quantified
@@ -252,6 +271,24 @@ type SubqueryConfig struct {
 	Offset      int
 	Limit       int
 	LimitSet    bool
+}
+
+// SubqueryGroupConfig controls the filter and post-group predicate for a
+// grouped subquery. The key and projection remain explicit typed arguments so
+// a rule does not need a row-shape closure hidden from Build validation.
+type SubqueryGroupConfig struct {
+	Where  Expression[bool]
+	Having Expression[bool]
+}
+
+type SubqueryGroupOption func(*SubqueryGroupConfig)
+
+func SubqueryGroupWhere(predicate Expression[bool]) SubqueryGroupOption {
+	return func(config *SubqueryGroupConfig) { config.Where = predicate }
+}
+
+func SubqueryGroupHaving(predicate Expression[bool]) SubqueryGroupOption {
+	return func(config *SubqueryGroupConfig) { config.Having = predicate }
 }
 
 type SubqueryOption func(*SubqueryConfig)
@@ -394,6 +431,60 @@ func SubqueryValues[T any](source RecordStream, projection Expression[T], option
 // item through EnumField/Property in the normal enumerable lambda context.
 func SubqueryEvents(source RecordStream, options ...SubqueryOption) Expression[[]Event] {
 	return SubqueryValues[Event](source, nil, options...)
+}
+
+// SubqueryGroupBy groups the current inner snapshot by key and returns one
+// typed value bucket per key. A scalar projection contributes one value per
+// accepted inner event; an aggregate projection such as Sum contributes one
+// value per group. SubqueryGroupHaving is evaluated with that group's
+// EvalContext, so aggregate expressions can be used without an opaque
+// callback. The map representation is intentionally Go-native; callers can
+// continue with EnumValues/Func expressions when a flattened collection is
+// desired.
+func SubqueryGroupBy[K comparable, V any](source RecordStream, key Expression[K], projection Expression[V], options ...SubqueryGroupOption) Expression[map[K][]V] {
+	config := SubqueryGroupConfig{}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	definition := &subqueryDefinition{
+		source:              source.node,
+		predicate:           config.Where,
+		projection:          projection,
+		groupBy:             key,
+		having:              config.Having,
+		grouped:             true,
+		aggregateProjection: isAggregateExpression(projection),
+	}
+	return makeSubqueryExpr[map[K][]V]("subquery-group-by", "group-by("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		result := make(map[K][]V)
+		for _, value := range values {
+			group, ok := value.Any().(subqueryGroupValue)
+			if !ok {
+				return Null()
+			}
+			var keyValue K
+			if group.key.IsPresent() {
+				converted, err := As[K](group.key)
+				if err != nil {
+					return Null()
+				}
+				keyValue = converted
+			}
+			var projected V
+			if group.value.IsPresent() {
+				converted, err := As[V](group.value)
+				if err != nil {
+					return Null()
+				}
+				projected = converted
+			}
+			result[keyValue] = append(result[keyValue], projected)
+		}
+		return Present(result)
+	})
 }
 
 // SubqueryIn compares value with the projected values of a named-window or
@@ -615,6 +706,12 @@ func subqueryDescription(definition *subqueryDefinition) string {
 	if definition.projection != nil {
 		description += ".select(" + definition.projection.Description() + ")"
 	}
+	if definition.groupBy != nil {
+		description += ".groupBy(" + definition.groupBy.Description() + ")"
+	}
+	if definition.having != nil {
+		description += ".having(" + definition.having.Description() + ")"
+	}
 	for _, order := range definition.orderBy {
 		direction := "asc"
 		if order.Descending {
@@ -715,11 +812,8 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 		temporary.variables = variablesWithEngine(outer.Variables, e)
 		runtime = &temporary
 	}
-	type subqueryCandidate struct {
-		value      Value
-		evaluation EvalContext
-	}
 	candidates := make([]subqueryCandidate, 0, len(events))
+	groupCandidates := make([]subqueryCandidate, 0, len(events))
 	containsWindow := subquerySourceContainsWindow(definition.source)
 	var aggregateGroup []Event
 	if containsWindow {
@@ -737,7 +831,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 				return nil
 			}
 		}
-		if definition.aggregateProjection && containsWindow {
+		if definition.aggregateProjection && containsWindow && !definition.grouped {
 			// A window source owns the final aggregate group. The delta history
 			// is updated after every snapshot event, including an empty history
 			// after the last event was evicted.
@@ -753,6 +847,16 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 				Now:        now,
 				Variables:  outer.Variables,
 				Parameters: outer.Parameters,
+			}
+			if definition.grouped {
+				if definition.predicate != nil {
+					matched, ok := boolValue(definition.predicate.eval(evaluation))
+					if !ok || !matched {
+						continue
+					}
+				}
+				groupCandidates = append(groupCandidates, subqueryCandidate{value: Present(candidate), evaluation: evaluation})
+				continue
 			}
 			if definition.aggregateProjection {
 				// Aggregate projections are evaluated once below over the final
@@ -776,6 +880,9 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 			}
 			candidates = append(candidates, subqueryCandidate{value: definition.projection.eval(evaluation), evaluation: evaluation})
 		}
+	}
+	if definition.grouped {
+		return evaluateSubqueryGroups(definition, groupCandidates, outer, e, now)
 	}
 	if definition.aggregateProjection {
 		if containsWindow && !lastAggregateDeltaHasHistory {
@@ -859,6 +966,85 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 		values = append(values, candidate.value)
 	}
 	return values
+}
+
+func evaluateSubqueryGroups(definition *subqueryDefinition, candidates []subqueryCandidate, outer EvalContext, engine *Engine, now time.Time) []Value {
+	if definition == nil || definition.groupBy == nil || definition.projection == nil {
+		return nil
+	}
+	type groupCandidate struct {
+		key         Value
+		events      []Event
+		evaluations []EvalContext
+	}
+	groups := make([]groupCandidate, 0)
+	for _, candidate := range candidates {
+		event, ok := candidate.value.Any().(Event)
+		if !ok {
+			continue
+		}
+		key := definition.groupBy.eval(candidate.evaluation)
+		groupIndex := -1
+		for index := range groups {
+			if subqueryValuesEqual(groups[index].key, key) {
+				groupIndex = index
+				break
+			}
+		}
+		if groupIndex < 0 {
+			groups = append(groups, groupCandidate{key: key})
+			groupIndex = len(groups) - 1
+		}
+		groups[groupIndex].events = append(groups[groupIndex].events, event)
+		groups[groupIndex].evaluations = append(groups[groupIndex].evaluations, candidate.evaluation)
+	}
+	values := make([]Value, 0, len(groups))
+	for _, group := range groups {
+		evaluation := EvalContext{
+			Engine:       engine,
+			OuterEvent:   outer.Event,
+			Group:        group.events,
+			EverGroup:    group.events,
+			AllGroup:     group.events,
+			AllEverGroup: group.events,
+			History:      group.events,
+			Now:          now,
+			Variables:    outer.Variables,
+			Parameters:   outer.Parameters,
+		}
+		if len(group.events) > 0 {
+			evaluation.Event = group.events[len(group.events)-1]
+		}
+		if definition.having != nil {
+			matched, ok := boolValue(definition.having.eval(evaluation))
+			if !ok || !matched {
+				continue
+			}
+		}
+		if definition.aggregateProjection {
+			values = append(values, Present(subqueryGroupValue{key: group.key, value: definition.projection.eval(evaluation)}))
+			continue
+		}
+		for _, candidateEvaluation := range group.evaluations {
+			candidateEvaluation.Group = group.events
+			candidateEvaluation.EverGroup = group.events
+			candidateEvaluation.AllGroup = group.events
+			candidateEvaluation.AllEverGroup = group.events
+			if candidateEvaluation.Now.IsZero() {
+				candidateEvaluation.Now = now
+			}
+			values = append(values, Present(subqueryGroupValue{key: group.key, value: definition.projection.eval(candidateEvaluation)}))
+		}
+	}
+	return values
+}
+
+func subqueryValuesEqual(left, right Value) bool {
+	if !left.IsPresent() || !right.IsPresent() {
+		return !left.IsPresent() && !right.IsPresent()
+	}
+	matched, ok := boolValue(EqualValues(left, right))
+	return ok && matched
 }
 
 func subquerySourceContainsWindow(node *streamNode) bool {
