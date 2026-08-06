@@ -303,7 +303,12 @@ func enumDescription[T any](name string, values Expression[[]T], predicate Expr)
 // otherwise be represented by a nil expression at runtime.
 func makeEnumExpr[T any](kind, description string, children []*exprNode, input Expr, parameterRequired bool, fn func(EvalContext) Value) Expression[T] {
 	expression := makeExpr[T](kind, description, children, fn)
-	expression.node().enumInputRequired = input != nil
+	// Every enumeration method has a collection operand. Keep the input
+	// parameter in this helper so the call sites remain explicit, but record
+	// the declaration requirement even when a caller supplied nil; otherwise
+	// a malformed fluent rule would only fail at runtime.
+	_ = input
+	expression.node().enumInputRequired = true
 	expression.node().enumParameterRequired = parameterRequired
 	return expression
 }
@@ -311,6 +316,9 @@ func makeEnumExpr[T any](kind, description string, children []*exprNode, input E
 func validateEnumExpressionNodes(node *exprNode) error {
 	if node == nil {
 		return nil
+	}
+	if node.enumInvalidReason != "" {
+		return NewError(ErrorInvalidRule, node.enumInvalidReason)
 	}
 	if node.enumInputRequired && len(node.children) == 0 {
 		return NewError(ErrorInvalidRule, fmt.Sprintf("enumeration method %q requires a collection expression", strings.TrimPrefix(node.kind, "enum-")))
@@ -501,11 +509,19 @@ func enumFirstLast[T any](kind string, values Expression[[]T], predicate Express
 }
 
 func EnumFirstOf[T any](values Expression[[]T], predicate ...Expression[bool]) Expression[T] {
-	return enumFirstLast[T]("first-of", values, optionalEnumPredicate(predicate), false)
+	expression := enumFirstLast[T]("first-of", values, optionalEnumPredicate(predicate), false)
+	if len(predicate) > 1 {
+		expression.node().enumInvalidReason = `enumeration method "first-of" accepts at most one predicate expression`
+	}
+	return expression
 }
 
 func EnumLastOf[T any](values Expression[[]T], predicate ...Expression[bool]) Expression[T] {
-	return enumFirstLast[T]("last-of", values, optionalEnumPredicate(predicate), true)
+	expression := enumFirstLast[T]("last-of", values, optionalEnumPredicate(predicate), true)
+	if len(predicate) > 1 {
+		expression.node().enumInvalidReason = `enumeration method "last-of" accepts at most one predicate expression`
+	}
+	return expression
 }
 
 func optionalEnumPredicate(predicate []Expression[bool]) Expression[bool] {

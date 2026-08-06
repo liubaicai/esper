@@ -661,7 +661,7 @@
       "tags": ["correctness", "expression", "enum", "invalid"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "Go now rejects missing collection inputs, required selectors/predicates and pair operands during Build, while Go generic signatures provide compile-time type rejection for many Java invalid cases. Complete invalid expression-body/property diagnostics and Java error-text parity remain open."
+      "difference": "Go rejects missing collection inputs, required selectors/predicates and pair operands during Build, and rejects multiple FirstOf/LastOf predicate expressions instead of silently selecting the first. Go generic signatures provide compile-time type rejection for many Java invalid cases; complete invalid expression-body/property diagnostics and Java error-text parity remain open."
     },
     {
       "id": "case.expr-enum-footprints",

@@ -47,6 +47,7 @@ type exprNode struct {
 	previousOffset        int
 	enumInputRequired     bool
 	enumParameterRequired bool
+	enumInvalidReason     string
 	children              []*exprNode
 	subquery              *subqueryDefinition
 }

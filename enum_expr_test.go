@@ -497,18 +497,24 @@ func TestEnumerableBuildRejectsMissingRequiredExpressions(t *testing.T) {
 	invalid := []struct {
 		name string
 		expr Expr
+		want string
 	}{
-		{name: "where-predicate", expr: EnumWhere[int64](values, nil)},
-		{name: "select-selector", expr: EnumSelect[int64, int64](values, nil)},
-		{name: "union-right", expr: EnumUnion[int64](values, nil)},
-		{name: "min-by-selector", expr: EnumMinBy[int64, int64](values, nil)},
-		{name: "to-map-value", expr: EnumToMap[int64, string, int64](values, Literal("key"), nil)},
-		{name: "group-by-value-selector", expr: EnumGroupBySelect[int64, int64, int64](values, Literal(int64(1)), nil)},
+		{name: "missing-values", expr: EnumCount[int64](nil), want: `enumeration method "count" requires a collection expression`},
+		{name: "where-predicate", expr: EnumWhere[int64](values, nil), want: `enumeration method "where" requires all selector expressions`},
+		{name: "select-selector", expr: EnumSelect[int64, int64](values, nil), want: `enumeration method "select" requires all selector expressions`},
+		{name: "union-right", expr: EnumUnion[int64](values, nil), want: `enumeration method "union" requires all selector expressions`},
+		{name: "min-by-selector", expr: EnumMinBy[int64, int64](values, nil), want: `enumeration method "min-by" requires all selector expressions`},
+		{name: "to-map-value", expr: EnumToMap[int64, string, int64](values, Literal("key"), nil), want: `enumeration method "to-map" requires all selector expressions`},
+		{name: "group-by-value-selector", expr: EnumGroupBySelect[int64, int64, int64](values, Literal(int64(1)), nil), want: `enumeration method "group-by-select" requires all selector expressions`},
+		{name: "first-of-too-many-predicates", expr: EnumFirstOf[int64](values, Literal(true), Literal(false)), want: `enumeration method "first-of" accepts at most one predicate expression`},
+		{name: "last-of-too-many-predicates", expr: EnumLastOf[int64](values, Literal(true), Literal(false)), want: `enumeration method "last-of" accepts at most one predicate expression`},
 	}
 	for _, testCase := range invalid {
 		t.Run(testCase.name, func(t *testing.T) {
 			if _, err := env.Build(Select(stream, Alias("invalid", testCase.expr)).Query(StatementName("enum-invalid-" + testCase.name))); err == nil {
 				t.Fatal("Build accepted an enumeration expression with a missing required expression")
+			} else if !strings.Contains(err.Error(), testCase.want) {
+				t.Fatalf("Build error = %v, want fragment %q", err, testCase.want)
 			}
 		})
 	}
