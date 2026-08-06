@@ -1273,6 +1273,27 @@ func (e *Environment) validateNode(node *streamNode) error {
 			return NewError(ErrorInvalidRule, "derived aggregate source cannot wrap a join aggregate")
 		}
 		return e.validateAggregate(node.derived.aggregate)
+	case streamContained:
+		if node.contained == nil || node.contained.property == nil {
+			return NewError(ErrorInvalidRule, "unnest stream requires a contained property expression")
+		}
+		if node.input == nil {
+			return NewError(ErrorDependency, "unnest stream has no parent input")
+		}
+		if err := e.validateNode(node.input); err != nil {
+			return err
+		}
+		propertyType := node.contained.property.Type()
+		if propertyType == nil || (propertyType.Kind() != reflect.Slice && propertyType.Kind() != reflect.Array) {
+			return fmt.Errorf("unnest property must return a slice or array, got %s", propertyType)
+		}
+		if node.contained.childType == nil || propertyType.Elem() != node.contained.childType {
+			return fmt.Errorf("unnest property element type %s does not match child type %s", propertyType.Elem(), node.contained.childType)
+		}
+		if _, err := e.sourceSchema(node); err != nil {
+			return err
+		}
+		return e.validateExprFields(node.input, node.contained.property)
 	case streamFilter:
 		if node.predicate == nil {
 			return fmt.Errorf("esper: filter predicate is required")
@@ -1584,6 +1605,15 @@ func (e *Environment) sourceSchema(source *streamNode) (Schema, error) {
 	if source == nil {
 		return Schema{}, NewError(ErrorDependency, "nil source")
 	}
+	if source.kind == streamContained {
+		if source.contained == nil || source.contained.childType == nil {
+			return Schema{}, NewError(ErrorDependency, fmt.Sprintf("unnest source %q has no child type", source.sourceName))
+		}
+		if schema, ok := e.schemaForGoType(source.contained.childType); ok {
+			return schema, nil
+		}
+		return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("unnest child type %s has no registered schema", source.contained.childType))
+	}
 	if source.kind == streamNamedWindow {
 		definition, ok := e.NamedWindow(source.sourceName)
 		if !ok {
@@ -1624,6 +1654,26 @@ func (e *Environment) sourceSchema(source *streamNode) (Schema, error) {
 		return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("source %q has no registered schema", source.sourceName))
 	}
 	return schema, nil
+}
+
+func (e *Environment) schemaForGoType(typ reflect.Type) (Schema, bool) {
+	if e == nil || typ == nil {
+		return Schema{}, false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	for _, schema := range e.schemas {
+		if schema.GoType() == typ {
+			return schema, true
+		}
+	}
+	for _, schema := range e.schemas {
+		goType := schema.GoType()
+		if goType != nil && (typ.AssignableTo(goType) || goType.AssignableTo(typ)) {
+			return schema, true
+		}
+	}
+	return Schema{}, false
 }
 
 func (e *Environment) validateExprVariables(expression Expr) error {
@@ -1989,6 +2039,11 @@ func visitStreamNodeExpressions(node *streamNode, visit func(Expr) error) error 
 	if err := visit(node.predicate); err != nil {
 		return err
 	}
+	if node.contained != nil {
+		if err := visit(node.contained.property); err != nil {
+			return err
+		}
+	}
 	if err := visitWindowExpressions(node.window, visit); err != nil {
 		return err
 	}
@@ -2204,7 +2259,7 @@ func isIntegralType(typ reflect.Type) bool {
 
 func sourceNode(node *streamNode) (*streamNode, error) {
 	for node != nil {
-		if node.kind == streamSource || node.kind == streamNamedWindow || node.kind == streamTable || node.kind == streamHistorical || node.kind == streamMethod || node.kind == streamPattern || node.kind == streamDerived {
+		if node.kind == streamSource || node.kind == streamNamedWindow || node.kind == streamTable || node.kind == streamHistorical || node.kind == streamMethod || node.kind == streamPattern || node.kind == streamDerived || node.kind == streamContained {
 			return node, nil
 		}
 		node = node.input

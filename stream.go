@@ -19,6 +19,7 @@ const (
 	streamMethod
 	streamPattern
 	streamDerived
+	streamContained
 )
 
 type streamNode struct {
@@ -34,6 +35,12 @@ type streamNode struct {
 	patternWindow      WindowSpec
 	predicate          Expr
 	window             WindowSpec
+	contained          *containedDefinition
+}
+
+type containedDefinition struct {
+	property  Expr
+	childType reflect.Type
 }
 
 func (n *streamNode) describe() string {
@@ -96,6 +103,16 @@ func (n *streamNode) describe() string {
 			description = "derived-source(" + input + ":group=" + describeExprList(n.derived.aggregate.groupBy) + ":select=" + strings.Join(parts, ",") + ")"
 		}
 		return description
+	case streamContained:
+		property := "<nil>"
+		if n.contained != nil && n.contained.property != nil {
+			property = n.contained.property.Description()
+		}
+		input := "<nil>"
+		if n.input != nil {
+			input = n.input.describe()
+		}
+		return "unnest(" + input + ":" + property + ")"
 	default:
 		return "<unknown-stream>"
 	}
@@ -784,6 +801,29 @@ func FromMethodOn[T any](env *Environment, sourceName, triggerType string, schem
 	}
 }
 
+// Unnest expands one slice/array-valued property of every parent event into
+// child events. It is the typed Go counterpart of Esper contained-event
+// syntax while keeping the rule chain explicit and composable:
+//
+//	books := Property[[]Book](EventValue[Order](), "books")
+//	children := Unnest(From[Order](env, "Order"), books)
+//
+// The child Go type must have a registered schema in the environment. The
+// returned stream can continue with Filter, Window, Join, Aggregate or Query.
+func Unnest[T, V any](input Stream[T], property Expression[[]V]) Stream[V] {
+	childType := typeOf[V]()
+	return Stream[V]{
+		env: input.env,
+		node: &streamNode{
+			kind:       streamContained,
+			input:      input.node,
+			sourceName: "unnest:" + childType.String(),
+			sourceType: childType,
+			contained:  &containedDefinition{property: property, childType: childType},
+		},
+	}
+}
+
 // DependingOn declares lateral/subordinate method inputs by join source
 // name. During a join the provider is polled once for every compatible
 // dependency tuple and obtains those events through MethodRequest.Dependency.
@@ -832,6 +872,10 @@ func cloneStreamNode(node *streamNode) *streamNode {
 		definition := *node.method
 		definition.dependencies = append([]string(nil), node.method.dependencies...)
 		cloned.method = &definition
+	}
+	if node.contained != nil {
+		definition := *node.contained
+		cloned.contained = &definition
 	}
 	return &cloned
 }

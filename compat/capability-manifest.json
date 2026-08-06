@@ -39,6 +39,17 @@
       "remaining": ["fragment/metadata integration across all event representations", "dynamic XPath/DOM/XML namespace and XSD-backed rendering", "Avro binary/logical types and schema evolution", "shared Java/Go render trace and complete fragment/identity matrix"]
     },
     {
+      "id": "event.contained",
+      "domain": "event",
+      "level": "S",
+      "summary": "Typed fluent expansion of slice/array-valued parent-event properties into child event streams",
+      "javaRefs": ["EPLContainedEventSimple", "EPLContainedEventNested", "EPLContainedEventArray", "EPLContainedEventSplitExpr", "EPLContainedEventExample", "EventInfraContainedSimple", "EventInfraContainedNested", "EventInfraContainedNestedArray", "EventInfraContainedIndexedWithIndex", "InfraNamedWindowContainedEvent"],
+      "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "contained_test.go"],
+      "phase": 1,
+      "status": "partial",
+      "remaining": ["nested multi-level expansion and child projection aliases", "scalar/string/array split expressions and @type materialization", "contained joins, unidirectional probes, Named Window/Table/FAF interactions", "fragment metadata, invalid diagnostics and complete Java contained-event trace"]
+    },
+    {
       "id": "event.json-typed",
       "domain": "event",
       "level": "S",
@@ -347,6 +358,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-suite-event-86-86", "java-suite-event-bean-19-19", "go-unit"],
       "difference": "Go now accepts literal indexed/mapped/nested property paths with Missing/Null preservation, exposes root/path property names and declared result types, registers explicit field/path/method accessors (including nested explicit schemas), discovers JavaBean GetX/IsX properties and pointer-receiver SetX writers for readable properties, and keeps setter-only JavaBeans at zero event properties like EPLBeanWriteOnly. Explicit typed callback/method setters support struct materialization. Setter metadata participates in Plan identity; setter errors and getter/setter type conflicts are validated. Registered nested fragments resolve through GetFragment, and schema/map/struct/array/nested values render as bounded JSON/XML with title, indent and XML attribute options. The selected Java EventInfra/EventRender/EventJson/EventXML suites and JavaBean/EXPLICIT/PUBLIC accessor regressions provide the oracle set; complete fragment/metadata integration for XML/Avro/JSON representations, DOM/XPath and exact shared render trace remain open."
+    },
+    {
+      "id": "case.event-contained-simple",
+      "javaRuntimeIds": ["java-runtime-b934858673985f744725", "java-runtime-7a56e7b54c443415b979", "java-runtime-52900f3c19170bc85d31"],
+      "javaNames": ["EPLContainedPropertyAccess", "EPLContainedAloneCount", "EPLContainedIRStreamArrayItem"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventSimple.java"],
+      "goTests": ["TestUnnestProjectsContainedStructsMatchesEsper", "TestUnnestAggregateCountMatchesEsper", "TestUnnestLengthWindowEmitsContainedOldAndNewRows"],
+      "tags": ["correctness", "event", "contained", "unnest", "array", "old-new", "aggregate"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
+      "difference": "Go adds a typed Unnest parent-to-child stream node requiring a registered child schema, preserving array order and allowing ordinary Filter/Window/Aggregate/Select chaining; the mapped slice covers Java contained property projection, standalone count and insert/remove array-item behavior. Nested contained paths, scalar split/type expressions, contained Join/Named Window/Subquery and full TestSuiteEPLContained trace remain open under event.contained."
     },
     {
       "id": "case.event-json-typed",
@@ -1537,6 +1559,7 @@
     {"capabilityId": "event.object-array", "caseId": "case.object-array-query-fields"},
     {"capabilityId": "event.avro-record", "caseId": "case.event-avro-record"},
     {"capabilityId": "event.property-access-render", "caseId": "case.event-property-access-render"},
+    {"capabilityId": "event.contained", "caseId": "case.event-contained-simple"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-typed"},
     {"capabilityId": "event.xml-tree", "caseId": "case.event-xml-tree"},
     {"capabilityId": "event.inheritance", "caseId": "case.event-inheritance"},

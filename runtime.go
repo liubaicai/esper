@@ -3064,6 +3064,9 @@ func sourceNodeAcceptsEvent(env *Environment, node *streamNode, event Event) boo
 		}
 		return false
 	}
+	if source.kind == streamContained {
+		return sourceNodeAcceptsEvent(env, source.input, event)
+	}
 	if source.kind == streamHistorical || source.kind == streamMethod {
 		return true
 	}
@@ -6416,6 +6419,27 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			return eventDelta{}, err
 		}
 		return eventDelta{newEvents: append([]Event(nil), events...)}, nil
+	case streamContained:
+		if node.contained == nil || node.contained.property == nil {
+			return eventDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unnest source %q has no contained property", node.sourceName))
+		}
+		inputDelta, err := r.insert(node.input, event, now)
+		if err != nil {
+			return eventDelta{}, err
+		}
+		childSchema, err := r.query.env.sourceSchema(node)
+		if err != nil {
+			return eventDelta{}, err
+		}
+		newEvents, err := expandContainedEvents(childSchema, node.contained, inputDelta.newEvents, now, r.variables)
+		if err != nil {
+			return eventDelta{}, err
+		}
+		oldEvents, err := expandContainedEvents(childSchema, node.contained, inputDelta.oldEvents, now, r.variables)
+		if err != nil {
+			return eventDelta{}, err
+		}
+		return eventDelta{newEvents: newEvents, oldEvents: oldEvents}, nil
 	case streamDerived:
 		if node.input == nil || node.derived == nil || node.derived.aggregate == nil {
 			return eventDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("derived source %q has no input or aggregate", node.sourceName))
@@ -6521,6 +6545,23 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 		return eventDelta{}, nil
 	case streamMethod:
 		return eventDelta{}, nil
+	case streamContained:
+		if node.contained == nil || node.contained.property == nil {
+			return eventDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unnest source %q has no contained property", node.sourceName))
+		}
+		inputDelta, err := r.remove(node.input, event, now)
+		if err != nil {
+			return eventDelta{}, err
+		}
+		childSchema, err := r.query.env.sourceSchema(node)
+		if err != nil {
+			return eventDelta{}, err
+		}
+		oldEvents, err := expandContainedEvents(childSchema, node.contained, inputDelta.oldEvents, now, r.variables)
+		if err != nil {
+			return eventDelta{}, err
+		}
+		return eventDelta{oldEvents: oldEvents}, nil
 	case streamDerived:
 		if node.input == nil || node.derived == nil || node.derived.aggregate == nil {
 			return eventDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("derived source %q has no input or aggregate", node.sourceName))
@@ -6596,6 +6637,38 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 	default:
 		return eventDelta{}, fmt.Errorf("esper: runtime encountered unknown stream node kind %d", node.kind)
 	}
+}
+
+func expandContainedEvents(schema Schema, definition *containedDefinition, parents []Event, now time.Time, variables map[string]Value) ([]Event, error) {
+	if !schema.valid() || definition == nil || definition.property == nil {
+		return nil, NewError(ErrorInvalidRule, "unnest expansion is incomplete")
+	}
+	result := make([]Event, 0)
+	for _, parent := range parents {
+		value := definition.property.eval(EvalContext{Event: parent, Now: now, Variables: variables})
+		if value.IsMissing() || value.IsNull() {
+			continue
+		}
+		collection := reflect.ValueOf(value.Any())
+		if !collection.IsValid() || (collection.Kind() != reflect.Slice && collection.Kind() != reflect.Array) {
+			return nil, fmt.Errorf("unnest property evaluated to %T, expected slice or array", value.Any())
+		}
+		for index := 0; index < collection.Len(); index++ {
+			item := collection.Index(index)
+			if item.Kind() == reflect.Interface && !item.IsNil() {
+				item = item.Elem()
+			}
+			if !item.IsValid() || (item.Kind() == reflect.Pointer && item.IsNil()) {
+				continue
+			}
+			child, err := newEvent(schema, item.Interface(), parent.ReceivedAt())
+			if err != nil {
+				return nil, fmt.Errorf("unnest child %d: %w", index, err)
+			}
+			result = append(result, child)
+		}
+	}
+	return result, nil
 }
 
 func (r *statementRuntime) insertDerived(node *streamNode, delta eventDelta, now time.Time) (eventDelta, error) {

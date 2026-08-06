@@ -665,6 +665,17 @@ func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source
 	if source == nil {
 		return nil, NewError(ErrorDependency, "fire-and-forget source is nil")
 	}
+	if source.kind == streamContained {
+		parents, err := e.snapshotFireAndForgetSourceInternal(ctx, source.input, now, variables, engineLocked)
+		if err != nil {
+			return nil, err
+		}
+		childSchema, err := e.env.sourceSchema(source)
+		if err != nil {
+			return nil, err
+		}
+		return expandContainedEvents(childSchema, source.contained, parents, now, variables)
+	}
 	switch source.kind {
 	case streamNamedWindow:
 		var window *NamedWindow
