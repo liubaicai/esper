@@ -346,9 +346,30 @@ func (c *DataflowCaptive) Runnables() []*DataflowCaptiveRunnable {
 // DataflowCaptiveRunnable is a single-use handle for a Beacon or custom
 // source held back by StartCaptive.
 type DataflowCaptiveRunnable struct {
-	name    string
-	run     func(context.Context) error
-	started atomic.Bool
+	name      string
+	run       func(context.Context) error
+	started   atomic.Bool
+	shutdown  atomic.Bool
+	mu        sync.Mutex
+	cancel    context.CancelFunc
+	completed bool
+	err       error
+	listeners []DataflowCaptiveCompletionListener
+	done      chan struct{}
+	doneOnce  sync.Once
+}
+
+// DataflowCaptiveCompletion is delivered once after a captive source exits.
+type DataflowCaptiveCompletion struct {
+	Name     string
+	Err      error
+	Canceled bool
+}
+
+type DataflowCaptiveCompletionListener func(DataflowCaptiveCompletion)
+
+func newDataflowCaptiveRunnable(name string, run func(context.Context) error) *DataflowCaptiveRunnable {
+	return &DataflowCaptiveRunnable{name: name, run: run, done: make(chan struct{})}
 }
 
 func (r *DataflowCaptiveRunnable) Name() string {
@@ -367,10 +388,116 @@ func (r *DataflowCaptiveRunnable) Run(ctx context.Context) error {
 	if !r.started.CompareAndSwap(false, true) {
 		return NewError(ErrorState, fmt.Sprintf("dataflow captive source %q has already run", r.name))
 	}
+	return r.execute(ctx)
+}
+
+// Start launches the captive source asynchronously. Completion is observed
+// through Wait, Done or AddCompletionListener.
+func (r *DataflowCaptiveRunnable) Start(ctx context.Context) error {
+	if r == nil || r.run == nil {
+		return NewError(ErrorState, "nil dataflow captive runnable")
+	}
+	if !r.started.CompareAndSwap(false, true) {
+		return NewError(ErrorState, fmt.Sprintf("dataflow captive source %q has already run", r.name))
+	}
+	go r.execute(ctx)
+	return nil
+}
+
+func (r *DataflowCaptiveRunnable) execute(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return r.run(ctx)
+	runCtx, cancel := context.WithCancel(ctx)
+	r.mu.Lock()
+	r.cancel = cancel
+	shutdown := r.shutdown.Load()
+	r.mu.Unlock()
+	if shutdown {
+		cancel()
+	}
+	err := r.run(runCtx)
+	cancel()
+	completion := DataflowCaptiveCompletion{Name: r.name, Err: err, Canceled: dataflowContextCancellation(err) || r.shutdown.Load()}
+	r.mu.Lock()
+	r.cancel = nil
+	r.completed = true
+	r.err = err
+	listeners := append([]DataflowCaptiveCompletionListener(nil), r.listeners...)
+	r.listeners = nil
+	r.mu.Unlock()
+	r.doneOnce.Do(func() { close(r.done) })
+	for _, listener := range listeners {
+		listener(completion)
+	}
+	return err
+}
+
+// AddCompletionListener registers a callback that runs once after the source
+// exits. A listener added after completion is invoked immediately.
+func (r *DataflowCaptiveRunnable) AddCompletionListener(listener DataflowCaptiveCompletionListener) error {
+	if r == nil {
+		return NewError(ErrorState, "nil dataflow captive runnable")
+	}
+	if listener == nil {
+		return NewError(ErrorInvalidRule, "dataflow captive completion listener is nil")
+	}
+	r.mu.Lock()
+	if !r.completed {
+		r.listeners = append(r.listeners, listener)
+		r.mu.Unlock()
+		return nil
+	}
+	completion := DataflowCaptiveCompletion{Name: r.name, Err: r.err, Canceled: dataflowContextCancellation(r.err) || r.shutdown.Load()}
+	r.mu.Unlock()
+	listener(completion)
+	return nil
+}
+
+// Shutdown requests cancellation of this source only. It does not cancel the
+// owning dataflow instance.
+func (r *DataflowCaptiveRunnable) Shutdown() {
+	if r == nil {
+		return
+	}
+	r.shutdown.Store(true)
+	r.mu.Lock()
+	cancel := r.cancel
+	r.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
+
+func (r *DataflowCaptiveRunnable) IsShutdown() bool {
+	return r != nil && r.shutdown.Load()
+}
+
+// Done closes after Run or Start exits.
+func (r *DataflowCaptiveRunnable) Done() <-chan struct{} {
+	if r == nil {
+		return nil
+	}
+	return r.done
+}
+
+// Wait blocks for source completion and returns its terminal error.
+func (r *DataflowCaptiveRunnable) Wait(ctx context.Context) error {
+	if r == nil {
+		return NewError(ErrorState, "nil dataflow captive runnable")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	select {
+	case <-r.done:
+		r.mu.Lock()
+		err := r.err
+		r.mu.Unlock()
+		return err
+	case <-ctx.Done():
+		return contextErr(ctx)
+	}
 }
 
 // Submit injects one event value into the captive emitter's outgoing graph.
@@ -4322,27 +4449,25 @@ func (d *DataflowInstance) StartCaptive(ctx context.Context) (*DataflowCaptive, 
 		}
 		switch operator.Kind {
 		case BeaconSourceKind:
-			captive.runnables = append(captive.runnables, &DataflowCaptiveRunnable{
-				name: operator.Name,
-				run: func(callerCtx context.Context) error {
+			captive.runnables = append(captive.runnables, newDataflowCaptiveRunnable(operator.Name,
+				func(callerCtx context.Context) error {
 					sourceCtx, stop := combineDataflowCaptiveContext(runCtx, callerCtx)
 					defer stop()
 					return d.runCaptiveBeaconSource(sourceCtx, operator)
 				},
-			})
+			))
 		case CustomSourceKind:
 			source := d.sources[operator.Name]
 			if source == nil {
 				continue
 			}
-			captive.runnables = append(captive.runnables, &DataflowCaptiveRunnable{
-				name: operator.Name,
-				run: func(callerCtx context.Context) error {
+			captive.runnables = append(captive.runnables, newDataflowCaptiveRunnable(operator.Name,
+				func(callerCtx context.Context) error {
 					sourceCtx, stop := combineDataflowCaptiveContext(runCtx, callerCtx)
 					defer stop()
 					return d.runCaptiveCustomSource(sourceCtx, operator, source)
 				},
-			})
+			))
 		}
 	}
 	return captive, nil
