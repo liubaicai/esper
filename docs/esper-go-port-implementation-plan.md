@@ -1604,3 +1604,5 @@ method source 的组合矩阵再补两条 Go-native 证据：多个 `FromMethodO
 本轮由 Java `EPLJoinCoercion` 对照发现并修复等值数值提升遗漏：表达式级 `EqualValues` 现在对有符号/无符号整数做精确比较，对整数与浮点做数值提升；严格的 `Value.Equal` 仍保留底层类型 identity。`TestJoinRangeAndEqualityCoercionMatchesEsper` 覆盖 int 与 long range 边界、滚动窗口和复合 key，`TestJoinIntegralEqualityCoercionMatchesEsper` 覆盖 long=int Join；`TestExpressionNumericEqualityCoercion` 额外锁定大整数精度和负 signed/unsigned 边界。
 
 本轮同时使用已启动的 `esper-java-mysql` Docker（3306）执行真实数据库门禁：`TestSQLHistoricalProviderMySQLDocker`、`TestSQLSinkMySQLDocker` 和 `TestDBConnectorMySQLDocker` 全部通过，覆盖历史 SQL 读取、SQL sink 以及 DB connector 的 MySQL upsert；测试使用独立临时表并由测试清理，未把 Docker 可用性误写成默认依赖。
+
+本轮补齐 Java `EPLJoinSingleOp3Stream` 的 3 个运行入口：EPL、ObjectModel 和 compile/deploy 变体统一映射到 Go 的 `TestThreeStreamSingleOperationJoinMatchesEsper`。测试使用 Go 链式 `JoinMany`，三侧分别使用 `length(3)`，同时声明 A-B、B-C、A-C 三个等值条件，复现 Java 的乱序补齐、未完成 tuple 不输出、窗口滚动后仍只匹配当前 key、以及三侧 wildcard Event 投影。三个 Java runtime ID 已全部登记；Go API 不复制 Java 的 EPL/OM/编译入口，而以同一语义的静态链式构造作为替代。更宽的三流外连接 cardinality、非左深/bushy 拓扑和索引计划矩阵仍保持 partial。
