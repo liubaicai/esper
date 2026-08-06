@@ -778,6 +778,63 @@ func TestHistoricalFireAndForgetBindsParametersAndUsesOneSnapshot(t *testing.T) 
 	}
 }
 
+func TestHistoricalSourceContextFireAndForgetPartitionsRows(t *testing.T) {
+	env := NewEnvironment()
+	historySchema, err := NewMapSchema("HistoryContextFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider := &fixtureHistoricalProvider{
+		schema: historySchema,
+		rows: []map[string]any{
+			{"symbol": "A", "value": 1},
+			{"symbol": "A", "value": 3},
+			{"symbol": "B", "value": 2},
+		},
+	}
+	historical := FromHistorical[map[string]any](env, "history-context-faf", historySchema, provider)
+	if _, err := CreateKeyContext(env, "historical-by-symbol", Field[any, string]("symbol")); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(Select(historical,
+		Alias("key", ContextKeyValue[string](0)),
+		Alias("symbol", Field[map[string]any, string]("symbol")),
+		Alias("value", Field[map[string]any, int]("value")),
+	).Query(StatementName("historical-source-context-faf"), WithContext("historical-by-symbol")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := NewEngine(env).ExecuteFireAndForgetWithSelector(context.Background(), plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if provider.CallCount() != 1 {
+		t.Fatalf("historical context FAF provider calls = %d, want 1", provider.CallCount())
+	}
+	if len(result.Results()) != 3 {
+		t.Fatalf("historical context FAF result count = %d, want 3: %#v", len(result.Results()), result.Results())
+	}
+	valuesBySymbol := make(map[string][]int)
+	for _, item := range result.Results() {
+		row, ok := item.Row()
+		if !ok {
+			t.Fatalf("historical context FAF result is not a row: %#v", item)
+		}
+		symbol, _ := row.Get("symbol").Any().(string)
+		value, _ := row.Get("value").Any().(int)
+		if row.Get("key").Any() != symbol {
+			t.Fatalf("historical context FAF partition key = %#v, symbol = %q", row.Get("key"), symbol)
+		}
+		valuesBySymbol[symbol] = append(valuesBySymbol[symbol], value)
+	}
+	if len(valuesBySymbol["A"]) != 2 || len(valuesBySymbol["B"]) != 1 {
+		t.Fatalf("historical context FAF partition rows = %#v", valuesBySymbol)
+	}
+}
+
 func TestHistoricalStreamDeployBindsParameters(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	historySchema, err := NewMapSchema("HistoryDeployParams", []FieldSpec{
