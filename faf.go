@@ -305,6 +305,9 @@ func (e *Engine) executeJoinFireAndForget(ctx context.Context, plan Plan, parame
 	if len(sources) < 2 {
 		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget join requires at least two sources")
 	}
+	if _, err := methodJoinEvaluationOrder(plan.query.join); err != nil {
+		return QueryResult{}, err
+	}
 	e.mu.Lock()
 	now := e.clock.Now()
 	variables := bindParameterValues(cloneValues(e.variables), parameters)
@@ -320,15 +323,24 @@ func (e *Engine) executeJoinFireAndForget(ctx context.Context, plan Plan, parame
 		if err != nil {
 			return QueryResult{}, err
 		}
-		if base.kind != streamNamedWindow && base.kind != streamTable {
-			return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget join sources must be named windows or tables")
+		if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
+			return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget joins with dependent method sources are not supported")
+		}
+		if base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical && base.kind != streamMethod {
+			return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget join sources must be named windows, tables, historical sources, or method sources")
 		}
 		events, err := e.snapshotFireAndForgetSource(ctx, base, now, variables)
 		if err != nil {
 			return QueryResult{}, err
 		}
+		input := source
+		if base.kind == streamHistorical {
+			input = replaceStreamBase(source, base, &streamNode{kind: streamSource, sourceName: base.historical.schema.Name(), sourceType: typeOf[any]()})
+		} else if base.kind == streamMethod {
+			input = replaceStreamBase(source, base, &streamNode{kind: streamSource, sourceName: base.method.schema.Name(), sourceType: typeOf[any]()})
+		}
 		for _, event := range events {
-			delta, insertErr := runtime.insert(source, event, now)
+			delta, insertErr := runtime.insert(input, event, now)
 			if insertErr != nil {
 				return QueryResult{}, insertErr
 			}
@@ -367,8 +379,11 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 		if err != nil {
 			return QueryResult{}, err
 		}
-		if base.kind != streamNamedWindow && base.kind != streamTable {
-			return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context join sources must be named windows or tables")
+		if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
+			return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context joins with dependent method sources are not supported")
+		}
+		if base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical && base.kind != streamMethod {
+			return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context join sources must be named windows, tables, historical sources, or method sources")
 		}
 		events, err := e.snapshotFireAndForgetSource(ctx, base, now, variables)
 		if err != nil {
@@ -424,8 +439,18 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 		runtime.variables = runtime.withContextProperties(runtime.variables)
 		runtime.joinState = &joinRuntimeState{sides: make([][]storedEvent, len(sources))}
 		for index, source := range sources {
+			base, baseErr := sourceNode(source)
+			if baseErr != nil {
+				return QueryResult{}, baseErr
+			}
+			input := source
+			if base.kind == streamHistorical {
+				input = replaceStreamBase(source, base, &streamNode{kind: streamSource, sourceName: base.historical.schema.Name(), sourceType: typeOf[any]()})
+			} else if base.kind == streamMethod {
+				input = replaceStreamBase(source, base, &streamNode{kind: streamSource, sourceName: base.method.schema.Name(), sourceType: typeOf[any]()})
+			}
 			for _, event := range grouped[index][key] {
-				delta, insertErr := runtime.insert(source, event, now)
+				delta, insertErr := runtime.insert(input, event, now)
 				if insertErr != nil {
 					return QueryResult{}, insertErr
 				}

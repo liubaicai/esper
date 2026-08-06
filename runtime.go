@@ -5587,6 +5587,9 @@ func joinTuples(definition *joinDefinition, state *joinRuntimeState, now time.Ti
 	if len(sources) < 2 || len(state.sides) != len(sources) {
 		return nil
 	}
+	if len(definition.edges) > 0 {
+		return joinChainedTuples(definition, state, now, runtime)
+	}
 	conditions := joinDefinitionConditions(definition)
 	if len(sources) == 2 && definition.kind != JoinInner {
 		result := make([][]Event, 0)
@@ -5650,6 +5653,65 @@ func joinTuples(definition *joinDefinition, state *joinRuntimeState, now time.Ti
 		}
 	}
 	visit(0)
+	return result
+}
+
+type chainedJoinTuple struct {
+	events []Event
+	stored []storedEvent
+}
+
+// joinChainedTuples evaluates the explicit left-deep join tree edge by edge.
+// This preserves intermediate unmatched rows, which cannot be represented by
+// the legacy JoinMany single-kind N-way Cartesian implementation.
+func joinChainedTuples(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) [][]Event {
+	if definition == nil || state == nil || len(definition.edges) != len(state.sides)-1 || len(state.sides) < 2 {
+		return nil
+	}
+	rows := make([]chainedJoinTuple, 0, len(state.sides[0]))
+	for _, stored := range state.sides[0] {
+		rows = append(rows, chainedJoinTuple{events: []Event{stored.event}, stored: []storedEvent{stored}})
+	}
+	for edgeIndex, edge := range definition.edges {
+		rightSide := state.sides[edgeIndex+1]
+		matchedRight := make([]bool, len(rightSide))
+		next := make([]chainedJoinTuple, 0)
+		for _, left := range rows {
+			matchedLeft := false
+			for rightIndex, right := range rightSide {
+				events := append(append([]Event(nil), left.events...), right.event)
+				stored := append(append([]storedEvent(nil), left.stored...), right)
+				if !joinStoredTupleMatchesLineageWithMissing(stored) || !joinConditionsMatch(edge.conditions, events, now, runtime) {
+					continue
+				}
+				matchedLeft = true
+				matchedRight[rightIndex] = true
+				next = append(next, chainedJoinTuple{events: events, stored: stored})
+			}
+			if !matchedLeft && (edge.kind == JoinLeftOuter || edge.kind == JoinFullOuter) {
+				events := append(append([]Event(nil), left.events...), Event{})
+				stored := append(append([]storedEvent(nil), left.stored...), storedEvent{})
+				next = append(next, chainedJoinTuple{events: events, stored: stored})
+			}
+		}
+		if edge.kind == JoinRightOuter || edge.kind == JoinFullOuter {
+			for rightIndex, right := range rightSide {
+				if matchedRight[rightIndex] {
+					continue
+				}
+				events := make([]Event, edgeIndex+2)
+				stored := make([]storedEvent, edgeIndex+2)
+				events[edgeIndex+1] = right.event
+				stored[edgeIndex+1] = right
+				next = append(next, chainedJoinTuple{events: events, stored: stored})
+			}
+		}
+		rows = next
+	}
+	result := make([][]Event, len(rows))
+	for index, row := range rows {
+		result[index] = row.events
+	}
 	return result
 }
 
@@ -5724,6 +5786,21 @@ func joinStoredTupleMatchesLineage(tuple []storedEvent) bool {
 	for _, stored := range tuple {
 		for dependencyIndex, dependencyLineageID := range stored.lineage {
 			if dependencyIndex < 0 || dependencyIndex >= len(tuple) || tuple[dependencyIndex].lineageID != dependencyLineageID {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func joinStoredTupleMatchesLineageWithMissing(tuple []storedEvent) bool {
+	for _, stored := range tuple {
+		for dependencyIndex, dependencyLineageID := range stored.lineage {
+			if dependencyIndex < 0 || dependencyIndex >= len(tuple) {
+				return false
+			}
+			actual := tuple[dependencyIndex].lineageID
+			if actual != 0 && actual != dependencyLineageID {
 				return false
 			}
 		}

@@ -2308,6 +2308,9 @@ func (e *Environment) validateJoin(definition *joinDefinition, selections []Join
 			return fmt.Errorf("join source %d: %w", index, err)
 		}
 	}
+	if err := e.validateJoinEdges(definition, sources); err != nil {
+		return err
+	}
 	if _, err := methodJoinEvaluationOrder(definition); err != nil {
 		return err
 	}
@@ -2333,6 +2336,51 @@ func (e *Environment) validateJoin(definition *joinDefinition, selections []Join
 		}
 	}
 	return nil
+}
+
+func (e *Environment) validateJoinEdges(definition *joinDefinition, sources []*streamNode) error {
+	if len(definition.edges) == 0 {
+		if definition.kind > JoinFullOuter {
+			return fmt.Errorf("unknown join kind %d", definition.kind)
+		}
+		return nil
+	}
+	if len(definition.edges) != len(sources)-1 {
+		return fmt.Errorf("join chain has %d edges for %d sources", len(definition.edges), len(sources))
+	}
+	for edgeIndex, edge := range definition.edges {
+		if edge.kind > JoinFullOuter {
+			return fmt.Errorf("join edge %d has unknown kind %d", edgeIndex, edge.kind)
+		}
+		if len(edge.conditions) == 0 {
+			return fmt.Errorf("join edge %d requires at least one condition", edgeIndex)
+		}
+		introducedSource := edgeIndex + 1
+		for conditionIndex, condition := range edge.conditions {
+			if !joinConditionReferencesSource(condition, introducedSource) {
+				return fmt.Errorf("join edge %d condition %d does not reference introduced source %d", edgeIndex, conditionIndex, introducedSource)
+			}
+			if err := e.validateJoinCondition(condition, sources[:introducedSource+1]); err != nil {
+				return fmt.Errorf("join edge %d condition %d: %w", edgeIndex, conditionIndex, err)
+			}
+		}
+	}
+	return nil
+}
+
+func joinConditionReferencesSource(condition JoinCondition, source int) bool {
+	for _, child := range condition.all {
+		if joinConditionReferencesSource(child, source) {
+			return true
+		}
+	}
+	for _, child := range condition.any {
+		if joinConditionReferencesSource(child, source) {
+			return true
+		}
+	}
+	left, right := joinConditionSources(condition)
+	return condition.Left != nil && condition.Right != nil && (left == source || right == source)
 }
 
 func (e *Environment) validateJoinCondition(condition JoinCondition, sources []*streamNode) error {

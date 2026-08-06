@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -775,6 +776,179 @@ func TestHistoricalFireAndForgetBindsParametersAndUsesOneSnapshot(t *testing.T) 
 	provider.mu.Unlock()
 	if len(calls) != 2 || calls[0].Parameters["wanted"].Any() != 7 || calls[1].Parameters["wanted"].Any() != 9 {
 		t.Fatalf("historical FAF parameter requests = %#v", calls)
+	}
+}
+
+func TestHistoricalAndMethodFireAndForgetJoinPollsEachSourceOnce(t *testing.T) {
+	env := NewEnvironment()
+	historySchema, err := NewMapSchema("HistoryJoinFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	methodSchema, err := NewMapSchema("MethodJoinFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	historicalProvider := &fixtureHistoricalProvider{
+		schema: historySchema,
+		rows:   []map[string]any{{"symbol": "A", "value": 7}},
+	}
+	methodCalls := 0
+	methodProvider := MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		methodCalls++
+		if request.Trigger.TypeName() != "" {
+			t.Fatalf("FAF method trigger = %q", request.Trigger.TypeName())
+		}
+		event, eventErr := newEvent(methodSchema, map[string]any{"symbol": "A", "value": 9}, request.Now)
+		return []Event{event}, eventErr
+	})
+	historical := FromHistorical[map[string]any](env, "history-join-faf", historySchema, historicalProvider)
+	method := FromMethod[map[string]any](env, "method-join-faf", methodSchema, methodProvider)
+	query := Join(historical.Filter(Equal[int](Field[map[string]any, int]("value"), Literal(7))), method.Window(LengthWindow(1)), OnEqual(
+		Field[map[string]any, string]("symbol"),
+		Field[map[string]any, string]("symbol"),
+	)).Select(
+		SelectLeft("history", Field[map[string]any, int]("value")),
+		SelectRight("method", Field[map[string]any, int]("value")),
+	).Query(StatementName("historical-method-join-faf"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := NewEngine(env).ExecuteFireAndForget(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Results()) != 1 {
+		t.Fatalf("historical/method FAF join results = %#v", result.Results())
+	}
+	row, ok := result.Results()[0].Row()
+	if !ok || row.Get("history").Any() != 7 || row.Get("method").Any() != 9 {
+		t.Fatalf("historical/method FAF join row = %#v", result.Results()[0])
+	}
+	if historicalProvider.CallCount() != 1 || methodCalls != 1 {
+		t.Fatalf("historical/method FAF calls = history:%d method:%d", historicalProvider.CallCount(), methodCalls)
+	}
+}
+
+func TestHistoricalAndMethodContextFireAndForgetJoinPartitionsRows(t *testing.T) {
+	env := NewEnvironment()
+	historySchema, err := NewMapSchema("HistoryContextJoinFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	methodSchema, err := NewMapSchema("MethodContextJoinFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	historicalProvider := &fixtureHistoricalProvider{
+		schema: historySchema,
+		rows: []map[string]any{
+			{"symbol": "A", "value": 7},
+			{"symbol": "B", "value": 8},
+		},
+	}
+	methodCalls := 0
+	methodProvider := MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		methodCalls++
+		rows := []map[string]any{{"symbol": "A", "value": 9}, {"symbol": "B", "value": 10}}
+		events := make([]Event, 0, len(rows))
+		for _, row := range rows {
+			event, eventErr := newEvent(methodSchema, row, request.Now)
+			if eventErr != nil {
+				return nil, eventErr
+			}
+			events = append(events, event)
+		}
+		return events, nil
+	})
+	if _, err := CreateKeyContext(env, "historical-method-context-faf", Field[any, string]("symbol")); err != nil {
+		t.Fatal(err)
+	}
+	historical := FromHistorical[map[string]any](env, "history-context-join-faf", historySchema, historicalProvider)
+	method := FromMethod[map[string]any](env, "method-context-join-faf", methodSchema, methodProvider)
+	query := Join(historical, method, OnEqual(
+		Field[map[string]any, string]("symbol"),
+		Field[map[string]any, string]("symbol"),
+	)).Select(
+		SelectLeft("history", Field[map[string]any, int]("value")),
+		SelectRight("method", Field[map[string]any, int]("value")),
+	).Query(StatementName("historical-method-context-join-faf"), WithContext("historical-method-context-faf"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := NewEngine(env).ExecuteFireAndForgetWithSelector(context.Background(), plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Results()) != 2 {
+		t.Fatalf("historical/method context FAF results = %#v", result.Results())
+	}
+	seen := map[string]bool{}
+	for _, item := range result.Results() {
+		row, ok := item.Row()
+		if !ok {
+			t.Fatalf("historical/method context FAF result = %#v", item)
+		}
+		seen[fmt.Sprintf("%v/%v", row.Get("history").Any(), row.Get("method").Any())] = true
+	}
+	if !seen["7/9"] || !seen["8/10"] || len(seen) != 2 {
+		t.Fatalf("historical/method context FAF rows = %#v", seen)
+	}
+	if historicalProvider.CallCount() != 1 || methodCalls != 1 {
+		t.Fatalf("historical/method context FAF calls = history:%d method:%d", historicalProvider.CallCount(), methodCalls)
+	}
+}
+
+func TestHistoricalAndMethodFireAndForgetRejectsDependentMethodSource(t *testing.T) {
+	env := NewEnvironment()
+	historySchema, err := NewMapSchema("HistoryDependentJoinFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	methodSchema, err := NewMapSchema("MethodDependentJoinFAF", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	historical := FromHistorical[map[string]any](env, "history-dependent-join-faf", historySchema, &fixtureHistoricalProvider{
+		schema: historySchema,
+	})
+	method := FromMethod[map[string]any](env, "method-dependent-join-faf", methodSchema, MethodProviderFunc(func(context.Context, MethodRequest) ([]Event, error) {
+		return nil, nil
+	})).DependingOn("history-dependent-join-faf")
+	query := Join(historical, method, OnEqual(
+		Field[map[string]any, string]("symbol"),
+		Field[map[string]any, string]("symbol"),
+	)).Select(
+		SelectLeft("history", Field[map[string]any, int]("value")),
+		SelectRight("method", Field[map[string]any, int]("value")),
+	).Query(StatementName("dependent-method-join-faf"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = NewEngine(env).ExecuteFireAndForget(context.Background(), plan)
+	if err == nil || !strings.Contains(err.Error(), "dependent method sources are not supported") {
+		t.Fatalf("dependent method FAF error = %v", err)
 	}
 }
 

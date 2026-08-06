@@ -539,3 +539,138 @@ func TestMethodSourceDependencyValidationAndPlanIdentity(t *testing.T) {
 		t.Fatal("method dependencies did not change canonical plan identity")
 	}
 }
+
+func TestMethodSourceJoinChainRejectsUnsatisfiedOuterDependencies(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	schema, err := StructSchema[methodDependentValue]("MethodChainDependencyValidation")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider := MethodProviderFunc(func(context.Context, MethodRequest) ([]Event, error) { return nil, nil })
+	base := JoinSource(FromMethodOn[methodDependentValue](env, "chain-base", "Trade", schema, provider))
+	h0 := func(dependencies ...string) JoinInput {
+		stream := FromMethodOn[methodDependentValue](env, "chain-h0", "Trade", schema, provider)
+		if len(dependencies) > 0 {
+			stream = stream.DependingOn(dependencies...)
+		}
+		return JoinSource(stream)
+	}
+	h1 := func(dependencies ...string) JoinInput {
+		stream := FromMethodOn[methodDependentValue](env, "chain-h1", "Trade", schema, provider)
+		if len(dependencies) > 0 {
+			stream = stream.DependingOn(dependencies...)
+		}
+		return JoinSource(stream)
+	}
+	baseH0 := OnSourcesEqual(0, Field[methodDependentValue, int]("group"), 1, Field[methodDependentValue, int]("group"))
+	h0H1 := OnSourcesEqual(1, Field[methodDependentValue, int]("group"), 2, Field[methodDependentValue, int]("group"))
+	selection := []JoinSelection{SelectFrom(0, "group", Field[methodDependentValue, int]("group"))}
+	validLeftChain := JoinChain(base).
+		LeftOuterJoin(h0(), baseH0).
+		LeftOuterJoin(h1("chain-h0"), h0H1).
+		Select(selection...).Query(StatementName("method-chain-left-left-valid"))
+	if _, err := env.Build(validLeftChain); err != nil {
+		t.Fatalf("left-outer subordinate branch rejected: %v", err)
+	}
+
+	// Java invalid matrix: H0 is optional after S0 full-outer H0, so a later
+	// left-outer H1 cannot require H0 for its method invocation.
+	fullThenLeft := JoinChain(base).
+		FullOuterJoin(h0(), baseH0).
+		LeftOuterJoin(h1("chain-h0"), h0H1).
+		Select(selection...).Query(StatementName("method-chain-full-left-invalid"))
+	if _, err := env.Build(fullThenLeft); err == nil || !strings.Contains(err.Error(), "cannot or may not be satisfied") {
+		t.Fatalf("full-then-left method dependency error = %v", err)
+	}
+
+	// A method in a left relation cannot depend on the optional source that a
+	// later left-outer edge has not introduced yet.
+	reverseLeft := JoinChain(base).
+		LeftOuterJoin(h0("chain-h1"), baseH0).
+		LeftOuterJoin(h1(), h0H1).
+		Select(selection...).Query(StatementName("method-chain-reverse-left-invalid"))
+	if _, err := env.Build(reverseLeft); err == nil || !strings.Contains(err.Error(), "cannot or may not be satisfied") {
+		t.Fatalf("reverse left method dependency error = %v", err)
+	}
+}
+
+func TestMethodSourceJoinChainMixedRightLeftMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[methodDependencyTrigger](env, "MethodChainTrigger"); err != nil {
+		t.Fatal(err)
+	}
+	rowSchema, err := StructSchema[methodDependencyRow]("MethodChainRow")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h1 := FromMethodOn[methodDependencyRow](env, "chain-independent-h1", "MethodChainTrigger", rowSchema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		event, eventErr := newEvent(rowSchema, methodDependencyRow{Value: "H1", Index: 1}, request.Now)
+		return []Event{event}, eventErr
+	}))
+	base := From[methodDependencyTrigger](env, "MethodChainTrigger")
+	h0Calls := 0
+	h0 := FromMethodOn[methodDependencyRow](env, "chain-dependent-h0", "MethodChainTrigger", rowSchema, MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		h0Calls++
+		dependency, ok := request.Dependency("MethodChainTrigger")
+		if !ok {
+			return nil, NewError(ErrorDependency, "method chain trigger dependency is missing")
+		}
+		trigger := dependency.Underlying().(methodDependencyTrigger)
+		event, eventErr := newEvent(rowSchema, methodDependencyRow{Value: trigger.ID + "-H0", Index: trigger.Count}, request.Now)
+		return []Event{event}, eventErr
+	})).DependingOn("MethodChainTrigger")
+	chain := JoinChain(JoinSource(h1)).
+		RightOuterJoin(JoinSource(base), OnSourcesEqual(
+			0, Field[methodDependencyRow, int]("index"),
+			1, Field[methodDependencyTrigger, int]("count"),
+		)).
+		LeftOuterJoin(JoinSource(h0), OnSourcesEqual(
+			1, Field[methodDependencyTrigger, int]("count"),
+			2, Field[methodDependencyRow, int]("index"),
+		))
+	plan, err := env.Build(chain.Select(
+		SelectFrom(0, "h1", Field[methodDependencyRow, string]("value")),
+		SelectFrom(1, "id", Field[methodDependencyTrigger, string]("id")),
+		SelectFrom(2, "h0", Field[methodDependencyRow, string]("value")),
+	).Query(StatementName("method-chain-right-left")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	if _, err := deployment.Statements()[0].Subscribe(func(context.Context, ResultBatch) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []methodDependencyTrigger{{ID: "E", Count: 1}, {ID: "F", Count: 2}} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	snapshot, err := deployment.Statements()[0].Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Results()) != 2 || h0Calls != 3 {
+		t.Fatalf("mixed method chain rows/calls = %#v / %d", snapshot.Results(), h0Calls)
+	}
+	seen := map[string]bool{}
+	for _, result := range snapshot.Results() {
+		row, ok := result.Row()
+		if !ok {
+			t.Fatalf("mixed method chain result = %#v", result)
+		}
+		if row.Get("id").Any() == "E" && row.Get("h1").Any() == "H1" && row.Get("h0").Any() == "E-H0" {
+			seen["E"] = true
+		}
+		if row.Get("id").Any() == "F" && row.Get("h1").IsNull() && row.Get("h0").Any() == "F-H0" {
+			seen["F"] = true
+		}
+	}
+	if len(seen) != 2 {
+		t.Fatalf("mixed method chain rows = %#v", snapshot.Results())
+	}
+}

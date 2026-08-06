@@ -256,6 +256,77 @@ type MultiJoinStream struct {
 	kind       JoinKind
 }
 
+// ChainedJoinStream builds a left-deep join tree one edge at a time. Unlike
+// JoinMany's convenient single-kind form, each edge carries its own join kind
+// and ON conditions, allowing fluent mixed outer joins without EPL text.
+type ChainedJoinStream struct {
+	env     *Environment
+	sources []*streamNode
+	edges   []joinEdgeDefinition
+}
+
+// JoinChain starts a left-deep multi-stream join from one source.
+func JoinChain(first JoinInput) ChainedJoinStream {
+	return ChainedJoinStream{env: first.env, sources: []*streamNode{first.node}}
+}
+
+func (j ChainedJoinStream) join(input JoinInput, kind JoinKind, conditions []JoinCondition) ChainedJoinStream {
+	j.sources = append(append([]*streamNode(nil), j.sources...), input.node)
+	j.edges = append(append([]joinEdgeDefinition(nil), j.edges...), joinEdgeDefinition{
+		kind: kind, conditions: append([]JoinCondition(nil), conditions...),
+	})
+	return j
+}
+
+func (j ChainedJoinStream) InnerJoin(input JoinInput, conditions ...JoinCondition) ChainedJoinStream {
+	return j.join(input, JoinInner, conditions)
+}
+
+func (j ChainedJoinStream) LeftOuterJoin(input JoinInput, conditions ...JoinCondition) ChainedJoinStream {
+	return j.join(input, JoinLeftOuter, conditions)
+}
+
+func (j ChainedJoinStream) RightOuterJoin(input JoinInput, conditions ...JoinCondition) ChainedJoinStream {
+	return j.join(input, JoinRightOuter, conditions)
+}
+
+func (j ChainedJoinStream) FullOuterJoin(input JoinInput, conditions ...JoinCondition) ChainedJoinStream {
+	return j.join(input, JoinFullOuter, conditions)
+}
+
+func (j ChainedJoinStream) Select(selections ...JoinSelection) JoinQuery {
+	return JoinQuery{
+		env: j.env,
+		definition: &joinDefinition{
+			sources: append([]*streamNode(nil), j.sources...),
+			edges:   cloneJoinEdges(j.edges),
+		},
+		selections: append([]JoinSelection(nil), selections...),
+	}
+}
+
+func (j ChainedJoinStream) Query(options ...QueryOption) Query {
+	return j.Select().Query(options...)
+}
+
+func (j ChainedJoinStream) Aggregate(selections ...Selection) AggregateStream {
+	definition := j.Select().definition
+	var node *streamNode
+	if len(definition.sources) > 0 {
+		node = definition.sources[0]
+	}
+	return AggregateStream{env: j.env, node: node, join: definition, selections: append([]Selection(nil), selections...)}
+}
+
+func (j ChainedJoinStream) GroupBy(keys ...Expr) AggregateStream {
+	definition := j.Select().definition
+	var node *streamNode
+	if len(definition.sources) > 0 {
+		node = definition.sources[0]
+	}
+	return AggregateStream{env: j.env, node: node, join: definition, groupBy: append([]Expr(nil), keys...)}
+}
+
 // JoinMany creates a multi-stream join. Conditions should use
 // OnSourcesEqual/OnSourcesCompare so each expression is tied to a source
 // index. Left/right/full outer variants retain unmatched tuples with zero
@@ -379,6 +450,23 @@ type joinDefinition struct {
 	sources    []*streamNode
 	conditions []JoinCondition
 	kind       JoinKind
+	edges      []joinEdgeDefinition
+}
+
+type joinEdgeDefinition struct {
+	kind       JoinKind
+	conditions []JoinCondition
+}
+
+func cloneJoinEdges(edges []joinEdgeDefinition) []joinEdgeDefinition {
+	if len(edges) == 0 {
+		return nil
+	}
+	cloned := make([]joinEdgeDefinition, len(edges))
+	for index, edge := range edges {
+		cloned[index] = joinEdgeDefinition{kind: edge.kind, conditions: append([]JoinCondition(nil), edge.conditions...)}
+	}
+	return cloned
 }
 
 func Join[L, R any](left Stream[L], right Stream[R], condition JoinCondition) JoinStream[L, R] {
@@ -1873,27 +1961,7 @@ func (q Query) description() string {
 		return strings.Join(parts, " -> ")
 	}
 	if q.join != nil {
-		joinName := "inner"
-		switch q.join.kind {
-		case JoinLeftOuter:
-			joinName = "left-outer"
-		case JoinRightOuter:
-			joinName = "right-outer"
-		case JoinFullOuter:
-			joinName = "full-outer"
-		}
-		sources := joinDefinitionSources(q.join)
-		sourceDescriptions := make([]string, 0, len(sources))
-		for _, source := range sources {
-			sourceDescriptions = append(sourceDescriptions, source.describe())
-		}
-		parts := []string{joinName + "-join(" + strings.Join(sourceDescriptions, ",") + ")"}
-		conditions := joinDefinitionConditions(q.join)
-		conditionDescriptions := make([]string, 0, len(conditions))
-		for _, condition := range conditions {
-			conditionDescriptions = append(conditionDescriptions, joinConditionDescription(condition))
-		}
-		parts = append(parts, "on("+strings.Join(conditionDescriptions, " and ")+")")
+		parts := []string{describeJoinDefinition(q.join)}
 		if len(q.joinSelections) == 0 {
 			return strings.Join(parts, " -> ")
 		}
@@ -2019,14 +2087,20 @@ func methodJoinEvaluationOrder(definition *joinDefinition) ([]int, error) {
 			if dependencyIndex == methodIndex {
 				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q cannot depend on itself", base.sourceName))
 			}
-			switch definition.kind {
-			case JoinLeftOuter:
-				if dependencyIndex > methodIndex {
-					return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot be satisfied by the left outer join", base.sourceName, name))
+			if len(definition.edges) > 0 {
+				if err := validateChainedMethodDependency(methodIndex, dependencyIndex, name, base.sourceName, definition.edges, containsHistoricalSource(sources[dependencyIndex])); err != nil {
+					return nil, err
 				}
-			case JoinRightOuter:
-				if dependencyIndex < methodIndex {
-					return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot be satisfied by the right outer join", base.sourceName, name))
+			} else {
+				switch definition.kind {
+				case JoinLeftOuter:
+					if dependencyIndex > methodIndex {
+						return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot be satisfied by the left outer join", base.sourceName, name))
+					}
+				case JoinRightOuter:
+					if dependencyIndex < methodIndex {
+						return nil, NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot be satisfied by the right outer join", base.sourceName, name))
+					}
 				}
 			}
 			edges[dependencyIndex] = append(edges[dependencyIndex], methodIndex)
@@ -2056,20 +2130,59 @@ func methodJoinEvaluationOrder(definition *joinDefinition) ([]int, error) {
 	return order, nil
 }
 
+func validateChainedMethodDependency(methodIndex, dependencyIndex int, dependencyName, methodName string, edges []joinEdgeDefinition, dependencyHistorical bool) error {
+	if dependencyIndex < methodIndex {
+		// A source introduced by a right/full edge can appear independently of
+		// the prior left relation. Java rejects making a later left-optional
+		// method subordinate to that branch. A source introduced by left outer
+		// is different: its descendants may remain on the same optional branch.
+		if dependencyHistorical && dependencyIndex > 0 {
+			origin := edges[dependencyIndex-1].kind
+			if origin == JoinRightOuter || origin == JoinFullOuter {
+				for edgeIndex := dependencyIndex; edgeIndex < methodIndex && edgeIndex < len(edges); edgeIndex++ {
+					if edges[edgeIndex].kind == JoinLeftOuter {
+						return NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot or may not be satisfied by the join chain", methodName, dependencyName))
+					}
+				}
+			}
+		}
+		return nil
+	}
+	// Inner joins are reorderable and right/full outer edges can be driven by
+	// the newly introduced right side. A left outer edge requires its left
+	// relation first and therefore cannot satisfy a reverse dependency.
+	for edgeIndex := methodIndex; edgeIndex < dependencyIndex && edgeIndex < len(edges); edgeIndex++ {
+		if edges[edgeIndex].kind == JoinLeftOuter {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("method source %q dependency %q cannot or may not be satisfied by join edge %d", methodName, dependencyName, edgeIndex))
+		}
+	}
+	return nil
+}
+
 func describeJoinDefinition(definition *joinDefinition) string {
 	if definition == nil {
 		return "<nil-join>"
 	}
-	joinName := "inner"
-	switch definition.kind {
-	case JoinLeftOuter:
-		joinName = "left-outer"
-	case JoinRightOuter:
-		joinName = "right-outer"
-	case JoinFullOuter:
-		joinName = "full-outer"
-	}
 	sources := joinDefinitionSources(definition)
+	if len(definition.edges) > 0 {
+		if len(sources) == 0 {
+			return "join-chain(<empty>)"
+		}
+		parts := []string{sources[0].describe()}
+		for index, edge := range definition.edges {
+			conditionDescriptions := make([]string, 0, len(edge.conditions))
+			for _, condition := range edge.conditions {
+				conditionDescriptions = append(conditionDescriptions, joinConditionDescription(condition))
+			}
+			source := "<missing-source>"
+			if index+1 < len(sources) {
+				source = sources[index+1].describe()
+			}
+			parts = append(parts, joinKindDescription(edge.kind)+"("+source+",on="+strings.Join(conditionDescriptions, " and ")+")")
+		}
+		return "join-chain(" + strings.Join(parts, " -> ") + ")"
+	}
+	joinName := joinKindDescription(definition.kind)
 	sourceDescriptions := make([]string, 0, len(sources))
 	for _, source := range sources {
 		sourceDescriptions = append(sourceDescriptions, source.describe())
@@ -2082,9 +2195,31 @@ func describeJoinDefinition(definition *joinDefinition) string {
 	return joinName + "-join(" + strings.Join(sourceDescriptions, ",") + ") -> on(" + strings.Join(conditionDescriptions, " and ") + ")"
 }
 
+func joinKindDescription(kind JoinKind) string {
+	switch kind {
+	case JoinInner:
+		return "inner"
+	case JoinLeftOuter:
+		return "left-outer"
+	case JoinRightOuter:
+		return "right-outer"
+	case JoinFullOuter:
+		return "full-outer"
+	default:
+		return fmt.Sprintf("unknown-%d", kind)
+	}
+}
+
 func joinDefinitionConditions(definition *joinDefinition) []JoinCondition {
 	if definition == nil {
 		return nil
+	}
+	if len(definition.edges) > 0 {
+		var conditions []JoinCondition
+		for _, edge := range definition.edges {
+			conditions = append(conditions, edge.conditions...)
+		}
+		return conditions
 	}
 	if len(definition.conditions) > 0 {
 		return definition.conditions
