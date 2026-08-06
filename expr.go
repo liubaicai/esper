@@ -1876,14 +1876,33 @@ func BitwiseAnd[T BitwiseOperand](left, right Expression[T]) Expression[T] {
 	return bitwiseExpression[T]("bitwise-and", "&", left, right)
 }
 
+// BitwiseAndOf is the nullable/mixed-operand form of BitwiseAnd. The result
+// type is explicit while each operand may be a compatible value, pointer or
+// interface expression; a nil pointer/interface evaluates to Null. This
+// models Java's primitive-and-boxed operand combinations without weakening
+// the ordinary BitwiseAnd compile-time contract.
+func BitwiseAndOf[T BitwiseOperand](left, right Expr) Expression[T] {
+	return bitwiseExpressionOf[T]("bitwise-and", "&", left, right)
+}
+
 // BitwiseOr applies a binary | operation to integer or boolean expressions.
 func BitwiseOr[T BitwiseOperand](left, right Expression[T]) Expression[T] {
 	return bitwiseExpression[T]("bitwise-or", "|", left, right)
 }
 
+// BitwiseOrOf is the nullable/mixed-operand form of BitwiseOr.
+func BitwiseOrOf[T BitwiseOperand](left, right Expr) Expression[T] {
+	return bitwiseExpressionOf[T]("bitwise-or", "|", left, right)
+}
+
 // BitwiseXor applies a binary ^ operation to integer or boolean expressions.
 func BitwiseXor[T BitwiseOperand](left, right Expression[T]) Expression[T] {
 	return bitwiseExpression[T]("bitwise-xor", "^", left, right)
+}
+
+// BitwiseXorOf is the nullable/mixed-operand form of BitwiseXor.
+func BitwiseXorOf[T BitwiseOperand](left, right Expr) Expression[T] {
+	return bitwiseExpressionOf[T]("bitwise-xor", "^", left, right)
 }
 
 // BinaryAnd, BinaryOr and BinaryXor are descriptive aliases for callers that
@@ -1892,15 +1911,38 @@ func BinaryAnd[T BitwiseOperand](left, right Expression[T]) Expression[T] {
 	return BitwiseAnd[T](left, right)
 }
 
+func BinaryAndOf[T BitwiseOperand](left, right Expr) Expression[T] {
+	return BitwiseAndOf[T](left, right)
+}
+
 func BinaryOr[T BitwiseOperand](left, right Expression[T]) Expression[T] {
 	return BitwiseOr[T](left, right)
+}
+
+func BinaryOrOf[T BitwiseOperand](left, right Expr) Expression[T] {
+	return BitwiseOrOf[T](left, right)
 }
 
 func BinaryXor[T BitwiseOperand](left, right Expression[T]) Expression[T] {
 	return BitwiseXor[T](left, right)
 }
 
+func BinaryXorOf[T BitwiseOperand](left, right Expr) Expression[T] {
+	return BitwiseXorOf[T](left, right)
+}
+
 func bitwiseExpression[T BitwiseOperand](kind, symbol string, left, right Expression[T]) Expression[T] {
+	var leftExpr, rightExpr Expr
+	if left != nil {
+		leftExpr = left
+	}
+	if right != nil {
+		rightExpr = right
+	}
+	return bitwiseExpressionOf[T](kind, symbol, leftExpr, rightExpr)
+}
+
+func bitwiseExpressionOf[T BitwiseOperand](kind, symbol string, left, right Expr) Expression[T] {
 	if left == nil || right == nil {
 		node := &exprNode{
 			kind:               kind,
@@ -1917,30 +1959,15 @@ func bitwiseExpression[T BitwiseOperand](kind, symbol string, left, right Expres
 }
 
 func applyBitwise[T BitwiseOperand](left, right Value, symbol string) Value {
-	if !left.IsPresent() || !right.IsPresent() {
-		return Null()
-	}
 	var zero T
 	target := reflect.TypeOf(zero)
 	if target == nil {
 		return Null()
 	}
-	leftValue := reflect.ValueOf(left.Any())
-	rightValue := reflect.ValueOf(right.Any())
-	if !leftValue.IsValid() || !rightValue.IsValid() {
+	leftValue, leftOK := bitwiseOperandValue(left, target)
+	rightValue, rightOK := bitwiseOperandValue(right, target)
+	if !leftOK || !rightOK {
 		return Null()
-	}
-	if leftValue.Type() != target {
-		if !leftValue.Type().ConvertibleTo(target) {
-			return Null()
-		}
-		leftValue = leftValue.Convert(target)
-	}
-	if rightValue.Type() != target {
-		if !rightValue.Type().ConvertibleTo(target) {
-			return Null()
-		}
-		rightValue = rightValue.Convert(target)
 	}
 	result := reflect.New(target).Elem()
 	switch target.Kind() {
@@ -1988,6 +2015,29 @@ func applyBitwise[T BitwiseOperand](left, right Value, symbol string) Value {
 		return Null()
 	}
 	return Present(result.Interface())
+}
+
+func bitwiseOperandValue(value Value, target reflect.Type) (reflect.Value, bool) {
+	if !value.IsPresent() {
+		return reflect.Value{}, false
+	}
+	operand := reflect.ValueOf(value.Any())
+	for operand.IsValid() && (operand.Kind() == reflect.Interface || operand.Kind() == reflect.Pointer) {
+		if operand.IsNil() {
+			return reflect.Value{}, false
+		}
+		operand = operand.Elem()
+	}
+	if !operand.IsValid() {
+		return reflect.Value{}, false
+	}
+	if operand.Type() == target {
+		return operand, true
+	}
+	if operand.Type().ConvertibleTo(target) {
+		return operand.Convert(target), true
+	}
+	return reflect.Value{}, false
 }
 
 func IsNull[T any](value Expression[T]) Expression[bool] {

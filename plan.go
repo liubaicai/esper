@@ -1137,6 +1137,9 @@ func (e *Environment) validateContextLifecycleExpression(expression Expr) error 
 	if expression == nil {
 		return fmt.Errorf("esper: nil expression")
 	}
+	if err := validateBitwiseExpressionNodes(expression.node()); err != nil {
+		return err
+	}
 	if err := validateMethodNodes(expression.node()); err != nil {
 		return err
 	}
@@ -1471,6 +1474,9 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 	if err := e.validateExpressionReferences(node, make(map[string]bool)); err != nil {
 		return err
 	}
+	if err := validateBitwiseExpressionNodes(node); err != nil {
+		return err
+	}
 	if err := validateMethodNodes(node); err != nil {
 		return err
 	}
@@ -1643,6 +1649,53 @@ func validateMethodNodes(node *exprNode) error {
 		}
 	}
 	return nil
+}
+
+func validateBitwiseExpressionNodes(node *exprNode) error {
+	if node == nil {
+		return nil
+	}
+	if node.kind == "bitwise-and" || node.kind == "bitwise-or" || node.kind == "bitwise-xor" {
+		if len(node.children) != 2 || node.children[0] == nil || node.children[1] == nil {
+			return NewError(ErrorInvalidRule, "bitwise operator requires two operands")
+		}
+		for index, child := range node.children {
+			if !bitwiseTypesCompatible(node.typ, child.typ) {
+				return NewError(ErrorTypeMismatch, fmt.Sprintf("bitwise operator %q operand %d has type %s, expected %s", node.kind, index, bitwiseTypeDescription(child.typ), bitwiseTypeDescription(node.typ)))
+			}
+		}
+	}
+	for _, child := range node.children {
+		if err := validateBitwiseExpressionNodes(child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func bitwiseTypesCompatible(expected, actual reflect.Type) bool {
+	if expected == nil || actual == nil || expected == typeOf[any]() || actual == typeOf[any]() {
+		return true
+	}
+	for actual.Kind() == reflect.Pointer {
+		actual = actual.Elem()
+	}
+	if actual == nil {
+		return false
+	}
+	if actual.Kind() == reflect.Interface {
+		// A non-empty interface does not reveal its concrete value at Build
+		// time. Leave the final compatible-value check to evaluation.
+		return true
+	}
+	return actual == expected || actual.AssignableTo(expected) || expected.AssignableTo(actual)
+}
+
+func bitwiseTypeDescription(typ reflect.Type) string {
+	if typ == nil {
+		return "any"
+	}
+	return typ.String()
 }
 
 func (e *Environment) validateScriptNodes(node *exprNode) error {
@@ -2985,6 +3038,9 @@ func (e *Environment) validateJoinScopedExpression(definition *joinDefinition, e
 	if definition == nil || expression == nil {
 		return NewError(ErrorInvalidRule, scope+" expression is required")
 	}
+	if err := validateBitwiseExpressionNodes(expression.node()); err != nil {
+		return err
+	}
 	if err := validateMethodNodes(expression.node()); err != nil {
 		return err
 	}
@@ -3866,6 +3922,9 @@ func (e *Environment) validateSourceLess(selections []Selection) error {
 		}
 		seen[selection.Name] = struct{}{}
 		if err := e.validateExprVariables(selection.Expr); err != nil {
+			return err
+		}
+		if err := validateBitwiseExpressionNodes(selection.Expr.node()); err != nil {
 			return err
 		}
 		var fields []string

@@ -18,6 +18,13 @@ type bitwiseParityEvent struct {
 	BoolRight  bool  `esper:"bool_right"`
 }
 
+type bitwiseBoxedEvent struct {
+	Primitive int8  `esper:"primitive"`
+	Boxed     *int8 `esper:"boxed"`
+	Bool      bool  `esper:"bool"`
+	BoolBoxed *bool `esper:"bool_boxed"`
+}
+
 func TestBitwiseExpressionsPreserveIntegerWidthAndBooleanSemantics(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[bitwiseParityEvent](env, "BitwiseParityEvent"); err != nil {
@@ -96,6 +103,67 @@ func TestBitwiseExpressionsPropagateNullAndRejectInvalidBuilders(t *testing.T) {
 	).Query(StatementName("bitwise-invalid"))
 	if _, err := env.Build(invalid); err == nil {
 		t.Fatal("nil bitwise operand must fail during Build")
+	}
+	wrongType := Select(input,
+		Alias("bad", BitwiseAndOf[int8](Literal("x"), Literal("y"))),
+	).Query(StatementName("bitwise-wrong-type"))
+	if _, err := env.Build(wrongType); err == nil {
+		t.Fatal("incompatible BitwiseAndOf operand must fail during Build")
+	}
+}
+
+func TestBitwiseExpressionsHandlePrimitiveAndBoxedOperands(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[bitwiseBoxedEvent](env, "BitwiseBoxedEvent"); err != nil {
+		t.Fatal(err)
+	}
+	input := From[bitwiseBoxedEvent](env, "BitwiseBoxedEvent")
+	plan, err := env.Build(Select(input,
+		Alias("numeric", BitwiseAndOf[int8](
+			Field[bitwiseBoxedEvent, int8]("primitive"),
+			Field[bitwiseBoxedEvent, *int8]("boxed"),
+		)),
+		Alias("boolean", BinaryAndOf[bool](
+			Field[bitwiseBoxedEvent, bool]("bool"),
+			Field[bitwiseBoxedEvent, *bool]("bool_boxed"),
+		)),
+	).Query(StatementName("bitwise-boxed")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := make([]Row, 0, 2)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return NewError(ErrorTypeMismatch, "boxed bitwise result is not a row")
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	boxed := int8(3)
+	boxedBool := true
+	if err := engine.SendEvent(context.Background(), bitwiseBoxedEvent{Primitive: 1, Boxed: &boxed, Bool: true, BoolBoxed: &boxedBool}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), bitwiseBoxedEvent{Primitive: 1, Bool: false}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("boxed bitwise rows = %d, want 2", len(rows))
+	}
+	assertBitwiseValue(t, rows[0].Get("numeric"), int8(1))
+	assertBitwiseValue(t, rows[0].Get("boolean"), true)
+	if !rows[1].Get("numeric").IsNull() || !rows[1].Get("boolean").IsNull() {
+		t.Fatalf("boxed null propagation = numeric=%v boolean=%v", rows[1].Get("numeric"), rows[1].Get("boolean"))
 	}
 }
 
