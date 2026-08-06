@@ -4796,6 +4796,12 @@ func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, 
 	if r == nil || batch.empty() {
 		return batch
 	}
+	if len(plans) > 0 && deferOutputResultWindow(plans[0].query.output) {
+		batch.New = orderResults(batch.New, plans[0].query.orderBy, now, r.variables)
+		batch.Old = orderResults(batch.Old, plans[0].query.orderBy, now, r.variables)
+		batch.New = applyResultWindow(batch.New, plans[0].query)
+		batch.Old = applyResultWindow(batch.Old, plans[0].query)
+	}
 	if len(plans) > 0 && len(plans[0].query.orderBy) > 0 {
 		batch.New = orderRowRecogResults(batch.New, plans[0].query.orderBy, now, r.variables)
 		batch.Old = orderRowRecogResults(batch.Old, plans[0].query.orderBy, now, r.variables)
@@ -8816,8 +8822,10 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 		if plan.query.distinct {
 			batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 		}
-		batch.New = applyResultWindow(batch.New, plan.query)
-		batch.Old = applyResultWindow(batch.Old, plan.query)
+		if !deferOutputResultWindow(plan.query.output) {
+			batch.New = applyResultWindow(batch.New, plan.query)
+			batch.Old = applyResultWindow(batch.Old, plan.query)
+		}
 		batch.Sequence = r.seq.Add(1)
 	}
 	return batch
@@ -8935,7 +8943,9 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 		if plan.query.distinct {
 			batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 		}
-		batch.New = applyResultWindow(batch.New, plan.query)
+		if !deferOutputResultWindow(plan.query.output) {
+			batch.New = applyResultWindow(batch.New, plan.query)
+		}
 		batch.Sequence = r.seq.Add(1)
 	}
 	return batch
@@ -9025,8 +9035,10 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 		if plan.query.distinct {
 			batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 		}
-		batch.New = applyResultWindow(batch.New, plan.query)
-		batch.Old = applyResultWindow(batch.Old, plan.query)
+		if !deferOutputResultWindow(plan.query.output) {
+			batch.New = applyResultWindow(batch.New, plan.query)
+			batch.Old = applyResultWindow(batch.Old, plan.query)
+		}
 		batch.Sequence = r.seq.Add(1)
 	}
 	return batch
@@ -9187,8 +9199,10 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		if plan.query.distinct {
 			batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 		}
-		batch.New = applyResultWindow(batch.New, plan.query)
-		batch.Old = applyResultWindow(batch.Old, plan.query)
+		if !deferOutputResultWindow(plan.query.output) {
+			batch.New = applyResultWindow(batch.New, plan.query)
+			batch.Old = applyResultWindow(batch.Old, plan.query)
+		}
 		batch.Sequence = r.seq.Add(1)
 	}
 	if plan.query.tableTarget != "" {
@@ -9578,10 +9592,16 @@ func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) Res
 		newResults, oldResults = r.applyDistinct(plan.query, newResults, oldResults)
 	}
 	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
-		batch.New = applyResultWindow(newResults, plan.query)
+		batch.New = newResults
+		if !deferOutputResultWindow(plan.query.output) {
+			batch.New = applyResultWindow(batch.New, plan.query)
+		}
 	}
 	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
-		batch.Old = applyResultWindow(oldResults, plan.query)
+		batch.Old = oldResults
+		if !deferOutputResultWindow(plan.query.output) {
+			batch.Old = applyResultWindow(batch.Old, plan.query)
+		}
 	}
 	if !batch.empty() {
 		batch.Sequence = r.seq.Add(1)
@@ -9612,8 +9632,10 @@ func (r *statementRuntime) joinBatch(delta joinDelta, plan Plan, now time.Time) 
 	if plan.query.distinct {
 		batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 	}
-	batch.New = applyResultWindow(batch.New, plan.query)
-	batch.Old = applyResultWindow(batch.Old, plan.query)
+	if !deferOutputResultWindow(plan.query.output) {
+		batch.New = applyResultWindow(batch.New, plan.query)
+		batch.Old = applyResultWindow(batch.Old, plan.query)
+	}
 	if !batch.empty() {
 		batch.Sequence = r.seq.Add(1)
 	}
@@ -9753,6 +9775,58 @@ func applyResultWindow(results []Result, query Query) []Result {
 		end = start + query.limit
 	}
 	return append([]Result(nil), results[start:end]...)
+}
+
+// deferOutputResultWindow keeps row-limit candidates intact while a batched
+// output policy is collecting deltas. Esper applies order/limit/offset to the
+// complete output interval; applying it to each input event would discard
+// candidates before the interval can be sorted. Snapshot policies already
+// rebuild and limit the current state directly.
+func deferOutputResultWindow(policy OutputPolicy) bool {
+	if policy.Snapshot {
+		return false
+	}
+	switch policy.Kind {
+	case OutputEveryPolicy, OutputEveryTimePolicy:
+		return true
+	default:
+		return false
+	}
+}
+
+func orderResults(results []Result, keys []SortKey, now time.Time, variables map[string]Value) []Result {
+	if len(results) < 2 || len(keys) == 0 {
+		return results
+	}
+	ordered := append([]Result(nil), results...)
+	sort.SliceStable(ordered, func(left, right int) bool {
+		leftContext := resultOrderContext(ordered[left], now, variables)
+		rightContext := resultOrderContext(ordered[right], now, variables)
+		for _, key := range keys {
+			comparison, ok := compareOrderValues(key.Expr.eval(leftContext), key.Expr.eval(rightContext))
+			if !ok || comparison == 0 {
+				continue
+			}
+			if key.Descending {
+				return comparison > 0
+			}
+			return comparison < 0
+		}
+		return false
+	})
+	return ordered
+}
+
+func resultOrderContext(result Result, now time.Time, variables map[string]Value) EvalContext {
+	ctx := EvalContext{Now: now, Variables: variables}
+	if event, ok := result.Event(); ok {
+		ctx.Event = event
+	}
+	if row, ok := result.Row(); ok {
+		rowCopy := row
+		ctx.resultRow = &rowCopy
+	}
+	return ctx
 }
 
 func resultKey(result Result) string {
