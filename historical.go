@@ -96,6 +96,40 @@ type SQLHistoricalValueConverter func(SQLHistoricalColumnMetadata, any, reflect.
 // convention. It is called once when the provider is constructed.
 type SQLHistoricalStatementRewriter func(statement string, argumentCount int) (string, error)
 
+// SQLHistoricalPlaceholderDialect selects a common numbered-parameter
+// convention for database/sql drivers. Question preserves the driver's
+// native '?' form while still validating the argument count.
+type SQLHistoricalPlaceholderDialect uint8
+
+const (
+	SQLHistoricalPlaceholderQuestion SQLHistoricalPlaceholderDialect = iota
+	SQLHistoricalPlaceholderDollarNumbered
+	SQLHistoricalPlaceholderColonNumbered
+	SQLHistoricalPlaceholderAtPNumbered
+)
+
+// NewSQLHistoricalPlaceholderRewriter returns a reusable statement rewriter
+// for common SQL driver placeholder conventions. It rewrites only question
+// marks in SQL code; literals, comments and quoted identifiers are preserved.
+func NewSQLHistoricalPlaceholderRewriter(dialect SQLHistoricalPlaceholderDialect) SQLHistoricalStatementRewriter {
+	prefix := "?"
+	switch dialect {
+	case SQLHistoricalPlaceholderQuestion:
+		prefix = "?"
+	case SQLHistoricalPlaceholderDollarNumbered:
+		prefix = "$"
+	case SQLHistoricalPlaceholderColonNumbered:
+		prefix = ":"
+	case SQLHistoricalPlaceholderAtPNumbered:
+		prefix = "@p"
+	default:
+		return func(string, int) (string, error) {
+			return "", NewError(ErrorInvalidRule, "historical SQL placeholder dialect is invalid")
+		}
+	}
+	return NewSQLPositionalPlaceholderRewriter(prefix, 1)
+}
+
 // NewSQLPositionalPlaceholderRewriter returns a rewriter that changes
 // question-mark placeholders outside quoted SQL literals to prefix+n, such as
 // $1/$2 for PostgreSQL. A positive startAt is required.
@@ -529,47 +563,146 @@ func rewriteSQLQuestionPlaceholders(statement string, argumentCount int, prefix 
 	inSingleQuote := false
 	inDoubleQuote := false
 	inBacktick := false
+	inBracketIdentifier := false
+	inLineComment := false
+	blockCommentDepth := 0
+	dollarQuoteDelimiter := ""
 	count := 0
 	for index := 0; index < len(statement); index++ {
 		character := statement[index]
-		if character == '\\' && (inSingleQuote || inDoubleQuote) && index+1 < len(statement) {
+		if inLineComment {
 			builder.WriteByte(character)
+			if character == '\n' || character == '\r' {
+				inLineComment = false
+			}
+			continue
+		}
+		if blockCommentDepth > 0 {
+			if strings.HasPrefix(statement[index:], "/*") {
+				builder.WriteString("/*")
+				index++
+				blockCommentDepth++
+				continue
+			}
+			if strings.HasPrefix(statement[index:], "*/") {
+				builder.WriteString("*/")
+				index++
+				blockCommentDepth--
+				continue
+			}
+			builder.WriteByte(character)
+			continue
+		}
+		if dollarQuoteDelimiter != "" {
+			if strings.HasPrefix(statement[index:], dollarQuoteDelimiter) {
+				builder.WriteString(dollarQuoteDelimiter)
+				index += len(dollarQuoteDelimiter) - 1
+				dollarQuoteDelimiter = ""
+				continue
+			}
+			builder.WriteByte(character)
+			continue
+		}
+		if inBracketIdentifier {
+			builder.WriteByte(character)
+			if character == ']' {
+				if index+1 < len(statement) && statement[index+1] == ']' {
+					builder.WriteByte(statement[index+1])
+					index++
+					continue
+				}
+				inBracketIdentifier = false
+			}
+			continue
+		}
+		if inSingleQuote {
+			builder.WriteByte(character)
+			if character == '\\' && index+1 < len(statement) {
+				index++
+				builder.WriteByte(statement[index])
+				continue
+			}
+			if character == '\'' {
+				if index+1 < len(statement) && statement[index+1] == '\'' {
+					builder.WriteByte(statement[index+1])
+					index++
+					continue
+				}
+				inSingleQuote = false
+			}
+			continue
+		}
+		if inDoubleQuote {
+			builder.WriteByte(character)
+			if character == '\\' && index+1 < len(statement) {
+				index++
+				builder.WriteByte(statement[index])
+				continue
+			}
+			if character == '"' {
+				if index+1 < len(statement) && statement[index+1] == '"' {
+					builder.WriteByte(statement[index+1])
+					index++
+					continue
+				}
+				inDoubleQuote = false
+			}
+			continue
+		}
+		if inBacktick {
+			builder.WriteByte(character)
+			if character == '`' {
+				if index+1 < len(statement) && statement[index+1] == '`' {
+					builder.WriteByte(statement[index+1])
+					index++
+					continue
+				}
+				inBacktick = false
+			}
+			continue
+		}
+		if strings.HasPrefix(statement[index:], "--") {
+			builder.WriteString("--")
 			index++
-			builder.WriteByte(statement[index])
+			inLineComment = true
+			continue
+		}
+		if character == '#' {
+			builder.WriteByte(character)
+			inLineComment = true
+			continue
+		}
+		if strings.HasPrefix(statement[index:], "/*") {
+			builder.WriteString("/*")
+			index++
+			blockCommentDepth = 1
 			continue
 		}
 		switch character {
 		case '\'':
-			if !inDoubleQuote && !inBacktick {
-				if inSingleQuote && index+1 < len(statement) && statement[index+1] == '\'' {
-					builder.WriteByte(character)
-					index++
-					builder.WriteByte(statement[index])
-					continue
-				}
-				inSingleQuote = !inSingleQuote
-			}
+			inSingleQuote = true
 		case '"':
-			if !inSingleQuote && !inBacktick {
-				if inDoubleQuote && index+1 < len(statement) && statement[index+1] == '"' {
-					builder.WriteByte(character)
-					index++
-					builder.WriteByte(statement[index])
-					continue
-				}
-				inDoubleQuote = !inDoubleQuote
-			}
+			inDoubleQuote = true
 		case '`':
-			if !inSingleQuote && !inDoubleQuote {
-				inBacktick = !inBacktick
-			}
-		case '?':
-			if !inSingleQuote && !inDoubleQuote && !inBacktick {
-				count++
-				builder.WriteString(prefix)
-				builder.WriteString(strconv.Itoa(startAt + count - 1))
+			inBacktick = true
+		case '[':
+			inBracketIdentifier = true
+		case '$':
+			if delimiter, ok := sqlDollarQuoteDelimiter(statement, index); ok {
+				builder.WriteString(delimiter)
+				index += len(delimiter) - 1
+				dollarQuoteDelimiter = delimiter
 				continue
 			}
+		case '?':
+			count++
+			if prefix == "?" {
+				builder.WriteByte('?')
+			} else {
+				builder.WriteString(prefix)
+				builder.WriteString(strconv.Itoa(startAt + count - 1))
+			}
+			continue
 		}
 		builder.WriteByte(character)
 	}
@@ -577,6 +710,32 @@ func rewriteSQLQuestionPlaceholders(statement string, argumentCount int, prefix 
 		return "", fmt.Errorf("SQL statement contains %d placeholders but %d arguments were supplied", count, argumentCount)
 	}
 	return builder.String(), nil
+}
+
+func sqlDollarQuoteDelimiter(statement string, index int) (string, bool) {
+	if index >= len(statement) || statement[index] != '$' {
+		return "", false
+	}
+	for end := index + 1; end < len(statement); end++ {
+		character := statement[end]
+		if character == '$' {
+			tag := statement[index+1 : end]
+			if tag == "" {
+				return statement[index : end+1], true
+			}
+			for tagIndex, tagCharacter := range tag {
+				if (tagCharacter >= 'a' && tagCharacter <= 'z') || (tagCharacter >= 'A' && tagCharacter <= 'Z') || tagCharacter == '_' || (tagIndex > 0 && tagCharacter >= '0' && tagCharacter <= '9') {
+					continue
+				}
+				return "", false
+			}
+			return statement[index : end+1], true
+		}
+		if !((character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') || character == '_' || (end > index+1 && character >= '0' && character <= '9')) {
+			return "", false
+		}
+	}
+	return "", false
 }
 
 func normalizeSQLColumn(column string, columnCase SQLColumnCase) string {

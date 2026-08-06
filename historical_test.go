@@ -443,6 +443,39 @@ func TestSQLPositionalPlaceholderRewriterRejectsMismatch(t *testing.T) {
 	if _, err := NewSQLPositionalPlaceholderRewriter("", 1)("select ?", 1); err == nil {
 		t.Fatal("empty placeholder prefix unexpectedly accepted")
 	}
+	statement := "select ?, '?', \"?\", `?`, [?] -- ?\n# ?\n/* ? /* ? */ */ ? /* tail */ ?"
+	rewritten, err := rewriter(statement, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "select $1, '?', \"?\", `?`, [?] -- ?\n# ?\n/* ? /* ? */ */ $2 /* tail */ $3"
+	if rewritten != want {
+		t.Fatalf("quoted/comment SQL rewrite = %q, want %q", rewritten, want)
+	}
+	dollarQuoted, err := rewriter("select ?, $$?$$, $tag$?$tag$, ?", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dollarQuoted != "select $1, $$?$$, $tag$?$tag$, $2" {
+		t.Fatalf("dollar-quoted SQL rewrite = %q", dollarQuoted)
+	}
+	for _, test := range []struct {
+		dialect SQLHistoricalPlaceholderDialect
+		want    string
+	}{
+		{SQLHistoricalPlaceholderQuestion, "select ?"},
+		{SQLHistoricalPlaceholderDollarNumbered, "select $1"},
+		{SQLHistoricalPlaceholderColonNumbered, "select :1"},
+		{SQLHistoricalPlaceholderAtPNumbered, "select @p1"},
+	} {
+		got, rewriteErr := NewSQLHistoricalPlaceholderRewriter(test.dialect)("select ?", 1)
+		if rewriteErr != nil || got != test.want {
+			t.Fatalf("dialect %d rewrite=%q err=%v want=%q", test.dialect, got, rewriteErr, test.want)
+		}
+	}
+	if _, err := NewSQLHistoricalPlaceholderRewriter(SQLHistoricalPlaceholderDialect(99))("select ?", 1); err == nil {
+		t.Fatal("unknown placeholder dialect unexpectedly accepted")
+	}
 }
 
 func TestSQLHistoricalProviderMySQLDocker(t *testing.T) {
