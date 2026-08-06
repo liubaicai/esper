@@ -1123,8 +1123,28 @@ func (e *Environment) validateQueryModifiers(query Query) error {
 			}
 			continue
 		}
-		if query.sourceLess || (query.join != nil && query.aggregate == nil) || query.pattern != nil {
+		if query.sourceLess || query.pattern != nil {
 			return fmt.Errorf("order-by is not yet supported for source-less, join, or pattern queries")
+		}
+		if query.join != nil && query.aggregate == nil {
+			node := key.Expr.node()
+			if node != nil && node.kind == "result-field" {
+				known := false
+				for _, selection := range query.joinSelections {
+					if selection.Name == node.fieldName {
+						known = true
+						break
+					}
+				}
+				if !known {
+					return NewError(ErrorUnknownName, fmt.Sprintf("order-by key %d references unknown join result %q", index, node.fieldName))
+				}
+				continue
+			}
+			if err := e.validateJoinScopedExpression(query.join, key.Expr, "join order-by"); err != nil {
+				return fmt.Errorf("order-by key %d: %w", index, err)
+			}
+			continue
 		}
 		if query.aggregate != nil && key.Expr.node() != nil && key.Expr.node().kind == "result-field" {
 			known := false

@@ -44,10 +44,10 @@
       "level": "S",
       "summary": "Typed fluent expansion of slice/array-valued parent-event properties into child event streams",
       "javaRefs": ["EPLContainedEventSimple", "EPLContainedEventNested", "EPLContainedEventArray", "EPLContainedEventSplitExpr", "EPLContainedEventExample", "EventInfraContainedSimple", "EventInfraContainedNested", "EventInfraContainedNestedArray", "EventInfraContainedIndexedWithIndex", "InfraNamedWindowContainedEvent"],
-      "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "contained_test.go"],
+      "goRefs": ["stream.go", "plan.go", "runtime.go", "faf.go", "contained_test.go", "contained_unidirectional_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["nested multi-level expansion and child projection aliases", "scalar/string/array split expressions and @type materialization", "contained joins, unidirectional probes, Named Window/Table/FAF interactions", "fragment metadata, invalid diagnostics and complete Java contained-event trace"]
+      "remaining": ["nested contained interactions beyond basic typed composition and child projection aliases", "scalar/string/array split expressions and @type materialization", "contained Named Window/Table/FAF interactions", "fragment metadata, invalid diagnostics and complete Java contained-event trace"]
     },
     {
       "id": "event.json-typed",
@@ -361,14 +361,14 @@
     },
     {
       "id": "case.event-contained-simple",
-      "javaRuntimeIds": ["java-runtime-b934858673985f744725", "java-runtime-7a56e7b54c443415b979", "java-runtime-52900f3c19170bc85d31", "java-runtime-fcd63f55402c291d52a3"],
-      "javaNames": ["EPLContainedPropertyAccess", "EPLContainedAloneCount", "EPLContainedIRStreamArrayItem", "EPLContainedJoin"],
+      "javaRuntimeIds": ["java-runtime-b934858673985f744725", "java-runtime-7a56e7b54c443415b979", "java-runtime-52900f3c19170bc85d31", "java-runtime-fcd63f55402c291d52a3", "java-runtime-604653d1b4fd35b66bc8", "java-runtime-4b07e1c080e1ee0a8c15"],
+      "javaNames": ["EPLContainedPropertyAccess", "EPLContainedAloneCount", "EPLContainedIRStreamArrayItem", "EPLContainedJoin", "EPLContainedUnidirectionalJoin", "EPLContainedUnidirectionalJoinCount"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/contained/EPLContainedEventSimple.java"],
-      "goTests": ["TestUnnestProjectsContainedStructsMatchesEsper", "TestUnnestAggregateCountMatchesEsper", "TestUnnestLengthWindowEmitsContainedOldAndNewRows", "TestUnnestParticipatesInJoin"],
-      "tags": ["correctness", "event", "contained", "unnest", "array", "old-new", "aggregate"],
+      "goTests": ["TestUnnestProjectsContainedStructsMatchesEsper", "TestUnnestAggregateCountMatchesEsper", "TestUnnestLengthWindowEmitsContainedOldAndNewRows", "TestUnnestParticipatesInJoin", "TestContainedUnidirectionalJoinMatchesEsper", "TestContainedUnidirectionalJoinCountMatchesEsper"],
+      "tags": ["correctness", "event", "contained", "unnest", "array", "old-new", "aggregate", "join", "unidirectional"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-suite-contained-5-5", "go-unit"],
-      "difference": "Go adds a typed Unnest parent-to-child stream node requiring a registered child schema, preserving array order and allowing ordinary Filter/Window/Aggregate/Select/Join chaining; the mapped slice covers Java contained property projection, standalone count, insert/remove array-item behavior and a two-stream contained join. Nested contained paths, scalar split/type expressions, contained Named Window/Subquery and full TestSuiteEPLContained trace remain open under event.contained."
+      "difference": "Go adds a typed Unnest parent-to-child stream node requiring a registered child schema, preserving array order and allowing ordinary Filter/Window/Aggregate/Select/Join chaining; the mapped slice covers Java contained property projection, standalone count, insert/remove array-item behavior and ordinary two-stream contained join. TestContainedUnidirectionalJoinMatchesEsper and TestContainedUnidirectionalJoinCountMatchesEsper additionally cover the Java three-source shape where one parent Order stream is transient and two child arrays are expanded as the current-event probe, preventing child rows from earlier parent events from leaking into later output; Join order-by now accepts analyzable JoinField/ResultField keys and preserves tuple scope for final output ordering. Nested contained paths beyond basic typed composition, scalar split/type expressions, contained Named Window/Table/FAF interactions and the full TestSuiteEPLContained trace remain open under event.contained."
     },
     {
       "id": "case.event-contained-nested-basic",

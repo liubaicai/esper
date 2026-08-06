@@ -33,12 +33,17 @@ func (f SinkFunc) Write(ctx context.Context, batch ResultBatch) error {
 
 // Result is either an underlying Event or an ordered projection Row.
 type Result struct {
-	event *Event
-	row   *Row
+	event      *Event
+	row        *Row
+	joinEvents []Event
 }
 
 func resultEvent(event Event) Result { return Result{event: &event} }
 func resultRow(row Row) Result       { return Result{row: &row} }
+
+func resultJoinRow(row Row, tuple []Event) Result {
+	return Result{row: &row, joinEvents: append([]Event(nil), tuple...)}
+}
 
 func (r Result) IsEvent() bool { return r.event != nil }
 func (r Result) IsRow() bool   { return r.row != nil }
@@ -4825,7 +4830,10 @@ func (r *statementRuntime) snapshotJoinBatch(plan Plan, now time.Time) ResultBat
 	}
 	tuples := joinTuples(plan.query.join, state, now, r)
 	tuples = filterJoinTuples(tuples, plan.query, now, r.variables)
-	result.New = projectJoinTuples(tuples, plan.query, plan.resultSchema, now, r.variables, false)
+	result.New = orderJoinResults(
+		projectJoinTuples(tuples, plan.query, plan.resultSchema, now, r.variables, false),
+		tuples, plan.query.orderBy, now, r.variables, false,
+	)
 	if plan.query.distinct {
 		result.New = distinctSnapshotResults(result.New)
 	}
@@ -5646,10 +5654,66 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	return joinDeltaWithPairs(delta), nil
 }
 
+// containedJoinSourceForDriver reports whether source is a contained-event
+// expansion of the same logical source as driver. Esper evaluates this shape
+// as a per-driver-event probe: the parent event is expanded independently for
+// each contained source and the contained rows from an earlier parent must
+// not participate in a later unidirectional probe. An explicit view after the
+// contained expansion changes that contract and remains stateful.
+func containedJoinSourceForDriver(source, driver *streamNode) bool {
+	if source == nil || driver == nil {
+		return false
+	}
+	contained := false
+	for current := source; current != nil; current = current.input {
+		switch current.kind {
+		case streamFilter:
+			continue
+		case streamContained:
+			contained = true
+		case streamWindow:
+			return false
+		default:
+			if !contained {
+				return false
+			}
+			return equivalentJoinSource(current, driver)
+		}
+	}
+	return false
+}
+
+func equivalentJoinSource(left, right *streamNode) bool {
+	if left == nil || right == nil {
+		return false
+	}
+	if left == right {
+		return true
+	}
+	leftBase, leftErr := sourceNode(left)
+	rightBase, rightErr := sourceNode(right)
+	if leftErr != nil || rightErr != nil || leftBase == nil || rightBase == nil {
+		return false
+	}
+	if leftBase.kind != rightBase.kind || leftBase.kind != streamSource {
+		return false
+	}
+	return leftBase.sourceName == rightBase.sourceName
+}
+
 func (r *statementRuntime) updateUnidirectionalJoin(definition *joinDefinition, sources []*streamNode, evaluationOrder []int, now time.Time, newEvents, oldEvents []Event) (joinDelta, error) {
 	flags := definition.unidirectional
 	driverCount := joinDefinitionUnidirectionalCount(definition)
 	result := joinDelta{}
+	driver := -1
+	if driverCount == 1 {
+		for index, flag := range flags {
+			if flag {
+				driver = index
+				break
+			}
+		}
+	}
 	for _, event := range newEvents {
 		working := cloneJoinRuntimeState(r.joinState)
 		for index, source := range sources {
@@ -5723,6 +5787,15 @@ func (r *statementRuntime) updateUnidirectionalJoin(definition *joinDefinition, 
 				working.sides[index] = driverRows[index]
 				continue
 			}
+			if driver >= 0 && containedJoinSourceForDriver(source, sources[driver]) {
+				// A contained source rooted at the unidirectional parent is a
+				// current-event probe, not a retained passive stream. Keep it in
+				// the working tuple only; leaving r.joinState untouched prevents
+				// rows from a previous parent event from leaking into the next
+				// probe.
+				working.sides[index] = stored
+				continue
+			}
 			removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
 			r.joinState.sides[index] = append(r.joinState.sides[index], stored...)
 			working.sides[index] = r.joinState.sides[index]
@@ -5748,13 +5821,6 @@ func (r *statementRuntime) updateUnidirectionalJoin(definition *joinDefinition, 
 				}
 			}
 			continue
-		}
-		driver := -1
-		for index, flag := range flags {
-			if flag {
-				driver = index
-				break
-			}
 		}
 		if driver < 0 || len(driverRows[driver]) == 0 {
 			continue
@@ -9954,10 +10020,18 @@ func (r *statementRuntime) joinBatch(delta joinDelta, plan Plan, now time.Time) 
 		}
 	}
 	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
-		batch.New = projectJoinTuples(filterJoinTuples(newTuples, plan.query, now, r.variables), plan.query, plan.resultSchema, now, r.variables, false)
+		filtered := filterJoinTuples(newTuples, plan.query, now, r.variables)
+		batch.New = orderJoinResults(
+			projectJoinTuples(filtered, plan.query, plan.resultSchema, now, r.variables, false),
+			filtered, plan.query.orderBy, now, r.variables, false,
+		)
 	}
 	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
-		batch.Old = projectJoinTuples(filterJoinTuples(oldTuples, plan.query, now, r.variables), plan.query, plan.resultSchema, now, r.variables, true)
+		filtered := filterJoinTuples(oldTuples, plan.query, now, r.variables)
+		batch.Old = orderJoinResults(
+			projectJoinTuples(filtered, plan.query, plan.resultSchema, now, r.variables, true),
+			filtered, plan.query.orderBy, now, r.variables, true,
+		)
 	}
 	if plan.query.distinct {
 		batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
@@ -10148,9 +10222,13 @@ func orderResults(results []Result, keys []SortKey, now time.Time, variables map
 }
 
 func resultOrderContext(result Result, now time.Time, variables map[string]Value) EvalContext {
-	ctx := EvalContext{Now: now, Variables: variables}
+	ctx := EvalContext{Now: now, Variables: variables, JoinEvents: result.joinEvents}
 	if event, ok := result.Event(); ok {
 		ctx.Event = event
+	}
+	if len(result.joinEvents) > 0 {
+		ctx.Event = result.joinEvents[0]
+		ctx.OuterEvent = result.joinEvents[0]
 	}
 	if row, ok := result.Row(); ok {
 		rowCopy := row
@@ -10203,9 +10281,64 @@ func projectJoinTuples(tuples [][]Event, query Query, resultSchema Schema, now t
 				Variables:  variables,
 			}))
 		}
-		results = append(results, resultRow(newRow(resultSchema, values)))
+		results = append(results, resultJoinRow(newRow(resultSchema, values), tuple))
 	}
 	return results
+}
+
+type joinResultOrderEntry struct {
+	result Result
+	tuple  []Event
+}
+
+func orderJoinResults(results []Result, tuples [][]Event, keys []SortKey, now time.Time, variables map[string]Value, leaving bool) []Result {
+	if len(results) < 2 || len(keys) == 0 || len(results) != len(tuples) {
+		return results
+	}
+	entries := make([]joinResultOrderEntry, len(results))
+	for index := range results {
+		entries[index] = joinResultOrderEntry{result: results[index], tuple: tuples[index]}
+	}
+	sort.SliceStable(entries, func(left, right int) bool {
+		leftContext := joinResultOrderContext(entries[left].result, entries[left].tuple, now, variables, leaving)
+		rightContext := joinResultOrderContext(entries[right].result, entries[right].tuple, now, variables, leaving)
+		for _, key := range keys {
+			comparison, ok := compareOrderValues(key.Expr.eval(leftContext), key.Expr.eval(rightContext))
+			if !ok || comparison == 0 {
+				continue
+			}
+			if key.Descending {
+				return comparison > 0
+			}
+			return comparison < 0
+		}
+		return false
+	})
+	ordered := make([]Result, len(entries))
+	for index, entry := range entries {
+		ordered[index] = entry.result
+	}
+	return ordered
+}
+
+func joinResultOrderContext(result Result, tuple []Event, now time.Time, variables map[string]Value, leaving bool) EvalContext {
+	var event Event
+	if len(tuple) > 0 {
+		event = tuple[0]
+	}
+	ctx := EvalContext{
+		Event:      event,
+		JoinEvents: tuple,
+		OuterEvent: event,
+		IsLeaving:  leaving,
+		Now:        now,
+		Variables:  variables,
+	}
+	if row, ok := result.Row(); ok {
+		rowCopy := row
+		ctx.resultRow = &rowCopy
+	}
+	return ctx
 }
 
 func contextErr(ctx context.Context) error {
