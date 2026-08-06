@@ -2603,11 +2603,15 @@ func ParseJSONWithOptions(schema Schema, data []byte, receivedAt time.Time, opti
 			if err != nil {
 				return Event{}, fmt.Errorf("esper: JSON event %q field %q: %w", schema.Name(), field.Name, err)
 			}
+			converted = normalizeDynamicJSONValue(converted)
 			object[key] = converted
 			if schema.goType != nil {
 				updates[field.Name] = converted
 			}
 		}
+	}
+	for key, value := range object {
+		object[key] = normalizeDynamicJSONValue(value)
 	}
 	if schema.goType != nil {
 		underlying, err := mergeSchemaUnderlying(schema, nil, updates)
@@ -2632,6 +2636,47 @@ func findJSONField(object map[string]any, schema Schema, name string) (string, b
 		}
 	}
 	return "", false
+}
+
+// normalizeDynamicJSONValue maps decoder-level json.Number values to the
+// ordinary Go values exposed by a dynamic JSON property. Declared numeric
+// fields are converted before this function runs, while arbitrary-precision
+// declared fields (big.Int/big.Rat) are already materialized and remain
+// untouched. The recursive walk also normalizes numbers inside a declared
+// map[string]any or []any field.
+func normalizeDynamicJSONValue(value any) any {
+	switch current := value.(type) {
+	case json.Number:
+		text := string(current)
+		if strings.ContainsAny(text, ".eE") {
+			if parsed, err := strconv.ParseFloat(text, 64); err == nil {
+				return parsed
+			}
+			return current
+		}
+		if parsed, err := strconv.ParseInt(text, 10, 64); err == nil {
+			if strconv.IntSize == 64 || (parsed >= -1<<31 && parsed <= 1<<31-1) {
+				return int(parsed)
+			}
+			return parsed
+		}
+		if parsed, ok := new(big.Int).SetString(text, 10); ok {
+			return *parsed
+		}
+		return current
+	case map[string]any:
+		for key, nested := range current {
+			current[key] = normalizeDynamicJSONValue(nested)
+		}
+		return current
+	case []any:
+		for index, nested := range current {
+			current[index] = normalizeDynamicJSONValue(nested)
+		}
+		return current
+	default:
+		return value
+	}
 }
 
 func validateJSONDepth(value any, maxDepth, depth int) error {

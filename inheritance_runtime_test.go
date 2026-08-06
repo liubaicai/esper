@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 )
 
 // TestSchemaInheritanceRoutesMultiLevelAndBranchedEvents mirrors the
@@ -169,5 +170,126 @@ func TestSchemaInheritanceRoutesMultiLevelAndBranchedEvents(t *testing.T) {
 	}
 	if objectEvent.Get("base").Any() != "OB" || objectEvent.Get("left").Any() != "OL" || objectEvent.Get("leaf").Any() != "OF" {
 		t.Fatalf("ObjectArray inherited values = %#v", objectEvent.Underlying())
+	}
+}
+
+// TestJSONSchemaInheritancePreservesNestedFragmentsAndDynamicProperties
+// mirrors EventJsonInheritsTwoLevelWArrayAndObject and the two dynamic-property
+// executions. Nested schemas declared by a parent remain visible to a child,
+// while dynamic lookup follows the Java parent-only/child-only policy.
+func TestJSONSchemaInheritancePreservesNestedFragmentsAndDynamicProperties(t *testing.T) {
+	stringType := reflect.TypeOf("")
+	nested, err := NewJSONSchema("InheritanceNestedObject", []FieldSpec{
+		FieldDef("n1", stringType),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent, err := NewJSONSchema("InheritanceNestedParent", []FieldSpec{
+		FieldDef("pn", reflect.TypeOf(map[string]any{})),
+		FieldDef("pa", reflect.TypeOf([]int{})),
+	}, WithNestedPropertySchema("pn", nested))
+	if err != nil {
+		t.Fatal(err)
+	}
+	child, err := NewJSONSchema("InheritanceNestedChild", []FieldSpec{
+		FieldDef("cn", reflect.TypeOf(map[string]any{})),
+		FieldDef("ca", reflect.TypeOf([]int{})),
+	}, WithSchemaParent(parent), WithNestedPropertySchema("cn", nested))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	event, err := ParseJSON(child, []byte(`{
+		"pn":{"n1":"a"}, "pa":[1,2],
+		"cn":{"n1":"b"}, "ca":[3,4]
+	}`), time.Unix(0, 0).UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := child.PropertyNames(), []string{"pn", "pa", "cn", "ca"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("nested inherited property order = %#v, want %#v", got, want)
+	}
+	if got := event.Get("pn.n1").Any(); got != "a" {
+		t.Fatalf("inherited nested property = %#v, want a", got)
+	}
+	if got := event.Get("ca[1]").Any(); got != 4 {
+		t.Fatalf("inherited child array property = %#v, want 4", got)
+	}
+	fragment, ok := event.GetFragment("pn")
+	if !ok || fragment.TypeName() != nested.Name() || fragment.Get("n1").Any() != "a" {
+		t.Fatalf("inherited nested fragment = %#v, ok=%t", fragment, ok)
+	}
+	if got := event.Get("cn.n1").Any(); got != "b" {
+		t.Fatalf("child nested property = %#v, want b", got)
+	}
+
+	parentDynamic, err := NewJSONSchema("InheritanceDynamicParent", nil, AllowDynamicFields())
+	if err != nil {
+		t.Fatal(err)
+	}
+	childFromParent, err := NewJSONSchema("InheritanceDynamicChild", nil, WithSchemaParent(parentDynamic))
+	if err != nil {
+		t.Fatal(err)
+	}
+	parentEvent, err := ParseJSON(childFromParent, []byte(`{"value":10}`), time.Unix(0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := parentEvent.Get("value").Any(); got != 10 {
+		t.Fatalf("parent-provided dynamic value = %#v, want 10", got)
+	}
+	if descriptor, ok := childFromParent.Property("value"); !ok || descriptor.Kind != PropertyDynamic {
+		t.Fatalf("parent-provided dynamic descriptor = %#v, ok=%t", descriptor, ok)
+	}
+
+	staticParent, err := NewJSONSchema("InheritanceStaticParent", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	childDynamic, err := NewJSONSchema("InheritanceChildDynamic", nil, WithSchemaParent(staticParent), AllowDynamicFields())
+	if err != nil {
+		t.Fatal(err)
+	}
+	childEvent, err := ParseJSON(childDynamic, []byte(`{"value":"abc"}`), time.Unix(0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := childEvent.Get("value").Any(); got != "abc" {
+		t.Fatalf("child-provided dynamic value = %#v, want abc", got)
+	}
+
+	env := NewEnvironment()
+	if err := env.RegisterSchema(parentDynamic); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.RegisterSchema(childFromParent); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(FromAny(env, parentDynamic.Name()).Query(StatementName("inherit-dynamic-parent")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var routed []Event
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if event, ok := result.Event(); ok {
+				routed = append(routed, event)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendJSON(context.Background(), childFromParent.Name(), []byte(`{"value":20}`)); err != nil {
+		t.Fatal(err)
+	}
+	if len(routed) != 1 || routed[0].TypeName() != childFromParent.Name() || routed[0].Get("value").Any() != 20 {
+		t.Fatalf("dynamic inherited runtime route = %#v", routed)
 	}
 }
