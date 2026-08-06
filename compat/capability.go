@@ -118,6 +118,7 @@ func (m CapabilityManifest) Validate() error {
 	}
 	pairs := make(map[string]struct{}, len(m.Mappings))
 	mappedCases := make(map[string]struct{}, len(m.Mappings))
+	mappedCapabilities := make(map[string]struct{}, len(m.Mappings))
 	for index, mapping := range m.Mappings {
 		if _, exists := capabilities[mapping.CapabilityID]; !exists {
 			return fmt.Errorf("compat: mapping %d references unknown capability %q", index, mapping.CapabilityID)
@@ -131,6 +132,7 @@ func (m CapabilityManifest) Validate() error {
 		}
 		pairs[key] = struct{}{}
 		mappedCases[mapping.CaseID] = struct{}{}
+		mappedCapabilities[mapping.CapabilityID] = struct{}{}
 	}
 	for _, parityCase := range m.Cases {
 		if parityCase.Status == "unmapped" {
@@ -138,6 +140,14 @@ func (m CapabilityManifest) Validate() error {
 		}
 		if _, mapped := mappedCases[parityCase.ID]; !mapped {
 			return fmt.Errorf("compat: case %q with status %q has no capability mapping", parityCase.ID, parityCase.Status)
+		}
+	}
+	for _, capability := range m.Capabilities {
+		if capability.Status == "planned" {
+			continue
+		}
+		if _, mapped := mappedCapabilities[capability.ID]; !mapped {
+			return fmt.Errorf("compat: capability %q with status %q has no case mapping", capability.ID, capability.Status)
 		}
 	}
 	return nil

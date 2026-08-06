@@ -544,6 +544,17 @@
       "difference": "The Go fluent PatternFrom(...).Every() rule supports a correlated SubqueryExists over a KeepAll event stream and SubqueryIn over a LastEvent event stream, with inner Field expressions and explicit current-event/OuterField scope. The Java filter execution's event-stream Filter, Named Window Filter and Named Window Pattern branches now share one exact tryAssertion trace; NamedWindowRetention(LastEvent()) replaces the previous row and dispatches the old/new state needed by the subquery. Event-stream SubquerySum over a length(2) source reproduces the Java rolling aggregate filter sequence across empty, replacement and exact-sum boundaries, while a chainable Func1 receives a Named Window SubqueryCount inside a Pattern predicate and verifies current Named Window state. Build-time validation now rejects unbounded non-aggregated event-stream subqueries, consumer-local data windows on Named Window subqueries, and incompatible IN/ANY/ALL operand types, matching the mapped EPLSubselectInvalid boundaries. Pattern aggregation, broader Pattern/Context/Dataflow combinations, full parser diagnostics and complete execution-trace/cardinality parity remain open."
     },
     {
+      "id": "case.join-basic",
+      "javaRuntimeIds": ["java-runtime-2a12d7139dd45ddca8f9", "java-runtime-4aa869a9f1905a65ab3a", "java-runtime-7885da47c76db1ebb5f7", "java-runtime-08d99642c6a7d8addbbb", "java-runtime-e5f395a82b62d891aa06", "java-runtime-27608c7defc733d605fb"],
+      "javaNames": ["EPLJoin2StreamSimple", "EPLJoinJoinWInnerKeywordWOOnClause", "EPLJoinJoinNoWhereClause", "EPLJoinSingleOp3StreamUniquePerId", "EPLJoinFullJoin2SidesMulticolumn", "EPLJoinFullJoin2Sides"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLJoin2StreamSimple.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLJoinNoWhereClause.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLJoinSingleOp3Stream.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLOuterFullJoin3Stream.java"],
+      "goTests": ["TestInnerJoinBuilderAndRuntime", "TestJoinAggregateGroupsTuplesAndEmitsOldNewRows", "TestLeftOuterJoinTransitionsFromUnmatchedToMatched", "TestCompoundJoinConditionSupportsRangePredicate", "TestMultiJoinProducesCrossStreamTuple", "TestMultiJoinLeftOuterEmitsUnmatchedAndMatchedTransitions", "TestContextPartitionedJoinKeepsJoinStateIsolated", "TestFireAndForgetNamedWindowJoinUsesSnapshotSources", "TestInsertIntoJoinWildcardPreservesSourceEventsAcrossRepresentations"],
+      "tags": ["correctness", "join", "inner-join", "outer-join", "multi-stream", "aggregate", "context", "faf", "representation"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Go's fluent Join/MultiJoin APIs cover two- and N-stream inner joins, left-outer unmatched-to-matched transitions, compound equality/range predicates, aggregate old/new rows, Context partition isolation, Named Window Fire-and-Forget snapshots, and InsertInto wildcard representation preservation. Java additionally covers the complete ordering/self-join/index-plan matrix, unidirectional and pattern joins, coercion/performance variants and full shared traces; those remain open."
+    },
+    {
       "id": "case.dataflow-typed-ports",
       "javaRuntimeIds": ["java-runtime-6309a6b7e0f0ba981a97"],
       "javaNames": ["EPLDataflowFanInOut"],
@@ -1400,6 +1411,7 @@
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-basic"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-context"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-pattern"},
+    {"capabilityId": "join.basic", "caseId": "case.join-basic"},
     {"capabilityId": "context.partition", "caseId": "case.context-partitioning"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},

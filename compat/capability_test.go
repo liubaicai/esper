@@ -58,7 +58,25 @@ func TestCapabilityManifestRejectsMappedCaseWithoutCapabilityMapping(t *testing.
 		t.Fatalf("missing capability mapping error = %v", err)
 	}
 	manifest.Cases[0].Status = "unmapped"
+	manifest.Capabilities[0].Status = "planned"
 	if err := manifest.Validate(); err != nil {
-		t.Fatalf("explicitly unmapped case should not require a mapping: %v", err)
+		t.Fatalf("explicitly unmapped case under a planned capability should not require a mapping: %v", err)
+	}
+}
+
+func TestCapabilityManifestRejectsNonPlannedCapabilityWithoutCaseMapping(t *testing.T) {
+	manifest := CapabilityManifest{
+		Version:    CapabilityManifestVersion,
+		JavaCommit: "java",
+		Capabilities: []CapabilityRecord{{
+			ID: "cap-a", Level: "S", Phase: 1, Status: "partial",
+		}},
+	}
+	if err := manifest.Validate(); err == nil || !strings.Contains(err.Error(), "has no case mapping") {
+		t.Fatalf("missing case mapping error = %v", err)
+	}
+	manifest.Capabilities[0].Status = "planned"
+	if err := manifest.Validate(); err != nil {
+		t.Fatalf("planned capability should not require a case mapping: %v", err)
 	}
 }
