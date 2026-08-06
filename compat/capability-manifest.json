@@ -252,11 +252,11 @@
       "domain": "resultset.output",
       "level": "S",
       "summary": "Core none/default/all/last/first/snapshot and virtual-time output policies over ordinary and join result streams",
-      "javaRefs": ["ResultSetOutputLimitSimple"],
-      "goRefs": ["stream.go", "runtime.go", "output_test.go", "output_first_having_test.go", "output_last_after_test.go", "output_group_policy_test.go", "snapshot_test.go"],
+      "javaRefs": ["ResultSetOutputLimitSimple", "ResultSetOutputLimitRowPerEvent", "ResultSetOutputLimitRowPerGroup", "ResultSetOutputLimitRowForAll"],
+      "goRefs": ["stream.go", "runtime.go", "output_test.go", "output_first_having_test.go", "output_last_after_test.go", "output_group_policy_test.go", "output_row_matrix_test.go", "snapshot_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["complete 41-execution Java output-limit trace and SODA variants", "dynamic multi-component interval variables and calendar month-scoped output", "row-per-event/row-per-group/row-for-all join ordering, unidirectional named-window and iterator combinations", "exact hint/invalid diagnostics and shared Java/Go trace"]
+      "remaining": ["complete Java output-limit trace and SODA variants", "dynamic multi-component interval variables and calendar month-scoped output", "row-per-event/row-per-group/row-for-all unidirectional, named-window and iterator combinations", "exact hint/invalid diagnostics and shared Java/Go trace"]
     },
     {
       "id": "pattern.basic",
@@ -1390,6 +1390,39 @@
       "difference": "Go covers the fluent core output policies, event/time batching, first/last group behavior, virtual-clock time output, current-state snapshots, HAVING, order/limit interaction and after/last composition through typed OutputPolicy builders. The case intentionally records the whole Java ResultSetOutputLimitSimple inventory while remaining partial: multi-component variable intervals, month-scoped dynamic periods, all row-per-event/group/for-all and unidirectional join traces, SODA variants, hints and exact diagnostics still require additional shared trace work."
     },
     {
+      "id": "case.output-row-per-event",
+      "javaRuntimeIds": ["java-runtime-b6309f18f0a3775976d8", "java-runtime-f29f5da7f746db3ea5b0", "java-runtime-fde9d042c81a4e21d146", "java-runtime-38b563c5a7c9c7d77a3f", "java-runtime-7388a11d9903f12c1b19", "java-runtime-012b794bfd6a484dde40", "java-runtime-17539070579a9cc9b231", "java-runtime-7284a10ee885ce89459e", "java-runtime-f078f0563a7884f1727f", "java-runtime-65d41bd9340dc3cfb6cb", "java-runtime-6b0268071f4669e2b9ea", "java-runtime-4377cf88a2bde82bb3b0", "java-runtime-58d5dc9d9377fe6e074d", "java-runtime-f78fb9ecb91c7df08276", "java-runtime-7a058a1b6da74273ec5b", "java-runtime-5be1b1dd81ab9e449b70", "java-runtime-283360d1b453d098e037", "java-runtime-abfd485b95d09067a168", "java-runtime-7330b400c075c520785b", "java-runtime-91ff6ad156f018583250", "java-runtime-33a3f9a37dda89902a11", "java-runtime-6b5ae7ffb3b67defb50f", "java-runtime-cc70ecf6f24913037068", "java-runtime-48cf493775005b89898a", "java-runtime-63c62ba280cc291660b5", "java-runtime-87a1f2491b74b89d47b5", "java-runtime-8991c7e6881f76c21979", "java-runtime-dd3389027b702500a02d", "java-runtime-9d5a55b3c16cc34523f1", "java-runtime-59506fdf49ddd3e2427a", "java-runtime-630dd5007acfacafb95c"],
+      "javaNames": ["ResultSet1NoneNoHavingNoJoin", "ResultSet2NoneNoHavingJoin", "ResultSet3NoneHavingNoJoin", "ResultSet4NoneHavingJoin", "ResultSet5DefaultNoHavingNoJoin", "ResultSet6DefaultNoHavingJoin", "ResultSet7DefaultHavingNoJoin", "ResultSet8DefaultHavingJoin", "ResultSet9AllNoHavingNoJoin", "ResultSet10AllNoHavingJoin", "ResultSet11AllHavingNoJoin", "ResultSet11AllHavingNoJoinHinted", "ResultSet12AllHavingJoin", "ResultSet13LastNoHavingNoJoin", "ResultSet14LastNoHavingJoin", "ResultSet15LastHavingNoJoin", "ResultSet16LastHavingJoin", "ResultSet17FirstNoHavingNoJoinIStreamOnly", "ResultSet17FirstNoHavingNoJoinIRStream", "ResultSet18SnapshotNoHavingNoJoin", "ResultSetHaving", "ResultSetHavingJoin", "ResultSetMaxTimeWindow", "ResultSetLimitSnapshot", "ResultSetLimitSnapshotJoin", "ResultSetJoinSortWindow", "ResultSetRowPerEventNoJoinLast", "ResultSetRowPerEventJoinAll", "ResultSetRowPerEventJoinLast", "ResultSetTime", "ResultSetCount"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerEvent.java"],
+      "goTests": ["TestOutputRowPerEventJoinAllAndLastMatchesEsper"],
+      "tags": ["correctness", "output", "row-per-event", "join", "aggregate"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go covers the representative join all/last aggregate interval behavior through typed OutputEvery and OutputLastEveryEvents builders, including the latest global row and aggregate update sequence. The Java case also contains none/default/first/snapshot/time/count, hinted, join-sort and full old/new combinations; those execution-specific traces and exact hint/diagnostic parity remain partial."
+    },
+    {
+      "id": "case.output-row-per-group",
+      "javaRuntimeIds": ["java-runtime-ebcdaaea9afc00a686d0", "java-runtime-047b01d4e6e6e73101c3", "java-runtime-f6dc738e9e1219068421", "java-runtime-815886be170eed7aee20", "java-runtime-7c4e54256aa53004caa5", "java-runtime-b6a1986826894ec12fd1", "java-runtime-66eefdbac64b7ab79a9b", "java-runtime-3df0124bc42a5e107a8c", "java-runtime-56e8b086b5eaf29a9494", "java-runtime-3cb45ffbbce3a1039f72", "java-runtime-2cfe8200a666f421582d", "java-runtime-2a425da1594958f77a88", "java-runtime-073783d29500f840e025", "java-runtime-930299a6192880bda3bc", "java-runtime-79057f1ac92150b68e68", "java-runtime-c30ea1262639b9008249", "java-runtime-101fbc773a180b386246", "java-runtime-0537627a9e2ced9a101d", "java-runtime-5662e97901c7b1960530", "java-runtime-7c3c8427c5d48c24774e", "java-runtime-54b18a72ff7fa42b3afe", "java-runtime-ebfb2b66f2dd8778a08b", "java-runtime-5d74da396c739c122464", "java-runtime-b07a17ff039944570426", "java-runtime-7238514718862bc6b951", "java-runtime-95facebe857914d29fc6", "java-runtime-e48997a92ab27b0586b6", "java-runtime-fb1d7cc0c950463969d1", "java-runtime-32e4ee023a3b309c2b4c", "java-runtime-c55c536922e604536dd8", "java-runtime-36976af041d05fe907ff", "java-runtime-d72753a34dd8191e28c1", "java-runtime-33f3e496a6431e2b7d10", "java-runtime-896a57e1bb14df31d330", "java-runtime-897df7824f16ef7db1c9", "java-runtime-9ec92fc889874b973112", "java-runtime-e499360495e769be65ec", "java-runtime-198f226a1080d3e02cf0", "java-runtime-97e7a2a759efa357a2af", "java-runtime-4b69198e8a2cc665a379", "java-runtime-49a1acbfbe84da2b0479", "java-runtime-80584d4ff67f59c3a260", "java-runtime-dbe1c30970ff2232fc35"],
+      "javaNames": ["ResultSetOutputFirstWhenThen", "ResultSet1NoneNoHavingNoJoin", "ResultSet2NoneNoHavingJoin", "ResultSet3NoneHavingNoJoin", "ResultSet4NoneHavingJoin", "ResultSet5DefaultNoHavingNoJoin", "ResultSet6DefaultNoHavingJoin", "ResultSet7DefaultHavingNoJoin", "ResultSet8DefaultHavingJoin", "ResultSet9AllNoHavingNoJoin", "ResultSet10AllNoHavingJoin", "ResultSet11AllHavingNoJoin", "ResultSet12AllHavingJoin", "ResultSet13LastNoHavingNoJoin", "ResultSet14LastNoHavingJoin", "ResultSet13LastNoHavingNoJoinWOrderBy", "ResultSet14LastNoHavingJoinWOrderBy", "ResultSet15LastHavingNoJoin", "ResultSet16LastHavingJoin", "ResultSet17FirstNoHavingNoJoin", "ResultSet17FirstNoHavingJoin", "ResultSet18SnapshotNoHavingNoJoin", "ResultSet18SnapshotNoHavingJoin", "ResultSetJoinSortWindow", "ResultSetLimitSnapshot", "ResultSetLimitSnapshotLimit", "ResultSetGroupByAll", "ResultSetGroupByDefault", "ResultSetMaxTimeWindow", "ResultSetNoJoinLast", "ResultSetNoOutputClauseView", "ResultSetNoOutputClauseJoin", "ResultSetNoJoinAll", "ResultSetJoinLast", "ResultSetJoinAll", "ResultSetCrontabNumberSetVariations", "ResultSetOutputFirstHavingJoinNoJoin", "ResultSetOutputFirstCrontab", "ResultSetOutputFirstEveryNEvents", "ResultSetOutputFirstMultikeyWArray", "ResultSetOutputAllMultikeyWArray", "ResultSetOutputLastMultikeyWArray", "ResultSetOutputSnapshotMultikeyWArray"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java"],
+      "goTests": ["TestOutputRowPerGroupAllAndLastMatchesEsper"],
+      "tags": ["correctness", "output", "row-per-group", "grouped", "aggregate"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go covers grouped all and last interval delivery with stable group identity, repeated-group replacement and complete grouped aggregate values. Java also covers join, crontab, first/when-then, wildcard, multikey, snapshot, no-output and order variants; those traces, iterator behavior and exact diagnostics remain partial."
+    },
+    {
+      "id": "case.output-row-for-all",
+      "javaRuntimeIds": ["java-runtime-4f64ae1ed41d82706cb2", "java-runtime-26979f26ed100654e561", "java-runtime-9f8a7c384054edee39d3", "java-runtime-6eeb61c29a0de06f43e9", "java-runtime-aa772475eedea0d76b63", "java-runtime-41987d1776fb09d66814", "java-runtime-ff46ecdce640bc36450c", "java-runtime-02dc65d3b143316687a4", "java-runtime-043471876e178b13fe4a", "java-runtime-5d039a01bcaa9af29617", "java-runtime-70929de806bb952ccdcf", "java-runtime-e3af7e37c18f4b7091f3", "java-runtime-d8e9b12907de75900a9c", "java-runtime-7c35e98202ae79e3f917", "java-runtime-54c5df7a9008f95c71c7", "java-runtime-92e0f778dc3a56f81757", "java-runtime-b80175a1e6aac5adbc4f", "java-runtime-9d40ce597809a1eb9d53", "java-runtime-5a4b8a3b8a21cae86bb3", "java-runtime-d96f93ae6467263ade42", "java-runtime-24be63920370b3566c81", "java-runtime-f4cbfb0e6ce87a467eb7", "java-runtime-da751b9d73d1e8078e84", "java-runtime-f5bed7994fd1ef11ea26", "java-runtime-48279541bbf57eb95ce5"],
+      "javaNames": ["ResultSet1NoneNoHavingNoJoin", "ResultSet2NoneNoHavingJoin", "ResultSet3NoneHavingNoJoin", "ResultSet4NoneHavingJoin", "ResultSet5DefaultNoHavingNoJoin", "ResultSet6DefaultNoHavingJoin", "ResultSet7DefaultHavingNoJoin", "ResultSet8DefaultHavingJoin", "ResultSet9AllNoHavingNoJoin", "ResultSet10AllNoHavingJoin", "ResultSet11AllHavingNoJoin", "ResultSet12AllHavingJoin", "ResultSet13LastNoHavingNoJoin", "ResultSet14LastNoHavingJoin", "ResultSet15LastHavingNoJoin", "ResultSet16LastHavingJoin", "ResultSet17FirstNoHavingNoJoin", "ResultSet18SnapshotNoHavingNoJoin", "ResultSetOutputLastWithInsertInto", "ResultSetAggAllHaving", "ResultSetAggAllHavingJoin", "ResultSetJoinSortWindow", "ResultSetMaxTimeWindow", "ResultSetTimeWindowOutputCountLast", "ResultSetTimeBatchOutputCount"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowForAll.java"],
+      "goTests": ["TestOutputRowForAllAggregateOldNewBatchMatchesEsper"],
+      "tags": ["correctness", "output", "row-for-all", "old-new", "aggregate"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go covers an ungrouped aggregate output interval with old/new rows, length-window eviction and deterministic interval batching. Java additionally covers joins, insert-into, snapshot, time-batch/count/last and multiple having combinations; those delivery and iterator combinations remain partial."
+    },
+    {
       "id": "case.output-crontab-static",
       "javaRuntimeIds": ["java-runtime-d1732fdb170309836a4d", "java-runtime-f03ba450d0474adb58e6", "java-runtime-529144b12e8729215062"],
       "javaNames": ["ResultSetOutputCrontabAt", "ResultSetOutputCrontabAtOMCreate", "ResultSetOutputCrontabAtOMCompile", "TestScheduleComputeHelper"],
@@ -2098,6 +2131,9 @@
     {"capabilityId": "output.when-basic", "caseId": "case.output-first-having"},
     {"capabilityId": "output.when-basic", "caseId": "case.output-group-policies"},
     {"capabilityId": "output.core", "caseId": "case.output-simple-core"},
+    {"capabilityId": "output.core", "caseId": "case.output-row-per-event"},
+    {"capabilityId": "output.core", "caseId": "case.output-row-per-group"},
+    {"capabilityId": "output.core", "caseId": "case.output-row-for-all"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-every"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-followed-by-max"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-consumption-policy"},
