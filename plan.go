@@ -599,7 +599,7 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		}
 		edges := make([]string, 0, len(dataflow.edges))
 		for _, edge := range dataflow.edges {
-			edges = append(edges, fmt.Sprintf("%s:%s>%s:%s", edge.From, edge.FromPort, edge.To, edge.ToPort))
+			edges = append(edges, fmt.Sprintf("%s:%s>%s:%s:feedback=%t", edge.From, edge.FromPort, edge.To, edge.ToPort, edge.Feedback))
 		}
 		canonicalParts = append(canonicalParts, "dataflow("+dataflow.name+":"+strings.Join(operators, ",")+":edges("+strings.Join(edges, ",")+"))")
 	}

@@ -1802,6 +1802,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 	if b.name == "" {
 		return DataflowDefinition{}, NewError(ErrorInvalidRule, "dataflow name is required")
 	}
+	if strings.TrimSpace(b.name) != b.name {
+		return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow name %q has surrounding whitespace", b.name))
+	}
 	if len(b.operators) == 0 {
 		return DataflowDefinition{}, NewError(ErrorInvalidRule, "dataflow requires an operator")
 	}
@@ -1812,6 +1815,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 		operator := inferDataflowBuiltinPorts(original)
 		if operator.Name == "" || operator.Kind == "" {
 			return DataflowDefinition{}, NewError(ErrorInvalidRule, "dataflow operator requires a name and kind")
+		}
+		if strings.TrimSpace(operator.Name) != operator.Name {
+			return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator name %q has surrounding whitespace", operator.Name))
 		}
 		if _, exists := seen[operator.Name]; exists {
 			return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow duplicates operator %q", operator.Name))
@@ -2005,8 +2011,15 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 	if len(b.edges) > 0 {
 		adjacency := make(map[string][]string, len(b.operators))
 		indegree := make(map[string]int, len(b.operators))
-		seenEdges := make(map[DataflowEdge]struct{}, len(b.edges))
+		type edgeRoute struct {
+			from     string
+			fromPort string
+			to       string
+			toPort   string
+		}
+		seenEdges := make(map[edgeRoute]struct{}, len(b.edges))
 		seenJoinInputs := make(map[string]map[string]struct{})
+		feedbackEdges := make([]DataflowEdge, 0)
 		for _, operator := range operators {
 			if operator.Kind == SelectKind && operator.JoinConfigured {
 				seenJoinInputs[operator.Name] = make(map[string]struct{}, len(operator.InputPorts))
@@ -2028,6 +2041,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 			if operatorsByName[edge.From].Kind == LogSinkKind || operatorsByName[edge.From].Kind == EventBusSinkKind {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow %s sink %q does not provide an output stream", strings.ToLower(string(operatorsByName[edge.From].Kind)), edge.From))
 			}
+			if dataflowOperatorIsSourceOnly(operatorsByName[edge.To]) {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow source operator %q does not accept input edges", edge.To))
+			}
 			if !dataflowPortAllowed(operatorsByName[edge.From], true, edge.FromPort) {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow edge references unknown output port %q on operator %q", edge.FromPort, edge.From))
 			}
@@ -2048,10 +2064,11 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 					return DataflowDefinition{}, NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow edge %q:%q -> %q:%q cannot assign %s to %s", edge.From, edge.FromPort, edge.To, edge.ToPort, outputType, inputType))
 				}
 			}
-			if _, duplicate := seenEdges[edge]; duplicate {
+			route := edgeRoute{from: edge.From, fromPort: edge.FromPort, to: edge.To, toPort: edge.ToPort}
+			if _, duplicate := seenEdges[route]; duplicate {
 				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow duplicates edge %q:%q -> %q:%q", edge.From, edge.FromPort, edge.To, edge.ToPort))
 			}
-			seenEdges[edge] = struct{}{}
+			seenEdges[route] = struct{}{}
 			if _, join := seenJoinInputs[edge.To]; join {
 				if _, duplicateInput := seenJoinInputs[edge.To][edge.ToPort]; duplicateInput {
 					return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow select join %q has multiple edges for input port %q", edge.To, edge.ToPort))
@@ -2061,6 +2078,13 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 			if !edge.Feedback {
 				adjacency[edge.From] = append(adjacency[edge.From], edge.To)
 				indegree[edge.To]++
+			} else {
+				feedbackEdges = append(feedbackEdges, edge)
+			}
+		}
+		for _, edge := range feedbackEdges {
+			if !dataflowGraphReachable(adjacency, edge.To, edge.From) {
+				return DataflowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("dataflow feedback edge %q:%q -> %q:%q does not close a graph cycle", edge.From, edge.FromPort, edge.To, edge.ToPort))
 			}
 		}
 		queue := make([]string, 0, len(b.operators))
@@ -2248,6 +2272,9 @@ func validateDataflowPorts(operator DataflowOperator) error {
 			if port == "" {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow %s port on operator %q cannot be empty", direction, operator.Name))
 			}
+			if strings.TrimSpace(port) != port {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow %s port %q on operator %q has surrounding whitespace", direction, port, operator.Name))
+			}
 			if _, exists := seen[port]; exists {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("dataflow operator %q duplicates %s port %q", operator.Name, direction, port))
 			}
@@ -2268,6 +2295,38 @@ func validateDataflowPorts(operator DataflowOperator) error {
 		}
 	}
 	return nil
+}
+
+func dataflowOperatorIsSourceOnly(operator DataflowOperator) bool {
+	switch operator.Kind {
+	case BeaconSourceKind, CustomSourceKind, EventBusSourceKind, EPStatementSourceKind:
+		return true
+	default:
+		return false
+	}
+}
+
+func dataflowGraphReachable(adjacency map[string][]string, start, target string) bool {
+	if start == target {
+		return true
+	}
+	visited := map[string]struct{}{start: {}}
+	queue := []string{start}
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		for _, next := range adjacency[current] {
+			if next == target {
+				return true
+			}
+			if _, exists := visited[next]; exists {
+				continue
+			}
+			visited[next] = struct{}{}
+			queue = append(queue, next)
+		}
+	}
+	return false
 }
 
 func dataflowPortSpecs(specs []DataflowPort) ([]string, map[string]reflect.Type) {
