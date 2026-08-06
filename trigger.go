@@ -616,11 +616,35 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 			if !clause.Delete && len(clause.Assignments) == 0 {
 				return fmt.Errorf("table merge clause %d requires assignments", index)
 			}
-			if err := validateTriggerAssignments(e, definition.input, table, clause.Assignments); err != nil {
+			if !clause.Matched {
+				var targetFields []string
+				clause.Condition.node().referencedTargetFields("table-field", &targetFields)
+				if len(targetFields) > 0 {
+					return fmt.Errorf("table merge clause %d not-matched condition cannot reference table fields", index)
+				}
+				for _, assignment := range clause.Assignments {
+					targetFields = nil
+					assignment.Expr.node().referencedTargetFields("table-field", &targetFields)
+					if len(targetFields) > 0 {
+						return fmt.Errorf("table merge clause %d not-matched assignment cannot reference table fields", index)
+					}
+				}
+			}
+			assignmentTargetKind := ""
+			if clause.Matched {
+				assignmentTargetKind = "table-field"
+			}
+			if err := validateTriggerAssignmentsWithTarget(e, definition.input, table, clause.Assignments, assignmentTargetKind); err != nil {
 				return fmt.Errorf("table merge clause %d: %w", index, err)
 			}
-			if err := e.validateExprFields(definition.input, clause.Condition); err != nil {
-				return fmt.Errorf("table merge clause %d condition: %w", index, err)
+			var conditionErr error
+			if clause.Matched {
+				conditionErr = e.validateTriggerTargetExpression(definition.input, table.schema, clause.Condition, "table-field")
+			} else {
+				conditionErr = e.validateExprFields(definition.input, clause.Condition)
+			}
+			if conditionErr != nil {
+				return fmt.Errorf("table merge clause %d condition: %w", index, conditionErr)
 			}
 		}
 	}
@@ -1339,6 +1363,13 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if err != nil {
 			return tableMutationResult{}, err
 		}
+		if found {
+			targetEvent, eventErr := tableRowEvent(table, definition.table, old, now)
+			if eventErr != nil {
+				return tableMutationResult{}, eventErr
+			}
+			evaluation.Group = []Event{targetEvent}
+		}
 		for _, clause := range definition.merge {
 			if clause.Matched != found {
 				continue
@@ -1524,6 +1555,10 @@ func cloneTableMergeClauses(clauses []TableMergeClause) []TableMergeClause {
 }
 
 func validateTriggerAssignments(e *Environment, input *streamNode, table TableDefinition, assignments []TableAssignment) error {
+	return validateTriggerAssignmentsWithTarget(e, input, table, assignments, "")
+}
+
+func validateTriggerAssignmentsWithTarget(e *Environment, input *streamNode, table TableDefinition, assignments []TableAssignment, targetKind string) error {
 	seen := make(map[string]struct{}, len(assignments))
 	for index, assignment := range assignments {
 		if assignment.Column == "" || assignment.Expr == nil {
@@ -1536,7 +1571,13 @@ func validateTriggerAssignments(e *Environment, input *streamNode, table TableDe
 		if _, exists := table.schema.Field(assignment.Column); !exists {
 			return fmt.Errorf("assignment references unknown column %q", assignment.Column)
 		}
-		if err := e.validateExprFields(input, assignment.Expr); err != nil {
+		var err error
+		if targetKind == "" {
+			err = e.validateExprFields(input, assignment.Expr)
+		} else {
+			err = e.validateTriggerTargetExpression(input, table.schema, assignment.Expr, targetKind)
+		}
+		if err != nil {
 			return fmt.Errorf("assignment %q: %w", assignment.Column, err)
 		}
 	}

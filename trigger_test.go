@@ -993,6 +993,127 @@ func TestTableMergeWithoutPrimaryKeyUsesExistingRowAsMatch(t *testing.T) {
 	}
 }
 
+func TestMergeMatchedBranchReadsTargetRow(t *testing.T) {
+	collect := func(t *testing.T, deployment *Deployment) *[]ResultBatch {
+		t.Helper()
+		batches := new([]ResultBatch)
+		if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+			*batches = append(*batches, batch)
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return batches
+	}
+
+	t.Run("table", func(t *testing.T) {
+		env := NewEnvironment()
+		if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := env.RegisterTable("merge-target-table", []TableColumn{
+			PrimaryKeyColumn[string]("symbol"),
+			TableColumnOf[float64]("price"),
+		}); err != nil {
+			t.Fatal(err)
+		}
+		source := From[runtimeTestTrade](env, "Trade")
+		symbol := Field[runtimeTestTrade, string]("symbol")
+		price := Field[runtimeTestTrade, float64]("price")
+		oldPrice := TableField[float64]("price")
+		plan, err := env.Build(OnEvent(source).MergeIntoTableWhen("merge-target-table", []Expr{symbol},
+			WhenNotMatchedAny(SetColumn("symbol", symbol), SetColumn("price", price)),
+			WhenMatchedDelete(Less[float64](price, Literal[float64](0))),
+			WhenMatched(Greater[float64](price, Literal[float64](0)), SetColumn("price", Add[float64](price, oldPrice))),
+		).Query(StatementName("merge-target-table-rule")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := env.Build(OnEvent(source).MergeIntoTableWhen("merge-target-table", []Expr{symbol},
+			WhenNotMatchedAny(SetColumn("symbol", symbol), SetColumn("price", oldPrice)),
+		).Query()); err == nil {
+			t.Fatal("not-matched table merge assignment could reference target row")
+		}
+		engine := NewEngine(env)
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer deployment.Undeploy(context.Background())
+		batches := collect(t, deployment)
+		send := func(symbol string, price float64) {
+			t.Helper()
+			if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol, Price: price}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		send("E2", 2)
+		send("E2", 10)
+		if len(*batches) != 2 || len((*batches)[1].Old) != 1 || len((*batches)[1].New) != 1 ||
+			(*batches)[1].Old[0].Get("price").Any() != float64(2) || (*batches)[1].New[0].Get("price").Any() != float64(12) {
+			t.Fatalf("table matched target old/new = %#v", *batches)
+		}
+		send("E2", -1)
+		if len(*batches) != 3 || len((*batches)[2].Old) != 1 || len((*batches)[2].New) != 0 || (*batches)[2].Old[0].Get("price").Any() != float64(12) {
+			t.Fatalf("table matched target delete = %#v", *batches)
+		}
+		send("E3", 3)
+		if len(*batches) != 4 || len((*batches)[3].New) != 1 || (*batches)[3].New[0].Get("price").Any() != float64(3) {
+			t.Fatalf("table matched target second insert = %#v", *batches)
+		}
+	})
+
+	t.Run("named-window", func(t *testing.T) {
+		env := NewEnvironment()
+		if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+			t.Fatal(err)
+		}
+		schema, ok := env.Schema("Trade")
+		if !ok {
+			t.Fatal("Trade schema is missing")
+		}
+		if _, err := env.RegisterNamedWindow("merge-target-window", schema); err != nil {
+			t.Fatal(err)
+		}
+		source := From[runtimeTestTrade](env, "Trade")
+		symbol := Field[runtimeTestTrade, string]("symbol")
+		price := Field[runtimeTestTrade, float64]("price")
+		oldPrice := NamedWindowField[float64]("price")
+		match := Equal[string](NamedWindowField[string]("symbol"), symbol)
+		plan, err := env.Build(OnEvent(source).MergeIntoNamedWindowWhen("merge-target-window", match,
+			WhenNotMatchedAny(SetColumn("symbol", symbol), SetColumn("price", price)),
+			WhenMatchedDelete(Less[float64](price, Literal[float64](0))),
+			WhenMatched(Greater[float64](price, Literal[float64](0)), SetColumn("price", Add[float64](price, oldPrice))),
+		).Query(StatementName("merge-target-window-rule")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env)
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer deployment.Undeploy(context.Background())
+		batches := collect(t, deployment)
+		send := func(symbol string, price float64) {
+			t.Helper()
+			if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol, Price: price}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		send("E2", 2)
+		send("E2", 10)
+		if len(*batches) != 2 || len((*batches)[1].Old) != 1 || len((*batches)[1].New) != 1 ||
+			(*batches)[1].Old[0].Get("price").Any() != float64(2) || (*batches)[1].New[0].Get("price").Any() != float64(12) {
+			t.Fatalf("named-window matched target old/new = %#v", *batches)
+		}
+		send("E2", -1)
+		if len(*batches) != 3 || len((*batches)[2].Old) != 1 || len((*batches)[2].New) != 0 {
+			t.Fatalf("named-window matched target delete = %#v", *batches)
+		}
+	})
+}
+
 func TestSingleSidedMergeBranchesAndConvenienceConstructors(t *testing.T) {
 	newEngine := func(t *testing.T, namedWindow bool) (*Environment, *Engine, Stream[runtimeTestTrade], Expression[string], Expression[float64]) {
 		t.Helper()

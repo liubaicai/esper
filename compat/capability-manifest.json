@@ -514,6 +514,17 @@
       "difference": "Go covers the core fluent retention windows and adds UniqueBy/FirstUniqueBy with state-aware multi-key identity, stable key order, Snapshot/Prev history visibility and recursive GroupWindow unique history. GroupWindow keys now use typed/content-preserving identity, including array keys. NamedWindowRetention now supports Unique/FirstUnique replacement state, including content-based array keys, old-stream dispatch and stable snapshots. Named-window-backed and regular event-stream subqueries now support aggregate WindowValues projection as one inner row over the retained group and array-key Unique count filtering, with statement-owned independent source-window state. The Dataflow graph path now gives each Dataflow instance a statement-owned registry with independent state per subquery definition, reproducing the Java array-key Unique window/captive emitter trace. TimeOrder now sorts external timestamps, expires on virtual time, immediately removes late events at the boundary, supports calendar years/months/days with exact AddDate boundaries, and preserves independent grouped-partition lifecycle and iteration order. TimeToLiveAt now models Java #timetolive(timestamp) as an absolute epoch-millisecond expiry, including same-boundary batch removal, already-expired insertion and named-window retention. RankWindowBy now models Java rank unique-key replacement, grouped partition state, sort ordering, full-window pass-through and worst-entry eviction; Sort and Rank preserve their different same-sort-value arrival order and eviction rules. Rank previous access now has Java ViewRankedPrev coverage for PrevWindow and Prev(0..4), while grouped Rank covers per-partition unique-key replacement and eviction. Go now also models the Java TimeOrder previous/prior split: Prev/PrevTail/PrevWindow use the view's sorted head-to-tail access order, Prior uses arrival order, PrevCount follows retained access history, and old-stream expiry rows retain only the Java-available prior value. The new navigation tests cover the two ViewTimeOrderTTLPreviousAndPrior scenes, including Snapshot and expiry lifecycle. Go tests also exercise object-array, two-dimensional-array, rank array unique keys, and stable union/intersection composition over array-key Unique children. Java's selected ViewMultikeyWArray/ViewRank additionally covers context/pattern subquery combinations, wider navigation combinations and exact shared trace; those combinations remain open."
     },
     {
+      "id": "case.trigger-merge-target-row",
+      "javaRuntimeIds": ["java-runtime-240cb61eabb22eb2a215", "java-runtime-aaa45c95e95a919bd0c0"],
+      "javaNames": ["InfraOnMergeMatchNoMatch"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestMergeMatchedBranchReadsTargetRow"],
+      "tags": ["correctness", "infra", "table", "named-window", "merge", "target-row", "new-old"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go binds the matched Table row into TableField expressions during both clause conditions and assignments, while rejecting target-field references in not-matched branches; Named Window keeps the same explicit target scope. The test covers matched accumulation, delete old-stream output and re-insertion for both targets. Java wildcard select, representation-specific event conversion, broader multi-clause traces and exact diagnostics remain open."
+    },
+    {
       "id": "case.trigger-merge-single-sided",
       "javaRuntimeIds": ["java-runtime-651148621e89ec5465b0", "java-runtime-e51caa89fbde4ab34197", "java-runtime-8900ac7e3d063d8b8842", "java-runtime-b581753558f219b16a2a", "java-runtime-5cdc46289e4fac78a0c5", "java-runtime-8e9616eb8385c473d45a", "java-runtime-af614186a63cbeb33ae5", "java-runtime-eb7754c9e46c8c465c14", "java-runtime-f21a6fc889f14608828f", "java-runtime-f7a73c74e857ffbdfd15"],
       "javaNames": ["InfraInsertOnly"],
@@ -2151,6 +2162,7 @@
     {"capabilityId": "join.basic", "caseId": "case.join-unidirectional-stream"},
     {"capabilityId": "join.basic", "caseId": "case.join-performance-baselines"},
     {"capabilityId": "context.partition", "caseId": "case.context-partitioning"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-target-row"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-single-sided"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-no-where"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
