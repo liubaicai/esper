@@ -1150,6 +1150,24 @@ func (e *Environment) validateNode(node *streamNode) error {
 			}
 		}
 		return nil
+	case streamMethod:
+		if node.method == nil || node.method.provider == nil {
+			return NewError(ErrorDependency, fmt.Sprintf("method source %q has no provider", node.sourceName))
+		}
+		if !node.method.schema.valid() {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("method source %q has no schema", node.sourceName))
+		}
+		if node.method.trigger != "" {
+			if _, ok := e.Schema(node.method.trigger); !ok {
+				return NewError(ErrorUnknownName, fmt.Sprintf("method source %q references unknown trigger type %q", node.sourceName, node.method.trigger))
+			}
+		}
+		if node.sourceType != nil && node.sourceType != typeOf[any]() && node.method.schema.GoType() != nil {
+			if !node.sourceType.AssignableTo(node.method.schema.GoType()) && !node.method.schema.GoType().AssignableTo(node.sourceType) {
+				return NewError(ErrorTypeMismatch, fmt.Sprintf("method source %q expects Go type %s, schema exposes %s", node.sourceName, node.sourceType, node.method.schema.GoType()))
+			}
+		}
+		return nil
 	case streamFilter:
 		if node.predicate == nil {
 			return fmt.Errorf("esper: filter predicate is required")
@@ -1309,8 +1327,8 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 	if err != nil {
 		return err
 	}
-	if base.kind != streamSource && base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical {
-		return NewError(ErrorInvalidRule, "subquery source must be an event stream, named window, table, or historical source")
+	if base.kind != streamSource && base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical && base.kind != streamMethod {
+		return NewError(ErrorInvalidRule, "subquery source must be an event stream, named window, table, historical source, or method source")
 	}
 	if base.kind == streamSource && !subquerySourceContainsWindow(definition.source) && !definition.aggregateProjection && !definition.grouped {
 		return NewError(ErrorInvalidRule, "non-aggregated event-stream subquery requires a window")
@@ -1480,6 +1498,12 @@ func (e *Environment) sourceSchema(source *streamNode) (Schema, error) {
 			return Schema{}, NewError(ErrorDependency, fmt.Sprintf("historical source %q has no schema", source.sourceName))
 		}
 		return source.historical.schema, nil
+	}
+	if source.kind == streamMethod {
+		if source.method == nil || !source.method.schema.valid() {
+			return Schema{}, NewError(ErrorDependency, fmt.Sprintf("method source %q has no schema", source.sourceName))
+		}
+		return source.method.schema, nil
 	}
 	schema, ok := e.Schema(source.sourceName)
 	if !ok {
@@ -2042,7 +2066,7 @@ func isIntegralType(typ reflect.Type) bool {
 
 func sourceNode(node *streamNode) (*streamNode, error) {
 	for node != nil {
-		if node.kind == streamSource || node.kind == streamNamedWindow || node.kind == streamTable || node.kind == streamHistorical {
+		if node.kind == streamSource || node.kind == streamNamedWindow || node.kind == streamTable || node.kind == streamHistorical || node.kind == streamMethod {
 			return node, nil
 		}
 		node = node.input

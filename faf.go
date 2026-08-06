@@ -210,7 +210,7 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 		return e.executeJoinFireAndForget(ctx, plan, parameters)
 	}
 	if !containsNamedWindow(plan.query.input, nil) && !containsTableSource(plan.query.input, nil) && !containsHistoricalSource(plan.query.input) {
-		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget currently requires a named-window, table, or historical source")
+		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget currently requires a named-window, table, historical source, or method source")
 	}
 	if plan.query.contextName != "" {
 		return e.executeContextFireAndForget(ctx, plan, selector, parameters)
@@ -236,6 +236,8 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 	input := plan.query.input
 	if source.kind == streamHistorical {
 		input = replaceStreamBase(input, source, &streamNode{kind: streamSource, sourceName: source.historical.schema.Name(), sourceType: typeOf[any]()})
+	} else if source.kind == streamMethod {
+		input = replaceStreamBase(input, source, &streamNode{kind: streamSource, sourceName: source.method.schema.Name(), sourceType: typeOf[any]()})
 	}
 	for _, event := range events {
 		inserted, insertErr := runtime.insert(input, event, now)
@@ -461,8 +463,8 @@ func (e *Engine) executeContextFireAndForget(ctx context.Context, plan Plan, sel
 	now := e.clock.Now()
 	variables := bindParameterValues(cloneValues(e.variables), parameters)
 	e.mu.Unlock()
-	if source.kind == streamHistorical {
-		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context queries do not support historical sources")
+	if source.kind == streamHistorical || source.kind == streamMethod {
+		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context queries do not support historical or method sources")
 	}
 	events, err := e.snapshotFireAndForgetSource(ctx, source, now, variables)
 	if err != nil {
@@ -613,8 +615,17 @@ func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source
 			Variables:  visibleVariableValues(variables),
 			Parameters: parameterValuesFromVariables(variables),
 		})
+	case streamMethod:
+		if source.method == nil || source.method.provider == nil {
+			return nil, NewError(ErrorDependency, fmt.Sprintf("method source %q has no provider", source.sourceName))
+		}
+		return source.method.provider.Poll(ctx, MethodRequest{
+			Now:        now,
+			Variables:  visibleVariableValues(variables),
+			Parameters: parameterValuesFromVariables(variables),
+		})
 	default:
-		return nil, NewError(ErrorInvalidRule, fmt.Sprintf("fire-and-forget source %q is not a named window, table, or historical source", source.sourceName))
+		return nil, NewError(ErrorInvalidRule, fmt.Sprintf("fire-and-forget source %q is not a named window, table, historical source, or method source", source.sourceName))
 	}
 }
 

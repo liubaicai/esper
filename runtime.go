@@ -3001,7 +3001,7 @@ func sourceNodeAcceptsEvent(env *Environment, node *streamNode, event Event) boo
 	if err != nil || source == nil {
 		return false
 	}
-	if source.kind == streamHistorical {
+	if source.kind == streamHistorical || source.kind == streamMethod {
 		return true
 	}
 	if env != nil && source.kind == streamSource {
@@ -5211,6 +5211,9 @@ func containsHistoricalSource(node *streamNode) bool {
 		if current.kind == streamHistorical {
 			return true
 		}
+		if current.kind == streamMethod {
+			return true
+		}
 	}
 	return false
 }
@@ -5663,6 +5666,18 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			return eventDelta{}, err
 		}
 		return eventDelta{newEvents: append([]Event(nil), events...)}, nil
+	case streamMethod:
+		if node.method == nil || node.method.provider == nil {
+			return eventDelta{}, NewError(ErrorDependency, fmt.Sprintf("method source %q has no provider", node.sourceName))
+		}
+		if node.method.trigger != "" && node.method.trigger != event.TypeName() {
+			return eventDelta{}, nil
+		}
+		events, err := node.method.provider.Poll(r.context(), MethodRequest{Trigger: event, Now: now, Variables: visibleVariableValues(r.variables), Parameters: parameterValuesFromVariables(r.variables)})
+		if err != nil {
+			return eventDelta{}, err
+		}
+		return eventDelta{newEvents: append([]Event(nil), events...)}, nil
 	case streamFilter:
 		inputDelta, err := r.insert(node.input, event, now)
 		if err != nil {
@@ -5754,6 +5769,8 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 		}
 		return eventDelta{oldEvents: []Event{event}}, nil
 	case streamHistorical:
+		return eventDelta{}, nil
+	case streamMethod:
 		return eventDelta{}, nil
 	case streamFilter:
 		inputDelta, err := r.remove(node.input, event, now)

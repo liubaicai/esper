@@ -16,6 +16,7 @@ const (
 	streamNamedWindow
 	streamTable
 	streamHistorical
+	streamMethod
 )
 
 type streamNode struct {
@@ -24,6 +25,7 @@ type streamNode struct {
 	sourceName string
 	sourceType reflect.Type
 	historical *historicalDefinition
+	method     *methodDefinition
 	predicate  Expr
 	window     WindowSpec
 }
@@ -53,6 +55,16 @@ func (n *streamNode) describe() string {
 			triggerName = n.historical.trigger
 		}
 		return "historical(" + n.sourceName + ":" + schemaName + ":trigger=" + triggerName + ")"
+	case streamMethod:
+		schemaName := "<nil>"
+		triggerName := ""
+		if n.method != nil && n.method.schema.valid() {
+			schemaName = n.method.schema.Name()
+		}
+		if n.method != nil {
+			triggerName = n.method.trigger
+		}
+		return "method(" + n.sourceName + ":" + schemaName + ":trigger=" + triggerName + ")"
 	default:
 		return "<unknown-stream>"
 	}
@@ -491,6 +503,28 @@ func FromHistoricalOn[T any](env *Environment, sourceName, triggerType string, s
 			sourceName: sourceName,
 			sourceType: typeOf[T](),
 			historical: &historicalDefinition{name: sourceName, trigger: triggerType, schema: schema, provider: provider},
+		},
+	}
+}
+
+// FromMethod creates a Go method-backed source. The provider is evaluated
+// once for each incoming event in a live statement and once for a
+// fire-and-forget snapshot. Its returned events can be filtered, windowed,
+// joined and projected through the same fluent chain as ordinary sources.
+func FromMethod[T any](env *Environment, sourceName string, schema Schema, provider MethodProvider) Stream[T] {
+	return FromMethodOn[T](env, sourceName, "", schema, provider)
+}
+
+// FromMethodOn restricts a method source to one registered trigger event
+// type. An empty triggerType keeps the source available to every event type.
+func FromMethodOn[T any](env *Environment, sourceName, triggerType string, schema Schema, provider MethodProvider) Stream[T] {
+	return Stream[T]{
+		env: env,
+		node: &streamNode{
+			kind:       streamMethod,
+			sourceName: sourceName,
+			sourceType: typeOf[T](),
+			method:     &methodDefinition{name: sourceName, trigger: triggerType, schema: schema, provider: provider},
 		},
 	}
 }

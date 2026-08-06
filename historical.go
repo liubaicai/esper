@@ -29,6 +29,34 @@ type HistoricalProvider interface {
 	Poll(context.Context, HistoricalRequest) ([]Event, error)
 }
 
+// MethodRequest is the input available to a Go method-backed source. The
+// trigger is populated for live statements and remains zero for a
+// fire-and-forget snapshot. Variables and Parameters are immutable snapshots
+// for the current evaluation.
+type MethodRequest struct {
+	Trigger    Event
+	Now        time.Time
+	Variables  map[string]Value
+	Parameters map[string]Value
+}
+
+// MethodProvider is the Go-native counterpart to Esper's method stream. The
+// provider returns already materialized Events so the schema and underlying
+// representation stay explicit in a fluent rule.
+type MethodProvider interface {
+	Poll(context.Context, MethodRequest) ([]Event, error)
+}
+
+// MethodProviderFunc adapts a function to MethodProvider.
+type MethodProviderFunc func(context.Context, MethodRequest) ([]Event, error)
+
+func (f MethodProviderFunc) Poll(ctx context.Context, request MethodRequest) ([]Event, error) {
+	if f == nil {
+		return nil, NewError(ErrorDependency, "method provider function is nil")
+	}
+	return f(ctx, request)
+}
+
 // SQLHistoricalQueryer is implemented by *sql.DB and *sql.Tx. It lets a
 // historical provider participate in a caller-owned transaction without
 // making the provider responsible for commit or rollback.
@@ -182,6 +210,13 @@ type historicalDefinition struct {
 	trigger  string
 	schema   Schema
 	provider HistoricalProvider
+}
+
+type methodDefinition struct {
+	name     string
+	trigger  string
+	schema   Schema
+	provider MethodProvider
 }
 
 // SQLHistoricalProvider adapts a prepared database/sql query to a historical

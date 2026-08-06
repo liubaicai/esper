@@ -2619,7 +2619,7 @@ func (r *statementRuntime) snapshotRowRecog(plan Plan, now time.Time, variables 
 func rowRecogInputIsUnbound(input *streamNode) bool {
 	for node := input; node != nil; node = node.input {
 		switch node.kind {
-		case streamWindow, streamNamedWindow, streamTable, streamHistorical:
+		case streamWindow, streamNamedWindow, streamTable, streamHistorical, streamMethod:
 			return false
 		case streamSource:
 			return true
