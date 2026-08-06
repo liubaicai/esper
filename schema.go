@@ -322,9 +322,9 @@ func NewXMLSchema(name string, fields []FieldSpec, opts ...SchemaOption) (Schema
 	return newSchema(name, SchemaXML, nil, fields, opts)
 }
 
-// NewAvroSchema describes an Avro datum represented by a Go map/record. The
-// binary Avro codec is intentionally kept behind this schema boundary; the
-// initial codec path accepts JSON-encoded Avro data through ParseAvroJSON.
+// NewAvroSchema describes an Avro datum represented at runtime by an
+// *AvroRecord. Map and JSON inputs are accepted at ingestion boundaries and
+// normalized to the schema-bound native record.
 func NewAvroSchema(name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
 	return newSchema(name, SchemaAvro, nil, fields, opts)
 }
@@ -525,6 +525,9 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 			nestedSchemas[nestedName] = nested
 		}
 		cfg.allowDynamic = cfg.allowDynamic || parent.allowDynamic
+	}
+	if kind == SchemaAvro && cfg.allowDynamic {
+		return Schema{}, fmt.Errorf("esper: Avro schema %q does not allow dynamic fields", name)
 	}
 	copyFields = append(copyFields, fields...)
 	if len(cfg.setters) > 0 && goType == nil {
@@ -1268,6 +1271,9 @@ func (s Schema) get(underlying any, name string) Value {
 	if underlying == nil {
 		return Null()
 	}
+	if value, record := avroRecordProperty(underlying, name); record && !value.IsMissing() {
+		return value
+	}
 	if values, ok := underlying.(map[string]Value); ok {
 		if value, exists := values[name]; exists {
 			return value
@@ -1328,6 +1334,9 @@ const (
 )
 
 func getPropertyPath(underlying any, name string, one func(any, string) Value) Value {
+	if value, record := avroRecordProperty(underlying, name); record && !value.IsMissing() {
+		return value
+	}
 	if values, ok := underlying.(map[string]Value); ok {
 		if value, exists := values[name]; exists {
 			return value
@@ -1765,6 +1774,9 @@ func rawPropertyValue(underlying any, name string, resolution PropertyResolution
 	if row, ok := underlying.(Row); ok {
 		return row.Get(name)
 	}
+	if value, record := avroRecordProperty(underlying, name); record {
+		return value
+	}
 	if values, ok := underlying.(map[string]Value); ok {
 		if value, exists := values[name]; exists {
 			return value
@@ -1815,6 +1827,9 @@ func (s Schema) getOne(underlying any, name string) Value {
 	}
 	if event, ok := underlying.(Event); ok {
 		return event.Get(name)
+	}
+	if value, record := avroRecordProperty(underlying, name); record {
+		return value
 	}
 	if values, ok := underlying.(map[string]Value); ok {
 		if value, exists := values[name]; exists {
@@ -2115,6 +2130,13 @@ func newEvent(schema Schema, underlying any, receivedAt time.Time) (Event, error
 		}
 		underlying = normalized
 	}
+	if schema.kind == SchemaAvro {
+		normalized, err := normalizeAvroRecord(schema, underlying)
+		if err != nil {
+			return Event{}, err
+		}
+		underlying = normalized
+	}
 	if schema.goType != nil {
 		got := reflect.TypeOf(underlying)
 		if !got.AssignableTo(schema.goType) && !(got.Kind() == reflect.Pointer && got.Elem().AssignableTo(schema.goType)) {
@@ -2213,6 +2235,27 @@ func mergeSchemaUnderlying(schema Schema, original any, updates map[string]any) 
 			values[index] = update
 		}
 		return normalizeObjectArray(schema, values)
+	}
+	if schema.kind == SchemaAvro {
+		var record *AvroRecord
+		var err error
+		if original == nil {
+			record, err = NewAvroRecord(schema)
+		} else {
+			record, err = normalizeAvroRecord(schema, original)
+			if err == nil {
+				record = record.Clone()
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		for name, value := range updates {
+			if err := record.Set(name, value); err != nil {
+				return nil, err
+			}
+		}
+		return record, nil
 	}
 	if schema.goType == nil {
 		result := make(map[string]any, len(schema.fields)+len(updates))

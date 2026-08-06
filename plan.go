@@ -744,7 +744,7 @@ func (e *Environment) validateRoute(query Query) error {
 		}
 		field, exists := target.Field(selection.Name)
 		if !exists {
-			if target.kind == SchemaMap || target.kind == SchemaJSON || target.kind == SchemaXML || target.kind == SchemaAvro || target.IsVariantAny() {
+			if target.kind == SchemaMap || target.kind == SchemaJSON || target.kind == SchemaXML || target.IsVariantAny() {
 				continue
 			}
 			return fmt.Errorf("route projection %q is not a field of target schema %q", selection.Name, target.Name())

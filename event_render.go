@@ -560,6 +560,12 @@ func dynamicMapFields(underlying any) map[string]any {
 	if underlying == nil {
 		return nil
 	}
+	if record, ok := underlying.(*AvroRecord); ok {
+		return record.AsMap()
+	}
+	if record, ok := underlying.(AvroRecord); ok {
+		return record.AsMap()
+	}
 	value := reflect.ValueOf(underlying)
 	for value.IsValid() && (value.Kind() == reflect.Pointer || value.Kind() == reflect.Interface) {
 		if value.IsNil() {

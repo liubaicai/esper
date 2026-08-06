@@ -529,6 +529,11 @@ func assertDataflowBeaconUnderlying(t *testing.T, output any, kind SchemaKind) {
 		if !ok || len(value) != 3 || value[0] != "abc" || value[1] != int64(7) || value[2] != float64(1) {
 			t.Fatalf("typed beacon object-array = %#v", output)
 		}
+	case SchemaAvro:
+		value, ok := output.(*AvroRecord)
+		if !ok || value.Get("p0") != "abc" || value.Get("p1") != int64(7) || value.Get("p2") != float64(1) {
+			t.Fatalf("typed beacon Avro record = %#v", output)
+		}
 	default:
 		value, ok := output.(map[string]any)
 		if !ok || value["p0"] != "abc" || value["p1"] != int64(7) || value["p2"] != float64(1) {

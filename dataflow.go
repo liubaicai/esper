@@ -2121,6 +2121,9 @@ func dataflowSchemaUnderlyingType(schema Schema) reflect.Type {
 	if schema.Kind() == SchemaObjectArray {
 		return reflect.TypeOf([]any{})
 	}
+	if schema.Kind() == SchemaAvro {
+		return avroRecordType()
+	}
 	return reflect.TypeOf(map[string]any{})
 }
 
@@ -2330,8 +2333,10 @@ func dataflowEventBusSinkOutputAssignable(env *Environment, eventType string, ou
 		return false
 	case SchemaObjectArray:
 		return output.Kind() == reflect.Array || output.Kind() == reflect.Slice
-	case SchemaMap, SchemaJSON, SchemaXML, SchemaAvro:
+	case SchemaMap, SchemaJSON, SchemaXML:
 		return output == reflect.TypeOf(map[string]any{})
+	case SchemaAvro:
+		return output == avroRecordType() || output == reflect.TypeOf(map[string]any{})
 	case SchemaStruct:
 		if schema.GoType() == nil {
 			return output == reflect.TypeOf(map[string]any{})

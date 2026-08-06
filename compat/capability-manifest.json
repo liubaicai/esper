@@ -335,7 +335,7 @@
       "tags": ["correctness", "event", "avro", "record", "underlying", "schema-identity", "representation", "invalid"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-suite-dataflow-23-23", "go-unit"],
-      "difference": "Go now uses a schema-bound *AvroRecord as the native underlying value instead of conflating Avro with map[string]any. NewAvroRecord/NewAvroRecordFromMap provide typed Set/Get/Lookup, cloning and JSON connector output; Engine.SendAvro preserves record identity, while SendRecord and ParseAvroJSON normalize compatible boundary values. Beacon underlying ports, EventBus sources, partial InsertInto and six-representation wildcard recast retain the record and schema identity. Undeclared fields, incompatible values, dynamic Avro schemas and cross-schema records are rejected. Binary Avro codecs, union/logical/fixed/enum semantics, schema evolution and the full EventAvro regression matrix remain open."
+      "difference": "Go now uses a schema-bound *AvroRecord as the native underlying value instead of conflating Avro with map[string]any. NewAvroRecord/NewAvroRecordFromMap provide typed Set/Get/Lookup, cloning and JSON connector output; Engine.SendAvro preserves record identity, while SendRecord and ParseAvroJSON normalize compatible boundary values. Beacon underlying ports, EventBus sources and sinks, partial InsertInto and six-representation wildcard recast retain the record and schema identity. Undeclared fields, incompatible values, dynamic Avro schemas and cross-schema records are rejected. Binary Avro codecs, union/logical/fixed/enum semantics, schema evolution and the full EventAvro regression matrix remain open."
     },
     {
       "id": "case.event-property-access-render",

@@ -300,6 +300,26 @@ func TestDataflowEventBusSinkSendsAllRegisteredRepresentationsMatchesEsper(t *te
 				}
 			},
 		},
+		{
+			name:      "avro",
+			eventType: "SinkRepresentationAvro",
+			register: func(env *Environment, name string, fields []FieldSpec) (Schema, error) {
+				return RegisterAvro(env, name, fields)
+			},
+			value: func(schema Schema) any {
+				record, err := NewAvroRecordFromMap(schema, map[string]any{"myString": "one", "myInt": 1})
+				if err != nil {
+					panic(err)
+				}
+				return record
+			},
+			assert: func(t *testing.T, value any) {
+				got, ok := value.(*AvroRecord)
+				if !ok || got.Schema().Name() != "SinkRepresentationAvro" || got.Get("myString") != "one" || got.Get("myInt") != 1 {
+					t.Fatalf("sink Avro underlying = %#v", value)
+				}
+			},
+		},
 	}
 
 	for _, testCase := range cases {
@@ -373,6 +393,10 @@ func TestDataflowEventBusSourceWithUnderlyingAllRegisteredRepresentationsMatches
 	if _, err := RegisterXML(env, "UnderlyingRepresentationXML", fields); err != nil {
 		t.Fatal(err)
 	}
+	avroSchema, err := RegisterAvro(env, "UnderlyingRepresentationAvro", fields)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cases := []struct {
 		name      string
 		eventType string
@@ -427,6 +451,23 @@ func TestDataflowEventBusSourceWithUnderlyingAllRegisteredRepresentationsMatches
 				got, ok := value.(map[string]any)
 				if !ok || got["myString"] != "one" || got["myInt"] != 1 {
 					t.Fatalf("underlying XML = %#v", value)
+				}
+			},
+		},
+		{
+			name:      "avro",
+			eventType: "UnderlyingRepresentationAvro",
+			send: func(engine *Engine) error {
+				record, recordErr := NewAvroRecordFromMap(avroSchema, map[string]any{"myString": "one", "myInt": 1})
+				if recordErr != nil {
+					return recordErr
+				}
+				return engine.SendAvro(context.Background(), "UnderlyingRepresentationAvro", record)
+			},
+			assert: func(t *testing.T, value any) {
+				got, ok := value.(*AvroRecord)
+				if !ok || got.Schema().Name() != "UnderlyingRepresentationAvro" || got.Get("myString") != "one" || got.Get("myInt") != 1 {
+					t.Fatalf("underlying Avro record = %#v", value)
 				}
 			},
 		},

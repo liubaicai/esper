@@ -156,6 +156,11 @@ func assertInsertRecastUnderlying(t *testing.T, event Event, kind SchemaKind) {
 		if !ok || len(value) != 3 || value[0] != "a" || value[1] != int64(10) || value[2] != nil {
 			t.Fatalf("recast object-array underlying = %#v", event.Underlying())
 		}
+	case SchemaAvro:
+		value, ok := event.Underlying().(*AvroRecord)
+		if !ok || value.Schema().Name() != event.TypeName() || value.Get("p0") != "a" || value.Get("p1") != int64(10) || value.Get("c0") != nil {
+			t.Fatalf("recast Avro underlying = %#v", event.Underlying())
+		}
 	default:
 		value, ok := event.Underlying().(map[string]any)
 		if !ok || value["p0"] != "a" || value["p1"] != int64(10) || value["c0"] != nil {

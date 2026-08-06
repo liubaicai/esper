@@ -102,6 +102,10 @@ func TestXMLAndAvroJSONSchemasParseTypedValues(t *testing.T) {
 	if avroEvent.Get("symbol").Any() != "ESPER" || avroEvent.Get("price").Any() != float64(12.5) || avroEvent.Get("qty").Any() != int64(3) {
 		t.Fatalf("Avro values = symbol=%v price=%v qty=%v", avroEvent.Get("symbol"), avroEvent.Get("price"), avroEvent.Get("qty"))
 	}
+	avroRecord, ok := avroEvent.Underlying().(*AvroRecord)
+	if !ok || avroRecord.Schema().Name() != "TradeAvro" || avroRecord.Get("symbol") != "ESPER" {
+		t.Fatalf("Avro underlying = %#v", avroEvent.Underlying())
+	}
 }
 
 func TestXMLParserRejectsMalformedInput(t *testing.T) {

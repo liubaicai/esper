@@ -110,6 +110,12 @@ func TestInsertIntoPartialColumnsMaterializesNullAcrossRepresentations(t *testin
 					t.Fatalf("partial object-array underlying = %#v", c0Event.Underlying())
 				}
 			}
+			if representation.kind == SchemaAvro {
+				record, ok := c0Event.Underlying().(*AvroRecord)
+				if !ok || record.Get("c0") != "E1" || record.Get("c1") != nil {
+					t.Fatalf("partial Avro underlying = %#v", c0Event.Underlying())
+				}
+			}
 		})
 	}
 }

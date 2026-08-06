@@ -1830,7 +1830,8 @@ func (e *Engine) EventSchema(eventType string) (Schema, bool) {
 
 // SendRecord sends a map-backed record to any registered non-variant event
 // schema. Struct-backed schemas are materialized from the named fields before
-// entering the normal Send path; map/JSON/Avro schemas retain the map. This is
+// entering the normal Send path; Avro schemas become schema-bound AvroRecord
+// values while map/JSON/XML schemas retain the map. This is
 // the connector-friendly counterpart to SendEvent and keeps adapters from
 // depending on private schema internals.
 func (e *Engine) SendRecord(ctx context.Context, eventType string, record map[string]any) error {
@@ -1938,6 +1939,24 @@ func (e *Engine) SendAvroJSON(ctx context.Context, eventType string, data []byte
 		return err
 	}
 	return e.Send(ctx, eventType, event.Underlying())
+}
+
+// SendAvro sends a native schema-bound Avro record.
+func (e *Engine) SendAvro(ctx context.Context, eventType string, record *AvroRecord) error {
+	if e == nil || e.env == nil {
+		return NewError(ErrorDependency, "engine has no environment")
+	}
+	schema, ok := e.env.Schema(eventType)
+	if !ok || schema.Kind() != SchemaAvro {
+		return NewError(ErrorUnknownName, fmt.Sprintf("Avro event type %q is not registered", eventType))
+	}
+	if record == nil {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("Avro event type %q record is nil", eventType))
+	}
+	if !avroSchemasEqual(schema, record.Schema()) {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("Avro event type %q received record for schema %q", eventType, record.Schema().Name()))
+	}
+	return e.Send(ctx, eventType, record)
 }
 
 // SendObjectArray sends a positional event to an ObjectArray schema. The
@@ -2343,6 +2362,9 @@ func projectMapToSchema(target Schema, values map[string]any) (any, error) {
 			}
 		}
 		return normalizeObjectArray(target, ordered)
+	}
+	if target.kind == SchemaAvro {
+		return NewAvroRecordFromMap(target, values)
 	}
 	if target.goType != nil {
 		return mergeSchemaUnderlying(target, nil, values)
