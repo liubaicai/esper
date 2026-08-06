@@ -100,7 +100,87 @@ func EqualValues(left, right Value) Value {
 	if !left.IsPresent() || !right.IsPresent() {
 		return Null()
 	}
+	if equal, numeric := numericEqual(left.data, right.data); numeric {
+		return Present(equal)
+	}
 	return Present(reflect.DeepEqual(left.data, right.data))
+}
+
+// numericEqual applies expression-level numeric coercion without weakening
+// Value.Equal's strict underlying-type identity. Integral values are
+// compared exactly when both operands are integral; a floating-point operand
+// promotes the comparison to float64, matching the numeric comparison path.
+func numericEqual(left, right any) (bool, bool) {
+	lv := reflect.ValueOf(left)
+	rv := reflect.ValueOf(right)
+	for lv.IsValid() && (lv.Kind() == reflect.Pointer || lv.Kind() == reflect.Interface) {
+		if lv.IsNil() {
+			return false, false
+		}
+		lv = lv.Elem()
+	}
+	for rv.IsValid() && (rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface) {
+		if rv.IsNil() {
+			return false, false
+		}
+		rv = rv.Elem()
+	}
+	if !lv.IsValid() || !rv.IsValid() || !isNumericKind(lv.Kind()) || !isNumericKind(rv.Kind()) {
+		return false, false
+	}
+	leftFloat := lv.Kind() == reflect.Float32 || lv.Kind() == reflect.Float64
+	rightFloat := rv.Kind() == reflect.Float32 || rv.Kind() == reflect.Float64
+	if leftFloat || rightFloat {
+		return numericReflectFloat(lv) == numericReflectFloat(rv), true
+	}
+	leftUnsigned := isUnsignedKind(lv.Kind())
+	rightUnsigned := isUnsignedKind(rv.Kind())
+	if leftUnsigned && rightUnsigned {
+		return lv.Uint() == rv.Uint(), true
+	}
+	if !leftUnsigned && !rightUnsigned {
+		return lv.Int() == rv.Int(), true
+	}
+	if leftUnsigned {
+		if rv.Int() < 0 {
+			return false, true
+		}
+		return lv.Uint() == uint64(rv.Int()), true
+	}
+	if lv.Int() < 0 {
+		return false, true
+	}
+	return uint64(lv.Int()) == rv.Uint(), true
+}
+
+func isNumericKind(kind reflect.Kind) bool {
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return false
+	}
+}
+
+func isUnsignedKind(kind reflect.Kind) bool {
+	switch kind {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	default:
+		return false
+	}
+}
+
+func numericReflectFloat(value reflect.Value) float64 {
+	if value.Kind() == reflect.Float32 || value.Kind() == reflect.Float64 {
+		return value.Float()
+	}
+	if isUnsignedKind(value.Kind()) {
+		return float64(value.Uint())
+	}
+	return float64(value.Int())
 }
 
 func boolValue(v Value) (bool, bool) {

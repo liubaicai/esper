@@ -49,6 +49,27 @@ func TestCoreExpressionOperators(t *testing.T) {
 	}
 }
 
+func TestExpressionNumericEqualityCoercion(t *testing.T) {
+	if got := EqualValues(Present(int(100)), Present(int64(100))); !got.Equal(Present(true)) {
+		t.Fatalf("integral equality coercion = %v", got)
+	}
+	if got := EqualValues(Present(uint64(100)), Present(int64(100))); !got.Equal(Present(true)) {
+		t.Fatalf("signed/unsigned equality coercion = %v", got)
+	}
+	if got := EqualValues(Present(int64(-1)), Present(uint64(1))); !got.Equal(Present(false)) {
+		t.Fatalf("negative signed/unsigned equality = %v", got)
+	}
+	if got := EqualValues(Present(int64(100)), Present(float64(100))); !got.Equal(Present(true)) {
+		t.Fatalf("floating equality coercion = %v", got)
+	}
+	if got := EqualValues(Present(int64(1<<53+1)), Present(int64(1<<53))); !got.Equal(Present(false)) {
+		t.Fatalf("large integral equality precision = %v", got)
+	}
+	if Present(int(100)).Equal(Present(int64(100))) {
+		t.Fatal("strict Value.Equal must retain underlying type identity")
+	}
+}
+
 func TestExpressionNullPropagationAndCoalesce(t *testing.T) {
 	value := NullLiteral[string]()
 	if got := Coalesce[string](value, Literal("fallback")).eval(EvalContext{}); !got.Equal(Present("fallback")) {

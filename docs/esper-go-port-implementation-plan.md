@@ -1600,3 +1600,5 @@ method source 的组合矩阵再补两条 Go-native 证据：多个 `FromMethodO
 本轮补齐 Java `EPLJoinUniqueIndex` 的运行时语义对照：`UniqueBy(d2, i2)` 在 Join 被动侧保留每个复合 key 的最新事件，`LastEvent` 与无窗口单向 driver 均可在两流/三流 Join 中按不同条件声明顺序得到同一匹配结果；`TestJoinUniqueIndexRetainsLatestCompositeKeyAcrossDriverVariants` 还覆盖额外等值条件与第三路无条件笛卡尔扩展。Java 的 STATICHOOK 物理索引唯一性断言没有在 Go API 中伪造，物理 query-plan hook、索引选择和性能阈值仍保持 partial。
 
 本轮继续补齐 Java `EPLJoinSelectClause`/`EPLJoinStartStop`：`TestJoinSelectClauseTypesArithmeticAndSnapshotMatchEsper` 验证链式 Join 的字段类型、显式数值提升/除法 projection 和 iterator snapshot；`TestJoinDeployLifecycleResetsWindowStateMatchesEsper` 验证 undeploy 后事件不进入旧语句、重新部署不回放旧窗口且只对当前部署状态 Join。Java 的精确无 view 诊断文本仍未强行映射，保持为 approved difference。
+
+本轮由 Java `EPLJoinCoercion` 对照发现并修复等值数值提升遗漏：表达式级 `EqualValues` 现在对有符号/无符号整数做精确比较，对整数与浮点做数值提升；严格的 `Value.Equal` 仍保留底层类型 identity。`TestJoinRangeAndEqualityCoercionMatchesEsper` 覆盖 int 与 long range 边界、滚动窗口和复合 key，`TestJoinIntegralEqualityCoercionMatchesEsper` 覆盖 long=int Join；`TestExpressionNumericEqualityCoercion` 额外锁定大整数精度和负 signed/unsigned 边界。
