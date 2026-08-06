@@ -1646,7 +1646,7 @@ func validateMethodNodes(node *exprNode) error {
 	if node == nil {
 		return nil
 	}
-	if node.kind == "method" && strings.TrimSpace(node.methodName) == "" {
+	if (node.kind == "method" || node.kind == "duck-method") && strings.TrimSpace(node.methodName) == "" {
 		return NewError(ErrorInvalidRule, "method name is required")
 	}
 	for _, child := range node.children {

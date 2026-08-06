@@ -571,6 +571,18 @@ func Property[T any](object Expr, name string) Expression[T] {
 // expressions visible in the AST. A missing method, incompatible argument or
 // non-nil error return evaluates to Missing.
 func Method[T any](object Expr, name string, arguments ...Expr) Expression[T] {
+	return methodExpression[T]("method", object, name, arguments...)
+}
+
+// DuckMethod invokes an exported Go method on a dynamically typed receiver.
+// Missing methods, missing receivers and incompatible dynamic results become
+// Null, matching Esper's duck-typed dot-method behavior. Use Method when a
+// missing method should remain distinguishable as Missing.
+func DuckMethod[T any](object Expr, name string, arguments ...Expr) Expression[T] {
+	return methodExpression[T]("duck-method", object, name, arguments...)
+}
+
+func methodExpression[T any](kind string, object Expr, name string, arguments ...Expr) Expression[T] {
 	name = strings.TrimSpace(name)
 	children := make([]*exprNode, 0, 1+len(arguments))
 	if object != nil {
@@ -581,31 +593,49 @@ func Method[T any](object Expr, name string, arguments ...Expr) Expression[T] {
 			children = append(children, argument.node())
 		}
 	}
-	description := "method(<invalid>)"
+	description := kind + "(<invalid>)"
 	if object != nil && name != "" {
 		parts := make([]string, 0, len(arguments))
 		for _, argument := range arguments {
 			parts = append(parts, expressionDescription(argument))
 		}
-		description = "method(" + object.Description() + "." + name + "(" + strings.Join(parts, ",") + "))"
+		description = kind + "(" + object.Description() + "." + name + "(" + strings.Join(parts, ",") + "))"
 	}
-	node := &exprNode{kind: "method", typ: typeOf[T](), description: description, methodName: name, children: children}
+	node := &exprNode{kind: kind, typ: typeOf[T](), description: description, methodName: name, children: children}
+	if object == nil || object.node() == nil {
+		node.configurationError = "method receiver is required"
+	} else if name == "" {
+		node.configurationError = "method name is required"
+	}
 	return typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
 		if object == nil || name == "" {
+			if kind == "duck-method" {
+				return Null()
+			}
 			return Missing()
 		}
 		target := object.eval(ctx)
 		if !target.IsPresent() {
+			if kind == "duck-method" {
+				return Null()
+			}
 			return target
 		}
 		values := make([]Value, 0, len(arguments))
 		for _, argument := range arguments {
 			if argument == nil {
+				if kind == "duck-method" {
+					return Null()
+				}
 				return Missing()
 			}
 			values = append(values, argument.eval(ctx))
 		}
-		return invokeMethod[T](target.Any(), name, values)
+		result := invokeMethod[T](target.Any(), name, values)
+		if kind == "duck-method" && result.IsMissing() {
+			return Null()
+		}
+		return result
 	}}
 }
 
