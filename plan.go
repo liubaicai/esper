@@ -26,6 +26,7 @@ type Environment struct {
 	typeToName       map[reflect.Type]string
 	variables        map[string]VariableDefinition
 	aggregatePlugins map[string]aggregatePluginDefinition
+	enumPlugins      map[string]enumPluginDefinition
 	scripts          map[string]scriptDefinition
 	tables           map[string]TableDefinition
 	namedWindows     map[string]NamedWindowDefinition
@@ -41,6 +42,7 @@ func NewEnvironment() *Environment {
 		typeToName:       make(map[reflect.Type]string),
 		variables:        make(map[string]VariableDefinition),
 		aggregatePlugins: make(map[string]aggregatePluginDefinition),
+		enumPlugins:      make(map[string]enumPluginDefinition),
 		scripts:          make(map[string]scriptDefinition),
 		tables:           make(map[string]TableDefinition),
 		namedWindows:     make(map[string]NamedWindowDefinition),
@@ -557,6 +559,19 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	sort.Strings(pluginNames)
 	for _, name := range pluginNames {
 		canonicalParts = append(canonicalParts, fmt.Sprintf("aggregate-plugin(%s:%s:factory=%t)", name, pluginTypes[name], pluginFactoryFlags[name]))
+	}
+	e.mu.RLock()
+	enumPluginNames := make([]string, 0, len(e.enumPlugins))
+	enumPluginDefinitions := make(map[string]enumPluginDefinition, len(e.enumPlugins))
+	for name, definition := range e.enumPlugins {
+		enumPluginNames = append(enumPluginNames, name)
+		enumPluginDefinitions[name] = definition
+	}
+	e.mu.RUnlock()
+	sort.Strings(enumPluginNames)
+	for _, name := range enumPluginNames {
+		definition := enumPluginDefinitions[name]
+		canonicalParts = append(canonicalParts, fmt.Sprintf("enum-plugin(%s:%s:%s)", name, definition.resultType, enumPluginFootprintsCanonical(definition.footprints)))
 	}
 	e.mu.RLock()
 	scriptNames := make([]string, 0, len(e.scripts))
@@ -2128,6 +2143,9 @@ func (e *Environment) validateExprVariables(expression Expr) error {
 		return err
 	}
 	if err := validateEnumExpressionNodes(expression.node()); err != nil {
+		return err
+	}
+	if err := e.validateEnumPluginNodes(expression.node()); err != nil {
 		return err
 	}
 	var variables []string

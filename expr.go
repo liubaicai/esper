@@ -55,6 +55,12 @@ type exprNode struct {
 	// type metadata. It is derived entirely from the typed builder AST and is
 	// never consulted as mutable runtime state.
 	enumMetadata          *EnumMethodMetadata
+	enumPluginName        string
+	enumPluginEnvironment *Environment
+	enumPluginFactory     enumPluginFactory
+	enumPluginReady       bool
+	enumPluginFootprints  []EnumMethodFootprint
+	enumPluginArguments   []enumPluginArgumentMeta
 	configurationError    string
 	expressionName        string
 	expressionEnvironment *Environment
@@ -287,6 +293,12 @@ type EvalContext struct {
 
 	enumAccumulator       Value
 	enumAccumulatorActive bool
+	// enumPluginStateValue is the current state getter visible while a
+	// registered enumeration-plugin lambda evaluates. It models Esper's
+	// EnumMethodLambdaParameterTypeStateGetter without exposing the mutable
+	// plugin state object to ordinary expressions.
+	enumPluginStateValue  Value
+	enumPluginStateActive bool
 	// groupingValues and groupingPresent are populated only while a
 	// dimensional aggregate result is evaluated. They let a grouped key
 	// evaluate to Null at subtotal levels without exposing runtime state to
