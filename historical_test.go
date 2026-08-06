@@ -1101,11 +1101,9 @@ func TestHistoricalAndMethodContextFireAndForgetSupportsDependentMethodSource(t 
 			return nil, fmt.Errorf("dependent Context FAF history row = %#v", dependency.Underlying())
 		}
 		invocations = append(invocations, request.Invocation)
-		symbol, ok := dependency.Get("symbol").Any().(string)
-		if !ok {
-			return nil, fmt.Errorf("dependent Context FAF symbol = %#v", dependency.Underlying())
-		}
-		event, eventErr := newEvent(methodSchema, map[string]any{"symbol": symbol, "sourceValue": value, "result": value + 2}, request.Now)
+		// The subordinate result already belongs to the dependency's Context
+		// partition. A different key must not re-route or discard it.
+		event, eventErr := newEvent(methodSchema, map[string]any{"symbol": "different", "sourceValue": value, "result": value + 2}, request.Now)
 		return []Event{event}, eventErr
 	})).DependingOn("history-dependent-context-faf")
 	query := Join(historical, method, OnEqual(
