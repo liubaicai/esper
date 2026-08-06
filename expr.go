@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -1820,43 +1819,11 @@ func coalesceCastValue[T any](value Value) Value {
 	return castValue[T](Present(source.Interface()))
 }
 func Like(value, pattern Expression[string]) Expression[bool] {
-	return makeExpr[bool]("like", "("+value.Description()+" like "+pattern.Description()+")", []*exprNode{value.node(), pattern.node()}, func(ctx EvalContext) Value {
-		leftValue := value.eval(ctx)
-		patternValue := pattern.eval(ctx)
-		if !leftValue.IsPresent() || !patternValue.IsPresent() {
-			return Null()
-		}
-		left, leftErr := As[string](leftValue)
-		text, patternErr := As[string](patternValue)
-		if leftErr != nil || patternErr != nil {
-			return Null()
-		}
-		compiled, err := regexp.Compile(likePattern(patternToRegexp(text)))
-		if err != nil {
-			return Null()
-		}
-		return Present(compiled.MatchString(left))
-	})
+	return likeExpression("like", value, pattern, nil)
 }
 
 func RegexpMatch(value, pattern Expression[string]) Expression[bool] {
-	return makeExpr[bool]("regexp", "regexp("+value.Description()+","+pattern.Description()+")", []*exprNode{value.node(), pattern.node()}, func(ctx EvalContext) Value {
-		leftValue := value.eval(ctx)
-		patternValue := pattern.eval(ctx)
-		if !leftValue.IsPresent() || !patternValue.IsPresent() {
-			return Null()
-		}
-		left, leftErr := As[string](leftValue)
-		text, patternErr := As[string](patternValue)
-		if leftErr != nil || patternErr != nil {
-			return Null()
-		}
-		compiled, err := regexp.Compile(text)
-		if err != nil {
-			return Null()
-		}
-		return Present(compiled.MatchString(left))
-	})
+	return regexpExpression(value, pattern)
 }
 
 func Lower(value Expression[string]) Expression[string] {
@@ -2287,16 +2254,11 @@ func IfThenElse[T any](condition Expression[bool], whenTrue, whenFalse Expressio
 }
 
 // Cast converts a present expression value to the requested Go type while
-// preserving Missing and Null. Numeric conversions use reflect's checked
-// conversion rules; string-to-number conversions accept the standard decimal
-// representation.
+// preserving Missing and Null. The explicit type parameters make conversion
+// visible in the fluent plan; runtime conversion covers native numerics,
+// booleans, arbitrary-precision numbers, recursive arrays and interfaces.
 func Cast[A, B any](value Expression[A]) Expression[B] {
-	if value == nil {
-		return makeExpr[B]("cast", "cast<invalid>", nil, func(EvalContext) Value { return Null() })
-	}
-	return makeExpr[B]("cast", fmt.Sprintf("cast<%s>(%s)", typeOf[B](), value.Description()), []*exprNode{value.node()}, func(ctx EvalContext) Value {
-		return castValue[B](value.eval(ctx))
-	})
+	return castExpression[A, B](value, "", nil)
 }
 
 // Exists reports whether the expression resolves to an existing property.
@@ -2385,30 +2347,7 @@ func MapValue[T any](values Expr, key Expression[string]) Expression[T] {
 }
 
 func castValue[T any](value Value) Value {
-	if !value.IsPresent() {
-		return value
-	}
-	target := typeOf[T]()
-	source := reflect.ValueOf(value.Any())
-	if source.Type().AssignableTo(target) {
-		return Present(source.Interface())
-	}
-	if source.Type().ConvertibleTo(target) && !(target.Kind() == reflect.String && source.Kind() != reflect.String) {
-		return Present(source.Convert(target).Interface())
-	}
-	if target.Kind() == reflect.String {
-		return Present(fmt.Sprint(value.Any()))
-	}
-	if source.Kind() == reflect.String && isNumericType(target) {
-		parsed, err := strconv.ParseFloat(source.String(), 64)
-		if err == nil {
-			converted := reflect.ValueOf(parsed)
-			if converted.Type().ConvertibleTo(target) {
-				return Present(converted.Convert(target).Interface())
-			}
-		}
-	}
-	return Null()
+	return castValueWithLayout[T](value, "")
 }
 
 func CurrentTime() Expression[time.Time] {

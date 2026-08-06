@@ -141,9 +141,9 @@
       "id": "expr.core",
       "domain": "expression",
       "level": "S",
-      "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, arithmetic/exact numeric operations, scalar min/max, mixed relational comparisons, typed array literals/indexing and ANY/ALL/SOME quantifiers, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates, property presence checks and runtime type names, with ordered branches, null semantics and aggregate-aware evaluation",
-      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreMath", "ExprCoreMathDivisionRules", "ExprCoreBigNumberSupportMathContext", "ExprCoreMinMaxNonAgg", "ExprCoreRelOp", "ExprCoreArray", "ExprCoreArrayAtElement", "ExprCoreAnyAllSome", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
-      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_math.go", "expr_math_test.go", "expr_minmax.go", "expr_minmax_test.go", "expr_relop.go", "expr_relop_test.go", "expr_array.go", "expr_array_test.go", "expr_quantifier.go", "expr_quantifier_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "enum_expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
+      "summary": "Go-native core expressions including searched/simple CASE, coalesce, logical/bitwise operators, arithmetic/exact numeric operations, scalar min/max, mixed relational comparisons, typed casts, typed array literals/indexing, LIKE/REGEXP matching and ANY/ALL/SOME quantifiers, virtual-clock current timestamp, statement evaluation metadata, dynamic type predicates, property presence checks and runtime type names, with ordered branches, null semantics and aggregate-aware evaluation",
+      "javaRefs": ["ExprCoreCase", "TestExprCaseNode", "ExprCoreCoalesce", "ExprCoreBitWiseOperators", "ExprCoreAndOrNot", "ExprCoreMath", "ExprCoreMathDivisionRules", "ExprCoreBigNumberSupportMathContext", "ExprCoreMinMaxNonAgg", "ExprCoreRelOp", "ExprCoreCast", "ExprCoreArray", "ExprCoreArrayAtElement", "ExprCoreLikeRegexp", "ExprCoreAnyAllSome", "ExprCoreCurrentTimestamp", "ExprCoreCurrentEvaluationContext", "ExprCoreInstanceOf", "ExprCoreExists", "ExprCoreTypeOf"],
+      "goRefs": ["expr_case.go", "expr_case_test.go", "expr_coalesce_test.go", "expr_logic_test.go", "expr_math.go", "expr_math_test.go", "expr_minmax.go", "expr_minmax_test.go", "expr_relop.go", "expr_relop_test.go", "expr_array.go", "expr_array_test.go", "expr_like.go", "expr_like_test.go", "expr_cast.go", "expr_cast_test.go", "expr_quantifier.go", "expr_quantifier_test.go", "expr_instanceof_test.go", "expr_exists_test.go", "expr_type_name_test.go", "expr_current_timestamp_test.go", "expr_evaluation_context.go", "expr_evaluation_context_test.go", "expr.go", "enum_expr.go", "runtime.go", "stream.go", "subquery.go", "plan.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["automatic heterogeneous branch-result coercion and complete array/collection representation and parameterized metadata matrix", "complete MathContext/decimal scale and rounding policy, mixed BigDecimal/BigInteger result metadata and division configuration matrix", "complete ANY/ALL/SOME mixed representation, collection typing and invalid-diagnostic matrix", "SODA/model and EPL compile-path equivalents (Go intentionally exposes builders only)", "complete ExprCore expression-family matrix and shared Java/Go trace parity"]
@@ -974,14 +974,13 @@
     },
     {
       "id": "case.expr-core-exists-cast",
-      "javaRuntimeIds": ["java-runtime-d77c035088ce635538c7", "java-runtime-4202039fb2f1ea65fd49", "java-runtime-8fa7f5076dde9d791d08", "java-runtime-afd826c7d955eb538001"],
-      "javaNames": ["ExprCoreExistsSimple", "ExprCoreExistsInner", "ExprCoreCastDoubleAndNullOM", "ExprCoreCastStringAndNullCompile"],
-      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreExists.java"],
-      "goTests": ["TestExistsExpressionsMatchDynamicPropertyPresenceAndNullSemantics", "TestExpressionCastExistenceTypeAndArrayAccess"],
+      "javaRuntimeIds": ["java-runtime-d77c035088ce635538c7", "java-runtime-4202039fb2f1ea65fd49", "java-runtime-8fa7f5076dde9d791d08", "java-runtime-afd826c7d955eb538001", "java-runtime-2ee2b8ab1bf9bb2c4e90", "java-runtime-3fc2cde530f321dc3994", "java-runtime-5c9fdd17b5480f9d78e2", "java-runtime-52fb8d57dd380f5efe6e", "java-runtime-45b9d5a2e216f8063b75", "java-runtime-2012a048edc6511a33e0", "java-runtime-9957cb6d9cd9ea836d4d", "java-runtime-0b91403db9a899efde99", "java-runtime-9babbbb6f96faf389bb7", "java-runtime-53d0455ef4e377c9c2f9", "java-runtime-58852773df609efe7d69", "java-runtime-2fcd2094aaf18ca4ce03", "java-runtime-f44847213060b8eb3949"],
+      "javaNames": ["ExprCoreExistsSimple", "ExprCoreExistsInner", "ExprCoreCastDoubleAndNullOM", "ExprCoreCastStringAndNullCompile", "ExprCoreCastDates", "ExprCoreCastSimple", "ExprCoreCastSimpleMoreTypes", "ExprCoreCastAsParse", "ExprCoreCastDoubleAndNullOM", "ExprCoreCastInterface", "ExprCoreCastStringAndNullCompile", "ExprCoreCastBoolean", "ExprCoreCastWStaticType", "ExprCoreCastWArray{soda=false}", "ExprCoreCastWArray{soda=true}", "ExprCoreCastGeneric", "ExprCoreCastBigDecimalBigInt"],
+      "goTests": ["TestExistsExpressionsMatchDynamicPropertyPresenceAndNullSemantics", "TestExpressionCastExistenceTypeAndArrayAccess", "TestCastExpressionsMatchJavaNumericBooleanBigNumberAndDateSemantics", "TestCastExpressionsBuildLiveProjectionAndPlanIdentity", "TestCastExpressionsRejectInvalidBuilders"],
       "tags": ["correctness", "expression", "exists", "cast", "dynamic", "nested", "mapped", "null", "missing", "plan-identity"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
-      "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not) and Cast[A,B] for typed numeric/string conversion; the mapped-schema test covers dynamic, nested and missing property paths in a live fluent projection. Java EPL optional-property syntax, SODA/compile text paths and exact dynamic getter/diagnostic metadata remain outside the Go builder."
+      "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not) and Cast[A,B] for typed conversion. Cast now also supports checked native numeric/boolean/rune conversion, big.Int/big.Rat, recursive arrays/slices, time.Time from RFC3339/custom or dynamic layouts, epoch milliseconds, duration and stable string formatting through CastWithLayout/CastWithFormat; live projections retain typed result metadata and plan identity. Java EPL optional-property/cast syntax, SODA/compile text paths, exact date parser/diagnostic behavior and the remaining full Java type matrix remain outside the fluent builder."
     },
     {
       "id": "case.expr-core-type-name",
@@ -1048,6 +1047,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
       "difference": "Go exposes ArrayOf/ArrayLiteral with an explicit element type, ArrayAt/ArrayElementAt for slices and fixed arrays with integer expressions, and ArraySize/ArrayLength for analyzable collection cardinality. The slice preserves order, explicit numeric conversion, nested arrays, nullable pointer/interface elements, Null/Missing/out-of-range behavior, typed result metadata and Plan identity; Build rejects nil elements, incompatible element/index types and scalar operands. Java EPL/SODA/compile syntax, compiler-inferred heterogeneous array component types, Avro array materialization, static method/UDF array returns, bean/variable property-path discovery and exact representation/diagnostic traces remain partial."
+    },
+    {
+      "id": "case.expr-core-like-regexp",
+      "javaRuntimeIds": ["java-runtime-376f347aa8fc8367fcbc", "java-runtime-09f15b6eb39cbee59b0d", "java-runtime-7dc8b98263cf5e9e4c3f", "java-runtime-8a8794063a0b9c4bfd0e", "java-runtime-60166384d3cbd527efa0", "java-runtime-44ab08dca1ed4ef65e75", "java-runtime-f1beed3a6851e74bdf1d", "java-runtime-7a8b1456c812bc2e7642", "java-runtime-0105c4531177003d173e", "java-runtime-90290c5c76ad71f74e9c"],
+      "javaNames": ["ExprCoreLikeWConstants", "ExprCoreLikeWExprs", "ExprCoreRegexpWConstants", "ExprCoreRegexpWExprs", "ExprCoreLikeRegexStringAndNull", "ExprCoreLikeRegExInvalid", "ExprCoreLikeRegexEscapedChar", "ExprCoreLikeRegexStringAndNullOM", "ExprCoreRegexStringAndNullCompile", "ExprCoreLikeRegexNumericAndNull"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreLikeRegexp.java"],
+      "goTests": ["TestLikeAndRegexpExpressionsMatchJavaWildcardNumericEscapeAndNullSemantics", "TestLikeAndRegexpExpressionsBuildLiveProjectionAndPlanIdentity", "TestLikeAndRegexpExpressionsRejectInvalidBuilders"],
+      "tags": ["correctness", "expression", "like", "regexp", "escape", "numeric-coercion", "null", "invalid", "plan-identity"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-source", "java-junit", "go-unit"],
+      "difference": "Go preserves the existing typed Like/RegexpMatch API and adds LikeOf, LikeWithEscape, LikeOfWithEscape and RegexpMatchOf for string/numeric/dynamic operands. LIKE uses full-string wildcard matching with a single-rune escape, REGEXP uses Go's RE2-compatible syntax, numeric values use Java-style text formatting, Null/invalid patterns return Null, and Build rejects bool/non-text-compatible operands and null escape literals. Java EPL/SODA/compile paths, exact Java regex engine diagnostics, locale/collation/Unicode behavior and broader parser type inference remain partial."
     },
     {
       "id": "case.expr-script-provider",
@@ -1856,6 +1866,7 @@
     {"capabilityId": "expr.core", "caseId": "case.expr-core-any-all-some"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-relop"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-array"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-core-like-regexp"},
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
