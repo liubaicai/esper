@@ -3055,7 +3055,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		s.runtime.partitions = make(map[string]*statementRuntime)
 	}
 
-	startMatches := advanceContextPattern(&s.runtime.contextStartPatternState, definition.startPattern, event, now, variables, nil, nil, s.engine.env)
+	startMatches := advanceContextPattern(&s.runtime.contextStartPatternState, definition.startPattern, event, now, variables, nil, nil, s.engine.env, &s.runtime, "start")
 	for _, match := range startMatches {
 		if !definition.initiatedOverlapping && len(s.runtime.partitions) > 0 {
 			continue
@@ -3116,6 +3116,8 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 				partition.contextPatternTags,
 				partition.contextPatternTagValues,
 				s.engine.env,
+				partition,
+				"end",
 			)
 			if len(matches) == 0 {
 				continue
@@ -3200,7 +3202,7 @@ func applyContextPatternProperties(runtime *statementRuntime, tags map[string]Ev
 	}
 }
 
-func advanceContextPattern(state **patternRuntimeState, definition *patternDefinition, event Event, now time.Time, variables map[string]Value, seedTags map[string]Event, seedTagValues map[string][]Event, env *Environment) []patternMatch {
+func advanceContextPattern(state **patternRuntimeState, definition *patternDefinition, event Event, now time.Time, variables map[string]Value, seedTags map[string]Event, seedTagValues map[string][]Event, env *Environment, runtime *statementRuntime, phase string) []patternMatch {
 	if state == nil || definition == nil || definition.root == nil {
 		return nil
 	}
@@ -3278,7 +3280,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if transition.complete {
 				completedAny = true
 				completed = append(completed, candidate)
-				if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
+				if patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternProgressTerminal(transition.state) {
@@ -3289,7 +3291,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if patternProgressTerminal(transition.state) {
 				terminal = true
 			}
-			if patternProgressActive(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
+			if patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
@@ -3318,13 +3320,13 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if transition.complete {
 				completedAny = true
 				completed = append(completed, started)
-				if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, started, definition) {
+				if patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, started, definition) {
 					nextActive = append(nextActive, started)
 				}
 				if patternProgressTerminal(transition.state) {
 					terminal = true
 				}
-			} else if patternMatchWithinLimits(nextActive, started, definition) {
+			} else if admitContextPatternMatch(runtime, phase, nextActive, started, definition) {
 				nextActive = append(nextActive, started)
 				if patternProgressTerminal(transition.state) {
 					terminal = true
@@ -3418,7 +3420,7 @@ func initializeContextPatternTimer(state **patternRuntimeState, definition *patt
 	return true
 }
 
-func advanceContextPatternCompositeTime(state **patternRuntimeState, definition *patternDefinition, now time.Time, variables map[string]Value, seedTags map[string]Event, seedTagValues map[string][]Event) []patternMatch {
+func advanceContextPatternCompositeTime(state **patternRuntimeState, definition *patternDefinition, now time.Time, variables map[string]Value, seedTags map[string]Event, seedTagValues map[string][]Event, runtime *statementRuntime, phase string) []patternMatch {
 	runtimeState := *state
 	if runtimeState.patternStopped {
 		return nil
@@ -3445,7 +3447,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 			}
 			if transition.complete {
 				completed = append(completed, candidate)
-				if patternCanContinueAfterMatch(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
+				if patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternProgressTerminal(transition.state) {
@@ -3457,7 +3459,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 					progress.tagValues = clonePatternTagValues(seedTagValues)
 					armPatternProgressTimers(progress, now, variables)
 					candidate := patternMatch{state: progress, startedAt: now}
-					if patternProgressActive(progress) && patternMatchWithinLimits(nextActive, candidate, definition) {
+					if patternProgressActive(progress) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
 						nextActive = append(nextActive, candidate)
 					}
 				}
@@ -3466,7 +3468,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 			if patternProgressTerminal(transition.state) {
 				terminal = true
 			}
-			if patternProgressActive(transition.state) && patternMatchWithinLimits(nextActive, candidate, definition) {
+			if patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
@@ -3478,7 +3480,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 	return completed
 }
 
-func advanceContextPatternTime(state **patternRuntimeState, definition *patternDefinition, now time.Time, variables map[string]Value, seedTags map[string]Event, seedTagValues map[string][]Event) []patternMatch {
+func advanceContextPatternTime(state **patternRuntimeState, definition *patternDefinition, now time.Time, variables map[string]Value, seedTags map[string]Event, seedTagValues map[string][]Event, runtime *statementRuntime, phase string) []patternMatch {
 	if state == nil || definition == nil || definition.root == nil || (!patternContainsTimer(definition.root) && definition.within <= 0 && patternDistinctExpiry(definition) <= 0) {
 		return nil
 	}
@@ -3506,7 +3508,7 @@ func advanceContextPatternTime(state **patternRuntimeState, definition *patternD
 		return nil
 	}
 	if !isPatternTimerRoot(definition) {
-		return advanceContextPatternCompositeTime(state, definition, now, variables, seedTags, seedTagValues)
+		return advanceContextPatternCompositeTime(state, definition, now, variables, seedTags, seedTagValues, runtime, phase)
 	}
 	runtimeState := *state
 	root := definition.root
@@ -3596,7 +3598,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 	if s.runtime.partitions == nil {
 		s.runtime.partitions = make(map[string]*statementRuntime)
 	}
-	for _, match := range advanceContextPatternTime(&s.runtime.contextStartPatternState, definition.startPattern, now, variables, nil, nil) {
+	for _, match := range advanceContextPatternTime(&s.runtime.contextStartPatternState, definition.startPattern, now, variables, nil, nil, &s.runtime, "start") {
 		if !definition.initiatedOverlapping && len(s.runtime.partitions) > 0 {
 			continue
 		}
@@ -3641,7 +3643,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		}
 		partitionVariables := partition.withContextVariables(variablesWithEngine(variables, s.engine))
 		partitionVariables = partition.withContextProperties(partitionVariables)
-		matches := advanceContextPatternTime(&partition.contextEndPatternState, definition.endPattern, now, partitionVariables, partition.contextPatternTags, partition.contextPatternTagValues)
+		matches := advanceContextPatternTime(&partition.contextEndPatternState, definition.endPattern, now, partitionVariables, partition.contextPatternTags, partition.contextPatternTagValues, partition, "end")
 		if len(matches) == 0 {
 			continue
 		}
@@ -7482,19 +7484,41 @@ func patternMatchLimit(active []patternMatch, candidate patternMatch, definition
 }
 
 func (r *statementRuntime) admitPatternMatch(active []patternMatch, candidate patternMatch, definition *patternDefinition) bool {
+	return r.admitPatternMatchForContext(active, candidate, definition, "")
+}
+
+func (r *statementRuntime) admitPatternMatchForContext(active []patternMatch, candidate patternMatch, definition *patternDefinition, phase string) bool {
 	allowed, violation := patternMatchLimit(active, candidate, definition)
 	if allowed || violation == nil || r == nil || r.engine == nil {
 		return allowed
 	}
 	deploymentID, statementName, _ := strings.Cut(r.rowRecogOwner, ":")
+	contextName := r.partitionContextName
+	partitionID := -1
+	if contextName == "" {
+		contextName = r.query.contextName
+	} else {
+		partitionID = r.partitionID
+	}
 	r.engine.queuePatternSubexpressionLimitLocked(PatternSubexpressionLimitEvent{
 		DeploymentID:  deploymentID,
 		StatementName: statementName,
 		Edge:          violation.edge,
 		Maximum:       violation.maximum,
 		Attempted:     violation.attempted,
+		ContextName:   contextName,
+		ContextPhase:  phase,
+		PartitionKey:  r.partitionKey,
+		PartitionID:   partitionID,
 	})
 	return false
+}
+
+func admitContextPatternMatch(runtime *statementRuntime, phase string, active []patternMatch, candidate patternMatch, definition *patternDefinition) bool {
+	if runtime == nil {
+		return patternMatchWithinLimits(active, candidate, definition)
+	}
+	return runtime.admitPatternMatchForContext(active, candidate, definition, phase)
 }
 
 type patternSequenceMaxCount struct {

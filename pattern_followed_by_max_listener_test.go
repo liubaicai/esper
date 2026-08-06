@@ -141,3 +141,109 @@ func TestPatternSubexpressionLimitListenerRejectsNil(t *testing.T) {
 		t.Fatalf("nil function pattern limit listener error = %v", err)
 	}
 }
+
+func TestPatternContextFollowedByMaxReportsStartAndEndOwnership(t *testing.T) {
+	t.Run("start", func(t *testing.T) {
+		env, engine := newRuntimeTest(t)
+		base := From[runtimeTestTrade](env, "Trade")
+		symbol := func(prefix string) Expression[bool] {
+			return StartsWith(Field[runtimeTestTrade, string]("symbol"), Literal(prefix))
+		}
+		start := PatternFrom(base, "a", symbol("A")).Every().FollowedByMax(2, "b", symbol("B"))
+		if _, err := CreatePatternInitiatedContext(env, "pattern-limit-start-context", start); err != nil {
+			t.Fatal(err)
+		}
+		plan, err := env.Build(FromAny(env, "Trade").Query(
+			StatementName("pattern-limit-start-statement"),
+			WithContext("pattern-limit-start-context"),
+		))
+		if err != nil {
+			t.Fatal(err)
+		}
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer deployment.Undeploy(context.Background())
+		listener := &recordingPatternLimitListener{engine: engine}
+		if err := engine.AddPatternSubexpressionLimitListener(listener); err != nil {
+			t.Fatal(err)
+		}
+		for _, event := range []runtimeTestTrade{{Symbol: "A1"}, {Symbol: "A2"}, {Symbol: "A3"}} {
+			if err := engine.SendEvent(context.Background(), event); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if len(listener.events) != 1 {
+			t.Fatalf("context start limit events = %#v", listener.events)
+		}
+		event := listener.events[0]
+		if event.DeploymentID != deployment.ID() || event.StatementName != "pattern-limit-start-statement" ||
+			event.ContextName != "pattern-limit-start-context" || event.ContextPhase != "start" ||
+			event.PartitionKey != "" || event.PartitionID != -1 || event.Maximum != 2 || event.Attempted != 3 {
+			t.Fatalf("context start limit ownership = %#v", event)
+		}
+	})
+
+	t.Run("end", func(t *testing.T) {
+		env, engine := newRuntimeTest(t)
+		base := From[runtimeTestTrade](env, "Trade")
+		symbol := func(prefix string) Expression[bool] {
+			return StartsWith(Field[runtimeTestTrade, string]("symbol"), Literal(prefix))
+		}
+		start := PatternFrom(base, "s", symbol("S"))
+		end := PatternFrom(base, "e", symbol("E")).Every().FollowedByMax(2, "t", symbol("T"))
+		if _, err := CreateOverlappingPatternInitiatedTerminatedContext(env, "pattern-limit-end-context", start, end); err != nil {
+			t.Fatal(err)
+		}
+		plan, err := env.Build(FromAny(env, "Trade").Query(
+			StatementName("pattern-limit-end-statement"),
+			WithContext("pattern-limit-end-context"),
+		))
+		if err != nil {
+			t.Fatal(err)
+		}
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer deployment.Undeploy(context.Background())
+		listener := &recordingPatternLimitListener{engine: engine}
+		if err := engine.AddPatternSubexpressionLimitListener(listener); err != nil {
+			t.Fatal(err)
+		}
+		for _, event := range []runtimeTestTrade{{Symbol: "S1"}, {Symbol: "S2"}} {
+			if err := engine.SendEvent(context.Background(), event); err != nil {
+				t.Fatal(err)
+			}
+		}
+		descriptors, err := engine.ContextPartitionDescriptors("pattern-limit-end-context", ContextPartitionSelectorAll{})
+		if err != nil || len(descriptors) != 2 {
+			t.Fatalf("context end descriptors = %#v, error = %v", descriptors, err)
+		}
+		for _, event := range []runtimeTestTrade{{Symbol: "E1"}, {Symbol: "E2"}, {Symbol: "E3"}} {
+			if err := engine.SendEvent(context.Background(), event); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if len(listener.events) != 2 {
+			t.Fatalf("context end limit events = %#v", listener.events)
+		}
+		partitions := make(map[string]int, len(descriptors))
+		for _, descriptor := range descriptors {
+			partitions[descriptor.Key] = descriptor.ID
+		}
+		for _, event := range listener.events {
+			partitionID, exists := partitions[event.PartitionKey]
+			if !exists || event.PartitionID != partitionID || event.DeploymentID != deployment.ID() ||
+				event.StatementName != "pattern-limit-end-statement" || event.ContextName != "pattern-limit-end-context" ||
+				event.ContextPhase != "end" || event.Maximum != 2 || event.Attempted != 3 {
+				t.Fatalf("context end limit ownership = %#v, descriptors = %#v", event, descriptors)
+			}
+			delete(partitions, event.PartitionKey)
+		}
+		if len(partitions) != 0 {
+			t.Fatalf("context end diagnostics missed partitions %#v", partitions)
+		}
+	})
+}

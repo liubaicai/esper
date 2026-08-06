@@ -12,6 +12,10 @@ type PatternSubexpressionLimitEvent struct {
 	Edge          string
 	Maximum       int
 	Attempted     int
+	ContextName   string
+	ContextPhase  string
+	PartitionKey  string
+	PartitionID   int
 }
 
 // PatternSubexpressionLimitListener observes FollowedByMax rejections.
@@ -115,7 +119,8 @@ func (e *Engine) queuePatternSubexpressionLimitLocked(event PatternSubexpression
 		return
 	}
 	for index, pending := range e.pendingPatternSubexpressionLimits {
-		if pending.DeploymentID != event.DeploymentID || pending.StatementName != event.StatementName || pending.Edge != event.Edge || pending.Maximum != event.Maximum {
+		if pending.DeploymentID != event.DeploymentID || pending.StatementName != event.StatementName || pending.Edge != event.Edge || pending.Maximum != event.Maximum ||
+			pending.ContextName != event.ContextName || pending.ContextPhase != event.ContextPhase || pending.PartitionKey != event.PartitionKey || pending.PartitionID != event.PartitionID {
 			continue
 		}
 		if event.Attempted > pending.Attempted {
