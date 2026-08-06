@@ -51,6 +51,10 @@ type exprNode struct {
 	enumInputRequired     bool
 	enumParameterRequired bool
 	enumInvalidReason     string
+	// enumMetadata mirrors Esper's enumeration method footprint and component
+	// type metadata. It is derived entirely from the typed builder AST and is
+	// never consulted as mutable runtime state.
+	enumMetadata          *EnumMethodMetadata
 	configurationError    string
 	expressionName        string
 	expressionEnvironment *Environment
@@ -2441,8 +2445,15 @@ func makeBinaryBool(kind, description string, left, right Expr, operation func(V
 // explicit rather than an opaque callback hidden inside a rule, so the Plan
 // retains a stable UDF node while the returned collection remains chainable.
 func Func0[T any](name string, function func() T) Expression[T] {
-	description := name + "()"
-	return makeExpr[T]("udf", description, nil, func(EvalContext) Value {
+	description := strings.TrimSpace(name) + "()"
+	configurationError := ""
+	if strings.TrimSpace(name) == "" {
+		configurationError = "udf function name is required"
+	} else if function == nil {
+		configurationError = fmt.Sprintf("udf %q requires a function", name)
+	}
+	return makeUDFExpr[T](description, nil, configurationError, func(EvalContext) (result Value) {
+		defer recoverUDF(&result)
 		if function == nil {
 			return Null()
 		}
@@ -2454,13 +2465,8 @@ func Func0[T any](name string, function func() T) Expression[T] {
 // explicit top-level UDF instead of an opaque field callback, so the Plan can
 // retain its stable name and dependency metadata.
 func Func1[A, B any](name string, function func(A) B, argument Expression[A]) Expression[B] {
-	description := name + "(<nil>)"
-	var children []*exprNode
-	if argument != nil {
-		description = name + "(" + argument.Description() + ")"
-		children = []*exprNode{argument.node()}
-	}
-	return makeExpr[B]("udf", description, children, func(ctx EvalContext) Value {
+	return makeUDFExpr[B](udfDescription(name, argument), udfChildren(argument), udfConfiguration(name, function == nil, argument == nil), func(ctx EvalContext) (result Value) {
+		defer recoverUDF(&result)
 		if function == nil || argument == nil {
 			return Null()
 		}
@@ -2480,13 +2486,9 @@ func Func1[A, B any](name string, function func(A) B, argument Expression[A]) Ex
 // expressions in the analyzable plan. It is useful for collection-producing
 // UDFs whose range, limit, or lookup key is supplied by a rule expression.
 func Func2[A, B, C any](name string, function func(A, B) C, first Expression[A], second Expression[B]) Expression[C] {
-	description := name + "(<nil>,<nil>)"
-	children := make([]*exprNode, 0, 2)
-	if first != nil && second != nil {
-		description = name + "(" + first.Description() + "," + second.Description() + ")"
-		children = []*exprNode{first.node(), second.node()}
-	}
-	return makeExpr[C]("udf", description, children, func(ctx EvalContext) Value {
+	children := udfChildren(first, second)
+	return makeUDFExpr[C](udfDescription(name, first, second), children, udfConfiguration(name, function == nil, first == nil, second == nil), func(ctx EvalContext) (result Value) {
+		defer recoverUDF(&result)
 		if function == nil || first == nil || second == nil {
 			return Null()
 		}
@@ -2505,6 +2507,118 @@ func Func2[A, B, C any](name string, function func(A, B) C, first Expression[A],
 		}
 		return Present(function(firstArgument, secondArgument))
 	})
+}
+
+// Func3 registers a named ternary function. It fills the same explicit UDF
+// role as Func0/Func1/Func2 while covering the common Java static-method
+// footprint used by range, lookup and collection-producing helpers.
+func Func3[A, B, C, D any](name string, function func(A, B, C) D, first Expression[A], second Expression[B], third Expression[C]) Expression[D] {
+	children := udfChildren(first, second, third)
+	return makeUDFExpr[D](udfDescription(name, first, second, third), children, udfConfiguration(name, function == nil, first == nil, second == nil, third == nil), func(ctx EvalContext) (result Value) {
+		defer recoverUDF(&result)
+		if function == nil || first == nil || second == nil || third == nil {
+			return Null()
+		}
+		firstValue, secondValue, thirdValue := first.eval(ctx), second.eval(ctx), third.eval(ctx)
+		if !firstValue.IsPresent() || !secondValue.IsPresent() || !thirdValue.IsPresent() {
+			return Null()
+		}
+		firstArgument, err := As[A](firstValue)
+		if err != nil {
+			return Null()
+		}
+		secondArgument, err := As[B](secondValue)
+		if err != nil {
+			return Null()
+		}
+		thirdArgument, err := As[C](thirdValue)
+		if err != nil {
+			return Null()
+		}
+		return Present(function(firstArgument, secondArgument, thirdArgument))
+	})
+}
+
+// Func4 registers a named four-argument function and retains every argument
+// in the analyzable expression tree.
+func Func4[A, B, C, D, E any](name string, function func(A, B, C, D) E, first Expression[A], second Expression[B], third Expression[C], fourth Expression[D]) Expression[E] {
+	children := udfChildren(first, second, third, fourth)
+	return makeUDFExpr[E](udfDescription(name, first, second, third, fourth), children, udfConfiguration(name, function == nil, first == nil, second == nil, third == nil, fourth == nil), func(ctx EvalContext) (result Value) {
+		defer recoverUDF(&result)
+		if function == nil || first == nil || second == nil || third == nil || fourth == nil {
+			return Null()
+		}
+		firstValue, secondValue, thirdValue, fourthValue := first.eval(ctx), second.eval(ctx), third.eval(ctx), fourth.eval(ctx)
+		if !firstValue.IsPresent() || !secondValue.IsPresent() || !thirdValue.IsPresent() || !fourthValue.IsPresent() {
+			return Null()
+		}
+		firstArgument, err := As[A](firstValue)
+		if err != nil {
+			return Null()
+		}
+		secondArgument, err := As[B](secondValue)
+		if err != nil {
+			return Null()
+		}
+		thirdArgument, err := As[C](thirdValue)
+		if err != nil {
+			return Null()
+		}
+		fourthArgument, err := As[D](fourthValue)
+		if err != nil {
+			return Null()
+		}
+		return Present(function(firstArgument, secondArgument, thirdArgument, fourthArgument))
+	})
+}
+
+func makeUDFExpr[T any](description string, children []*exprNode, configurationError string, fn func(EvalContext) Value) Expression[T] {
+	expression := makeExpr[T]("udf", description, children, fn)
+	expression.node().configurationError = configurationError
+	return expression
+}
+
+func udfChildren(arguments ...Expr) []*exprNode {
+	children := make([]*exprNode, len(arguments))
+	for index, argument := range arguments {
+		if argument != nil {
+			children[index] = argument.node()
+		}
+	}
+	return children
+}
+
+func udfDescription(name string, arguments ...Expr) string {
+	parts := make([]string, len(arguments))
+	for index, argument := range arguments {
+		if argument == nil {
+			parts[index] = "<nil>"
+		} else {
+			parts[index] = argument.Description()
+		}
+	}
+	return strings.TrimSpace(name) + "(" + strings.Join(parts, ",") + ")"
+}
+
+func udfConfiguration(name string, functionMissing bool, argumentsMissing ...bool) string {
+	if strings.TrimSpace(name) == "" {
+		return "udf function name is required"
+	}
+	if functionMissing {
+		return fmt.Sprintf("udf %q requires a function", name)
+	}
+	for index, missing := range argumentsMissing {
+		if missing {
+			return fmt.Sprintf("udf %q argument %d is required", name, index)
+		}
+	}
+	return ""
+}
+
+func recoverUDF(result *Value) {
+	if recover() != nil {
+		*result = Null()
+	}
 }
 
 // AggregateExpression is evaluated over EvalContext.Group by an aggregate

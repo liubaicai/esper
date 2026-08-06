@@ -132,10 +132,10 @@
       "level": "S",
       "summary": "Analyzable chained collection and enumeration expressions",
       "javaRefs": ["ExprEnumAggregate", "ExprEnumSelectFrom", "ExprEnumExceptIntersectUnion"],
-      "goRefs": ["enum_expr.go", "enum_expr_test.go", "enum_select_from_test.go", "enum_table_source_test.go", "enum_access_aggregate_source_test.go", "enum_method_nested_source_test.go"],
+      "goRefs": ["enum_expr.go", "enum_expr_test.go", "expr.go", "enum_select_from_test.go", "enum_table_source_test.go", "enum_access_aggregate_source_test.go", "enum_method_nested_source_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["complete Java method-footprint and type matrix", "Java collection metadata and generic component descriptors", "complete invalid-rule diagnostics and Java error-text parity", "nested/subquery/access-aggregate/UDF source matrix"]
+      "remaining": ["complete Java method-footprint validation and type matrix, including plug-in enumeration methods", "generic component descriptors for dynamic/representation-backed collections", "complete invalid-rule diagnostics and Java error-text parity", "nested/subquery/access-aggregate/UDF/Context/Pattern source matrix"]
     },
     {
       "id": "expr.core",
@@ -157,7 +157,7 @@
       "goRefs": ["expression_definition.go", "expression_definition_test.go", "expr.go", "plan.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["Map-backed event parameters and full subquery/pattern/context multi-row parameter matrix", "overload/name-collision rules", "module/deployment visibility and lifecycle replacement", "complete iterator/cardinality/fragment/context/pattern/Dataflow combinations", "full Java invalid-rule and shared trace parity"]
+      "remaining": ["Map-backed event parameter combinations beyond the mapped pattern/subquery cases and the full subquery/pattern/context multi-row matrix", "overload/name-collision rules", "module/deployment visibility and lifecycle replacement", "complete iterator/cardinality/fragment/context/pattern/Dataflow combinations", "full Java invalid-rule and shared trace parity"]
     },
     {
       "id": "expr.script",
@@ -897,14 +897,14 @@
     },
     {
       "id": "case.expr-declared",
-      "javaRuntimeIds": ["java-runtime-fe88aa9f7b78478355ae", "java-runtime-11c39858b2fb936c60bb", "java-runtime-48b280bc6b857cf5fa3a", "java-runtime-b787900abf907e4d27c7", "java-runtime-c80bac042daa8019b9f3", "java-runtime-9916c8da4f513eb522c1", "java-runtime-e13d8266311bca7fc491"],
-      "javaNames": ["EPLSubselectMultirowGroupedUncorrelatedIteratorAndExpressionDef", "ExprDefineValueParameterV", "ExprDefineValueParameterInvalid", "ExprDefineValueParameterEV", "ExprDefineValueParameterVEVE", "ExprDefineEventParamPatternPOJO", "ExprDefineEventParamSubqueryPOJO"],
+      "javaRuntimeIds": ["java-runtime-fe88aa9f7b78478355ae", "java-runtime-11c39858b2fb936c60bb", "java-runtime-48b280bc6b857cf5fa3a", "java-runtime-b787900abf907e4d27c7", "java-runtime-c80bac042daa8019b9f3", "java-runtime-9916c8da4f513eb522c1", "java-runtime-e13d8266311bca7fc491", "java-runtime-f99da8bbca4256d388b7", "java-runtime-9159bf72b2622a56931f"],
+      "javaNames": ["EPLSubselectMultirowGroupedUncorrelatedIteratorAndExpressionDef", "ExprDefineValueParameterV", "ExprDefineValueParameterInvalid", "ExprDefineValueParameterEV", "ExprDefineValueParameterVEVE", "ExprDefineEventParamPatternPOJO", "ExprDefineEventParamSubqueryPOJO", "ExprDefineEventParamPatternMap", "ExprDefineEventParamSubqueryMap"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedMultirowAndColumn.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineValueParameter.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineEventParameterNonStream.java"],
-      "goTests": ["TestNamedExpressionReferenceEvaluatesAndEntersPlanIdentity", "TestNamedExpressionReferenceRejectsInvalidDependencies", "TestNamedExpressionGroupedSubquerySnapshotAndEnumChainMatchEsper", "TestParameterizedNamedExpressionReferenceMatchesJavaValueParameterSemantics", "TestParameterizedNamedExpressionReferenceRejectsArityAndTypeMismatch", "TestParameterizedNamedExpressionReferenceSupportsEventValueParameters", "TestParameterizedNamedExpressionReferenceSupportsJoinedEventValues", "TestParameterizedNamedExpressionReferenceSupportsPatternEventValues", "TestParameterizedNamedExpressionReferenceSupportsSubqueryEventValues"],
+      "goTests": ["TestNamedExpressionReferenceEvaluatesAndEntersPlanIdentity", "TestNamedExpressionReferenceRejectsInvalidDependencies", "TestNamedExpressionGroupedSubquerySnapshotAndEnumChainMatchEsper", "TestParameterizedNamedExpressionReferenceMatchesJavaValueParameterSemantics", "TestParameterizedNamedExpressionReferenceRejectsArityAndTypeMismatch", "TestParameterizedNamedExpressionReferenceSupportsEventValueParameters", "TestParameterizedNamedExpressionReferenceSupportsJoinedEventValues", "TestParameterizedNamedExpressionReferenceSupportsPatternEventValues", "TestParameterizedNamedExpressionReferenceSupportsSubqueryEventValues", "TestParameterizedNamedExpressionReferenceSupportsMapPatternEventValues", "TestParameterizedNamedExpressionReferenceSupportsMapSubqueryEventValues"],
       "tags": ["correctness", "expression", "declared-expression", "event-parameter", "subquery", "pattern", "named-window", "enum", "dependency", "plan-identity"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "Go exposes typed DefineExpression[T] plus ExpressionParam[T]/variadic ExpressionRef[T] nodes instead of EPL create-expression syntax. Value and typed Event parameters substitute at runtime while preserving the caller event, Join tuple, Pattern capture, LastEvent subquery, variables, prepared parameters, aggregate state and Engine snapshot; nested calls, inferred declaration order, arity/type diagnostics and parameter metadata in Plan canonical/hash are covered. Map-backed event parameters, the broader multi-row subquery/Pattern/Context matrix, overload/module visibility, lifecycle replacement and the complete Java iterator/cardinality/fragment trace remain open."
+      "difference": "Go exposes typed DefineExpression[T] plus ExpressionParam[T]/variadic ExpressionRef[T] nodes instead of EPL create-expression syntax. Value and typed Event parameters substitute at runtime while preserving the caller event, Join tuple, Pattern capture, LastEvent subquery, variables, prepared parameters, aggregate state and Engine snapshot; nested calls, inferred declaration order, arity/type diagnostics and parameter metadata in Plan canonical/hash are covered. Map-backed Event parameters now have direct Pattern and LastEvent-subquery parity cases; the broader multi-row subquery/Pattern/Context matrix, overload/module visibility, lifecycle replacement and the complete Java iterator/cardinality/fragment trace remain open."
     },
     {
       "id": "case.expr-core-bitwise",
@@ -1200,7 +1200,7 @@
       "tags": ["correctness", "expression", "enum", "collection", "iterator"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "The Go EnumCollect API normalizes arrays, slices, iter.Seq, maps.Values-backed sources and explicit pull iterators into []T without inventing map order. Table-backed WindowAccessValue rows can be unwrapped through the typed Values method, WindowValues access aggregates can be consumed by EnumAnyOf/EnumAllOf, and Method/Property can feed nested enumeration chains, matching the Java table-row, window(*) and nested method/property source traces. Java additionally exposes collection generic/component metadata and covers UDF/subquery sources in the same execution, which remain open."
+      "difference": "The Go EnumCollect API normalizes arrays, slices, iter.Seq, maps.Values-backed sources and explicit pull iterators into []T without inventing map order. Table-backed WindowAccessValue rows can be unwrapped through the typed Values method, WindowValues access aggregates can be consumed by EnumAnyOf/EnumAllOf, and Method/Property can feed nested enumeration chains, matching the Java table-row, window(*) and nested method/property source traces. EnumerationMetadata now exposes the normalized collection/component/result types and the attached method footprint for all built-in enum nodes; dynamic/representation-backed generic descriptors and the full Java source matrix remain open."
     },
     {
       "id": "case.expr-enum-invalid",
@@ -1217,23 +1217,23 @@
       "id": "case.expr-enum-footprints",
       "javaRuntimeIds": ["java-runtime-de1bcaf9deecd986e68d", "java-runtime-7b857f459e33c14bbe64", "java-runtime-2ec6618bc45779487cba", "java-runtime-3d4634e5bf5d8372c234", "java-runtime-399a143e349314e112f0", "java-runtime-a3bed382cc19389d382d"],
       "javaNames": ["ExprEnumMinMaxEvents", "ExprEnumMinMaxScalarWithPredicate", "ExprEnumOrderByScalar", "ExprEnumOrderByScalarWithParam", "ExprEnumTakeEvents", "ExprEnumTakeScalar"],
-      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumOrderBy.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumTakeAndTakeLast.java"],
-      "goTests": ["TestEnumerableSelectorExtremesNaturalOrderAndDynamicTake"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumOrderBy.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumTakeAndTakeLast.java", "common/src/main/java/com/espertech/esper/common/internal/epl/enummethod/dot/EnumMethodBuiltin.java", "common/src/main/java/com/espertech/esper/common/internal/epl/enummethod/dot/EnumMethodEnumParams.java"],
+      "goTests": ["TestEnumerableSelectorExtremesNaturalOrderAndDynamicTake", "TestEnumerableMetadataMirrorsJavaFootprints", "TestEnumerableMetadataCoversAllGoEnumerationConstructors"],
       "tags": ["correctness", "expression", "enum", "footprint", "dynamic"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "Go adds typed EnumMinOf/EnumMaxOf selector-value results, EnumOrderByNatural ascending/descending forms, and analyzable Expression[int64]-backed EnumTakeExpr/EnumTakeLastExpr with runtime variable updates. Static count/order and selector-returning MinBy/MaxBy remain source-compatible; Java's broader lambda arity, null/type diagnostics and collection metadata are still open."
+      "difference": "Go adds typed EnumMinOf/EnumMaxOf selector-value results, EnumOrderByNatural ascending/descending forms, analyzable Expression[int64]-backed EnumTakeExpr/EnumTakeLastExpr with runtime variable updates, and immutable EnumerationMetadata footprints for every current Go enumeration constructor, including Java's no-lambda, 1/2/3-parameter lambda, two-selector and aggregate 2/3/4-parameter forms. Static count/order and selector-returning MinBy/MaxBy remain source-compatible; Java's expression-body lambda type inference, null diagnostics, plug-in method registration and dynamic collection metadata are still open."
     },
     {
       "id": "case.expr-enum-subquery-udf",
       "javaRuntimeIds": ["java-runtime-385eff1ed2a658d97cc5", "java-runtime-41005ef10624c5d74430", "java-runtime-1cb9b928361d501cdfc4"],
       "javaNames": ["ExprEnumSubquery", "ExprEnumNamedWindow", "ExprEnumUDFStaticMethod"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDocSamples.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDataSources.java"],
-      "goTests": ["TestEnumerableSubqueryAndZeroArgumentUDFFSources"],
+      "goTests": ["TestEnumerableSubqueryAndZeroArgumentUDFFSources", "TestUDFArityThreeAndFourRemainChainableAndSafe"],
       "tags": ["correctness", "expression", "enum", "subquery", "udf", "named-window"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "Go adds SubqueryValues/SubqueryEvents for typed multi-row named-window snapshots with predicate options and typed Func0/Func1/Func2 collection-producing UDFs; all feed normal analyzable EnumSelect/EnumSum chains. Java additionally covers event-stream subqueries, declared expressions, access aggregation, context/table/pattern sources, generic component metadata and exact invalid diagnostics, which remain open."
+      "difference": "Go adds SubqueryValues/SubqueryEvents for typed multi-row named-window snapshots with predicate options and typed Func0/Func1/Func2/Func3/Func4 collection-producing UDFs; UDF argument/function configuration is rejected at Build and panics become Null at evaluation, while all valid results feed normal analyzable EnumSelect/EnumSum chains. Java additionally covers event-stream subqueries, declared expressions, access aggregation, context/table/pattern sources, generic component metadata and exact invalid diagnostics, which remain open."
     },
     {
       "id": "case.expr-enum-groupby",

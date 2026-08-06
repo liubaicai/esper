@@ -9,6 +9,248 @@ import (
 	"strings"
 )
 
+// EnumInputKind describes the input-shape constraint used by an Esper
+// enumeration method footprint. Go's generic signatures enforce the concrete
+// collection element type; this value preserves the corresponding Java
+// compiler metadata for tooling, diagnostics and parity reports.
+type EnumInputKind uint8
+
+const (
+	EnumInputAny EnumInputKind = iota
+	EnumInputScalarAny
+	EnumInputScalarNumeric
+	EnumInputEventCollection
+)
+
+func (kind EnumInputKind) String() string {
+	switch kind {
+	case EnumInputAny:
+		return "any"
+	case EnumInputScalarAny:
+		return "scalar-any"
+	case EnumInputScalarNumeric:
+		return "scalar-numeric"
+	case EnumInputEventCollection:
+		return "event-collection"
+	default:
+		return "unknown"
+	}
+}
+
+// EnumParameterKind describes the expected result of one method parameter.
+// Lambda arity is carried separately by EnumMethodParameter.
+type EnumParameterKind uint8
+
+const (
+	EnumParameterAny EnumParameterKind = iota
+	EnumParameterBoolean
+	EnumParameterNumeric
+	EnumParameterCollection
+)
+
+func (kind EnumParameterKind) String() string {
+	switch kind {
+	case EnumParameterAny:
+		return "any"
+	case EnumParameterBoolean:
+		return "boolean"
+	case EnumParameterNumeric:
+		return "numeric"
+	case EnumParameterCollection:
+		return "collection"
+	default:
+		return "unknown"
+	}
+}
+
+// EnumMethodParameter is the Go-native representation of one
+// DotMethodFPParam. LambdaParameterCount is zero for a normal expression and
+// otherwise records the accepted lambda arity (for example 1, 2 or 3 for
+// item, index and size).
+type EnumMethodParameter struct {
+	LambdaParameterCount int
+	Description          string
+	Expected             EnumParameterKind
+}
+
+// EnumMethodFootprint is one accepted method signature. A footprint can have
+// multiple parameters, as aggregate has an initialization expression plus an
+// accumulator lambda and toMap/groupBy have two selector lambdas.
+type EnumMethodFootprint struct {
+	Input      EnumInputKind
+	Parameters []EnumMethodParameter
+}
+
+// EnumMethodMetadata exposes the component type and accepted footprints of a
+// fluent enumeration expression. It is immutable from the caller's point of
+// view: EnumerationMetadata returns copies of all slices.
+type EnumMethodMetadata struct {
+	Method         string
+	CollectionType reflect.Type
+	ElementType    reflect.Type
+	ResultType     reflect.Type
+	Footprints     []EnumMethodFootprint
+}
+
+// EnumerationMetadata returns the static Java-style method metadata attached
+// to an enumeration expression. The second result is false for ordinary
+// expressions. Metadata is available before deployment and never evaluates a
+// user callback or reads runtime state.
+func EnumerationMetadata(expression Expr) (EnumMethodMetadata, bool) {
+	if expression == nil || expression.node() == nil || expression.node().enumMetadata == nil {
+		return EnumMethodMetadata{}, false
+	}
+	metadata := *expression.node().enumMetadata
+	metadata.Footprints = cloneEnumMethodFootprints(metadata.Footprints)
+	return metadata, true
+}
+
+func cloneEnumMethodFootprints(source []EnumMethodFootprint) []EnumMethodFootprint {
+	if len(source) == 0 {
+		return nil
+	}
+	result := make([]EnumMethodFootprint, len(source))
+	for index, footprint := range source {
+		result[index] = EnumMethodFootprint{
+			Input:      footprint.Input,
+			Parameters: append([]EnumMethodParameter(nil), footprint.Parameters...),
+		}
+	}
+	return result
+}
+
+func enumCollectionTypes(input Expr) (reflect.Type, reflect.Type) {
+	if input == nil || input.Type() == nil {
+		return nil, nil
+	}
+	collectionType := input.Type()
+	elementType := collectionType
+	for elementType.Kind() == reflect.Pointer {
+		elementType = elementType.Elem()
+	}
+	if elementType.Kind() == reflect.Array || elementType.Kind() == reflect.Slice {
+		elementType = elementType.Elem()
+	}
+	return collectionType, elementType
+}
+
+func enumParameter(lambdaCount int, description string, expected EnumParameterKind) EnumMethodParameter {
+	return EnumMethodParameter{LambdaParameterCount: lambdaCount, Description: description, Expected: expected}
+}
+
+func enumLambdaFootprints(kind string) []EnumMethodFootprint {
+	input := EnumInputAny
+	parameter := EnumParameterAny
+	switch kind {
+	case "sum", "average", "average-exact":
+		input = EnumInputScalarNumeric
+		parameter = EnumParameterNumeric
+	case "min", "max", "order-by", "order-by-desc", "distinct", "array-of", "most-frequent", "least-frequent":
+		input = EnumInputScalarAny
+	}
+	lambda := func(description string, expected EnumParameterKind) []EnumMethodFootprint {
+		return []EnumMethodFootprint{
+			{Input: EnumInputAny, Parameters: []EnumMethodParameter{
+				enumParameter(1, description, expected),
+			}},
+			{Input: EnumInputAny, Parameters: []EnumMethodParameter{
+				enumParameter(2, "("+description+", index)", expected),
+			}},
+			{Input: EnumInputAny, Parameters: []EnumMethodParameter{
+				enumParameter(3, "("+description+", index, size)", expected),
+			}},
+		}
+	}
+	noParam := func() []EnumMethodFootprint {
+		return []EnumMethodFootprint{{Input: input}}
+	}
+	switch kind {
+	case "where", "any-of", "all-of", "take-while", "take-while-last":
+		return lambda("predicate", EnumParameterBoolean)
+	case "count-of", "first-of", "last-of":
+		return append(noParam(), lambda("predicate", EnumParameterBoolean)...)
+	case "select", "select-from", "min-by", "max-by", "min-of", "max-of":
+		return lambda("value-selector", EnumParameterAny)
+	case "order-by", "order-by-desc", "distinct", "array-of", "most-frequent", "least-frequent", "min", "max":
+		return append(noParam(), lambda("value-selector", EnumParameterAny)...)
+	case "sum", "average", "average-exact":
+		return append([]EnumMethodFootprint{{Input: input}}, lambda("value-selector", parameter)...)
+	case "take", "take-last":
+		return []EnumMethodFootprint{{Input: EnumInputAny, Parameters: []EnumMethodParameter{enumParameter(0, "count", EnumParameterNumeric)}}}
+	case "aggregate":
+		return []EnumMethodFootprint{
+			{Input: EnumInputAny, Parameters: []EnumMethodParameter{
+				enumParameter(0, "initialization-value", EnumParameterAny),
+				enumParameter(2, "(result, next)", EnumParameterAny),
+			}},
+			{Input: EnumInputAny, Parameters: []EnumMethodParameter{
+				enumParameter(0, "initialization-value", EnumParameterAny),
+				enumParameter(3, "(result, next, index)", EnumParameterAny),
+			}},
+			{Input: EnumInputAny, Parameters: []EnumMethodParameter{
+				enumParameter(0, "initialization-value", EnumParameterAny),
+				enumParameter(4, "(result, next, index, size)", EnumParameterAny),
+			}},
+		}
+	case "group-by":
+		oneSelector := lambda("key-selector", EnumParameterAny)
+		twoSelector := makeTwoLambdaFootprints("key-selector", "value-selector")
+		return append(oneSelector, twoSelector...)
+	case "group-by-select", "to-map":
+		result := make([]EnumMethodFootprint, 0, 3)
+		for _, count := range []int{1, 2, 3} {
+			description := "key-selector"
+			if count > 1 {
+				description = fmt.Sprintf("(key-selector, index%s)", func() string {
+					if count == 3 {
+						return ", size"
+					}
+					return ""
+				}())
+			}
+			valueDescription := "value-selector"
+			if count > 1 {
+				valueDescription = fmt.Sprintf("(value-selector, index%s)", func() string {
+					if count == 3 {
+						return ", size"
+					}
+					return ""
+				}())
+			}
+			result = append(result, EnumMethodFootprint{Input: input, Parameters: []EnumMethodParameter{
+				enumParameter(count, description, EnumParameterAny),
+				enumParameter(count, valueDescription, EnumParameterAny),
+			}})
+		}
+		return result
+	case "except", "intersect", "union":
+		return []EnumMethodFootprint{{Input: EnumInputAny, Parameters: []EnumMethodParameter{enumParameter(0, "collection", EnumParameterAny)}}}
+	case "sequence-equal":
+		return []EnumMethodFootprint{{Input: EnumInputScalarAny, Parameters: []EnumMethodParameter{enumParameter(0, "sequence", EnumParameterAny)}}}
+	case "count", "first", "last", "reverse", "collect":
+		return noParam()
+	default:
+		return nil
+	}
+}
+
+func makeTwoLambdaFootprints(first, second string) []EnumMethodFootprint {
+	result := make([]EnumMethodFootprint, 0, 3)
+	for _, count := range []int{1, 2, 3} {
+		suffix := ""
+		if count == 2 {
+			suffix = ", index"
+		} else if count == 3 {
+			suffix = ", index, size"
+		}
+		result = append(result, EnumMethodFootprint{Input: EnumInputAny, Parameters: []EnumMethodParameter{
+			enumParameter(count, first+suffix, EnumParameterAny),
+			enumParameter(count, second+suffix, EnumParameterAny),
+		}})
+	}
+	return result
+}
+
 // EnumOrdered is the ordered value set supported by enumeration methods.
 // big.Int and big.Rat provide the Go equivalents of Esper's BigInteger and
 // BigDecimal values without converting through float64.
@@ -151,7 +393,7 @@ func EnumCollect[T any](values Expr) Expression[[]T] {
 		description = "collect(" + values.Description() + ")"
 		children = []*exprNode{values.node()}
 	}
-	return makeExpr[[]T]("enum-collect", description, children, func(ctx EvalContext) Value {
+	return makeEnumExpr[[]T]("enum-collect", description, children, values, false, func(ctx EvalContext) Value {
 		if values == nil {
 			return Missing()
 		}
@@ -325,6 +567,25 @@ func makeEnumExpr[T any](kind, description string, children []*exprNode, input E
 	_ = input
 	expression.node().enumInputRequired = true
 	expression.node().enumParameterRequired = parameterRequired
+	collectionType, elementType := enumCollectionTypes(input)
+	if kind == "enum-collect" {
+		// EnumCollect accepts arrays, iter.Seq and pull iterators, so the
+		// source expression itself is not necessarily a collection type. The
+		// explicit []T result is the stable component metadata for the
+		// normalized enumeration value.
+		collectionType = expression.Type()
+		if collectionType != nil && collectionType.Kind() == reflect.Slice {
+			elementType = collectionType.Elem()
+		}
+	}
+	metadata := EnumMethodMetadata{
+		Method:         strings.TrimPrefix(kind, "enum-"),
+		CollectionType: collectionType,
+		ElementType:    elementType,
+		ResultType:     expression.Type(),
+		Footprints:     enumLambdaFootprints(strings.TrimPrefix(kind, "enum-")),
+	}
+	expression.node().enumMetadata = &metadata
 	return expression
 }
 

@@ -229,6 +229,186 @@ func TestEnumerableNumericMethodsAndPlanIntegration(t *testing.T) {
 	}
 }
 
+func TestEnumerableMetadataMirrorsJavaFootprints(t *testing.T) {
+	items := Literal([]enumExpressionItem{{ID: "E1", Score: 1}})
+	where := EnumWhere[enumExpressionItem](items, Equal[int64](EnumIndex(), Literal(int64(0))))
+	metadata, ok := EnumerationMetadata(where)
+	if !ok {
+		t.Fatal("where metadata was not attached")
+	}
+	if metadata.Method != "where" || metadata.CollectionType != reflect.TypeOf([]enumExpressionItem{}) || metadata.ElementType != reflect.TypeOf(enumExpressionItem{}) || metadata.ResultType != reflect.TypeOf([]enumExpressionItem{}) {
+		t.Fatalf("where metadata = %#v", metadata)
+	}
+	if len(metadata.Footprints) != 3 {
+		t.Fatalf("where footprints = %#v", metadata.Footprints)
+	}
+	for index, want := range []int{1, 2, 3} {
+		footprint := metadata.Footprints[index]
+		if footprint.Input != EnumInputAny || len(footprint.Parameters) != 1 || footprint.Parameters[0].LambdaParameterCount != want || footprint.Parameters[0].Expected != EnumParameterBoolean {
+			t.Fatalf("where footprint %d = %#v", index, footprint)
+		}
+	}
+
+	sumMetadata, ok := EnumerationMetadata(EnumSum[int64](Literal([]int64{1, 2})))
+	if !ok || len(sumMetadata.Footprints) != 4 || sumMetadata.Footprints[0].Input != EnumInputScalarNumeric || sumMetadata.Footprints[0].Parameters != nil || sumMetadata.Footprints[1].Input != EnumInputAny || sumMetadata.Footprints[1].Parameters[0].Expected != EnumParameterNumeric {
+		t.Fatalf("sum metadata = %#v", sumMetadata)
+	}
+
+	aggregateMetadata, ok := EnumerationMetadata(EnumAggregate[int64, int64](Literal([]int64{1}), int64(0), Add[int64](EnumAccumulator[int64](), EnumElement[int64]())))
+	if !ok || len(aggregateMetadata.Footprints) != 3 {
+		t.Fatalf("aggregate metadata = %#v", aggregateMetadata)
+	}
+	for index, want := range []int{2, 3, 4} {
+		parameters := aggregateMetadata.Footprints[index].Parameters
+		if len(parameters) != 2 || parameters[0].LambdaParameterCount != 0 || parameters[1].LambdaParameterCount != want {
+			t.Fatalf("aggregate footprint %d = %#v", index, parameters)
+		}
+	}
+
+	groupMetadata, ok := EnumerationMetadata(EnumGroupBySelect[enumExpressionItem, string, int64](items, EnumField[enumExpressionItem, string]("id"), EnumField[enumExpressionItem, int64]("score")))
+	if !ok || len(groupMetadata.Footprints) != 3 {
+		t.Fatalf("group-by metadata = %#v", groupMetadata)
+	}
+	for index, want := range []int{1, 2, 3} {
+		parameters := groupMetadata.Footprints[index].Parameters
+		if len(parameters) != 2 || parameters[0].LambdaParameterCount != want || parameters[1].LambdaParameterCount != want {
+			t.Fatalf("group-by footprint %d = %#v", index, parameters)
+		}
+	}
+
+	collectMetadata, ok := EnumerationMetadata(EnumCollect[int64](Literal([]int64{1})))
+	if !ok || collectMetadata.Method != "collect" || len(collectMetadata.Footprints) != 1 || len(collectMetadata.Footprints[0].Parameters) != 0 {
+		t.Fatalf("collect metadata = %#v", collectMetadata)
+	}
+
+	metadata.Footprints[0].Parameters[0].Description = "mutated"
+	again, ok := EnumerationMetadata(where)
+	if !ok || again.Footprints[0].Parameters[0].Description == "mutated" {
+		t.Fatal("enumeration metadata exposes mutable footprint storage")
+	}
+}
+
+func TestEnumerableMetadataCoversAllGoEnumerationConstructors(t *testing.T) {
+	items := Literal([]enumExpressionItem{{ID: "E1", Score: 1}, {ID: "E2", Score: 2}})
+	numbers := Literal([]int64{1, 2, 3})
+	id := EnumField[enumExpressionItem, string]("id")
+	score := EnumField[enumExpressionItem, int64]("score")
+	predicate := GreaterOrEqual[int64](score, Literal(int64(1)))
+
+	type footprintExpectation struct {
+		name       string
+		expression Expr
+		method     string
+		input      EnumInputKind
+		arities    []int
+		parameters int
+	}
+	expectations := []footprintExpectation{
+		{"collect", EnumCollect[enumExpressionItem](items), "collect", EnumInputAny, []int{0}, 0},
+		{"where", EnumWhere[enumExpressionItem](items, predicate), "where", EnumInputAny, []int{1, 2, 3}, 1},
+		{"select", EnumSelect[enumExpressionItem, int64](items, score), "select", EnumInputAny, []int{1, 2, 3}, 1},
+		{"select-from", EnumSelectMap[enumExpressionItem](items, Alias("id", id)), "select-from", EnumInputAny, []int{1, 2, 3}, 1},
+		{"array-of", EnumArrayOf[enumExpressionItem](items), "array-of", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"array-of-select", EnumArrayOfSelect[enumExpressionItem, int64](items, score), "array-of", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"count", EnumCount[enumExpressionItem](items), "count", EnumInputAny, []int{0}, 0},
+		{"count-of", EnumCountOf[enumExpressionItem](items, predicate), "count-of", EnumInputAny, []int{0, 1, 2, 3}, -1},
+		{"any-of", EnumAnyOf[enumExpressionItem](items, predicate), "any-of", EnumInputAny, []int{1, 2, 3}, 1},
+		{"all-of", EnumAllOf[enumExpressionItem](items, predicate), "all-of", EnumInputAny, []int{1, 2, 3}, 1},
+		{"first-of", EnumFirstOf[enumExpressionItem](items, predicate), "first-of", EnumInputAny, []int{0, 1, 2, 3}, -1},
+		{"last-of", EnumLastOf[enumExpressionItem](items, predicate), "last-of", EnumInputAny, []int{0, 1, 2, 3}, -1},
+		{"distinct", EnumDistinct[enumExpressionItem](items), "distinct", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"distinct-by", EnumDistinctBy[enumExpressionItem, string](items, id), "distinct", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"take", EnumTake[enumExpressionItem](items, 1), "take", EnumInputAny, []int{0}, 1},
+		{"take-expr", EnumTakeExpr[enumExpressionItem](items, Literal(int64(1))), "take", EnumInputAny, []int{0}, 1},
+		{"take-last", EnumTakeLast[enumExpressionItem](items, 1), "take-last", EnumInputAny, []int{0}, 1},
+		{"take-while", EnumTakeWhile[enumExpressionItem](items, predicate), "take-while", EnumInputAny, []int{1, 2, 3}, 1},
+		{"take-while-last", EnumTakeWhileLast[enumExpressionItem](items, predicate), "take-while-last", EnumInputAny, []int{1, 2, 3}, 1},
+		{"reverse", EnumReverse[enumExpressionItem](items), "reverse", EnumInputAny, []int{0}, 0},
+		{"min", EnumMin[int64](numbers), "min", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"max", EnumMax[int64](numbers), "max", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"min-by", EnumMinBy[enumExpressionItem, int64](items, score), "min-by", EnumInputAny, []int{1, 2, 3}, 1},
+		{"max-by", EnumMaxBy[enumExpressionItem, int64](items, score), "max-by", EnumInputAny, []int{1, 2, 3}, 1},
+		{"min-of", EnumMinOf[enumExpressionItem, int64](items, score), "min", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"max-of", EnumMaxOf[enumExpressionItem, int64](items, score), "max", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"order-by", EnumOrderBy[enumExpressionItem, int64](items, score, false), "order-by", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"order-by-natural", EnumOrderByNatural[int64](numbers, false), "order-by", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"order-by-desc", EnumOrderBy[enumExpressionItem, int64](items, score, true), "order-by-desc", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"sum", EnumSum[int64](numbers), "sum", EnumInputScalarNumeric, []int{0, 1, 2, 3}, -1},
+		{"sum-of", EnumSumOf[enumExpressionItem, int64](items, score), "sum", EnumInputScalarNumeric, []int{0, 1, 2, 3}, -1},
+		{"average", EnumAverage[int64](numbers), "average", EnumInputScalarNumeric, []int{0, 1, 2, 3}, -1},
+		{"average-of", EnumAverageOf[enumExpressionItem, int64](items, score), "average", EnumInputScalarNumeric, []int{0, 1, 2, 3}, -1},
+		{"average-exact", EnumAverageExact[int64](numbers), "average-exact", EnumInputScalarNumeric, []int{0, 1, 2, 3}, -1},
+		{"aggregate", EnumAggregate[int64, int64](numbers, int64(0), Add[int64](EnumAccumulator[int64](), EnumElement[int64]())), "aggregate", EnumInputAny, []int{2, 3, 4}, 2},
+		{"except", EnumExcept[int64](numbers, Literal([]int64{2})), "except", EnumInputAny, []int{0}, 1},
+		{"intersect", EnumIntersect[int64](numbers, Literal([]int64{2})), "intersect", EnumInputAny, []int{0}, 1},
+		{"union", EnumUnion[int64](numbers, Literal([]int64{2})), "union", EnumInputAny, []int{0}, 1},
+		{"sequence-equal", EnumSequenceEqual[int64](numbers, Literal([]int64{1})), "sequence-equal", EnumInputScalarAny, []int{0}, 1},
+		{"group-by", EnumGroupBy[enumExpressionItem, string](items, id), "group-by", EnumInputAny, []int{1, 2, 3, 1, 2, 3}, -1},
+		{"group-by-select", EnumGroupBySelect[enumExpressionItem, string, int64](items, id, score), "group-by-select", EnumInputAny, []int{1, 2, 3}, 2},
+		{"to-map", EnumToMap[enumExpressionItem, string, int64](items, id, score), "to-map", EnumInputAny, []int{1, 2, 3}, 2},
+		{"most-frequent", EnumMostFrequent[int64](numbers), "most-frequent", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"most-frequent-by", EnumMostFrequentBy[enumExpressionItem, string](items, id), "most-frequent", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"least-frequent", EnumLeastFrequent[int64](numbers), "least-frequent", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+		{"least-frequent-by", EnumLeastFrequentBy[enumExpressionItem, string](items, id), "least-frequent", EnumInputScalarAny, []int{0, 1, 2, 3}, -1},
+	}
+
+	for _, expectation := range expectations {
+		metadata, ok := EnumerationMetadata(expectation.expression)
+		if !ok {
+			t.Errorf("%s: metadata missing", expectation.name)
+			continue
+		}
+		if metadata.Method != expectation.method {
+			t.Errorf("%s: method = %q, want %q", expectation.name, metadata.Method, expectation.method)
+		}
+		if len(metadata.Footprints) != len(expectation.arities) {
+			t.Errorf("%s: footprint count = %d, want %d (%#v)", expectation.name, len(metadata.Footprints), len(expectation.arities), metadata.Footprints)
+			continue
+		}
+		for index, arity := range expectation.arities {
+			footprint := metadata.Footprints[index]
+			wantInput := expectation.input
+			if index > 0 && (wantInput == EnumInputScalarAny || wantInput == EnumInputScalarNumeric) {
+				wantInput = EnumInputAny
+			}
+			if footprint.Input != wantInput {
+				t.Errorf("%s footprint %d: input = %s, want %s", expectation.name, index, footprint.Input, wantInput)
+			}
+			if expectation.parameters >= 0 && len(footprint.Parameters) != expectation.parameters {
+				t.Errorf("%s footprint %d: parameter count = %d, want %d", expectation.name, index, len(footprint.Parameters), expectation.parameters)
+			}
+			if len(footprint.Parameters) > 0 {
+				lambdaParameter := footprint.Parameters[0]
+				if len(footprint.Parameters) > 1 {
+					lambdaParameter = footprint.Parameters[len(footprint.Parameters)-1]
+				}
+				if lambdaParameter.LambdaParameterCount != arity {
+					t.Errorf("%s footprint %d: lambda arity = %d, want %d", expectation.name, index, lambdaParameter.LambdaParameterCount, arity)
+				}
+			}
+		}
+	}
+
+	if _, ok := EnumerationMetadata(Literal(int64(1))); ok {
+		t.Fatal("ordinary expressions must not expose enumeration metadata")
+	}
+	sequence := Func0[iter.Seq[int64]]("values", func() iter.Seq[int64] {
+		return func(yield func(int64) bool) {
+			yield(1)
+		}
+	})
+	sequenceMetadata, ok := EnumerationMetadata(EnumCollect[int64](sequence))
+	if !ok || sequenceMetadata.CollectionType != reflect.TypeOf([]int64{}) || sequenceMetadata.ElementType != reflect.TypeOf(int64(0)) || sequenceMetadata.ResultType != reflect.TypeOf([]int64{}) {
+		t.Fatalf("iterator collection metadata = source=%v method=%s collection=%v (want normalized %v) element=%v (want %v) result=%v (want %v)", sequence.Type(), sequenceMetadata.Method, sequenceMetadata.CollectionType, reflect.TypeOf([]int64{}), sequenceMetadata.ElementType, reflect.TypeOf(int64(0)), sequenceMetadata.ResultType, reflect.TypeOf([]int64{}))
+	}
+	if EnumInputAny.String() != "any" || EnumInputScalarAny.String() != "scalar-any" || EnumInputScalarNumeric.String() != "scalar-numeric" || EnumInputEventCollection.String() != "event-collection" || EnumInputKind(255).String() != "unknown" {
+		t.Fatal("unexpected enumeration input-kind strings")
+	}
+	if EnumParameterAny.String() != "any" || EnumParameterBoolean.String() != "boolean" || EnumParameterNumeric.String() != "numeric" || EnumParameterCollection.String() != "collection" || EnumParameterKind(255).String() != "unknown" {
+		t.Fatal("unexpected enumeration parameter-kind strings")
+	}
+}
+
 func TestEnumerableSupportsExactBigNumbersAndArrayCollections(t *testing.T) {
 	largeOne := *big.NewInt(9007199254740993001)
 	largeTwo := *big.NewInt(9007199254740993002)
@@ -514,6 +694,31 @@ func TestEnumerableSubqueryAndZeroArgumentUDFFSources(t *testing.T) {
 	}
 }
 
+func TestUDFArityThreeAndFourRemainChainableAndSafe(t *testing.T) {
+	values := Func3[int64, int64, int64, []int64]("range3", func(start, count, step int64) []int64 {
+		result := make([]int64, 0, count)
+		for index := int64(0); index < count; index++ {
+			result = append(result, start+index*step)
+		}
+		return result
+	}, Literal(int64(2)), Literal(int64(3)), Literal(int64(4)))
+	if got := EnumSum[int64](values).eval(EvalContext{}); !got.Equal(Present(int64(18))) {
+		t.Fatalf("three-argument collection UDF = %v", got)
+	}
+
+	total := Func4[int64, int64, int64, int64, int64]("sum4", func(one, two, three, four int64) int64 {
+		return one + two + three + four
+	}, Literal(int64(1)), Literal(int64(2)), Literal(int64(3)), Literal(int64(4)))
+	if got := total.eval(EvalContext{}); !got.Equal(Present(int64(10))) {
+		t.Fatalf("four-argument UDF = %v", got)
+	}
+
+	panicking := Func0[int64]("panic-udf", func() int64 { panic("udf failure") })
+	if got := panicking.eval(EvalContext{}); !got.IsNull() {
+		t.Fatalf("panicking UDF = %v, want null", got)
+	}
+}
+
 func TestEnumerableBuildRejectsMissingRequiredExpressions(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[enumExpressionContainer](env, "EnumInvalidContainer"); err != nil {
@@ -535,6 +740,10 @@ func TestEnumerableBuildRejectsMissingRequiredExpressions(t *testing.T) {
 		{name: "group-by-value-selector", expr: EnumGroupBySelect[int64, int64, int64](values, Literal(int64(1)), nil), want: `enumeration method "group-by-select" requires all selector expressions`},
 		{name: "first-of-too-many-predicates", expr: EnumFirstOf[int64](values, Literal(true), Literal(false)), want: `enumeration method "first-of" accepts at most one predicate expression`},
 		{name: "last-of-too-many-predicates", expr: EnumLastOf[int64](values, Literal(true), Literal(false)), want: `enumeration method "last-of" accepts at most one predicate expression`},
+		{name: "collect-values", expr: EnumCollect[int64](nil), want: `enumeration method "collect" requires a collection expression`},
+		{name: "udf-name", expr: Func0[int64]("", func() int64 { return 1 }), want: "udf function name is required"},
+		{name: "udf-function", expr: Func3[int64, int64, int64, []int64]("missing-udf", nil, Literal(int64(1)), Literal(int64(2)), Literal(int64(3))), want: `udf "missing-udf" requires a function`},
+		{name: "udf-argument", expr: Func3[int64, int64, int64, []int64]("missing-argument", func(int64, int64, int64) []int64 { return nil }, Literal(int64(1)), nil, Literal(int64(3))), want: `udf "missing-argument" argument 1 is required`},
 	}
 	for _, testCase := range invalid {
 		t.Run(testCase.name, func(t *testing.T) {

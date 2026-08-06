@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"reflect"
 	"testing"
 )
 
@@ -172,5 +173,64 @@ func TestParameterizedNamedExpressionReferenceSupportsSubqueryEventValues(t *tes
 	}
 	if len(*rows) != 2 || (*rows)[1].Get("value").Any() != "AB" {
 		t.Fatalf("subquery event parameter rows = %#v", *rows)
+	}
+}
+
+func TestParameterizedNamedExpressionReferenceSupportsMapPatternEventValues(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("p00", reflect.TypeOf("")), FieldDef("p01", reflect.TypeOf(""))}
+	if _, err := RegisterMap(env, "EventParameterMapPattern", fields); err != nil {
+		t.Fatal(err)
+	}
+	eventParam := ExpressionParam[Event]("event")
+	if err := DefineExpression[string](env, "map-pattern-event-value", Concat(Property[string](eventParam, "p00"), Property[string](eventParam, "p01"))); err != nil {
+		t.Fatal(err)
+	}
+	pattern := PatternFromRecord(FromAny(env, "EventParameterMapPattern"), "a", Literal(true)).FollowedBy("b", Literal(true))
+	query := pattern.Select(Alias("value", ExpressionRef[string](env, "map-pattern-event-value", PatternEvent("a")))).Query(StatementName("declared-map-pattern-event"))
+	engine, rows := deployEventParameterRows(t, env, query)
+	if err := engine.SendRecord(context.Background(), "EventParameterMapPattern", map[string]any{"p00": "A", "p01": "B"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendRecord(context.Background(), "EventParameterMapPattern", map[string]any{"p00": "C", "p01": "D"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*rows) != 1 || (*rows)[0].Get("value").Any() != "AB" {
+		t.Fatalf("map pattern event parameter rows = %#v", *rows)
+	}
+}
+
+func TestParameterizedNamedExpressionReferenceSupportsMapSubqueryEventValues(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("p00", reflect.TypeOf("")), FieldDef("p01", reflect.TypeOf(""))}
+	if _, err := RegisterMap(env, "EventParameterMapSource", fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "EventParameterMapTrigger", nil); err != nil {
+		t.Fatal(err)
+	}
+	eventParam := ExpressionParam[Event]("event")
+	if err := DefineExpression[string](env, "map-subquery-event-value", Concat(Property[string](eventParam, "p00"), Property[string](eventParam, "p01"))); err != nil {
+		t.Fatal(err)
+	}
+	inner := FromAny(env, "EventParameterMapSource").Window(LastEvent())
+	argument := SubqueryValue[Event](inner, EventValue[Event]())
+	engine, rows := deployEventParameterRows(t, env, FromAny(env, "EventParameterMapTrigger").Select(
+		Alias("value", ExpressionRef[string](env, "map-subquery-event-value", argument)),
+	).Query(StatementName("declared-map-subquery-event")))
+	if err := engine.SendRecord(context.Background(), "EventParameterMapTrigger", map[string]any{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*rows) != 1 || (*rows)[0].Get("value").Any() != nil {
+		t.Fatalf("empty map subquery event parameter rows = %#v", *rows)
+	}
+	if err := engine.SendRecord(context.Background(), "EventParameterMapSource", map[string]any{"p00": "A", "p01": "B"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendRecord(context.Background(), "EventParameterMapTrigger", map[string]any{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*rows) != 2 || (*rows)[1].Get("value").Any() != "AB" {
+		t.Fatalf("map subquery event parameter rows = %#v", *rows)
 	}
 }
