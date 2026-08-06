@@ -31,27 +31,35 @@ type Expression[T any] interface {
 }
 
 type exprNode struct {
-	kind                  string
-	typ                   reflect.Type
-	description           string
-	fieldName             string
-	tagName               string
-	variableName          string
-	parameterName         string
-	pluginName            string
-	pluginReady           bool
-	pluginAccess          bool
-	pluginFactory         aggregatePluginFactory
-	pluginEnvironment     *Environment
-	scriptName            string
-	scriptEnvironment     *Environment
-	methodName            string
-	containedParentLevels int
-	joinSource            int
-	previousOffset        int
-	enumInputRequired     bool
-	enumParameterRequired bool
-	enumInvalidReason     string
+	kind                            string
+	typ                             reflect.Type
+	description                     string
+	fieldName                       string
+	tagName                         string
+	variableName                    string
+	parameterName                   string
+	pluginName                      string
+	pluginReady                     bool
+	pluginAccess                    bool
+	pluginFactory                   aggregatePluginFactory
+	pluginEnvironment               *Environment
+	aggregateMultiPluginName        string
+	aggregateMultiPluginMethod      string
+	aggregateMultiPluginReady       bool
+	aggregateMultiPluginFactory     aggregateMultiPluginFactory
+	aggregateMultiPluginEnvironment *Environment
+	aggregateMultiStateKey          string
+	aggregateMultiStateShared       bool
+	aggregateMultiMethods           map[string]AggregateMultiPluginMethod
+	scriptName                      string
+	scriptEnvironment               *Environment
+	methodName                      string
+	containedParentLevels           int
+	joinSource                      int
+	previousOffset                  int
+	enumInputRequired               bool
+	enumParameterRequired           bool
+	enumInvalidReason               string
 	// enumMetadata mirrors Esper's enumeration method footprint and component
 	// type metadata. It is derived entirely from the typed builder AST and is
 	// never consulted as mutable runtime state.
@@ -318,6 +326,11 @@ type EvalContext struct {
 	// factories. It is set only while evaluating a result row and is keyed by
 	// expression node so each aggregate group owns an independent state.
 	aggregatePluginStates map[*exprNode]aggregatePluginState
+	// aggregateMultiPluginStates is private runtime state for multi-function
+	// aggregate extensions. The key is the provider's explicit state key plus
+	// local aggregate scope; an unshared expression uses its node identity.
+	aggregateMultiPluginStates map[string]aggregateMultiPluginState
+	aggregateMultiScope        string
 	// aggregateEvaluation distinguishes an explicitly empty aggregate group
 	// from an ordinary projection that has only a current Event. Access
 	// aggregates such as First use the latter as a one-row group, but an empty
@@ -1646,10 +1659,47 @@ func NotEqual[T comparable](left, right Expression[T]) Expression[bool] {
 	})
 }
 
+// SortedMultiKey is an immutable lexicographic key for multi-criteria sorted
+// access aggregates. Each component keeps its Value state so a caller can
+// distinguish a present component from Null/Missing when inspecting a key;
+// sorted access itself only indexes rows whose complete key is present.
+type SortedMultiKey struct {
+	parts []Value
+}
+
+// NewSortedMultiKey constructs a detached multi-criteria key. Value arguments
+// retain their state; all other arguments are wrapped with Present (nil is
+// therefore represented as Null).
+func NewSortedMultiKey(parts ...any) SortedMultiKey {
+	result := SortedMultiKey{parts: make([]Value, len(parts))}
+	for index, part := range parts {
+		if value, ok := part.(Value); ok {
+			result.parts[index] = value
+			continue
+		}
+		result.parts[index] = Present(part)
+	}
+	return result
+}
+
+// Parts returns the underlying components as detached Go values. Null and
+// Missing components are both exposed as nil; use PartValues when the state
+// distinction is needed.
+func (key SortedMultiKey) Parts() []any {
+	parts := make([]any, len(key.parts))
+	for index, value := range key.parts {
+		parts[index] = value.Any()
+	}
+	return parts
+}
+
+// PartValues returns a defensive copy retaining Missing/Null/Present state.
+func (key SortedMultiKey) PartValues() []Value { return append([]Value(nil), key.parts...) }
+
 type Ordered interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
 		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
-		~float32 | ~float64 | ~string
+		~float32 | ~float64 | ~string | SortedMultiKey
 }
 
 type Numeric interface {
@@ -2751,6 +2801,7 @@ func FilterAggregate[T any](aggregate AggregateExpression[T], predicate Expressi
 		nested.EverGroup = filterEvents(ctx.EverGroup)
 		nested.AllGroup = filterEvents(ctx.AllGroup)
 		nested.AllEverGroup = filterEvents(ctx.AllEverGroup)
+		nested.aggregateMultiScope = aggregateExpressionScope(ctx.aggregateMultiScope, predicate.Description())
 		return aggregate.eval(nested)
 	})
 }
@@ -2787,6 +2838,7 @@ func LocalGroupBy[T any](aggregate AggregateExpression[T], keys ...Expr) Aggrega
 			}
 			nested.AllGroup = nested.Group
 			nested.AllEverGroup = nested.EverGroup
+			nested.aggregateMultiScope = aggregateExpressionScope(ctx.aggregateMultiScope, description)
 			return aggregate.eval(nested)
 		}
 		current := ctx.Event
@@ -2822,6 +2874,7 @@ func LocalGroupBy[T any](aggregate AggregateExpression[T], keys ...Expr) Aggrega
 		// this local group as its own statement scope.
 		nested.AllGroup = nested.Group
 		nested.AllEverGroup = nested.EverGroup
+		nested.aggregateMultiScope = aggregateExpressionScope(ctx.aggregateMultiScope, description)
 		return aggregate.eval(nested)
 	})
 }
@@ -3151,6 +3204,9 @@ func RegisterAggregatePlugin[T any](env *Environment, name string, evaluate func
 	if _, exists := env.aggregatePlugins[name]; exists {
 		return NewError(ErrorDependency, fmt.Sprintf("aggregate plugin %q is already registered", name))
 	}
+	if _, exists := env.aggregateMultiPlugins[name]; exists {
+		return NewError(ErrorDependency, fmt.Sprintf("aggregate plugin %q conflicts with aggregate multi plugin", name))
+	}
 	env.aggregatePlugins[name] = aggregatePluginDefinition{
 		resultType: typeOf[T](),
 		evaluate: func(ctx EvalContext) (Value, bool) {
@@ -3185,6 +3241,9 @@ func registerAggregatePluginFactory[T any](env *Environment, name string, factor
 	defer env.mu.Unlock()
 	if _, exists := env.aggregatePlugins[name]; exists {
 		return NewError(ErrorDependency, fmt.Sprintf("aggregate plugin %q is already registered", name))
+	}
+	if _, exists := env.aggregateMultiPlugins[name]; exists {
+		return NewError(ErrorDependency, fmt.Sprintf("aggregate plugin %q conflicts with aggregate multi plugin", name))
 	}
 	env.aggregatePlugins[name] = aggregatePluginDefinition{
 		resultType: typeOf[T](),
@@ -5094,6 +5153,48 @@ func SortedAccessBy[V any, K Ordered](value Expression[V], key Expression[K]) So
 	}}}
 }
 
+// SortedAccessByMulti creates a sorted access aggregate with two ordered key
+// expressions. Keys compare lexicographically, matching Esper's
+// HashableMultiKey/TreeMap behavior while keeping the rule fully typed and
+// analyzable in Go.
+func SortedAccessByMulti[V any, A Ordered, B Ordered](value Expression[V], first Expression[A], second Expression[B]) SortedAccessExpression[V, SortedMultiKey] {
+	key := sortedMultiKeyExpression[A, B](first, second)
+	return SortedAccessBy[V, SortedMultiKey](value, key)
+}
+
+func sortedMultiKeyExpression[A Ordered, B Ordered](first Expression[A], second Expression[B]) Expression[SortedMultiKey] {
+	children := make([]*exprNode, 0, 2)
+	if first != nil {
+		children = append(children, first.node())
+	} else {
+		children = append(children, nil)
+	}
+	if second != nil {
+		children = append(children, second.node())
+	} else {
+		children = append(children, nil)
+	}
+	description := "sorted-multi-key(<invalid>)"
+	if first != nil && second != nil {
+		description = "sorted-multi-key(" + first.Description() + "," + second.Description() + ")"
+	}
+	node := &exprNode{kind: "sorted-multi-key", typ: typeOf[SortedMultiKey](), description: description, children: children}
+	if first == nil || second == nil {
+		node.configurationError = "sorted multi-key requires two key expressions"
+	}
+	return typedExpr[SortedMultiKey]{n: node, fn: func(ctx EvalContext) Value {
+		if first == nil || second == nil {
+			return Missing()
+		}
+		firstValue := first.eval(ctx)
+		secondValue := second.eval(ctx)
+		if !firstValue.IsPresent() || !secondValue.IsPresent() {
+			return Null()
+		}
+		return Present(NewSortedMultiKey(firstValue, secondValue))
+	}}
+}
+
 func buildSortedAccessValue[V any, K Ordered](ctx EvalContext, value Expression[V], key Expression[K]) SortedAccessValue[K, V] {
 	entries := make([]SortedAccessEntry[K, V], 0)
 	for _, event := range ctx.Group {
@@ -5558,10 +5659,14 @@ func SortedValues[T Ordered](expression Expression[T], descending bool) Aggregat
 			}
 		}
 		sort.SliceStable(values, func(left, right int) bool {
-			if descending {
-				return values[left] > values[right]
+			comparison, ok := compareValues(Present(values[left]), Present(values[right]))
+			if !ok {
+				return false
 			}
-			return values[left] < values[right]
+			if descending {
+				return comparison > 0
+			}
+			return comparison < 0
 		})
 		return Present(values)
 	})

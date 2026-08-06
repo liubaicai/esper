@@ -248,6 +248,13 @@ func compareValues(left, right Value) (int, bool) {
 	if !left.IsPresent() || !right.IsPresent() {
 		return 0, false
 	}
+	if leftKey, ok := left.data.(SortedMultiKey); ok {
+		rightKey, rightOK := right.data.(SortedMultiKey)
+		if !rightOK {
+			return 0, false
+		}
+		return compareSortedMultiKeys(leftKey, rightKey)
+	}
 	if l, ok := numericValue(left); ok {
 		if r, ok := numericValue(right); ok {
 			switch {
@@ -279,6 +286,23 @@ func compareValues(left, right Value) (int, bool) {
 		return 0, true
 	}
 	return 0, false
+}
+
+func compareSortedMultiKeys(left, right SortedMultiKey) (int, bool) {
+	for index := 0; index < len(left.parts) && index < len(right.parts); index++ {
+		comparison, ok := compareValues(left.parts[index], right.parts[index])
+		if !ok || comparison != 0 {
+			return comparison, ok
+		}
+	}
+	switch {
+	case len(left.parts) < len(right.parts):
+		return -1, true
+	case len(left.parts) > len(right.parts):
+		return 1, true
+	default:
+		return 0, true
+	}
 }
 
 func andValues(left, right Value) Value {

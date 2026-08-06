@@ -21,37 +21,39 @@ type Environment struct {
 	// definition node to the reference AST; keeping that one-time expansion
 	// under a build lock preserves the concurrent-plan safety promised by the
 	// Environment API without exposing mutable AST state to callers.
-	buildMu          sync.Mutex
-	schemas          map[string]Schema
-	typeToName       map[reflect.Type]string
-	variables        map[string]VariableDefinition
-	aggregatePlugins map[string]aggregatePluginDefinition
-	enumPlugins      map[string]enumPluginDefinition
-	dateTimePlugins  map[string]dateTimePluginDefinition
-	scripts          map[string]scriptDefinition
-	tables           map[string]TableDefinition
-	namedWindows     map[string]NamedWindowDefinition
-	contexts         map[string]ContextDefinition
-	dataflows        map[string]DataflowDefinition
-	savedDataflows   map[string]DataflowDefinition
-	expressions      map[string]ExpressionDefinition
+	buildMu               sync.Mutex
+	schemas               map[string]Schema
+	typeToName            map[reflect.Type]string
+	variables             map[string]VariableDefinition
+	aggregatePlugins      map[string]aggregatePluginDefinition
+	aggregateMultiPlugins map[string]aggregateMultiPluginDefinition
+	enumPlugins           map[string]enumPluginDefinition
+	dateTimePlugins       map[string]dateTimePluginDefinition
+	scripts               map[string]scriptDefinition
+	tables                map[string]TableDefinition
+	namedWindows          map[string]NamedWindowDefinition
+	contexts              map[string]ContextDefinition
+	dataflows             map[string]DataflowDefinition
+	savedDataflows        map[string]DataflowDefinition
+	expressions           map[string]ExpressionDefinition
 }
 
 func NewEnvironment() *Environment {
 	return &Environment{
-		schemas:          make(map[string]Schema),
-		typeToName:       make(map[reflect.Type]string),
-		variables:        make(map[string]VariableDefinition),
-		aggregatePlugins: make(map[string]aggregatePluginDefinition),
-		enumPlugins:      make(map[string]enumPluginDefinition),
-		dateTimePlugins:  make(map[string]dateTimePluginDefinition),
-		scripts:          make(map[string]scriptDefinition),
-		tables:           make(map[string]TableDefinition),
-		namedWindows:     make(map[string]NamedWindowDefinition),
-		contexts:         make(map[string]ContextDefinition),
-		dataflows:        make(map[string]DataflowDefinition),
-		savedDataflows:   make(map[string]DataflowDefinition),
-		expressions:      make(map[string]ExpressionDefinition),
+		schemas:               make(map[string]Schema),
+		typeToName:            make(map[reflect.Type]string),
+		variables:             make(map[string]VariableDefinition),
+		aggregatePlugins:      make(map[string]aggregatePluginDefinition),
+		aggregateMultiPlugins: make(map[string]aggregateMultiPluginDefinition),
+		enumPlugins:           make(map[string]enumPluginDefinition),
+		dateTimePlugins:       make(map[string]dateTimePluginDefinition),
+		scripts:               make(map[string]scriptDefinition),
+		tables:                make(map[string]TableDefinition),
+		namedWindows:          make(map[string]NamedWindowDefinition),
+		contexts:              make(map[string]ContextDefinition),
+		dataflows:             make(map[string]DataflowDefinition),
+		savedDataflows:        make(map[string]DataflowDefinition),
+		expressions:           make(map[string]ExpressionDefinition),
 	}
 }
 
@@ -563,6 +565,18 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	sort.Strings(pluginNames)
 	for _, name := range pluginNames {
 		canonicalParts = append(canonicalParts, fmt.Sprintf("aggregate-plugin(%s:%s:factory=%t:access=%t)", name, pluginTypes[name], pluginFactoryFlags[name], pluginAccessFlags[name]))
+	}
+	e.mu.RLock()
+	multiPluginNames := make([]string, 0, len(e.aggregateMultiPlugins))
+	multiPluginDefinitions := make(map[string]aggregateMultiPluginDefinition, len(e.aggregateMultiPlugins))
+	for name, definition := range e.aggregateMultiPlugins {
+		multiPluginNames = append(multiPluginNames, name)
+		multiPluginDefinitions[name] = definition
+	}
+	e.mu.RUnlock()
+	sort.Strings(multiPluginNames)
+	for _, name := range multiPluginNames {
+		canonicalParts = append(canonicalParts, fmt.Sprintf("aggregate-multi-plugin(%s:%s)", name, aggregateMultiPluginMethodsCanonical(multiPluginDefinitions[name].methods)))
 	}
 	e.mu.RLock()
 	enumPluginNames := make([]string, 0, len(e.enumPlugins))
@@ -3172,6 +3186,9 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 		if err := e.validateAggregatePluginNodes(selection.Expr.node()); err != nil {
 			return err
 		}
+		if err := e.validateAggregateMultiPluginNodes(selection.Expr.node()); err != nil {
+			return err
+		}
 		if err := validateFields(definition.input, selection.Expr); err != nil {
 			return err
 		}
@@ -3184,6 +3201,9 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 			return err
 		}
 		if err := e.validateAggregatePluginNodes(definition.having.node()); err != nil {
+			return err
+		}
+		if err := e.validateAggregateMultiPluginNodes(definition.having.node()); err != nil {
 			return err
 		}
 		if err := validateFields(definition.input, definition.having); err != nil {
@@ -3343,6 +3363,57 @@ func (e *Environment) validateAggregatePluginNodes(node *exprNode) error {
 	return nil
 }
 
+func (e *Environment) validateAggregateMultiPluginNodes(node *exprNode) error {
+	if node == nil {
+		return nil
+	}
+	if node.kind == "aggregate-multi-plugin" || node.kind == "aggregate-multi-plugin-ref" {
+		if strings.TrimSpace(node.aggregateMultiPluginName) == "" {
+			return NewError(ErrorInvalidRule, "aggregate multi plugin provider is required")
+		}
+		if strings.TrimSpace(node.aggregateMultiPluginMethod) == "" {
+			return NewError(ErrorInvalidRule, "aggregate multi plugin method is required")
+		}
+		if len(node.children) > 1 || (len(node.children) == 1 && node.children[0] == nil) {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("aggregate multi plugin %q accepts at most one non-nil input expression", node.aggregateMultiPluginName))
+		}
+		var methods map[string]AggregateMultiPluginMethod
+		if node.kind == "aggregate-multi-plugin-ref" {
+			if node.aggregateMultiPluginEnvironment == nil || node.aggregateMultiPluginEnvironment != e {
+				return NewError(ErrorDependency, fmt.Sprintf("aggregate multi plugin %q belongs to a different environment", node.aggregateMultiPluginName))
+			}
+			e.mu.RLock()
+			definition, ok := e.aggregateMultiPlugins[node.aggregateMultiPluginName]
+			e.mu.RUnlock()
+			if !ok {
+				return NewError(ErrorUnknownName, fmt.Sprintf("aggregate multi plugin %q is not registered", node.aggregateMultiPluginName))
+			}
+			methods = definition.methods
+		} else {
+			if !node.aggregateMultiPluginReady || node.aggregateMultiPluginFactory == nil {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("aggregate multi plugin %q has no factory", node.aggregateMultiPluginName))
+			}
+			methods = node.aggregateMultiMethods
+		}
+		method, ok := methods[node.aggregateMultiPluginMethod]
+		if !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("aggregate multi plugin %q method %q is not declared", node.aggregateMultiPluginName, node.aggregateMultiPluginMethod))
+		}
+		if method.ResultType != nil && node.typ != nil && method.ResultType != node.typ &&
+			!method.ResultType.AssignableTo(node.typ) && !node.typ.AssignableTo(method.ResultType) && !numericTypes(method.ResultType, node.typ) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("aggregate multi plugin %q.%s returns %s, expression expects %s", node.aggregateMultiPluginName, node.aggregateMultiPluginMethod, method.ResultType, node.typ))
+		}
+		node.aggregateMultiStateKey = method.StateKey
+		node.aggregateMultiStateShared = method.StateKey != ""
+	}
+	for _, child := range node.children {
+		if err := e.validateAggregateMultiPluginNodes(child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func validateAggregateExpressionNodes(node *exprNode) error {
 	if node == nil {
 		return NewError(ErrorInvalidRule, "aggregate expression node is required")
@@ -3432,6 +3503,17 @@ func validateAggregateExpressionNodes(node *exprNode) error {
 			return NewError(ErrorInvalidRule, "plugin aggregate factory accepts at most one input expression")
 		}
 	}
+	if node.kind == "aggregate-multi-plugin" || node.kind == "aggregate-multi-plugin-ref" {
+		if strings.TrimSpace(node.aggregateMultiPluginName) == "" {
+			return NewError(ErrorInvalidRule, "aggregate multi plugin provider is required")
+		}
+		if strings.TrimSpace(node.aggregateMultiPluginMethod) == "" {
+			return NewError(ErrorInvalidRule, "aggregate multi plugin method is required")
+		}
+		if len(node.children) > 1 || (len(node.children) == 1 && node.children[0] == nil) {
+			return NewError(ErrorInvalidRule, "aggregate multi plugin accepts at most one non-nil input expression")
+		}
+	}
 	if node.kind == "aggregate-plugin-inputs" {
 		for index, child := range node.children {
 			if child == nil {
@@ -3483,7 +3565,7 @@ func expressionNodeContainsAggregate(node *exprNode) bool {
 		return true
 	}
 	switch node.kind {
-	case "aggregate-filter", "aggregate-local-group", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "aggregate-plugin-access-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "max-exact", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
+	case "aggregate-filter", "aggregate-local-group", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "aggregate-plugin-access-ref", "aggregate-multi-plugin", "aggregate-multi-plugin-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "max-exact", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
 		return true
 	}
 	for _, child := range node.children {

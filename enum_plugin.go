@@ -154,6 +154,9 @@ func RegisterEnumPlugin[T any](env *Environment, name string, footprints []EnumM
 	if _, exists := env.aggregatePlugins[name]; exists {
 		return NewError(ErrorDependency, fmt.Sprintf("enumeration plugin %q conflicts with aggregate plugin", name))
 	}
+	if _, exists := env.aggregateMultiPlugins[name]; exists {
+		return NewError(ErrorDependency, fmt.Sprintf("enumeration plugin %q conflicts with aggregate multi plugin", name))
+	}
 	env.enumPlugins[name] = enumPluginDefinition{
 		resultType: typeOf[T](),
 		footprints: cloneEnumMethodFootprints(footprints),

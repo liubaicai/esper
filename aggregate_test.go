@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -12,6 +13,314 @@ import (
 
 func (trade runtimeTestTrade) PriceLabel() string {
 	return fmt.Sprintf("%s:%.0f", trade.Symbol, trade.Price)
+}
+
+type testAggregateMultiStateExtended struct {
+	id   int
+	rows [][]Value
+}
+
+func (state *testAggregateMultiStateExtended) Enter(values []Value) {
+	state.rows = append(state.rows, append([]Value(nil), values...))
+}
+
+func (state *testAggregateMultiStateExtended) Leave(values []Value) {
+	for index, current := range state.rows {
+		if reflect.DeepEqual(current, values) {
+			state.rows = append(state.rows[:index], state.rows[index+1:]...)
+			return
+		}
+	}
+}
+
+func (state *testAggregateMultiStateExtended) Value(method string) (any, bool) {
+	switch method {
+	case "count":
+		return int64(len(state.rows)), true
+	case "sum":
+		var sum float64
+		for _, row := range state.rows {
+			if len(row) == 0 {
+				continue
+			}
+			if value, ok := numericValue(row[0]); ok {
+				sum += value
+			}
+		}
+		return sum, true
+	case "vectorWidth":
+		if len(state.rows) == 0 {
+			return int64(0), true
+		}
+		return int64(len(state.rows[len(state.rows)-1])), true
+	case "instance":
+		return int64(state.id), true
+	case "se1", "se2":
+		if len(state.rows) == 0 || len(state.rows[len(state.rows)-1]) == 0 {
+			return nil, false
+		}
+		return state.rows[len(state.rows)-1][0].Any(), true
+	default:
+		return nil, false
+	}
+}
+
+func (state *testAggregateMultiStateExtended) Clear() {
+	state.rows = nil
+}
+
+func TestAggregateMultiPluginRegisteredLifecycleAndSharing(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	symbol := Field[runtimeTestTrade, string]("symbol")
+	price := Field[runtimeTestTrade, float64]("price")
+	input := AggregatePluginInputs(price, symbol)
+	methods := []AggregateMultiPluginMethod{
+		AggregateMultiMethod[int64]("count", "numbers"),
+		AggregateMultiMethod[float64]("sum", "numbers"),
+		AggregateMultiMethod[int64]("vectorWidth"),
+		AggregateMultiMethod[Event]("se1", "single"),
+		AggregateMultiMethod[Event]("se2", "single"),
+	}
+	factoryCount := 0
+	factory := func(ctx AggregateMultiPluginFactoryContext) AggregateMultiPluginState {
+		factoryCount++
+		for _, method := range []string{"count", "sum", "vectorWidth", "se1", "se2"} {
+			if _, ok := ctx.Methods[method]; !ok {
+				t.Fatalf("multi plugin factory did not receive method %q", method)
+			}
+		}
+		return &testAggregateMultiStateExtended{id: factoryCount}
+	}
+	if err := RegisterAggregateMultiPlugin(env, "registered-multi", methods, factory); err != nil {
+		t.Fatal(err)
+	}
+	filtered := FilterAggregate[int64](
+		PluginAggregateMultiRef[int64](env, "registered-multi", "count", input),
+		StartsWith(symbol, Literal("A")),
+	)
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(2)).GroupBy(symbol).Select(
+		Alias("symbol", symbol),
+		Alias("count", PluginAggregateMultiRef[int64](env, "registered-multi", "count", input)),
+		Alias("sum", PluginAggregateMultiRef[float64](env, "registered-multi", "sum", input)),
+		Alias("width", PluginAggregateMultiRef[int64](env, "registered-multi", "vectorWidth", input)),
+		Alias("filtered", filtered),
+		Alias("event1", PluginAggregateMultiRef[Event](env, "registered-multi", "se1", nil)),
+		Alias("event2", PluginAggregateMultiRef[Event](env, "registered-multi", "se2", nil)),
+	).Query(StatementName("registered-multi-lifecycle")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := make([]Row, 0, 4)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []runtimeTestTrade{
+		{Symbol: "A", Price: 1},
+		{Symbol: "A", Price: 4},
+		{Symbol: "B", Price: 10},
+		{Symbol: "A", Price: 7},
+	} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 5 {
+		t.Fatalf("multi plugin rows = %d", len(rows))
+	}
+	for _, row := range rows {
+		if row.Get("width").Any() != int64(2) {
+			t.Fatalf("multi plugin vector width = %#v", row.AsMap())
+		}
+		event1, ok := row.Get("event1").Any().(Event)
+		if !ok {
+			t.Fatalf("multi plugin event1 type = %T", row.Get("event1").Any())
+		}
+		event2, ok := row.Get("event2").Any().(Event)
+		if !ok || !sameEvent(event1, event2) {
+			t.Fatalf("multi plugin shared event state = %#v", row.AsMap())
+		}
+		switch row.Get("symbol").Any() {
+		case "A":
+			if row.Get("filtered").Any() != row.Get("count").Any() {
+				t.Fatalf("filtered A row = %#v", row.AsMap())
+			}
+			count, sum := row.Get("count").Any(), row.Get("sum").Any()
+			switch sum {
+			case float64(1), float64(4), float64(7):
+				if count != int64(1) {
+					t.Fatalf("A single-row count = %#v", row.AsMap())
+				}
+			case float64(5):
+				if count != int64(2) {
+					t.Fatalf("A two-row count = %#v", row.AsMap())
+				}
+			default:
+				t.Fatalf("A sum = %#v", row.AsMap())
+			}
+		case "B":
+			if row.Get("count").Any() != int64(1) || row.Get("sum").Any() != float64(10) || row.Get("filtered").Any() != int64(0) {
+				t.Fatalf("B row = %#v", row.AsMap())
+			}
+		default:
+			t.Fatalf("unexpected multi plugin group = %#v", row.AsMap())
+		}
+	}
+	// numbers and single share one state per group; vectorWidth and the
+	// filtered scope each have their own state per group.
+	if factoryCount != 8 {
+		t.Fatalf("multi plugin factory instances = %d, want 8", factoryCount)
+	}
+	if err := RegisterAggregateMultiPlugin(env, "registered-multi", methods, factory); err == nil {
+		t.Fatal("duplicate multi plugin registration succeeded")
+	}
+}
+
+func TestAggregateMultiPluginInlineIsolationAndPlanIdentity(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	methods := []AggregateMultiPluginMethod{AggregateMultiMethod[int64]("instance")}
+	factoryCount := 0
+	factory := func(AggregateMultiPluginFactoryContext) AggregateMultiPluginState {
+		factoryCount++
+		return &testAggregateMultiStateExtended{id: factoryCount}
+	}
+	left := PluginAggregateMulti[int64]("inline-multi", "instance", nil, factory, methods...)
+	right := PluginAggregateMulti[int64]("inline-multi", "instance", nil, factory, methods...)
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(2)).Aggregate(
+		Alias("left", left),
+		Alias("right", right),
+	).Query(StatementName("inline-multi-isolation")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(plan.Canonical()), "aggregate-multi-plugin(inline-multi.instance") {
+		t.Fatalf("inline multi plugin missing from canonical plan: %s", plan.Canonical())
+	}
+	second, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(2)).Aggregate(
+		Alias("left", PluginAggregateMulti[int64]("inline-multi", "instance", nil, factory, methods...)),
+		Alias("right", PluginAggregateMulti[int64]("inline-multi", "instance", nil, factory, methods...)),
+	).Query(StatementName("inline-multi-isolation")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Hash() != second.Hash() || !reflect.DeepEqual(plan.Canonical(), second.Canonical()) {
+		t.Fatal("inline multi plugin plan identity is unstable")
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var last Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) > 0 {
+			var ok bool
+			last, ok = batch.New[len(batch.New)-1].Row()
+			if !ok {
+				return fmt.Errorf("inline multi result is not a row")
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if last.Get("left").Any() != int64(1) || last.Get("right").Any() != int64(2) {
+		t.Fatalf("inline multi default state sharing = %#v", last.AsMap())
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A", Price: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if last.Get("left").Any() != int64(1) || last.Get("right").Any() != int64(2) || factoryCount != 2 {
+		t.Fatalf("inline multi state lifecycle = %#v, factories=%d", last.AsMap(), factoryCount)
+	}
+}
+
+func TestAggregateMultiPluginValidationBoundaries(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	methods := []AggregateMultiPluginMethod{
+		AggregateMultiMethod[int64]("count", "shared"),
+	}
+	factory := func(AggregateMultiPluginFactoryContext) AggregateMultiPluginState {
+		return &testAggregateMultiStateExtended{}
+	}
+	if err := RegisterAggregateMultiPlugin(nil, "multi", methods, factory); err == nil || !errors.Is(err, ErrorDependency) {
+		t.Fatalf("nil environment registration error = %v", err)
+	}
+	if err := RegisterAggregateMultiPlugin(env, "", methods, factory); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("blank provider registration error = %v", err)
+	}
+	if err := RegisterAggregateMultiPlugin(env, "no-factory", methods, nil); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("nil factory registration error = %v", err)
+	}
+	if err := RegisterAggregateMultiPlugin(env, "no-methods", nil, factory); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("empty method registration error = %v", err)
+	}
+	if err := RegisterAggregateMultiPlugin(env, "duplicate-method", []AggregateMultiPluginMethod{
+		AggregateMultiMethod[int64]("same"), AggregateMultiMethod[int64]("same"),
+	}, factory); err == nil || !errors.Is(err, ErrorDependency) {
+		t.Fatalf("duplicate method registration error = %v", err)
+	}
+	if err := RegisterAggregateMultiPlugin(env, "missing-result", []AggregateMultiPluginMethod{{Name: "value"}}, factory); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("missing method result type error = %v", err)
+	}
+	if err := RegisterAggregateMultiPlugin(env, "registered-multi-validation", methods, factory); err != nil {
+		t.Fatal(err)
+	}
+	if err := RegisterAggregatePlugin[int64](env, "registered-multi-validation", func(EvalContext) (int64, bool) { return 1, true }); err == nil || !errors.Is(err, ErrorDependency) {
+		t.Fatalf("cross-category registration error = %v", err)
+	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("unknown-provider", PluginAggregateMultiRef[int64](env, "missing", "count", nil)),
+	).Query(StatementName("invalid-multi-provider"))); err == nil || !errors.Is(err, ErrorUnknownName) {
+		t.Fatalf("unknown multi provider Build error = %v", err)
+	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("unknown-method", PluginAggregateMultiRef[int64](env, "registered-multi-validation", "missing", nil)),
+	).Query(StatementName("invalid-multi-method"))); err == nil || !errors.Is(err, ErrorUnknownName) {
+		t.Fatalf("unknown multi method Build error = %v", err)
+	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("wrong-type", PluginAggregateMultiRef[string](env, "registered-multi-validation", "count", nil)),
+	).Query(StatementName("invalid-multi-type"))); err == nil || !errors.Is(err, ErrorTypeMismatch) {
+		t.Fatalf("multi result type Build error = %v", err)
+	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("nil-factory", PluginAggregateMulti[int64]("inline", "count", nil, nil, methods...)),
+	).Query(StatementName("invalid-multi-factory"))); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("inline nil factory Build error = %v", err)
+	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("duplicate-inline", PluginAggregateMulti[int64]("inline", "count", nil, factory,
+			AggregateMultiMethod[int64]("count"), AggregateMultiMethod[int64]("count"))),
+	).Query(StatementName("invalid-inline-methods"))); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("inline duplicate method Build error = %v", err)
+	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("nested", PluginAggregateMultiRef[int64](env, "registered-multi-validation", "count", AggregatePluginInputs(CountAll()))),
+	).Query(StatementName("invalid-multi-nested-aggregate"))); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("nested multi aggregate Build error = %v", err)
+	}
+	env2, _ := newRuntimeTest(t)
+	if err := RegisterAggregateMultiPlugin(env2, "registered-multi-validation", methods, factory); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("foreign", PluginAggregateMultiRef[int64](env2, "registered-multi-validation", "count", nil)),
+	).Query(StatementName("invalid-multi-environment"))); err == nil || !errors.Is(err, ErrorDependency) {
+		t.Fatalf("foreign multi environment Build error = %v", err)
+	}
 }
 
 type runtimeRateEvent struct {
@@ -768,6 +1077,70 @@ func TestSortedAccessNavigationAndDuplicateKeyBuckets(t *testing.T) {
 	}
 	if last.Get("firstKey").Any() != float64(10) || last.Get("lastKey").Any() != float64(40) {
 		t.Fatalf("sorted access after eviction = %#v", last.AsMap())
+	}
+}
+
+func TestSortedAccessMultiCriteriaMatchesEsper(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	symbol := Field[runtimeTestTrade, string]("symbol")
+	price := Field[runtimeTestTrade, float64]("price")
+	sorted := SortedAccessByMulti[runtimeTestTrade, string, float64](EventValue[runtimeTestTrade](), symbol, price)
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(LengthWindow(8)).Aggregate(
+		Alias("firstKey", sorted.FirstKey()),
+		Alias("lastKey", sorted.LastKey()),
+		Alias("lowerKey", sorted.LowerKey(Literal(NewSortedMultiKey("E4", 1.0)))),
+		Alias("higherKey", sorted.HigherKey(Literal(NewSortedMultiKey("E4b", -1.0)))),
+	).Query(StatementName("sorted-access-multi-criteria")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var last Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) > 0 {
+			var ok bool
+			last, ok = batch.New[len(batch.New)-1].Row()
+			if !ok {
+				return fmt.Errorf("multi-criteria sorted result is not a row")
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []runtimeTestTrade{
+		{Symbol: "E1a", Price: 1},
+		{Symbol: "E1b", Price: 1},
+		{Symbol: "E4b", Price: 4},
+		{Symbol: "E6a", Price: 6},
+		{Symbol: "E6b", Price: 6},
+		{Symbol: "E8", Price: 8},
+		{Symbol: "E9", Price: 9},
+	} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertKey := func(name, wantSymbol string, wantPrice float64) {
+		value := last.Get(name)
+		key, ok := value.Any().(SortedMultiKey)
+		if !ok {
+			t.Fatalf("%s = %#v, want SortedMultiKey", name, value.Any())
+		}
+		parts := key.Parts()
+		if len(parts) != 2 || parts[0] != wantSymbol || parts[1] != wantPrice {
+			t.Fatalf("%s parts = %#v, want [%q %v]", name, parts, wantSymbol, wantPrice)
+		}
+	}
+	assertKey("firstKey", "E1a", 1)
+	assertKey("lastKey", "E9", 9)
+	assertKey("lowerKey", "E1b", 1)
+	assertKey("higherKey", "E4b", 4)
+	if !reflect.DeepEqual(NewSortedMultiKey("E4b", 4.0).Parts(), []any{"E4b", 4.0}) {
+		t.Fatalf("multi-key defensive parts = %#v", NewSortedMultiKey("E4b", 4.0).Parts())
 	}
 }
 

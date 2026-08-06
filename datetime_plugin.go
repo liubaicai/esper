@@ -181,6 +181,9 @@ func RegisterDateTimePlugin(env *Environment, name string, footprints []DateTime
 	if _, exists := env.aggregatePlugins[name]; exists {
 		return NewError(ErrorDependency, fmt.Sprintf("date-time plugin %q conflicts with aggregate plugin", name))
 	}
+	if _, exists := env.aggregateMultiPlugins[name]; exists {
+		return NewError(ErrorDependency, fmt.Sprintf("date-time plugin %q conflicts with aggregate multi plugin", name))
+	}
 	env.dateTimePlugins[name] = dateTimePluginDefinition{
 		footprints: cloneDateTimeMethodFootprints(footprints),
 		factory:    dateTimePluginFactory(factory),

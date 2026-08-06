@@ -1247,6 +1247,17 @@
       "difference": "Go maps the stateful aggregate factory lifecycle to explicit typed factories, including independent group/window state, event/field/constant/array argument vectors, zero-argument input vectors, registered references, Table materialization and Go Build validation. It intentionally does not expose Java EPL names, reflection/classloader registration, SODA serialization, code-generation forge callbacks, Java distinct/star compiler sugar, dot-method return descriptors or exact invalid diagnostic text; those broader configuration and compiler matrices remain partial."
     },
     {
+      "id": "case.expr-aggregate-multifunction",
+      "javaRuntimeIds": ["java-runtime-dddc14fa4fcbc5c299c9", "java-runtime-502d46e9a79b152e9f2b", "java-runtime-79ca5047f6bd47562f38", "java-runtime-1a634a9ffc6da29055f2", "java-runtime-f31078232e4c8225676c", "java-runtime-bbce8948de4e027393fd", "java-runtime-6e89910ea4ec2fce1869", "java-runtime-ef9c3e22146d334ec0be"],
+      "javaNames": ["ClientExtendAggregationMFManagedSimpleState", "ClientExtendAggregationMFManagedScalarOnly", "ClientExtendAggregationMFManagedScalarArray", "ClientExtendAggregationMFManagedScalarColl", "ClientExtendAggregationMFManagedSingleEvent", "ClientExtendAggregationMFManagedCollEvent", "ClientExtendAggregationMFManagedSameProviderGroupedReturnSingleEvent", "ClientExtendAggregationMFManagedWithTable"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendAggregationMultiFunction.java"],
+      "goTests": ["TestAggregateMultiPluginMatchesJavaSharedAccessorAndTypeFamilies", "TestAggregateMultiPluginReplaysLengthWindowLeaveLifecycle", "TestAggregateMultiPluginRegisteredLifecycleAndSharing", "TestAggregateMultiPluginInlineIsolationAndPlanIdentity", "TestAggregateMultiPluginValidationBoundaries"],
+      "tags": ["correctness", "expression", "aggregate", "plugin", "multi-function", "shared-state", "event-access"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go now provides an explicit RegisterAggregateMultiPlugin/PluginAggregateMultiRef and inline PluginAggregateMulti fluent contract with typed method metadata, provider-defined shared StateKey semantics, per-expression default isolation, per-group state isolation, scalar/array/collection/single-event/collection-event accessors, parameter vectors, filter scope, window replay and stable Plan canonical identity. The grouped shared-accessor trace and additional Build/lifecycle boundaries are covered against the Java multi-function execution family. Java table agent modes, inlined-class deployment/dependency graph, dynamic input-dependent return descriptors, full state/accessor metadata callbacks, code generation, serialization/HA lifecycle and exact invalid diagnostics remain open."
+    },
+    {
       "id": "case.expr-enum-subquery-udf",
       "javaRuntimeIds": ["java-runtime-385eff1ed2a658d97cc5", "java-runtime-41005ef10624c5d74430", "java-runtime-1cb9b928361d501cdfc4"],
       "javaNames": ["ExprEnumSubquery", "ExprEnumNamedWindow", "ExprEnumUDFStaticMethod"],
@@ -1998,6 +2009,7 @@
     {"capabilityId": "expr.core", "caseId": "case.expr-core-case"},
     {"capabilityId": "expr.core", "caseId": "case.expr-datetime-plugin"},
     {"capabilityId": "expr.core", "caseId": "case.expr-aggregate-plugin"},
+    {"capabilityId": "expr.core", "caseId": "case.expr-aggregate-multifunction"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-bitwise"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-current-timestamp"},
     {"capabilityId": "expr.core", "caseId": "case.expr-core-coalesce"},

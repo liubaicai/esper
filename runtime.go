@@ -2623,16 +2623,17 @@ type aggregateRuntimeState struct {
 }
 
 type aggregateGroup struct {
-	events         []Event
-	everEvents     []Event
-	leavingEvents  []Event
-	pluginStates   map[*exprNode]aggregatePluginState
-	representative Event
-	current        Event
-	groupingSet    []int
-	leaving        bool
-	previous       []Value
-	emitted        bool
+	events            []Event
+	everEvents        []Event
+	leavingEvents     []Event
+	pluginStates      map[*exprNode]aggregatePluginState
+	multiPluginStates map[string]aggregateMultiPluginState
+	representative    Event
+	current           Event
+	groupingSet       []int
+	leaving           bool
+	previous          []Value
+	emitted           bool
 }
 
 type aggregateResultEntry struct {
@@ -4872,6 +4873,7 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 			now,
 			r.variables,
 			group.pluginStates,
+			group.multiPluginStates,
 		)
 		if !visible {
 			continue
@@ -9753,9 +9755,10 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		group := state.groups[key]
 		if group == nil {
 			group = &aggregateGroup{
-				groupingSet:    append([]int(nil), groupingSet...),
-				representative: event,
-				pluginStates:   make(map[*exprNode]aggregatePluginState),
+				groupingSet:       append([]int(nil), groupingSet...),
+				representative:    event,
+				pluginStates:      make(map[*exprNode]aggregatePluginState),
+				multiPluginStates: make(map[string]aggregateMultiPluginState),
 			}
 			state.groups[key] = group
 		}
@@ -9802,7 +9805,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				key:    key,
 			})
 		}
-		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates)
+		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
 		if visible && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 			newEntries = append(newEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, newValues)),
@@ -9818,6 +9821,11 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			group.emitted = false
 		}
 		if len(group.events) == 0 && !aggregateDefinitionUsesEver(definition) {
+			for _, pluginState := range group.multiPluginStates {
+				if pluginState != nil {
+					pluginState.clear()
+				}
+			}
 			delete(state.groups, key)
 		}
 	}
@@ -9901,7 +9909,7 @@ func (r *statementRuntime) persistAggregateTable(plan Plan, now time.Time) error
 		if group == nil || len(group.events) == 0 {
 			continue
 		}
-		values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, group.pluginStates)
+		values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
 		if !visible {
 			continue
 		}
@@ -10043,19 +10051,19 @@ func aggregateGroupKey(groupBy []Expr, groupingSet []int, event Event, now time.
 	return encodeKey(values)
 }
 
-func evaluateAggregateGroup(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState) ([]Value, bool) {
-	return evaluateAggregateGroupInternal(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, allEvents, allEverEvents, now, variables, pluginStates, false)
+func evaluateAggregateGroup(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState, multiPluginStates map[string]aggregateMultiPluginState) ([]Value, bool) {
+	return evaluateAggregateGroupInternal(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, allEvents, allEverEvents, now, variables, pluginStates, multiPluginStates, false)
 }
 
 func evaluateEmptyAggregateGroup(definition *aggregateDefinition, now time.Time, variables map[string]Value) ([]Value, bool) {
-	return evaluateAggregateGroupInternal(definition, nil, nil, nil, false, nil, Event{}, nil, nil, now, variables, nil, true)
+	return evaluateAggregateGroupInternal(definition, nil, nil, nil, false, nil, Event{}, nil, nil, now, variables, nil, nil, true)
 }
 
-func evaluateAggregateGroupInternal(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState, allowEmpty bool) ([]Value, bool) {
+func evaluateAggregateGroupInternal(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState, multiPluginStates map[string]aggregateMultiPluginState, allowEmpty bool) ([]Value, bool) {
 	if len(events) == 0 && len(everEvents) == 0 && current.Schema().Name() == "" && !allowEmpty {
 		return nil, false
 	}
-	ctx := aggregateGroupContext(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, allEvents, allEverEvents, now, variables, pluginStates)
+	ctx := aggregateGroupContext(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, allEvents, allEverEvents, now, variables, pluginStates, multiPluginStates)
 	values := make([]Value, 0, len(definition.selections))
 	for _, selection := range definition.selections {
 		values = append(values, evaluateAggregateExpression(selection.Expr, ctx))
@@ -10070,7 +10078,7 @@ func evaluateAggregateGroupInternal(definition *aggregateDefinition, events []Ev
 	return values, true
 }
 
-func aggregateGroupContext(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState) EvalContext {
+func aggregateGroupContext(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState, multiPluginStates map[string]aggregateMultiPluginState) EvalContext {
 	if current.Schema().Name() == "" {
 		if len(events) > 0 {
 			current = events[0]
@@ -10078,7 +10086,7 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 			current = everEvents[0]
 		}
 	}
-	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Now: now, Variables: variables, aggregatePluginStates: pluginStates, aggregateEvaluation: true}
+	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Now: now, Variables: variables, aggregatePluginStates: pluginStates, aggregateMultiPluginStates: multiPluginStates, aggregateEvaluation: true}
 	if len(definition.groupBy) > 0 {
 		groupingEvent := current
 		if groupingEvent.Schema().Name() == "" {
@@ -10147,7 +10155,7 @@ func aggregateResultContext(group *aggregateGroup, definition *aggregateDefiniti
 	if len(events) == 0 && group.representative.Schema().Name() != "" {
 		events = []Event{group.representative}
 	}
-	ctx := aggregateGroupContext(definition, events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, allEvents, allEverEvents, now, variables, group.pluginStates)
+	ctx := aggregateGroupContext(definition, events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, allEvents, allEverEvents, now, variables, group.pluginStates, group.multiPluginStates)
 	ctx.IsLeaving = leaving
 	return ctx
 }
