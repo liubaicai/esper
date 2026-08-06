@@ -979,6 +979,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 			evaluation := EvalContext{
 				Engine:     e,
 				Event:      candidate,
+				JoinEvents: append([]Event(nil), outer.JoinEvents...),
 				OuterEvent: outer.Event,
 				History:    historyForEvent(delta, candidate),
 				Now:        now,
@@ -1031,6 +1032,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 				matched, ok := boolValue(definition.predicate.eval(EvalContext{
 					Engine:     e,
 					Event:      event,
+					JoinEvents: append([]Event(nil), outer.JoinEvents...),
 					OuterEvent: outer.Event,
 					Group:      aggregateGroup,
 					History:    aggregateGroup,
@@ -1046,6 +1048,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 		}
 		evaluation := EvalContext{
 			Engine:       e,
+			JoinEvents:   append([]Event(nil), outer.JoinEvents...),
 			OuterEvent:   outer.Event,
 			Group:        aggregateGroup,
 			EverGroup:    aggregateGroup,
@@ -1139,6 +1142,7 @@ func evaluateSubqueryGroups(definition *subqueryDefinition, candidates []subquer
 	for _, group := range groups {
 		evaluation := EvalContext{
 			Engine:       engine,
+			JoinEvents:   append([]Event(nil), outer.JoinEvents...),
 			OuterEvent:   outer.Event,
 			Group:        group.events,
 			EverGroup:    group.events,

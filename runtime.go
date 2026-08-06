@@ -5662,8 +5662,8 @@ func joinConditionMatches(condition JoinCondition, events []Event, now time.Time
 	if condition.Left == nil || condition.Right == nil || leftSource < 0 || rightSource < 0 || leftSource >= len(events) || rightSource >= len(events) {
 		return false
 	}
-	leftValue := condition.Left.eval(EvalContext{Event: events[leftSource], Now: now, Variables: variables})
-	rightValue := condition.Right.eval(EvalContext{Event: events[rightSource], Now: now, Variables: variables})
+	leftValue := condition.Left.eval(EvalContext{Event: events[leftSource], JoinEvents: events, OuterEvent: events[leftSource], Now: now, Variables: variables})
+	rightValue := condition.Right.eval(EvalContext{Event: events[rightSource], JoinEvents: events, OuterEvent: events[rightSource], Now: now, Variables: variables})
 	switch condition.Comparison {
 	case JoinEqual:
 		matched, ok := boolValue(EqualValues(leftValue, rightValue))
@@ -9552,7 +9552,14 @@ func projectJoinTuples(tuples [][]Event, query Query, resultSchema Schema, now t
 			if source >= 0 && source < len(tuple) {
 				event = tuple[source]
 			}
-			values = append(values, selection.Expr.eval(EvalContext{Event: event, IsLeaving: leaving, Now: now, Variables: variables}))
+			values = append(values, selection.Expr.eval(EvalContext{
+				Event:      event,
+				JoinEvents: tuple,
+				OuterEvent: event,
+				IsLeaving:  leaving,
+				Now:        now,
+				Variables:  variables,
+			}))
 		}
 		results = append(results, resultRow(newRow(resultSchema, values)))
 	}

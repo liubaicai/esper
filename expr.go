@@ -179,6 +179,11 @@ func ContextKeyValue[T any](index int) Expression[T] {
 // EvalContext contains the event and logical time visible to an expression.
 type EvalContext struct {
 	Event Event
+	// JoinEvents contains the complete tuple currently being evaluated. It is
+	// populated for Join projections and Join conditions so a correlated
+	// subquery can refer to any outer source with JoinField/JoinEventValue.
+	// Ordinary stream expressions leave it nil.
+	JoinEvents []Event
 	// OuterEvent is the event from the enclosing statement while evaluating a
 	// correlated subquery. Ordinary expressions leave it empty.
 	OuterEvent Event
@@ -343,11 +348,18 @@ func JoinField[V any](source int, name string) Expression[V] {
 		if source < 0 || name == "" {
 			return Missing()
 		}
-		tuple, ok := ctx.Event.Underlying().(joinTuple)
-		if !ok || source >= len(tuple.events) {
+		events := ctx.JoinEvents
+		if events == nil {
+			tuple, ok := ctx.Event.Underlying().(joinTuple)
+			if !ok {
+				return Missing()
+			}
+			events = tuple.events
+		}
+		if source >= len(events) {
 			return Missing()
 		}
-		event := tuple.events[source]
+		event := events[source]
 		if !event.Schema().valid() {
 			return Null()
 		}
@@ -365,11 +377,18 @@ func JoinEventValue[T any](source int) Expression[T] {
 		if source < 0 {
 			return Missing()
 		}
-		tuple, ok := ctx.Event.Underlying().(joinTuple)
-		if !ok || source >= len(tuple.events) {
+		events := ctx.JoinEvents
+		if events == nil {
+			tuple, ok := ctx.Event.Underlying().(joinTuple)
+			if !ok {
+				return Missing()
+			}
+			events = tuple.events
+		}
+		if source >= len(events) {
 			return Missing()
 		}
-		event := tuple.events[source]
+		event := events[source]
 		if !event.Schema().valid() {
 			return Null()
 		}
