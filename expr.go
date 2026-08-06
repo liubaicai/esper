@@ -2200,33 +2200,11 @@ func Signum(value Expression[float64]) Expression[float64] {
 }
 
 func Concat(values ...Expression[string]) Expression[string] {
-	descriptions := make([]string, 0, len(values))
-	children := make([]*exprNode, 0, len(values))
-	for _, value := range values {
-		if value == nil {
-			continue
-		}
-		descriptions = append(descriptions, value.Description())
-		children = append(children, value.node())
+	operands := make([]Expr, len(values))
+	for index, value := range values {
+		operands[index] = value
 	}
-	return makeExpr[string]("concat", "concat("+strings.Join(descriptions, ",")+")", children, func(ctx EvalContext) Value {
-		var builder strings.Builder
-		for _, value := range values {
-			if value == nil {
-				continue
-			}
-			current := value.eval(ctx)
-			if !current.IsPresent() {
-				return Null()
-			}
-			text, err := As[string](current)
-			if err != nil {
-				return Null()
-			}
-			builder.WriteString(text)
-		}
-		return Present(builder.String())
-	})
+	return concatExpression("concat", operands...)
 }
 
 func IfThenElse[T any](condition Expression[bool], whenTrue, whenFalse Expression[T]) Expression[T] {

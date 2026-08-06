@@ -18,7 +18,7 @@ type inBetweenParityEvent struct {
 	IntKeys      map[int]string `esper:"int_keys"`
 }
 
-func TestInBetweenExpressionsMatchJavaNullCollectionAndCoercionSemantics(t *testing.T) {
+func TestInBetweenExpressionsMatchJavaCollectionNumericBigNumberAndNullSemantics(t *testing.T) {
 	if got := InOf(Literal(1), Literal(int64(2)), Literal(int16(1))).eval(EvalContext{}); !got.Equal(Present(true)) {
 		t.Fatalf("mixed scalar IN = %v, want true", got)
 	}
