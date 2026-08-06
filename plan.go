@@ -1262,6 +1262,17 @@ func (e *Environment) validateNode(node *streamNode) error {
 			}
 		}
 		return nil
+	case streamDerived:
+		if node.derived == nil || node.derived.aggregate == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("derived source %q has no aggregate definition", node.sourceName))
+		}
+		if !node.derived.schema.valid() {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("derived source %q has no result schema", node.sourceName))
+		}
+		if node.derived.aggregate.join != nil {
+			return NewError(ErrorInvalidRule, "derived aggregate source cannot wrap a join aggregate")
+		}
+		return e.validateAggregate(node.derived.aggregate)
 	case streamFilter:
 		if node.predicate == nil {
 			return fmt.Errorf("esper: filter predicate is required")
@@ -1601,6 +1612,12 @@ func (e *Environment) sourceSchema(source *streamNode) (Schema, error) {
 	}
 	if source.kind == streamPattern {
 		return patternJoinSchema(source.pattern)
+	}
+	if source.kind == streamDerived {
+		if source.derived == nil || !source.derived.schema.valid() {
+			return Schema{}, NewError(ErrorDependency, fmt.Sprintf("derived source %q has no result schema", source.sourceName))
+		}
+		return source.derived.schema, nil
 	}
 	schema, ok := e.Schema(source.sourceName)
 	if !ok {
@@ -1975,6 +1992,24 @@ func visitStreamNodeExpressions(node *streamNode, visit func(Expr) error) error 
 	if err := visitWindowExpressions(node.window, visit); err != nil {
 		return err
 	}
+	if node.derived != nil && node.derived.aggregate != nil {
+		for _, key := range node.derived.aggregate.groupBy {
+			if err := visit(key); err != nil {
+				return err
+			}
+		}
+		if err := visit(node.derived.aggregate.where); err != nil {
+			return err
+		}
+		if err := visit(node.derived.aggregate.having); err != nil {
+			return err
+		}
+		for _, selection := range node.derived.aggregate.selections {
+			if err := visit(selection.Expr); err != nil {
+				return err
+			}
+		}
+	}
 	return visitStreamNodeExpressions(node.input, visit)
 }
 
@@ -2169,7 +2204,7 @@ func isIntegralType(typ reflect.Type) bool {
 
 func sourceNode(node *streamNode) (*streamNode, error) {
 	for node != nil {
-		if node.kind == streamSource || node.kind == streamNamedWindow || node.kind == streamTable || node.kind == streamHistorical || node.kind == streamMethod || node.kind == streamPattern {
+		if node.kind == streamSource || node.kind == streamNamedWindow || node.kind == streamTable || node.kind == streamHistorical || node.kind == streamMethod || node.kind == streamPattern || node.kind == streamDerived {
 			return node, nil
 		}
 		node = node.input

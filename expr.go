@@ -1838,6 +1838,32 @@ func Abs[T Numeric](value Expression[T]) Expression[T] {
 	})
 }
 
+// Signum is the Go-native equivalent of Java Math.signum for double-valued
+// expressions. NaN and negative zero are preserved, while finite values are
+// normalized to -1, 0, or 1.
+func Signum(value Expression[float64]) Expression[float64] {
+	if value == nil {
+		return makeExpr[float64]("signum", "signum(<nil>)", nil, func(EvalContext) Value { return Null() })
+	}
+	return makeExpr[float64]("signum", "signum("+value.Description()+")", []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		current := value.eval(ctx)
+		if !current.IsPresent() {
+			return Null()
+		}
+		input, ok := current.Any().(float64)
+		if !ok {
+			return Null()
+		}
+		if math.IsNaN(input) || input == 0 {
+			return Present(input)
+		}
+		if input < 0 {
+			return Present(float64(-1))
+		}
+		return Present(float64(1))
+	})
+}
+
 func Concat(values ...Expression[string]) Expression[string] {
 	descriptions := make([]string, 0, len(values))
 	children := make([]*exprNode, 0, len(values))

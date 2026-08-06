@@ -18,6 +18,7 @@ const (
 	streamHistorical
 	streamMethod
 	streamPattern
+	streamDerived
 )
 
 type streamNode struct {
@@ -29,6 +30,7 @@ type streamNode struct {
 	historical         *historicalDefinition
 	method             *methodDefinition
 	pattern            *patternDefinition
+	derived            *derivedStreamDefinition
 	patternWindow      WindowSpec
 	predicate          Expr
 	window             WindowSpec
@@ -80,6 +82,20 @@ func (n *streamNode) describe() string {
 			description += ":window=" + n.patternWindow.description()
 		}
 		return description + ")"
+	case streamDerived:
+		description := "derived-source(<nil>)"
+		if n.derived != nil && n.derived.aggregate != nil {
+			parts := make([]string, 0, len(n.derived.aggregate.selections))
+			for _, selection := range n.derived.aggregate.selections {
+				parts = append(parts, selection.description())
+			}
+			input := "<nil>"
+			if n.input != nil {
+				input = n.input.describe()
+			}
+			description = "derived-source(" + input + ":group=" + describeExprList(n.derived.aggregate.groupBy) + ":select=" + strings.Join(parts, ",") + ")"
+		}
+		return description
 	default:
 		return "<unknown-stream>"
 	}
@@ -109,6 +125,23 @@ type AggregateStream struct {
 	selections   []Selection
 	where        Expression[bool]
 	having       Expression[bool]
+}
+
+type derivedStreamDefinition struct {
+	aggregate *aggregateDefinition
+	schema    Schema
+}
+
+func describeExprList(expressions []Expr) string {
+	parts := make([]string, 0, len(expressions))
+	for _, expression := range expressions {
+		if expression == nil {
+			parts = append(parts, "<nil>")
+			continue
+		}
+		parts = append(parts, expression.Description())
+	}
+	return strings.Join(parts, ",")
 }
 
 type aggregateGroupingMode uint8
@@ -778,6 +811,19 @@ func cloneStreamNode(node *streamNode) *streamNode {
 	}
 	cloned := *node
 	cloned.input = cloneStreamNode(node.input)
+	if node.derived != nil {
+		definition := *node.derived
+		if node.derived.aggregate != nil {
+			aggregate := *node.derived.aggregate
+			aggregate.input = cloned.input
+			aggregate.groupBy = append([]Expr(nil), node.derived.aggregate.groupBy...)
+			aggregate.groupingSets = cloneGroupingExprSetsByIndex(node.derived.aggregate.groupingSets)
+			aggregate.selections = append([]Selection(nil), node.derived.aggregate.selections...)
+			definition.aggregate = &aggregate
+		}
+		definition.schema = node.derived.schema
+		cloned.derived = &definition
+	}
 	if node.historical != nil {
 		definition := *node.historical
 		cloned.historical = &definition
@@ -788,6 +834,17 @@ func cloneStreamNode(node *streamNode) *streamNode {
 		cloned.method = &definition
 	}
 	return &cloned
+}
+
+func cloneGroupingExprSetsByIndex(sets [][]int) [][]int {
+	if sets == nil {
+		return nil
+	}
+	cloned := make([][]int, len(sets))
+	for index, set := range sets {
+		cloned[index] = append([]int(nil), set...)
+	}
+	return cloned
 }
 
 func (s Stream[T]) Filter(predicate Expression[bool]) Stream[T] {
@@ -1023,6 +1080,63 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 func (a AggregateStream) To(sink Sink, options ...QueryOption) Query {
 	options = append(options, WithSink(sink))
 	return a.Query(options...)
+}
+
+// AsJoinSource turns an ordinary aggregate chain into a reusable derived
+// event source. Each aggregate update is materialized as a schema-bound Row
+// event, so it can participate in another fluent Join without EPL text.
+// Join aggregates and side effects are intentionally rejected at Build time;
+// this adapter models view/aggregate output, not a second statement graph.
+func (a AggregateStream) AsJoinSource() JoinInput {
+	inputNode := cloneStreamNode(a.node)
+	node := &streamNode{
+		kind:       streamDerived,
+		sourceName: "derived-aggregate",
+		sourceType: typeOf[any](),
+		input:      inputNode,
+	}
+	if a.env == nil || inputNode == nil {
+		node.configurationError = "derived aggregate source requires an environment and input"
+		return JoinInput{env: a.env, node: node}
+	}
+	if a.join != nil {
+		node.configurationError = "derived aggregate source cannot wrap a join aggregate"
+		return JoinInput{env: a.env, node: node}
+	}
+	if len(a.selections) == 0 {
+		node.configurationError = "derived aggregate source requires at least one projection"
+		return JoinInput{env: a.env, node: node}
+	}
+	groupBy, groupingSets := normalizedAggregateGrouping(a.groupBy, a.grouping, a.groupingSets)
+	definition := &aggregateDefinition{
+		input:        inputNode,
+		groupBy:      groupBy,
+		grouping:     a.grouping,
+		groupingSets: groupingSets,
+		selections:   append([]Selection(nil), a.selections...),
+		where:        a.where,
+		having:       a.having,
+	}
+	fields := make([]FieldSpec, 0, len(a.selections))
+	for _, selection := range a.selections {
+		fieldType := typeOf[any]()
+		if selection.Expr != nil && selection.Expr.Type() != nil {
+			fieldType = selection.Expr.Type()
+		}
+		fields = append(fields, FieldSpec{Name: selection.Name, Type: fieldType})
+	}
+	schema, err := NewSchema("derived:"+a.node.describe(), fields...)
+	if err != nil {
+		node.configurationError = err.Error()
+		return JoinInput{env: a.env, node: node}
+	}
+	node.derived = &derivedStreamDefinition{aggregate: definition, schema: schema}
+	return JoinInput{env: a.env, node: node}
+}
+
+// JoinAggregateSource is the function form of AggregateStream.AsJoinSource.
+func JoinAggregateSource(aggregate AggregateStream) JoinInput {
+	return aggregate.AsJoinSource()
 }
 
 func cloneGroupingExprSets(sets [][]Expr) [][]Expr {

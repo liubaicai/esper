@@ -2505,6 +2505,7 @@ type statementRuntime struct {
 	windows                  map[*streamNode]*windowRuntimeState
 	joinState                *joinRuntimeState
 	aggregateState           *aggregateRuntimeState
+	derivedStates            map[*streamNode]*aggregateRuntimeState
 	patternState             *patternRuntimeState
 	patternJoinStates        map[*streamNode]*patternJoinRuntime
 	contextStartPatternState *patternRuntimeState
@@ -2780,7 +2781,7 @@ type outputRuntimeState struct {
 }
 
 func newStatementRuntime(query Query) statementRuntime {
-	runtime := statementRuntime{query: query, ctx: context.Background(), windows: make(map[*streamNode]*windowRuntimeState), partitions: make(map[string]*statementRuntime), patternJoinStates: make(map[*streamNode]*patternJoinRuntime), variables: make(map[string]Value), seq: &atomic.Uint64{}}
+	runtime := statementRuntime{query: query, ctx: context.Background(), windows: make(map[*streamNode]*windowRuntimeState), derivedStates: make(map[*streamNode]*aggregateRuntimeState), partitions: make(map[string]*statementRuntime), patternJoinStates: make(map[*streamNode]*patternJoinRuntime), variables: make(map[string]Value), seq: &atomic.Uint64{}}
 	if query.join != nil {
 		runtime.joinState = &joinRuntimeState{}
 	}
@@ -3038,6 +3039,12 @@ func sourceNodeAcceptsEvent(env *Environment, node *streamNode, event Event) boo
 	source, err := sourceNode(node)
 	if err != nil || source == nil {
 		return false
+	}
+	if source.kind == streamDerived {
+		if source.input == nil {
+			return false
+		}
+		return sourceNodeAcceptsEvent(env, source.input, event)
 	}
 	if source.kind == streamPattern {
 		for _, input := range patternDefinitionInputs(source.pattern) {
@@ -6158,6 +6165,15 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			return eventDelta{}, err
 		}
 		return eventDelta{newEvents: append([]Event(nil), events...)}, nil
+	case streamDerived:
+		if node.input == nil || node.derived == nil || node.derived.aggregate == nil {
+			return eventDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("derived source %q has no input or aggregate", node.sourceName))
+		}
+		inputDelta, err := r.insert(node.input, event, now)
+		if err != nil {
+			return eventDelta{}, err
+		}
+		return r.insertDerived(node, inputDelta, now)
 	case streamPattern:
 		return r.insertPatternSource(node, event, now)
 	case streamFilter:
@@ -6254,6 +6270,15 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 		return eventDelta{}, nil
 	case streamMethod:
 		return eventDelta{}, nil
+	case streamDerived:
+		if node.input == nil || node.derived == nil || node.derived.aggregate == nil {
+			return eventDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("derived source %q has no input or aggregate", node.sourceName))
+		}
+		inputDelta, err := r.remove(node.input, event, now)
+		if err != nil {
+			return eventDelta{}, err
+		}
+		return r.insertDerived(node, inputDelta, now)
 	case streamPattern:
 		return eventDelta{}, nil
 	case streamFilter:
@@ -6320,6 +6345,85 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 	default:
 		return eventDelta{}, fmt.Errorf("esper: runtime encountered unknown stream node kind %d", node.kind)
 	}
+}
+
+func (r *statementRuntime) insertDerived(node *streamNode, delta eventDelta, now time.Time) (eventDelta, error) {
+	if node == nil || node.derived == nil || node.derived.aggregate == nil || !node.derived.schema.valid() {
+		return eventDelta{}, NewError(ErrorInvalidRule, "derived source is incomplete")
+	}
+	if len(delta.newEvents) == 0 && len(delta.oldEvents) == 0 {
+		return eventDelta{}, nil
+	}
+	if r.derivedStates == nil {
+		r.derivedStates = make(map[*streamNode]*aggregateRuntimeState)
+	}
+	state := r.derivedStates[node]
+	if state == nil {
+		state = &aggregateRuntimeState{groups: make(map[string]*aggregateGroup)}
+		r.derivedStates[node] = state
+	}
+	definition := node.derived.aggregate
+	temporaryQuery := Query{
+		env:       r.query.env,
+		input:     definition.input,
+		aggregate: definition,
+		selector:  SelectIRStream,
+		name:      node.sourceName,
+	}
+	temporaryPlan := Plan{
+		schemaVersion: planSchemaVersion,
+		query:         temporaryQuery,
+		resultSchema:  node.derived.schema,
+	}
+	previous := r.aggregateState
+	r.aggregateState = state
+	batch, err := r.aggregateBatch(delta, temporaryPlan, now)
+	r.aggregateState = previous
+	if err != nil {
+		return eventDelta{}, err
+	}
+	result := eventDelta{}
+	result.oldEvents, err = derivedResultEvents(node.derived.schema, batch.Old, now, "old", batch.Sequence)
+	if err != nil {
+		return eventDelta{}, err
+	}
+	result.newEvents, err = derivedResultEvents(node.derived.schema, batch.New, now, "new", batch.Sequence)
+	if err != nil {
+		return eventDelta{}, err
+	}
+	return result, nil
+}
+
+func derivedResultEvents(schema Schema, results []Result, receivedAt time.Time, stream string, sequence uint64) ([]Event, error) {
+	if len(results) == 0 {
+		return nil, nil
+	}
+	events := make([]Event, 0, len(results))
+	for _, result := range results {
+		row, ok := result.Row()
+		if !ok {
+			return nil, fmt.Errorf("derived source %q produced a non-row result", schema.Name())
+		}
+		values := make(map[string]any, len(schema.fields))
+		for _, field := range schema.fields {
+			value := row.Get(field.Name)
+			if value.IsMissing() {
+				continue
+			}
+			values[field.Name] = value.Any()
+		}
+		// Aggregate rows can carry identical visible values across adjacent
+		// batches. Keep a private identity marker in the dynamic underlying map
+		// so Join treats those view updates as distinct events, like Esper's
+		// view-generated EventBean instances.
+		values["__esper_derived_identity"] = fmt.Sprintf("%s:%d:%d", stream, sequence, len(events))
+		event, err := newEvent(schema, values, receivedAt)
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, event)
+	}
+	return events, nil
 }
 
 func removeFromWindowState(spec WindowSpec, state *windowRuntimeState, event Event, now time.Time, variables map[string]Value) bool {
