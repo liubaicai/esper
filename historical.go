@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -79,6 +80,11 @@ const (
 	SQLHistoricalMetadataDefault SQLHistoricalMetadataMode = iota
 	SQLHistoricalMetadataRequired
 	SQLHistoricalMetadataSkip
+	// SQLHistoricalMetadataSample obtains result type metadata from the
+	// separate MetadataStatement configured on the provider. This is the
+	// chain-friendly equivalent of Esper's metadatasql option and is useful
+	// for drivers that cannot expose ColumnTypes for the live statement.
+	SQLHistoricalMetadataSample
 )
 
 // SQLHistoricalValueConverter can override the default database/sql to Go
@@ -121,7 +127,13 @@ func (c SQLHistoricalCacheConfig) validate() error {
 // SQLHistoricalProviderOptions configures a SQLHistoricalProvider without
 // changing the original constructor that accepts argument functions.
 type SQLHistoricalProviderOptions struct {
-	Arguments         []func(HistoricalRequest) any
+	Arguments []func(HistoricalRequest) any
+	// MetadataStatement is executed only when MetadataMode is
+	// SQLHistoricalMetadataSample. MetadataArguments defaults to Arguments
+	// when omitted, which matches a metadata SQL statement that uses the same
+	// trigger-bound parameters as the live query.
+	MetadataStatement string
+	MetadataArguments []func(HistoricalRequest) any
 	Cache             SQLHistoricalCacheConfig
 	ColumnCase        SQLColumnCase
 	ValueConverter    SQLHistoricalValueConverter
@@ -147,17 +159,20 @@ type SQLHistoricalProvider struct {
 	Statement string
 	Arguments []func(HistoricalRequest) any
 
-	queryer      SQLHistoricalQueryer
-	columnCase   SQLColumnCase
-	converter    SQLHistoricalValueConverter
-	typeBindings map[string]reflect.Type
-	metadataMode SQLHistoricalMetadataMode
-	prepare      bool
-	statement    *sql.Stmt
-	statementMu  sync.Mutex
-	closed       bool
-	cache        *historicalSQLCache
-	cacheMu      sync.Mutex
+	queryer           SQLHistoricalQueryer
+	metadataStatement string
+	metadataArguments []func(HistoricalRequest) any
+	columnCase        SQLColumnCase
+	converter         SQLHistoricalValueConverter
+	typeBindings      map[string]reflect.Type
+	metadataMode      SQLHistoricalMetadataMode
+	prepare           bool
+	statement         *sql.Stmt
+	metadataStmt      *sql.Stmt
+	statementMu       sync.Mutex
+	closed            bool
+	cache             *historicalSQLCache
+	cacheMu           sync.Mutex
 }
 
 func NewSQLHistoricalProvider(db *sql.DB, schema Schema, statement string, arguments ...func(HistoricalRequest) any) (*SQLHistoricalProvider, error) {
@@ -189,8 +204,21 @@ func NewSQLHistoricalProviderWithQueryer(queryer SQLHistoricalQueryer, schema Sc
 	if options.ColumnCase != SQLColumnCasePreserve && options.ColumnCase != SQLColumnCaseLower && options.ColumnCase != SQLColumnCaseUpper {
 		return nil, NewError(ErrorInvalidRule, "historical SQL column case is invalid")
 	}
-	if options.MetadataMode != SQLHistoricalMetadataDefault && options.MetadataMode != SQLHistoricalMetadataRequired && options.MetadataMode != SQLHistoricalMetadataSkip {
+	switch options.MetadataMode {
+	case SQLHistoricalMetadataDefault, SQLHistoricalMetadataRequired, SQLHistoricalMetadataSkip, SQLHistoricalMetadataSample:
+	default:
 		return nil, NewError(ErrorInvalidRule, "historical SQL metadata mode is invalid")
+	}
+	metadataStatement := strings.TrimSpace(options.MetadataStatement)
+	if options.MetadataMode == SQLHistoricalMetadataSample && metadataStatement == "" {
+		return nil, NewError(ErrorInvalidRule, "historical SQL sample metadata statement is required")
+	}
+	if options.MetadataMode != SQLHistoricalMetadataSample && metadataStatement != "" {
+		return nil, NewError(ErrorInvalidRule, "historical SQL metadata mode is invalid")
+	}
+	metadataArguments := options.MetadataArguments
+	if metadataStatement != "" && len(metadataArguments) == 0 {
+		metadataArguments = options.Arguments
 	}
 	if err := options.Cache.validate(); err != nil {
 		return nil, err
@@ -205,6 +233,16 @@ func NewSQLHistoricalProviderWithQueryer(queryer SQLHistoricalQueryer, schema Sc
 		if strings.TrimSpace(preparedStatement) == "" {
 			return nil, NewError(ErrorInvalidRule, "historical SQL statement rewriter returned an empty statement")
 		}
+		if metadataStatement != "" {
+			var rewriteErr error
+			metadataStatement, rewriteErr = options.StatementRewriter(metadataStatement, len(metadataArguments))
+			if rewriteErr != nil {
+				return nil, WrapError(ErrorInvalidRule, "historical SQL sample metadata statement", rewriteErr)
+			}
+			if strings.TrimSpace(metadataStatement) == "" {
+				return nil, NewError(ErrorInvalidRule, "historical SQL sample metadata rewriter returned an empty statement")
+			}
+		}
 	}
 	if options.PrepareStatement {
 		if _, ok := queryer.(sqlHistoricalPreparer); !ok {
@@ -216,17 +254,19 @@ func NewSQLHistoricalProviderWithQueryer(queryer SQLHistoricalQueryer, schema Sc
 		db = typedDB
 	}
 	return &SQLHistoricalProvider{
-		DB:           db,
-		Schema:       schema,
-		Statement:    preparedStatement,
-		Arguments:    append([]func(HistoricalRequest) any(nil), options.Arguments...),
-		queryer:      queryer,
-		columnCase:   options.ColumnCase,
-		converter:    options.ValueConverter,
-		typeBindings: cloneHistoricalTypeBindings(options.TypeBindings),
-		metadataMode: options.MetadataMode,
-		prepare:      options.PrepareStatement,
-		cache:        newHistoricalSQLCache(options.Cache),
+		DB:                db,
+		Schema:            schema,
+		Statement:         preparedStatement,
+		Arguments:         append([]func(HistoricalRequest) any(nil), options.Arguments...),
+		queryer:           queryer,
+		metadataStatement: metadataStatement,
+		metadataArguments: append([]func(HistoricalRequest) any(nil), metadataArguments...),
+		columnCase:        options.ColumnCase,
+		converter:         options.ValueConverter,
+		typeBindings:      cloneHistoricalTypeBindings(options.TypeBindings),
+		metadataMode:      options.MetadataMode,
+		prepare:           options.PrepareStatement,
+		cache:             newHistoricalSQLCache(options.Cache),
 	}, nil
 }
 
@@ -256,11 +296,21 @@ func (p *SQLHistoricalProvider) Close() error {
 	p.closed = true
 	statement := p.statement
 	p.statement = nil
+	metadataStatement := p.metadataStmt
+	p.metadataStmt = nil
 	p.statementMu.Unlock()
-	if statement == nil {
-		return nil
+	var closeErrors []error
+	if statement != nil {
+		if err := statement.Close(); err != nil {
+			closeErrors = append(closeErrors, err)
+		}
 	}
-	return statement.Close()
+	if metadataStatement != nil {
+		if err := metadataStatement.Close(); err != nil {
+			closeErrors = append(closeErrors, err)
+		}
+	}
+	return errors.Join(closeErrors...)
 }
 
 func (p *SQLHistoricalProvider) Poll(ctx context.Context, request HistoricalRequest) ([]Event, error) {
@@ -276,14 +326,7 @@ func (p *SQLHistoricalProvider) Poll(ctx context.Context, request HistoricalRequ
 		return nil, NewError(ErrorDependency, "historical SQL provider is closed")
 	}
 	p.statementMu.Unlock()
-	args := make([]any, 0, len(p.Arguments))
-	for _, argument := range p.Arguments {
-		if argument == nil {
-			args = append(args, nil)
-			continue
-		}
-		args = append(args, argument(request))
-	}
+	args := historicalArguments(p.Arguments, request)
 	cacheKey := encodeKey(args)
 	cacheNow := request.Now
 	if cacheNow.IsZero() {
@@ -295,6 +338,29 @@ func (p *SQLHistoricalProvider) Poll(ctx context.Context, request HistoricalRequ
 		return cached, nil
 	}
 	p.cacheMu.Unlock()
+	var sampleColumnTypes []*sql.ColumnType
+	if p.metadataMode == SQLHistoricalMetadataSample {
+		metadataRows, metadataErr := p.queryMetadata(ctx, request)
+		if metadataErr != nil {
+			return nil, metadataErr
+		}
+		metadataColumns, columnsErr := metadataRows.Columns()
+		if columnsErr != nil {
+			_ = metadataRows.Close()
+			return nil, columnsErr
+		}
+		sampleColumnTypes, columnsErr = metadataRows.ColumnTypes()
+		closeErr := metadataRows.Close()
+		if columnsErr != nil {
+			return nil, columnsErr
+		}
+		if closeErr != nil {
+			return nil, closeErr
+		}
+		if len(metadataColumns) == 0 || len(sampleColumnTypes) != len(metadataColumns) {
+			return nil, NewError(ErrorInvalidRule, "historical SQL sample metadata returned no usable columns")
+		}
+	}
 	rows, err := p.query(ctx, args...)
 	if err != nil {
 		return nil, err
@@ -304,8 +370,13 @@ func (p *SQLHistoricalProvider) Poll(ctx context.Context, request HistoricalRequ
 	if err != nil {
 		return nil, err
 	}
+	if p.metadataMode == SQLHistoricalMetadataSample && len(sampleColumnTypes) != len(columns) {
+		return nil, NewError(ErrorInvalidRule, fmt.Sprintf("historical SQL sample metadata has %d columns but live query has %d", len(sampleColumnTypes), len(columns)))
+	}
 	var columnTypes []*sql.ColumnType
-	if p.metadataMode != SQLHistoricalMetadataSkip {
+	if p.metadataMode == SQLHistoricalMetadataSample {
+		columnTypes = sampleColumnTypes
+	} else if p.metadataMode != SQLHistoricalMetadataSkip {
 		columnTypes, err = rows.ColumnTypes()
 		if err != nil && p.metadataMode == SQLHistoricalMetadataRequired {
 			return nil, err
@@ -390,6 +461,29 @@ func cloneHistoricalTypeBindings(bindings map[string]reflect.Type) map[string]re
 }
 
 func (p *SQLHistoricalProvider) query(ctx context.Context, args ...any) (*sql.Rows, error) {
+	return p.queryStatement(ctx, p.Statement, args, &p.statement)
+}
+
+func (p *SQLHistoricalProvider) queryMetadata(ctx context.Context, request HistoricalRequest) (*sql.Rows, error) {
+	if strings.TrimSpace(p.metadataStatement) == "" {
+		return nil, NewError(ErrorInvalidRule, "historical SQL sample metadata statement is required")
+	}
+	return p.queryStatement(ctx, p.metadataStatement, historicalArguments(p.metadataArguments, request), &p.metadataStmt)
+}
+
+func historicalArguments(arguments []func(HistoricalRequest) any, request HistoricalRequest) []any {
+	args := make([]any, 0, len(arguments))
+	for _, argument := range arguments {
+		if argument == nil {
+			args = append(args, nil)
+			continue
+		}
+		args = append(args, argument(request))
+	}
+	return args
+}
+
+func (p *SQLHistoricalProvider) queryStatement(ctx context.Context, statementText string, args []any, preparedSlot **sql.Stmt) (*sql.Rows, error) {
 	p.statementMu.Lock()
 	if p.closed {
 		p.statementMu.Unlock()
@@ -398,11 +492,11 @@ func (p *SQLHistoricalProvider) query(ctx context.Context, args ...any) (*sql.Ro
 	if !p.prepare {
 		p.statementMu.Unlock()
 		if p.queryer != nil {
-			return p.queryer.QueryContext(ctx, p.Statement, args...)
+			return p.queryer.QueryContext(ctx, statementText, args...)
 		}
-		return p.DB.QueryContext(ctx, p.Statement, args...)
+		return p.DB.QueryContext(ctx, statementText, args...)
 	}
-	if p.statement == nil {
+	if *preparedSlot == nil {
 		preparer, ok := p.queryer.(sqlHistoricalPreparer)
 		if !ok && p.DB != nil {
 			preparer, ok = any(p.DB).(sqlHistoricalPreparer)
@@ -411,14 +505,14 @@ func (p *SQLHistoricalProvider) query(ctx context.Context, args ...any) (*sql.Ro
 			p.statementMu.Unlock()
 			return nil, NewError(ErrorDependency, "historical SQL provider queryer does not support prepared statements")
 		}
-		statement, err := preparer.PrepareContext(ctx, p.Statement)
+		statement, err := preparer.PrepareContext(ctx, statementText)
 		if err != nil {
 			p.statementMu.Unlock()
 			return nil, err
 		}
-		p.statement = statement
+		*preparedSlot = statement
 	}
-	statement := p.statement
+	statement := *preparedSlot
 	p.statementMu.Unlock()
 	return statement.QueryContext(ctx, args...)
 }

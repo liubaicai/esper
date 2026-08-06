@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -59,6 +60,70 @@ func (r *fixtureSQLRows) Next(dest []driver.Value) error {
 	dest[0] = []byte("A")
 	dest[1] = []byte("7")
 	dest[2] = []byte("1")
+	return nil
+}
+
+type metadataFixtureDriver struct{}
+
+var metadataFixtureQueriesMu sync.Mutex
+var metadataFixtureQueries []string
+
+func (metadataFixtureDriver) Open(string) (driver.Conn, error) { return metadataFixtureConn{}, nil }
+
+type metadataFixtureConn struct{}
+
+func (metadataFixtureConn) Prepare(statement string) (driver.Stmt, error) {
+	return metadataFixtureStmt{statement: statement}, nil
+}
+func (metadataFixtureConn) Close() error              { return nil }
+func (metadataFixtureConn) Begin() (driver.Tx, error) { return fixtureSQLTx{}, nil }
+func (metadataFixtureConn) QueryContext(_ context.Context, statement string, _ []driver.NamedValue) (driver.Rows, error) {
+	metadataFixtureQueriesMu.Lock()
+	metadataFixtureQueries = append(metadataFixtureQueries, statement)
+	metadataFixtureQueriesMu.Unlock()
+	return &metadataFixtureRows{metadata: strings.Contains(statement, "metadata")}, nil
+}
+
+type metadataFixtureStmt struct{ statement string }
+
+func (s metadataFixtureStmt) Close() error  { return nil }
+func (s metadataFixtureStmt) NumInput() int { return -1 }
+func (s metadataFixtureStmt) Exec([]driver.Value) (driver.Result, error) {
+	return driver.RowsAffected(0), nil
+}
+func (s metadataFixtureStmt) Query([]driver.Value) (driver.Rows, error) {
+	metadataFixtureQueriesMu.Lock()
+	metadataFixtureQueries = append(metadataFixtureQueries, s.statement)
+	metadataFixtureQueriesMu.Unlock()
+	return &metadataFixtureRows{metadata: strings.Contains(s.statement, "metadata")}, nil
+}
+
+type metadataFixtureRows struct {
+	metadata bool
+	emitted  bool
+}
+
+func (r *metadataFixtureRows) Columns() []string { return []string{"symbol", "value"} }
+func (r *metadataFixtureRows) Close() error      { return nil }
+func (r *metadataFixtureRows) ColumnTypeDatabaseTypeName(index int) string {
+	if r.metadata {
+		return []string{"VARCHAR", "BIGINT"}[index]
+	}
+	return []string{"LIVE_TEXT", "LIVE_NUMBER"}[index]
+}
+func (r *metadataFixtureRows) ColumnTypeScanType(index int) reflect.Type {
+	if index == 0 {
+		return reflect.TypeOf("")
+	}
+	return reflect.TypeOf(int64(0))
+}
+func (r *metadataFixtureRows) Next(dest []driver.Value) error {
+	if r.emitted {
+		return io.EOF
+	}
+	r.emitted = true
+	dest[0] = []byte("A")
+	dest[1] = []byte("7")
 	return nil
 }
 
@@ -300,6 +365,70 @@ func TestSQLHistoricalProviderSupportsRewriterConverterAndClose(t *testing.T) {
 	}
 	if _, err := provider.Poll(context.Background(), HistoricalRequest{}); err == nil {
 		t.Fatal("poll after provider close unexpectedly succeeded")
+	}
+}
+
+func TestSQLHistoricalProviderUsesSampleMetadataStatement(t *testing.T) {
+	const driverName = "esper-fixture-historical-metadata"
+	sql.Register(driverName, metadataFixtureDriver{})
+	db, err := sql.Open(driverName, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	metadataFixtureQueriesMu.Lock()
+	metadataFixtureQueries = nil
+	metadataFixtureQueriesMu.Unlock()
+	schema, err := NewMapSchema("HistorySQLSampleMetadata", []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("value", reflect.TypeOf(int64(0))),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := NewSQLHistoricalProviderWithOptions(db, schema,
+		"select symbol, value from live_history where id = ?",
+		SQLHistoricalProviderOptions{
+			Arguments:         []func(HistoricalRequest) any{func(HistoricalRequest) any { return 6 }},
+			MetadataMode:      SQLHistoricalMetadataSample,
+			MetadataStatement: "select symbol, value from metadata_history where id = ?",
+			PrepareStatement:  true,
+			ValueConverter: func(column SQLHistoricalColumnMetadata, value any, target reflect.Type) (any, error) {
+				if column.Name == "value" && column.DatabaseTypeName == "BIGINT" && target == reflect.TypeOf(int64(0)) {
+					return int64(70), nil
+				}
+				return coerceHistoricalSQLValue(value, target)
+			},
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	events, err := provider.Poll(context.Background(), HistoricalRequest{Now: time.Unix(400, 0).UTC()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Get("symbol").Any() != "A" || events[0].Get("value").Any() != int64(70) {
+		t.Fatalf("sample metadata events = %#v", events)
+	}
+	metadataFixtureQueriesMu.Lock()
+	queries := append([]string(nil), metadataFixtureQueries...)
+	metadataFixtureQueriesMu.Unlock()
+	if len(queries) != 2 || !strings.Contains(queries[0], "metadata_history") || !strings.Contains(queries[1], "live_history") {
+		t.Fatalf("sample metadata query order = %#v", queries)
+	}
+	if err := provider.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.Poll(context.Background(), HistoricalRequest{}); err == nil {
+		t.Fatal("sample metadata provider poll after close unexpectedly succeeded")
+	}
+	if _, err := NewSQLHistoricalProviderWithOptions(db, schema, "select value", SQLHistoricalProviderOptions{MetadataMode: SQLHistoricalMetadataSample}); err == nil {
+		t.Fatal("sample metadata mode accepted without metadata statement")
+	}
+	if _, err := NewSQLHistoricalProviderWithOptions(db, schema, "select value", SQLHistoricalProviderOptions{
+		MetadataStatement: "select value",
+	}); err == nil {
+		t.Fatal("metadata statement accepted without sample metadata mode")
 	}
 }
 
