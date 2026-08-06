@@ -63,6 +63,12 @@ func (r *fixtureSQLRows) Next(dest []driver.Value) error {
 	return nil
 }
 
+type historicalSQLTypedResult struct {
+	Symbol  string `esper:"symbol"`
+	Value   int    `esper:"value"`
+	Enabled bool   `esper:"enabled"`
+}
+
 type metadataFixtureDriver struct{}
 
 var metadataFixtureQueriesMu sync.Mutex
@@ -195,6 +201,38 @@ func TestSQLHistoricalProviderMapsRowsAndBindsArguments(t *testing.T) {
 	}
 	if len(events) != 1 || events[0].Get("symbol").Any() != "A" || events[0].Get("value").Any() != 7 || events[0].Get("enabled").Any() != true {
 		t.Fatalf("SQL historical events = %#v", events)
+	}
+}
+
+func TestSQLHistoricalProviderMaterializesTypedStructRows(t *testing.T) {
+	const driverName = "esper-fixture-historical-typed-struct"
+	sql.Register(driverName, fixtureSQLDriver{})
+	db, err := sql.Open(driverName, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	schema, err := StructSchema[historicalSQLTypedResult]("HistorySQLTypedStruct")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := NewSQLHistoricalProvider(db, schema, "select symbol, value, enabled")
+	if err != nil {
+		t.Fatal(err)
+	}
+	events, err := provider.Poll(context.Background(), HistoricalRequest{Now: time.Unix(50, 0).UTC()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("typed historical rows = %#v", events)
+	}
+	result, ok := events[0].Underlying().(historicalSQLTypedResult)
+	if !ok {
+		t.Fatalf("typed historical underlying = %T, want %T", events[0].Underlying(), historicalSQLTypedResult{})
+	}
+	if result.Symbol != "A" || result.Value != 7 || !result.Enabled {
+		t.Fatalf("typed historical result = %#v", result)
 	}
 }
 

@@ -229,8 +229,8 @@ func NewSQLHistoricalProviderWithQueryer(queryer SQLHistoricalQueryer, schema Sc
 	if !schema.valid() {
 		return nil, NewError(ErrorInvalidRule, "historical SQL provider requires a schema")
 	}
-	if schema.Kind() == SchemaStruct || schema.GoType() != nil {
-		return nil, NewError(ErrorTypeMismatch, "historical SQL provider requires a map-backed schema")
+	if schema.Kind() == SchemaVariant {
+		return nil, NewError(ErrorTypeMismatch, "historical SQL provider cannot materialize a variant schema")
 	}
 	if strings.TrimSpace(statement) == "" {
 		return nil, NewError(ErrorInvalidRule, "historical SQL statement is required")
@@ -465,7 +465,15 @@ func (p *SQLHistoricalProvider) Poll(ctx context.Context, request HistoricalRequ
 			}
 			underlying[field.Name] = coerced
 		}
-		event, eventErr := newEvent(p.Schema, underlying, request.Now)
+		// Normalize the row through the same representation boundary used by
+		// SendRecord/InsertInto. This keeps SQL historical results useful for
+		// typed struct, typed JSON, object-array and Avro schemas instead of
+		// silently limiting the provider to map-backed events.
+		materialized, materializeErr := projectMapToSchema(p.Schema, underlying)
+		if materializeErr != nil {
+			return nil, fmt.Errorf("historical SQL row: %w", materializeErr)
+		}
+		event, eventErr := newEvent(p.Schema, materialized, request.Now)
 		if eventErr != nil {
 			return nil, eventErr
 		}
