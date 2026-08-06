@@ -309,6 +309,70 @@ type DataflowEmitter struct {
 	allowRaw bool
 }
 
+// DataflowCaptive is returned by StartCaptive. Emitters are caller-driven
+// graph entry points, while Runnables are source operators that the caller may
+// execute on its own goroutines. Captive sources never complete the instance
+// merely by returning; the instance remains running until explicitly canceled.
+type DataflowCaptive struct {
+	emitters  map[string]*DataflowEmitter
+	runnables []*DataflowCaptiveRunnable
+}
+
+// Emitters returns an independent map of every named Emitter graph source.
+func (c *DataflowCaptive) Emitters() map[string]*DataflowEmitter {
+	if c == nil {
+		return nil
+	}
+	return maps.Clone(c.emitters)
+}
+
+// Emitter returns one named captive emitter.
+func (c *DataflowCaptive) Emitter(name string) (*DataflowEmitter, bool) {
+	if c == nil {
+		return nil, false
+	}
+	emitter, ok := c.emitters[name]
+	return emitter, ok
+}
+
+// Runnables returns source handles in dataflow definition order.
+func (c *DataflowCaptive) Runnables() []*DataflowCaptiveRunnable {
+	if c == nil {
+		return nil
+	}
+	return append([]*DataflowCaptiveRunnable(nil), c.runnables...)
+}
+
+// DataflowCaptiveRunnable is a single-use handle for a Beacon or custom
+// source held back by StartCaptive.
+type DataflowCaptiveRunnable struct {
+	name    string
+	run     func(context.Context) error
+	started atomic.Bool
+}
+
+func (r *DataflowCaptiveRunnable) Name() string {
+	if r == nil {
+		return ""
+	}
+	return r.name
+}
+
+// Run executes the captive source synchronously. Each source handle may run
+// once, matching the lifecycle of Esper's GraphSourceRunnable.
+func (r *DataflowCaptiveRunnable) Run(ctx context.Context) error {
+	if r == nil || r.run == nil {
+		return NewError(ErrorState, "nil dataflow captive runnable")
+	}
+	if !r.started.CompareAndSwap(false, true) {
+		return NewError(ErrorState, fmt.Sprintf("dataflow captive source %q has already run", r.name))
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return r.run(ctx)
+}
+
 // Submit injects one event value into the captive emitter's outgoing graph.
 // Registered Go event values and already materialized Event values are both
 // accepted.
@@ -4114,12 +4178,12 @@ func (d *DataflowInstance) onStatementUndeployed(statement *Statement) {
 	}
 }
 
-func (d *DataflowInstance) Start(ctx context.Context) error {
+func (d *DataflowInstance) beginExecution(ctx context.Context) (context.Context, error) {
 	if err := contextErr(ctx); err != nil {
-		return err
+		return nil, err
 	}
 	if d == nil {
-		return NewError(ErrorState, "nil dataflow instance")
+		return nil, NewError(ErrorState, "nil dataflow instance")
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -4129,7 +4193,7 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 	if d.state != DataflowInstantiated {
 		d.mu.Unlock()
 		runCancel()
-		return NewError(ErrorState, "dataflow can only start from instantiated state")
+		return nil, NewError(ErrorState, "dataflow can only start from instantiated state")
 	}
 	d.state = DataflowRunning
 	d.runCancel = runCancel
@@ -4138,14 +4202,12 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 	d.startDataflowSelectStates(d.engine.Now())
 	if err := d.openRuntimes(ctx); err != nil {
 		_ = d.Cancel(context.Background())
-		return err
+		return nil, err
 	}
-	hasEventSource := d.persistentSource
 	for _, operator := range d.definition.operators {
 		if operator.Kind != EPStatementSourceKind {
 			continue
 		}
-		hasEventSource = true
 		if operator.StatementFilter != nil {
 			for _, statement := range d.engine.dataflowFindStatements() {
 				if !d.statementSourceMatches(operator, statement) {
@@ -4153,7 +4215,7 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 				}
 				if err := d.attachStatementSource(operator, statement); err != nil {
 					_ = d.Cancel(context.Background())
-					return err
+					return nil, err
 				}
 			}
 			continue
@@ -4162,15 +4224,27 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 		if statement == nil {
 			if operator.Statement != nil {
 				_ = d.Cancel(context.Background())
-				return NewError(ErrorDependency, fmt.Sprintf("dataflow statement source %q statement is unavailable", operator.Name))
+				return nil, NewError(ErrorDependency, fmt.Sprintf("dataflow statement source %q statement is unavailable", operator.Name))
 			}
 			continue
 		}
 		if err := d.attachStatementSource(operator, statement); err != nil {
 			_ = d.Cancel(context.Background())
-			return err
+			return nil, err
 		}
 	}
+	return runCtx, nil
+}
+
+func (d *DataflowInstance) Start(ctx context.Context) error {
+	runCtx, err := d.beginExecution(ctx)
+	if err != nil {
+		return err
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	hasEventSource := d.persistentSource
 	for _, operator := range d.definition.operators {
 		if operator.Kind != BeaconSourceKind {
 			continue
@@ -4229,6 +4303,143 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 		d.complete(nil)
 	}
 	return nil
+}
+
+// StartCaptive opens the dataflow without launching Beacon or custom source
+// goroutines. It returns every caller-driven Emitter and each held source in
+// definition order. Unlike Start, source completion does not complete a
+// captive instance; callers explicitly cancel it when finished.
+func (d *DataflowInstance) StartCaptive(ctx context.Context) (*DataflowCaptive, error) {
+	runCtx, err := d.beginExecution(ctx)
+	if err != nil {
+		return nil, err
+	}
+	captive := &DataflowCaptive{emitters: make(map[string]*DataflowEmitter)}
+	for _, definitionOperator := range d.definition.operators {
+		operator := definitionOperator
+		if operator.Kind == EmitterKind && len(d.outgoing[operator.Name]) > 0 {
+			captive.emitters[operator.Name] = &DataflowEmitter{instance: d, name: operator.Name}
+		}
+		switch operator.Kind {
+		case BeaconSourceKind:
+			captive.runnables = append(captive.runnables, &DataflowCaptiveRunnable{
+				name: operator.Name,
+				run: func(callerCtx context.Context) error {
+					sourceCtx, stop := combineDataflowCaptiveContext(runCtx, callerCtx)
+					defer stop()
+					return d.runCaptiveBeaconSource(sourceCtx, operator)
+				},
+			})
+		case CustomSourceKind:
+			source := d.sources[operator.Name]
+			if source == nil {
+				continue
+			}
+			captive.runnables = append(captive.runnables, &DataflowCaptiveRunnable{
+				name: operator.Name,
+				run: func(callerCtx context.Context) error {
+					sourceCtx, stop := combineDataflowCaptiveContext(runCtx, callerCtx)
+					defer stop()
+					return d.runCaptiveCustomSource(sourceCtx, operator, source)
+				},
+			})
+		}
+	}
+	return captive, nil
+}
+
+func combineDataflowCaptiveContext(instanceCtx, callerCtx context.Context) (context.Context, func()) {
+	if callerCtx == nil {
+		callerCtx = context.Background()
+	}
+	combined, cancel := context.WithCancel(callerCtx)
+	stopInstance := context.AfterFunc(instanceCtx, cancel)
+	return combined, func() {
+		stopInstance()
+		cancel()
+	}
+}
+
+func (d *DataflowInstance) runCaptiveBeaconSource(ctx context.Context, operator DataflowOperator) error {
+	d.mu.Lock()
+	running := d.state == DataflowRunning
+	d.mu.Unlock()
+	if !running {
+		return NewError(ErrorState, "dataflow is not running")
+	}
+	if !operator.BeaconConfigured {
+		for _, event := range operator.Events {
+			if err := contextErr(ctx); err != nil {
+				return err
+			}
+			var err error
+			if d.graph {
+				if _, signal := event.(DataflowSignal); !signal {
+					d.processed.Add(1)
+				}
+				err = d.processGraphFrom(ctx, event, operator.Name)
+			} else {
+				err = d.process(ctx, event)
+			}
+			if err != nil {
+				return d.handleCaptiveSourceFailure(operator.Name, err)
+			}
+		}
+		return nil
+	}
+	options := operator.BeaconOptions
+	for iteration := 0; ; iteration++ {
+		delay := options.Interval
+		if iteration == 0 {
+			delay = options.InitialDelay
+		}
+		if err := waitDataflowBeacon(ctx, delay); err != nil {
+			return contextErr(ctx)
+		}
+		if options.Iterations > 0 && iteration >= options.Iterations {
+			if err := d.submitBeaconValue(ctx, operator, FinalMarker{}); err != nil {
+				return d.handleCaptiveSourceFailure(operator.Name, err)
+			}
+			return nil
+		}
+		value, err := d.beaconValue(ctx, operator, iteration)
+		if err != nil {
+			return d.handleCaptiveSourceFailure(operator.Name, err)
+		}
+		if err := d.submitBeaconValue(ctx, operator, value); err != nil {
+			return d.handleCaptiveSourceFailure(operator.Name, err)
+		}
+	}
+}
+
+func (d *DataflowInstance) handleCaptiveSourceFailure(operatorName string, err error) error {
+	if err == nil || dataflowContextCancellation(err) {
+		return err
+	}
+	if dataflowErrorWasHandled(err) {
+		return d.completeDataflowFailure(err)
+	}
+	if handled := d.handleDataflowError(context.Background(), operatorName, err); handled != nil {
+		return d.completeDataflowFailure(handled)
+	}
+	return nil
+}
+
+func (d *DataflowInstance) runCaptiveCustomSource(ctx context.Context, operator DataflowOperator, source DataflowSourceRuntime) error {
+	d.mu.Lock()
+	running := d.state == DataflowRunning
+	d.mu.Unlock()
+	if !running {
+		return NewError(ErrorState, "dataflow is not running")
+	}
+	emitter := &DataflowEmitter{instance: d, name: operator.Name, allowRaw: true}
+	started := time.Now()
+	err := source.Run(ctx, emitter)
+	d.recordOperatorElapsed(operator.Name, time.Since(started))
+	if err == nil || contextErr(ctx) != nil {
+		return contextErr(ctx)
+	}
+	return d.handleCaptiveSourceFailure(operator.Name, err)
 }
 
 func (d *DataflowInstance) startDataflowSelectStates(now time.Time) {
