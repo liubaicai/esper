@@ -561,8 +561,16 @@ func TestTableTriggerValidation(t *testing.T) {
 	}
 	if _, err := env.Build(OnEvent(source).MergeIntoTableWhen("positions", []Expr{Field[runtimeTestTrade, string]("symbol")},
 		WhenMatched(Literal(true), SetColumn("symbol", Field[runtimeTestTrade, string]("symbol"))),
-	).Query()); err == nil {
-		t.Fatal("table merge without a not-matched clause was accepted")
+	).Query()); err != nil {
+		t.Fatal("table merge with a matched clause was rejected")
+	}
+	if _, err := env.Build(OnEvent(source).MergeIntoTableWhen("positions", []Expr{Field[runtimeTestTrade, string]("symbol")},
+		WhenNotMatched(Literal(true), SetColumn("symbol", Field[runtimeTestTrade, string]("symbol"))),
+	).Query()); err != nil {
+		t.Fatalf("table merge with a not-matched clause was rejected: %v", err)
+	}
+	if _, err := env.Build(OnEvent(source).MergeIntoTableWhen("positions", []Expr{Field[runtimeTestTrade, string]("symbol")}).Query()); err == nil {
+		t.Fatal("table merge without any clause was accepted")
 	}
 	if _, err := env.Build(OnEvent(source).MergeIntoTableWhen("positions", []Expr{Field[runtimeTestTrade, string]("symbol")},
 		TableMergeClause{Delete: true, Condition: Literal(true)},
@@ -852,6 +860,180 @@ func TestConditionalTableMergeBranches(t *testing.T) {
 	if _, found, err := table.Get(context.Background(), "A"); err != nil || found {
 		t.Fatalf("matched delete merge row found=%v, err=%v", found, err)
 	}
+}
+
+func TestSingleSidedMergeBranchesAndConvenienceConstructors(t *testing.T) {
+	newEngine := func(t *testing.T, namedWindow bool) (*Environment, *Engine, Stream[runtimeTestTrade], Expression[string], Expression[float64]) {
+		t.Helper()
+		env := NewEnvironment()
+		if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+			t.Fatal(err)
+		}
+		schema, ok := env.Schema("Trade")
+		if !ok {
+			t.Fatal("Trade schema is missing")
+		}
+		if namedWindow {
+			if _, err := env.RegisterNamedWindow("branch-window", schema); err != nil {
+				t.Fatal(err)
+			}
+		} else if _, err := env.RegisterTable("branch-table", []TableColumn{
+			PrimaryKeyColumn[string]("symbol"),
+			TableColumnOf[float64]("price"),
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return env, NewEngine(env), From[runtimeTestTrade](env, "Trade"), Field[runtimeTestTrade, string]("symbol"), Field[runtimeTestTrade, float64]("price")
+	}
+
+	collect := func(t *testing.T, deployment *Deployment) *[]ResultBatch {
+		t.Helper()
+		batches := new([]ResultBatch)
+		if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+			*batches = append(*batches, batch)
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return batches
+	}
+
+	t.Run("table", func(t *testing.T) {
+		env, engine, source, symbol, price := newEngine(t, false)
+		insertOnlyPlan, err := env.Build(OnEvent(source).MergeIntoTableWhen("branch-table", []Expr{symbol},
+			WhenNotMatchedAny(SetColumn("symbol", symbol), SetColumn("price", price)),
+		).Query(StatementName("table-insert-only")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		insertOnlyDeployment, err := engine.Deploy(context.Background(), insertOnlyPlan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		insertBatches := collect(t, insertOnlyDeployment)
+		send := func(event runtimeTestTrade) {
+			t.Helper()
+			if err := engine.SendEvent(context.Background(), event); err != nil {
+				t.Fatal(err)
+			}
+		}
+		send(runtimeTestTrade{Symbol: "A", Price: 1})
+		send(runtimeTestTrade{Symbol: "A", Price: 2})
+		if len(*insertBatches) != 1 || len((*insertBatches)[0].New) != 1 || len((*insertBatches)[0].Old) != 0 {
+			t.Fatalf("table insert-only batches = %#v", *insertBatches)
+		}
+		if err := engine.Undeploy(context.Background(), insertOnlyDeployment.ID()); err != nil {
+			t.Fatal(err)
+		}
+
+		matchedPlan, err := env.Build(OnEvent(source).MergeIntoTableWhen("branch-table", []Expr{symbol},
+			WhenMatchedAny(SetColumn("price", price)),
+		).Query(StatementName("table-matched-only")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		matchedDeployment, err := engine.Deploy(context.Background(), matchedPlan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		matchedBatches := collect(t, matchedDeployment)
+		send(runtimeTestTrade{Symbol: "A", Price: 3})
+		send(runtimeTestTrade{Symbol: "missing", Price: 9})
+		if len(*matchedBatches) != 1 || len((*matchedBatches)[0].Old) != 1 || len((*matchedBatches)[0].New) != 1 {
+			t.Fatalf("table matched-only batches = %#v", *matchedBatches)
+		}
+		if (*matchedBatches)[0].Old[0].Get("price").Any() != float64(1) || (*matchedBatches)[0].New[0].Get("price").Any() != float64(3) {
+			t.Fatalf("table matched-only old/new = %#v", *matchedBatches)
+		}
+		if err := engine.Undeploy(context.Background(), matchedDeployment.ID()); err != nil {
+			t.Fatal(err)
+		}
+
+		deletePlan, err := env.Build(OnEvent(source).MergeIntoTableWhen("branch-table", []Expr{symbol},
+			WhenMatchedDeleteAny(),
+		).Query(StatementName("table-delete-only")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		deleteDeployment, err := engine.Deploy(context.Background(), deletePlan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deleteBatches := collect(t, deleteDeployment)
+		send(runtimeTestTrade{Symbol: "A"})
+		send(runtimeTestTrade{Symbol: "missing"})
+		if len(*deleteBatches) != 1 || len((*deleteBatches)[0].Old) != 1 || len((*deleteBatches)[0].New) != 0 {
+			t.Fatalf("table delete-only batches = %#v", *deleteBatches)
+		}
+	})
+
+	t.Run("named-window", func(t *testing.T) {
+		env, engine, source, symbol, price := newEngine(t, true)
+		match := Equal[string](NamedWindowField[string]("symbol"), symbol)
+		insertOnlyPlan, err := env.Build(OnEvent(source).MergeIntoNamedWindowWhen("branch-window", match,
+			WhenNotMatchedAny(SetColumn("symbol", symbol), SetColumn("price", price)),
+		).Query(StatementName("window-insert-only")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		insertOnlyDeployment, err := engine.Deploy(context.Background(), insertOnlyPlan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		insertBatches := collect(t, insertOnlyDeployment)
+		send := func(event runtimeTestTrade) {
+			t.Helper()
+			if err := engine.SendEvent(context.Background(), event); err != nil {
+				t.Fatal(err)
+			}
+		}
+		send(runtimeTestTrade{Symbol: "A", Price: 1})
+		send(runtimeTestTrade{Symbol: "A", Price: 2})
+		send(runtimeTestTrade{Symbol: "B", Price: 3})
+		if len(*insertBatches) != 2 || len((*insertBatches)[0].New) != 1 || len((*insertBatches)[1].New) != 1 {
+			t.Fatalf("named-window insert-only batches = %#v", *insertBatches)
+		}
+		if err := engine.Undeploy(context.Background(), insertOnlyDeployment.ID()); err != nil {
+			t.Fatal(err)
+		}
+
+		matchedPlan, err := env.Build(OnEvent(source).MergeIntoNamedWindowWhen("branch-window", match,
+			WhenMatchedAny(SetColumn("price", price)),
+		).Query(StatementName("window-matched-only")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		matchedDeployment, err := engine.Deploy(context.Background(), matchedPlan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		matchedBatches := collect(t, matchedDeployment)
+		send(runtimeTestTrade{Symbol: "A", Price: 4})
+		send(runtimeTestTrade{Symbol: "missing", Price: 9})
+		if len(*matchedBatches) != 1 || len((*matchedBatches)[0].Old) != 1 || len((*matchedBatches)[0].New) != 1 {
+			t.Fatalf("named-window matched-only batches = %#v", *matchedBatches)
+		}
+		if err := engine.Undeploy(context.Background(), matchedDeployment.ID()); err != nil {
+			t.Fatal(err)
+		}
+
+		deletePlan, err := env.Build(OnEvent(source).MergeIntoNamedWindowWhen("branch-window", match,
+			WhenMatchedDeleteAny(),
+		).Query(StatementName("window-delete-only")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		deleteDeployment, err := engine.Deploy(context.Background(), deletePlan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deleteBatches := collect(t, deleteDeployment)
+		send(runtimeTestTrade{Symbol: "A"})
+		send(runtimeTestTrade{Symbol: "missing"})
+		if len(*deleteBatches) != 1 || len((*deleteBatches)[0].Old) != 1 || len((*deleteBatches)[0].New) != 0 {
+			t.Fatalf("named-window delete-only batches = %#v", *deleteBatches)
+		}
+	})
 }
 
 func TestVariableTriggerSetUsesEventSnapshotAndOrderedDispatch(t *testing.T) {

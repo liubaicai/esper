@@ -68,12 +68,29 @@ func WhenMatched(condition Expr, assignments ...TableAssignment) TableMergeClaus
 	return TableMergeClause{Matched: true, Condition: condition, Assignments: append([]TableAssignment(nil), assignments...)}
 }
 
+// WhenMatchedAny creates an unconditional matched branch. It is the fluent
+// equivalent of Java Esper's "when matched then update" form.
+func WhenMatchedAny(assignments ...TableAssignment) TableMergeClause {
+	return WhenMatched(Literal(true), assignments...)
+}
+
 func WhenNotMatched(condition Expr, assignments ...TableAssignment) TableMergeClause {
 	return TableMergeClause{Condition: condition, Assignments: append([]TableAssignment(nil), assignments...)}
 }
 
+// WhenNotMatchedAny creates an unconditional not-matched branch. It is the
+// fluent equivalent of Java Esper's "when not matched then insert" form.
+func WhenNotMatchedAny(assignments ...TableAssignment) TableMergeClause {
+	return WhenNotMatched(Literal(true), assignments...)
+}
+
 func WhenMatchedDelete(condition Expr) TableMergeClause {
 	return TableMergeClause{Matched: true, Condition: condition, Delete: true}
+}
+
+// WhenMatchedDeleteAny creates an unconditional matched delete branch.
+func WhenMatchedDeleteAny() TableMergeClause {
+	return WhenMatchedDelete(Literal(true))
 }
 
 type triggerDefinition struct {
@@ -581,15 +598,9 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 		if len(definition.merge) == 0 {
 			return NewError(ErrorInvalidRule, "table merge requires at least one clause")
 		}
-		var matched, notMatched bool
 		for index, clause := range definition.merge {
 			if clause.Condition == nil || clause.Condition.Type() != typeOf[bool]() {
 				return fmt.Errorf("table merge clause %d requires a bool condition", index)
-			}
-			if clause.Matched {
-				matched = true
-			} else {
-				notMatched = true
 			}
 			if clause.Delete && !clause.Matched {
 				return fmt.Errorf("table merge delete clause %d must be matched", index)
@@ -606,9 +617,6 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 			if err := e.validateExprFields(definition.input, clause.Condition); err != nil {
 				return fmt.Errorf("table merge clause %d condition: %w", index, err)
 			}
-		}
-		if !matched || !notMatched {
-			return NewError(ErrorInvalidRule, "table merge requires matched and not-matched clauses")
 		}
 	}
 	return nil

@@ -264,7 +264,7 @@
       "level": "S",
       "summary": "Fluent pattern composition, tags, repetition, fixed/dynamic/calendar guards and virtual-time timer observers",
       "javaRefs": ["PatternMicrosecondResolution", "PatternOperatorEvery", "PatternOperatorMatchUntil", "PatternOperatorFollowedByMax", "PatternConsumingPattern", "PatternConsumingFilter", "PatternObserverTimerAt", "PatternObserverTimerInterval", "PatternObserverTimerSchedule"],
-      "goRefs": ["pattern.go", "pattern_limit.go", "pattern_test.go", "pattern_followed_by_max_test.go", "pattern_followed_by_max_listener_test.go", "pattern_consumption_test.go"],
+      "goRefs": ["pattern.go", "pattern_limit.go", "pattern_test.go", "pattern_guard_observer_matrix_test.go", "pattern_followed_by_max_test.go", "pattern_followed_by_max_listener_test.go", "pattern_consumption_test.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["complete guard/observer combination", "full nested @consume(N) trace across match-until/guard/observer and complete SODA/invalid matrix", "advanced Match Recognize integration is tracked by rowrecog.match-recognize"]
@@ -300,7 +300,7 @@
       "goRefs": ["trigger.go", "trigger_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["full index/transaction semantics", "all Java on-trigger cases", "persistence"]
+      "remaining": ["full index/transaction semantics", "table no-primary-key/no-where merge and wildcard/multi-action projection matrix", "all Java on-trigger cases", "persistence"]
     },
     {
       "id": "context.partition",
@@ -512,6 +512,28 @@
       "status": "mapped",
       "evidence": ["java-suite-view-27-27", "java-runtime-inventory", "go-unit"],
       "difference": "Go covers the core fluent retention windows and adds UniqueBy/FirstUniqueBy with state-aware multi-key identity, stable key order, Snapshot/Prev history visibility and recursive GroupWindow unique history. GroupWindow keys now use typed/content-preserving identity, including array keys. NamedWindowRetention now supports Unique/FirstUnique replacement state, including content-based array keys, old-stream dispatch and stable snapshots. Named-window-backed and regular event-stream subqueries now support aggregate WindowValues projection as one inner row over the retained group and array-key Unique count filtering, with statement-owned independent source-window state. The Dataflow graph path now gives each Dataflow instance a statement-owned registry with independent state per subquery definition, reproducing the Java array-key Unique window/captive emitter trace. TimeOrder now sorts external timestamps, expires on virtual time, immediately removes late events at the boundary, supports calendar years/months/days with exact AddDate boundaries, and preserves independent grouped-partition lifecycle and iteration order. TimeToLiveAt now models Java #timetolive(timestamp) as an absolute epoch-millisecond expiry, including same-boundary batch removal, already-expired insertion and named-window retention. RankWindowBy now models Java rank unique-key replacement, grouped partition state, sort ordering, full-window pass-through and worst-entry eviction; Sort and Rank preserve their different same-sort-value arrival order and eviction rules. Rank previous access now has Java ViewRankedPrev coverage for PrevWindow and Prev(0..4), while grouped Rank covers per-partition unique-key replacement and eviction. Go now also models the Java TimeOrder previous/prior split: Prev/PrevTail/PrevWindow use the view's sorted head-to-tail access order, Prior uses arrival order, PrevCount follows retained access history, and old-stream expiry rows retain only the Java-available prior value. The new navigation tests cover the two ViewTimeOrderTTLPreviousAndPrior scenes, including Snapshot and expiry lifecycle. Go tests also exercise object-array, two-dimensional-array, rank array unique keys, and stable union/intersection composition over array-key Unique children. Java's selected ViewMultikeyWArray/ViewRank additionally covers context/pattern subquery combinations, wider navigation combinations and exact shared trace; those combinations remain open."
+    },
+    {
+      "id": "case.trigger-merge-single-sided",
+      "javaRuntimeIds": ["java-runtime-651148621e89ec5465b0", "java-runtime-e51caa89fbde4ab34197", "java-runtime-8900ac7e3d063d8b8842", "java-runtime-b581753558f219b16a2a", "java-runtime-5cdc46289e4fac78a0c5", "java-runtime-8e9616eb8385c473d45a", "java-runtime-af614186a63cbeb33ae5", "java-runtime-eb7754c9e46c8c465c14", "java-runtime-f21a6fc889f14608828f", "java-runtime-f7a73c74e857ffbdfd15"],
+      "javaNames": ["InfraInsertOnly"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestSingleSidedMergeBranchesAndConvenienceConstructors"],
+      "tags": ["correctness", "infra", "table", "named-window", "merge", "insert-only", "new-old"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Go exposes WhenNotMatchedAny, WhenMatchedAny and WhenMatchedDeleteAny as typed fluent branches. The test covers insert-only no-op on an existing key, matched update/delete, and Table/Named Window new/old batches. Java's equivalent/SODA/column-name variants are represented by the same behavioral slice; full wildcard event materialization, representation-specific metadata and shared Java/Go trace remain open."
+    },
+    {
+      "id": "case.trigger-merge-no-where",
+      "javaRuntimeIds": ["java-runtime-0dc6b8eb05a1d3989b23", "java-runtime-c6f6bda40f34d29acb8c"],
+      "javaNames": ["InfraNoWhereClause"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestNamedWindowMergeWithoutWhereUsesMatchedBranch", "TestSingleSidedMergeBranchesAndConvenienceConstructors"],
+      "tags": ["correctness", "infra", "table", "named-window", "merge", "no-where"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Go's nil named-window match predicate treats every existing target event as matched and routes an empty target to the not-matched branch, matching the covered Java no-where lifecycle. Table merges still require explicit primary-key expressions; Java's no-primary-key table/no-where form, delete-trigger interaction, and full multi-clause trace remain open."
     },
     {
       "id": "case.named-window-unique-merge",
@@ -1552,6 +1574,17 @@
       "difference": "Go covers outer Within versus inner Within().EveryDistinct() scope, distinct suppression with an AST-owned Every state, virtual-clock expiry via Within and explicit EveryDistinctFor, ordinary Pattern and Pattern Context lifecycle, scoped WithinOrMax guards, dynamic duration from captured tags, variables, deployment parameters and component expressions, repeated-tag property access including indexed fields from repeated event tags, component-wise fixed-duration parameters, variable reconfiguration for the next recurring timer period, microsecond precision, recurring month-calendar boundaries, mixed calendar-plus-fixed timer periods, exact-deadline tests, edge-scoped FollowedByMax capacity for nested/composed followed-by branches, and MatchUntil expression bounds resolved from variables, deployment parameters, null open bounds and captured outer tags. Bounded-until additionally preserves a capped repeated branch while waiting for a terminator, gives the terminator priority on the same event, and expires without output below the lower bound. Java additionally covers ISO period parsing, multi-key expiry, nested observer/guard/consumption combinations and exact execution trace parity; Go WithinOrMax, dynamic duration and dynamic MatchUntil support do not yet cover every nested parent transition, followed-by dynamic maxima or the complete consumption policy matrix."
     },
     {
+      "id": "case.pattern-guard-observer-prearmed",
+      "javaRuntimeIds": ["java-runtime-bb8113cb979826cff927", "java-runtime-9b41fb5951301c0de979"],
+      "javaNames": ["PatternGuardTimerWithin$PatternOp", "PatternObserverTimerInterval$PatternOp"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternGuardTimerWithin.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java"],
+      "goTests": ["TestPatternIndependentWithinGuardsComposeWithEveryAndMatchesEsper"],
+      "tags": ["correctness", "pattern", "guard", "observer", "every", "virtual-time"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go composes two independently guarded event branches with And and definition-level Every. Virtual-clock prearming is retained on each active branch; the first matching event advances the prearmed branch instead of creating a duplicate Every root, and an expired guarded branch does not produce a late conjunction. The Java source contains a broader guard/observer case matrix; nested consume, Not/Until/MatchUntil, dynamic calendar components, SODA and full shared trace remain partial."
+    },
+    {
       "id": "case.pattern-every-completion-boundary",
       "javaRuntimeIds": ["java-runtime-96878ce28620e660d0b2"],
       "javaNames": ["PatternEveryFollowedBy"],
@@ -2118,6 +2151,8 @@
     {"capabilityId": "join.basic", "caseId": "case.join-unidirectional-stream"},
     {"capabilityId": "join.basic", "caseId": "case.join-performance-baselines"},
     {"capabilityId": "context.partition", "caseId": "case.context-partitioning"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-single-sided"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-no-where"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-variable"},
@@ -2135,6 +2170,7 @@
     {"capabilityId": "output.core", "caseId": "case.output-row-per-group"},
     {"capabilityId": "output.core", "caseId": "case.output-row-for-all"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-every"},
+    {"capabilityId": "pattern.basic", "caseId": "case.pattern-guard-observer-prearmed"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-followed-by-max"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-consumption-policy"},
     {"capabilityId": "pattern.basic", "caseId": "case.pattern-consuming-filter"},
