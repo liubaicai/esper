@@ -2,6 +2,7 @@ package esper
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -229,8 +230,10 @@ type ContextPartitionSelectorCategories struct {
 	set    map[string]struct{}
 }
 
-// ContextPartitionSelectorHashes selects hash-context partitions by the
-// signed 32-bit hash value exposed in the descriptor's hash property.
+// ContextPartitionSelectorHashes selects hash-context partitions by either
+// the descriptor hash property or the compact hash bucket encoded in the
+// public partition key. Accepting both forms keeps the Go descriptor API
+// useful while matching Esper's ContextPartitionSelectorHash contract.
 type ContextPartitionSelectorHashes struct {
 	Hashes []int64
 	set    map[int64]struct{}
@@ -249,20 +252,28 @@ func (s ContextPartitionSelectorHashes) SelectContextPartition(string) bool { re
 
 func (s ContextPartitionSelectorHashes) SelectContextPartitionDescriptor(descriptor ContextPartitionDescriptor) bool {
 	value, ok := descriptor.Property("hash")
-	if !ok || value.IsNull() {
-		return false
+	values := make([]int64, 0, 2)
+	if ok && !value.IsNull() {
+		if hash, typeOK := value.Any().(int64); typeOK {
+			values = append(values, hash)
+		}
 	}
-	hash, ok := value.Any().(int64)
-	if !ok {
-		return false
+	if strings.HasPrefix(descriptor.Key, "hash:") {
+		if bucket, parseErr := strconv.ParseInt(strings.TrimPrefix(descriptor.Key, "hash:"), 10, 64); parseErr == nil {
+			values = append(values, bucket)
+		}
 	}
-	if s.set != nil {
-		_, ok := s.set[hash]
-		return ok
-	}
-	for _, candidate := range s.Hashes {
-		if candidate == hash {
-			return true
+	for _, value := range values {
+		if s.set != nil {
+			if _, ok := s.set[value]; ok {
+				return true
+			}
+			continue
+		}
+		for _, candidate := range s.Hashes {
+			if candidate == value {
+				return true
+			}
 		}
 	}
 	return false
