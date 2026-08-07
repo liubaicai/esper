@@ -303,8 +303,17 @@ type tableState struct {
 	rows         map[string]TableRow
 	order        []string
 	indexes      map[string]map[string][]string
+	indexEntries map[string][]tableIndexEntry
 	version      uint64
 	indexLookups atomic.Uint64
+}
+
+// tableIndexEntry is the ordered representation of one B-tree index member.
+// The hash map above remains the fast complete-key path; entries retain the
+// typed values so range probes do not need to decode encodeKey strings.
+type tableIndexEntry struct {
+	rowKey string
+	values []Value
 }
 
 // Table is a concurrency-safe in-memory table owned by an Engine. Reads use
@@ -314,10 +323,11 @@ type Table struct {
 }
 
 type tableMutationSnapshot struct {
-	rows    map[string]TableRow
-	order   []string
-	indexes map[string]map[string][]string
-	version uint64
+	rows         map[string]TableRow
+	order        []string
+	indexes      map[string]map[string][]string
+	indexEntries map[string][]tableIndexEntry
+	version      uint64
 }
 
 func (t *Table) snapshotMutationState() tableMutationSnapshot {
@@ -328,10 +338,11 @@ func (t *Table) snapshotMutationState() tableMutationSnapshot {
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	snapshot := tableMutationSnapshot{
-		rows:    make(map[string]TableRow, len(state.rows)),
-		order:   append([]string(nil), state.order...),
-		indexes: make(map[string]map[string][]string, len(state.indexes)),
-		version: state.version,
+		rows:         make(map[string]TableRow, len(state.rows)),
+		order:        append([]string(nil), state.order...),
+		indexes:      make(map[string]map[string][]string, len(state.indexes)),
+		indexEntries: make(map[string][]tableIndexEntry, len(state.indexEntries)),
+		version:      state.version,
 	}
 	for key, row := range state.rows {
 		snapshot.rows[key] = cloneTableRow(row)
@@ -342,6 +353,13 @@ func (t *Table) snapshotMutationState() tableMutationSnapshot {
 			copied[key] = append([]string(nil), rowKeys...)
 		}
 		snapshot.indexes[name] = copied
+	}
+	for name, entries := range state.indexEntries {
+		copied := make([]tableIndexEntry, len(entries))
+		for index, entry := range entries {
+			copied[index] = tableIndexEntry{rowKey: entry.rowKey, values: append([]Value(nil), entry.values...)}
+		}
+		snapshot.indexEntries[name] = copied
 	}
 	return snapshot
 }
@@ -366,15 +384,25 @@ func (t *Table) restoreMutationState(snapshot tableMutationSnapshot) {
 		}
 		state.indexes[name] = copied
 	}
+	state.indexEntries = make(map[string][]tableIndexEntry, len(snapshot.indexEntries))
+	for name, entries := range snapshot.indexEntries {
+		copied := make([]tableIndexEntry, len(entries))
+		for index, entry := range entries {
+			copied[index] = tableIndexEntry{rowKey: entry.rowKey, values: append([]Value(nil), entry.values...)}
+		}
+		state.indexEntries[name] = copied
+	}
 	state.version = snapshot.version
 }
 
 func newTable(definition TableDefinition) *Table {
 	indexes := make(map[string]map[string][]string, len(definition.indexes))
+	indexEntries := make(map[string][]tableIndexEntry, len(definition.indexes))
 	for _, index := range definition.indexes {
 		indexes[index.Name] = make(map[string][]string)
+		indexEntries[index.Name] = nil
 	}
-	return &Table{state: &tableState{def: definition, rows: make(map[string]TableRow), indexes: indexes}}
+	return &Table{state: &tableState{def: definition, rows: make(map[string]TableRow), indexes: indexes, indexEntries: indexEntries}}
 }
 
 func (t *Table) Definition() TableDefinition {
@@ -413,13 +441,15 @@ func (t *Table) Replace(ctx context.Context, rows []map[string]any) error {
 	defer state.mu.Unlock()
 
 	replacement := &tableState{
-		def:     state.def,
-		rows:    make(map[string]TableRow, len(rows)),
-		indexes: make(map[string]map[string][]string, len(state.def.indexes)),
-		version: state.version,
+		def:          state.def,
+		rows:         make(map[string]TableRow, len(rows)),
+		indexes:      make(map[string]map[string][]string, len(state.def.indexes)),
+		indexEntries: make(map[string][]tableIndexEntry, len(state.def.indexes)),
+		version:      state.version,
 	}
 	for _, definition := range state.def.indexes {
 		replacement.indexes[definition.Name] = make(map[string][]string)
+		replacement.indexEntries[definition.Name] = nil
 	}
 	for index, values := range rows {
 		if err := contextErr(ctx); err != nil {
@@ -432,6 +462,7 @@ func (t *Table) Replace(ctx context.Context, rows []map[string]any) error {
 	state.rows = replacement.rows
 	state.order = replacement.order
 	state.indexes = replacement.indexes
+	state.indexEntries = replacement.indexEntries
 	state.version = replacement.version
 	return nil
 }
@@ -567,6 +598,7 @@ func (t *Table) Clear(ctx context.Context) ([]TableRow, error) {
 	state.order = nil
 	for name := range state.indexes {
 		state.indexes[name] = make(map[string][]string)
+		state.indexEntries[name] = nil
 	}
 	state.version++
 	return rows, nil
@@ -620,6 +652,44 @@ func (t *Table) lookupMany(ctx context.Context, indexName string, keys [][]any) 
 	for _, key := range keys {
 		for _, rowKey := range index[encodeKey(key)] {
 			wanted[rowKey] = struct{}{}
+		}
+	}
+	rows := make([]TableRow, 0, len(wanted))
+	for _, rowKey := range state.order {
+		if _, exists := wanted[rowKey]; !exists {
+			continue
+		}
+		if row, exists := state.rows[rowKey]; exists {
+			rows = append(rows, cloneTableRow(row))
+		}
+	}
+	return rows, nil
+}
+
+// lookupRange walks the ordered members of a B-tree index and returns matched
+// rows in table insertion order. The ordered members are kept separately from
+// the hash buckets so the runtime never has to reverse-engineer encodeKey.
+func (t *Table) lookupRange(ctx context.Context, indexName string, query indexRangeSpec) ([]TableRow, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	if t == nil || t.state == nil {
+		return nil, NewError(ErrorState, "nil table")
+	}
+	state := t.state
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	if _, ok := state.indexes[indexName]; !ok {
+		return nil, NewError(ErrorUnknownName, fmt.Sprintf("table index %q does not exist", indexName))
+	}
+	state.indexLookups.Add(1)
+	wanted := make(map[string]struct{})
+	for _, entry := range state.indexEntries[indexName] {
+		if err := contextErr(ctx); err != nil {
+			return nil, err
+		}
+		if indexRangeEntryMatches(entry.values, query) {
+			wanted[entry.rowKey] = struct{}{}
 		}
 	}
 	rows := make([]TableRow, 0, len(wanted))
@@ -751,6 +821,16 @@ func (s *tableState) addIndexesLocked(rowKey string, row TableRow) {
 		if !definition.Unique || len(index[key]) == 0 {
 			index[key] = append(index[key], rowKey)
 		}
+		entries := s.indexEntries[definition.Name]
+		entries = append(entries, tableIndexEntry{rowKey: rowKey, values: tableIndexValues(row, definition.Columns)})
+		sort.SliceStable(entries, func(left, right int) bool {
+			comparison, comparable := compareIndexValueSlices(entries[left].values, entries[right].values)
+			if !comparable || comparison == 0 {
+				return false
+			}
+			return comparison < 0
+		})
+		s.indexEntries[definition.Name] = entries
 	}
 }
 
@@ -770,6 +850,15 @@ func (s *tableState) removeIndexesLocked(rowKey string, row TableRow) {
 		} else {
 			index[key] = rowKeys
 		}
+		entries := s.indexEntries[definition.Name]
+		for position, entry := range entries {
+			if entry.rowKey != rowKey {
+				continue
+			}
+			entries = append(entries[:position], entries[position+1:]...)
+			break
+		}
+		s.indexEntries[definition.Name] = entries
 	}
 }
 
@@ -779,6 +868,14 @@ func (s *tableState) indexKey(row TableRow, columns []string) string {
 		values = append(values, row.Get(column).Any())
 	}
 	return encodeKey(values)
+}
+
+func tableIndexValues(row TableRow, columns []string) []Value {
+	values := make([]Value, 0, len(columns))
+	for _, column := range columns {
+		values = append(values, row.Get(column))
+	}
+	return values
 }
 
 func cloneTableRow(row TableRow) TableRow {
@@ -1051,11 +1148,20 @@ type namedWindowRuntime struct {
 	partitions        map[string]*namedWindowRuntime
 	entries           []storedEvent
 	indexes           map[string]map[string][]int
+	indexEntries      map[string][]namedWindowIndexEntry
 	keyed             map[string]storedEvent
 	keyOrder          []string
 	listeners         map[uint64]NamedWindowListener
 	nextID            uint64
 	indexLookups      atomic.Uint64
+}
+
+// namedWindowIndexEntry is the ordered representation of one B-tree index
+// member. Positions are rebuilt together with the Named Window index after
+// any mutation that can shift entry positions.
+type namedWindowIndexEntry struct {
+	position int
+	values   []Value
 }
 
 type NamedWindow struct {
@@ -1070,10 +1176,12 @@ func newNamedWindow(definition NamedWindowDefinition, engine *Engine) *NamedWind
 
 func newNamedWindowRuntime(definition NamedWindowDefinition, contextKey string) *namedWindowRuntime {
 	indexes := make(map[string]map[string][]int, len(definition.indexes))
+	indexEntries := make(map[string][]namedWindowIndexEntry, len(definition.indexes))
 	for _, index := range definition.indexes {
 		indexes[index.Name] = make(map[string][]int)
+		indexEntries[index.Name] = nil
 	}
-	state := &namedWindowRuntime{def: definition, contextKey: contextKey, indexes: indexes, listeners: make(map[uint64]NamedWindowListener)}
+	state := &namedWindowRuntime{def: definition, contextKey: contextKey, indexes: indexes, indexEntries: indexEntries, listeners: make(map[uint64]NamedWindowListener)}
 	if definition.contextName != "" && contextKey == "" {
 		state.partitions = make(map[string]*namedWindowRuntime)
 	}
@@ -1092,6 +1200,14 @@ func namedWindowIndexKey(event Event, columns []string) string {
 		values = append(values, event.Get(column).Any())
 	}
 	return encodeKey(values)
+}
+
+func namedWindowIndexValues(event Event, columns []string) []Value {
+	values := make([]Value, 0, len(columns))
+	for _, column := range columns {
+		values = append(values, event.Get(column))
+	}
+	return values
 }
 
 func namedWindowIndexKeyDisplay(event Event, columns []string) any {
@@ -1119,18 +1235,30 @@ func rebuildNamedWindowIndexesLocked(state *namedWindowRuntime) {
 		return
 	}
 	indexes := make(map[string]map[string][]int, len(state.def.indexes))
+	indexEntries := make(map[string][]namedWindowIndexEntry, len(state.def.indexes))
 	for _, definition := range state.def.indexes {
 		index := make(map[string][]int)
+		entries := make([]namedWindowIndexEntry, 0, len(state.entries))
 		for position, entry := range state.entries {
 			key := namedWindowIndexKey(entry.event, definition.Columns)
 			if definition.Unique && len(index[key]) > 0 {
 				continue
 			}
 			index[key] = append(index[key], position)
+			entries = append(entries, namedWindowIndexEntry{position: position, values: namedWindowIndexValues(entry.event, definition.Columns)})
 		}
+		sort.SliceStable(entries, func(left, right int) bool {
+			comparison, comparable := compareIndexValueSlices(entries[left].values, entries[right].values)
+			if !comparable || comparison == 0 {
+				return false
+			}
+			return comparison < 0
+		})
 		indexes[definition.Name] = index
+		indexEntries[definition.Name] = entries
 	}
 	state.indexes = indexes
+	state.indexEntries = indexEntries
 }
 
 func validateNamedWindowUniqueIndexesLocked(state *namedWindowRuntime, event Event) error {
@@ -1622,6 +1750,70 @@ func (w *NamedWindow) lookupMany(ctx context.Context, indexName string, keys [][
 	result := make([]Event, 0)
 	for _, partitionKey := range partitionKeys {
 		result = append(result, lookupNamedWindowStateMany(partitions[partitionKey], indexName, keys)...)
+	}
+	return result, nil
+}
+
+// lookupRange walks ordered Named Window index members and returns matched
+// events in retention/insertion order. Context-bound root windows search
+// partitions in the same deterministic order as Lookup.
+func (w *NamedWindow) lookupRange(ctx context.Context, indexName string, query indexRangeSpec) ([]Event, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	if w == nil || w.state == nil {
+		return nil, NewError(ErrorState, "nil named window")
+	}
+	if _, exists := namedWindowIndexDefinition(w.state.def, indexName); !exists {
+		return nil, NewError(ErrorUnknownName, fmt.Sprintf("named window index %q does not exist", indexName))
+	}
+	if w.state.def.contextName == "" || w.state.contextKey != "" {
+		return lookupNamedWindowRangeState(w.state, indexName, query, ctx)
+	}
+	w.state.mu.RLock()
+	partitionKeys := make([]string, 0, len(w.state.partitions))
+	partitions := make(map[string]*namedWindowRuntime, len(w.state.partitions))
+	for partitionKey, partition := range w.state.partitions {
+		partitionKeys = append(partitionKeys, partitionKey)
+		partitions[partitionKey] = partition
+	}
+	w.state.mu.RUnlock()
+	sort.Strings(partitionKeys)
+	result := make([]Event, 0)
+	for _, partitionKey := range partitionKeys {
+		if err := contextErr(ctx); err != nil {
+			return nil, err
+		}
+		partitionResult, err := lookupNamedWindowRangeState(partitions[partitionKey], indexName, query, ctx)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, partitionResult...)
+	}
+	return result, nil
+}
+
+func lookupNamedWindowRangeState(state *namedWindowRuntime, indexName string, query indexRangeSpec, ctx context.Context) ([]Event, error) {
+	if state == nil {
+		return nil, nil
+	}
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	state.indexLookups.Add(1)
+	wanted := make(map[int]struct{})
+	for _, entry := range state.indexEntries[indexName] {
+		if err := contextErr(ctx); err != nil {
+			return nil, err
+		}
+		if indexRangeEntryMatches(entry.values, query) {
+			wanted[entry.position] = struct{}{}
+		}
+	}
+	result := make([]Event, 0, len(wanted))
+	for position, entry := range state.entries {
+		if _, exists := wanted[position]; exists {
+			result = append(result, entry.event)
+		}
 	}
 	return result, nil
 }

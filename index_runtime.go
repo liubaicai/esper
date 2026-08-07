@@ -7,6 +7,28 @@ import (
 	"time"
 )
 
+type indexRangeBound struct {
+	value     any
+	inclusive bool
+}
+
+// indexRangeSpec describes a lexicographic B-tree probe. Prefix values are
+// complete equality components; the next component carries one or both
+// ordered bounds. Trailing index columns are intentionally not constrained,
+// matching the planner's equality-prefix-plus-range contract.
+type indexRangeSpec struct {
+	prefix        []any
+	rangePosition int
+	lower         *indexRangeBound
+	upper         *indexRangeBound
+	empty         bool
+}
+
+type indexProbeBounds struct {
+	lower *indexRangeBound
+	upper *indexRangeBound
+}
+
 // maxIndexProbeKeys bounds expansion of an IN predicate before execution
 // falls back to the normal snapshot path. The fallback keeps correctness and
 // prevents a prepared query from turning one large parameter into an
@@ -26,6 +48,56 @@ func sourceIndexFilterExpressions(source *streamNode) []Expr {
 		}
 	}
 	return result
+}
+
+func compareIndexValueSlices(left, right []Value) (int, bool) {
+	limit := len(left)
+	if len(right) < limit {
+		limit = len(right)
+	}
+	for index := 0; index < limit; index++ {
+		comparison, comparable := compareValues(left[index], right[index])
+		if !comparable || comparison != 0 {
+			return comparison, comparable
+		}
+	}
+	switch {
+	case len(left) < len(right):
+		return -1, true
+	case len(left) > len(right):
+		return 1, true
+	default:
+		return 0, true
+	}
+}
+
+func indexRangeEntryMatches(values []Value, query indexRangeSpec) bool {
+	if query.empty || query.rangePosition < 0 || query.rangePosition >= len(values) || len(query.prefix) > query.rangePosition {
+		return false
+	}
+	for position, expected := range query.prefix {
+		comparison, comparable := compareValues(values[position], Present(expected))
+		if !comparable || comparison != 0 {
+			return false
+		}
+	}
+	current := values[query.rangePosition]
+	if !current.IsPresent() {
+		return false
+	}
+	if query.lower != nil {
+		comparison, comparable := compareValues(current, Present(query.lower.value))
+		if !comparable || comparison < 0 || (comparison == 0 && !query.lower.inclusive) {
+			return false
+		}
+	}
+	if query.upper != nil {
+		comparison, comparable := compareValues(current, Present(query.upper.value))
+		if !comparable || comparison > 0 || (comparison == 0 && !query.upper.inclusive) {
+			return false
+		}
+	}
+	return true
 }
 
 func indexProbeExpressions(source *streamNode, onDemand Expr) []Expr {
@@ -196,6 +268,157 @@ func collectIndexProbeConstraints(node *exprNode, ctx EvalContext, constraints i
 	}
 }
 
+func markIndexProbeBoundsInvalid(bounds map[string]*indexProbeBounds, column string) *indexProbeBounds {
+	current := bounds[column]
+	if current == nil {
+		current = &indexProbeBounds{}
+		bounds[column] = current
+	}
+	return current
+}
+
+func mergeIndexLowerBound(bounds *indexProbeBounds, bound indexRangeBound) {
+	if bounds == nil {
+		return
+	}
+	if bounds.lower == nil {
+		copy := bound
+		bounds.lower = &copy
+		return
+	}
+	comparison, comparable := compareValues(Present(bounds.lower.value), Present(bound.value))
+	if !comparable {
+		return
+	}
+	if comparison < 0 {
+		copy := bound
+		bounds.lower = &copy
+		return
+	}
+	if comparison == 0 {
+		bounds.lower.inclusive = bounds.lower.inclusive && bound.inclusive
+	}
+}
+
+func mergeIndexUpperBound(bounds *indexProbeBounds, bound indexRangeBound) {
+	if bounds == nil {
+		return
+	}
+	if bounds.upper == nil {
+		copy := bound
+		bounds.upper = &copy
+		return
+	}
+	comparison, comparable := compareValues(Present(bounds.upper.value), Present(bound.value))
+	if !comparable {
+		return
+	}
+	if comparison > 0 {
+		copy := bound
+		bounds.upper = &copy
+		return
+	}
+	if comparison == 0 {
+		bounds.upper.inclusive = bounds.upper.inclusive && bound.inclusive
+	}
+}
+
+func addIndexProbeComparison(bounds map[string]*indexProbeBounds, column, kind string, value any, reversed bool) {
+	if strings.TrimSpace(column) == "" {
+		return
+	}
+	if reversed {
+		switch kind {
+		case "gt":
+			kind = "lt"
+		case "gte":
+			kind = "lte"
+		case "lt":
+			kind = "gt"
+		case "lte":
+			kind = "gte"
+		}
+	}
+	current := markIndexProbeBoundsInvalid(bounds, column)
+	switch kind {
+	case "gt":
+		mergeIndexLowerBound(current, indexRangeBound{value: value, inclusive: false})
+	case "gte":
+		mergeIndexLowerBound(current, indexRangeBound{value: value, inclusive: true})
+	case "lt":
+		mergeIndexUpperBound(current, indexRangeBound{value: value, inclusive: false})
+	case "lte":
+		mergeIndexUpperBound(current, indexRangeBound{value: value, inclusive: true})
+	}
+}
+
+func collectIndexProbeRangeConstraints(node *exprNode, ctx EvalContext, exact indexProbeConstraints, ranges map[string]*indexProbeBounds) {
+	if node == nil {
+		return
+	}
+	if node.kind == "and" {
+		for _, child := range node.children {
+			collectIndexProbeRangeConstraints(child, ctx, exact, ranges)
+		}
+		return
+	}
+	switch node.kind {
+	case "eq", "equal-of", "is", "in", "in-of", "in-slice":
+		collectIndexProbeConstraints(node, ctx, exact)
+	case "between", "between-of":
+		if len(node.children) != 3 {
+			return
+		}
+		column := fieldColumn(node.children[0])
+		if column == "" {
+			return
+		}
+		lower := make([]any, 0, 1)
+		upper := make([]any, 0, 1)
+		if !appendIndexProbeValues(&lower, node.children[1], ctx, false) || !appendIndexProbeValues(&upper, node.children[2], ctx, false) {
+			markIndexProbeBoundsInvalid(ranges, column)
+			return
+		}
+		current := markIndexProbeBoundsInvalid(ranges, column)
+		mergeIndexLowerBound(current, indexRangeBound{value: lower[0], inclusive: true})
+		mergeIndexUpperBound(current, indexRangeBound{value: upper[0], inclusive: true})
+	case "gt", "gte", "lt", "lte", "greater-of", "greater-equal-of", "less-of", "less-equal-of":
+		if len(node.children) < 2 {
+			return
+		}
+		kind := node.kind
+		switch kind {
+		case "greater-of":
+			kind = "gt"
+		case "greater-equal-of":
+			kind = "gte"
+		case "less-of":
+			kind = "lt"
+		case "less-equal-of":
+			kind = "lte"
+		}
+		leftColumn := fieldColumn(node.children[0])
+		rightColumn := fieldColumn(node.children[1])
+		if leftColumn != "" && rightColumn == "" {
+			value := make([]any, 0, 1)
+			if appendIndexProbeValues(&value, node.children[1], ctx, false) {
+				addIndexProbeComparison(ranges, leftColumn, kind, value[0], false)
+			} else {
+				markIndexProbeBoundsInvalid(ranges, leftColumn)
+			}
+			return
+		}
+		if rightColumn != "" && leftColumn == "" {
+			value := make([]any, 0, 1)
+			if appendIndexProbeValues(&value, node.children[0], ctx, false) {
+				addIndexProbeComparison(ranges, rightColumn, kind, value[0], true)
+			} else {
+				markIndexProbeBoundsInvalid(ranges, rightColumn)
+			}
+		}
+	}
+}
+
 func normalizeIndexProbeValue(value any, fieldType reflect.Type) (any, bool) {
 	if fieldType == nil || fieldType == typeOf[any]() || value == nil {
 		return value, true
@@ -205,6 +428,105 @@ func normalizeIndexProbeValue(value any, fieldType reflect.Type) (any, bool) {
 		return nil, false
 	}
 	return coerced.Any(), coerced.IsPresent()
+}
+
+func normalizeIndexRangeBound(bound *indexRangeBound, fieldType reflect.Type) (*indexRangeBound, bool) {
+	if bound == nil {
+		return nil, true
+	}
+	value, ok := normalizeIndexProbeValue(bound.value, fieldType)
+	if !ok || value == nil || isNilReflectValue(reflect.ValueOf(value)) {
+		return nil, false
+	}
+	return &indexRangeBound{value: value, inclusive: bound.inclusive}, true
+}
+
+func (e *Engine) indexProbeRangeSpec(source *streamNode, selection IndexSelection, expressions []Expr, now time.Time, variables map[string]Value) (indexRangeSpec, bool) {
+	if e == nil || selection.Access != IndexAccessRange || (selection.Backing != IndexBackingBTree && selection.Backing != IndexBackingUniqueBTree) || len(selection.Columns) == 0 || len(selection.MatchedColumns) == 0 {
+		return indexRangeSpec{}, false
+	}
+	base, err := sourceNode(source)
+	if err != nil {
+		return indexRangeSpec{}, false
+	}
+	schema, err := e.env.sourceSchema(base)
+	if err != nil {
+		return indexRangeSpec{}, false
+	}
+	rangePosition := len(selection.MatchedColumns) - 1
+	if rangePosition < 0 || rangePosition >= len(selection.Columns) {
+		return indexRangeSpec{}, false
+	}
+	ctx := EvalContext{Now: now, Variables: variables, Parameters: parameterValuesFromVariables(variables)}
+	exact := make(indexProbeConstraints)
+	ranges := make(map[string]*indexProbeBounds)
+	for _, expression := range expressions {
+		if expression != nil {
+			collectIndexProbeRangeConstraints(expression.node(), ctx, exact, ranges)
+		}
+	}
+	query := indexRangeSpec{rangePosition: rangePosition, prefix: make([]any, 0, rangePosition)}
+	for position := 0; position < rangePosition; position++ {
+		column := selection.Columns[position]
+		values, exists := exact[column]
+		if !exists || len(values) != 1 {
+			return indexRangeSpec{}, false
+		}
+		field, fieldExists := schema.Field(column)
+		fieldType := reflect.Type(nil)
+		if fieldExists {
+			fieldType = field.Type
+		}
+		value, ok := normalizeIndexProbeValue(values[0], fieldType)
+		if !ok || value == nil || isNilReflectValue(reflect.ValueOf(value)) {
+			return indexRangeSpec{}, false
+		}
+		query.prefix = append(query.prefix, value)
+	}
+	rangeColumn := selection.Columns[rangePosition]
+	bounds, exists := ranges[rangeColumn]
+	if !exists || bounds == nil || (bounds.lower == nil && bounds.upper == nil) {
+		return indexRangeSpec{}, false
+	}
+	if bounds.lower == nil && bounds.upper == nil {
+		return indexRangeSpec{}, false
+	}
+	if bounds.lower != nil {
+		field, fieldExists := schema.Field(rangeColumn)
+		fieldType := reflect.Type(nil)
+		if fieldExists {
+			fieldType = field.Type
+		}
+		var ok bool
+		query.lower, ok = normalizeIndexRangeBound(bounds.lower, fieldType)
+		if !ok {
+			return indexRangeSpec{}, false
+		}
+	}
+	if bounds.upper != nil {
+		field, fieldExists := schema.Field(rangeColumn)
+		fieldType := reflect.Type(nil)
+		if fieldExists {
+			fieldType = field.Type
+		}
+		var ok bool
+		query.upper, ok = normalizeIndexRangeBound(bounds.upper, fieldType)
+		if !ok {
+			return indexRangeSpec{}, false
+		}
+	}
+	if query.lower != nil && query.upper != nil {
+		comparison, comparable := compareValues(Present(query.lower.value), Present(query.upper.value))
+		if !comparable {
+			return indexRangeSpec{}, false
+		}
+		if comparison > 0 {
+			query.lower, query.upper = query.upper, query.lower
+		} else if comparison == 0 && (!query.lower.inclusive || !query.upper.inclusive) {
+			query.empty = true
+		}
+	}
+	return query, true
 }
 
 func (e *Engine) indexProbeKeys(source *streamNode, selection IndexSelection, expressions []Expr, now time.Time, variables map[string]Value) ([][]any, bool) {
@@ -293,6 +615,39 @@ func tableRowsAsEvents(source *streamNode, definition TableDefinition, rows []Ta
 }
 
 func (e *Engine) snapshotFireAndForgetSourceWithIndex(ctx context.Context, source *streamNode, selection IndexSelection, expressions []Expr, now time.Time, variables map[string]Value) ([]Event, error) {
+	if selection.Access == IndexAccessRange {
+		query, usable := e.indexProbeRangeSpec(source, selection, expressions, now, variables)
+		if !usable {
+			return e.snapshotFireAndForgetSource(ctx, source, now, variables)
+		}
+		base, err := sourceNode(source)
+		if err != nil {
+			return nil, err
+		}
+		switch base.kind {
+		case streamNamedWindow:
+			if strings.HasPrefix(selection.IndexName, "<") {
+				return e.snapshotFireAndForgetSource(ctx, source, now, variables)
+			}
+			window, ok := e.NamedWindowInModule(base.moduleName, base.sourceName)
+			if !ok {
+				return nil, NewError(ErrorUnknownName, "named window "+base.sourceName+" is not registered")
+			}
+			return window.lookupRange(ctx, selection.IndexName, query)
+		case streamTable:
+			table, ok := e.TableInModule(base.moduleName, base.sourceName)
+			if !ok {
+				return nil, NewError(ErrorUnknownName, "table "+base.sourceName+" is not registered")
+			}
+			rows, err := table.lookupRange(ctx, selection.IndexName, query)
+			if err != nil {
+				return nil, err
+			}
+			return tableRowsAsEvents(base, table.Definition(), rows, now)
+		default:
+			return e.snapshotFireAndForgetSource(ctx, source, now, variables)
+		}
+	}
 	keys, usable := e.indexProbeKeys(source, selection, expressions, now, variables)
 	if !usable {
 		return e.snapshotFireAndForgetSource(ctx, source, now, variables)

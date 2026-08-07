@@ -427,7 +427,7 @@ func TestInfraFAFPhysicalHashIndexEqualityInAndPreparedParameterParity(t *testin
 	}
 }
 
-func TestInfraFAFPhysicalIndexFallbackParity(t *testing.T) {
+func TestInfraFAFPhysicalIndexRangeAndFallbackParity(t *testing.T) {
 	for _, namedWindow := range []bool{true, false} {
 		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
 			env, engine, source, indexLookups := setupInfraPhysicalHashStore(t, namedWindow)
@@ -460,9 +460,9 @@ func TestInfraFAFPhysicalIndexFallbackParity(t *testing.T) {
 				t.Fatalf("UDF fallback unexpectedly used the index: before=%d after=%d", before, after)
 			}
 
-			// B-tree range planning is intentionally recorded before the physical
-			// range cursor is implemented. Equality/IN execution must not be
-			// misused for a range predicate.
+			// B-tree range planning and the physical ordered candidate path must
+			// agree. The returned rows still pass through the ordinary predicate
+			// evaluator, so the candidate path cannot change semantics.
 			rangeEnv, rangeEngine, rangeSource, rangeLookups := setupInfraPhysicalBTreeStore(t, namedWindow)
 			// The B-tree store has an independent environment/source; rebuild
 			// the same predicate against it so the fallback assertion is not
@@ -485,8 +485,295 @@ func TestInfraFAFPhysicalIndexFallbackParity(t *testing.T) {
 			if got := infraResultIDs(rangeResult.Results()); !reflect.DeepEqual(got, []string{"L1", "L2", "L3"}) {
 				t.Fatalf("range fallback result = %#v, want [L1 L2 L3]", got)
 			}
+			if after := rangeLookups(); after <= before {
+				t.Fatalf("B-tree range did not use the ordered index: before=%d after=%d", before, after)
+			}
+
+			exclusivePlan, err := rangeEnv.Build(rangeSource.Filter(And(
+				Greater[string](Field[any, string]("key"), Literal("X")),
+				LessOrEqual[string](Field[any, string]("key"), Literal("Y")),
+			)).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			before = rangeLookups()
+			exclusiveResult, err := rangeEngine.ExecuteFireAndForget(ctx, exclusivePlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraResultIDs(exclusiveResult.Results()); !reflect.DeepEqual(got, []string{"L2"}) {
+				t.Fatalf("exclusive/intersected range result = %#v, want [L2]", got)
+			}
+			if after := rangeLookups(); after <= before {
+				t.Fatalf("exclusive/intersected range did not use the ordered index: before=%d after=%d", before, after)
+			}
+
+			reversedPlan, err := rangeEnv.Build(rangeSource.Filter(BetweenOf(
+				Field[any, string]("key"), Literal("Y"), Literal("X"),
+			)).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			before = rangeLookups()
+			reversedResult, err := rangeEngine.ExecuteFireAndForget(ctx, reversedPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraResultIDs(reversedResult.Results()); !reflect.DeepEqual(got, []string{"L1", "L2", "L3"}) {
+				t.Fatalf("reversed range result = %#v, want [L1 L2 L3]", got)
+			}
+			if after := rangeLookups(); after <= before {
+				t.Fatalf("reversed range did not use the ordered index: before=%d after=%d", before, after)
+			}
+
+			// A comparison may put the indexed field on the right-hand side.
+			// The runtime must reverse the operator before constructing the
+			// candidate bound, while the final predicate still owns semantics.
+			reversedOperandPlan, err := rangeEnv.Build(rangeSource.Filter(
+				LessOrEqual[string](Literal("Y"), field),
+			).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			before = rangeLookups()
+			reversedOperandResult, err := rangeEngine.ExecuteFireAndForget(ctx, reversedOperandPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraResultIDs(reversedOperandResult.Results()); !reflect.DeepEqual(got, []string{"L2"}) {
+				t.Fatalf("reversed-operand range result = %#v, want [L2]", got)
+			}
+			if after := rangeLookups(); after <= before {
+				t.Fatalf("reversed-operand range did not use the ordered index: before=%d after=%d", before, after)
+			}
+
+			// Prepared bounds are extracted at execution time, not at Build time,
+			// and must use the same physical range path as literal bounds.
+			preparedRangePlan, err := rangeEnv.Build(rangeSource.Filter(BetweenOf(
+				field, Parameter[string]("low"), Parameter[string]("high"),
+			)).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			preparedRange, err := rangeEngine.PrepareFireAndForget(preparedRangePlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			before = rangeLookups()
+			preparedRangeResult, err := preparedRange.ExecuteWithParameters(ctx, ParameterValues{"low": "X", "high": "Y"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraResultIDs(preparedRangeResult.Results()); !reflect.DeepEqual(got, []string{"L1", "L2", "L3"}) {
+				t.Fatalf("prepared range result = %#v, want [L1 L2 L3]", got)
+			}
+			if after := rangeLookups(); after <= before {
+				t.Fatalf("prepared range did not use the ordered index: before=%d after=%d", before, after)
+			}
+
+			// A Null/Missing bound is not a safe physical probe. The plan may
+			// still advertise a range access path, but execution must preserve
+			// the normal false/null predicate semantics through snapshot fallback.
+			nullBoundPlan, err := rangeEnv.Build(rangeSource.Filter(BetweenOf(
+				field, NullLiteral[string](), Literal("Y"),
+			)).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			before = rangeLookups()
+			nullBoundResult, err := rangeEngine.ExecuteFireAndForget(ctx, nullBoundPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(nullBoundResult.Results()) != 0 {
+				t.Fatalf("null-bound range result = %#v, want empty", nullBoundResult.Results())
+			}
 			if after := rangeLookups(); after != before {
-				t.Fatalf("range fallback unexpectedly used the hash lookup path: before=%d after=%d", before, after)
+				t.Fatalf("null-bound range unexpectedly used the index: before=%d after=%d", before, after)
+			}
+		})
+	}
+}
+
+func TestInfraFAFPhysicalBTreeRangeTracksMutation(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env, engine, source, indexLookups := setupInfraPhysicalBTreeStore(t, namedWindow)
+			ctx := context.Background()
+			plan, err := env.Build(source.Filter(BetweenOf(
+				Field[any, string]("key"), Literal("X"), Literal("Y"),
+			)).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			run := func(want []string) {
+				t.Helper()
+				result, runErr := engine.ExecuteFireAndForget(ctx, plan)
+				if runErr != nil {
+					t.Fatal(runErr)
+				}
+				if got := infraResultIDs(result.Results()); !reflect.DeepEqual(got, want) {
+					t.Fatalf("range mutation result = %#v, want %#v", got, want)
+				}
+			}
+			run([]string{"L1", "L2", "L3"})
+
+			if namedWindow {
+				window, ok := engine.NamedWindow("PhysicalStore")
+				if !ok {
+					t.Fatal("PhysicalStore named window is missing")
+				}
+				if _, err := window.UpdateWhere(ctx, func(event Event) bool {
+					return event.Get("id").Any() == "L1"
+				}, func(Event) (any, error) {
+					return infraIndexJoinLeft{ID: "L1", Key: "A"}, nil
+				}); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				table, ok := engine.Table("PhysicalStore")
+				if !ok {
+					t.Fatal("PhysicalStore table is missing")
+				}
+				if _, err := table.Update(ctx, []any{"L1"}, map[string]any{"key": "A"}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			run([]string{"L2", "L3"})
+
+			if namedWindow {
+				window, _ := engine.NamedWindow("PhysicalStore")
+				if _, err := window.UpdateWhere(ctx, func(event Event) bool {
+					return event.Get("id").Any() == "L1"
+				}, func(Event) (any, error) {
+					return infraIndexJoinLeft{ID: "L1", Key: "Y"}, nil
+				}); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				table, _ := engine.Table("PhysicalStore")
+				if _, err := table.Update(ctx, []any{"L1"}, map[string]any{"key": "Y"}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			run([]string{"L1", "L2", "L3"})
+
+			if namedWindow {
+				window, _ := engine.NamedWindow("PhysicalStore")
+				if _, err := window.DeleteWhere(ctx, func(event Event) bool {
+					return event.Get("id").Any() == "L2"
+				}); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				table, _ := engine.Table("PhysicalStore")
+				if _, _, err := table.Delete(ctx, "L2"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			run([]string{"L1", "L3"})
+
+			before := indexLookups()
+			if namedWindow {
+				window, _ := engine.NamedWindow("PhysicalStore")
+				if _, err := window.DeleteWhere(ctx, func(Event) bool { return true }); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				table, _ := engine.Table("PhysicalStore")
+				if _, err := table.Clear(ctx); err != nil {
+					t.Fatal(err)
+				}
+			}
+			run([]string{})
+			if after := indexLookups(); after <= before {
+				t.Fatalf("empty range after clear did not use the maintained index: before=%d after=%d", before, after)
+			}
+		})
+	}
+}
+
+func TestInfraFAFPhysicalCompositeBTreePrefixRangeParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env := NewEnvironment()
+			schema, err := RegisterStruct[infraIndexJoinRight](env, "InfraPhysicalCompositeRangeEvent")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var source RecordStream
+			if namedWindow {
+				if _, err := CreateNamedWindow(env, "CompositeStore", schema,
+					NamedWindowRetention(KeepAll()), NamedWindowBTreeIndex("by-key-amount", "key", "amount")); err != nil {
+					t.Fatal(err)
+				}
+				source = FromNamedWindow(env, "CompositeStore")
+			} else {
+				if _, err := CreateTable(env, "CompositeStore", []TableColumn{
+					PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("amount"),
+				}, SecondaryBTreeIndex("by-key-amount", "key", "amount")); err != nil {
+					t.Fatal(err)
+				}
+				source = FromTable(env, "CompositeStore")
+			}
+			engine := NewEngine(env)
+			ctx := context.Background()
+			rows := []infraIndexJoinRight{
+				{ID: "R1", Key: "X", Amount: 10},
+				{ID: "R2", Key: "X", Amount: 20},
+				{ID: "R3", Key: "Y", Amount: 30},
+			}
+			for _, row := range rows {
+				if namedWindow {
+					if err := engine.InsertNamedWindow(ctx, "CompositeStore", row); err != nil {
+						t.Fatal(err)
+					}
+					continue
+				}
+				table, ok := engine.Table("CompositeStore")
+				if !ok {
+					t.Fatal("CompositeStore table is missing")
+				}
+				if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "amount": row.Amount}); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			plan, err := env.Build(source.Filter(And(
+				EqualOf(Field[any, string]("key"), Literal("X")),
+				Greater[int64](Field[any, int64]("amount"), Literal[int64](15)),
+			)).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok := plan.IndexPlan().ForSource(0)
+			if !ok || selection.IndexName != "by-key-amount" || selection.Access != IndexAccessRange || !reflect.DeepEqual(selection.MatchedColumns, []string{"key", "amount"}) {
+				t.Fatalf("composite range index plan = %#v", selection)
+			}
+			var indexLookups func() uint64
+			if namedWindow {
+				window, ok := engine.NamedWindow("CompositeStore")
+				if !ok {
+					t.Fatal("CompositeStore named window is missing")
+				}
+				indexLookups = func() uint64 { return window.state.indexLookups.Load() }
+			} else {
+				table, ok := engine.Table("CompositeStore")
+				if !ok {
+					t.Fatal("CompositeStore table is missing")
+				}
+				indexLookups = func() uint64 { return table.state.indexLookups.Load() }
+			}
+			before := indexLookups()
+			result, err := engine.ExecuteFireAndForget(ctx, plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraResultIDs(result.Results()); !reflect.DeepEqual(got, []string{"R2"}) {
+				t.Fatalf("composite prefix range result = %#v, want [R2]", got)
+			}
+			if after := indexLookups(); after <= before {
+				t.Fatalf("composite prefix range did not use the ordered index: before=%d after=%d", before, after)
 			}
 		})
 	}
