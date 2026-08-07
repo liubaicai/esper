@@ -653,7 +653,11 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	for _, table := range e.Tables() {
 		columns := make([]string, 0, len(table.columns))
 		for _, column := range table.columns {
-			columns = append(columns, fmt.Sprintf("%s:%s:%t:%t", column.Name, column.Type, column.Optional, column.PrimaryKey))
+			columnDescription := fmt.Sprintf("%s:%s:%t:%t", column.Name, column.Type, column.Optional, column.PrimaryKey)
+			if column.Nested.valid() {
+				columnDescription += ":nested=" + column.Nested.Name()
+			}
+			columns = append(columns, columnDescription)
 		}
 		indexes := make([]string, 0, len(table.indexes))
 		for _, index := range table.indexes {

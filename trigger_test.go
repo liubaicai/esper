@@ -1752,3 +1752,187 @@ func TestTriggerArrayAssignmentsRejectInvalidBuildersAndRuntimeBounds(t *testing
 		t.Fatal("out-of-range array assignment did not fail")
 	}
 }
+
+func TestTriggerNestedAssignmentsPreserveMapAndObjectArrayValues(t *testing.T) {
+	cases := []struct {
+		name        string
+		objectArray bool
+		namedWindow bool
+	}{
+		{name: "map-table"},
+		{name: "map-named-window", namedWindow: true},
+		{name: "object-array-table", objectArray: true},
+		{name: "object-array-named-window", objectArray: true, namedWindow: true},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			env := NewEnvironment()
+			var sourceName, targetName string
+			var source Schema
+			var target Schema
+			var nested Schema
+			if testCase.objectArray {
+				inner, err := RegisterObjectArray(env, "NestedAssignmentInner", []FieldSpec{
+					FieldDef("c0", reflect.TypeOf(int(0))),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				nested = inner
+				target, err = RegisterObjectArray(env, "NestedAssignmentTarget", []FieldSpec{
+					FieldDef("k", reflect.TypeOf("")),
+					FieldDef("cflat", reflect.TypeOf([]any{})),
+					FieldDef("carr", reflect.TypeOf([][]any{})),
+				}, WithNestedPropertySchema("cflat", inner), WithNestedPropertySchema("carr", inner))
+				if err != nil {
+					t.Fatal(err)
+				}
+				source, err = RegisterObjectArray(env, "NestedAssignmentSource", []FieldSpec{
+					FieldDef("cf", reflect.TypeOf([]any{})),
+					FieldDef("ca", reflect.TypeOf([][]any{})),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				sourceName, targetName = "NestedAssignmentSource", "nested-assignment-object-array"
+			} else {
+				inner, err := RegisterMap(env, "NestedAssignmentInner", []FieldSpec{
+					FieldDef("c0", reflect.TypeOf(int(0))),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				target, err = RegisterMap(env, "NestedAssignmentTarget", []FieldSpec{
+					FieldDef("k", reflect.TypeOf("")),
+					FieldDef("cflat", reflect.TypeOf(map[string]any{})),
+					FieldDef("carr", reflect.TypeOf([]map[string]any{})),
+				}, WithNestedPropertySchema("cflat", inner), WithNestedPropertySchema("carr", inner))
+				if err != nil {
+					t.Fatal(err)
+				}
+				nested = inner
+				source, err = RegisterMap(env, "NestedAssignmentSource", []FieldSpec{
+					FieldDef("cf", reflect.TypeOf(map[string]any{})),
+					FieldDef("ca", reflect.TypeOf([]map[string]any{})),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				sourceName, targetName = "NestedAssignmentSource", "nested-assignment-map"
+			}
+			_ = source
+
+			var table *Table
+			var window *NamedWindow
+			if testCase.namedWindow {
+				if _, err := CreateNamedWindow(env, targetName, target, NamedWindowRetention(LastEvent())); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				columns := []TableColumn{PrimaryKeyColumn[string]("k")}
+				if testCase.objectArray {
+					columns = append(columns,
+						OptionalTableColumnOf[[]any]("cflat", WithTableColumnNestedSchema(nested)),
+						OptionalTableColumnOf[[][]any]("carr", WithTableColumnNestedSchema(nested)),
+					)
+				} else {
+					columns = append(columns,
+						OptionalTableColumnOf[map[string]any]("cflat", WithTableColumnNestedSchema(nested)),
+						OptionalTableColumnOf[[]map[string]any]("carr", WithTableColumnNestedSchema(nested)),
+					)
+				}
+				if _, err := CreateTable(env, targetName, columns); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			sourceStream := FromAny(env, sourceName)
+			var plan Plan
+			var err error
+			if testCase.objectArray {
+				cf := Field[any, []any]("cf")
+				ca := Field[any, [][]any]("ca")
+				if testCase.namedWindow {
+					plan, err = env.Build(OnRecord(sourceStream).UpdateNamedWindow(targetName, Literal(true),
+						SetColumn("cflat", cf), SetColumn("carr", ca),
+					).Query(StatementName("nested-assignment-update")))
+				} else {
+					plan, err = env.Build(OnRecord(sourceStream).UpdateTableWhere(targetName, Literal(true),
+						SetColumn("cflat", cf), SetColumn("carr", ca),
+					).Query(StatementName("nested-assignment-update")))
+				}
+			} else {
+				cf := Field[any, map[string]any]("cf")
+				ca := Field[any, []map[string]any]("ca")
+				if testCase.namedWindow {
+					plan, err = env.Build(OnRecord(sourceStream).UpdateNamedWindow(targetName, Literal(true),
+						SetColumn("cflat", cf), SetColumn("carr", ca),
+					).Query(StatementName("nested-assignment-update")))
+				} else {
+					plan, err = env.Build(OnRecord(sourceStream).UpdateTableWhere(targetName, Literal(true),
+						SetColumn("cflat", cf), SetColumn("carr", ca),
+					).Query(StatementName("nested-assignment-update")))
+				}
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			engine := NewEngine(env)
+			if testCase.namedWindow {
+				window, _ = engine.NamedWindow(targetName)
+				if testCase.objectArray {
+					if err := engine.InsertNamedWindow(context.Background(), targetName, []any{"E1", nil, nil}); err != nil {
+						t.Fatal(err)
+					}
+				} else if err := engine.InsertNamedWindow(context.Background(), targetName, map[string]any{"k": "E1", "cflat": nil, "carr": nil}); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				table, _ = engine.Table(targetName)
+				if _, err := table.Insert(context.Background(), map[string]any{"k": "E1", "cflat": nil, "carr": nil}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := engine.Deploy(context.Background(), plan); err != nil {
+				t.Fatal(err)
+			}
+			if testCase.objectArray {
+				if err := engine.SendObjectArray(context.Background(), sourceName, []any{[]any{1}, [][]any{{1}, {2}}}); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := engine.Send(context.Background(), sourceName, map[string]any{
+				"cf": map[string]any{"c0": 1},
+				"ca": []map[string]any{{"c0": 1}, {"c0": 2}},
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			var resultEvent Event
+			if testCase.namedWindow {
+				events, snapshotErr := window.Snapshot(context.Background())
+				if snapshotErr != nil || len(events) != 1 {
+					t.Fatalf("nested named-window snapshot = %#v, err=%v", events, snapshotErr)
+				}
+				resultEvent = events[0]
+			} else {
+				rows, snapshotErr := table.Snapshot(context.Background())
+				if snapshotErr != nil || len(rows) != 1 {
+					t.Fatalf("nested table snapshot = %#v, err=%v", rows, snapshotErr)
+				}
+				resultEvent, err = tableRowEvent(table, targetName, rows[0], engine.Now())
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			if testCase.objectArray {
+				if !reflect.DeepEqual(resultEvent.Get("cflat").Any(), []any{1}) ||
+					!reflect.DeepEqual(resultEvent.Get("carr").Any(), [][]any{{1}, {2}}) {
+					t.Fatalf("object-array nested assignment values = cflat=%#v carr=%#v", resultEvent.Get("cflat"), resultEvent.Get("carr"))
+				}
+			}
+			if resultEvent.Get("cflat.c0").Any() != int(1) || resultEvent.Get("carr[0].c0").Any() != int(1) || resultEvent.Get("carr[1].c0").Any() != int(2) {
+				t.Fatalf("map nested assignment values = cflat=%#v carr0=%#v carr1=%#v", resultEvent.Get("cflat.c0"), resultEvent.Get("carr[0].c0"), resultEvent.Get("carr[1].c0"))
+			}
+		})
+	}
+}

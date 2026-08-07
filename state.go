@@ -17,21 +17,53 @@ type TableColumn struct {
 	Type       reflect.Type
 	Optional   bool
 	PrimaryKey bool
+	// Nested describes the schema of a composite column, or of each element
+	// when Type is an array/slice. It preserves nested property metadata when
+	// a table row is materialized as an Event for fluent expressions.
+	Nested Schema
 }
 
-func TableColumnOf[T any](name string) TableColumn {
-	return TableColumn{Name: name, Type: typeOf[T]()}
+// TableColumnOption changes the metadata of a table column declaration.
+type TableColumnOption func(*TableColumn)
+
+// WithTableColumnNestedSchema associates a composite column with its nested
+// event schema. The same schema is used for a scalar composite value and for
+// every element of an array/slice composite value.
+func WithTableColumnNestedSchema(nested Schema) TableColumnOption {
+	return func(column *TableColumn) { column.Nested = nested }
+}
+
+func TableColumnOf[T any](name string, options ...TableColumnOption) TableColumn {
+	column := TableColumn{Name: name, Type: typeOf[T]()}
+	for _, option := range options {
+		if option != nil {
+			option(&column)
+		}
+	}
+	return column
 }
 
 // OptionalTableColumnOf declares a nullable table column. It is useful for
 // dimensional aggregate materializations where subtotal rows intentionally
 // carry Null for dimensions that are not present in that grouping set.
-func OptionalTableColumnOf[T any](name string) TableColumn {
-	return TableColumn{Name: name, Type: typeOf[T](), Optional: true}
+func OptionalTableColumnOf[T any](name string, options ...TableColumnOption) TableColumn {
+	column := TableColumn{Name: name, Type: typeOf[T](), Optional: true}
+	for _, option := range options {
+		if option != nil {
+			option(&column)
+		}
+	}
+	return column
 }
 
-func PrimaryKeyColumn[T any](name string) TableColumn {
-	return TableColumn{Name: name, Type: typeOf[T](), PrimaryKey: true}
+func PrimaryKeyColumn[T any](name string, options ...TableColumnOption) TableColumn {
+	column := TableColumn{Name: name, Type: typeOf[T](), PrimaryKey: true}
+	for _, option := range options {
+		if option != nil {
+			option(&column)
+		}
+	}
+	return column
 }
 
 type TableIndexDefinition struct {
@@ -75,6 +107,7 @@ func NewTableDefinition(name string, columns []TableColumn, options ...TableOpti
 		return TableDefinition{}, NewError(ErrorInvalidRule, "table requires at least one column")
 	}
 	fields := make([]FieldSpec, 0, len(columns))
+	nested := make([]SchemaOption, 0)
 	copyColumns := make([]TableColumn, len(columns))
 	seen := make(map[string]struct{}, len(columns))
 	primaryKey := make([]string, 0)
@@ -92,6 +125,9 @@ func NewTableDefinition(name string, columns []TableColumn, options ...TableOpti
 		}
 		copyColumns[index] = column
 		fields = append(fields, FieldSpec{Name: column.Name, Type: column.Type, Optional: column.Optional})
+		if column.Nested.valid() {
+			nested = append(nested, WithNestedPropertySchema(column.Name, column.Nested))
+		}
 		if column.PrimaryKey {
 			primaryKey = append(primaryKey, column.Name)
 		}
@@ -112,7 +148,7 @@ func NewTableDefinition(name string, columns []TableColumn, options ...TableOpti
 			}
 		}
 	}
-	schema, err := NewMapSchema("table:"+name, fields)
+	schema, err := NewMapSchema("table:"+name, fields, nested...)
 	if err != nil {
 		return TableDefinition{}, err
 	}

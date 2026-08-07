@@ -16,6 +16,8 @@
 | 核心 API 方向 | Flink DataStream 风格的 Go 链式 API，不以 EPL 字符串作为规则定义方式 |
 | 规划原则 | 对照 Java 行为完整移植，采用 Go 架构与习惯，不逐类、逐包机械翻译 |
 
+本轮复核补充：对照 Java `InfraUpdateNestedEvent` 的 `java-runtime-065003de88aca37795b8`/`java-runtime-2e8d691b5e2c927038d7`，新增 `TestTriggerNestedAssignmentsPreserveMapAndObjectArrayValues`，覆盖 Map/ObjectArray × Table/Named Window 的直接复合列赋值及 `cflat.c0`、`carr[0].c0`、`carr[1].c0` 读取。修复 Table materialization 遗漏：`TableColumn` 支持 `WithTableColumnNestedSchema`，Table schema 与 Plan canonical 保留复合列/数组元素 nested metadata。该 slice 已登记为 `case.trigger-nested-assignment` 并映射到 `trigger.table-named-window`；wildcard、多 action、mapped/nested path 写入、representation-specific conversion/metadata、事务/持久化和 `InfraNWTableOnMerge` 其余 execution 仍未完成。JDK 17/Maven 可用，当前验证不需要 MySQL。
+
 本文以实施规划为主，不把当前 Go 原型的签名视为最终稳定 API。文中出现的方法名和调用链只表示目标 API 形态，除第 17 节外不代表对应功能已经完成。
 
 ## 2. 目标与完成定义

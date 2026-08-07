@@ -297,10 +297,10 @@
       "level": "S",
       "summary": "Table and Named Window on-trigger mutation, merge branches, consumer dispatch and new/old streams",
       "javaRefs": ["InfraTableOnUpdate", "InfraNamedWindowOnMerge", "InfraNWTableOnDelete", "InfraNWTableOnMerge"],
-      "goRefs": ["trigger.go", "trigger_test.go"],
+      "goRefs": ["trigger.go", "trigger_test.go", "state.go", "plan.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["full index/transaction semantics", "wildcard/multi-action projection and nested assignment matrix", "all Java on-trigger cases", "persistence"]
+      "remaining": ["full index/transaction semantics", "wildcard/multi-action projection", "nested/mapped property assignment beyond direct Map/ObjectArray composite columns", "representation-specific conversion and metadata", "all Java on-trigger cases", "persistence"]
     },
     {
       "id": "context.partition",
@@ -545,6 +545,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
       "difference": "Go exposes SetArrayElement with analyzable index and value expressions, applies ordered assignments against a working target row, and exposes InitialTableField/InitialNamedWindowField for the pre-assignment snapshot. Table and Named Window tests cover direct and dynamic indexes, repeated ordered assignments, null arrays, type/index/schema validation and runtime bounds. Go intentionally keeps structured errors and fluent builders instead of Java EPL/SODA text diagnostics; mapped coverage does not imply the remaining nested/mapped-property, representation, transaction or persistence matrix is complete."
+    },
+    {
+      "id": "case.trigger-nested-assignment",
+      "javaRuntimeIds": ["java-runtime-065003de88aca37795b8", "java-runtime-2e8d691b5e2c927038d7"],
+      "javaNames": ["InfraUpdateNestedEvent{namedWindow=true}", "InfraUpdateNestedEvent{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerNestedAssignmentsPreserveMapAndObjectArrayValues"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "nested", "map", "object-array"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go preserves direct composite assignments for Map and ObjectArray events in both Table and Named Window merge targets. TableColumn nested schema metadata is carried into the materialized target Event, so scalar and array paths such as cflat.c0 and carr[0].c0 remain readable after the update. This closes only the direct nested composite-column slice; wildcard/multi-action clauses, mapped/nested path writes, representation-specific conversion and the broader on-trigger matrix remain open."
     },
     {
       "id": "case.trigger-merge-no-where",
@@ -2177,6 +2188,7 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-single-sided"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-no-where"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-array-assignment"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-nested-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-variable"},
