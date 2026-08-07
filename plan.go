@@ -2867,7 +2867,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 			seen[selection.Name] = struct{}{}
 			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
 		}
-		return NewSchema("result:"+query.name, fields...)
+		return newProjectionResultSchema("result:"+query.name, fields, query.selections)
 	}
 	if query.trigger != nil && query.trigger.target == triggerTargetNamedWindow && query.trigger.action != triggerSetVariables {
 		window, ok := e.NamedWindow(query.trigger.table)
@@ -2892,7 +2892,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 			seen[selection.Name] = struct{}{}
 			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
 		}
-		return NewSchema("result:"+query.name, fields...)
+		return newProjectionResultSchema("result:"+query.name, fields, query.selections)
 	}
 	if query.trigger != nil && query.trigger.action != triggerSetVariables {
 		table, ok := e.Table(query.trigger.table)
@@ -2909,7 +2909,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 			}
 			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
 		}
-		return NewSchema("result:"+query.name, fields...)
+		return newProjectionResultSchema("result:"+query.name, fields, query.selections)
 	}
 	if query.rowRecog != nil {
 		if len(query.patternSelections) == 0 {
@@ -2927,7 +2927,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 			seen[selection.Name] = struct{}{}
 			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
 		}
-		return NewSchema("result:"+query.name, fields...)
+		return newProjectionResultSchema("result:"+query.name, fields, query.patternSelections)
 	}
 	if query.pattern != nil {
 		if len(query.patternSelections) == 0 {
@@ -2945,7 +2945,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 			seen[selection.Name] = struct{}{}
 			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
 		}
-		return NewSchema("result:"+query.name, fields...)
+		return newProjectionResultSchema("result:"+query.name, fields, query.patternSelections)
 	}
 	if query.aggregate != nil {
 		if len(query.aggregate.selections) == 0 {
@@ -2963,7 +2963,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 			seen[selection.Name] = struct{}{}
 			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
 		}
-		return NewSchema("result:"+query.name, fields...)
+		return newProjectionResultSchema("result:"+query.name, fields, query.aggregate.selections)
 	}
 	if query.join != nil {
 		if len(query.joinSelections) == 0 {
@@ -2981,7 +2981,11 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 			seen[selection.Name] = struct{}{}
 			fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
 		}
-		return NewSchema("result:"+query.name, fields...)
+		projectionSelections := make([]Selection, 0, len(query.joinSelections))
+		for _, selection := range query.joinSelections {
+			projectionSelections = append(projectionSelections, Selection{Name: selection.Name, Expr: selection.Expr})
+		}
+		return newProjectionResultSchema("result:"+query.name, fields, projectionSelections)
 	}
 	if len(query.selections) == 0 {
 		return Schema{}, nil
@@ -3004,7 +3008,15 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 		}
 		fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
 	}
-	return NewSchema("result:"+query.name, fields...)
+	return newProjectionResultSchema("result:"+query.name, fields, query.selections)
+}
+
+func newProjectionResultSchema(name string, fields []FieldSpec, selections []Selection) (Schema, error) {
+	options, err := subquerySchemaOptions(selections)
+	if err != nil {
+		return Schema{}, err
+	}
+	return NewSchemaWithOptions(name, fields, options...)
 }
 
 func (e *Environment) validateJoin(definition *joinDefinition, selections []JoinSelection) error {

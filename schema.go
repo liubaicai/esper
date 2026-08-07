@@ -2546,6 +2546,14 @@ func (e Event) GetFragment(name string) (Event, bool) {
 	return Event{}, false
 }
 
+// GetFragments materializes an indexed nested property as a slice of typed
+// Event envelopes. It is the Go counterpart of an indexed Esper fragment and
+// keeps the underlying result as []map/[]struct rather than forcing callers
+// to use reflection.
+func (e Event) GetFragments(name string) ([]Event, bool) {
+	return getIndexedFragments(e.schema, e.receivedAt, name, e.Get(name))
+}
+
 // Row is an ordered projection result. The schema owns the field order and
 // values are immutable after construction.
 type Row struct {
@@ -2570,6 +2578,78 @@ func (r Row) Get(name string) Value {
 		return Missing()
 	}
 	return r.values[index]
+}
+
+// GetFragment materializes a scalar nested result column as an Event using
+// the nested schema carried by the projection Row.
+func (r Row) GetFragment(name string) (Event, bool) {
+	value := r.Get(name)
+	if !value.IsPresent() {
+		return Event{}, false
+	}
+	if fragment, ok := value.Any().(Event); ok {
+		return fragment, true
+	}
+	if fragment, ok := value.Any().(*Event); ok && fragment != nil {
+		return *fragment, true
+	}
+	segments, err := parsePropertyPath(name)
+	if err != nil || len(segments) != 1 || len(segments[0].accessors) != 0 {
+		return Event{}, false
+	}
+	nested, ok := r.schema.lookupNestedSchema(segments[0].name)
+	if !ok {
+		return Event{}, false
+	}
+	fragment, err := newEvent(nested, value.Any(), time.Time{})
+	if err != nil {
+		return Event{}, false
+	}
+	return fragment, true
+}
+
+// GetFragments materializes an indexed nested result column as Event
+// envelopes. The row remains immutable; each envelope receives a defensive
+// schema-bound underlying value through newEvent.
+func (r Row) GetFragments(name string) ([]Event, bool) {
+	return getIndexedFragments(r.schema, time.Time{}, name, r.Get(name))
+}
+
+func getIndexedFragments(schema Schema, receivedAt time.Time, name string, value Value) ([]Event, bool) {
+	if !value.IsPresent() {
+		return nil, false
+	}
+	segments, err := parsePropertyPath(name)
+	if err != nil || len(segments) != 1 || len(segments[0].accessors) != 0 {
+		return nil, false
+	}
+	nested, ok := schema.lookupNestedSchema(segments[0].name)
+	if !ok {
+		return nil, false
+	}
+	reflected := reflect.ValueOf(value.Any())
+	for reflected.IsValid() && (reflected.Kind() == reflect.Interface || reflected.Kind() == reflect.Pointer) {
+		if reflected.IsNil() {
+			return nil, false
+		}
+		reflected = reflected.Elem()
+	}
+	if !reflected.IsValid() || (reflected.Kind() != reflect.Array && reflected.Kind() != reflect.Slice) {
+		return nil, false
+	}
+	fragments := make([]Event, 0, reflected.Len())
+	for index := 0; index < reflected.Len(); index++ {
+		item := reflectValueToValue(reflected.Index(index))
+		if !item.IsPresent() {
+			return nil, false
+		}
+		fragment, err := newEvent(nested, item.Any(), receivedAt)
+		if err != nil {
+			return nil, false
+		}
+		fragments = append(fragments, fragment)
+	}
+	return fragments, true
 }
 
 func (r Row) Values() []Value { return append([]Value(nil), r.values...) }

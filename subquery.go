@@ -328,6 +328,49 @@ func cloneSubqueryResultMetadata(metadata SubqueryResultMetadata) SubqueryResult
 	return clone
 }
 
+// subquerySchemaOptions converts static multi-column metadata into nested
+// Schema options for a projected result. The runtime representation remains
+// the Go-native map or []map value, while the result schema can now materialize
+// the same value as a fragment when callers need typed Event navigation.
+func subquerySchemaOptions(selections []Selection) ([]SchemaOption, error) {
+	options := make([]SchemaOption, 0)
+	for _, selection := range selections {
+		if selection.Expr == nil {
+			continue
+		}
+		metadata, ok := SubqueryMetadata(selection.Expr)
+		if !ok {
+			continue
+		}
+		nested, err := subqueryMetadataSchema(metadata, selection.Name)
+		if err != nil {
+			return nil, err
+		}
+		options = append(options, WithNestedPropertySchema(selection.Name, nested))
+	}
+	return options, nil
+}
+
+func subqueryMetadataSchema(metadata SubqueryResultMetadata, name string) (Schema, error) {
+	fields := make([]FieldSpec, 0, len(metadata.Columns))
+	options := make([]SchemaOption, 0)
+	for _, column := range metadata.Columns {
+		typ := column.Type
+		if typ == nil {
+			typ = typeOf[any]()
+		}
+		fields = append(fields, FieldSpec{Name: column.Name, Type: typ, Optional: column.Optional})
+		if column.Fragment != nil {
+			nested, err := subqueryMetadataSchema(*column.Fragment, name+"."+column.Name)
+			if err != nil {
+				return Schema{}, err
+			}
+			options = append(options, WithNestedPropertySchema(column.Name, nested))
+		}
+	}
+	return NewMapSchema("subquery-fragment:"+name, fields, options...)
+}
+
 type subqueryGroupValue struct {
 	key   Value
 	value Value
