@@ -1314,7 +1314,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 				Engine:               e,
 				Event:                candidate,
 				JoinEvents:           append([]Event(nil), outer.JoinEvents...),
-				OuterEvent:           outer.Event,
+				OuterEvent:           subqueryEnclosingEvent(outer),
 				ContainedParentEvent: containedParentEvent(candidate),
 				History:              historyForEvent(delta, candidate),
 				Now:                  now,
@@ -1369,7 +1369,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 					Engine:               e,
 					Event:                event,
 					JoinEvents:           append([]Event(nil), outer.JoinEvents...),
-					OuterEvent:           outer.Event,
+					OuterEvent:           subqueryEnclosingEvent(outer),
 					ContainedParentEvent: containedParentEvent(event),
 					Group:                aggregateGroup,
 					History:              aggregateGroup,
@@ -1386,7 +1386,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 		evaluation := EvalContext{
 			Engine:              e,
 			JoinEvents:          append([]Event(nil), outer.JoinEvents...),
-			OuterEvent:          outer.Event,
+			OuterEvent:          subqueryEnclosingEvent(outer),
 			Group:               aggregateGroup,
 			EverGroup:           aggregateGroup,
 			AllGroup:            aggregateGroup,
@@ -1452,6 +1452,19 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 	return values
 }
 
+// subqueryEnclosingEvent returns the immediate event scope for an inner
+// subquery. Ordinary statement evaluation stores that scope in Event. A
+// fire-and-forget target mutation has no incoming event, so its target row is
+// deliberately carried in OuterEvent instead; falling back here preserves
+// correlated OuterField expressions for that path without changing nested
+// statement semantics.
+func subqueryEnclosingEvent(outer EvalContext) Event {
+	if outer.Event.identity != nil {
+		return outer.Event
+	}
+	return outer.OuterEvent
+}
+
 func evaluateSubqueryGroups(definition *subqueryDefinition, candidates []subqueryCandidate, outer EvalContext, engine *Engine, now time.Time) []Value {
 	if definition == nil || definition.groupBy == nil || (definition.projection == nil && len(definition.columns) == 0) {
 		return nil
@@ -1487,7 +1500,7 @@ func evaluateSubqueryGroups(definition *subqueryDefinition, candidates []subquer
 		evaluation := EvalContext{
 			Engine:       engine,
 			JoinEvents:   append([]Event(nil), outer.JoinEvents...),
-			OuterEvent:   outer.Event,
+			OuterEvent:   subqueryEnclosingEvent(outer),
 			Group:        group.events,
 			EverGroup:    group.events,
 			AllGroup:     group.events,

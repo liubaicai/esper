@@ -308,6 +308,13 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 	if err := validateParameterBindings(parameterTypes, parameters); err != nil {
 		return QueryResult{}, err
 	}
+	// A Plan can also be deployed as a live statement, so the FAF-only
+	// subquery source rules are checked at execution time rather than during
+	// the general Build step. This mirrors the Java distinction between the
+	// ordinary compiler and compileFAF.
+	if err := e.env.validateFireAndForgetSubqueries(plan.query); err != nil {
+		return QueryResult{}, WrapError(ErrorInvalidRule, "fire-and-forget subquery", err)
+	}
 	if plan.query.onDemand != nil {
 		return e.executeFireAndForgetMutation(ctx, plan, selector, parameters)
 	}
@@ -444,10 +451,11 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 		mutation, err = e.executeFireAndForgetMultirowInsertLocked(ctx, plan, now, variables)
 	} else {
 		definition := &triggerDefinition{
-			input:  source,
-			table:  source.sourceName,
-			where:  plan.query.onDemand.predicate,
-			action: triggerInsertTable,
+			input:    source,
+			table:    source.sourceName,
+			onDemand: true,
+			where:    plan.query.onDemand.predicate,
+			action:   triggerInsertTable,
 		}
 		switch plan.query.onDemand.action {
 		case onDemandInsert:
@@ -765,6 +773,7 @@ func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, 
 		trigger := &triggerDefinition{
 			input:               source,
 			table:               source.sourceName,
+			onDemand:            true,
 			where:               plan.query.onDemand.predicate,
 			action:              triggerDeleteTable,
 			assignments:         append([]TableAssignment(nil), plan.query.onDemand.assignments...),

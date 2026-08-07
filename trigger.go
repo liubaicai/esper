@@ -202,10 +202,15 @@ func WhenNotMatchedActions(actions ...TableMergeAction) TableMergeClause {
 }
 
 type triggerDefinition struct {
-	input               *streamNode
-	table               string
-	target              triggerTargetKind
-	action              triggerActionKind
+	input  *streamNode
+	table  string
+	target triggerTargetKind
+	action triggerActionKind
+	// onDemand distinguishes fire-and-forget target-row evaluation from a
+	// live on-trigger.  Live triggers keep the incoming event as the outer
+	// scope; FAF mutations use the candidate target row as OuterEvent so a
+	// correlated subquery can reference it through OuterField.
+	onDemand            bool
 	assignments         []TableAssignment
 	keys                []Expr
 	where               Expr
@@ -1711,6 +1716,9 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 				return namedWindowMergeDecision{}, nil
 			}
 			evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+			if definition.onDemand {
+				evaluation.OuterEvent = candidate
+			}
 			if definition.where != nil {
 				matched, ok := boolValue(definition.where.eval(evaluation))
 				if !ok || !matched {
@@ -1792,7 +1800,11 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 			if predicate == nil {
 				return true
 			}
-			value := predicate.eval(EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables})
+			evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+			if definition.onDemand {
+				evaluation.OuterEvent = candidate
+			}
+			value := predicate.eval(evaluation)
 			matched, ok := boolValue(value)
 			return ok && matched
 		})
@@ -1808,11 +1820,18 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 			return tableMutationResult{}, NewError(ErrorInvalidRule, "named-window update requires a predicate")
 		}
 		delta, err := target.updateWhere(ctx, func(candidate Event) bool {
-			value := definition.where.eval(EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables})
+			evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+			if definition.onDemand {
+				evaluation.OuterEvent = candidate
+			}
+			value := definition.where.eval(evaluation)
 			matched, ok := boolValue(value)
 			return ok && matched
 		}, func(candidate Event) (any, error) {
 			evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+			if definition.onDemand {
+				evaluation.OuterEvent = candidate
+			}
 			values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, candidate.Underlying(), definition.assignments, evaluation, now)
 			if assignmentErr != nil {
 				return nil, assignmentErr
@@ -2058,6 +2077,9 @@ func executeTableWhereAction(ctx context.Context, table *Table, definition *trig
 			}
 		}
 		evaluation := EvalContext{Event: event, Group: []Event{targetEvent}, Now: now, Variables: variables}
+		if definition.onDemand {
+			evaluation.OuterEvent = targetEvent
+		}
 		matched, ok := boolValue(definition.where.eval(evaluation))
 		if !ok || !matched {
 			continue

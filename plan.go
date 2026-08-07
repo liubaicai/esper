@@ -3612,6 +3612,49 @@ func (e *Environment) validateOnDemand(query Query) error {
 	default:
 		return NewError(ErrorInvalidRule, fmt.Sprintf("unknown on-demand action %d", query.onDemand.action))
 	}
+	if err := e.validateFireAndForgetSubqueries(query); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateFireAndForgetSubqueries applies the source restrictions that are
+// specific to Esper fire-and-forget subqueries.  Ordinary statement
+// subqueries may use a windowed event stream and a source filter; FAF
+// subqueries are snapshot lookups and therefore accept only root Named Window
+// or Table sources.  A context-bound Named Window must also be queried under
+// the same context declaration so a partition-local snapshot cannot silently
+// become a global lookup.
+func (e *Environment) validateFireAndForgetSubqueries(query Query) error {
+	for index, definition := range querySubqueryDefinitions(query) {
+		if definition == nil || definition.source == nil {
+			continue
+		}
+		base, err := subqueryRootSource(definition.source)
+		if err != nil {
+			return fmt.Errorf("failed to plan subquery number %d: %w", index+1, err)
+		}
+		if base.kind != streamNamedWindow && base.kind != streamTable {
+			return fmt.Errorf("fire-and-forget subquery %d only allows named-window and table sources", index+1)
+		}
+		for node := definition.source; node != nil && node != base; node = node.input {
+			if node.kind == streamFilter {
+				return fmt.Errorf("fire-and-forget subquery %d does not allow source filter expressions", index+1)
+			}
+		}
+		if base.kind != streamNamedWindow {
+			continue
+		}
+		window, ok := e.NamedWindow(base.sourceName)
+		if !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("subquery references unknown named window %q", base.sourceName))
+		}
+		windowContext := strings.TrimSpace(window.Context())
+		queryContext := strings.TrimSpace(query.contextName)
+		if windowContext != "" && windowContext != queryContext {
+			return fmt.Errorf("fire-and-forget subquery %d context %q does not match query context %q for named window %q", index+1, windowContext, queryContext, base.sourceName)
+		}
+	}
 	return nil
 }
 

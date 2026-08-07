@@ -131,11 +131,11 @@
       "domain": "query",
       "level": "S",
       "summary": "Fluent Fire-and-Forget snapshots and target-side mutation for Named Windows and Tables",
-      "javaRefs": ["InfraNWTableFAF", "InfraNWTableFAFSubstitutionParams", "InfraNWTableFAFIndex", "InfraNWTableFAFInsertMultirow", "InfraNWTableFAFResolve"],
-      "goRefs": ["faf.go", "stream.go", "plan.go", "runtime.go", "state.go", "faf_mutation_test.go", "faf_multirow_test.go", "faf_substitution_params_test.go", "infra_nwtable_faf_parity_test.go"],
+      "javaRefs": ["InfraNWTableFAF", "InfraNWTableFAFSubstitutionParams", "InfraNWTableFAFSubquery", "InfraNWTableFAFIndex", "InfraNWTableFAFInsertMultirow", "InfraNWTableFAFResolve"],
+      "goRefs": ["faf.go", "stream.go", "plan.go", "runtime.go", "state.go", "subquery.go", "faf_mutation_test.go", "faf_multirow_test.go", "faf_substitution_params_test.go", "faf_subquery_parity_test.go", "infra_nwtable_faf_parity_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["context-partition selectors and partition-local mutation", "prepared-parameter combinations across joins/subqueries/contexts and late-binding trace parity", "index selection, composite/range/in-key planning and query-plan hooks", "all event representations and schema-conversion diagnostics", "FAF subquery, historical/method source and full invalid-rule matrix", "concurrent read/write snapshot and transaction semantics", "full Java execution trace parity"]
+      "remaining": ["context-partition selectors and partition-local mutation breadth", "prepared-parameter combinations across joins/subqueries/contexts and late-binding trace parity", "index selection, composite/range/in-key planning and query-plan hooks", "all event representations and schema-conversion diagnostics", "FAF subquery performance/index execution, broader cardinality/representation coverage, historical/method source and full invalid-rule matrix", "concurrent read/write snapshot and transaction semantics", "full Java execution trace parity"]
     },
     {
       "id": "expr.enum",
@@ -1169,6 +1169,17 @@
       "status": "mapped",
       "evidence": ["java-maven-regression", "java-runtime-inventory", "go-unit"],
       "difference": "Go exposes a typed ParameterAt[T](position) constructor and immutable variadic positional execution methods alongside Parameter[T](name) and named ParameterValues. The plan rejects mixed named/positional forms, positional gaps and incompatible repeated declarations; execution validates missing, extra and typed values without reproducing EPL syntax or Java's exact reserved-keyword parser diagnostics."
+    },
+    {
+      "id": "case.query-fire-and-forget-subquery",
+      "javaRuntimeIds": ["java-runtime-07aeb2c6985d3d393074", "java-runtime-071ffca99beb62755d77", "java-runtime-c11cedc67cfb4fca1af0", "java-runtime-0236a118d7b91f89323b", "java-runtime-07a63e07102fd13ccc59", "java-runtime-3d0adb076b38062c0ce5", "java-runtime-03aa9bbc8d6c56bbd532", "java-runtime-34a0d88bc64a305202f0", "java-runtime-4c7189fe1f1c4daf2466", "java-runtime-91c7d06a86b8d1ee5719", "java-runtime-344fd5dddffda949a68c", "java-runtime-403c5c4ac18f4fd21104", "java-runtime-7004f5b8181fc36b3e7e", "java-runtime-dda65d6262bc825b022b", "java-runtime-768ece1c6bf0b86db2eb", "java-runtime-bf6feb50410671004703", "java-runtime-b313f28f80b2e7c854a8", "java-runtime-0280fbbda51c2a86dcf8", "java-runtime-5da2ad2a122070d17b34", "java-runtime-72f3f0dcd40640ce143b"],
+      "javaNames": ["InfraFAFSubquerySimple{namedWindow=true}", "InfraFAFSubquerySimple{namedWindow=false}", "InfraFAFSubquerySimpleJoin", "InfraFAFSubqueryInsert{namedWindow=true}", "InfraFAFSubqueryInsert{namedWindow=false}", "InfraFAFSubqueryUpdateUncorrelated", "InfraFAFSubqueryDeleteUncorrelated", "InfraFAFSubquerySelectCorrelated", "InfraFAFSubqueryUpdateCorrelatedSet", "InfraFAFSubqueryUpdateCorrelatedWhere", "InfraFAFSubqueryDeleteCorrelatedWhere", "InfraFAFSubqueryContextBothWindows", "InfraFAFSubqueryContextSelect", "InfraFAFSubquerySelectWhere", "InfraFAFSubquerySelectGroupBy", "InfraFAFSubquerySelectIndexPerfWSubstitution{namedWindow=true}", "InfraFAFSubquerySelectIndexPerfWSubstitution{namedWindow=false}", "InfraFAFSubquerySelectIndexPerfCorrelated{namedWindow=true}", "InfraFAFSubquerySelectIndexPerfCorrelated{namedWindow=false}", "InfraFAFSubqueryInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableFAFSubquery.java"],
+      "goTests": ["TestInfraFAFSubquerySimpleMatchesEsper", "TestInfraFAFSubquerySimpleJoinMatchesEsper", "TestInfraFAFSubqueryInsertMatchesEsper", "TestInfraFAFSubqueryUncorrelatedMutationMatchesEsper", "TestInfraFAFSubquerySelectCorrelatedMatchesEsper", "TestInfraFAFSubqueryUpdateDeleteCorrelatedMatchesEsper", "TestInfraFAFSubquerySelectWhereAndGroupByMatchesEsper", "TestInfraFAFSubqueryContextMatchesEsper", "TestInfraFAFSubqueryInvalidMatchesEsper"],
+      "tags": ["correctness", "query", "fire-and-forget", "subquery", "correlated", "named-window", "table", "context", "invalidity"],
+      "status": "partial",
+      "evidence": ["java-maven-regression", "java-runtime-inventory", "go-unit"],
+      "difference": "Go covers the first 15 functional InfraNWTableFAFSubquery executions with typed SubqueryValue/SubqueryGroupRows, OuterField correlation, Named Window/Table snapshots, on-demand insert/update/delete, context-local lookup, inner where/group-by and three FAF-only invalid constraints. The four Java performance executions are intentionally not claimed as timing parity; index selection/plan hooks, broader cardinality and event-representation combinations, historical/method sources, transactional concurrency and exact Java diagnostics remain open."
     },
     {
       "id": "case.subquery-basic",
@@ -2713,6 +2724,7 @@
     {"capabilityId": "resultset.aggregate-local-group", "caseId": "case.aggregate-local-group"},
     {"capabilityId": "query.fire-and-forget", "caseId": "case.query-fire-and-forget-nwtable"},
     {"capabilityId": "query.fire-and-forget", "caseId": "case.query-fire-and-forget-substitution-params"},
+    {"capabilityId": "query.fire-and-forget", "caseId": "case.query-fire-and-forget-subquery"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-basic"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-empty-quantifiers"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-context"},
