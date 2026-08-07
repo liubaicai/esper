@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -297,12 +298,13 @@ func (r TableRow) Values() map[string]Value {
 func (r TableRow) Version() uint64 { return r.version }
 
 type tableState struct {
-	mu      sync.RWMutex
-	def     TableDefinition
-	rows    map[string]TableRow
-	order   []string
-	indexes map[string]map[string][]string
-	version uint64
+	mu           sync.RWMutex
+	def          TableDefinition
+	rows         map[string]TableRow
+	order        []string
+	indexes      map[string]map[string][]string
+	version      uint64
+	indexLookups atomic.Uint64
 }
 
 // Table is a concurrency-safe in-memory table owned by an Engine. Reads use
@@ -584,10 +586,47 @@ func (t *Table) Lookup(ctx context.Context, indexName string, key ...any) ([]Tab
 	if !ok {
 		return nil, NewError(ErrorUnknownName, fmt.Sprintf("table index %q does not exist", indexName))
 	}
+	state.indexLookups.Add(1)
 	indexKey := encodeKey(key)
 	rowKeys := index[indexKey]
 	rows := make([]TableRow, 0, len(rowKeys))
 	for _, rowKey := range rowKeys {
+		if row, exists := state.rows[rowKey]; exists {
+			rows = append(rows, cloneTableRow(row))
+		}
+	}
+	return rows, nil
+}
+
+// lookupMany returns indexed rows in table insertion order, independent of
+// the order in which IN probe keys were supplied. It is internal so the
+// observable public Lookup API stays a single complete-key operation.
+func (t *Table) lookupMany(ctx context.Context, indexName string, keys [][]any) ([]TableRow, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	if t == nil || t.state == nil {
+		return nil, NewError(ErrorState, "nil table")
+	}
+	state := t.state
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	index, ok := state.indexes[indexName]
+	if !ok {
+		return nil, NewError(ErrorUnknownName, fmt.Sprintf("table index %q does not exist", indexName))
+	}
+	state.indexLookups.Add(1)
+	wanted := make(map[string]struct{})
+	for _, key := range keys {
+		for _, rowKey := range index[encodeKey(key)] {
+			wanted[rowKey] = struct{}{}
+		}
+	}
+	rows := make([]TableRow, 0, len(wanted))
+	for _, rowKey := range state.order {
+		if _, exists := wanted[rowKey]; !exists {
+			continue
+		}
 		if row, exists := state.rows[rowKey]; exists {
 			rows = append(rows, cloneTableRow(row))
 		}
@@ -1016,6 +1055,7 @@ type namedWindowRuntime struct {
 	keyOrder          []string
 	listeners         map[uint64]NamedWindowListener
 	nextID            uint64
+	indexLookups      atomic.Uint64
 }
 
 type NamedWindow struct {
@@ -1531,19 +1571,59 @@ func (w *NamedWindow) Lookup(ctx context.Context, indexName string, key ...any) 
 }
 
 func lookupNamedWindowState(state *namedWindowRuntime, indexName string, key []any) []Event {
+	return lookupNamedWindowStateMany(state, indexName, [][]any{key})
+}
+
+func lookupNamedWindowStateMany(state *namedWindowRuntime, indexName string, keys [][]any) []Event {
 	if state == nil {
 		return nil
 	}
 	state.mu.RLock()
 	defer state.mu.RUnlock()
-	positions := state.indexes[indexName][encodeKey(key)]
-	result := make([]Event, 0, len(positions))
-	for _, position := range positions {
-		if position >= 0 && position < len(state.entries) {
-			result = append(result, state.entries[position].event)
+	state.indexLookups.Add(1)
+	index := state.indexes[indexName]
+	wanted := make(map[int]struct{})
+	for _, key := range keys {
+		for _, position := range index[encodeKey(key)] {
+			wanted[position] = struct{}{}
+		}
+	}
+	result := make([]Event, 0, len(wanted))
+	for position, entry := range state.entries {
+		if _, exists := wanted[position]; exists {
+			result = append(result, entry.event)
 		}
 	}
 	return result
+}
+
+func (w *NamedWindow) lookupMany(ctx context.Context, indexName string, keys [][]any) ([]Event, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	if w == nil || w.state == nil {
+		return nil, NewError(ErrorState, "nil named window")
+	}
+	if _, exists := namedWindowIndexDefinition(w.state.def, indexName); !exists {
+		return nil, NewError(ErrorUnknownName, fmt.Sprintf("named window index %q does not exist", indexName))
+	}
+	if w.state.def.contextName == "" || w.state.contextKey != "" {
+		return lookupNamedWindowStateMany(w.state, indexName, keys), nil
+	}
+	w.state.mu.RLock()
+	partitionKeys := make([]string, 0, len(w.state.partitions))
+	partitions := make(map[string]*namedWindowRuntime, len(w.state.partitions))
+	for partitionKey, partition := range w.state.partitions {
+		partitionKeys = append(partitionKeys, partitionKey)
+		partitions[partitionKey] = partition
+	}
+	w.state.mu.RUnlock()
+	sort.Strings(partitionKeys)
+	result := make([]Event, 0)
+	for _, partitionKey := range partitionKeys {
+		result = append(result, lookupNamedWindowStateMany(partitions[partitionKey], indexName, keys)...)
+	}
+	return result, nil
 }
 
 func snapshotNamedWindowState(state *namedWindowRuntime) []Event {

@@ -353,7 +353,8 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 	now := e.clock.Now()
 	variables := bindParameterValues(cloneValues(e.variables), parameters)
 	e.mu.Unlock()
-	events, err := e.snapshotFireAndForgetSource(ctx, source, now, variables)
+	selection, _ := plan.indexPlan.ForSource(0)
+	events, err := e.snapshotFireAndForgetSourceWithIndex(ctx, source, selection, sourceIndexFilterExpressions(plan.query.input), now, variables)
 	if err != nil {
 		return QueryResult{}, err
 	}
@@ -1316,25 +1317,7 @@ func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source
 		if err != nil {
 			return nil, err
 		}
-		definition := table.Definition()
-		events := make([]Event, 0, len(rows))
-		for _, row := range rows {
-			values := make(map[string]any, len(row.values))
-			for name, value := range row.values {
-				values[name] = value.Any()
-			}
-			event, eventErr := newEvent(definition.schema, values, now)
-			if eventErr != nil {
-				return nil, eventErr
-			}
-			// Table rows use the logical table name as their runtime stream type.
-			// The module remains part of the source node/catalog identity; putting
-			// it into Event.TypeName would make the existing source acceptance
-			// contract reject the row before projection.
-			event.typeName = source.sourceName
-			events = append(events, event)
-		}
-		return events, nil
+		return tableRowsAsEvents(source, table.Definition(), rows, now)
 	case streamHistorical:
 		if source.historical == nil || source.historical.provider == nil {
 			return nil, NewError(ErrorDependency, fmt.Sprintf("historical source %q has no provider", source.sourceName))

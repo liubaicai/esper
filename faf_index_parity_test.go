@@ -349,6 +349,272 @@ func TestInfraFAFIndexJoinChoiceParity(t *testing.T) {
 	}
 }
 
+func TestInfraFAFPhysicalHashIndexEqualityInAndPreparedParameterParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env, engine, source, indexLookups := setupInfraPhysicalHashStore(t, namedWindow)
+			ctx := context.Background()
+			field := Field[any, string]("key")
+
+			equalityPlan, err := env.Build(source.Filter(
+				EqualOf(field, Literal("X")),
+			).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok := equalityPlan.IndexPlan().ForSource(0)
+			if !ok || selection.IndexName != "by-key" || selection.Access != IndexAccessEquality || selection.Backing != IndexBackingHash {
+				t.Fatalf("physical equality index plan = %#v", selection)
+			}
+			before := indexLookups()
+			equalityResult, err := engine.ExecuteFireAndForget(ctx, equalityPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraResultIDs(equalityResult.Results()); !reflect.DeepEqual(got, []string{"L1", "L3"}) {
+				t.Fatalf("physical equality result order = %#v, want [L1 L3]", got)
+			}
+			if after := indexLookups(); after <= before {
+				t.Fatalf("physical equality did not use the hash index: before=%d after=%d", before, after)
+			}
+
+			inPlan, err := env.Build(source.Filter(
+				In[string](field, Literal("Y"), Literal("X")),
+			).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok = inPlan.IndexPlan().ForSource(0)
+			if !ok || selection.IndexName != "by-key" || selection.Access != IndexAccessIn || selection.Backing != IndexBackingHash {
+				t.Fatalf("physical IN index plan = %#v", selection)
+			}
+			before = indexLookups()
+			inResult, err := engine.ExecuteFireAndForget(ctx, inPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Probe order is Y then X, but Esper's snapshot result order is the
+			// source insertion order and must not depend on IN operand order.
+			if got := infraResultIDs(inResult.Results()); !reflect.DeepEqual(got, []string{"L1", "L2", "L3"}) {
+				t.Fatalf("physical IN result order = %#v, want [L1 L2 L3]", got)
+			}
+			if after := indexLookups(); after <= before {
+				t.Fatalf("physical IN did not use the hash index: before=%d after=%d", before, after)
+			}
+
+			parameterPlan, err := env.Build(source.Filter(
+				EqualOf(field, Parameter[string]("wanted")),
+			).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			prepared, err := engine.PrepareFireAndForget(parameterPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			before = indexLookups()
+			parameterResult, err := prepared.ExecuteWithParameters(ctx, ParameterValues{"wanted": "Y"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraResultIDs(parameterResult.Results()); !reflect.DeepEqual(got, []string{"L2"}) {
+				t.Fatalf("physical prepared-parameter result = %#v, want [L2]", got)
+			}
+			if after := indexLookups(); after <= before {
+				t.Fatalf("physical prepared parameter did not use the hash index: before=%d after=%d", before, after)
+			}
+		})
+	}
+}
+
+func TestInfraFAFPhysicalIndexFallbackParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env, engine, source, indexLookups := setupInfraPhysicalHashStore(t, namedWindow)
+			ctx := context.Background()
+			field := Field[any, string]("key")
+
+			// The planner can select the hinted equality index, but the runtime
+			// must not guess at a UDF result. It falls back to the complete
+			// snapshot and lets the normal predicate evaluator decide.
+			udfKey := Func1[string, string]("identity-key", func(value string) string { return value }, Literal("X"))
+			udfPlan, err := env.Build(source.Filter(
+				EqualOf(field, udfKey),
+			).Select(Alias("id", Field[any, string]("id"))).Query(UseIndex("by-key")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok := udfPlan.IndexPlan().ForSource(0)
+			if !ok || selection.IndexName != "by-key" || selection.Access != IndexAccessEquality {
+				t.Fatalf("UDF fallback index plan = %#v", selection)
+			}
+			before := indexLookups()
+			udfResult, err := engine.ExecuteFireAndForget(ctx, udfPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraResultIDs(udfResult.Results()); !reflect.DeepEqual(got, []string{"L1", "L3"}) {
+				t.Fatalf("UDF fallback result = %#v, want [L1 L3]", got)
+			}
+			if after := indexLookups(); after != before {
+				t.Fatalf("UDF fallback unexpectedly used the index: before=%d after=%d", before, after)
+			}
+
+			// B-tree range planning is intentionally recorded before the physical
+			// range cursor is implemented. Equality/IN execution must not be
+			// misused for a range predicate.
+			rangeEnv, rangeEngine, rangeSource, rangeLookups := setupInfraPhysicalBTreeStore(t, namedWindow)
+			// The B-tree store has an independent environment/source; rebuild
+			// the same predicate against it so the fallback assertion is not
+			// accidentally coupled to the hash-only fixture above.
+			rangePlan, err := rangeEnv.Build(rangeSource.Filter(BetweenOf(
+				Field[any, string]("key"), Literal("X"), Literal("Y"),
+			)).Select(Alias("id", Field[any, string]("id"))).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok = rangePlan.IndexPlan().ForSource(0)
+			if !ok || selection.IndexName != "by-key" || selection.Access != IndexAccessRange || selection.Backing != IndexBackingBTree {
+				t.Fatalf("range fallback index plan = %#v", selection)
+			}
+			before = rangeLookups()
+			rangeResult, err := rangeEngine.ExecuteFireAndForget(ctx, rangePlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraResultIDs(rangeResult.Results()); !reflect.DeepEqual(got, []string{"L1", "L2", "L3"}) {
+				t.Fatalf("range fallback result = %#v, want [L1 L2 L3]", got)
+			}
+			if after := rangeLookups(); after != before {
+				t.Fatalf("range fallback unexpectedly used the hash lookup path: before=%d after=%d", before, after)
+			}
+		})
+	}
+}
+
+func setupInfraPhysicalHashStore(t *testing.T, namedWindow bool) (*Environment, *Engine, RecordStream, func() uint64) {
+	t.Helper()
+	env := NewEnvironment()
+	schema, err := RegisterStruct[infraIndexJoinLeft](env, "InfraPhysicalHashEvent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source RecordStream
+	if namedWindow {
+		if _, err := CreateNamedWindow(env, "PhysicalStore", schema,
+			NamedWindowRetention(KeepAll()), NamedWindowIndex("by-key", "key")); err != nil {
+			t.Fatal(err)
+		}
+		source = FromNamedWindow(env, "PhysicalStore")
+	} else {
+		if _, err := CreateTable(env, "PhysicalStore", []TableColumn{
+			PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"),
+		}, SecondaryIndex("by-key", "key")); err != nil {
+			t.Fatal(err)
+		}
+		source = FromTable(env, "PhysicalStore")
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	rows := []infraIndexJoinLeft{
+		{ID: "L1", Key: "X"},
+		{ID: "L2", Key: "Y"},
+		{ID: "L3", Key: "X"},
+	}
+	for _, row := range rows {
+		if namedWindow {
+			if err := engine.InsertNamedWindow(ctx, "PhysicalStore", row); err != nil {
+				t.Fatal(err)
+			}
+			continue
+		}
+		table, ok := engine.Table("PhysicalStore")
+		if !ok {
+			t.Fatal("PhysicalStore table is missing")
+		}
+		if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if namedWindow {
+		window, ok := engine.NamedWindow("PhysicalStore")
+		if !ok {
+			t.Fatal("PhysicalStore named window is missing")
+		}
+		return env, engine, source, func() uint64 { return window.state.indexLookups.Load() }
+	}
+	table, ok := engine.Table("PhysicalStore")
+	if !ok {
+		t.Fatal("PhysicalStore table is missing")
+	}
+	return env, engine, source, func() uint64 { return table.state.indexLookups.Load() }
+}
+
+func setupInfraPhysicalBTreeStore(t *testing.T, namedWindow bool) (*Environment, *Engine, RecordStream, func() uint64) {
+	t.Helper()
+	env := NewEnvironment()
+	schema, err := RegisterStruct[infraIndexJoinLeft](env, "InfraPhysicalBTreeEvent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source RecordStream
+	if namedWindow {
+		if _, err := CreateNamedWindow(env, "PhysicalStore", schema,
+			NamedWindowRetention(KeepAll()), NamedWindowBTreeIndex("by-key", "key")); err != nil {
+			t.Fatal(err)
+		}
+		source = FromNamedWindow(env, "PhysicalStore")
+	} else {
+		if _, err := CreateTable(env, "PhysicalStore", []TableColumn{
+			PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"),
+		}, SecondaryBTreeIndex("by-key", "key")); err != nil {
+			t.Fatal(err)
+		}
+		source = FromTable(env, "PhysicalStore")
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	for _, row := range []infraIndexJoinLeft{
+		{ID: "L1", Key: "X"},
+		{ID: "L2", Key: "Y"},
+		{ID: "L3", Key: "X"},
+	} {
+		if namedWindow {
+			if err := engine.InsertNamedWindow(ctx, "PhysicalStore", row); err != nil {
+				t.Fatal(err)
+			}
+			continue
+		}
+		table, ok := engine.Table("PhysicalStore")
+		if !ok {
+			t.Fatal("PhysicalStore table is missing")
+		}
+		if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if namedWindow {
+		window, ok := engine.NamedWindow("PhysicalStore")
+		if !ok {
+			t.Fatal("PhysicalStore named window is missing")
+		}
+		return env, engine, source, func() uint64 { return window.state.indexLookups.Load() }
+	}
+	table, ok := engine.Table("PhysicalStore")
+	if !ok {
+		t.Fatal("PhysicalStore table is missing")
+	}
+	return env, engine, source, func() uint64 { return table.state.indexLookups.Load() }
+}
+
+func infraResultIDs(results []Result) []string {
+	ids := make([]string, 0, len(results))
+	for _, result := range results {
+		ids = append(ids, result.Get("id").Any().(string))
+	}
+	return ids
+}
+
 func TestNamedWindowDeclaredIndexLookupTracksMutation(t *testing.T) {
 	env := NewEnvironment()
 	schema, err := RegisterStruct[infraIndexArrayEvent](env, "InfraIndexLookupEvent")

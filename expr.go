@@ -36,6 +36,7 @@ type exprNode struct {
 	typ                             reflect.Type
 	description                     string
 	fieldName                       string
+	literalValue                    any
 	initialTarget                   bool
 	tagName                         string
 	variableName                    string
@@ -1630,7 +1631,8 @@ func DeclaredExpressionParam[T any](name string) Expression[T] {
 // Literal creates a constant expression.
 func Literal[T any](value T) Expression[T] {
 	description := fmt.Sprintf("%v", value)
-	return makeExpr[T]("literal", description, nil, func(EvalContext) Value { return Present(value) })
+	node := &exprNode{kind: "literal", typ: typeOf[T](), description: description, literalValue: value}
+	return typedExpr[T]{n: node, fn: func(EvalContext) Value { return Present(value) }}
 }
 
 // DurationSeconds converts an analyzable numeric expression to a duration.

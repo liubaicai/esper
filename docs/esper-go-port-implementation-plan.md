@@ -4,10 +4,10 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档状态 | Draft 2.56，补充 Java `InfraNWTableFAFIndex` 的 12 个 runtime 对照；Go 增加结构化 hash/B-tree 索引声明、`UseIndex`/`UseIndexOn`、`Plan.IndexPlan` 和 Named Window `Lookup`。Java `@Hint`/JVM query-plan hook 不复制为 Go API 外形；物理候选执行、成本模型和性能阈值仍明确列为后续项 |
+| 文档状态 | Draft 2.57，补充 Java `InfraNWTableFAFIndex` 的物理执行验证；Go 已将单源 Table/Named Window 的完整 hash equality/IN candidate lookup 接入 FAF，并覆盖 prepared named parameter、插入顺序和安全回退。Java `@Hint`/JVM query-plan hook 不复制为 Go API 外形；Join/B-tree range/Context 物理路径、成本模型和性能阈值仍明确列为后续项 |
 | 历史增量状态 | Draft 2.22：在 sorted aggregate access 的不可变导航快照基础上补充 Fire-and-Forget named-window 快照、重复 key 桶、边界事件、`EventsBetween`、descending/navigable map 访问和对照测试登记；新增 Table 按主键 selector 的 target-row 绑定、缺失分组 Null 投影和 grouped sorted table Java 对照；声明表达式已补充 Context initiating/pattern Event、多行 `SubqueryEvents` 参数和 Map keep-all/where/`NullOnMultiple` cardinality 对照；Java `TestSuiteExprDefine` 5/5 通过。 |
 | 前序复核状态 | Draft 2.33（2026-08-07）：补充非分组聚合子查询 `SubqueryHaving` 的完整 inner-group 评估、outer-field 相关阈值、`SubqueryExistsValue` 以及带 options 的 IN/ANY/SOME/ALL；补充多列子查询结果的递归 fragment Schema、Row/Event 的标量 `GetFragment` 与 indexed `GetFragments` 运行时物化，并以 scalar/history/rows 三层对照测试固定 map/slice 结果不变。补充 TableColumn nested schema metadata 与 Table/Named Window representation 保留对照；本轮再补齐 `InfraOnMergeMatchNoMatch` 的 Go-native `CopyMatchingFields` wildcard 赋值、`InfraOnMergeInsertStream` 的 `ThenInsertInto`/`ThenInsertIntoWhen`/`ThenInsertIntoTarget` 有序 action-chain，以及 matched side-stream 读取 target-row 后继续 update 的边界，覆盖 Table/Named Window、source-only/target-only 字段、side-stream projection、条件 side-stream、目标字段作用域以及 new/old/target snapshot 语义；相关 case 已登记到 `compat/capability-manifest.json`。Java `TestSuiteInfraNWTable` 在 JDK 17/Maven 3.9.11 下 26/26 通过；Go 核心与本轮验证不依赖 MySQL，DB/SQL/connector 测试继续按需使用本机 `esper-java-mysql`。此前补充 `ClientExtendAggregationMultiFunction` 的 typed fluent provider、共享 `StateKey`、分组/窗口 Enter-Leave replay、过滤作用域、IntoTable/trigger 读取和 inline/invalid Build 对照；补充 `SortedMultiKey` 两级字典序及 alias/string/numeric 比较边界；补充 `InfraNWTableOnMerge` 的单侧 merge 分支、无条件 `WhenMatchedAny`/`WhenNotMatchedAny`/`WhenMatchedDeleteAny`、Table/Named Window new/old 对照及 Java runtime 映射。JDK 17（`C:\Program Files\Microsoft\jdk-17.0.20.8-hotspot`）、Maven 3.9.11（`D:\Tools\apache-maven-3.9.11`）可用；SQL/DB 相关测试按需使用本机 `esper-java-mysql`（MySQL 8.0，`127.0.0.1:3306`），核心/本轮测试不依赖 MySQL。 |
-| 当前修订 | Draft 2.56（2026-08-07）：在 `InfraNWTableFAFResolve` module name-resolution 对照基础上，新增 `faf_index_parity_test.go` 对照 `InfraNWTableFAFIndex` 的 12 个 runtime（Named Window/Table、单源/Join、hash/unique/B-tree、IN/equality/range、单数组/复合数组/null）。Go 使用 `IndexHash`/`IndexBTree` 声明索引、`UseIndex`/`UseIndexOn` 结构化 hint、`Plan.IndexPlan` 稳定逻辑摘要和 `NamedWindow.Lookup`；新增聚合 where、Join 自身过滤、hint 越界校验以及 Named Window 更新/删除后的索引维护。Java 的 `@Hint` 字符串、`SupportQueryPlanIndexHook` backing class 和 selectivity/cost/performance 断言不作为 Go 契约；本轮不需要 MySQL Docker。 |
+| 当前修订 | Draft 2.57（2026-08-08）：在 `InfraNWTableFAFResolve` module name-resolution 对照基础上，新增 `faf_index_parity_test.go` 对照 `InfraNWTableFAFIndex` 的逻辑计划和物理执行切片。Go 使用 `IndexHash`/`IndexBTree` 声明索引、`UseIndex`/`UseIndexOn` 结构化 hint、`Plan.IndexPlan` 稳定逻辑摘要和 `NamedWindow.Lookup`；当前已验证单源 Table/Named Window 完整 equality/IN、prepared named parameter、插入顺序与 UDF/range 安全回退，Join 候选、B-tree range 游标、Context FAF、selectivity/cost/performance 仍开放。Java 的 `@Hint` 字符串、`SupportQueryPlanIndexHook` backing class 不作为 Go 契约；Java `TestSuiteInfraNWTable` 本轮 26/26 通过，本轮不需要 MySQL Docker。 |
 | Java 对照项目 | D:/Code/soc/esper |
 | Java 基线 | Esper 9.0.0，tag release_9.0.0，commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c |
 | Java 要求 | Java 17 |
@@ -610,6 +610,8 @@ Plan Schema 版本独立于 Go module/API 版本管理，加载前完成版本�
 - 可观测的状态量、索引命中、调度项和泄漏检测。
 - 实现源码已公开的 serde/state-management 契约及版本化边界；持久化介质、分布式状态和高可用不因该抽象自动成为 v1 承诺。
 
+当前 FAF 索引实施口径必须单独看待逻辑计划与物理执行：`IndexHash`/`IndexBTree`、`UseIndex`/`UseIndexOn` 和 `Plan.IndexPlan()` 先提供稳定的 Go-native 计划摘要；`index_runtime.go` 已把普通单源 Table/Named Window 的完整 hash equality/IN key（literal、变量、prepared named parameter、slice-IN）接入物理 candidate lookup，并由状态层按插入顺序合并多 key 命中。索引探针无法安全提取（UDF、算术/属性链、Null/Missing 或超大 IN）时必须回退完整 snapshot，不能猜测值；当前 B-tree range、Join 两侧、Context FAF、FAF subquery、成本/selectivity 和 Java backing-class/query-plan hook 仍是后续实施项。
+
 ### 7.5 并发策略
 
 并发语义先于性能实现：
@@ -1176,7 +1178,9 @@ CI 分别报告 capability coverage、source-test disposition coverage 和 case 
 13. **矩阵完整性与漏域**：`compat/capability-manifest.json` 当前是首批纵向 capability/case 映射，不是 4,136 个 Java runtime execution、726 个源测试文件的全量处置矩阵；当前已扩展到 35 个 capability，仍不能用这些 `mapped` 状态代表全量完成。必须另行登记 client configuration、Module/PathCache/Stage、Filter Service、完整 view/statistical view、spatial、script/UDF、serde/render、metrics/instrumentation、multithread、transaction/qos、compiler/runtimeconfig、benchmark、example 和剩余 Event/Expr/Infra/EsperIO 入口，并为每项给出 Go test、replacement 或 N 级理由。
 14. **清单引用完整性**：每次变更 `capability-manifest.json` 后，必须机器校验所有 `javaRuntimeIds` 都存在于 `java-execution-inventory.jsonl`，`javaSourceFiles` 都存在于固定 Java 源树，`goTests` 都能解析到实际 Go 测试符号，且 capability/case/mapping 无重复或孤立引用。仅 JSON 语法和 `mapped` 状态校验不够；本轮复核已发现并修正一个尾部错误的 runtime ID 和一个过期的 Go 测试名。
 
-### 17.2 当前工作树的事实状态（2026-08-07）
+### 17.2 当前工作树的事实状态（2026-08-08）
+
+本轮新增的物理索引验收口径如下：单源 hash equality/IN 的逻辑 `IndexPlan` 必须与实际 `indexLookups` 计数同时验证，不能只断言计划对象；Table 与 Named Window 都要覆盖重复 key、IN 探针顺序与最终插入顺序、prepared named parameter。对 UDF 等值和 B-tree range，要同时断言结果正确且索引计数不增长，证明运行时走了安全 snapshot fallback。该切片不关闭 Java `InfraNWTableFAFIndex` 的 Join、Context、B-tree range cursor、cost/selectivity、性能阈值或 JVM query-plan hook 差异。
 
 | 项目 | 当前状态 | 结论 |
 |---|---|---|
