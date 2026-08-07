@@ -70,19 +70,37 @@ type TableIndexDefinition struct {
 	Name    string
 	Columns []string
 	Unique  bool
+	Kind    IndexKind
 }
 
 type TableOption func(*tableConfig)
 
 func SecondaryIndex(name string, columns ...string) TableOption {
 	return func(config *tableConfig) {
-		config.indexes = append(config.indexes, TableIndexDefinition{Name: name, Columns: append([]string(nil), columns...)})
+		config.indexes = append(config.indexes, TableIndexDefinition{Name: name, Columns: append([]string(nil), columns...), Kind: IndexHash})
 	}
 }
 
 func UniqueIndex(name string, columns ...string) TableOption {
 	return func(config *tableConfig) {
-		config.indexes = append(config.indexes, TableIndexDefinition{Name: name, Columns: append([]string(nil), columns...), Unique: true})
+		config.indexes = append(config.indexes, TableIndexDefinition{Name: name, Columns: append([]string(nil), columns...), Unique: true, Kind: IndexHash})
+	}
+}
+
+// SecondaryBTreeIndex declares a non-unique ordered index. It is useful for
+// FAF range predicates and for equality-plus-range composite access paths.
+// The declaration is explicit so callers never need to encode an EPL index
+// backing keyword in a rule string.
+func SecondaryBTreeIndex(name string, columns ...string) TableOption {
+	return func(config *tableConfig) {
+		config.indexes = append(config.indexes, TableIndexDefinition{Name: name, Columns: append([]string(nil), columns...), Kind: IndexBTree})
+	}
+}
+
+// UniqueBTreeIndex declares a unique ordered index.
+func UniqueBTreeIndex(name string, columns ...string) TableOption {
+	return func(config *tableConfig) {
+		config.indexes = append(config.indexes, TableIndexDefinition{Name: name, Columns: append([]string(nil), columns...), Unique: true, Kind: IndexBTree})
 	}
 }
 
@@ -139,14 +157,31 @@ func NewTableDefinition(name string, columns []TableColumn, options ...TableOpti
 			option(&config)
 		}
 	}
-	for _, index := range config.indexes {
+	seenIndexes := make(map[string]struct{}, len(config.indexes))
+	for indexPosition := range config.indexes {
+		index := &config.indexes[indexPosition]
+		index.Name = strings.TrimSpace(index.Name)
 		if strings.TrimSpace(index.Name) == "" || len(index.Columns) == 0 {
 			return TableDefinition{}, NewError(ErrorInvalidRule, "table index requires a name and columns")
 		}
-		for _, column := range index.Columns {
+		if _, exists := seenIndexes[index.Name]; exists {
+			return TableDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("table duplicates index %q", index.Name))
+		}
+		seenIndexes[index.Name] = struct{}{}
+		if !index.Kind.valid() {
+			return TableDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("table index %q has unknown kind %d", index.Name, index.Kind))
+		}
+		seenColumns := make(map[string]struct{}, len(index.Columns))
+		for columnPosition, column := range index.Columns {
+			column = strings.TrimSpace(column)
 			if _, exists := seen[column]; !exists {
 				return TableDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("table index %q references unknown column %q", index.Name, column))
 			}
+			if _, duplicate := seenColumns[column]; duplicate {
+				return TableDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("table index %q duplicates column %q", index.Name, column))
+			}
+			seenColumns[column] = struct{}{}
+			index.Columns[columnPosition] = column
 		}
 	}
 	schema, err := NewMapSchema("table:"+name, fields, nested...)
@@ -158,7 +193,7 @@ func NewTableDefinition(name string, columns []TableColumn, options ...TableOpti
 		columns:    copyColumns,
 		schema:     schema,
 		primaryKey: primaryKey,
-		indexes:    append([]TableIndexDefinition(nil), config.indexes...),
+		indexes:    cloneTableIndexDefinitions(config.indexes),
 	}, nil
 }
 
@@ -747,18 +782,20 @@ type NamedWindowDefinition struct {
 	schema        Schema
 	retention     WindowSpec
 	contextName   string
+	indexes       []NamedWindowIndexDefinition
 	uniqueIndexes []NamedWindowIndexDefinition
 }
 
 // NamedWindowIndexDefinition describes an index declared directly on a
-// Named Window. Only strict unique indexes are currently exposed by the
-// fluent option; the definition is kept explicit so it remains distinct from
+// Named Window. A non-unique index is a reusable lookup/access path, while a
+// strict unique index also rejects duplicate keys. It remains distinct from
 // a Unique retention view, whose duplicate-key behavior is replacement rather
 // than a constraint violation.
 type NamedWindowIndexDefinition struct {
 	Name    string
 	Columns []string
 	Unique  bool
+	Kind    IndexKind
 }
 
 type NamedWindowOption func(*namedWindowConfig)
@@ -775,15 +812,40 @@ func NamedWindowContext(contextName string) NamedWindowOption {
 	return func(config *namedWindowConfig) { config.contextName = strings.TrimSpace(contextName) }
 }
 
+// NamedWindowIndex adds a non-unique hash index to a named window.
+func NamedWindowIndex(name string, columns ...string) NamedWindowOption {
+	return func(config *namedWindowConfig) {
+		config.indexes = append(config.indexes, NamedWindowIndexDefinition{
+			Name: strings.TrimSpace(name), Columns: append([]string(nil), columns...), Kind: IndexHash,
+		})
+	}
+}
+
+// NamedWindowBTreeIndex adds a non-unique ordered index to a named window.
+func NamedWindowBTreeIndex(name string, columns ...string) NamedWindowOption {
+	return func(config *namedWindowConfig) {
+		config.indexes = append(config.indexes, NamedWindowIndexDefinition{
+			Name: strings.TrimSpace(name), Columns: append([]string(nil), columns...), Kind: IndexBTree,
+		})
+	}
+}
+
 // NamedWindowUniqueIndex adds a strict unique index constraint to a Named
 // Window. Unlike NamedWindowRetention(Unique(...)), a duplicate key is an
 // error and does not replace the retained event.
 func NamedWindowUniqueIndex(name string, columns ...string) NamedWindowOption {
 	return func(config *namedWindowConfig) {
-		config.uniqueIndexes = append(config.uniqueIndexes, NamedWindowIndexDefinition{
-			Name:    strings.TrimSpace(name),
-			Columns: append([]string(nil), columns...),
-			Unique:  true,
+		config.indexes = append(config.indexes, NamedWindowIndexDefinition{
+			Name: strings.TrimSpace(name), Columns: append([]string(nil), columns...), Unique: true, Kind: IndexHash,
+		})
+	}
+}
+
+// NamedWindowUniqueBTreeIndex adds a strict unique ordered index.
+func NamedWindowUniqueBTreeIndex(name string, columns ...string) NamedWindowOption {
+	return func(config *namedWindowConfig) {
+		config.indexes = append(config.indexes, NamedWindowIndexDefinition{
+			Name: strings.TrimSpace(name), Columns: append([]string(nil), columns...), Unique: true, Kind: IndexBTree,
 		})
 	}
 }
@@ -791,6 +853,7 @@ func NamedWindowUniqueIndex(name string, columns ...string) NamedWindowOption {
 type namedWindowConfig struct {
 	retention     WindowSpec
 	contextName   string
+	indexes       []NamedWindowIndexDefinition
 	uniqueIndexes []NamedWindowIndexDefinition
 }
 
@@ -813,9 +876,10 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 	if err := config.retention.validate(); err != nil {
 		return NamedWindowDefinition{}, err
 	}
-	seenIndexes := make(map[string]struct{}, len(config.uniqueIndexes))
-	indexes := make([]NamedWindowIndexDefinition, 0, len(config.uniqueIndexes))
-	for index, definition := range config.uniqueIndexes {
+	seenIndexes := make(map[string]struct{}, len(config.indexes))
+	indexes := make([]NamedWindowIndexDefinition, 0, len(config.indexes))
+	uniqueIndexes := make([]NamedWindowIndexDefinition, 0, len(config.indexes))
+	for index, definition := range config.indexes {
 		definition.Name = strings.TrimSpace(definition.Name)
 		if definition.Name == "" || len(definition.Columns) == 0 {
 			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window index %d requires a name and columns", index+1))
@@ -824,6 +888,9 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window duplicates index %q", definition.Name))
 		}
 		seenIndexes[definition.Name] = struct{}{}
+		if !definition.Kind.valid() {
+			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window index %q has unknown kind %d", definition.Name, definition.Kind))
+		}
 		seenColumns := make(map[string]struct{}, len(definition.Columns))
 		for columnIndex, column := range definition.Columns {
 			column = strings.TrimSpace(column)
@@ -839,10 +906,12 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 			seenColumns[column] = struct{}{}
 			definition.Columns[columnIndex] = column
 		}
-		definition.Unique = true
 		indexes = append(indexes, definition)
+		if definition.Unique {
+			uniqueIndexes = append(uniqueIndexes, definition)
+		}
 	}
-	return NamedWindowDefinition{name: name, schema: schema, retention: config.retention, contextName: config.contextName, uniqueIndexes: indexes}, nil
+	return NamedWindowDefinition{name: name, schema: schema, retention: config.retention, contextName: config.contextName, indexes: indexes, uniqueIndexes: uniqueIndexes}, nil
 }
 
 func (d NamedWindowDefinition) Name() string          { return d.name }
@@ -851,11 +920,13 @@ func (d NamedWindowDefinition) Schema() Schema        { return d.schema }
 func (d NamedWindowDefinition) Retention() WindowSpec { return d.retention }
 func (d NamedWindowDefinition) Context() string       { return d.contextName }
 func (d NamedWindowDefinition) Indexes() []NamedWindowIndexDefinition {
-	result := append([]NamedWindowIndexDefinition(nil), d.uniqueIndexes...)
-	for index := range result {
-		result[index].Columns = append([]string(nil), result[index].Columns...)
-	}
-	return result
+	return cloneNamedWindowIndexDefinitions(d.indexes)
+}
+
+// UniqueIndexes returns only strict unique constraints. Indexes returns both
+// unique and non-unique declarations.
+func (d NamedWindowDefinition) UniqueIndexes() []NamedWindowIndexDefinition {
+	return cloneNamedWindowIndexDefinitions(d.uniqueIndexes)
 }
 
 func (e *Environment) RegisterNamedWindow(name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
@@ -940,6 +1011,7 @@ type namedWindowRuntime struct {
 	contextProperties map[string]Value
 	partitions        map[string]*namedWindowRuntime
 	entries           []storedEvent
+	indexes           map[string]map[string][]int
 	keyed             map[string]storedEvent
 	keyOrder          []string
 	listeners         map[uint64]NamedWindowListener
@@ -957,7 +1029,11 @@ func newNamedWindow(definition NamedWindowDefinition, engine *Engine) *NamedWind
 }
 
 func newNamedWindowRuntime(definition NamedWindowDefinition, contextKey string) *namedWindowRuntime {
-	state := &namedWindowRuntime{def: definition, contextKey: contextKey, listeners: make(map[uint64]NamedWindowListener)}
+	indexes := make(map[string]map[string][]int, len(definition.indexes))
+	for _, index := range definition.indexes {
+		indexes[index.Name] = make(map[string][]int)
+	}
+	state := &namedWindowRuntime{def: definition, contextKey: contextKey, indexes: indexes, listeners: make(map[uint64]NamedWindowListener)}
 	if definition.contextName != "" && contextKey == "" {
 		state.partitions = make(map[string]*namedWindowRuntime)
 	}
@@ -987,6 +1063,34 @@ func namedWindowIndexKeyDisplay(event Event, columns []string) any {
 		values = append(values, event.Get(column).Any())
 	}
 	return values
+}
+
+func namedWindowIndexDefinition(definition NamedWindowDefinition, name string) (NamedWindowIndexDefinition, bool) {
+	for _, index := range definition.indexes {
+		if index.Name == name {
+			return index, true
+		}
+	}
+	return NamedWindowIndexDefinition{}, false
+}
+
+func rebuildNamedWindowIndexesLocked(state *namedWindowRuntime) {
+	if state == nil {
+		return
+	}
+	indexes := make(map[string]map[string][]int, len(state.def.indexes))
+	for _, definition := range state.def.indexes {
+		index := make(map[string][]int)
+		for position, entry := range state.entries {
+			key := namedWindowIndexKey(entry.event, definition.Columns)
+			if definition.Unique && len(index[key]) > 0 {
+				continue
+			}
+			index[key] = append(index[key], position)
+		}
+		indexes[definition.Name] = index
+	}
+	state.indexes = indexes
 }
 
 func validateNamedWindowUniqueIndexesLocked(state *namedWindowRuntime, event Event) error {
@@ -1137,12 +1241,14 @@ func (w *NamedWindow) rebuildUniqueStateForLocked(state *namedWindowRuntime) {
 	if retention, sorted := state.def.retention.(SortedWindowSpec); sorted {
 		state.entries, state.keyed = normalizeSortedNamedWindowEntries(state.entries, retention, w.now())
 		state.keyOrder = nil
+		rebuildNamedWindowIndexesLocked(state)
 		return
 	}
 	retention, unique := state.def.retention.(UniqueWindowSpec)
 	if !unique {
 		state.keyed = nil
 		state.keyOrder = nil
+		rebuildNamedWindowIndexesLocked(state)
 		return
 	}
 	keyed := make(map[string]storedEvent, len(state.entries))
@@ -1164,6 +1270,7 @@ func (w *NamedWindow) rebuildUniqueStateForLocked(state *namedWindowRuntime) {
 	state.entries = entries
 	state.keyed = keyed
 	state.keyOrder = keyOrder
+	rebuildNamedWindowIndexesLocked(state)
 }
 
 func (w *NamedWindow) Definition() NamedWindowDefinition {
@@ -1384,6 +1491,61 @@ func (w *NamedWindow) SnapshotContext(ctx context.Context, partitionKey string) 
 	return snapshotNamedWindowState(state), nil
 }
 
+// Lookup returns the events matching one complete declared Named Window index
+// key. It is an explicit Go-native access-path API for callers that need a
+// keyed snapshot; query execution remains free to choose a plan from
+// Plan.IndexPlan. Composite keys follow the declaration order. The method
+// also works for context-bound windows and searches all active partitions when
+// called on the root window.
+func (w *NamedWindow) Lookup(ctx context.Context, indexName string, key ...any) ([]Event, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	if w == nil || w.state == nil {
+		return nil, NewError(ErrorState, "nil named window")
+	}
+	definition, exists := namedWindowIndexDefinition(w.state.def, indexName)
+	if !exists {
+		return nil, NewError(ErrorUnknownName, fmt.Sprintf("named window index %q does not exist", indexName))
+	}
+	if len(key) != len(definition.Columns) {
+		return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("named window index %q expects %d values, got %d", indexName, len(definition.Columns), len(key)))
+	}
+	if w.state.def.contextName == "" || w.state.contextKey != "" {
+		return lookupNamedWindowState(w.state, indexName, key), nil
+	}
+	w.state.mu.RLock()
+	partitionKeys := make([]string, 0, len(w.state.partitions))
+	partitions := make(map[string]*namedWindowRuntime, len(w.state.partitions))
+	for partitionKey, partition := range w.state.partitions {
+		partitionKeys = append(partitionKeys, partitionKey)
+		partitions[partitionKey] = partition
+	}
+	w.state.mu.RUnlock()
+	sort.Strings(partitionKeys)
+	result := make([]Event, 0)
+	for _, partitionKey := range partitionKeys {
+		result = append(result, lookupNamedWindowState(partitions[partitionKey], indexName, key)...)
+	}
+	return result, nil
+}
+
+func lookupNamedWindowState(state *namedWindowRuntime, indexName string, key []any) []Event {
+	if state == nil {
+		return nil
+	}
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	positions := state.indexes[indexName][encodeKey(key)]
+	result := make([]Event, 0, len(positions))
+	for _, position := range positions {
+		if position >= 0 && position < len(state.entries) {
+			result = append(result, state.entries[position].event)
+		}
+	}
+	return result
+}
+
 func snapshotNamedWindowState(state *namedWindowRuntime) []Event {
 	if state == nil {
 		return nil
@@ -1443,6 +1605,7 @@ func (w *NamedWindow) restoreMutationState(snapshot namedWindowMutationSnapshot)
 	}
 	state.keyOrder = append([]string(nil), snapshot.keyOrder...)
 	state.contextProperties = cloneValues(snapshot.contextProperties)
+	rebuildNamedWindowIndexesLocked(state)
 }
 
 func (w *NamedWindow) DeleteWhere(ctx context.Context, predicate func(Event) bool) (NamedWindowDelta, error) {
@@ -1871,11 +2034,13 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 					state.entries[index] = entry
 					state.keyed[key] = entry
 					delta.Old = append(delta.Old, previous.event)
+					rebuildNamedWindowIndexesLocked(state)
 					return delta, nil
 				}
 			}
 			state.keyed[key] = entry
 			state.entries = append(state.entries, entry)
+			rebuildNamedWindowIndexesLocked(state)
 			return delta, nil
 		}
 		state.keyed[key] = entry
@@ -1886,6 +2051,7 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 	default:
 		return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", retention))
 	}
+	rebuildNamedWindowIndexesLocked(state)
 	return delta, nil
 }
 
@@ -1978,6 +2144,7 @@ func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindow
 			}
 		}
 		state.entries = kept
+		rebuildNamedWindowIndexesLocked(state)
 		return delta
 	default:
 		return NamedWindowDelta{}
@@ -1992,6 +2159,7 @@ func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindow
 		}
 	}
 	state.entries = kept
+	rebuildNamedWindowIndexesLocked(state)
 	return delta
 }
 

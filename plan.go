@@ -382,12 +382,18 @@ type Plan struct {
 	hash          string
 	query         Query
 	resultSchema  Schema
+	indexPlan     IndexPlan
 }
 
 func (p Plan) SchemaVersion() string { return p.schemaVersion }
 func (p Plan) Hash() string          { return p.hash }
 func (p Plan) Canonical() []byte     { return append([]byte(nil), p.canonical...) }
-func (p Plan) Query() Query          { return p.query }
+
+// IndexPlan returns a detached, deterministic access-path summary. It is a
+// Go-native replacement for Java's query-plan hook assertions and does not
+// expose implementation-specific JVM backing-table classes.
+func (p Plan) IndexPlan() IndexPlan { return p.indexPlan.clone() }
+func (p Plan) Query() Query         { return p.query }
 func (p Plan) ResultSchema() (Schema, bool) {
 	return p.resultSchema, p.resultSchema.valid()
 }
@@ -504,6 +510,11 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	if err := e.validateIntoTable(query); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "into-table", err)
 	}
+	indexPlan, err := e.buildIndexPlan(query)
+	if err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "index-plan", err)
+	}
+	sortIndexSelections(indexPlan.Selections)
 	if query.name != "" && strings.TrimSpace(query.name) == "" {
 		return Plan{}, fmt.Errorf("esper: statement name cannot be blank")
 	}
@@ -692,20 +703,20 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		}
 		indexes := make([]string, 0, len(table.indexes))
 		for _, index := range table.indexes {
-			indexes = append(indexes, fmt.Sprintf("%s:%s:%t", index.Name, strings.Join(index.Columns, ","), index.Unique))
+			indexes = append(indexes, fmt.Sprintf("%s:%s:%t:%s", index.Name, strings.Join(index.Columns, ","), index.Unique, index.Kind))
 		}
-		canonicalParts = append(canonicalParts, "table("+table.name+":"+strings.Join(columns, ",")+":"+strings.Join(indexes, ",")+")")
+		canonicalParts = append(canonicalParts, "table("+catalogKey(table.moduleName, table.name)+":"+strings.Join(columns, ",")+":"+strings.Join(indexes, ",")+")")
 	}
 	for _, window := range e.NamedWindows() {
 		fields := make([]string, 0, len(window.schema.fields))
 		for _, field := range window.schema.fields {
 			fields = append(fields, fmt.Sprintf("%s:%s:%t:%t:%t", field.Name, field.Type, field.Optional, field.StartTimestamp, field.EndTimestamp))
 		}
-		indexes := make([]string, 0, len(window.uniqueIndexes))
-		for _, index := range window.uniqueIndexes {
-			indexes = append(indexes, fmt.Sprintf("%s:%s:%t", index.Name, strings.Join(index.Columns, ","), index.Unique))
+		indexes := make([]string, 0, len(window.indexes))
+		for _, index := range window.indexes {
+			indexes = append(indexes, fmt.Sprintf("%s:%s:%t:%s", index.Name, strings.Join(index.Columns, ","), index.Unique, index.Kind))
 		}
-		canonicalParts = append(canonicalParts, "named-window("+window.name+":"+window.schema.Name()+":"+window.retention.description()+":context="+window.contextName+":"+strings.Join(fields, ",")+":indexes="+strings.Join(indexes, ",")+")")
+		canonicalParts = append(canonicalParts, "named-window("+catalogKey(window.moduleName, window.name)+":"+window.schema.Name()+":"+window.retention.description()+":context="+window.contextName+":"+strings.Join(fields, ",")+":indexes="+strings.Join(indexes, ",")+")")
 	}
 	for _, context := range e.Contexts() {
 		canonicalParts = append(canonicalParts, "context("+context.name+":"+context.description()+")")
@@ -765,6 +776,7 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		hash:          hex.EncodeToString(digest[:]),
 		query:         query,
 		resultSchema:  resultSchema,
+		indexPlan:     indexPlan.clone(),
 	}, nil
 }
 

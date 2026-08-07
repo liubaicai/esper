@@ -723,6 +723,7 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		orderBy:                    append([]SortKey(nil), spec.orderBy...),
 		limit:                      spec.limit,
 		offset:                     spec.offset,
+		indexHints:                 append([]indexHint(nil), spec.indexHints...),
 	}
 }
 
@@ -1179,6 +1180,7 @@ func (s OnDemandStream) query(action onDemandAction, predicate Expr, assignments
 		output:      spec.output,
 		contextName: spec.contextName,
 		onDemand:    &onDemandDefinition{action: action, predicate: predicate, assignments: append([]TableAssignment(nil), assignments...)},
+		indexHints:  append([]indexHint(nil), spec.indexHints...),
 	}
 }
 
@@ -1368,6 +1370,7 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 		orderBy:                    append([]SortKey(nil), spec.orderBy...),
 		limit:                      spec.limit,
 		offset:                     spec.offset,
+		indexHints:                 append([]indexHint(nil), spec.indexHints...),
 	}
 }
 
@@ -2313,6 +2316,7 @@ type querySpec struct {
 	limit                      int
 	offset                     int
 	allowNoSink                bool
+	indexHints                 []indexHint
 }
 
 // QueryOption configures statement metadata and output policy. Options are
@@ -2405,7 +2409,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...)}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -2441,6 +2445,7 @@ type Query struct {
 	orderBy                    []SortKey
 	limit                      int
 	offset                     int
+	indexHints                 []indexHint
 }
 
 func (q Query) Name() string { return q.name }
@@ -2451,6 +2456,7 @@ func (q Query) description() string {
 		if q.contextName != "" {
 			parts = append(parts, "context("+q.contextName+")")
 		}
+		parts = appendQueryModifiers(parts, q)
 		return strings.Join(parts, " -> ")
 	}
 	if q.sourceLess {
@@ -2569,6 +2575,7 @@ func (q Query) description() string {
 			parts = append(parts, "where("+q.joinWhere.Description()+")")
 		}
 		if len(q.joinSelections) == 0 {
+			parts = appendQueryModifiers(parts, q)
 			return strings.Join(parts, " -> ")
 		}
 		selectionDescriptions := make([]string, 0, len(q.joinSelections))
@@ -2601,6 +2608,13 @@ func (q Query) description() string {
 }
 
 func appendQueryModifiers(parts []string, query Query) []string {
+	if len(query.indexHints) > 0 {
+		hints := make([]string, 0, len(query.indexHints))
+		for _, hint := range query.indexHints {
+			hints = append(hints, fmt.Sprintf("%d:%s", hint.source, hint.name))
+		}
+		parts = append(parts, "index-hints("+strings.Join(hints, ",")+")")
+	}
 	if query.distinct {
 		parts = append(parts, "distinct")
 	}
