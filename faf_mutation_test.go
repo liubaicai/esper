@@ -164,6 +164,197 @@ func TestOnDemandTableMutationMatchesEsper(t *testing.T) {
 	}
 }
 
+func TestOnDemandTableMutationRollsBackAfterMidBatchFailure(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := CreateTable(env, "FAFRollbackTable", []TableColumn{
+		PrimaryKeyColumn[string]("theString"),
+		TableColumnOf[int64]("intPrimitive"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	table, ok := engine.Table("FAFRollbackTable")
+	if !ok {
+		t.Fatal("FAFRollbackTable is missing")
+	}
+	ctx := context.Background()
+	for _, row := range []map[string]any{
+		{"theString": "E0", "intPrimitive": int64(0)},
+		{"theString": "E1", "intPrimitive": int64(1)},
+	} {
+		if _, err := table.Insert(ctx, row); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	plan, err := env.Build(FromTable(env, "FAFRollbackTable").OnDemand().UpdateAll(
+		SetColumn("theString", Literal("collision")),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.ExecuteFireAndForget(ctx, plan); err == nil {
+		t.Fatal("mid-batch primary-key collision unexpectedly succeeded")
+	}
+	rows, err := table.Snapshot(ctx)
+	if err != nil || len(rows) != 2 {
+		t.Fatalf("rollback snapshot = %#v, err=%v", rows, err)
+	}
+	if rows[0].Get("theString").Any() != "E0" || rows[1].Get("theString").Any() != "E1" {
+		t.Fatalf("partial update survived rollback: %#v", rows)
+	}
+}
+
+func TestOnDemandNamedWindowMutationRollsBackAfterAssignmentFailure(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraContextFAFEvent](env, "FAFNamedWindowRollbackEvent"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFNamedWindowRollback", mustSchema(env, "FAFNamedWindowRollbackEvent"), NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	for _, event := range []infraContextFAFEvent{
+		{TheString: "E0", IntPrimitive: 0},
+		{TheString: "E1", IntPrimitive: 1},
+	} {
+		if err := engine.InsertNamedWindow(ctx, "FAFNamedWindowRollback", event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assignment := Func1[string, any]("fail-on-second-row", func(value string) any {
+		if value == "E1" {
+			return int64(99)
+		}
+		return value + "-updated"
+	}, NamedWindowField[string]("theString"))
+	plan, err := env.Build(FromNamedWindow(env, "FAFNamedWindowRollback").OnDemand().UpdateAll(
+		SetColumn("theString", assignment),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.ExecuteFireAndForget(ctx, plan); err == nil {
+		t.Fatal("incompatible named-window assignment unexpectedly succeeded")
+	}
+	window, ok := engine.NamedWindow("FAFNamedWindowRollback")
+	if !ok {
+		t.Fatal("FAFNamedWindowRollback is missing")
+	}
+	rows, err := window.Snapshot(ctx)
+	if err != nil || len(rows) != 2 {
+		t.Fatalf("named-window rollback snapshot = %#v, err=%v", rows, err)
+	}
+	if rows[0].Get("theString").Any() != "E0" || rows[1].Get("theString").Any() != "E1" {
+		t.Fatalf("partial named-window update survived rollback: %#v", rows)
+	}
+}
+
+func TestOnDemandMutationRollsBackAfterRoutedProcessingFailure(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "FAFRouteRollbackEvent", []FieldSpec{
+		FieldDef("value", typeOf[int64]()),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFRouteRollbackWindow", mustSchema(env, "FAFRouteRollbackEvent"), NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	bridge, err := env.Build(FromNamedWindow(env, "FAFRouteRollbackWindow").InsertInto(
+		"FAFRouteRollbackEvent", StatementName("faf-route-rollback-bridge"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cycle, err := env.Build(FromAny(env, "FAFRouteRollbackEvent").InsertInto(
+		"FAFRouteRollbackEvent", StatementName("faf-route-rollback-cycle"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	if err := engine.InsertNamedWindow(ctx, "FAFRouteRollbackWindow", map[string]any{"value": int64(1)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(ctx, bridge); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(ctx, cycle); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(FromNamedWindow(env, "FAFRouteRollbackWindow").OnDemand().UpdateAll(
+		SetColumn("value", Add[int64](NamedWindowField[int64]("value"), Literal[int64](1))),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.ExecuteFireAndForget(ctx, plan); err == nil || !strings.Contains(err.Error(), "route event limit") {
+		t.Fatalf("routed processing failure = %v", err)
+	}
+	window, ok := engine.NamedWindow("FAFRouteRollbackWindow")
+	if !ok {
+		t.Fatal("FAFRouteRollbackWindow is missing")
+	}
+	rows, err := window.Snapshot(ctx)
+	if err != nil || len(rows) != 1 || rows[0].Get("value").Any() != int64(1) {
+		t.Fatalf("routed failure rollback snapshot = %#v, err=%v", rows, err)
+	}
+}
+
+func TestOnDemandContextTableMutationRollsBackAcrossPartitions(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraContextFAFEvent](env, "FAFContextRollbackEvent"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCategoryContext(env, "faf-context-rollback",
+		Category("negative", Less[int64](Field[infraContextFAFEvent, int64]("intPrimitive"), Literal[int64](0))),
+		Category("positive", Greater[int64](Field[infraContextFAFEvent, int64]("intPrimitive"), Literal[int64](0))),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "FAFContextRollbackTable", []TableColumn{
+		PrimaryKeyColumn[string]("theString"),
+		TableColumnOf[int64]("intPrimitive"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	table, ok := engine.Table("FAFContextRollbackTable")
+	if !ok {
+		t.Fatal("FAFContextRollbackTable is missing")
+	}
+	ctx := context.Background()
+	for _, row := range []map[string]any{
+		{"theString": "N1", "intPrimitive": int64(-1)},
+		{"theString": "P1", "intPrimitive": int64(1)},
+	} {
+		if _, err := table.Insert(ctx, row); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	target := FromTable(env, "FAFContextRollbackTable").OnDemand().WithContext("faf-context-rollback")
+	plan, err := env.Build(target.UpdateAll(SetColumn("theString", Literal("collision"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.ExecuteFireAndForget(ctx, plan); err == nil {
+		t.Fatal("cross-partition primary-key collision unexpectedly succeeded")
+	}
+	rows, err := table.Snapshot(ctx)
+	if err != nil || len(rows) != 2 {
+		t.Fatalf("context rollback snapshot = %#v, err=%v", rows, err)
+	}
+	if rows[0].Get("theString").Any() != "N1" || rows[1].Get("theString").Any() != "P1" {
+		t.Fatalf("cross-partition partial update survived rollback: %#v", rows)
+	}
+	if len(engine.contextTableOwnership) != 0 {
+		t.Fatalf("context ownership survived rollback: %#v", engine.contextTableOwnership)
+	}
+}
+
 func TestOnDemandUpdateAllMatchesInfraUpdate(t *testing.T) {
 	for _, namedWindow := range []bool{true, false} {
 		t.Run(map[bool]string{true: "named-window", false: "table"}[namedWindow], func(t *testing.T) {

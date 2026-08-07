@@ -429,19 +429,18 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 	now := e.clock.Now()
 	e.refreshVariablesLocked()
 	variables := variablesWithEngineLockState(bindParameterValues(cloneValues(e.variables), parameters), e, true)
-	e.pendingStatementDispatches = nil
-	e.pendingNamedWindowDispatches = nil
-	e.pendingRoutedEvents = nil
-	e.pendingContextEvents = nil
-	e.pendingVariableChanges = nil
-	e.pendingMatchRecognizeStateLimits = nil
-	e.pendingPatternSubexpressionLimits = nil
+	e.clearFireAndForgetPendingMutationLocked()
 
 	if source.kind == streamNamedWindow {
 		if _, ok := e.ensureNamedWindowLockedInModule(source.moduleName, source.sourceName); !ok {
 			e.mu.Unlock()
 			return QueryResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
 		}
+	}
+	targetSnapshot := e.snapshotFireAndForgetMutationLocked(source)
+	rollback := func() {
+		targetSnapshot.restore(e)
+		e.clearFireAndForgetPendingMutationLocked()
 	}
 
 	var mutation tableMutationResult
@@ -483,6 +482,7 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 		mutation, err = executeTriggerAction(ctx, e, definition, Event{}, now, variables, nil, nil)
 	}
 	if err != nil {
+		rollback()
 		e.mu.Unlock()
 		return QueryResult{}, err
 	}
@@ -503,6 +503,7 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 
 	dispatches := make([]statementDispatch, 0, len(e.pendingStatementDispatches))
 	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches); err != nil {
+		rollback()
 		e.mu.Unlock()
 		return QueryResult{}, err
 	}
@@ -639,6 +640,163 @@ func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, p
 		return tableMutationResult{}, err
 	}
 	return tableMutationResult{newEvents: append([]Event(nil), delta.New...)}, nil
+}
+
+type fireAndForgetNamedWindowSnapshot struct {
+	states     map[*namedWindowRuntime]namedWindowMutationSnapshot
+	partitions map[*namedWindowRuntime]map[string]*namedWindowRuntime
+}
+
+type fireAndForgetMutationSnapshot struct {
+	table                   *Table
+	tableState              tableMutationSnapshot
+	window                  *NamedWindow
+	namedWindow             fireAndForgetNamedWindowSnapshot
+	contextTableOwnership   map[string]map[string]map[uint64]tableContextRowOwnership
+	contextPartitionIDs     map[string]map[string]int
+	contextPartitionNextIDs map[string]int
+}
+
+func cloneTableContextOwnership(ownership map[string]map[string]map[uint64]tableContextRowOwnership) map[string]map[string]map[uint64]tableContextRowOwnership {
+	if ownership == nil {
+		return make(map[string]map[string]map[uint64]tableContextRowOwnership)
+	}
+	result := make(map[string]map[string]map[uint64]tableContextRowOwnership, len(ownership))
+	for tableKey, byContext := range ownership {
+		contextCopy := make(map[string]map[uint64]tableContextRowOwnership, len(byContext))
+		for contextName, byRow := range byContext {
+			rowCopy := make(map[uint64]tableContextRowOwnership, len(byRow))
+			for identity, rowOwnership := range byRow {
+				rowCopy[identity] = cloneTableContextRowOwnership(rowOwnership)
+			}
+			contextCopy[contextName] = rowCopy
+		}
+		result[tableKey] = contextCopy
+	}
+	return result
+}
+
+func cloneContextPartitionIDs(ids map[string]map[string]int) map[string]map[string]int {
+	if ids == nil {
+		return make(map[string]map[string]int)
+	}
+	result := make(map[string]map[string]int, len(ids))
+	for contextName, byKey := range ids {
+		result[contextName] = make(map[string]int, len(byKey))
+		for key, id := range byKey {
+			result[contextName][key] = id
+		}
+	}
+	return result
+}
+
+func cloneContextPartitionNextIDs(ids map[string]int) map[string]int {
+	if ids == nil {
+		return make(map[string]int)
+	}
+	result := make(map[string]int, len(ids))
+	for contextName, id := range ids {
+		result[contextName] = id
+	}
+	return result
+}
+
+func snapshotNamedWindowForFireAndForget(window *NamedWindow) fireAndForgetNamedWindowSnapshot {
+	snapshot := fireAndForgetNamedWindowSnapshot{
+		states:     make(map[*namedWindowRuntime]namedWindowMutationSnapshot),
+		partitions: make(map[*namedWindowRuntime]map[string]*namedWindowRuntime),
+	}
+	if window == nil || window.state == nil {
+		return snapshot
+	}
+	states := make([]*namedWindowRuntime, 0, 1+len(window.contextPartitionStates()))
+	states = append(states, window.state)
+	states = append(states, window.contextPartitionStates()...)
+	seen := make(map[*namedWindowRuntime]struct{}, len(states))
+	for _, state := range states {
+		if state == nil {
+			continue
+		}
+		if _, exists := seen[state]; exists {
+			continue
+		}
+		seen[state] = struct{}{}
+		wrapped := &NamedWindow{state: state, engine: window.engine}
+		snapshot.states[state] = wrapped.snapshotMutationState()
+		state.mu.RLock()
+		if state.partitions != nil {
+			partitions := make(map[string]*namedWindowRuntime, len(state.partitions))
+			for key, partition := range state.partitions {
+				partitions[key] = partition
+			}
+			snapshot.partitions[state] = partitions
+		}
+		state.mu.RUnlock()
+	}
+	return snapshot
+}
+
+func (snapshot fireAndForgetNamedWindowSnapshot) restore() {
+	for state, mutation := range snapshot.states {
+		(&NamedWindow{state: state}).restoreMutationState(mutation)
+	}
+	for state, partitions := range snapshot.partitions {
+		state.mu.Lock()
+		state.partitions = make(map[string]*namedWindowRuntime, len(partitions))
+		for key, partition := range partitions {
+			state.partitions[key] = partition
+		}
+		state.mu.Unlock()
+	}
+}
+
+func (e *Engine) snapshotFireAndForgetMutationLocked(source *streamNode) fireAndForgetMutationSnapshot {
+	snapshot := fireAndForgetMutationSnapshot{
+		contextTableOwnership:   cloneTableContextOwnership(e.contextTableOwnership),
+		contextPartitionIDs:     cloneContextPartitionIDs(e.contextPartitionIDs),
+		contextPartitionNextIDs: cloneContextPartitionNextIDs(e.contextPartitionNextIDs),
+	}
+	if e == nil || source == nil {
+		return snapshot
+	}
+	key := catalogKey(source.moduleName, source.sourceName)
+	switch source.kind {
+	case streamTable:
+		snapshot.table = e.tables[key]
+		if snapshot.table != nil {
+			snapshot.tableState = snapshot.table.snapshotMutationState()
+		}
+	case streamNamedWindow:
+		snapshot.window = e.namedWindows[key]
+		snapshot.namedWindow = snapshotNamedWindowForFireAndForget(snapshot.window)
+	}
+	return snapshot
+}
+
+func (snapshot fireAndForgetMutationSnapshot) restore(e *Engine) {
+	if e == nil {
+		return
+	}
+	if snapshot.table != nil {
+		snapshot.table.restoreMutationState(snapshot.tableState)
+	}
+	snapshot.namedWindow.restore()
+	e.contextTableOwnership = cloneTableContextOwnership(snapshot.contextTableOwnership)
+	e.contextPartitionIDs = cloneContextPartitionIDs(snapshot.contextPartitionIDs)
+	e.contextPartitionNextIDs = cloneContextPartitionNextIDs(snapshot.contextPartitionNextIDs)
+}
+
+func (e *Engine) clearFireAndForgetPendingMutationLocked() {
+	if e == nil {
+		return
+	}
+	e.pendingStatementDispatches = nil
+	e.pendingNamedWindowDispatches = nil
+	e.pendingRoutedEvents = nil
+	e.pendingContextEvents = nil
+	e.pendingVariableChanges = nil
+	e.pendingMatchRecognizeStateLimits = nil
+	e.pendingPatternSubexpressionLimits = nil
 }
 
 type contextMutationPartition struct {
