@@ -1199,7 +1199,8 @@ func (e *Engine) executeContextFireAndForget(ctx context.Context, plan Plan, sel
 	now := e.clock.Now()
 	variables := bindParameterValues(cloneValues(e.variables), parameters)
 	e.mu.Unlock()
-	events, err := e.snapshotFireAndForgetSource(ctx, source, now, variables)
+	selection, _ := plan.indexPlan.ForSource(0)
+	events, err := e.snapshotFireAndForgetSourceWithIndex(ctx, source, selection, sourceIndexFilterExpressions(plan.query.input), now, variables)
 	if err != nil {
 		return QueryResult{}, err
 	}

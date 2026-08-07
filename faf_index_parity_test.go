@@ -50,6 +50,12 @@ type infraIndexRangeJoinRight struct {
 	Value int64  `esper:"value"`
 }
 
+type infraContextIndexEvent struct {
+	ID    string `esper:"id"`
+	Key   string `esper:"key"`
+	Value int64  `esper:"value"`
+}
+
 func TestInfraFAFIndexMultikeyArrayParity(t *testing.T) {
 	for _, namedWindow := range []bool{true, false} {
 		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
@@ -645,6 +651,154 @@ func TestInfraFAFIndexJoinOuterFallbackAndProbeBoundParity(t *testing.T) {
 	if !usable || tupleProbes != nil {
 		t.Fatalf("empty loaded join side was not represented as a usable empty probe: tuples=%v usable=%v", tupleProbes, usable)
 	}
+}
+
+func TestInfraFAFContextIndexCandidateEqualityRangeParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env := NewEnvironment()
+			schema, err := RegisterStruct[infraContextIndexEvent](env, "InfraContextIndexEvent")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := CreateKeyContext(env, "infra-context-index", Field[any, string]("key")); err != nil {
+				t.Fatal(err)
+			}
+			var source RecordStream
+			if namedWindow {
+				if _, err := CreateNamedWindow(env, "ContextIndexStore", schema,
+					NamedWindowIndex("by-key", "key"),
+					NamedWindowBTreeIndex("by-value", "key", "value"),
+				); err != nil {
+					t.Fatal(err)
+				}
+				source = FromNamedWindow(env, "ContextIndexStore")
+			} else {
+				if _, err := CreateTable(env, "ContextIndexStore", []TableColumn{
+					PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("value"),
+				}, SecondaryIndex("by-key", "key"), SecondaryBTreeIndex("by-value", "key", "value")); err != nil {
+					t.Fatal(err)
+				}
+				source = FromTable(env, "ContextIndexStore")
+			}
+			engine := NewEngine(env)
+			ctx := context.Background()
+			rows := []infraContextIndexEvent{
+				{ID: "A1", Key: "A", Value: 10},
+				{ID: "A2", Key: "A", Value: 20},
+				{ID: "B1", Key: "B", Value: 30},
+				{ID: "B2", Key: "B", Value: 40},
+			}
+			for _, row := range rows {
+				if namedWindow {
+					if err := engine.InsertNamedWindow(ctx, "ContextIndexStore", row); err != nil {
+						t.Fatal(err)
+					}
+					continue
+				}
+				table, ok := engine.Table("ContextIndexStore")
+				if !ok {
+					t.Fatal("context index table is missing")
+				}
+				if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "value": row.Value}); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			keyField := Field[any, string]("key")
+			equalityPlan, err := env.Build(source.Filter(
+				EqualOf(keyField, Parameter[string]("wanted")),
+			).Select(
+				Alias("id", Field[any, string]("id")),
+				Alias("key", keyField),
+			).Query(WithContext("infra-context-index")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok := equalityPlan.IndexPlan().ForSource(0)
+			if !ok || selection.IndexName != "by-key" || selection.Access != IndexAccessEquality {
+				t.Fatalf("context equality index plan = %#v", selection)
+			}
+			var indexLookups func() uint64
+			if namedWindow {
+				window, ok := engine.NamedWindow("ContextIndexStore")
+				if !ok {
+					t.Fatal("context index named window is missing")
+				}
+				indexLookups = func() uint64 { return window.state.indexLookups.Load() }
+			} else {
+				table, ok := engine.Table("ContextIndexStore")
+				if !ok {
+					t.Fatal("context index table is missing")
+				}
+				indexLookups = func() uint64 { return table.state.indexLookups.Load() }
+			}
+			keyA := encodeKey([]any{ValuePresent, "A"})
+			before := indexLookups()
+			allEquality, err := engine.ExecuteFireAndForgetWithSelectorAndParameters(ctx, equalityPlan, ContextPartitionSelectorAll{}, ParameterValues{"wanted": "A"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraContextIndexResultIDs(allEquality.Results()); !reflect.DeepEqual(got, []string{"A1", "A2"}) {
+				t.Fatalf("context equality all result = %#v", got)
+			}
+			if indexLookups() <= before {
+				t.Fatalf("context equality did not use index: before=%d after=%d", before, indexLookups())
+			}
+			selectedEquality, err := engine.ExecuteFireAndForgetWithSelectorAndParameters(ctx, equalityPlan, SelectContextPartitions(keyA), ParameterValues{"wanted": "A"})
+			if err != nil || !reflect.DeepEqual(infraContextIndexResultIDs(selectedEquality.Results()), []string{"A1", "A2"}) {
+				t.Fatalf("context equality selected result = %#v, err=%v", selectedEquality.Results(), err)
+			}
+			keyBSelected, err := engine.ExecuteFireAndForgetWithSelectorAndParameters(ctx, equalityPlan, SelectContextPartitions(encodeKey([]any{ValuePresent, "B"})), ParameterValues{"wanted": "A"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(keyBSelected.Results()) != 0 {
+				t.Fatalf("context equality wrong selector result = %#v", keyBSelected.Results())
+			}
+
+			rangePlan, err := env.Build(source.Filter(And(
+				EqualOf(keyField, Literal("B")),
+				GreaterOrEqual[int64](Field[any, int64]("value"), Parameter[int64]("minimum")),
+			)).Select(
+				Alias("id", Field[any, string]("id")),
+				Alias("value", Field[any, int64]("value")),
+			).Query(WithContext("infra-context-index")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok = rangePlan.IndexPlan().ForSource(0)
+			if !ok || selection.IndexName != "by-value" || selection.Access != IndexAccessRange || !reflect.DeepEqual(selection.MatchedColumns, []string{"key", "value"}) {
+				t.Fatalf("context range index plan = %#v", selection)
+			}
+			before = indexLookups()
+			rangeResult, err := engine.ExecuteFireAndForgetWithSelectorAndParameters(ctx, rangePlan, ContextPartitionSelectorAll{}, ParameterValues{"minimum": int64(35)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := infraContextIndexResultIDs(rangeResult.Results()); !reflect.DeepEqual(got, []string{"B2"}) {
+				t.Fatalf("context range all result = %#v", got)
+			}
+			if indexLookups() <= before {
+				t.Fatalf("context range did not use index: before=%d after=%d", before, indexLookups())
+			}
+			selectedRange, err := engine.ExecuteFireAndForgetWithSelectorAndParameters(ctx, rangePlan, SelectContextPartitions(encodeKey([]any{ValuePresent, "A"})), ParameterValues{"minimum": int64(0)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(selectedRange.Results()) != 0 {
+				t.Fatalf("context range wrong selector result = %#v", selectedRange.Results())
+			}
+		})
+	}
+}
+
+func infraContextIndexResultIDs(results []Result) []string {
+	ids := make([]string, 0, len(results))
+	for _, result := range results {
+		ids = append(ids, result.Get("id").Any().(string))
+	}
+	return ids
 }
 
 func TestInfraFAFIndexJoinCompositeEqualityAndDuplicateProbeParity(t *testing.T) {
