@@ -354,7 +354,14 @@ func NewMapSchema(name string, fields []FieldSpec, opts ...SchemaOption) (Schema
 // NewJSONSchema constructs a JSON-backed schema. Its runtime representation is
 // a map, but the kind remains visible for rendering and diagnostics.
 func NewJSONSchema(name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
-	return newSchema(name, SchemaJSON, nil, fields, opts)
+	schema, err := newSchema(name, SchemaJSON, nil, fields, opts)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := inferJSONNestedSchemas(&schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
 }
 
 // NewJSONSchemaFor constructs a JSON event schema whose underlying value is a
@@ -391,7 +398,135 @@ func NewJSONSchemaFor[T any](name string, fields []FieldSpec, opts ...SchemaOpti
 	if err := validateTypedJSONDefaults(base, config.defaults); err != nil {
 		return Schema{}, fmt.Errorf("esper: typed JSON schema %q: %w", name, err)
 	}
-	return newSchema(name, SchemaJSON, typ, fields, opts)
+	schema, err := newSchema(name, SchemaJSON, typ, fields, opts)
+	if err != nil {
+		return Schema{}, err
+	}
+	if err := inferJSONNestedSchemas(&schema); err != nil {
+		return Schema{}, err
+	}
+	return schema, nil
+}
+
+// inferJSONNestedSchemas derives fragment schemas for struct-valued JSON
+// properties. Java provided JSON classes derive these nested event types from
+// the declared class graph; Go keeps the same information as immutable Schema
+// values associated with the parent property. Explicit
+// WithNestedPropertySchema options always win over inference.
+//
+// The cache is keyed by the reflected Go type. Reusing a schema for the same
+// type gives recursive pointers a finite, shared schema graph instead of
+// recursively allocating schemas forever. The nested map is intentionally
+// shared while a schema is being completed, so a self-referential type can
+// point back to its own schema and still support arbitrarily deep property
+// navigation at runtime.
+func inferJSONNestedSchemas(root *Schema) error {
+	if root == nil || root.kind != SchemaJSON {
+		return nil
+	}
+	if root.nested == nil {
+		root.nested = make(map[string]Schema)
+	}
+	cache := make(map[reflect.Type]Schema)
+	if rootType := jsonNestedStructType(root.goType); rootType != nil {
+		cache[rootType] = *root
+	}
+	building := make(map[reflect.Type]bool)
+	completed := make(map[reflect.Type]bool)
+	return inferJSONNestedSchemaChildren(root, cache, building, completed)
+}
+
+func inferJSONNestedSchemaChildren(parent *Schema, cache map[reflect.Type]Schema, building, completed map[reflect.Type]bool) error {
+	if parent == nil || parent.kind != SchemaJSON {
+		return nil
+	}
+	parentType := jsonNestedStructType(parent.goType)
+	if parentType != nil {
+		if completed[parentType] {
+			return nil
+		}
+		if building[parentType] {
+			return nil
+		}
+		building[parentType] = true
+		defer func() {
+			delete(building, parentType)
+			completed[parentType] = true
+		}()
+	}
+
+	for _, field := range parent.fields {
+		structType := jsonNestedStructType(field.Type)
+		if structType == nil {
+			continue
+		}
+		// An explicitly supplied nested schema may describe a map-backed event,
+		// a named shared event type, or a different representation. Do not
+		// silently replace that caller-owned contract with reflected metadata.
+		if _, exists := parent.lookupNestedSchema(field.Name); exists {
+			continue
+		}
+
+		child, exists := cache[structType]
+		if !exists {
+			childFields, err := structFields(structType, nil)
+			if err != nil {
+				return fmt.Errorf("JSON nested property %q: %w", field.Name, err)
+			}
+			child, err = newSchema(
+				parent.name+"."+field.Name,
+				SchemaJSON,
+				structType,
+				childFields,
+				[]SchemaOption{
+					WithPropertyResolution(parent.resolution),
+					WithAccessorStyle(parent.accessor),
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("JSON nested property %q: %w", field.Name, err)
+			}
+			if child.nested == nil {
+				child.nested = make(map[string]Schema)
+			}
+			cache[structType] = child
+		}
+		parent.nested[field.Name] = child
+
+		// A cached schema may be the parent itself or another schema currently
+		// being built. In both cases the shared nested map already forms the
+		// correct finite graph and recursion must stop here.
+		if !completed[structType] && !building[structType] {
+			if err := inferJSONNestedSchemaChildren(&child, cache, building, completed); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func jsonNestedStructType(typ reflect.Type) reflect.Type {
+	for typ != nil && typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	for typ != nil && (typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice) {
+		typ = typ.Elem()
+		for typ != nil && typ.Kind() == reflect.Pointer {
+			typ = typ.Elem()
+		}
+	}
+	if typ == nil || typ.Kind() != reflect.Struct || isJSONScalarStructType(typ) {
+		return nil
+	}
+	return typ
+}
+
+func isJSONScalarStructType(typ reflect.Type) bool {
+	return typ == reflect.TypeOf(time.Time{}) ||
+		typ == reflect.TypeOf(big.Int{}) ||
+		typ == reflect.TypeOf(big.Rat{}) ||
+		typ == reflect.TypeOf(Event{}) ||
+		typ == reflect.TypeOf(Row{})
 }
 
 func validateTypedJSONFields(typ reflect.Type, fields []FieldSpec) error {
@@ -1128,6 +1263,39 @@ func (s Schema) Properties() []PropertyDescriptor {
 		})
 	}
 	return properties
+}
+
+// NestedSchema resolves the fragment schema associated with a declared
+// property. It is useful for typed JSON structs, whose nested Go types are
+// inferred automatically, and for map-backed JSON events configured with
+// WithNestedPropertySchema.
+func (s Schema) NestedSchema(name string) (Schema, bool) {
+	return s.lookupNestedSchema(name)
+}
+
+// NestedSchemaNames returns the declared fragment properties in stable order.
+// The returned slice is detached from the immutable schema metadata.
+func (s Schema) NestedSchemaNames() []string {
+	if len(s.nested) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(s.nested))
+	for name := range s.nested {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// FragmentSchema resolves the schema for a root fragment property. Indexed
+// properties use their declared property name (for example, "items" rather
+// than "items[0]"); callers can use Property to inspect the element type.
+func (s Schema) FragmentSchema(name string) (Schema, bool) {
+	segments, err := parsePropertyPath(name)
+	if err != nil || len(segments) != 1 || len(segments[0].accessors) != 0 {
+		return Schema{}, false
+	}
+	return s.NestedSchema(segments[0].name)
 }
 
 // PropertyNames returns a copy of the declared root property names.
@@ -2843,8 +3011,8 @@ func (e Event) HasProperty(name string) bool {
 }
 
 // GetFragment returns a nested Event value when a property carries an Event
-// envelope. Map/struct fragments remain available through Get and Property;
-// they are not fabricated into an event without a registered nested schema.
+// envelope or a registered/inferred nested JSON schema. Map/struct fragments
+// without fragment metadata remain available through Get and Property.
 func (e Event) GetFragment(name string) (Event, bool) {
 	value := e.Get(name)
 	if !value.IsPresent() {

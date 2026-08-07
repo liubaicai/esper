@@ -55,10 +55,10 @@
       "level": "S",
       "summary": "Schema-directed JSON conversion for nested structs, maps, arrays, enum-like strings, time and arbitrary-precision numeric values",
       "javaRefs": ["EventJsonTypingCoreParse", "EventJsonTypingCoreWrite", "EventJsonTypingClassParseWrite", "EventJsonParserLaxness", "EventJsonProvidedUnderlyingClass", "EventJsonEventSender", "EventJsonGetter", "EventJsonCreateSchema", "EventJsonAdapter", "EventJsonDocSamples", "EventJsonVisibility"],
-      "goRefs": ["schema.go", "event_render.go", "runtime.go", "json_sender.go", "json_adapter.go", "schema_test.go", "json_underlying_test.go", "json_scalar_types.go", "json_scalar_parity_test.go", "json_class_parity_test.go", "json_core_parity_test.go", "json_provided_underlying_test.go", "json_sender_adapter_test.go", "json_doc_visibility_test.go"],
+      "goRefs": ["schema.go", "event_render.go", "runtime.go", "json_sender.go", "json_adapter.go", "schema_test.go", "json_underlying_test.go", "json_scalar_types.go", "json_scalar_parity_test.go", "json_class_parity_test.go", "json_core_parity_test.go", "json_provided_underlying_test.go", "json_sender_adapter_test.go", "json_doc_visibility_test.go", "json_nested_fragment_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["recursive nested provided types as independently registered schemas, fragments and complete metadata/identity propagation", "Java class/list adapter conventions outside the covered class/list parse-write execution slice, recursive schema inheritance and metadata, and dynamic strict-lax policy outside the covered core value matrix", "JSON adapter discovery/validation beyond explicit Go registration", "Java module/path visibility and configuration-time versus runtime schema resolution", "BigDecimal/BigInteger exact JSON write policy across all nested and dynamic values", "shared Java/Go parse-write trace, schema evolution and compatibility rules"]
+      "remaining": ["named nested schema catalog across independently registered event types, cross-representation fragments and complete metadata/identity propagation", "Java class/list adapter conventions outside the covered class/list parse-write execution slice, recursive schema inheritance and metadata, and dynamic strict-lax policy outside the covered core value matrix", "JSON adapter discovery/validation beyond explicit Go registration", "Java module/path visibility and configuration-time versus runtime schema resolution", "BigDecimal/BigInteger exact JSON write policy across all nested and dynamic values", "shared Java/Go parse-write trace, schema evolution and compatibility rules"]
     },
     {
       "id": "event.xml-tree",
@@ -467,7 +467,18 @@
       "tags": ["correctness", "event", "json", "typed", "parse", "write", "nested", "dynamic", "number-format", "precision", "vm-class", "laxness", "url", "uri"],
       "status": "mapped",
       "evidence": ["java-suite-event-json-13-13", "go-unit"],
-      "difference": "Go now recursively converts declared JSON fields into typed slices/arrays/maps/structs, enum-like string aliases, rune/Character-shaped strings, time.Time (including Java-style local/offset/zoned text), DateOnly, UUID, URL, URI, big.Int and big.Rat, preserves null pointers, accepts Java-style scalar string coercions, reports invalid nested VM-class values, maps incompatible object/array shapes to Null, rejects malformed/trailing data, supports optional max depth and unknown-field rejection, materializes typed struct underlying values through SendJSON, and renders arbitrary-precision and URI-like values as JSON scalars. The Go tests now cover the Java class-simple, recursive, nested object array/collection, built-in list, enum-list and VM-class scalar/array/collection executions, including null/empty/missing/partial states, schema-order JSON objects and parsed number/Character lexemes; the core dynamic string/number/bool/null/object/array/nested-array matrix remains covered as well. Java's remaining surface includes class/list adapter conventions outside this slice, independently registered nested fragments, recursive schema inheritance and metadata, exact formatting across every dynamic/nested BigDecimal/BigInteger value, provided-class serialization conventions and shared parse-write trace."
+      "difference": "Go now recursively converts declared JSON fields into typed slices/arrays/maps/structs, enum-like string aliases, rune/Character-shaped strings, time.Time (including Java-style local/offset/zoned text), DateOnly, UUID, URL, URI, big.Int and big.Rat, preserves null pointers, accepts Java-style scalar string coercions, reports invalid nested VM-class values, maps incompatible object/array shapes to Null, rejects malformed/trailing data, supports optional max depth and unknown-field rejection, materializes typed struct underlying values through SendJSON, and renders arbitrary-precision and URI-like values as JSON scalars. The Go tests now cover the Java class-simple, recursive, nested object array/collection, built-in list, enum-list and VM-class scalar/array/collection executions, including null/empty/missing/partial states, schema-order JSON objects and parsed number/Character lexemes; the core dynamic string/number/bool/null/object/array/nested-array matrix remains covered as well. Java's remaining surface includes class/list adapter conventions outside this slice, named nested-schema catalog variants across representations, recursive schema inheritance and metadata, exact formatting across every dynamic/nested BigDecimal/BigInteger value, provided-class serialization conventions and shared parse-write trace."
+    },
+    {
+      "id": "case.event-json-nested-fragments",
+      "javaRuntimeIds": ["java-runtime-54a78b2fb1795e68c336", "java-runtime-ff9997e0d311c63214fc", "java-runtime-354b7f70ff5c84c7b9a6"],
+      "javaNames": ["EventJsonTypingNestedRecursive", "EventJsonTypingClassWArrayAndColl", "EventJsonProvidedClassWArrayPatternInsert"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonTypingClassParseWrite.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonProvidedUnderlyingClass.java"],
+      "goTests": ["TestJSONProvidedNestedSchemasExposeRecursiveFragmentsAndMetadata", "TestJSONMapSchemaInfersStructFragmentAndPreservesExplicitNestedSchema"],
+      "tags": ["correctness", "event", "json", "nested", "fragment", "metadata", "recursive"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-suite-event-json-13-13", "go-unit"],
+      "difference": "Go automatically derives finite, identity-stable JSON fragment schemas from struct-valued scalar and indexed properties, reuses the schema graph for recursive pointers, exposes NestedSchema/NestedSchemaNames/FragmentSchema and deep schema-bound getters, materializes Event.GetFragment/GetFragments for root and recursive values, and preserves null-versus-empty nested arrays during rendering. Explicit WithNestedPropertySchema remains authoritative for independently described map-backed/named fragments. Java's class-loader/module visibility, cross-representation fragment metadata and complete shared parse-write trace remain open."
     },
     {
       "id": "case.event-json-doc-samples",
@@ -2423,6 +2434,7 @@
     {"capabilityId": "event.contained", "caseId": "case.event-contained-named-window-nested"},
     {"capabilityId": "event.contained", "caseId": "case.event-contained-split-type"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-typed"},
+    {"capabilityId": "event.json-typed", "caseId": "case.event-json-nested-fragments"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-doc-samples"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-sender"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-getter"},

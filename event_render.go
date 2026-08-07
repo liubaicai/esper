@@ -216,6 +216,12 @@ func renderJSONNestedSchemaValueWithRaw(schema Schema, underlying any, maxDepth,
 		value = value.Elem()
 	}
 	if value.IsValid() && (value.Kind() == reflect.Array || value.Kind() == reflect.Slice) && value.Type() != reflect.TypeOf([]byte{}) {
+		if value.Kind() == reflect.Slice && value.IsNil() {
+			// A null element in a nested typed collection must remain JSON null;
+			// materializing it as an empty array loses the Java JSON class
+			// renderer's null-versus-empty distinction.
+			return nil, nil
+		}
 		result := make([]any, value.Len())
 		elementType := reflect.Type(nil)
 		if declaredType != nil {
