@@ -4,10 +4,10 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档状态 | Draft 2.43，继续补充 `EventJsonTypingCoreParse/CoreWrite` 的 Go/Java 对照证据，覆盖基本 scalar、Character 首 code point、wrapper/primitive 一维与二维数组、enum、BigInteger/BigDecimal、Object/Object[]/Map 容器和嵌套 BigDecimal 写回；此前已补充 JSON VM-class、provided-underlying、lax conversion、malformed JSON 和静态/动态未声明字段策略；其余历史增量与未完成项见下文 |
-| 本轮增量状态 | Draft 2.22：在 sorted aggregate access 的不可变导航快照基础上补充 Fire-and-Forget named-window 快照、重复 key 桶、边界事件、`EventsBetween`、descending/navigable map 访问和对照测试登记；新增 Table 按主键 selector 的 target-row 绑定、缺失分组 Null 投影和 grouped sorted table Java 对照；声明表达式已补充 Context initiating/pattern Event、多行 `SubqueryEvents` 参数和 Map keep-all/where/`NullOnMultiple` cardinality 对照；Java `TestSuiteExprDefine` 5/5 通过。 |
+| 文档状态 | Draft 2.45，继续补充 JSON sender、schema-bound getter、特殊字段名/嵌套 schema 校验和显式 field adapter 的 Go/Java 对照证据；此前已补充 Core typed、VM-class、provided-underlying、lax conversion、malformed JSON 和静态/动态未声明字段策略；其余历史增量与未完成项见下文 |
+| 历史增量状态 | Draft 2.22：在 sorted aggregate access 的不可变导航快照基础上补充 Fire-and-Forget named-window 快照、重复 key 桶、边界事件、`EventsBetween`、descending/navigable map 访问和对照测试登记；新增 Table 按主键 selector 的 target-row 绑定、缺失分组 Null 投影和 grouped sorted table Java 对照；声明表达式已补充 Context initiating/pattern Event、多行 `SubqueryEvents` 参数和 Map keep-all/where/`NullOnMultiple` cardinality 对照；Java `TestSuiteExprDefine` 5/5 通过。 |
 | 前序复核状态 | Draft 2.33（2026-08-07）：补充非分组聚合子查询 `SubqueryHaving` 的完整 inner-group 评估、outer-field 相关阈值、`SubqueryExistsValue` 以及带 options 的 IN/ANY/SOME/ALL；补充多列子查询结果的递归 fragment Schema、Row/Event 的标量 `GetFragment` 与 indexed `GetFragments` 运行时物化，并以 scalar/history/rows 三层对照测试固定 map/slice 结果不变。补充 TableColumn nested schema metadata 与 Table/Named Window representation 保留对照；本轮再补齐 `InfraOnMergeMatchNoMatch` 的 Go-native `CopyMatchingFields` wildcard 赋值、`InfraOnMergeInsertStream` 的 `ThenInsertInto`/`ThenInsertIntoWhen`/`ThenInsertIntoTarget` 有序 action-chain，以及 matched side-stream 读取 target-row 后继续 update 的边界，覆盖 Table/Named Window、source-only/target-only 字段、side-stream projection、条件 side-stream、目标字段作用域以及 new/old/target snapshot 语义；相关 case 已登记到 `compat/capability-manifest.json`。Java `TestSuiteInfraNWTable` 在 JDK 17/Maven 3.9.11 下 26/26 通过；Go 核心与本轮验证不依赖 MySQL，DB/SQL/connector 测试继续按需使用本机 `esper-java-mysql`。此前补充 `ClientExtendAggregationMultiFunction` 的 typed fluent provider、共享 `StateKey`、分组/窗口 Enter-Leave replay、过滤作用域、IntoTable/trigger 读取和 inline/invalid Build 对照；补充 `SortedMultiKey` 两级字典序及 alias/string/numeric 比较边界；补充 `InfraNWTableOnMerge` 的单侧 merge 分支、无条件 `WhenMatchedAny`/`WhenNotMatchedAny`/`WhenMatchedDeleteAny`、Table/Named Window new/old 对照及 Java runtime 映射。JDK 17（`C:\Program Files\Microsoft\jdk-17.0.20.8-hotspot`）、Maven 3.9.11（`D:\Tools\apache-maven-3.9.11`）可用；SQL/DB 相关测试按需使用本机 `esper-java-mysql`（MySQL 8.0，`127.0.0.1:3306`），核心/本轮测试不依赖 MySQL。 |
-| 当前修订 | Draft 2.43（2026-08-07）：继续对照 Java `EventJsonTypingCoreParse/CoreWrite`，新增 `json_core_parity_test.go` 的直接 parity 用例，覆盖 Core 的 scalar/array/2D-array/enum/BigInteger/BigDecimal/Object/Object[]/Map 以及 nested/nested-array 写回矩阵；同时修正 Character 多字符 JSON 输入按 Java `charAt(0)` 取首 code point、渲染保持单字符 JSON string。Core JSON 定向测试通过；全量 Java JSON 13/13 作为回归基线通过；完整 dynamic strict-lax、递归 schema/metadata、所有 nested/dynamic arbitrary-precision 格式规则与共享 trace 仍保持 partial；本轮不需要 MySQL Docker。 |
+| 当前修订 | Draft 2.45（2026-08-07）：继续补齐 Java `EventJsonEventSender`、`EventJsonGetter`、`EventJsonCreateSchema`、`EventJsonAdapter`、`EventJsonDocSamples` 和 `EventJsonVisibility` 遗漏项。Go 新增 `Engine.JSONSender`/`JSONEventSender.Parse|Send|Route|SendEvent|RouteEvent|SendUnderlying|RouteUnderlying`、schema identity 防串型校验、`Schema.Getter`/`EventPropertyGetter`、特殊字段名与 JSON/Map nested-schema 校验，以及显式泛型 `NewJSONFieldAdapter`/`NewNamedJSONFieldAdapter`/`WithJSONFieldAdapter` 的 parse/render 双向转换、null 保留、类型校验和非法输入测试；JSON adapter identity 已进入 Plan canonical/hash，sender dispatch 保留 JSON 原始树；DocSamples 的 Book/Cake nested、dynamic empty、application class 与 visibility catalog boundary 也有独立处置。新增 6 个 capability case、17 个 runtime 对账，manifest 进度为 1,211/4,136（约 29.28%）、167 个 case（163 mapped、4 approved-difference）。Java 类加载/注解式 adapter、模块/path visibility、完整 fragment/metadata 和共享 Java/Go trace 仍为 partial；本轮核心验证不需要 MySQL Docker。 |
 | Java 对照项目 | D:/Code/soc/esper |
 | Java 基线 | Esper 9.0.0，tag release_9.0.0，commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c |
 | Java 要求 | Java 17 |
@@ -124,7 +124,7 @@
 - regression-run 静态扫描到约 860 个 public test 入口方法。
 - examples 下有 17 个示例项目、34 个 Java 测试源文件和 181 个 Java 主源码文件，需要按用例价值转换为 Go 示例或端到端测试。
 - 回归标签包含多线程、性能、无效输入、即席查询、序列化、数据流、运行时操作、编译器操作和事件发送器等维度。
-- 当前 capability manifest 已关联 1,194/4,136 个唯一 Java runtime（约 28.87% 的 Java runtime 对账/处置进度）；161 个 case 中 158 个 mapped、3 个 approved-difference。该比例不是 Java/Go 行为 parity 通过率，也不是全量移植完成度。
+- 当前 capability manifest 已关联 1,211/4,136 个唯一 Java runtime（约 29.28% 的 Java runtime 对账/处置进度）；167 个 case 中 163 个 mapped、4 个 approved-difference。该比例不是 Java/Go 行为 parity 通过率，也不是全量移植完成度。
 - 除 regression-lib 外，common/compiler/runtime/common-avro/common-xmlxsd 共 371 个 Java 单元测试文件、regression-run 有 82 个入口源文件、EsperIO 共 58 个测试文件，也必须逐项分类；不能只迁移 RegressionExecution。
 - 17 个示例为 autoid、benchmark、cycledetect、marketdatafeed、matchmaker、namedwinquery、ohlcpluginview、qos_sla、rfidassetzone、runtimeconfig、servershell、stockticker、terminalsvc、terminalsvc-jse、transaction、trivia、virtualdw。
 
@@ -226,7 +226,7 @@ S 和 G 都属于“完整移植”。任何从 S/G 改为 C/N 的变更必须�
 
 各动态格式还需覆盖：
 
-- JSON：严格/宽松解析、数字精度、深度限制、原生表示、provided-underlying 等价能力、自定义 parser hook 和 Schema 演进。
+- JSON：严格/宽松解析、数字精度、深度限制、原生表示、provided-underlying 等价能力、自定义 parser/field-adapter hook、schema-bound getter、特殊字段名、JSON/Map nested schema 校验、sender 原始字面量保留、模块/path visibility 和 Schema 演进。Go 的 adapter 采用显式注册函数，不复制 Java annotation/class-loader；JSON sender/getter/adapter 的独立 Java runtime 映射必须与 core typed/laxness case 分开统计，不能因 `SendJSON` 已存在就漏记 EventSenderJson。
 - XML：有/无 XSD、DOM 与 XPath 属性访问、namespace、相对/绝对路径、fragment、根元素校验，以及 XPath 函数/变量 resolver；默认防御 XXE 和实体扩张。
 - Avro：Schema 对象/文本、native string、非 null default、supertype、类型映射/拓宽 hook、logical type 与 Schema 演进。
 

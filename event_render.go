@@ -183,6 +183,16 @@ func renderJSONSchemaProperty(schema Schema, name string, value Value, maxDepth,
 }
 
 func renderJSONSchemaPropertyWithRaw(schema Schema, name string, value Value, raw any, declaredType reflect.Type, maxDepth, depth int) (any, error) {
+	if adapter, ok := schema.JSONFieldAdapter(name); ok {
+		if value.IsMissing() || value.IsNull() {
+			return nil, nil
+		}
+		encoded, err := adapter.Write(value.Any())
+		if err != nil {
+			return nil, fmt.Errorf("JSON field adapter %q: %w", name, err)
+		}
+		return encoded, nil
+	}
 	nested, ok := schema.lookupNestedSchema(name)
 	if !ok || value.IsMissing() || value.IsNull() {
 		return renderJSONValueStateWithRaw(value, maxDepth, depth, raw, declaredType)

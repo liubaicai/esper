@@ -54,11 +54,11 @@
       "domain": "event",
       "level": "S",
       "summary": "Schema-directed JSON conversion for nested structs, maps, arrays, enum-like strings, time and arbitrary-precision numeric values",
-      "javaRefs": ["EventJsonTypingCoreParse", "EventJsonTypingCoreWrite", "EventJsonTypingClassParseWrite", "EventJsonParserLaxness", "EventJsonProvidedUnderlyingClass"],
-      "goRefs": ["schema.go", "event_render.go", "schema_test.go", "json_underlying_test.go", "json_scalar_types.go", "json_scalar_parity_test.go", "json_class_parity_test.go", "json_core_parity_test.go", "json_provided_underlying_test.go"],
+      "javaRefs": ["EventJsonTypingCoreParse", "EventJsonTypingCoreWrite", "EventJsonTypingClassParseWrite", "EventJsonParserLaxness", "EventJsonProvidedUnderlyingClass", "EventJsonEventSender", "EventJsonGetter", "EventJsonCreateSchema", "EventJsonAdapter", "EventJsonDocSamples", "EventJsonVisibility"],
+      "goRefs": ["schema.go", "event_render.go", "runtime.go", "json_sender.go", "json_adapter.go", "schema_test.go", "json_underlying_test.go", "json_scalar_types.go", "json_scalar_parity_test.go", "json_class_parity_test.go", "json_core_parity_test.go", "json_provided_underlying_test.go", "json_sender_adapter_test.go", "json_doc_visibility_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["recursive nested provided types as independently registered schemas, fragments and complete metadata/identity propagation", "Java class/list adapter conventions outside the covered class/list parse-write execution slice, recursive schema inheritance and metadata, and dynamic strict-lax policy outside the covered core value matrix", "BigDecimal/BigInteger exact JSON write policy across all nested and dynamic values", "shared Java/Go parse-write trace, schema evolution and compatibility rules"]
+      "remaining": ["recursive nested provided types as independently registered schemas, fragments and complete metadata/identity propagation", "Java class/list adapter conventions outside the covered class/list parse-write execution slice, recursive schema inheritance and metadata, and dynamic strict-lax policy outside the covered core value matrix", "JSON adapter discovery/validation beyond explicit Go registration", "Java module/path visibility and configuration-time versus runtime schema resolution", "BigDecimal/BigInteger exact JSON write policy across all nested and dynamic values", "shared Java/Go parse-write trace, schema evolution and compatibility rules"]
     },
     {
       "id": "event.xml-tree",
@@ -468,6 +468,72 @@
       "status": "mapped",
       "evidence": ["java-suite-event-json-13-13", "go-unit"],
       "difference": "Go now recursively converts declared JSON fields into typed slices/arrays/maps/structs, enum-like string aliases, rune/Character-shaped strings, time.Time (including Java-style local/offset/zoned text), DateOnly, UUID, URL, URI, big.Int and big.Rat, preserves null pointers, accepts Java-style scalar string coercions, reports invalid nested VM-class values, maps incompatible object/array shapes to Null, rejects malformed/trailing data, supports optional max depth and unknown-field rejection, materializes typed struct underlying values through SendJSON, and renders arbitrary-precision and URI-like values as JSON scalars. The Go tests now cover the Java class-simple, recursive, nested object array/collection, built-in list, enum-list and VM-class scalar/array/collection executions, including null/empty/missing/partial states, schema-order JSON objects and parsed number/Character lexemes; the core dynamic string/number/bool/null/object/array/nested-array matrix remains covered as well. Java's remaining surface includes class/list adapter conventions outside this slice, independently registered nested fragments, recursive schema inheritance and metadata, exact formatting across every dynamic/nested BigDecimal/BigInteger value, provided-class serialization conventions and shared parse-write trace."
+    },
+    {
+      "id": "case.event-json-doc-samples",
+      "javaRuntimeIds": ["java-runtime-e8d57d8276627eadf713", "java-runtime-400c867b66788955ae95", "java-runtime-0be282c65c5e0690f86e", "java-runtime-f520db6407cc25667f92", "java-runtime-f41ed7be359ba9657f81"],
+      "javaNames": ["EventJsonDocSamplesCarLocUpdate", "EventJsonDocSamplesBook", "EventJsonDocSamplesCake", "EventJsonDocDynamicEmpty", "EventJsonDocApplicationClass"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonDocSamples.java"],
+      "goTests": ["TestJSONDocSamplesNestedDynamicAndApplicationClassMatchEsper"],
+      "tags": ["correctness", "event", "json", "documentation", "nested", "dynamic", "typed-class"],
+      "status": "mapped",
+      "evidence": ["java-suite-event-json-13-13", "java-runtime-inventory", "go-unit"],
+      "difference": "Go covers the documented CarLocUpdate, Book, Cake, dynamic-empty and application-class payloads with explicit JSON nested schemas, dynamic map paths and UUID-backed typed structs. Go uses schema options and generic structs instead of EPL type declarations and Java application-class loading; full fragment metadata and shared trace remain open."
+    },
+    {
+      "id": "case.event-json-sender",
+      "javaRuntimeIds": ["java-runtime-8d0258718d883f9c5497"],
+      "javaNames": ["EventJsonEventSenderParseAndSend"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonEventSender.java"],
+      "goTests": ["TestJSONEventSenderParseSendAndRawShapeMatchEsper"],
+      "tags": ["correctness", "event", "json", "sender", "parse", "send", "dataflow"],
+      "status": "mapped",
+      "evidence": ["java-suite-event-json-13-13", "java-runtime-inventory", "go-unit"],
+      "difference": "Go exposes Engine.JSONSender as a schema-bound sender with Parse, Send, Route, SendEvent, RouteEvent, SendUnderlying and RouteUnderlying methods. It preserves the parsed JSON raw tree through both dispatch paths and rejects events from separately constructed same-name schemas, while Java returns JsonEventObject and uses runtime EventSenderJson; the Go API intentionally avoids Java casts and class-based sender lookup."
+    },
+    {
+      "id": "case.event-json-getter",
+      "javaRuntimeIds": ["java-runtime-b36d999f7edc275dacd2"],
+      "javaNames": ["EventJsonGetterMapType"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonGetter.java"],
+      "goTests": ["TestJSONSchemaGetterSupportsMappedAccessAndRejectsUndeclaredDotPath"],
+      "tags": ["correctness", "event", "json", "getter", "mapped", "metadata"],
+      "status": "mapped",
+      "evidence": ["java-suite-event-json-13-13", "java-runtime-inventory", "go-unit"],
+      "difference": "Go returns a schema-bound EventPropertyGetter with Value-preserving Get and explicit path metadata. Mapped access prop('x') is advertised for a declared map, while the Java negative getter case prop.somefield? remains absent; Go does not expose Java EventType or EventBean classes."
+    },
+    {
+      "id": "case.event-json-create-schema",
+      "javaRuntimeIds": ["java-runtime-e366769167a48553468a", "java-runtime-cb766bd253ca06b20f05"],
+      "javaNames": ["EventJsonCreateSchemaSpecialName", "EventJsonCreateSchemaInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonCreateSchema.java"],
+      "goTests": ["TestJSONCreateSchemaSpecialNamesAndInvalidDeclarationsMatchEsper"],
+      "tags": ["correctness", "event", "json", "schema", "special-name", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-suite-event-json-13-13", "java-runtime-inventory", "go-unit"],
+      "difference": "Go FieldDef and NewJSONSchema make field/name declarations typed at compile time and validate empty names, unsupported interface-like types and non-JSON nested schemas. Backtick/quoted EPL syntax and Java's exact parser/compiler diagnostic text are intentionally replaced by Go constructors and errors."
+    },
+    {
+      "id": "case.event-json-adapter",
+      "javaRuntimeIds": ["java-runtime-706d2a2f6bdd3f522457", "java-runtime-30ad022c4b1542e493e3", "java-runtime-39d9f1a890a50fb92d53", "java-runtime-e949fd77aef3bbc74c60"],
+      "javaNames": ["EventJsonAdapterInsertInto", "EventJsonAdapterCreateSchemaWStringTransform", "EventJsonAdapterInvalid", "EventJsonAdapterDocSample"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonAdapter.java"],
+      "goTests": ["TestJSONFieldAdapterRoundTripAndSchemaValidation"],
+      "tags": ["correctness", "event", "json", "adapter", "parse", "write", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-suite-event-json-13-13", "java-runtime-inventory", "go-unit"],
+      "difference": "Go uses explicit NewJSONFieldAdapter/NewNamedJSONFieldAdapter/WithJSONFieldAdapter registration with typed Parse/Write functions. The covered slice converts non-null JSON strings in both ParseJSON and RenderJSON, preserves null, validates adapter result types, rejects non-string input, and includes the adapter identity in Plan canonicalization. Java class loading, annotations and the full insert-into representation matrix remain open and are tracked in event.json-typed remaining items."
+    },
+    {
+      "id": "case.event-json-visibility",
+      "javaRuntimeIds": ["java-runtime-2ba53ee03b7b8ce70699", "java-runtime-0aca8bed47f555903a11", "java-runtime-db74d06784300616315a", "java-runtime-3aec3a8b727b1b23685c"],
+      "javaNames": ["EventJsonVisibilityPublicSameModule", "EventJsonVisibilityPublicTwoModulesBinaryPath", "EventJsonVisibilityPublicTwoModulesRuntimePath", "EventJsonVisibilityProtected"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonVisibility.java"],
+      "goTests": ["TestJSONVisibilityUsesExplicitEnvironmentCatalogBoundary"],
+      "tags": ["correctness", "event", "json", "visibility", "module", "path"],
+      "status": "approved-difference",
+      "evidence": ["java-suite-event-json-13-13", "java-runtime-inventory", "go-unit"],
+      "difference": "Go Environment is an explicit schema catalog boundary: separate environments may register the same event name, while a single environment rejects duplicates. Java public/protected module, binary-path and runtime-path visibility are not inferred or reproduced; explicit catalog ownership is the supported Go replacement and module/path visibility remains a planned capability."
     },
     {
       "id": "case.event-json-underlying",
@@ -2357,6 +2423,12 @@
     {"capabilityId": "event.contained", "caseId": "case.event-contained-named-window-nested"},
     {"capabilityId": "event.contained", "caseId": "case.event-contained-split-type"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-typed"},
+    {"capabilityId": "event.json-typed", "caseId": "case.event-json-doc-samples"},
+    {"capabilityId": "event.json-typed", "caseId": "case.event-json-sender"},
+    {"capabilityId": "event.json-typed", "caseId": "case.event-json-getter"},
+    {"capabilityId": "event.json-typed", "caseId": "case.event-json-create-schema"},
+    {"capabilityId": "event.json-typed", "caseId": "case.event-json-adapter"},
+    {"capabilityId": "event.json-typed", "caseId": "case.event-json-visibility"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-underlying"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-provided-underlying"},
     {"capabilityId": "event.xml-tree", "caseId": "case.event-xml-tree"},

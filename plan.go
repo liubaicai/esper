@@ -555,6 +555,18 @@ func (e *Environment) Build(query Query) (Plan, error) {
 			defaults = append(defaults, fmt.Sprintf("%s:%T:%v", name, schema.defaults[name], schema.defaults[name]))
 		}
 		canonicalParts = append(canonicalParts, fmt.Sprintf("schema(%s:%d:%d:%d:%t:variant=%d:parents=%s:%s:fields=%s:getters=%s:setters=%s:nested=%s:defaults=%s)", schema.Name(), schema.kind, schema.resolution, schema.accessor, schema.allowDynamic, schema.variantMode, parents, members, strings.Join(fields, ","), strings.Join(getters, ","), strings.Join(setters, ","), strings.Join(nestedNames, ","), strings.Join(defaults, ",")))
+		if len(schema.jsonAdapters) > 0 {
+			adapterNames := make([]string, 0, len(schema.jsonAdapters))
+			for name := range schema.jsonAdapters {
+				adapterNames = append(adapterNames, name)
+			}
+			sort.Strings(adapterNames)
+			adapters := make([]string, 0, len(adapterNames))
+			for _, name := range adapterNames {
+				adapters = append(adapters, name+":"+jsonFieldAdapterPlanIdentity(schema.jsonAdapters[name]))
+			}
+			canonicalParts = append(canonicalParts, fmt.Sprintf("schema-adapters(%s:%s)", schema.Name(), strings.Join(adapters, ",")))
+		}
 	}
 	for _, variable := range e.Variables() {
 		canonicalParts = append(canonicalParts, fmt.Sprintf("variable(%s:%s:%s:%s:%t)", variable.name, variable.context, variable.typ, variable.initial.String(), variable.constant))

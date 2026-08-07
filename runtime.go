@@ -1792,6 +1792,10 @@ func (s *Statement) markClosedLocked() {
 }
 
 func (e *Engine) Send(ctx context.Context, eventType string, underlying any) error {
+	return e.send(ctx, eventType, underlying, nil)
+}
+
+func (e *Engine) send(ctx context.Context, eventType string, underlying any, jsonRaw any) error {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
@@ -1828,6 +1832,7 @@ func (e *Engine) Send(ctx context.Context, eventType string, underlying any) err
 		e.mu.Unlock()
 		return WrapError(ErrorTypeMismatch, "event."+eventType, err)
 	}
+	event.jsonRaw = jsonRaw
 	e.refreshVariablesLocked()
 	variables := cloneValues(e.variables)
 	e.pendingStatementDispatches = nil
@@ -1984,18 +1989,11 @@ func (e *Engine) SendEvent(ctx context.Context, underlying any) error {
 }
 
 func (e *Engine) SendJSON(ctx context.Context, eventType string, data []byte) error {
-	if e == nil || e.env == nil {
-		return NewError(ErrorDependency, "engine has no environment")
-	}
-	schema, ok := e.env.Schema(eventType)
-	if !ok || schema.Kind() != SchemaJSON {
-		return NewError(ErrorUnknownName, fmt.Sprintf("JSON event type %q is not registered", eventType))
-	}
-	event, err := ParseJSON(schema, data, e.Now())
+	sender, err := e.JSONSender(eventType)
 	if err != nil {
 		return err
 	}
-	return e.Send(ctx, eventType, event.Underlying())
+	return sender.Send(ctx, data)
 }
 
 func (e *Engine) SendXML(ctx context.Context, eventType string, data []byte) error {

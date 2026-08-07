@@ -101,6 +101,27 @@ func OptionalFieldDef(name string, typ reflect.Type) FieldSpec {
 // may be returned when the accessor needs to preserve Esper's value state.
 type PropertyGetter func(underlying any) (Value, error)
 
+// EventPropertyGetter is a schema-bound, read-only property accessor. It is
+// the Go counterpart of Esper's EventPropertyGetter, while exposing Value so
+// callers retain the Missing/Null/Present distinction.
+type EventPropertyGetter struct {
+	schema     Schema
+	path       string
+	descriptor PropertyDescriptor
+}
+
+// Get reads the configured path from a schema underlying value.
+func (g EventPropertyGetter) Get(underlying any) Value {
+	if !g.schema.valid() || strings.TrimSpace(g.path) == "" {
+		return Missing()
+	}
+	return g.schema.get(underlying, g.path)
+}
+
+func (g EventPropertyGetter) Path() string                 { return g.path }
+func (g EventPropertyGetter) Property() PropertyDescriptor { return g.descriptor }
+func (g EventPropertyGetter) Type() reflect.Type           { return g.descriptor.Type }
+
 // PropertySetter writes one property on an addressable event underlying
 // value. Struct materialization passes a pointer to the newly allocated Go
 // value so callbacks can preserve setter-side validation and normalization.
@@ -113,6 +134,20 @@ type schemaGetterSpec struct {
 	getter   PropertyGetter
 	method   string
 	path     string
+}
+
+type jsonFieldAdapterSpec struct {
+	name    string
+	adapter JSONFieldAdapter
+}
+
+// schemaIdentityToken distinguishes separately constructed schemas that happen
+// to use the same logical name.  Runtime-bound accessors such as an event
+// sender must not accept an Event created for a different schema definition.
+// The token is intentionally not part of plan canonicalization; it is an
+// in-process ownership check only.
+type schemaIdentityToken struct {
+	marker byte
 }
 
 type schemaSetterSpec struct {
@@ -135,6 +170,7 @@ type schemaConfig struct {
 	setters      []schemaSetterSpec
 	nested       map[string]Schema
 	defaults     map[string]any
+	jsonAdapters []jsonFieldAdapterSpec
 }
 
 func WithPropertyResolution(style PropertyResolutionStyle) SchemaOption {
@@ -242,6 +278,15 @@ func WithNestedPropertySchema(name string, nested Schema) SchemaOption {
 	}
 }
 
+// WithJSONFieldAdapter binds a string-based JSON adapter to one declared
+// property. The adapter is used by ParseJSON and RenderJSON in both map-backed
+// and typed-struct-backed JSON schemas.
+func WithJSONFieldAdapter(name string, adapter JSONFieldAdapter) SchemaOption {
+	return func(cfg *schemaConfig) {
+		cfg.jsonAdapters = append(cfg.jsonAdapters, jsonFieldAdapterSpec{name: name, adapter: adapter})
+	}
+}
+
 func AllowDynamicFields() SchemaOption {
 	return func(cfg *schemaConfig) { cfg.allowDynamic = true }
 }
@@ -268,6 +313,7 @@ func WithSchemaParent(parent Schema) SchemaOption {
 
 // Schema is immutable after construction and safe for concurrent reads.
 type Schema struct {
+	identity       *schemaIdentityToken
 	name           string
 	kind           SchemaKind
 	fields         []FieldSpec
@@ -280,6 +326,7 @@ type Schema struct {
 	accessor       AccessorStyle
 	allowDynamic   bool
 	defaults       map[string]any
+	jsonAdapters   map[string]JSONFieldAdapter
 	variantMode    VariantMode
 	variantMembers []string
 	parents        []Schema
@@ -661,6 +708,16 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		}
 		nestedSchemas[nestedName] = nested
 	}
+	if kind == SchemaJSON {
+		for nestedName, nested := range nestedSchemas {
+			if nested.kind != SchemaJSON && nested.kind != SchemaMap {
+				return Schema{}, fmt.Errorf("esper: JSON schema %q nested property %q expects a JSON or Map schema, got %s", name, nestedName, schemaKindName(nested.kind))
+			}
+		}
+		if err := validateJSONFieldTypes(copyFields); err != nil {
+			return Schema{}, fmt.Errorf("esper: JSON schema %q: %w", name, err)
+		}
+	}
 
 	index := make(map[string]int, len(copyFields))
 	for i, field := range copyFields {
@@ -676,7 +733,36 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		}
 		index[field.Name] = i
 	}
+	jsonAdapters := make(map[string]JSONFieldAdapter)
+	for adapterIndex, configured := range cfg.jsonAdapters {
+		if kind != SchemaJSON {
+			return Schema{}, fmt.Errorf("esper: JSON field adapter %d can only be used with a JSON schema", adapterIndex)
+		}
+		adapterName := strings.TrimSpace(configured.name)
+		if adapterName == "" {
+			return Schema{}, fmt.Errorf("esper: JSON field adapter %d has no property name", adapterIndex)
+		}
+		if isNilJSONFieldAdapter(configured.adapter) {
+			return Schema{}, fmt.Errorf("esper: JSON field adapter for property %q is nil", adapterName)
+		}
+		field, canonical, err := lookupFieldInList(copyFields, adapterName, cfg.resolution)
+		if err != nil {
+			return Schema{}, fmt.Errorf("esper: JSON field adapter for property %q: %w", adapterName, err)
+		}
+		valueType := configured.adapter.ValueType()
+		if valueType == nil {
+			return Schema{}, fmt.Errorf("esper: JSON field adapter for property %q has no value type", adapterName)
+		}
+		if !jsonAdapterTypesCompatible(field.Type, valueType) {
+			return Schema{}, fmt.Errorf("esper: JSON field adapter for property %q produces %s, field declares %s", canonical, valueType, field.Type)
+		}
+		if _, exists := jsonAdapters[canonical]; exists {
+			return Schema{}, fmt.Errorf("esper: JSON schema %q duplicates field adapter %q", name, canonical)
+		}
+		jsonAdapters[canonical] = configured.adapter
+	}
 	return Schema{
+		identity:     &schemaIdentityToken{},
 		name:         name,
 		kind:         kind,
 		fields:       copyFields,
@@ -689,6 +775,7 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		accessor:     cfg.accessor,
 		allowDynamic: cfg.allowDynamic,
 		defaults:     cloneAnyMap(cfg.defaults),
+		jsonAdapters: jsonAdapters,
 		parents:      append([]Schema(nil), cfg.parents...),
 		parentNames:  parentNames,
 	}, nil
@@ -1010,6 +1097,23 @@ func (s Schema) ParentNames() []string { return append([]string(nil), s.parentNa
 
 func (s Schema) AllowsDynamicProperties() bool { return s.allowDynamic }
 
+// JSONFieldAdapter returns the adapter bound to a declared JSON property.
+func (s Schema) JSONFieldAdapter(name string) (JSONFieldAdapter, bool) {
+	if s.kind != SchemaJSON {
+		return nil, false
+	}
+	if adapter, ok := s.jsonAdapters[name]; ok {
+		return adapter, true
+	}
+	field, canonical, err := s.lookupField(name)
+	_ = field
+	if err != nil {
+		return nil, false
+	}
+	adapter, ok := s.jsonAdapters[canonical]
+	return adapter, ok
+}
+
 func (s Schema) Fields() []FieldSpec { return append([]FieldSpec(nil), s.fields...) }
 
 // Properties returns metadata for statically declared root properties.
@@ -1111,6 +1215,21 @@ func (s Schema) PropertyType(name string) (reflect.Type, bool) {
 		return nil, false
 	}
 	return descriptor.Type, true
+}
+
+// Getter returns a schema-bound getter when the complete path is a statically
+// supported property path. In particular, mapped access such as
+// "prop('x')" is supported for a declared map, while a dotted lookup below a
+// plain map ("prop.somefield?") is not silently advertised as a getter.
+func (s Schema) Getter(name string) (EventPropertyGetter, bool) {
+	if !s.supportsGetterPath(name) {
+		return EventPropertyGetter{}, false
+	}
+	descriptor, ok := s.Property(name)
+	if !ok {
+		return EventPropertyGetter{}, false
+	}
+	return EventPropertyGetter{schema: s, path: name, descriptor: descriptor}, true
 }
 
 func propertyKindForType(typ reflect.Type) PropertyAccessKind {
@@ -1286,6 +1405,103 @@ func (s Schema) lookupNestedSchema(name string) (Schema, bool) {
 		found = true
 	}
 	return match, found
+}
+
+func (s Schema) supportsGetterPath(name string) bool {
+	segments, err := parsePropertyPath(name)
+	if err != nil || len(segments) == 0 {
+		return false
+	}
+	currentSchema := s
+	var currentType reflect.Type
+	for index, segment := range segments {
+		if index == 0 {
+			field, _, fieldErr := currentSchema.lookupField(segment.name)
+			if fieldErr == nil {
+				currentType = field.Type
+			} else {
+				getter, _, getterOK := currentSchema.lookupGetter(segment.name)
+				if !getterOK {
+					return false
+				}
+				currentType = getter.typ
+			}
+		} else {
+			if nested, ok := currentSchema.lookupNestedSchema(segments[index-1].name); ok {
+				currentSchema = nested
+				field, _, fieldErr := currentSchema.lookupField(segment.name)
+				if fieldErr != nil {
+					return false
+				}
+				currentType = field.Type
+			} else {
+				var ok bool
+				currentType, ok = strictNestedPropertyType(currentType, segment.name, currentSchema.resolution, currentSchema.allowDynamic)
+				if !ok {
+					return false
+				}
+			}
+		}
+		for _, accessor := range segment.accessors {
+			var ok bool
+			currentType, ok = strictAccessorPropertyType(currentType, accessor.kind, currentSchema.allowDynamic)
+			if !ok {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func strictNestedPropertyType(typ reflect.Type, name string, resolution PropertyResolutionStyle, allowDynamic bool) (reflect.Type, bool) {
+	for typ != nil && typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	if typ == nil {
+		return nil, false
+	}
+	if typ.Kind() == reflect.Interface && typ == typeOf[any]() && allowDynamic {
+		return typeOf[any](), true
+	}
+	if typ.Kind() != reflect.Struct {
+		return nil, false
+	}
+	fields, err := structFields(typ, nil)
+	if err != nil {
+		return nil, false
+	}
+	for _, field := range fields {
+		if field.Name == name || resolution != PropertyCaseSensitive && strings.EqualFold(field.Name, name) {
+			return field.Type, true
+		}
+	}
+	return nil, false
+}
+
+func strictAccessorPropertyType(typ reflect.Type, kind propertyAccessorKind, allowDynamic bool) (reflect.Type, bool) {
+	for typ != nil && typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	if typ == nil {
+		return nil, false
+	}
+	if typ == typeOf[any]() {
+		if allowDynamic {
+			return typeOf[any](), true
+		}
+		return nil, false
+	}
+	switch kind {
+	case propertyIndex:
+		if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
+			return typ.Elem(), true
+		}
+	case propertyMap:
+		if typ.Kind() == reflect.Map && typ.Key().Kind() == reflect.String {
+			return typ.Elem(), true
+		}
+	}
+	return nil, false
 }
 
 func (s Schema) acceptsEventType(eventType string) bool {
@@ -2839,9 +3055,35 @@ func ParseJSONWithOptions(schema Schema, data []byte, receivedAt time.Time, opti
 	updates := make(map[string]any, len(schema.fields))
 	for _, field := range schema.fields {
 		if key, exists := findJSONField(object, schema, field.Name); exists {
-			converted, err := coerceJSONField(object[key], field.Type)
-			if err != nil {
-				return Event{}, fmt.Errorf("esper: JSON event %q field %q: %w", schema.Name(), field.Name, err)
+			var converted any
+			if adapter, adapted := schema.JSONFieldAdapter(field.Name); adapted {
+				if object[key] == nil {
+					converted = nil
+				} else {
+					text, isString := object[key].(string)
+					if !isString {
+						return Event{}, fmt.Errorf("esper: JSON event %q field %q adapter expects a JSON string, got %T", schema.Name(), field.Name, object[key])
+					}
+					parsed, parseErr := adapter.Parse(text)
+					if parseErr != nil {
+						return Event{}, fmt.Errorf("esper: JSON event %q field %q adapter parse: %w", schema.Name(), field.Name, parseErr)
+					}
+					if parsed == nil {
+						converted = nil
+					} else {
+						assigned, assignErr := assignReflectValue(field.Type, parsed)
+						if assignErr != nil {
+							return Event{}, fmt.Errorf("esper: JSON event %q field %q adapter result: %w", schema.Name(), field.Name, assignErr)
+						}
+						converted = assigned.Interface()
+					}
+				}
+			} else {
+				var err error
+				converted, err = coerceJSONField(object[key], field.Type)
+				if err != nil {
+					return Event{}, fmt.Errorf("esper: JSON event %q field %q: %w", schema.Name(), field.Name, err)
+				}
 			}
 			converted = normalizeDynamicJSONValue(converted)
 			object[key] = converted
