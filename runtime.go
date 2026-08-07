@@ -1177,6 +1177,7 @@ type Statement struct {
 	mu                       sync.RWMutex
 	engine                   *Engine
 	deployment               *Deployment
+	deploymentOrder          uint64
 	plan                     Plan
 	parameters               ParameterValues
 	id                       string
@@ -1597,14 +1598,15 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 	runtimeQuery := plan.query
 	runtimeQuery.name = name
 	statement := &Statement{
-		engine:     e,
-		id:         deploymentID + ":" + name,
-		name:       name,
-		plan:       plan,
-		parameters: cloneParameterValues(parameters),
-		listeners:  make(map[uint64]Listener),
-		state:      StatementStarted,
-		runtime:    newStatementRuntime(runtimeQuery),
+		engine:          e,
+		deploymentOrder: e.nextID,
+		id:              deploymentID + ":" + name,
+		name:            name,
+		plan:            plan,
+		parameters:      cloneParameterValues(parameters),
+		listeners:       make(map[uint64]Listener),
+		state:           StatementStarted,
+		runtime:         newStatementRuntime(runtimeQuery),
 	}
 	statement.runtime.engine = e
 	statement.runtime.rowRecogOwner = statement.id
@@ -2169,7 +2171,16 @@ func (e *Engine) sortedStatementsLocked() []*Statement {
 	for _, statement := range e.statements {
 		statements = append(statements, statement)
 	}
-	sort.Slice(statements, func(i, j int) bool { return statements[i].name < statements[j].name })
+	// Event processing follows deployment order, which is observable when one
+	// statement mutates a named window/table and another statement consumes the
+	// same input event. Names remain a deterministic fallback for legacy or
+	// externally constructed statements that do not carry an order.
+	sort.SliceStable(statements, func(i, j int) bool {
+		if statements[i].deploymentOrder != statements[j].deploymentOrder {
+			return statements[i].deploymentOrder < statements[j].deploymentOrder
+		}
+		return statements[i].name < statements[j].name
+	})
 	return statements
 }
 

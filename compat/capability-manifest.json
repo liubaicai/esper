@@ -297,7 +297,7 @@
       "level": "S",
       "summary": "Table and Named Window on-trigger mutation, merge branches, consumer dispatch and new/old streams",
       "javaRefs": ["InfraTableOnUpdate", "InfraNamedWindowOnMerge", "InfraNWTableOnDelete", "InfraNWTableOnMerge"],
-      "goRefs": ["trigger.go", "trigger_test.go", "state.go", "plan.go"],
+      "goRefs": ["trigger.go", "trigger_test.go", "trigger_merge_representation_test.go", "trigger_infra_insert_other_stream_test.go", "state.go", "plan.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["full index/transaction semantics", "wildcard/select projection across all event representations", "mapped/nested property assignment beyond direct Map/ObjectArray composite columns", "representation-specific conversion and metadata", "split-stream and complete on-trigger action ordering matrix", "all Java on-trigger cases", "persistence"]
@@ -639,11 +639,22 @@
       "javaRuntimeIds": ["java-runtime-c91b3df37512cfac454f", "java-runtime-b54b14998ff59e65f2fc", "java-runtime-945ba0790a1cfa2b1033", "java-runtime-fef4b3a46f9b7da65a72", "java-runtime-d8cb24fc9e29421236e2", "java-runtime-e22957dc02c3ac4b8bb7", "java-runtime-284497e8a9729bb76ac2", "java-runtime-f6718d2a96a3e3668239", "java-runtime-51773f11823a58156447", "java-runtime-b891f1f54423ccb8a628", "java-runtime-dd95faed8e31c95bec9f", "java-runtime-6e68e972f23cef8dde85"],
       "javaNames": ["InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=OBJECTARRAY}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=OBJECTARRAY}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=MAP}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=MAP}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=AVRO}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=AVRO}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=JSON}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=JSON}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=JSONCLASSPROVIDED}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=JSONCLASSPROVIDED}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=DEFAULT}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=DEFAULT}"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
-      "goTests": ["TestTriggerMatchedMergeInsertStreamReadsTargetRow", "TestTriggerMatchedMergeInsertStreamReadsTargetRowTypedSource"],
+      "goTests": ["TestTriggerMatchedMergeInsertStreamReadsTargetRow", "TestTriggerMatchedMergeInsertStreamReadsTargetRowTypedSource", "TestTriggerMergeInsertOtherStreamRepresentationMatrix", "TestTriggerInfraInsertOtherStreamBootstrapMatchesInfraInsertOtherStream"],
       "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "insert-into", "matched", "target-row"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "Go permits a matched side-stream projection to read the current target row, while a later ThenUpdate commits the target mutation; a side-stream-only matched action does not fabricate target new/old output. The Go test covers the same target-row/action-chain behavior for Table and Named Window and registers all 12 Java representation/target executions as the source matrix. Go still uses schema-bound map targets and does not yet cover ObjectArray/Avro/JSON/JSON-class-provided/XML representation conversion, the Java insert-into target bootstrap, InnerType/Variable, invalid/rollback, split-stream, transaction/persistence, index-plan or exact diagnostic matrix."
+      "difference": "Go permits a matched side-stream projection to read the current target row, while a later ThenUpdate commits the target mutation; a side-stream-only matched action does not fabricate target new/old output. The Go tests cover target-row/action-chain behavior for Table and Named Window, the Java ObjectArray/Map/Avro/JSON/JSON-class-provided/DEFAULT representation matrix, and deployment-order-sensitive insert-into bootstrap (Table before merge, Named Window merge before unique replacement), including not-matched target insertion, unique replacement and matched status projection. XML, Java bootstrap edge cases, InnerType/Variable combinations, invalid/rollback, split-stream, transaction/persistence, index-plan or exact diagnostic matrix remain open."
+    },
+    {
+      "id": "case.trigger-merge-insert-other-stream-bootstrap",
+      "javaRuntimeIds": ["java-runtime-c91b3df37512cfac454f", "java-runtime-b54b14998ff59e65f2fc", "java-runtime-945ba0790a1cfa2b1033", "java-runtime-fef4b3a46f9b7da65a72", "java-runtime-dd95faed8e31c95bec9f", "java-runtime-6e68e972f23cef8dde85"],
+      "javaNames": ["InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=OBJECTARRAY}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=OBJECTARRAY}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=MAP}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=MAP}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=DEFAULT}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=DEFAULT}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerInfraInsertOtherStreamBootstrapMatchesInfraInsertOtherStream"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "insert-into", "bootstrap", "deployment-order", "object-array", "map", "struct"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go now covers the Java insert-into bootstrap plus side-stream-only merge for Table and unique Named Window targets. Runtime processing follows deployment order: Table route-before-merge yields status 10, while Named Window merge-before-route yields 0, then 10 and 11 for repeated same-key events; the named-window underlying representation is retained for struct, Map and ObjectArray inputs. Go struct is an additional typed representation rather than Java DEFAULT's Map equivalent. Avro, JSON and JSON-class-provided executions, XML, cross-representation conversion, transaction/rollback, persistence, exact shared trace and Java diagnostics remain partial."
     },
     {
       "id": "case.trigger-merge-subquery-not-matched",
@@ -2343,6 +2354,7 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-multiple-insert"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-flow"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-matched-side-stream"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-insert-other-stream-bootstrap"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-wildcard"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-subquery-not-matched"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
