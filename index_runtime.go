@@ -685,6 +685,36 @@ func addJoinIndexConstraint(constraints map[string]joinIndexConstraint, expressi
 	return true
 }
 
+// joinIndexCandidateAllowed limits physical pruning to join shapes for which
+// omitting non-matching rows from the target side cannot remove a preserved
+// outer row. For a two-stream left outer join the right side is optional; for
+// a right outer join the left side is optional. Full outer joins, chained
+// outer joins and unidirectional joins still use the complete snapshot path.
+func joinIndexCandidateAllowed(definition *joinDefinition, targetSource int) bool {
+	if definition == nil || joinDefinitionHasUnidirectional(definition) {
+		return false
+	}
+	sources := joinDefinitionSources(definition)
+	if len(definition.edges) > 0 {
+		for _, edge := range definition.edges {
+			if edge.kind != JoinInner {
+				return false
+			}
+		}
+		return true
+	}
+	switch definition.kind {
+	case JoinInner:
+		return true
+	case JoinLeftOuter:
+		return len(sources) == 2 && targetSource == 1
+	case JoinRightOuter:
+		return len(sources) == 2 && targetSource == 0
+	default:
+		return false
+	}
+}
+
 func addJoinIndexNodeConstraint(constraints map[string]joinIndexConstraint, target, value *exprNode, targetSource, declaredTargetSource, valueSource int) bool {
 	column, ok := joinIndexTargetNode(target, targetSource, declaredTargetSource)
 	if !ok || value == nil || expressionReferencesJoinSource(value, targetSource) {
@@ -1041,13 +1071,8 @@ func (e *Engine) joinIndexProbeKeys(source *streamNode, selection IndexSelection
 	if e == nil || source == nil || selection.Access != IndexAccessEquality || len(selection.Columns) == 0 || len(selection.MatchedColumns) != len(selection.Columns) || (strings.HasPrefix(selection.IndexName, "<") && selection.IndexName != "<primary-key>") {
 		return nil, false
 	}
-	if definition == nil || definition.kind != JoinInner || joinDefinitionHasUnidirectional(definition) {
+	if !joinIndexCandidateAllowed(definition, targetSource) {
 		return nil, false
-	}
-	for _, edge := range definition.edges {
-		if edge.kind != JoinInner {
-			return nil, false
-		}
 	}
 	base, err := sourceNode(source)
 	if err != nil || (base.kind != streamNamedWindow && base.kind != streamTable) {
@@ -1154,13 +1179,8 @@ func (e *Engine) joinIndexProbeRangeSpecs(source *streamNode, selection IndexSel
 	if e == nil || source == nil || selection.Access != IndexAccessRange || (selection.Backing != IndexBackingBTree && selection.Backing != IndexBackingUniqueBTree) || len(selection.Columns) == 0 || len(selection.MatchedColumns) == 0 || len(selection.MatchedColumns) > len(selection.Columns) || strings.HasPrefix(selection.IndexName, "<") {
 		return nil, false
 	}
-	if definition == nil || definition.kind != JoinInner || joinDefinitionHasUnidirectional(definition) {
+	if !joinIndexCandidateAllowed(definition, targetSource) {
 		return nil, false
-	}
-	for _, edge := range definition.edges {
-		if edge.kind != JoinInner {
-			return nil, false
-		}
 	}
 	base, err := sourceNode(source)
 	if err != nil || (base.kind != streamNamedWindow && base.kind != streamTable) {

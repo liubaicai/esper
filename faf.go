@@ -859,6 +859,23 @@ func validateParameterBindings(parameterTypes map[string]reflect.Type, parameter
 	return nil
 }
 
+// fireAndForgetJoinEvaluationOrder loads the preserved side first for a
+// two-stream right outer query. This makes the optional left side eligible for
+// a safe index candidate probe while keeping source indexes and result
+// projection order unchanged. Dependency-driven method joins retain the
+// topological order returned by methodJoinEvaluationOrder.
+func fireAndForgetJoinEvaluationOrder(definition *joinDefinition) ([]int, error) {
+	order, err := methodJoinEvaluationOrder(definition)
+	if err != nil {
+		return nil, err
+	}
+	sources := joinDefinitionSources(definition)
+	if definition != nil && definition.kind == JoinRightOuter && len(sources) == 2 && len(order) == 2 && order[0] == 0 && order[1] == 1 {
+		return []int{1, 0}, nil
+	}
+	return order, nil
+}
+
 // positionalParameterBindings translates the public variadic Go binding form
 // into the internal immutable map used by every expression evaluator. It is
 // intentionally plan-driven: the number, order and static type of values are
@@ -912,7 +929,7 @@ func (e *Engine) executeJoinFireAndForget(ctx context.Context, plan Plan, parame
 	if len(sources) < 2 {
 		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget join requires at least two sources")
 	}
-	if _, err := methodJoinEvaluationOrder(plan.query.join); err != nil {
+	if _, err := fireAndForgetJoinEvaluationOrder(plan.query.join); err != nil {
 		return QueryResult{}, err
 	}
 	e.mu.Lock()
@@ -926,7 +943,7 @@ func (e *Engine) executeJoinFireAndForget(ctx context.Context, plan Plan, parame
 	runtime.variables = variablesWithEngine(variables, e)
 	runtime.joinState = &joinRuntimeState{sides: make([][]storedEvent, len(sources))}
 	loaded := make([]bool, len(sources))
-	evaluationOrder, err := methodJoinEvaluationOrder(plan.query.join)
+	evaluationOrder, err := fireAndForgetJoinEvaluationOrder(plan.query.join)
 	if err != nil {
 		return QueryResult{}, err
 	}

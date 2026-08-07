@@ -531,8 +531,13 @@ func TestInfraFAFIndexJoinOuterFallbackAndProbeBoundParity(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				if err := engine.InsertNamedWindow(ctx, "W2", infraIndexJoinRight{ID: "R1", Key: "X", Amount: 10}); err != nil {
-					t.Fatal(err)
+				for _, row := range []infraIndexJoinRight{
+					{ID: "R1", Key: "X", Amount: 10},
+					{ID: "R2", Key: "Z", Amount: 20},
+				} {
+					if err := engine.InsertNamedWindow(ctx, "W2", row); err != nil {
+						t.Fatal(err)
+					}
 				}
 			} else {
 				leftTable, _ := engine.Table("W1")
@@ -542,8 +547,13 @@ func TestInfraFAFIndexJoinOuterFallbackAndProbeBoundParity(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				if _, err := rightTable.Insert(ctx, map[string]any{"id": "R1", "key": "X", "amount": int64(10)}); err != nil {
-					t.Fatal(err)
+				for _, row := range []map[string]any{
+					{"id": "R1", "key": "X", "amount": int64(10)},
+					{"id": "R2", "key": "Z", "amount": int64(20)},
+				} {
+					if _, err := rightTable.Insert(ctx, row); err != nil {
+						t.Fatal(err)
+					}
 				}
 			}
 			join := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(
@@ -573,8 +583,55 @@ func TestInfraFAFIndexJoinOuterFallbackAndProbeBoundParity(t *testing.T) {
 			if err != nil || len(result.Results()) != 2 {
 				t.Fatalf("outer join result = %#v, err=%v", result.Results(), err)
 			}
+			if leftLookups() != leftBefore || rightLookups() != rightBefore+1 {
+				t.Fatalf("left outer join did not use the optional-side candidate path: left %d->%d, right %d->%d", leftBefore, leftLookups(), rightBefore, rightLookups())
+			}
+
+			rightOuter := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(
+				OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+			).RightOuter()
+			rightPlan, err := env.Build(rightOuter.Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query(UseIndexOn(0, "W1Key"), UseIndexOn(1, "W2Key")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			leftBefore, rightBefore = leftLookups(), rightLookups()
+			rightResult, err := engine.ExecuteFireAndForget(ctx, rightPlan)
+			if err != nil || len(rightResult.Results()) != 2 {
+				t.Fatalf("right outer join result = %#v, err=%v", rightResult.Results(), err)
+			}
+			if leftAfter := leftLookups(); leftAfter != leftBefore+1 {
+				t.Fatalf("right outer join did not probe optional left side: before=%d after=%d", leftBefore, leftAfter)
+			}
+			if rightAfter := rightLookups(); rightAfter != rightBefore {
+				t.Fatalf("right outer join unexpectedly probed preserved right side: before=%d after=%d", rightBefore, rightAfter)
+			}
+			if got := rightResult.Results()[0].Get("left").Any(); got != "L1" {
+				t.Fatalf("right outer matched row left id = %#v, want L1", got)
+			}
+			if got := rightResult.Results()[1].Get("right").Any(); got != "R2" {
+				t.Fatalf("right outer unmatched row right id = %#v, want R2", got)
+			}
+
+			fullOuter := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(
+				OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+			).FullOuter()
+			fullPlan, err := env.Build(fullOuter.Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query(UseIndexOn(0, "W1Key"), UseIndexOn(1, "W2Key")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			leftBefore, rightBefore = leftLookups(), rightLookups()
+			fullResult, err := engine.ExecuteFireAndForget(ctx, fullPlan)
+			if err != nil || len(fullResult.Results()) != 3 {
+				t.Fatalf("full outer join result = %#v, err=%v", fullResult.Results(), err)
+			}
 			if leftLookups() != leftBefore || rightLookups() != rightBefore {
-				t.Fatalf("outer join unexpectedly used an inner candidate path: left %d->%d, right %d->%d", leftBefore, leftLookups(), rightBefore, rightLookups())
+				t.Fatalf("full outer join unexpectedly used an optional-side candidate path: left %d->%d, right %d->%d", leftBefore, leftLookups(), rightBefore, rightLookups())
 			}
 		})
 	}
@@ -720,7 +777,7 @@ func TestInfraFAFIndexJoinBTreeRangeCandidateParity(t *testing.T) {
 			}
 			var left, right RecordStream
 			if namedWindow {
-				if _, err := CreateNamedWindow(env, "W1", leftSchema); err != nil {
+				if _, err := CreateNamedWindow(env, "W1", leftSchema, NamedWindowBTreeIndex("left-range", "key", "min")); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := CreateNamedWindow(env, "W2", rightSchema, NamedWindowBTreeIndex("range", "key", "value")); err != nil {
@@ -730,7 +787,7 @@ func TestInfraFAFIndexJoinBTreeRangeCandidateParity(t *testing.T) {
 			} else {
 				if _, err := CreateTable(env, "W1", []TableColumn{
 					PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("min"), TableColumnOf[int64]("max"),
-				}); err != nil {
+				}, SecondaryBTreeIndex("left-range", "key", "min")); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := CreateTable(env, "W2", []TableColumn{
@@ -905,6 +962,76 @@ func TestInfraFAFIndexJoinBTreeRangeCandidateParity(t *testing.T) {
 			}
 			if leftAfter := leftLookups(); leftAfter != leftBefore {
 				t.Fatalf("join-where range left source unexpectedly probed its index: before=%d after=%d", leftBefore, leftAfter)
+			}
+
+			leftOuterQuery := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(AllJoin(
+				OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+				OnSourcesCompare(0, Field[any, int64]("min"), 1, Field[any, int64]("value"), JoinLessOrEqual),
+				OnSourcesCompare(0, Field[any, int64]("max"), 1, Field[any, int64]("value"), JoinGreaterOrEqual),
+			)).LeftOuter().Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query()
+			leftOuterPlan, err := env.Build(leftOuterQuery)
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok = leftOuterPlan.IndexPlan().ForSource(1)
+			if !ok || selection.IndexName != "range" || selection.Access != IndexAccessRange {
+				t.Fatalf("left outer range index plan = %#v", selection)
+			}
+			leftBefore, rightBefore = leftLookups(), rightLookups()
+			leftOuterResult, err := engine.ExecuteFireAndForget(ctx, leftOuterPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			leftOuterPairs := make([]string, 0, len(leftOuterResult.Results()))
+			for _, row := range leftOuterResult.Results() {
+				leftOuterPairs = append(leftOuterPairs, row.Get("left").Any().(string)+"/"+row.Get("right").Any().(string))
+			}
+			if !reflect.DeepEqual(leftOuterPairs, []string{"L1/R2", "L1/R3", "L1/R4", "L2/R4", "L2/R5", "L3/R6"}) {
+				t.Fatalf("left outer range result = %#v", leftOuterPairs)
+			}
+			if leftLookups() != leftBefore || rightLookups() != rightBefore+1 {
+				t.Fatalf("left outer range candidate counters = left %d->%d right %d->%d", leftBefore, leftLookups(), rightBefore, rightLookups())
+			}
+
+			rightOuterQuery := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(AllJoin(
+				OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+				OnSourcesCompare(0, Field[any, int64]("min"), 1, Field[any, int64]("value"), JoinLessOrEqual),
+				OnSourcesCompare(0, Field[any, int64]("max"), 1, Field[any, int64]("value"), JoinGreaterOrEqual),
+			)).RightOuter().Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query()
+			rightOuterPlan, err := env.Build(rightOuterQuery)
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok = rightOuterPlan.IndexPlan().ForSource(0)
+			if !ok || selection.IndexName != "left-range" || selection.Access != IndexAccessRange {
+				t.Fatalf("right outer range index plan = %#v", selection)
+			}
+			leftBefore, rightBefore = leftLookups(), rightLookups()
+			rightOuterResult, err := engine.ExecuteFireAndForget(ctx, rightOuterPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			formatID := func(value Value) string {
+				if !value.IsPresent() {
+					return "<missing>"
+				}
+				return value.Any().(string)
+			}
+			rightOuterPairs := make([]string, 0, len(rightOuterResult.Results()))
+			for _, row := range rightOuterResult.Results() {
+				rightOuterPairs = append(rightOuterPairs, formatID(row.Get("left"))+"/"+formatID(row.Get("right")))
+			}
+			if !reflect.DeepEqual(rightOuterPairs, []string{"L1/R2", "L1/R3", "L1/R4", "L2/R4", "L2/R5", "L3/R6", "<missing>/R1", "<missing>/R7"}) {
+				t.Fatalf("right outer range result = %#v", rightOuterPairs)
+			}
+			if leftLookups() != leftBefore+1 || rightLookups() != rightBefore {
+				t.Fatalf("right outer range candidate counters = left %d->%d right %d->%d", leftBefore, leftLookups(), rightBefore, rightLookups())
 			}
 		})
 	}
