@@ -1195,14 +1195,15 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 // the current key after lookup. This preserves selector and partition
 // semantics while avoiding a full scan of the optional/target source.
 //
-// The helper handles inner joins (including an all-inner left-deep chain) and
-// two-stream left/right outer joins without unidirectional sources. For an
+// The helper handles inner joins (including an all-inner left-deep chain),
+// two-stream left/right outer joins and the adjacency-constrained left-deep
+// mixed inner/left-outer chain subset without unidirectional sources. For an
 // outer join, the evaluation order is required to load the preserved side
 // first; the optional side can then be safely reduced to index candidates,
 // including an empty candidate set which lets joinTuples emit the unmatched
-// preserved row. FullOuter, mixed-edge, chained outer and unidirectional
-// shapes return used=false so the established complete-snapshot implementation
-// remains the source of truth.
+// preserved row. FullOuter, right-preserving chain edges, non-adjacent mixed
+// edges and unidirectional shapes return used=false so the established
+// complete-snapshot implementation remains the source of truth.
 func (e *Engine) executeContextJoinFireAndForgetWithIndex(
 	ctx context.Context,
 	plan Plan,
@@ -1433,12 +1434,17 @@ func contextJoinIndexShapeAllowed(definition *joinDefinition) bool {
 		return false
 	}
 	if len(definition.edges) > 0 {
+		allInner := true
 		for _, edge := range definition.edges {
 			if edge.kind != JoinInner {
-				return false
+				allInner = false
+				break
 			}
 		}
-		return true
+		if allInner {
+			return true
+		}
+		return joinIndexChainedOuterShapeAllowed(definition)
 	}
 	sources := joinDefinitionSources(definition)
 	switch definition.kind {
@@ -1452,7 +1458,13 @@ func contextJoinIndexShapeAllowed(definition *joinDefinition) bool {
 }
 
 func contextJoinIndexDriverAllowed(definition *joinDefinition, driverIndex int) bool {
-	if definition == nil || len(definition.edges) > 0 {
+	if definition == nil {
+		return true
+	}
+	if len(definition.edges) > 0 {
+		if joinIndexChainedOuterShapeAllowed(definition) {
+			return driverIndex == 0
+		}
 		return true
 	}
 	switch definition.kind {

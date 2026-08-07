@@ -1000,6 +1000,216 @@ func TestInfraFAFContextOuterJoinIndexCandidateRangeParity(t *testing.T) {
 	}
 }
 
+func TestInfraFAFContextChainedMixedOuterIndexCandidateParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		for _, tailKind := range []JoinKind{JoinInner, JoinLeftOuter} {
+			name := indexStoreName(namedWindow) + "-" + joinKindDescription(tailKind)
+			t.Run(name, func(t *testing.T) {
+				env := NewEnvironment()
+				rootSchema, err := RegisterStruct[infraIndexRangeJoinLeft](env, "InfraContextChainRoot")
+				if err != nil {
+					t.Fatal(err)
+				}
+				middleSchema, err := RegisterStruct[infraIndexRangeJoinLeft](env, "InfraContextChainMiddle")
+				if err != nil {
+					t.Fatal(err)
+				}
+				tailSchema, err := RegisterStruct[infraIndexRangeJoinRight](env, "InfraContextChainTail")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateKeyContext(env, "infra-context-chain", Field[any, string]("key")); err != nil {
+					t.Fatal(err)
+				}
+				var root, middle, tail RecordStream
+				if namedWindow {
+					if _, err := CreateNamedWindow(env, "ContextChainRoot", rootSchema); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := CreateNamedWindow(env, "ContextChainMiddle", middleSchema, NamedWindowIndex("by-key", "key")); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := CreateNamedWindow(env, "ContextChainTail", tailSchema, NamedWindowBTreeIndex("range", "key", "value")); err != nil {
+						t.Fatal(err)
+					}
+					root, middle, tail = FromNamedWindow(env, "ContextChainRoot"), FromNamedWindow(env, "ContextChainMiddle"), FromNamedWindow(env, "ContextChainTail")
+				} else {
+					columns := []TableColumn{
+						PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("min"), TableColumnOf[int64]("max"),
+					}
+					if _, err := CreateTable(env, "ContextChainRoot", columns, SecondaryIndex("unused-root", "key")); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := CreateTable(env, "ContextChainMiddle", columns, SecondaryIndex("by-key", "key")); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := CreateTable(env, "ContextChainTail", []TableColumn{
+						PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("value"),
+					}, SecondaryBTreeIndex("range", "key", "value")); err != nil {
+						t.Fatal(err)
+					}
+					root, middle, tail = FromTable(env, "ContextChainRoot"), FromTable(env, "ContextChainMiddle"), FromTable(env, "ContextChainTail")
+				}
+
+				engine := NewEngine(env)
+				ctx := context.Background()
+				insertRoot := func(row infraIndexRangeJoinLeft) {
+					t.Helper()
+					if namedWindow {
+						if err := engine.InsertNamedWindow(ctx, "ContextChainRoot", row); err != nil {
+							t.Fatal(err)
+						}
+						return
+					}
+					table, ok := engine.Table("ContextChainRoot")
+					if !ok {
+						t.Fatal("context chain root table is missing")
+					}
+					if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "min": row.Min, "max": row.Max}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				insertMiddle := func(row infraIndexRangeJoinLeft) {
+					t.Helper()
+					if namedWindow {
+						if err := engine.InsertNamedWindow(ctx, "ContextChainMiddle", row); err != nil {
+							t.Fatal(err)
+						}
+						return
+					}
+					table, ok := engine.Table("ContextChainMiddle")
+					if !ok {
+						t.Fatal("context chain middle table is missing")
+					}
+					if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "min": row.Min, "max": row.Max}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				insertTail := func(row infraIndexRangeJoinRight) {
+					t.Helper()
+					if namedWindow {
+						if err := engine.InsertNamedWindow(ctx, "ContextChainTail", row); err != nil {
+							t.Fatal(err)
+						}
+						return
+					}
+					table, ok := engine.Table("ContextChainTail")
+					if !ok {
+						t.Fatal("context chain tail table is missing")
+					}
+					if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "value": row.Value}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				for _, row := range []infraIndexRangeJoinLeft{
+					{ID: "L1", Key: "X"}, {ID: "L2", Key: "X"}, {ID: "L3", Key: "Y"}, {ID: "L4", Key: "Q"},
+				} {
+					insertRoot(row)
+				}
+				for _, row := range []infraIndexRangeJoinLeft{
+					{ID: "M1", Key: "X", Min: 10, Max: 20}, {ID: "M2", Key: "Y", Min: 0, Max: 5},
+				} {
+					insertMiddle(row)
+				}
+				for _, row := range []infraIndexRangeJoinRight{
+					{ID: "T1", Key: "X", Value: 5}, {ID: "T2", Key: "X", Value: 10}, {ID: "T3", Key: "X", Value: 15},
+					{ID: "T4", Key: "X", Value: 20}, {ID: "T5", Key: "Y", Value: 3}, {ID: "T6", Key: "Y", Value: 9},
+					{ID: "TQ", Key: "Q", Value: 105}, {ID: "TZ", Key: "Z", Value: 1},
+				} {
+					insertTail(row)
+				}
+
+				edgeRootMiddle := OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key"))
+				edgeMiddleTail := AllJoin(
+					OnSourcesEqual(1, Field[any, string]("key"), 2, Field[any, string]("key")),
+					OnSourcesCompare(1, Field[any, int64]("min"), 2, Field[any, int64]("value"), JoinLessOrEqual),
+					OnSourcesCompare(1, Field[any, int64]("max"), 2, Field[any, int64]("value"), JoinGreaterOrEqual),
+				)
+				chain := JoinChain(JoinRecordSource(root)).LeftOuterJoin(JoinRecordSource(middle), edgeRootMiddle)
+				if tailKind == JoinInner {
+					chain = chain.InnerJoin(JoinRecordSource(tail), edgeMiddleTail)
+				} else {
+					chain = chain.LeftOuterJoin(JoinRecordSource(tail), edgeMiddleTail)
+				}
+				plan, err := env.Build(chain.Select(
+					SelectFrom(0, "root", JoinField[string](0, "id")),
+					SelectFrom(1, "middle", JoinField[string](1, "id")),
+					SelectFrom(2, "tail", JoinField[string](2, "id")),
+				).Query(
+					WithContext("infra-context-chain"),
+					UseIndexOn(1, "by-key"), UseIndexOn(2, "range"),
+				))
+				if err != nil {
+					t.Fatal(err)
+				}
+				middlePlan, ok := plan.IndexPlan().ForSource(1)
+				if !ok || middlePlan.IndexName != "by-key" || middlePlan.Access != IndexAccessEquality {
+					t.Fatalf("context chain middle index plan = %#v", middlePlan)
+				}
+				tailPlan, ok := plan.IndexPlan().ForSource(2)
+				if !ok || tailPlan.IndexName != "range" || tailPlan.Access != IndexAccessRange {
+					t.Fatalf("context chain tail index plan = %#v", tailPlan)
+				}
+
+				var middleLookups, tailLookups func() uint64
+				if namedWindow {
+					middleWindow, _ := engine.NamedWindow("ContextChainMiddle")
+					tailWindow, _ := engine.NamedWindow("ContextChainTail")
+					middleLookups = func() uint64 { return middleWindow.state.indexLookups.Load() }
+					tailLookups = func() uint64 { return tailWindow.state.indexLookups.Load() }
+				} else {
+					middleTable, _ := engine.Table("ContextChainMiddle")
+					tailTable, _ := engine.Table("ContextChainTail")
+					middleLookups = func() uint64 { return middleTable.state.indexLookups.Load() }
+					tailLookups = func() uint64 { return tailTable.state.indexLookups.Load() }
+				}
+				beforeMiddle, beforeTail := middleLookups(), tailLookups()
+				result, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				format := func(value Value) string {
+					if !value.IsPresent() {
+						return "<missing>"
+					}
+					return value.Any().(string)
+				}
+				got := make([]string, 0, len(result.Results()))
+				for _, row := range result.Results() {
+					got = append(got, format(row.Get("root"))+"/"+format(row.Get("middle"))+"/"+format(row.Get("tail")))
+				}
+				want := []string{"L1/M1/T2", "L1/M1/T3", "L1/M1/T4", "L2/M1/T2", "L2/M1/T3", "L2/M1/T4", "L3/M2/T5"}
+				if tailKind == JoinLeftOuter {
+					want = append([]string{"L4/<missing>/<missing>"}, want...)
+				}
+				if !reflect.DeepEqual(got, want) {
+					t.Fatalf("context chained mixed result = %#v, want %#v", got, want)
+				}
+				if middleLookups() != beforeMiddle+3 || tailLookups() != beforeTail+2 {
+					t.Fatalf("context chained mixed lookup counters = middle %d->%d tail %d->%d", beforeMiddle, middleLookups(), beforeTail, tailLookups())
+				}
+
+				beforeMiddle, beforeTail = middleLookups(), tailLookups()
+				selected, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, SelectContextPartitions(encodeKey([]any{ValuePresent, "X"})))
+				if err != nil {
+					t.Fatal(err)
+				}
+				selectedGot := make([]string, 0, len(selected.Results()))
+				for _, row := range selected.Results() {
+					selectedGot = append(selectedGot, format(row.Get("root"))+"/"+format(row.Get("middle"))+"/"+format(row.Get("tail")))
+				}
+				selectedWant := []string{"L1/M1/T2", "L1/M1/T3", "L1/M1/T4", "L2/M1/T2", "L2/M1/T3", "L2/M1/T4"}
+				if !reflect.DeepEqual(selectedGot, selectedWant) {
+					t.Fatalf("selected context chained mixed result = %#v, want %#v", selectedGot, selectedWant)
+				}
+				if middleLookups() != beforeMiddle+1 || tailLookups() != beforeTail+1 {
+					t.Fatalf("selected context chained mixed lookup counters = middle %d->%d tail %d->%d", beforeMiddle, middleLookups(), beforeTail, tailLookups())
+				}
+			})
+		}
+	}
+}
+
 func TestInfraFAFContextJoinIndexCandidateEqualityParity(t *testing.T) {
 	for _, namedWindow := range []bool{true, false} {
 		t.Run(indexStoreName(namedWindow), func(t *testing.T) {

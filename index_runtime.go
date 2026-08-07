@@ -699,23 +699,88 @@ func addJoinIndexConstraint(constraints map[string]joinIndexConstraint, expressi
 	return true
 }
 
+// joinIndexChainedOuterShapeAllowed identifies the left-deep chain subset for
+// which a target-side candidate lookup cannot remove a preserved row. Every
+// edge must introduce an inner or left-optional source, and its conditions
+// must use only the newly introduced source and the immediately preceding
+// source. The adjacency restriction matters when an earlier optional side is
+// empty: a later edge cannot recover a match through a missing intermediate
+// tuple, so an empty candidate set remains semantically safe.
+func joinIndexChainedOuterShapeAllowed(definition *joinDefinition) bool {
+	if definition == nil || len(definition.edges) == 0 || joinDefinitionHasUnidirectional(definition) {
+		return false
+	}
+	sources := joinDefinitionSources(definition)
+	if len(sources) != len(definition.edges)+1 {
+		return false
+	}
+	for edgeIndex, edge := range definition.edges {
+		if edge.kind != JoinInner && edge.kind != JoinLeftOuter || len(edge.conditions) == 0 {
+			return false
+		}
+		allowed := map[int]struct{}{edgeIndex: {}, edgeIndex + 1: {}}
+		for _, condition := range edge.conditions {
+			if !joinConditionUsesOnlySources(condition, allowed) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func joinConditionUsesOnlySources(condition JoinCondition, allowed map[int]struct{}) bool {
+	if len(condition.all) > 0 && len(condition.any) > 0 {
+		return false
+	}
+	if len(condition.any) > 0 {
+		// AnyJoin is an OR. A candidate from one branch can exclude a row
+		// matched by another branch, so it is never a safe pruning basis.
+		return false
+	}
+	if len(condition.all) > 0 {
+		for _, child := range condition.all {
+			if !joinConditionUsesOnlySources(child, allowed) {
+				return false
+			}
+		}
+		return true
+	}
+	if condition.Left == nil || condition.Right == nil {
+		return false
+	}
+	leftSource, rightSource := joinConditionSources(condition)
+	_, leftAllowed := allowed[leftSource]
+	_, rightAllowed := allowed[rightSource]
+	return leftAllowed && rightAllowed && leftSource != rightSource
+}
+
 // joinIndexCandidateAllowed limits physical pruning to join shapes for which
 // omitting non-matching rows from the target side cannot remove a preserved
 // outer row. For a two-stream left outer join the right side is optional; for
-// a right outer join the left side is optional. Full outer joins, chained
-// outer joins and unidirectional joins still use the complete snapshot path.
+// a right outer join the left side is optional. A left-deep chain can use the
+// same path only for the adjacency-constrained inner/left-outer subset above.
+// Full outer joins, right-preserving chain edges and unidirectional joins use
+// the complete snapshot path.
 func joinIndexCandidateAllowed(definition *joinDefinition, targetSource int) bool {
 	if definition == nil || joinDefinitionHasUnidirectional(definition) {
 		return false
 	}
 	sources := joinDefinitionSources(definition)
 	if len(definition.edges) > 0 {
+		allInner := true
 		for _, edge := range definition.edges {
 			if edge.kind != JoinInner {
-				return false
+				allInner = false
+				break
 			}
 		}
-		return true
+		if allInner {
+			return true
+		}
+		if !joinIndexChainedOuterShapeAllowed(definition) || targetSource <= 0 || targetSource >= len(sources) {
+			return false
+		}
+		return definition.edges[targetSource-1].kind == JoinInner || definition.edges[targetSource-1].kind == JoinLeftOuter
 	}
 	switch definition.kind {
 	case JoinInner:
