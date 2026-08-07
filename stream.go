@@ -1173,6 +1173,33 @@ func (s OnDemandStream) Insert(assignments ...TableAssignment) Query {
 	return s.query(onDemandInsert, nil, assignments)
 }
 
+// OnDemandInsertRow describes one positional row for a multi-row
+// fire-and-forget insert. Values map to the target schema columns in
+// declaration order; use InsertValues to construct one.
+type OnDemandInsertRow struct {
+	values []Expr
+}
+
+// InsertValues builds one positional row for OnDemandStream.InsertRows.
+// Keeping values as analyzable expressions is the Go-native equivalent of a
+// values clause while allowing literals, parameters, variables and subqueries.
+func InsertValues(values ...Expr) OnDemandInsertRow {
+	return OnDemandInsertRow{values: append([]Expr(nil), values...)}
+}
+
+// InsertRows builds an atomic multi-row fire-and-forget insert. The target
+// schema determines column order and every row must provide one value for
+// every column. At most 1000 rows are accepted, matching Esper's FAF limit.
+func (s OnDemandStream) InsertRows(rows ...OnDemandInsertRow) Query {
+	definitionRows := make([]onDemandInsertRow, 0, len(rows))
+	for _, row := range rows {
+		definitionRows = append(definitionRows, onDemandInsertRow{values: append([]Expr(nil), row.values...)})
+	}
+	query := s.query(onDemandInsert, nil, nil)
+	query.onDemand.rows = definitionRows
+	return query
+}
+
 // UpdateWhere updates every target row for which predicate is true. The
 // predicate and assignment expressions may read the current row with
 // TableField or NamedWindowField; assignments are applied in declaration

@@ -695,7 +695,11 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		for _, field := range window.schema.fields {
 			fields = append(fields, fmt.Sprintf("%s:%s:%t:%t:%t", field.Name, field.Type, field.Optional, field.StartTimestamp, field.EndTimestamp))
 		}
-		canonicalParts = append(canonicalParts, "named-window("+window.name+":"+window.schema.Name()+":"+window.retention.description()+":context="+window.contextName+":"+strings.Join(fields, ",")+")")
+		indexes := make([]string, 0, len(window.uniqueIndexes))
+		for _, index := range window.uniqueIndexes {
+			indexes = append(indexes, fmt.Sprintf("%s:%s:%t", index.Name, strings.Join(index.Columns, ","), index.Unique))
+		}
+		canonicalParts = append(canonicalParts, "named-window("+window.name+":"+window.schema.Name()+":"+window.retention.description()+":context="+window.contextName+":"+strings.Join(fields, ",")+":indexes="+strings.Join(indexes, ",")+")")
 	}
 	for _, context := range e.Contexts() {
 		canonicalParts = append(canonicalParts, "context("+context.name+":"+context.description()+")")
@@ -2428,6 +2432,13 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 				return err
 			}
 		}
+		for _, row := range query.onDemand.rows {
+			for _, expression := range row.values {
+				if err := visit(expression); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	if err := visitSelectionsExpressions(query.selections, visit); err != nil {
 		return err
@@ -3493,8 +3504,32 @@ func (e *Environment) validateOnDemand(query Query) error {
 	}
 	switch query.onDemand.action {
 	case onDemandInsert:
+		if len(query.onDemand.rows) > 0 {
+			if len(query.onDemand.assignments) != 0 {
+				return NewError(ErrorInvalidRule, "on-demand insert cannot combine positional rows with assignments")
+			}
+			const maxRows = 1000
+			if len(query.onDemand.rows) > maxRows {
+				return fmt.Errorf("on-demand insert number of rows exceeds the maximum of %d rows as the query provides %d rows", maxRows, len(query.onDemand.rows))
+			}
+			for rowIndex, row := range query.onDemand.rows {
+				if len(row.values) != len(targetSchema.fields) {
+					return fmt.Errorf("failed to validate multi-row insert at row %d of %d: number of supplied values %d does not match target column count %d", rowIndex+1, len(query.onDemand.rows), len(row.values), len(targetSchema.fields))
+				}
+				for columnIndex, expression := range row.values {
+					if expression == nil {
+						return fmt.Errorf("failed to validate multi-row insert at row %d of %d: value %d is nil", rowIndex+1, len(query.onDemand.rows), columnIndex+1)
+					}
+					assignment := SetColumn(targetSchema.fields[columnIndex].Name, expression)
+					if err := validateTriggerAssignment(e, query.input, targetSchema, assignment, ""); err != nil {
+						return fmt.Errorf("failed to validate multi-row insert at row %d of %d, column %q: %w", rowIndex+1, len(query.onDemand.rows), assignment.Column, err)
+					}
+				}
+			}
+			break
+		}
 		if len(query.onDemand.assignments) == 0 {
-			return NewError(ErrorInvalidRule, "on-demand insert requires at least one assignment")
+			return NewError(ErrorInvalidRule, "on-demand insert requires at least one assignment or positional row")
 		}
 		for index, assignment := range query.onDemand.assignments {
 			if assignment.Wildcard {

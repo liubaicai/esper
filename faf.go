@@ -23,6 +23,14 @@ type onDemandDefinition struct {
 	action      onDemandAction
 	predicate   Expr
 	assignments []TableAssignment
+	rows        []onDemandInsertRow
+}
+
+// onDemandInsertRow is the positional values form of an on-demand insert.
+// The fields are deliberately private: callers construct rows through
+// InsertValues so the target schema remains the source of column ordering.
+type onDemandInsertRow struct {
+	values []Expr
 }
 
 func (d *onDemandDefinition) description() string {
@@ -60,6 +68,21 @@ func (d *onDemandDefinition) description() string {
 			assignments = append(assignments, assignment.Column+index+"="+expression)
 		}
 		parts = append(parts, "set("+strings.Join(assignments, ",")+")")
+	}
+	if len(d.rows) > 0 {
+		rows := make([]string, 0, len(d.rows))
+		for _, row := range d.rows {
+			values := make([]string, 0, len(row.values))
+			for _, value := range row.values {
+				if value == nil {
+					values = append(values, "<nil>")
+				} else {
+					values = append(values, value.Description())
+				}
+			}
+			rows = append(rows, "["+strings.Join(values, ",")+"]")
+		}
+		parts = append(parts, "values("+strings.Join(rows, ",")+")")
 	}
 	return "on-demand(" + strings.Join(parts, ",") + ")"
 }
@@ -355,7 +378,7 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 	}
 	now := e.clock.Now()
 	e.refreshVariablesLocked()
-	variables := bindParameterValues(cloneValues(e.variables), parameters)
+	variables := variablesWithEngineLockState(bindParameterValues(cloneValues(e.variables), parameters), e, true)
 	e.pendingStatementDispatches = nil
 	e.pendingNamedWindowDispatches = nil
 	e.pendingRoutedEvents = nil
@@ -375,6 +398,8 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 	var err error
 	if plan.query.contextName != "" {
 		mutation, err = e.executeContextFireAndForgetMutationLocked(ctx, plan, selector, now, variables)
+	} else if plan.query.onDemand.action == onDemandInsert && len(plan.query.onDemand.rows) > 0 {
+		mutation, err = e.executeFireAndForgetMultirowInsertLocked(ctx, plan, now, variables)
 	} else {
 		definition := &triggerDefinition{
 			input:  source,
@@ -453,6 +478,115 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 		}
 	}
 	return QueryResult{Batch: batch}, nil
+}
+
+// executeFireAndForgetMultirowInsertLocked evaluates and commits a
+// positional multi-row insert while the caller holds e.mu. No consumer is
+// processed until every row has been validated and inserted, so one failed
+// row cannot expose a partial Named Window delta or a partially populated
+// Table.
+func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, plan Plan, now time.Time, variables map[string]Value) (tableMutationResult, error) {
+	if e == nil || e.env == nil || plan.query.onDemand == nil || plan.query.input == nil {
+		return tableMutationResult{}, NewError(ErrorDependency, "multi-row insert has no engine, target or definition")
+	}
+	target := plan.query.input
+	if target.kind != streamNamedWindow && target.kind != streamTable {
+		return tableMutationResult{}, NewError(ErrorInvalidRule, "multi-row insert target must be a root named window or table")
+	}
+	schema, err := e.env.sourceSchema(target)
+	if err != nil {
+		return tableMutationResult{}, err
+	}
+	rows := plan.query.onDemand.rows
+	if len(rows) == 0 {
+		return tableMutationResult{}, NewError(ErrorInvalidRule, "multi-row insert requires at least one row")
+	}
+	if len(rows) > 1000 {
+		return tableMutationResult{}, NewError(ErrorInvalidRule, fmt.Sprintf("on-demand insert number of rows exceeds the maximum of 1000 rows as the query provides %d rows", len(rows)))
+	}
+
+	// Evaluate every row before touching target state. This also gives
+	// subqueries one engine-backed, lock-aware evaluation context.
+	evaluated := make([]map[string]any, 0, len(rows))
+	underlyings := make([]any, 0, len(rows))
+	evaluation := EvalContext{Engine: e, Now: now, Variables: variables}
+	for rowIndex, row := range rows {
+		if err := contextErr(ctx); err != nil {
+			return tableMutationResult{}, err
+		}
+		if len(row.values) != len(schema.fields) {
+			return tableMutationResult{}, fmt.Errorf("failed to validate multi-row insert at row %d of %d: number of supplied values %d does not match target column count %d", rowIndex+1, len(rows), len(row.values), len(schema.fields))
+		}
+		assignments := make([]TableAssignment, 0, len(row.values))
+		for columnIndex, expression := range row.values {
+			if expression == nil {
+				return tableMutationResult{}, fmt.Errorf("failed to validate multi-row insert at row %d of %d: value %d is nil", rowIndex+1, len(rows), columnIndex+1)
+			}
+			assignments = append(assignments, SetColumn(schema.fields[columnIndex].Name, expression))
+		}
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, assignments, evaluation, now)
+		if assignmentErr != nil {
+			return tableMutationResult{}, fmt.Errorf("failed to evaluate multi-row insert row %d of %d: %w", rowIndex+1, len(rows), assignmentErr)
+		}
+		evaluated = append(evaluated, values)
+		if target.kind == streamNamedWindow {
+			underlying, mergeErr := mergeSchemaUnderlying(schema, nil, values)
+			if mergeErr != nil {
+				return tableMutationResult{}, fmt.Errorf("failed to materialize multi-row insert row %d of %d: %w", rowIndex+1, len(rows), mergeErr)
+			}
+			if _, eventErr := newEvent(schema, underlying, now); eventErr != nil {
+				return tableMutationResult{}, fmt.Errorf("failed to materialize multi-row insert row %d of %d: %w", rowIndex+1, len(rows), eventErr)
+			}
+			underlyings = append(underlyings, underlying)
+		}
+	}
+
+	if target.kind == streamTable {
+		table := e.tables[target.sourceName]
+		if table == nil {
+			return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", target.sourceName))
+		}
+		snapshot := table.snapshotMutationState()
+		mutation := tableMutationResult{}
+		for rowIndex, values := range evaluated {
+			if err := contextErr(ctx); err != nil {
+				table.restoreMutationState(snapshot)
+				return tableMutationResult{}, err
+			}
+			row, insertErr := table.Insert(ctx, values)
+			if insertErr != nil {
+				table.restoreMutationState(snapshot)
+				return tableMutationResult{}, fmt.Errorf("multi-row insert row %d of %d failed: %w", rowIndex+1, len(rows), insertErr)
+			}
+			mutation.newRows = append(mutation.newRows, row)
+		}
+		return mutation, nil
+	}
+
+	window := e.namedWindows[target.sourceName]
+	if window == nil {
+		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", target.sourceName))
+	}
+	snapshot := window.snapshotMutationState()
+	delta := NamedWindowDelta{Time: now}
+	for rowIndex, underlying := range underlyings {
+		if err := contextErr(ctx); err != nil {
+			window.restoreMutationState(snapshot)
+			return tableMutationResult{}, err
+		}
+		rowDelta, insertErr := window.insertWithVariables(now, underlying, variables)
+		if insertErr != nil {
+			window.restoreMutationState(snapshot)
+			return tableMutationResult{}, fmt.Errorf("multi-row insert row %d of %d failed: %w", rowIndex+1, len(rows), insertErr)
+		}
+		delta.New = append(delta.New, rowDelta.New...)
+		delta.Old = append(delta.Old, rowDelta.Old...)
+	}
+	if err := e.queueNamedWindowDeltaLocked(ctx, now, window, delta, variables, nil); err != nil {
+		window.restoreMutationState(snapshot)
+		return tableMutationResult{}, err
+	}
+	return tableMutationResult{newEvents: append([]Event(nil), delta.New...)}, nil
 }
 
 type contextMutationPartition struct {

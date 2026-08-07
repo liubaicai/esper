@@ -1676,7 +1676,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 	schema := target.Definition().schema
 	switch definition.action {
 	case triggerInsertTable:
-		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, definition.assignments, EvalContext{Event: event, Now: now, Variables: variables}, now)
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, definition.assignments, EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}, now)
 		if assignmentErr != nil {
 			return tableMutationResult{}, assignmentErr
 		}
@@ -1710,7 +1710,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 			if definition.where == nil && !hasMatchedClause {
 				return namedWindowMergeDecision{}, nil
 			}
-			evaluation := EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+			evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
 			if definition.where != nil {
 				matched, ok := boolValue(definition.where.eval(evaluation))
 				if !ok || !matched {
@@ -1739,7 +1739,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 			}
 			return namedWindowMergeDecision{matched: true}, nil
 		}, func() (any, bool, error) {
-			evaluation := EvalContext{Event: event, Now: now, Variables: variables}
+			evaluation := EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}
 			for _, clause := range definition.merge {
 				if clause.Matched {
 					continue
@@ -1792,7 +1792,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 			if predicate == nil {
 				return true
 			}
-			value := predicate.eval(EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables})
+			value := predicate.eval(EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables})
 			matched, ok := boolValue(value)
 			return ok && matched
 		})
@@ -1808,11 +1808,11 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 			return tableMutationResult{}, NewError(ErrorInvalidRule, "named-window update requires a predicate")
 		}
 		delta, err := target.updateWhere(ctx, func(candidate Event) bool {
-			value := definition.where.eval(EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables})
+			value := definition.where.eval(EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables})
 			matched, ok := boolValue(value)
 			return ok && matched
 		}, func(candidate Event) (any, error) {
-			evaluation := EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+			evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
 			values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, candidate.Underlying(), definition.assignments, evaluation, now)
 			if assignmentErr != nil {
 				return nil, assignmentErr
@@ -1835,7 +1835,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 	if engine == nil || definition == nil {
 		return tableMutationResult{}, NewError(ErrorDependency, "nil table trigger")
 	}
-	evaluation := EvalContext{Event: event, Now: now, Variables: variables}
+	evaluation := EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}
 	if definition.action == triggerSetVariables {
 		return tableMutationResult{}, executeVariableTriggerAction(ctx, engine, definition, evaluation, variables, runtime)
 	}

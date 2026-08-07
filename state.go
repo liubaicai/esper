@@ -248,6 +248,62 @@ type Table struct {
 	state *tableState
 }
 
+type tableMutationSnapshot struct {
+	rows    map[string]TableRow
+	order   []string
+	indexes map[string]map[string][]string
+	version uint64
+}
+
+func (t *Table) snapshotMutationState() tableMutationSnapshot {
+	if t == nil || t.state == nil {
+		return tableMutationSnapshot{}
+	}
+	state := t.state
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	snapshot := tableMutationSnapshot{
+		rows:    make(map[string]TableRow, len(state.rows)),
+		order:   append([]string(nil), state.order...),
+		indexes: make(map[string]map[string][]string, len(state.indexes)),
+		version: state.version,
+	}
+	for key, row := range state.rows {
+		snapshot.rows[key] = cloneTableRow(row)
+	}
+	for name, index := range state.indexes {
+		copied := make(map[string][]string, len(index))
+		for key, rowKeys := range index {
+			copied[key] = append([]string(nil), rowKeys...)
+		}
+		snapshot.indexes[name] = copied
+	}
+	return snapshot
+}
+
+func (t *Table) restoreMutationState(snapshot tableMutationSnapshot) {
+	if t == nil || t.state == nil {
+		return
+	}
+	state := t.state
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	state.rows = make(map[string]TableRow, len(snapshot.rows))
+	for key, row := range snapshot.rows {
+		state.rows[key] = cloneTableRow(row)
+	}
+	state.order = append([]string(nil), snapshot.order...)
+	state.indexes = make(map[string]map[string][]string, len(snapshot.indexes))
+	for name, index := range snapshot.indexes {
+		copied := make(map[string][]string, len(index))
+		for key, rowKeys := range index {
+			copied[key] = append([]string(nil), rowKeys...)
+		}
+		state.indexes[name] = copied
+	}
+	state.version = snapshot.version
+}
+
 func newTable(definition TableDefinition) *Table {
 	indexes := make(map[string]map[string][]string, len(definition.indexes))
 	for _, index := range definition.indexes {
@@ -658,10 +714,22 @@ func encodeKey(values []any) string {
 // retention policy. A named window has one immutable event schema and can have
 // multiple consumers.
 type NamedWindowDefinition struct {
-	name        string
-	schema      Schema
-	retention   WindowSpec
-	contextName string
+	name          string
+	schema        Schema
+	retention     WindowSpec
+	contextName   string
+	uniqueIndexes []NamedWindowIndexDefinition
+}
+
+// NamedWindowIndexDefinition describes an index declared directly on a
+// Named Window. Only strict unique indexes are currently exposed by the
+// fluent option; the definition is kept explicit so it remains distinct from
+// a Unique retention view, whose duplicate-key behavior is replacement rather
+// than a constraint violation.
+type NamedWindowIndexDefinition struct {
+	Name    string
+	Columns []string
+	Unique  bool
 }
 
 type NamedWindowOption func(*namedWindowConfig)
@@ -678,9 +746,23 @@ func NamedWindowContext(contextName string) NamedWindowOption {
 	return func(config *namedWindowConfig) { config.contextName = strings.TrimSpace(contextName) }
 }
 
+// NamedWindowUniqueIndex adds a strict unique index constraint to a Named
+// Window. Unlike NamedWindowRetention(Unique(...)), a duplicate key is an
+// error and does not replace the retained event.
+func NamedWindowUniqueIndex(name string, columns ...string) NamedWindowOption {
+	return func(config *namedWindowConfig) {
+		config.uniqueIndexes = append(config.uniqueIndexes, NamedWindowIndexDefinition{
+			Name:    strings.TrimSpace(name),
+			Columns: append([]string(nil), columns...),
+			Unique:  true,
+		})
+	}
+}
+
 type namedWindowConfig struct {
-	retention   WindowSpec
-	contextName string
+	retention     WindowSpec
+	contextName   string
+	uniqueIndexes []NamedWindowIndexDefinition
 }
 
 func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
@@ -702,13 +784,49 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 	if err := config.retention.validate(); err != nil {
 		return NamedWindowDefinition{}, err
 	}
-	return NamedWindowDefinition{name: name, schema: schema, retention: config.retention, contextName: config.contextName}, nil
+	seenIndexes := make(map[string]struct{}, len(config.uniqueIndexes))
+	indexes := make([]NamedWindowIndexDefinition, 0, len(config.uniqueIndexes))
+	for index, definition := range config.uniqueIndexes {
+		definition.Name = strings.TrimSpace(definition.Name)
+		if definition.Name == "" || len(definition.Columns) == 0 {
+			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window index %d requires a name and columns", index+1))
+		}
+		if _, exists := seenIndexes[definition.Name]; exists {
+			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window duplicates index %q", definition.Name))
+		}
+		seenIndexes[definition.Name] = struct{}{}
+		seenColumns := make(map[string]struct{}, len(definition.Columns))
+		for columnIndex, column := range definition.Columns {
+			column = strings.TrimSpace(column)
+			if column == "" {
+				return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window index %q column %d is blank", definition.Name, columnIndex+1))
+			}
+			if _, duplicate := seenColumns[column]; duplicate {
+				return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window index %q duplicates column %q", definition.Name, column))
+			}
+			if _, exists := schema.Field(column); !exists {
+				return NamedWindowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("named-window index %q references unknown column %q", definition.Name, column))
+			}
+			seenColumns[column] = struct{}{}
+			definition.Columns[columnIndex] = column
+		}
+		definition.Unique = true
+		indexes = append(indexes, definition)
+	}
+	return NamedWindowDefinition{name: name, schema: schema, retention: config.retention, contextName: config.contextName, uniqueIndexes: indexes}, nil
 }
 
 func (d NamedWindowDefinition) Name() string          { return d.name }
 func (d NamedWindowDefinition) Schema() Schema        { return d.schema }
 func (d NamedWindowDefinition) Retention() WindowSpec { return d.retention }
 func (d NamedWindowDefinition) Context() string       { return d.contextName }
+func (d NamedWindowDefinition) Indexes() []NamedWindowIndexDefinition {
+	result := append([]NamedWindowIndexDefinition(nil), d.uniqueIndexes...)
+	for index := range result {
+		result[index].Columns = append([]string(nil), result[index].Columns...)
+	}
+	return result
+}
 
 func (e *Environment) RegisterNamedWindow(name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
 	definition, err := NewNamedWindowDefinition(name, schema, options...)
@@ -794,6 +912,41 @@ func newNamedWindowRuntime(definition NamedWindowDefinition, contextKey string) 
 		state.keyed = make(map[string]storedEvent)
 	}
 	return state
+}
+
+func namedWindowIndexKey(event Event, columns []string) string {
+	values := make([]any, 0, len(columns))
+	for _, column := range columns {
+		values = append(values, event.Get(column).Any())
+	}
+	return encodeKey(values)
+}
+
+func namedWindowIndexKeyDisplay(event Event, columns []string) any {
+	if len(columns) == 1 {
+		return event.Get(columns[0]).Any()
+	}
+	values := make([]any, 0, len(columns))
+	for _, column := range columns {
+		values = append(values, event.Get(column).Any())
+	}
+	return values
+}
+
+func validateNamedWindowUniqueIndexesLocked(state *namedWindowRuntime, event Event) error {
+	if state == nil || len(state.def.uniqueIndexes) == 0 {
+		return nil
+	}
+	for _, definition := range state.def.uniqueIndexes {
+		key := namedWindowIndexKey(event, definition.Columns)
+		for _, existing := range state.entries {
+			if namedWindowIndexKey(existing.event, definition.Columns) != key {
+				continue
+			}
+			return NewError(ErrorState, fmt.Sprintf("Unique index violation, index '%s' is a unique index and key '%v' already exists", definition.Name, namedWindowIndexKeyDisplay(event, definition.Columns)))
+		}
+	}
+	return nil
 }
 
 func (state *namedWindowRuntime) contextPropertiesSnapshot() map[string]Value {
@@ -1188,6 +1341,54 @@ func snapshotNamedWindowState(state *namedWindowRuntime) []Event {
 	return result
 }
 
+type namedWindowMutationSnapshot struct {
+	entries           []storedEvent
+	keyed             map[string]storedEvent
+	keyOrder          []string
+	contextProperties map[string]Value
+}
+
+func (w *NamedWindow) snapshotMutationState() namedWindowMutationSnapshot {
+	if w == nil || w.state == nil {
+		return namedWindowMutationSnapshot{}
+	}
+	state := w.state
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	snapshot := namedWindowMutationSnapshot{
+		entries:           append([]storedEvent(nil), state.entries...),
+		keyOrder:          append([]string(nil), state.keyOrder...),
+		contextProperties: cloneValues(state.contextProperties),
+	}
+	if state.keyed != nil {
+		snapshot.keyed = make(map[string]storedEvent, len(state.keyed))
+		for key, entry := range state.keyed {
+			snapshot.keyed[key] = entry
+		}
+	}
+	return snapshot
+}
+
+func (w *NamedWindow) restoreMutationState(snapshot namedWindowMutationSnapshot) {
+	if w == nil || w.state == nil {
+		return
+	}
+	state := w.state
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	state.entries = append([]storedEvent(nil), snapshot.entries...)
+	if snapshot.keyed != nil {
+		state.keyed = make(map[string]storedEvent, len(snapshot.keyed))
+		for key, entry := range snapshot.keyed {
+			state.keyed[key] = entry
+		}
+	} else {
+		state.keyed = nil
+	}
+	state.keyOrder = append([]string(nil), snapshot.keyOrder...)
+	state.contextProperties = cloneValues(snapshot.contextProperties)
+}
+
 func (w *NamedWindow) DeleteWhere(ctx context.Context, predicate func(Event) bool) (NamedWindowDelta, error) {
 	delta, err := w.deleteWhere(ctx, predicate)
 	if err != nil {
@@ -1568,6 +1769,9 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
+	if err := validateNamedWindowUniqueIndexesLocked(state, event); err != nil {
+		return NamedWindowDelta{}, err
+	}
 	entry := storedEvent{event: event, receivedAt: now}
 	delta := NamedWindowDelta{New: []Event{event}, Time: now}
 	switch retention := state.def.retention.(type) {
