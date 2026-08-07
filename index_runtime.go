@@ -100,6 +100,137 @@ func indexRangeEntryMatches(values []Value, query indexRangeSpec) bool {
 	return true
 }
 
+// compareIndexRangeCursorEntry compares one ordered index member with the
+// prefix and optional range boundary of a cursor. A nil boundary means the
+// comparison stops after the equality prefix, which is useful for finding the
+// first/last member of a prefix group. Incomparable or missing values force
+// the caller to use the established full ordered scan.
+func compareIndexRangeCursorEntry(values []Value, query indexRangeSpec, boundary *indexRangeBound) (int, bool) {
+	if query.rangePosition < 0 || query.rangePosition >= len(values) || len(query.prefix) > query.rangePosition {
+		return 0, false
+	}
+	for position, expected := range query.prefix {
+		comparison, comparable := compareValues(values[position], Present(expected))
+		if !comparable {
+			return 0, false
+		}
+		if comparison != 0 {
+			return comparison, true
+		}
+	}
+	if boundary == nil {
+		return 0, true
+	}
+	current := values[query.rangePosition]
+	if !current.IsPresent() {
+		return 0, false
+	}
+	return compareValues(current, Present(boundary.value))
+}
+
+// indexRangeCursorBounds locates the half-open ordered-entry interval that
+// can contain a range query. It intentionally uses only the equality prefix
+// and range column; trailing index columns remain unconstrained. Returning
+// usable=false preserves correctness for legacy indexes containing values
+// that cannot participate in a total ordering.
+func indexRangeCursorBounds(entryCount int, valueAt func(int) []Value, query indexRangeSpec) (start, end int, usable bool) {
+	if entryCount == 0 || query.empty {
+		return 0, 0, true
+	}
+	start = 0
+	end = entryCount
+	if query.lower != nil {
+		left, right := 0, entryCount
+		for left < right {
+			middle := left + (right-left)/2
+			comparison, comparable := compareIndexRangeCursorEntry(valueAt(middle), query, query.lower)
+			if !comparable {
+				return 0, 0, false
+			}
+			if comparison < 0 || (comparison == 0 && !query.lower.inclusive) {
+				left = middle + 1
+			} else {
+				right = middle
+			}
+		}
+		start = left
+	} else {
+		left, right := 0, entryCount
+		for left < right {
+			middle := left + (right-left)/2
+			comparison, comparable := compareIndexRangeCursorEntry(valueAt(middle), query, nil)
+			if !comparable {
+				return 0, 0, false
+			}
+			if comparison < 0 {
+				left = middle + 1
+			} else {
+				right = middle
+			}
+		}
+		start = left
+	}
+
+	if query.upper != nil {
+		left, right := 0, entryCount
+		for left < right {
+			middle := left + (right-left)/2
+			comparison, comparable := compareIndexRangeCursorEntry(valueAt(middle), query, query.upper)
+			if !comparable {
+				return 0, 0, false
+			}
+			if comparison < 0 || (comparison == 0 && query.upper.inclusive) {
+				left = middle + 1
+			} else {
+				right = middle
+			}
+		}
+		end = left
+	} else {
+		left, right := 0, entryCount
+		for left < right {
+			middle := left + (right-left)/2
+			comparison, comparable := compareIndexRangeCursorEntry(valueAt(middle), query, nil)
+			if !comparable {
+				return 0, 0, false
+			}
+			if comparison <= 0 {
+				left = middle + 1
+			} else {
+				right = middle
+			}
+		}
+		end = left
+	}
+	if start > end {
+		return 0, 0, true
+	}
+	return start, end, true
+}
+
+// collectIndexRangeCursorPositions performs one binary-bounded scan per
+// query and unions matching ordered-entry positions. It returns usable=false
+// when a total ordering cannot be proven, allowing Table and Named Window to
+// retain their correctness-first full scan fallback.
+func collectIndexRangeCursorPositions(ctx context.Context, entryCount int, valueAt func(int) []Value, queries []indexRangeSpec) (map[int]struct{}, bool, error) {
+	wanted := make(map[int]struct{})
+	for _, query := range queries {
+		start, end, usable := indexRangeCursorBounds(entryCount, valueAt, query)
+		if !usable {
+			return nil, false, nil
+		}
+		for position := start; position < end; position++ {
+			if err := contextErr(ctx); err != nil {
+				return nil, true, err
+			}
+			if indexRangeEntryMatches(valueAt(position), query) {
+				wanted[position] = struct{}{}
+			}
+		}
+	}
+	return wanted, true, nil
+}
+
 func indexProbeExpressions(source *streamNode, onDemand Expr) []Expr {
 	if onDemand != nil {
 		return []Expr{onDemand}

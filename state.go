@@ -729,15 +729,30 @@ func (t *Table) lookupRangeMany(ctx context.Context, indexName string, queries [
 		return nil, NewError(ErrorUnknownName, fmt.Sprintf("table index %q does not exist", indexName))
 	}
 	state.indexLookups.Add(1)
+	entries := state.indexEntries[indexName]
+	positions, cursorUsable, err := collectIndexRangeCursorPositions(ctx, len(entries), func(index int) []Value {
+		return entries[index].values
+	}, queries)
+	if err != nil {
+		return nil, err
+	}
 	wanted := make(map[string]struct{})
-	for _, entry := range state.indexEntries[indexName] {
-		if err := contextErr(ctx); err != nil {
-			return nil, err
+	if cursorUsable {
+		for position := range positions {
+			if position >= 0 && position < len(entries) {
+				wanted[entries[position].rowKey] = struct{}{}
+			}
 		}
-		for _, query := range queries {
-			if indexRangeEntryMatches(entry.values, query) {
-				wanted[entry.rowKey] = struct{}{}
-				break
+	} else {
+		for _, entry := range entries {
+			if err := contextErr(ctx); err != nil {
+				return nil, err
+			}
+			for _, query := range queries {
+				if indexRangeEntryMatches(entry.values, query) {
+					wanted[entry.rowKey] = struct{}{}
+					break
+				}
 			}
 		}
 	}
@@ -1857,15 +1872,30 @@ func lookupNamedWindowRangeStateMany(state *namedWindowRuntime, indexName string
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	state.indexLookups.Add(1)
+	entries := state.indexEntries[indexName]
+	positions, cursorUsable, err := collectIndexRangeCursorPositions(ctx, len(entries), func(index int) []Value {
+		return entries[index].values
+	}, queries)
+	if err != nil {
+		return nil, err
+	}
 	wanted := make(map[int]struct{})
-	for _, entry := range state.indexEntries[indexName] {
-		if err := contextErr(ctx); err != nil {
-			return nil, err
+	if cursorUsable {
+		for position := range positions {
+			if position >= 0 && position < len(entries) {
+				wanted[entries[position].position] = struct{}{}
+			}
 		}
-		for _, query := range queries {
-			if indexRangeEntryMatches(entry.values, query) {
-				wanted[entry.position] = struct{}{}
-				break
+	} else {
+		for _, entry := range entries {
+			if err := contextErr(ctx); err != nil {
+				return nil, err
+			}
+			for _, query := range queries {
+				if indexRangeEntryMatches(entry.values, query) {
+					wanted[entry.position] = struct{}{}
+					break
+				}
 			}
 		}
 	}
