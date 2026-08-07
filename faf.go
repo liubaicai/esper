@@ -1940,6 +1940,44 @@ func (e *Engine) snapshotFireAndForgetSourceLocked(ctx context.Context, source *
 	return e.snapshotFireAndForgetSourceInternal(ctx, source, now, variables, true)
 }
 
+// contextRootTableRowsForScope keeps compatibility with callers that
+// populated a context-used Table through the public root Table API before a
+// context statement was deployed. Such rows do not have a scoped state, so
+// their first context projection is resolved through the persistent
+// ownership map. Rows written by live context statements are already in the
+// requested scoped state and never pass through this fallback.
+func (e *Engine) contextRootTableRowsForScope(ctx context.Context, source *streamNode, table *Table, rows []TableRow, contextName, partitionKey string, now time.Time, variables map[string]Value, engineLocked bool) ([]TableRow, error) {
+	if e == nil || source == nil || table == nil || contextName == "" || partitionKey == "" {
+		return nil, nil
+	}
+	if !engineLocked {
+		e.mu.Lock()
+		defer e.mu.Unlock()
+	}
+	definition, ok := e.env.Context(contextName)
+	if !ok {
+		return nil, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", contextName))
+	}
+	selected := make([]TableRow, 0, len(rows))
+	for _, row := range rows {
+		if err := contextErr(ctx); err != nil {
+			return nil, err
+		}
+		representative, eventErr := tableRowEvent(table, source.sourceName, row, now)
+		if eventErr != nil {
+			return nil, eventErr
+		}
+		ownership, active, ownershipErr := e.resolveTableContextRowOwnershipLocked(definition, catalogKey(source.moduleName, source.sourceName), row, representative, now, variables)
+		if ownershipErr != nil {
+			return nil, ownershipErr
+		}
+		if active && ownership.partitionKey == partitionKey {
+			selected = append(selected, row)
+		}
+	}
+	return selected, nil
+}
+
 func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source *streamNode, now time.Time, variables map[string]Value, engineLocked bool) ([]Event, error) {
 	if source == nil {
 		return nil, NewError(ErrorDependency, "fire-and-forget source is nil")
@@ -1979,7 +2017,25 @@ func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source
 		if !ok {
 			return nil, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", source.sourceName))
 		}
-		rows, err := table.Snapshot(ctx)
+		var rows []TableRow
+		var err error
+		if contextName, partitionKey, scoped := contextTableScopeValues(variables); scoped && table.hasScopedState() {
+			rows, err = table.snapshotInScope(ctx, tableContextScope(contextName, partitionKey))
+			if err == nil {
+				rootRows, rootErr := table.snapshotInScope(ctx, "")
+				if rootErr != nil {
+					return nil, rootErr
+				}
+				legacyRows, legacyErr := e.contextRootTableRowsForScope(ctx, source, table, rootRows, contextName, partitionKey, now, variables, engineLocked)
+				if legacyErr != nil {
+					return nil, legacyErr
+				}
+				rows = append(rows, legacyRows...)
+				sort.SliceStable(rows, func(left, right int) bool { return rows[left].identity < rows[right].identity })
+			}
+		} else {
+			rows, err = table.Snapshot(ctx)
+		}
 		if err != nil {
 			return nil, err
 		}

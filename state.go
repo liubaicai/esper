@@ -275,6 +275,11 @@ type TableRow struct {
 	values   map[string]Value
 	version  uint64
 	identity uint64
+	// scope is empty for the ordinary/root table state. Context-bound
+	// runtime views keep their logical context scope here so the Engine can
+	// route a legacy root row and a partition-local row through the correct
+	// mutation path without exposing storage details in the public row API.
+	scope string
 }
 
 func (r TableRow) Get(name string) Value {
@@ -301,6 +306,8 @@ func (r TableRow) Version() uint64 { return r.version }
 type tableState struct {
 	mu           sync.RWMutex
 	def          TableDefinition
+	scope        string
+	identity     *tableIdentitySource
 	rows         map[string]TableRow
 	order        []string
 	indexes      map[string]map[string][]string
@@ -308,6 +315,39 @@ type tableState struct {
 	version      uint64
 	nextIdentity uint64
 	indexLookups atomic.Uint64
+}
+
+type tableIdentitySource struct {
+	mu   sync.Mutex
+	next uint64
+}
+
+func (source *tableIdentitySource) allocate() uint64 {
+	if source == nil {
+		return 0
+	}
+	source.mu.Lock()
+	defer source.mu.Unlock()
+	source.next++
+	return source.next
+}
+
+func (source *tableIdentitySource) value() uint64 {
+	if source == nil {
+		return 0
+	}
+	source.mu.Lock()
+	defer source.mu.Unlock()
+	return source.next
+}
+
+func (source *tableIdentitySource) restore(next uint64) {
+	if source == nil {
+		return
+	}
+	source.mu.Lock()
+	source.next = next
+	source.mu.Unlock()
 }
 
 // tableIndexEntry is the ordered representation of one B-tree index member.
@@ -321,10 +361,24 @@ type tableIndexEntry struct {
 // Table is a concurrency-safe in-memory table owned by an Engine. Reads use
 // a consistent snapshot and writes update all configured indexes atomically.
 type Table struct {
-	state *tableState
+	state       *tableState
+	identity    *tableIdentitySource
+	scopesMu    sync.RWMutex
+	scopedState map[string]*tableState
 }
 
 type tableMutationSnapshot struct {
+	rows          map[string]TableRow
+	order         []string
+	indexes       map[string]map[string][]string
+	indexEntries  map[string][]tableIndexEntry
+	version       uint64
+	nextIdentity  uint64
+	scopes        map[string]tableStateMutationSnapshot
+	allocatorNext uint64
+}
+
+type tableStateMutationSnapshot struct {
 	rows         map[string]TableRow
 	order        []string
 	indexes      map[string]map[string][]string
@@ -333,14 +387,13 @@ type tableMutationSnapshot struct {
 	nextIdentity uint64
 }
 
-func (t *Table) snapshotMutationState() tableMutationSnapshot {
-	if t == nil || t.state == nil {
-		return tableMutationSnapshot{}
+func snapshotTableState(state *tableState) tableStateMutationSnapshot {
+	if state == nil {
+		return tableStateMutationSnapshot{}
 	}
-	state := t.state
 	state.mu.RLock()
 	defer state.mu.RUnlock()
-	snapshot := tableMutationSnapshot{
+	snapshot := tableStateMutationSnapshot{
 		rows:         make(map[string]TableRow, len(state.rows)),
 		order:        append([]string(nil), state.order...),
 		indexes:      make(map[string]map[string][]string, len(state.indexes)),
@@ -368,11 +421,10 @@ func (t *Table) snapshotMutationState() tableMutationSnapshot {
 	return snapshot
 }
 
-func (t *Table) restoreMutationState(snapshot tableMutationSnapshot) {
-	if t == nil || t.state == nil {
+func restoreTableState(state *tableState, snapshot tableStateMutationSnapshot) {
+	if state == nil {
 		return
 	}
-	state := t.state
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	state.rows = make(map[string]TableRow, len(snapshot.rows))
@@ -400,14 +452,78 @@ func (t *Table) restoreMutationState(snapshot tableMutationSnapshot) {
 	state.nextIdentity = snapshot.nextIdentity
 }
 
-func newTable(definition TableDefinition) *Table {
+func (t *Table) snapshotMutationState() tableMutationSnapshot {
+	if t == nil || t.state == nil {
+		return tableMutationSnapshot{}
+	}
+	snapshot := tableMutationSnapshot{
+		allocatorNext: t.identity.value(),
+	}
+	root := snapshotTableState(t.state)
+	snapshot.rows = root.rows
+	snapshot.order = root.order
+	snapshot.indexes = root.indexes
+	snapshot.indexEntries = root.indexEntries
+	snapshot.version = root.version
+	snapshot.nextIdentity = root.nextIdentity
+	t.scopesMu.RLock()
+	states := make(map[string]*tableState, len(t.scopedState))
+	for scope, state := range t.scopedState {
+		states[scope] = state
+	}
+	t.scopesMu.RUnlock()
+	if len(states) > 0 {
+		snapshot.scopes = make(map[string]tableStateMutationSnapshot, len(states))
+		for scope, state := range states {
+			snapshot.scopes[scope] = snapshotTableState(state)
+		}
+	}
+	return snapshot
+}
+
+func (t *Table) restoreMutationState(snapshot tableMutationSnapshot) {
+	if t == nil || t.state == nil {
+		return
+	}
+	root := tableStateMutationSnapshot{
+		rows: snapshot.rows, order: snapshot.order, indexes: snapshot.indexes,
+		indexEntries: snapshot.indexEntries, version: snapshot.version, nextIdentity: snapshot.nextIdentity,
+	}
+	restoreTableState(t.state, root)
+	t.scopesMu.Lock()
+	current := t.scopedState
+	if current == nil {
+		current = make(map[string]*tableState)
+	}
+	restored := make(map[string]*tableState, len(snapshot.scopes))
+	for scope := range snapshot.scopes {
+		state := current[scope]
+		if state == nil {
+			state = newTableState(t.state.def, scope, t.identity)
+		}
+		restored[scope] = state
+	}
+	t.scopedState = restored
+	t.scopesMu.Unlock()
+	for scope, state := range restored {
+		restoreTableState(state, snapshot.scopes[scope])
+	}
+	t.identity.restore(snapshot.allocatorNext)
+}
+
+func newTableState(definition TableDefinition, scope string, identity *tableIdentitySource) *tableState {
 	indexes := make(map[string]map[string][]string, len(definition.indexes))
 	indexEntries := make(map[string][]tableIndexEntry, len(definition.indexes))
 	for _, index := range definition.indexes {
 		indexes[index.Name] = make(map[string][]string)
 		indexEntries[index.Name] = nil
 	}
-	return &Table{state: &tableState{def: definition, rows: make(map[string]TableRow), indexes: indexes, indexEntries: indexEntries}}
+	return &tableState{def: definition, scope: scope, identity: identity, rows: make(map[string]TableRow), indexes: indexes, indexEntries: indexEntries}
+}
+
+func newTable(definition TableDefinition) *Table {
+	identity := &tableIdentitySource{}
+	return &Table{state: newTableState(definition, "", identity), identity: identity, scopedState: make(map[string]*tableState)}
 }
 
 func (t *Table) Definition() TableDefinition {
@@ -417,17 +533,135 @@ func (t *Table) Definition() TableDefinition {
 	return t.state.def
 }
 
-func (t *Table) Upsert(ctx context.Context, values map[string]any) (TableRow, error) {
+// tableContextScope is the internal storage key for a logical context
+// partition. It is deliberately not part of TableRow values or the public
+// Table API: callers still use ordinary typed rows while the runtime selects
+// the appropriate state view from the statement context.
+func tableContextScope(contextName, partitionKey string) string {
+	if contextName == "" || partitionKey == "" {
+		return ""
+	}
+	return contextName + "\x00" + partitionKey
+}
+
+func contextTableScopeFromVariables(variables map[string]Value) string {
+	contextName, partitionKey, ok := contextTableScopeValues(variables)
+	if !ok {
+		return ""
+	}
+	return tableContextScope(contextName, partitionKey)
+}
+
+func contextTableScopeValues(variables map[string]Value) (string, string, bool) {
+	if len(variables) == 0 {
+		return "", "", false
+	}
+	nameValue, nameOK := variables[subqueryContextNameVariable]
+	keyValue, keyOK := variables[subqueryContextPartitionVariable]
+	if !nameOK || !keyOK || !nameValue.IsPresent() || !keyValue.IsPresent() {
+		return "", "", false
+	}
+	contextName, nameOK := nameValue.Any().(string)
+	partitionKey, keyOK := keyValue.Any().(string)
+	if !nameOK || !keyOK {
+		return "", "", false
+	}
+	return contextName, partitionKey, contextName != "" && partitionKey != ""
+}
+
+func (t *Table) stateForScope(scope string, create bool) (*tableState, error) {
+	if t == nil || t.state == nil {
+		return nil, NewError(ErrorState, "nil table")
+	}
+	if scope == "" {
+		return t.state, nil
+	}
+	t.scopesMu.RLock()
+	state := t.scopedState[scope]
+	t.scopesMu.RUnlock()
+	if state != nil || !create {
+		if state == nil {
+			return nil, nil
+		}
+		return state, nil
+	}
+	t.scopesMu.Lock()
+	defer t.scopesMu.Unlock()
+	if state = t.scopedState[scope]; state == nil {
+		state = newTableState(t.state.def, scope, t.identity)
+		t.scopedState[scope] = state
+	}
+	return state, nil
+}
+
+func (t *Table) statesSnapshot() []*tableState {
+	if t == nil || t.state == nil {
+		return nil
+	}
+	states := []*tableState{t.state}
+	t.scopesMu.RLock()
+	keys := make([]string, 0, len(t.scopedState))
+	for key := range t.scopedState {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		states = append(states, t.scopedState[key])
+	}
+	t.scopesMu.RUnlock()
+	return states
+}
+
+func (t *Table) hasScopedState() bool {
+	if t == nil {
+		return false
+	}
+	t.scopesMu.RLock()
+	defer t.scopesMu.RUnlock()
+	return len(t.scopedState) > 0
+}
+
+// releaseContextPartition drops the physical state for one logical context
+// partition. The state object is not reused: a later partition with the same
+// key must receive a fresh table view, just as Esper creates a fresh
+// partition-local table instance after a lifecycle-managed Context partition
+// is destroyed.
+func (t *Table) releaseContextPartition(contextName, partitionKey string) {
+	if t == nil || contextName == "" || partitionKey == "" {
+		return
+	}
+	scope := tableContextScope(contextName, partitionKey)
+	if scope == "" {
+		return
+	}
+	t.scopesMu.Lock()
+	delete(t.scopedState, scope)
+	t.scopesMu.Unlock()
+}
+
+func (t *Table) upsertInScope(ctx context.Context, scope string, values map[string]any, insertOnly bool) (TableRow, error) {
 	if err := contextErr(ctx); err != nil {
 		return TableRow{}, err
 	}
-	if t == nil || t.state == nil {
-		return TableRow{}, NewError(ErrorState, "nil table")
+	state, err := t.stateForScope(scope, true)
+	if err != nil {
+		return TableRow{}, err
 	}
-	state := t.state
 	state.mu.Lock()
 	defer state.mu.Unlock()
-	return state.upsert(values, false)
+	return state.upsert(values, insertOnly, t.identity.allocate)
+}
+
+func (t *Table) insertInScope(ctx context.Context, scope string, values map[string]any) (TableRow, error) {
+	return t.upsertInScope(ctx, scope, values, true)
+}
+
+func (t *Table) upsertExistingInScope(ctx context.Context, scope string, values map[string]any) (TableRow, error) {
+	return t.upsertInScope(ctx, scope, values, false)
+}
+
+func (t *Table) Upsert(ctx context.Context, values map[string]any) (TableRow, error) {
+	return t.upsertExistingInScope(ctx, "", values)
 }
 
 // Replace atomically replaces the complete table snapshot. It is used by
@@ -435,33 +669,31 @@ func (t *Table) Upsert(ctx context.Context, values map[string]any) (TableRow, er
 // rows behind, and a failed conversion or cancelled context cannot partially
 // update the table.
 func (t *Table) Replace(ctx context.Context, rows []map[string]any) error {
+	return t.replaceInScope(ctx, "", rows)
+}
+
+func (t *Table) replaceInScope(ctx context.Context, scope string, rows []map[string]any) error {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
 	if t == nil || t.state == nil {
 		return NewError(ErrorState, "nil table")
 	}
-	state := t.state
+	state, err := t.stateForScope(scope, true)
+	if err != nil {
+		return err
+	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
 
-	replacement := &tableState{
-		def:          state.def,
-		rows:         make(map[string]TableRow, len(rows)),
-		indexes:      make(map[string]map[string][]string, len(state.def.indexes)),
-		indexEntries: make(map[string][]tableIndexEntry, len(state.def.indexes)),
-		version:      state.version,
-		nextIdentity: state.nextIdentity,
-	}
-	for _, definition := range state.def.indexes {
-		replacement.indexes[definition.Name] = make(map[string][]string)
-		replacement.indexEntries[definition.Name] = nil
-	}
+	replacement := newTableState(state.def, state.scope, t.identity)
+	replacement.version = state.version
+	replacement.nextIdentity = state.nextIdentity
 	for index, values := range rows {
 		if err := contextErr(ctx); err != nil {
 			return err
 		}
-		if _, err := replacement.upsert(values, false); err != nil {
+		if _, err := replacement.upsert(values, false, t.identity.allocate); err != nil {
 			return WrapError(ErrorState, fmt.Sprintf("table replacement row %d", index), err)
 		}
 	}
@@ -474,26 +706,24 @@ func (t *Table) Replace(ctx context.Context, rows []map[string]any) error {
 }
 
 func (t *Table) Insert(ctx context.Context, values map[string]any) (TableRow, error) {
-	if err := contextErr(ctx); err != nil {
-		return TableRow{}, err
-	}
-	if t == nil || t.state == nil {
-		return TableRow{}, NewError(ErrorState, "nil table")
-	}
-	state := t.state
-	state.mu.Lock()
-	defer state.mu.Unlock()
-	return state.upsert(values, true)
+	return t.insertInScope(ctx, "", values)
 }
 
 func (t *Table) Update(ctx context.Context, key []any, values map[string]any) (TableRow, error) {
+	return t.updateInScope(ctx, "", key, values)
+}
+
+func (t *Table) updateInScope(ctx context.Context, scope string, key []any, values map[string]any) (TableRow, error) {
 	if err := contextErr(ctx); err != nil {
 		return TableRow{}, err
 	}
-	if t == nil || t.state == nil {
-		return TableRow{}, NewError(ErrorState, "nil table")
+	state, err := t.stateForScope(scope, false)
+	if err != nil {
+		return TableRow{}, err
 	}
-	state := t.state
+	if state == nil {
+		return TableRow{}, NewError(ErrorUnknownName, "table row does not exist")
+	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	rowKey, err := state.keyFromValues(key)
@@ -520,7 +750,7 @@ func (t *Table) Update(ctx context.Context, key []any, values map[string]any) (T
 			return TableRow{}, NewError(ErrorState, "table row already exists")
 		}
 	}
-	updated := TableRow{values: converted, identity: existing.identity}
+	updated := TableRow{values: converted, identity: existing.identity, scope: state.scope}
 	if err := state.validateIndexesLockedIgnoring(newRowKey, updated, rowKey); err != nil {
 		return TableRow{}, err
 	}
@@ -546,13 +776,20 @@ func (t *Table) Update(ctx context.Context, key []any, values map[string]any) (T
 }
 
 func (t *Table) Delete(ctx context.Context, key ...any) (TableRow, bool, error) {
+	return t.deleteInScope(ctx, "", key...)
+}
+
+func (t *Table) deleteInScope(ctx context.Context, scope string, key ...any) (TableRow, bool, error) {
 	if err := contextErr(ctx); err != nil {
 		return TableRow{}, false, err
 	}
-	if t == nil || t.state == nil {
-		return TableRow{}, false, NewError(ErrorState, "nil table")
+	state, err := t.stateForScope(scope, false)
+	if err != nil {
+		return TableRow{}, false, err
 	}
-	state := t.state
+	if state == nil {
+		return TableRow{}, false, nil
+	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	rowKey, err := state.keyFromValues(key)
@@ -568,13 +805,20 @@ func (t *Table) Delete(ctx context.Context, key ...any) (TableRow, bool, error) 
 }
 
 func (t *Table) Get(ctx context.Context, key ...any) (TableRow, bool, error) {
+	return t.getInScope(ctx, "", key...)
+}
+
+func (t *Table) getInScope(ctx context.Context, scope string, key ...any) (TableRow, bool, error) {
 	if err := contextErr(ctx); err != nil {
 		return TableRow{}, false, err
 	}
-	if t == nil || t.state == nil {
-		return TableRow{}, false, NewError(ErrorState, "nil table")
+	state, err := t.stateForScope(scope, false)
+	if err != nil {
+		return TableRow{}, false, err
 	}
-	state := t.state
+	if state == nil {
+		return TableRow{}, false, nil
+	}
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	rowKey, err := state.keyFromValues(key)
@@ -592,7 +836,31 @@ func (t *Table) Snapshot(ctx context.Context) ([]TableRow, error) {
 	if t == nil || t.state == nil {
 		return nil, NewError(ErrorState, "nil table")
 	}
-	state := t.state
+	rows := make([]TableRow, 0)
+	for _, state := range t.statesSnapshot() {
+		state.mu.RLock()
+		for _, key := range state.order {
+			if row, ok := state.rows[key]; ok {
+				rows = append(rows, cloneTableRow(row))
+			}
+		}
+		state.mu.RUnlock()
+	}
+	sort.SliceStable(rows, func(left, right int) bool { return rows[left].identity < rows[right].identity })
+	return rows, nil
+}
+
+func (t *Table) snapshotInScope(ctx context.Context, scope string) ([]TableRow, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	state, err := t.stateForScope(scope, false)
+	if err != nil {
+		return nil, err
+	}
+	if state == nil {
+		return nil, nil
+	}
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	rows := make([]TableRow, 0, len(state.order))
@@ -611,7 +879,25 @@ func (t *Table) Clear(ctx context.Context) ([]TableRow, error) {
 	if t == nil || t.state == nil {
 		return nil, NewError(ErrorState, "nil table")
 	}
-	state := t.state
+	rows := make([]TableRow, 0)
+	for _, state := range t.statesSnapshot() {
+		cleared, err := clearTableState(ctx, state)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, cleared...)
+	}
+	sort.SliceStable(rows, func(left, right int) bool { return rows[left].identity < rows[right].identity })
+	return rows, nil
+}
+
+func clearTableState(ctx context.Context, state *tableState) ([]TableRow, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	if state == nil {
+		return nil, nil
+	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	rows := make([]TableRow, 0, len(state.order))
@@ -630,14 +916,35 @@ func (t *Table) Clear(ctx context.Context) ([]TableRow, error) {
 	return rows, nil
 }
 
-func (t *Table) Lookup(ctx context.Context, indexName string, key ...any) ([]TableRow, error) {
+func (t *Table) clearInScope(ctx context.Context, scope string) ([]TableRow, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
-	if t == nil || t.state == nil {
-		return nil, NewError(ErrorState, "nil table")
+	state, err := t.stateForScope(scope, false)
+	if err != nil {
+		return nil, err
 	}
-	state := t.state
+	if state == nil {
+		return nil, nil
+	}
+	return clearTableState(ctx, state)
+}
+
+func (t *Table) Lookup(ctx context.Context, indexName string, key ...any) ([]TableRow, error) {
+	return t.lookupInScope(ctx, "", indexName, key...)
+}
+
+func (t *Table) lookupInScope(ctx context.Context, scope, indexName string, key ...any) ([]TableRow, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	state, err := t.stateForScope(scope, false)
+	if err != nil {
+		return nil, err
+	}
+	if state == nil {
+		return nil, nil
+	}
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	index, ok := state.indexes[indexName]
@@ -660,13 +967,20 @@ func (t *Table) Lookup(ctx context.Context, indexName string, key ...any) ([]Tab
 // the order in which IN probe keys were supplied. It is internal so the
 // observable public Lookup API stays a single complete-key operation.
 func (t *Table) lookupMany(ctx context.Context, indexName string, keys [][]any) ([]TableRow, error) {
+	return t.lookupManyInScope(ctx, "", indexName, keys)
+}
+
+func (t *Table) lookupManyInScope(ctx context.Context, scope, indexName string, keys [][]any) ([]TableRow, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
-	if t == nil || t.state == nil {
-		return nil, NewError(ErrorState, "nil table")
+	state, err := t.stateForScope(scope, false)
+	if err != nil {
+		return nil, err
 	}
-	state := t.state
+	if state == nil {
+		return nil, nil
+	}
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	index, ok := state.indexes[indexName]
@@ -697,13 +1011,20 @@ func (t *Table) lookupMany(ctx context.Context, indexName string, keys [][]any) 
 // candidate execution still needs one consistent snapshot and insertion-order
 // result assembly when probing several keys.
 func (t *Table) lookupPrimaryMany(ctx context.Context, keys [][]any) ([]TableRow, error) {
+	return t.lookupPrimaryManyInScope(ctx, "", keys)
+}
+
+func (t *Table) lookupPrimaryManyInScope(ctx context.Context, scope string, keys [][]any) ([]TableRow, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
-	if t == nil || t.state == nil {
-		return nil, NewError(ErrorState, "nil table")
+	state, err := t.stateForScope(scope, false)
+	if err != nil {
+		return nil, err
 	}
-	state := t.state
+	if state == nil {
+		return nil, nil
+	}
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	state.indexLookups.Add(1)
@@ -737,18 +1058,29 @@ func (t *Table) lookupRange(ctx context.Context, indexName string, query indexRa
 	return t.lookupRangeMany(ctx, indexName, []indexRangeSpec{query})
 }
 
+func (t *Table) lookupRangeInScope(ctx context.Context, scope, indexName string, query indexRangeSpec) ([]TableRow, error) {
+	return t.lookupRangeManyInScope(ctx, scope, indexName, []indexRangeSpec{query})
+}
+
 // lookupRangeMany unions several complete range probes in one locked
 // insertion-order snapshot. FAF Join range candidates can be driven by more
 // than one loaded-side tuple; probing them as a batch avoids duplicate rows
 // and keeps result order independent of probe order.
 func (t *Table) lookupRangeMany(ctx context.Context, indexName string, queries []indexRangeSpec) ([]TableRow, error) {
+	return t.lookupRangeManyInScope(ctx, "", indexName, queries)
+}
+
+func (t *Table) lookupRangeManyInScope(ctx context.Context, scope, indexName string, queries []indexRangeSpec) ([]TableRow, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
-	if t == nil || t.state == nil {
-		return nil, NewError(ErrorState, "nil table")
+	state, err := t.stateForScope(scope, false)
+	if err != nil {
+		return nil, err
 	}
-	state := t.state
+	if state == nil {
+		return nil, nil
+	}
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	if _, ok := state.indexes[indexName]; !ok {
@@ -794,7 +1126,7 @@ func (t *Table) lookupRangeMany(ctx context.Context, indexName string, queries [
 	return rows, nil
 }
 
-func (s *tableState) upsert(values map[string]any, insertOnly bool) (TableRow, error) {
+func (s *tableState) upsert(values map[string]any, insertOnly bool, allocateIdentity func() uint64) (TableRow, error) {
 	converted, rowKey, err := s.convertValues(values)
 	if err != nil {
 		return TableRow{}, err
@@ -808,10 +1140,19 @@ func (s *tableState) upsert(values map[string]any, insertOnly bool) (TableRow, e
 	}
 	if old, exists := s.rows[rowKey]; exists {
 		row.identity = old.identity
+		row.scope = old.scope
 		s.removeIndexesLocked(rowKey, old)
 	} else {
-		s.nextIdentity++
-		row.identity = s.nextIdentity
+		if allocateIdentity != nil {
+			row.identity = allocateIdentity()
+		} else {
+			s.nextIdentity++
+			row.identity = s.nextIdentity
+		}
+		if row.identity > s.nextIdentity {
+			s.nextIdentity = row.identity
+		}
+		row.scope = s.scope
 		s.order = append(s.order, rowKey)
 	}
 	s.version++
@@ -983,7 +1324,7 @@ func tableIndexValues(row TableRow, columns []string) []Value {
 }
 
 func cloneTableRow(row TableRow) TableRow {
-	return TableRow{values: row.Values(), version: row.version, identity: row.identity}
+	return TableRow{values: row.Values(), version: row.version, identity: row.identity, scope: row.scope}
 }
 
 func coerceTableValue(value any, target reflect.Type) (Value, error) {

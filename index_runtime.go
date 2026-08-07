@@ -1680,6 +1680,16 @@ func (e *Engine) lookupIndexedFireAndForgetRangeSource(ctx context.Context, sour
 }
 
 func (e *Engine) snapshotFireAndForgetSourceWithIndex(ctx context.Context, source *streamNode, selection IndexSelection, expressions []Expr, now time.Time, variables map[string]Value) ([]Event, error) {
+	if base, baseErr := sourceNode(source); baseErr == nil && base != nil && base.kind == streamTable {
+		if table := e.tables[catalogKey(base.moduleName, base.sourceName)]; table != nil && table.hasScopedState() {
+			// A scoped Table has one independent primary/secondary index per
+			// context partition. The context planner may not yet have selected a
+			// partition (or may be evaluating a root/unscoped query), so preserve
+			// complete snapshot semantics until a scope-aware candidate path is
+			// available.
+			return e.snapshotFireAndForgetSource(ctx, source, now, variables)
+		}
+	}
 	if selection.Access == IndexAccessRange {
 		query, usable := e.indexProbeRangeSpec(source, selection, expressions, now, variables)
 		if !usable {

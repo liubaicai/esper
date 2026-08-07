@@ -556,6 +556,13 @@ func (e *Engine) snapshotFireAndForgetSubquerySourceWithIndex(
 		if table == nil {
 			return nil, true, NewError(ErrorUnknownName, "table "+base.sourceName+" is not registered")
 		}
+		// A context Table owns an independent index per partition. Until the
+		// subquery candidate path carries the selected scope into every index
+		// probe, use the complete snapshot path so both scoped rows and legacy
+		// root rows remain visible with the correct context filter.
+		if table.hasScopedState() {
+			return nil, false, nil
+		}
 		var rows []TableRow
 		if selection.IndexName == "<primary-key>" {
 			if selection.Access == IndexAccessRange {

@@ -234,6 +234,16 @@ type tableMutationResult struct {
 	newEvents []Event
 }
 
+func triggerTableScope(definition *triggerDefinition, runtime *statementRuntime, variables map[string]Value) string {
+	if runtime != nil && runtime.partitionContextName != "" && runtime.partitionKey != "" {
+		return tableContextScope(runtime.partitionContextName, runtime.partitionKey)
+	}
+	if definition != nil && definition.contextDefinition != nil && definition.contextPartitionKey != "" {
+		return tableContextScope(definition.contextDefinition.name, definition.contextPartitionKey)
+	}
+	return contextTableScopeFromVariables(variables)
+}
+
 type TriggerStream[T any] struct {
 	env  *Environment
 	node *streamNode
@@ -1366,8 +1376,15 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 	if table == nil {
 		return ResultBatch{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger table %q is not available", definition.table))
 	}
+	scope := contextTableScopeFromVariables(variables)
 	if definition.where != nil {
-		rows, err := table.Snapshot(ctx)
+		var rows []TableRow
+		var err error
+		if scope == "" {
+			rows, err = table.Snapshot(ctx)
+		} else {
+			rows, err = table.snapshotInScope(ctx, scope)
+		}
 		if err != nil {
 			return ResultBatch{}, err
 		}
@@ -1398,7 +1415,7 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 	if err != nil {
 		return ResultBatch{}, err
 	}
-	row, found, err := table.Get(ctx, keys...)
+	row, found, err := table.getInScope(ctx, scope, keys...)
 	if err != nil {
 		return ResultBatch{Time: now}, err
 	}
@@ -1592,7 +1609,7 @@ func queueMergeInsertEvent(engine *Engine, action TableMergeAction, evaluation E
 	return nil
 }
 
-func executeTableMergeNotMatchedActions(ctx context.Context, engine *Engine, table *Table, definition *triggerDefinition, event Event, evaluation EvalContext, actions []TableMergeAction, now time.Time) (tableMutationResult, bool, error) {
+func executeTableMergeNotMatchedActions(ctx context.Context, engine *Engine, table *Table, definition *triggerDefinition, event Event, evaluation EvalContext, actions []TableMergeAction, now time.Time, scope string) (tableMutationResult, bool, error) {
 	if engine == nil || table == nil || definition == nil {
 		return tableMutationResult{}, false, NewError(ErrorDependency, "nil table merge insert action")
 	}
@@ -1617,7 +1634,7 @@ func executeTableMergeNotMatchedActions(ctx context.Context, engine *Engine, tab
 		if assignmentErr != nil {
 			return tableMutationResult{}, false, assignmentErr
 		}
-		row, insertErr := table.Insert(ctx, values)
+		row, insertErr := table.insertInScope(ctx, scope, values)
 		if insertErr != nil {
 			return tableMutationResult{}, false, insertErr
 		}
@@ -1875,8 +1892,9 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 	if table == nil {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger table %q is not available", definition.table))
 	}
+	scope := triggerTableScope(definition, runtime, variables)
 	if definition.where != nil {
-		return executeTableWhereAction(ctx, engine, table, definition, event, now, variables)
+		return executeTableWhereAction(ctx, engine, table, definition, event, now, variables, runtime, scope)
 	}
 	mutation = tableMutationResult{}
 	switch definition.action {
@@ -1885,7 +1903,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if assignmentErr != nil {
 			return tableMutationResult{}, assignmentErr
 		}
-		row, err := table.Insert(ctx, values)
+		row, err := table.insertInScope(ctx, scope, values)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
@@ -1896,11 +1914,11 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if assignmentErr != nil {
 			return tableMutationResult{}, assignmentErr
 		}
-		old, found, err := tableRowForValues(ctx, table, values)
+		old, found, err := tableRowForValuesInScope(ctx, table, scope, values)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		row, err := table.Upsert(ctx, values)
+		row, err := table.upsertExistingInScope(ctx, scope, values)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
@@ -1914,7 +1932,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		old, found, err := table.Get(ctx, keys...)
+		old, found, err := table.getInScope(ctx, scope, keys...)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
@@ -1930,7 +1948,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if assignmentErr != nil {
 			return tableMutationResult{}, assignmentErr
 		}
-		row, err := table.Update(ctx, keys, values)
+		row, err := table.updateInScope(ctx, scope, keys, values)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
@@ -1942,7 +1960,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		row, found, err := table.Delete(ctx, keys...)
+		row, found, err := table.deleteInScope(ctx, scope, keys...)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
@@ -1951,7 +1969,13 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		}
 		return mutation, nil
 	case triggerDeleteAllTable:
-		rows, err := table.Clear(ctx)
+		var rows []TableRow
+		var err error
+		if scope == "" {
+			rows, err = table.Clear(ctx)
+		} else {
+			rows, err = table.clearInScope(ctx, scope)
+		}
 		if err != nil {
 			return tableMutationResult{}, err
 		}
@@ -1962,7 +1986,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		old, found, err := table.Get(ctx, keys...)
+		old, found, err := table.getInScope(ctx, scope, keys...)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
@@ -1981,7 +2005,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 				continue
 			}
 			if !found && clause.Actions != nil {
-				mutation, executed, actionErr := executeTableMergeNotMatchedActions(ctx, engine, table, definition, event, evaluation, tableMergeClauseActions(clause), now)
+				mutation, executed, actionErr := executeTableMergeNotMatchedActions(ctx, engine, table, definition, event, evaluation, tableMergeClauseActions(clause), now, scope)
 				if actionErr != nil {
 					return tableMutationResult{}, actionErr
 				}
@@ -1999,7 +2023,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 					continue
 				}
 				if deleted {
-					row, deletedRow, deleteErr := table.Delete(ctx, keys...)
+					row, deletedRow, deleteErr := table.deleteInScope(ctx, scope, keys...)
 					if deleteErr != nil {
 						return tableMutationResult{}, deleteErr
 					}
@@ -2011,7 +2035,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 				if !updated {
 					return mutation, nil
 				}
-				row, updateErr := table.Update(ctx, keys, valuesFromMergeUnderlying(table.Definition().schema, underlying))
+				row, updateErr := table.updateInScope(ctx, scope, keys, valuesFromMergeUnderlying(table.Definition().schema, underlying))
 				if updateErr != nil {
 					return tableMutationResult{}, updateErr
 				}
@@ -2024,7 +2048,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 				continue
 			}
 			if clause.Delete {
-				row, deleted, err := table.Delete(ctx, keys...)
+				row, deleted, err := table.deleteInScope(ctx, scope, keys...)
 				if err != nil {
 					return tableMutationResult{}, err
 				}
@@ -2039,14 +2063,14 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 				return tableMutationResult{}, assignmentErr
 			}
 			if found {
-				row, updateErr := table.Update(ctx, keys, values)
+				row, updateErr := table.updateInScope(ctx, scope, keys, values)
 				if updateErr != nil {
 					return tableMutationResult{}, updateErr
 				}
 				mutation.oldRows = append(mutation.oldRows, old)
 				mutation.newRows = append(mutation.newRows, row)
 			} else {
-				row, insertErr := table.Insert(ctx, values)
+				row, insertErr := table.insertInScope(ctx, scope, values)
 				if insertErr != nil {
 					return tableMutationResult{}, insertErr
 				}
@@ -2060,11 +2084,17 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 	}
 }
 
-func executeTableWhereAction(ctx context.Context, engine *Engine, table *Table, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value) (tableMutationResult, error) {
+func executeTableWhereAction(ctx context.Context, engine *Engine, table *Table, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, runtime *statementRuntime, scope string) (tableMutationResult, error) {
 	if engine == nil || table == nil || definition == nil || definition.where == nil {
 		return tableMutationResult{}, NewError(ErrorDependency, "nil table predicate trigger")
 	}
-	rows, err := table.Snapshot(ctx)
+	var rows []TableRow
+	var err error
+	if definition.contextDefinition == nil && scope != "" {
+		rows, err = table.snapshotInScope(ctx, scope)
+	} else {
+		rows, err = table.Snapshot(ctx)
+	}
 	if err != nil {
 		return tableMutationResult{}, err
 	}
@@ -2095,9 +2125,13 @@ func executeTableWhereAction(ctx context.Context, engine *Engine, table *Table, 
 			continue
 		}
 		keys := tableRowKeys(table.Definition(), row)
+		rowScope := row.scope
+		if rowScope == "" && definition.contextDefinition == nil {
+			rowScope = triggerTableScope(definition, runtime, variables)
+		}
 		switch definition.action {
 		case triggerDeleteTable:
-			deleted, found, deleteErr := table.Delete(ctx, keys...)
+			deleted, found, deleteErr := table.deleteInScope(ctx, rowScope, keys...)
 			if deleteErr != nil {
 				return tableMutationResult{}, deleteErr
 			}
@@ -2112,7 +2146,7 @@ func executeTableWhereAction(ctx context.Context, engine *Engine, table *Table, 
 			if assignmentErr != nil {
 				return tableMutationResult{}, assignmentErr
 			}
-			updated, updateErr := table.Update(ctx, keys, values)
+			updated, updateErr := table.updateInScope(ctx, rowScope, keys, values)
 			if updateErr != nil {
 				return tableMutationResult{}, updateErr
 			}
@@ -2134,6 +2168,10 @@ func tableRowKeys(definition TableDefinition, row TableRow) []any {
 }
 
 func tableRowForValues(ctx context.Context, table *Table, values map[string]any) (TableRow, bool, error) {
+	return tableRowForValuesInScope(ctx, table, "", values)
+}
+
+func tableRowForValuesInScope(ctx context.Context, table *Table, scope string, values map[string]any) (TableRow, bool, error) {
 	definition := table.Definition()
 	keys := make([]any, 0, len(definition.primaryKey))
 	for _, name := range definition.primaryKey {
@@ -2143,7 +2181,7 @@ func tableRowForValues(ctx context.Context, table *Table, values map[string]any)
 		}
 		keys = append(keys, value)
 	}
-	return table.Get(ctx, keys...)
+	return table.getInScope(ctx, scope, keys...)
 }
 
 func valuesFromMergeUnderlying(schema Schema, underlying any) map[string]any {

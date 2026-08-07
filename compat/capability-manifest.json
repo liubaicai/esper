@@ -1977,11 +1977,11 @@
       "javaRuntimeIds": ["java-runtime-f9d69a7108debefc522e"],
       "javaNames": ["ContextKeyedSegmentedTable"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmentedInfra.java"],
-      "goTests": ["TestContextTableLiveInsertOwnershipMatchesEsper"],
+      "goTests": ["TestContextTableLiveInsertOwnershipMatchesEsper", "TestContextTableLiveDuplicatePrimaryKeysRemainPartitionLocal", "TestContextTableAggregateIntoTableUsesPartitionLocalReplacement", "TestContextTableLifecycleReleasesPartitionState"],
       "tags": ["correctness", "context", "table", "trigger", "ownership", "selector"],
       "status": "mapped",
       "evidence": ["java-maven-regression", "java-runtime-inventory", "go-unit"],
-      "difference": "Go uses typed fluent InsertIntoTable, UpsertIntoTable and MergeInsertIntoTable actions and keeps the global physical Table behind an explicit table/context/row-identity ownership map; Java materializes partition-local table instances. The mapped slice covers first ownership, stable selector properties after a context-field update, Context FAF deletion through the original partition selector and live-delete cleanup; cross-context duplicate-primary-key isolation, aggregate-into-table and full transaction/trace parity remain open."
+      "difference": "Go uses typed fluent InsertIntoTable, UpsertIntoTable and MergeInsertIntoTable actions and keeps the Table behind explicit root/scoped states plus a table/context/row-identity ownership map; Java materializes partition-local table instances. The mapped slice covers first ownership, stable selector properties after a context-field update, duplicate primary keys isolated per partition, partition-local live/FAF reads and deletes, aggregate IntoTable scoped replacement, and temporal/initiated partition cleanup. Ordinary global Tables retain indexed Context FAF subquery behavior; Context-scoped Table subquery/index candidates still use a correctness-first partition snapshot fallback. Cross-statement transaction, full routed/listener trace, and complete scope-aware hash/B-tree candidate parity remain open."
     },
     {
       "id": "case.context-partitioning",

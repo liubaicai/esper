@@ -3482,9 +3482,6 @@ func (e *Environment) validateIntoTable(query Query) error {
 	if query.aggregate == nil {
 		return NewError(ErrorInvalidRule, "into-table requires an aggregate query")
 	}
-	if query.contextName != "" {
-		return NewError(ErrorInvalidRule, "into-table does not yet support context-partitioned aggregate state")
-	}
 	definition, ok := e.Table(query.tableTarget)
 	if !ok {
 		return NewError(ErrorUnknownName, fmt.Sprintf("into-table target %q is not registered", query.tableTarget))

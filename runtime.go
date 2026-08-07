@@ -525,6 +525,29 @@ func (e *Engine) releaseContextPartitionLocked(contextName, partitionKey string,
 			window.releaseContextPartition(contextName, partitionKey)
 		}
 	}
+	definition, definitionOK := e.env.Context(contextName)
+	lifecycleManaged := definitionOK && (definition.isTemporal() || definition.kind == ContextInitiatedTerminated)
+	if lifecycleManaged {
+		for _, table := range e.tables {
+			if table != nil {
+				table.releaseContextPartition(contextName, partitionKey)
+			}
+		}
+		for tableKey, byContext := range e.contextTableOwnership {
+			byRow := byContext[contextName]
+			for identity, ownership := range byRow {
+				if ownership.partitionKey == partitionKey {
+					delete(byRow, identity)
+				}
+			}
+			if len(byRow) == 0 {
+				delete(byContext, contextName)
+			}
+			if len(byContext) == 0 {
+				delete(e.contextTableOwnership, tableKey)
+			}
+		}
+	}
 	descriptor := e.contextPartitionDescriptors[contextName][partitionKey]
 	if len(runtime) > 0 && runtime[0] != nil {
 		descriptor = newContextPartitionDescriptor(contextName, partitionKey, runtime[0])
@@ -10101,7 +10124,11 @@ func (r *statementRuntime) persistAggregateTable(plan Plan, now time.Time) error
 		}
 		return encodeKey(leftValues) < encodeKey(rightValues)
 	})
-	if err := table.Replace(r.context(), rows); err != nil {
+	scope := ""
+	if r.partitionContextName != "" && r.partitionKey != "" {
+		scope = tableContextScope(r.partitionContextName, r.partitionKey)
+	}
+	if err := table.replaceInScope(r.context(), scope, rows); err != nil {
 		return WrapError(ErrorState, "into-table."+plan.query.tableTarget, err)
 	}
 	return nil

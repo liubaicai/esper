@@ -1,5 +1,7 @@
 # Esper Go
 
+本轮 Context Table 补充：相同 primary key 可在不同 Context partition 独立存在；live trigger、分区内 select/update/delete、Context FAF 与 aggregate `IntoTable` scoped replacement 均有对照测试，temporal/initiated partition 释放会回收 scoped Table state 与 ownership。普通全局 Table 的 Context FAF subquery 继续走 indexed candidate；Context-scoped Table 的 subquery/index candidate 暂时使用 partition snapshot fallback。跨 statement transaction、完整 routed/listener rollback 与 scope-aware Table subquery hash/B-tree candidate 仍待后续切片。
+
 Esper 9.0.0 的 Go 移植正在按 [实施规划](docs/esper-go-port-implementation-plan.md) 进行。规则使用可分析的 Go 链式 Builder 构造，核心路径不接受 EPL 字符串。
 
 本轮结果集切片补充了索引化 `First`/`Last`/`Nth`、`WindowEvents`/`EventValue`、`MinByEver`/`MaxByEver`、带过滤器的有状态 `Leaving`、常量/过滤速率与 `RateByTimestamp`/数量速率、多条件 `SortedEvents`、外层分组可嵌套的 `LocalGroupBy`、`SortedAccessBy` 导航访问、无参数 `Method`/属性链、命名及环境注册式 `PluginAggregate`、按组隔离的 `AggregatePluginFactory`（含 `Enter`/`Leave`/`Value`/`Clear`）、context-partitioned rollup/FAF 聚合、确定性 `CountMinSketchAdd`、`TableSink` 聚合落表、链式 `AggregateStream.IntoTable` 原子快照同步、live table snapshot join，以及聚合投影别名 `ResultField` 的 order-by/having 语义；对应 Java 来源和 runtime ID 已登记在 `compat/capability-manifest.json`。这些能力仍是 mapped/partial 切片，不能解读为 Esper 聚合全量对等。

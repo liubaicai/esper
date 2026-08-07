@@ -2,6 +2,8 @@
 
 ## 1. 文档信息
 
+当前切片（Draft 2.71，2026-08-08）继续补齐 Context Table 物理分区语义：相同 primary key 可在不同 Context partition 独立存在，live `InsertIntoTable`/`UpsertIntoTable`/merge、分区内 select/update/delete、Context FAF snapshot 与 aggregate `IntoTable` scoped replacement 均已覆盖；temporal/initiated partition 释放时回收 Table scoped state 与 row ownership。普通全局 Table 的 Context FAF subquery index 语义保持原有候选路径；Context-scoped Table 的 subquery/index candidate 仍以 partition snapshot fallback 保证正确性，后续补 scope-aware hash/B-tree candidate。完整跨 statement transaction、跨目标 routed side effect、listener/external resource rollback 和 transaction/concurrency trace 仍是后续项。
+
 | 项目 | 内容 |
 |---|---|
 | 文档状态 | Draft 2.70，补充 Context Table live insert ownership：`InsertIntoTable`、`UpsertIntoTable` 和 merge not-matched insert 成功后按稳定 row identity 记录首次 context partition/selector properties，live delete 回收归属，并以旧分区 selector 验证分区字段变更后的 FAF 定位；完整跨 statement transaction、跨目标 routed side effect、listener/external resource rollback、更广 live Context Table 组合和 transaction/concurrency trace 仍列为后续项。此前已完成的单源 Table/Named Window equality/range candidate、普通内连接及两流 outer optional side、Context candidate 与 B-tree ordered candidate，以及 `InfraUpdate` 全量更新/re-key 对照继续有效。Java `@Hint`/JVM query-plan hook 不复制为 Go API 外形；Context Join/subquery 物理路径、成本模型和性能阈值仍明确列为后续项 |
