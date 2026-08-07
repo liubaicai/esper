@@ -488,10 +488,10 @@ func rawJSONCharacter(raw any, declaredType reflect.Type, value reflect.Value) (
 		}
 		value = value.Elem()
 	}
-	if !value.IsValid() || value.Kind() != reflect.Int32 || len([]rune(text)) != 1 {
+	if !value.IsValid() || value.Kind() != reflect.Int32 || len([]rune(text)) == 0 {
 		return "", false
 	}
-	return text, true
+	return string([]rune(text)[0]), true
 }
 
 func rawJSONSchemaField(raw any, schema Schema, name string) (any, bool) {

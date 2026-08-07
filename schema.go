@@ -3494,12 +3494,13 @@ func coerceJSONReflect(value any, target reflect.Type) (reflect.Value, bool) {
 		}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		// Java Character is represented by Go's rune (an int32 alias) but
-		// JSON carries it as a one-character string. Keep ordinary numeric
-		// int32 input numeric while accepting the Character-shaped string.
+		// JSON carries it as a string. Character parsing consumes the first
+		// UTF-8 code point (the Java charAt(0) behavior); ordinary numeric
+		// int32 input remains numeric.
 		if target.Kind() == reflect.Int32 {
 			if character, ok := value.(string); ok {
 				runes := []rune(character)
-				if len(runes) == 1 {
+				if len(runes) > 0 {
 					converted := reflect.New(target).Elem()
 					converted.SetInt(int64(runes[0]))
 					return converted, true
