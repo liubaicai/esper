@@ -622,7 +622,67 @@ func NewVariantSchema(name string, members ...Schema) (Schema, error) {
 	schema.variantMode = VariantPredefined
 	schema.variantMembers = variantMemberNames(members)
 	schema.variantSchemas = append([]Schema(nil), members...)
+	for _, field := range fields {
+		property := field.Name
+		schema.getters[property] = schemaGetterSpec{
+			name:     property,
+			typ:      field.Type,
+			optional: field.Optional,
+			getter: func(underlying any) (Value, error) {
+				return variantMemberPropertyValue(members, underlying, property), nil
+			},
+		}
+	}
 	return schema, nil
+}
+
+// variantMemberPropertyValue dispatches a predefined Variant getter to the
+// concrete member schema. A routed Event retains its member envelope, while
+// direct getter calls receive only the underlying value; the latter is matched
+// by the member Go type when available and otherwise falls back to the first
+// member that can read a present property. This keeps method-backed JavaBean
+// members usable through the common Variant metadata without changing the
+// routed Event identity.
+func variantMemberPropertyValue(members []Schema, underlying any, property string) Value {
+	if event, ok := underlying.(Event); ok {
+		for _, member := range members {
+			if schemaDescendsFrom(event.Schema(), member.Name(), make(map[string]struct{})) {
+				return member.get(event.Underlying(), property)
+			}
+		}
+		underlying = event.Underlying()
+	}
+	for _, member := range members {
+		if !schemaUnderlyingMatches(member, underlying) {
+			continue
+		}
+		return member.get(underlying, property)
+	}
+	for _, member := range members {
+		value := member.get(underlying, property)
+		if !value.IsMissing() {
+			return value
+		}
+	}
+	return Missing()
+}
+
+func schemaUnderlyingMatches(schema Schema, underlying any) bool {
+	if underlying == nil || schema.goType == nil {
+		return false
+	}
+	got := reflect.TypeOf(underlying)
+	target := schema.goType
+	if got.AssignableTo(target) || target.AssignableTo(got) {
+		return true
+	}
+	if got.Kind() == reflect.Pointer && got.Elem().AssignableTo(target) {
+		return true
+	}
+	if target.Kind() == reflect.Pointer && got.AssignableTo(target.Elem()) {
+		return true
+	}
+	return false
 }
 
 // NewAnyVariantSchema constructs an ANY variant. It accepts any event type
@@ -2705,6 +2765,11 @@ func commonVariantFields(members []Schema) ([]FieldSpec, error) {
 				if common.Type != nil && field.Type != nil && field.Type.AssignableTo(common.Type) {
 					continue
 				}
+				if widened, ok := commonVariantType(common.Type, field.Type); ok {
+					common.Type = widened
+					common.Optional = common.Optional || isOptionalReflectType(widened) || isOptionalReflectType(common.Type) || isOptionalReflectType(field.Type)
+					continue
+				}
 				if numericTypes(common.Type, field.Type) {
 					common.Type = typeOf[any]()
 					continue
@@ -2719,11 +2784,108 @@ func commonVariantFields(members []Schema) ([]FieldSpec, error) {
 	return fields, nil
 }
 
+// commonVariantType returns a stable Go type for member properties that differ
+// only by pointer optionality or numeric width. Java variant metadata widens
+// primitive/wrapper and numeric member properties to one common descriptor;
+// collapsing these cases to any loses the same build-time type information in
+// the Go fluent API. The helper intentionally leaves unrelated types to the
+// caller's existing interface/any fallback.
+func commonVariantType(left, right reflect.Type) (reflect.Type, bool) {
+	if left == nil || right == nil {
+		return nil, false
+	}
+	leftDepth, leftBase := variantPointerBase(left)
+	rightDepth, rightBase := variantPointerBase(right)
+	if leftBase == rightBase {
+		depth := leftDepth
+		if rightDepth > depth {
+			depth = rightDepth
+		}
+		base := leftBase
+		for index := 0; index < depth; index++ {
+			base = reflect.PointerTo(base)
+		}
+		return base, true
+	}
+	if !isNumericType(leftBase) || !isNumericType(rightBase) {
+		return nil, false
+	}
+	base := widerVariantNumericType(leftBase, rightBase)
+	depth := leftDepth
+	if rightDepth > depth {
+		depth = rightDepth
+	}
+	for index := 0; index < depth; index++ {
+		base = reflect.PointerTo(base)
+	}
+	return base, true
+}
+
+func variantPointerBase(typ reflect.Type) (int, reflect.Type) {
+	depth := 0
+	for typ != nil && typ.Kind() == reflect.Pointer {
+		depth++
+		typ = typ.Elem()
+	}
+	return depth, typ
+}
+
+func widerVariantNumericType(left, right reflect.Type) reflect.Type {
+	if variantNumericRank(left) >= variantNumericRank(right) {
+		return left
+	}
+	return right
+}
+
+func variantNumericRank(typ reflect.Type) int {
+	if typ == nil {
+		return -1
+	}
+	switch typ.Kind() {
+	case reflect.Int8:
+		return 1
+	case reflect.Uint8:
+		return 2
+	case reflect.Int16:
+		return 3
+	case reflect.Uint16:
+		return 4
+	case reflect.Int32:
+		return 5
+	case reflect.Uint32:
+		return 6
+	case reflect.Int:
+		return 7
+	case reflect.Uint:
+		return 8
+	case reflect.Int64:
+		return 9
+	case reflect.Uint64:
+		return 10
+	case reflect.Float32:
+		return 11
+	case reflect.Float64:
+		return 12
+	default:
+		return -1
+	}
+}
+
 // mergeSchemaUnderlying creates a target event value while preserving fields
 // not mentioned by an on-trigger assignment. Map-backed schemas remain maps;
 // struct-backed schemas are copied into a fresh addressable value so updates
 // do not mutate an event already retained by a named window.
 func mergeSchemaUnderlying(schema Schema, original any, updates map[string]any) (any, error) {
+	if schema.kind == SchemaVariant {
+		if len(updates) > 0 {
+			return nil, fmt.Errorf("esper: cannot assign projected fields to predefined variant %q without member identity", schema.name)
+		}
+		member, ok := original.(Event)
+		if !ok || !member.Schema().valid() || !schema.acceptsEventSchema(member.Schema()) {
+			return nil, fmt.Errorf("esper: variant event %q requires a routed member Event underlying", schema.name)
+		}
+		return member, nil
+	}
 	if schema.kind == SchemaObjectArray {
 		values := make([]any, len(schema.fields))
 		if original != nil {

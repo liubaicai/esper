@@ -1751,7 +1751,15 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 				}
 				original := any(nil)
 				if len(clause.Assignments) == 0 {
-					original = event.Underlying()
+					if schema.kind == SchemaVariant {
+						// A predefined Variant keeps the concrete routed member
+						// Event as its identity. Passing only the underlying struct
+						// would make the target unable to reconstruct the member
+						// envelope for a named-window insert.
+						original = event
+					} else {
+						original = event.Underlying()
+					}
 				}
 				underlying, mergeErr := mergeSchemaUnderlying(schema, original, values)
 				if mergeErr != nil {
