@@ -132,10 +132,10 @@
       "level": "S",
       "summary": "Fluent Fire-and-Forget snapshots and target-side mutation for Named Windows and Tables",
       "javaRefs": ["InfraNWTableFAF", "InfraNWTableFAFSubstitutionParams", "InfraNWTableFAFSubquery", "InfraNWTableFAFIndex", "InfraNWTableFAFInsertMultirow", "InfraNWTableFAFResolve"],
-      "goRefs": ["faf.go", "index_runtime.go", "stream.go", "plan.go", "runtime.go", "state.go", "subquery.go", "module.go", "index_plan.go", "faf_mutation_test.go", "faf_multirow_test.go", "faf_substitution_params_test.go", "faf_subquery_parity_test.go", "faf_resolve_parity_test.go", "faf_index_parity_test.go", "infra_nwtable_faf_parity_test.go"],
+      "goRefs": ["faf.go", "index_runtime.go", "stream.go", "plan.go", "runtime.go", "state.go", "subquery.go", "module.go", "index_plan.go", "faf_mutation_test.go", "faf_multirow_test.go", "faf_substitution_params_test.go", "faf_subquery_parity_test.go", "faf_subquery_index_parity_test.go", "faf_resolve_parity_test.go", "faf_index_parity_test.go", "infra_nwtable_faf_parity_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["context-partition selectors and partition-local mutation breadth", "prepared-parameter combinations across joins/subqueries/contexts and late-binding trace parity", "FullOuter/链式 outer/unidirectional physical candidates for FAF joins, Context FAF Join and subquery paths", "cost-based composite/range/in-key planning, selectivity/performance thresholds and Java query-plan hook trace", "all event representations and schema-conversion diagnostics", "FAF subquery performance/index execution, broader cardinality/representation coverage, historical/method source and full invalid-rule matrix", "concurrent read/write snapshot and transaction semantics", "full Java execution trace parity"]
+      "remaining": ["context-partition selectors and partition-local mutation breadth", "prepared-parameter combinations across joins/subqueries/contexts and late-binding trace parity", "FullOuter/链式 outer/unidirectional physical candidates for FAF joins and Context FAF Join", "cost-based composite/range/in-key planning, subquery range/index-sharing, selectivity/performance thresholds and Java query-plan hook trace", "all event representations and schema-conversion diagnostics", "FAF subquery broader cardinality/representation coverage, historical/method source and full invalid-rule matrix", "concurrent read/write snapshot and transaction semantics", "full Java execution trace parity"]
     },
     {
       "id": "expr.enum",

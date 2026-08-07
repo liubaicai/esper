@@ -208,6 +208,327 @@ func subqueryRuntimeFromVariables(variables map[string]Value) *subqueryRuntimeRe
 	return ref.registry
 }
 
+// subqueryIndexSelection returns a physical access path only when the
+// subquery has a declared lookup index that can satisfy a complete equality
+// or IN key.  The normal FAF planner exposes index selections for top-level
+// sources; subqueries are evaluated as expressions, so their access path is
+// derived here from the same analyzable predicate vocabulary.
+//
+// A retention summary such as a Named Window's unique retention is not a
+// declared lookup index.  It remains a logical planner candidate for other
+// purposes, but this physical subquery path deliberately falls back unless a
+// real index was declared.
+func subqueryIndexSelection(e *Environment, base *streamNode, definition *subqueryDefinition) (IndexSelection, bool) {
+	if e == nil || base == nil || definition == nil || definition.predicate == nil || definition.source != base {
+		return IndexSelection{}, false
+	}
+	if base.kind != streamNamedWindow && base.kind != streamTable {
+		return IndexSelection{}, false
+	}
+	predicates := indexPredicatesFromExpression(definition.predicate)
+	if len(predicates) == 0 {
+		return IndexSelection{}, false
+	}
+	selection, err := chooseIndexSelection(e, base, 0, predicates, nil)
+	if err != nil || selection.IndexName == "" {
+		return IndexSelection{}, false
+	}
+	if base.kind == streamNamedWindow && strings.HasPrefix(selection.IndexName, "<") {
+		return IndexSelection{}, false
+	}
+	if selection.Access != IndexAccessEquality && selection.Access != IndexAccessIn {
+		return IndexSelection{}, false
+	}
+	if len(selection.Columns) == 0 || len(selection.MatchedColumns) != len(selection.Columns) {
+		return IndexSelection{}, false
+	}
+	return selection, true
+}
+
+func subqueryIndexOperandValue(node *exprNode, outer EvalContext) (Value, bool) {
+	if node == nil {
+		return Missing(), false
+	}
+	if node.kind == "outer-field" {
+		event := subqueryEnclosingEvent(outer)
+		if !event.Schema().valid() {
+			return Missing(), false
+		}
+		value := event.Get(node.fieldName)
+		return value, value.IsPresent()
+	}
+	return indexOperandValue(node, EvalContext{
+		Now:        outer.Now,
+		Variables:  outer.Variables,
+		Parameters: outer.Parameters,
+	})
+}
+
+// appendSubqueryIndexProbeValues is the correlated counterpart of
+// appendIndexProbeValues.  OuterField is safe here because its value is
+// fixed for the current outer row; arbitrary expressions are still rejected
+// so physical pruning can never evaluate a dynamic function speculatively.
+func appendSubqueryIndexProbeValues(destination *[]any, node *exprNode, outer EvalContext, expandCollection bool) bool {
+	if node == nil {
+		return false
+	}
+	value, ok := subqueryIndexOperandValue(node, outer)
+	if !ok || !value.IsPresent() {
+		return false
+	}
+	if !expandCollection {
+		*destination = append(*destination, value.Any())
+		return true
+	}
+	raw := reflect.ValueOf(value.Any())
+	for raw.IsValid() && raw.Kind() == reflect.Interface {
+		if raw.IsNil() {
+			return false
+		}
+		raw = raw.Elem()
+	}
+	if !raw.IsValid() {
+		return false
+	}
+	switch raw.Kind() {
+	case reflect.Array, reflect.Slice:
+		for index := 0; index < raw.Len(); index++ {
+			item := raw.Index(index)
+			if item.Kind() == reflect.Interface && !item.IsNil() {
+				item = item.Elem()
+			}
+			if !item.IsValid() || ((item.Kind() == reflect.Pointer || item.Kind() == reflect.Interface) && item.IsNil()) {
+				continue
+			}
+			*destination = append(*destination, item.Interface())
+		}
+		return true
+	case reflect.Map:
+		for _, key := range raw.MapKeys() {
+			*destination = append(*destination, key.Interface())
+		}
+		return true
+	default:
+		*destination = append(*destination, value.Any())
+		return true
+	}
+}
+
+func collectSubqueryIndexProbeConstraints(node *exprNode, outer EvalContext, constraints indexProbeConstraints) {
+	if node == nil {
+		return
+	}
+	if node.kind == "and" {
+		for _, child := range node.children {
+			collectSubqueryIndexProbeConstraints(child, outer, constraints)
+		}
+		return
+	}
+	switch node.kind {
+	case "eq", "equal-of", "is":
+		if len(node.children) < 2 {
+			return
+		}
+		leftColumn := fieldColumn(node.children[0])
+		rightColumn := fieldColumn(node.children[1])
+		if leftColumn != "" && rightColumn == "" {
+			values := make([]any, 0, 1)
+			if appendSubqueryIndexProbeValues(&values, node.children[1], outer, false) {
+				addIndexProbeConstraint(constraints, leftColumn, values)
+			}
+			return
+		}
+		if rightColumn != "" && leftColumn == "" {
+			values := make([]any, 0, 1)
+			if appendSubqueryIndexProbeValues(&values, node.children[0], outer, false) {
+				addIndexProbeConstraint(constraints, rightColumn, values)
+			}
+		}
+	case "in", "in-of":
+		if len(node.children) < 2 {
+			return
+		}
+		column := fieldColumn(node.children[0])
+		if column == "" {
+			return
+		}
+		values := make([]any, 0, len(node.children)-1)
+		for _, candidate := range node.children[1:] {
+			if !appendSubqueryIndexProbeValues(&values, candidate, outer, node.kind == "in-of") {
+				return
+			}
+		}
+		addIndexProbeConstraint(constraints, column, values)
+	case "in-slice":
+		if len(node.children) != 2 {
+			return
+		}
+		column := fieldColumn(node.children[0])
+		if column == "" {
+			return
+		}
+		values := make([]any, 0)
+		if appendSubqueryIndexProbeValues(&values, node.children[1], outer, true) {
+			addIndexProbeConstraint(constraints, column, values)
+		}
+	}
+}
+
+func (e *Engine) subqueryIndexProbeKeys(base *streamNode, selection IndexSelection, predicate Expr, outer EvalContext) ([][]any, bool) {
+	if e == nil || base == nil || predicate == nil || selection.Access != IndexAccessEquality && selection.Access != IndexAccessIn {
+		return nil, false
+	}
+	schema, err := e.env.sourceSchema(base)
+	if err != nil {
+		return nil, false
+	}
+	constraints := make(indexProbeConstraints)
+	collectSubqueryIndexProbeConstraints(predicate.node(), outer, constraints)
+	keys := [][]any{{}}
+	for _, column := range selection.Columns {
+		values, exists := constraints[column]
+		if !exists || len(values) == 0 {
+			return nil, false
+		}
+		field, fieldExists := schema.Field(column)
+		fieldType := reflect.Type(nil)
+		if fieldExists {
+			fieldType = field.Type
+		}
+		normalized := make([]any, 0, len(values))
+		for _, value := range values {
+			converted, ok := normalizeIndexProbeValue(value, fieldType)
+			if !ok || converted == nil || isNilReflectValue(reflect.ValueOf(converted)) {
+				return nil, false
+			}
+			normalized = append(normalized, converted)
+		}
+		next := make([][]any, 0, len(keys)*len(normalized))
+		for _, prefix := range keys {
+			for _, value := range normalized {
+				key := append(append([]any(nil), prefix...), value)
+				next = append(next, key)
+				if len(next) > maxIndexProbeKeys {
+					return nil, false
+				}
+			}
+		}
+		keys = next
+	}
+	seen := make(map[string]struct{}, len(keys))
+	result := make([][]any, 0, len(keys))
+	for _, key := range keys {
+		encoded := encodeKey(key)
+		if _, exists := seen[encoded]; exists {
+			continue
+		}
+		seen[encoded] = struct{}{}
+		result = append(result, key)
+	}
+	return result, len(result) > 0
+}
+
+func subqueryContextScope(variables map[string]Value) (string, string) {
+	if variables == nil {
+		return "", ""
+	}
+	contextName := ""
+	partition := ""
+	if value, ok := variables[subqueryContextNameVariable]; ok && value.IsPresent() {
+		contextName, _ = value.Any().(string)
+	}
+	if value, ok := variables[subqueryContextPartitionVariable]; ok && value.IsPresent() {
+		partition, _ = value.Any().(string)
+	}
+	return contextName, partition
+}
+
+// snapshotFireAndForgetSubquerySourceWithIndex performs one complete-key
+// lookup for a scalar/exists subquery. It returns used=false whenever the
+// predicate cannot be proven to provide a complete candidate key; callers
+// then use the existing snapshot evaluator as the correctness path.
+func (e *Engine) snapshotFireAndForgetSubquerySourceWithIndex(
+	ctx context.Context,
+	definition *subqueryDefinition,
+	outer EvalContext,
+	base *streamNode,
+	now time.Time,
+	variables map[string]Value,
+	engineLocked bool,
+) ([]Event, bool, error) {
+	selection, usable := subqueryIndexSelection(e.env, base, definition)
+	if !usable {
+		return nil, false, nil
+	}
+	keys, usable := e.subqueryIndexProbeKeys(base, selection, definition.predicate, outer)
+	if !usable {
+		return nil, false, nil
+	}
+	var events []Event
+	switch base.kind {
+	case streamNamedWindow:
+		var window *NamedWindow
+		if engineLocked {
+			window = e.namedWindows[catalogKey(base.moduleName, base.sourceName)]
+		} else {
+			window, _ = e.NamedWindowInModule(base.moduleName, base.sourceName)
+		}
+		if window == nil {
+			return nil, true, NewError(ErrorUnknownName, "named window "+base.sourceName+" is not registered")
+		}
+		contextName, partition := subqueryContextScope(variables)
+		windowContext := strings.TrimSpace(window.Definition().Context())
+		if windowContext != "" {
+			if contextName != windowContext || partition == "" {
+				return nil, false, nil
+			}
+			window.state.mu.RLock()
+			partitionState := window.state.partitions[partition]
+			window.state.mu.RUnlock()
+			if partitionState == nil {
+				return nil, true, nil
+			}
+			if err := contextErr(ctx); err != nil {
+				return nil, true, err
+			}
+			events = lookupNamedWindowStateMany(partitionState, selection.IndexName, keys)
+		} else {
+			var err error
+			events, err = window.lookupMany(ctx, selection.IndexName, keys)
+			if err != nil {
+				return nil, true, err
+			}
+		}
+	case streamTable:
+		var table *Table
+		var err error
+		if engineLocked {
+			table = e.tables[catalogKey(base.moduleName, base.sourceName)]
+		} else {
+			table, _ = e.TableInModule(base.moduleName, base.sourceName)
+		}
+		if table == nil {
+			return nil, true, NewError(ErrorUnknownName, "table "+base.sourceName+" is not registered")
+		}
+		var rows []TableRow
+		if selection.IndexName == "<primary-key>" {
+			rows, err = table.lookupPrimaryMany(ctx, keys)
+		} else {
+			rows, err = table.lookupMany(ctx, selection.IndexName, keys)
+		}
+		if err != nil {
+			return nil, true, err
+		}
+		events, err = tableRowsAsEvents(base, table.Definition(), rows, now)
+		if err != nil {
+			return nil, true, err
+		}
+	default:
+		return nil, false, nil
+	}
+	return events, true, nil
+}
+
 type subqueryDefinition struct {
 	source               *streamNode
 	predicate            Expr
@@ -1242,16 +1563,24 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 		}
 	}
 	if !usingRuntimeSnapshot {
-		contextName := ""
-		contextPartition := ""
-		if outer.Variables != nil {
-			if value, ok := outer.Variables[subqueryContextNameVariable]; ok && value.IsPresent() {
-				contextName, _ = value.Any().(string)
+		// A FAF subquery is evaluated once for each outer row.  When its
+		// predicate exposes a complete equality/IN key (including an
+		// OuterField value), use the declared Named Window/Table index to
+		// produce candidates.  This is intentionally a pruning step only;
+		// the ordinary temporary runtime below still evaluates the complete
+		// predicate and projection, preserving scalar cardinality and null
+		// semantics.
+		if indexed, used, indexErr := e.snapshotFireAndForgetSubquerySourceWithIndex(
+			context.Background(), definition, outer, base, now, outer.Variables, engineLocked,
+		); used {
+			if indexErr != nil {
+				return nil
 			}
-			if value, ok := outer.Variables[subqueryContextPartitionVariable]; ok && value.IsPresent() {
-				contextPartition, _ = value.Any().(string)
-			}
+			events = indexed
 		}
+	}
+	if !usingRuntimeSnapshot {
+		contextName, contextPartition := subqueryContextScope(outer.Variables)
 		if base.kind == streamNamedWindow && contextName != "" && contextPartition != "" {
 			var window *NamedWindow
 			if engineLocked {
