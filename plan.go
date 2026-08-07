@@ -406,7 +406,11 @@ func (e *Environment) Build(query Query) (Plan, error) {
 			return Plan{}, NewError(ErrorInvalidRule, "pattern consumption policies are not supported with context, joins or actions")
 		}
 	}
-	if query.sourceLess {
+	if query.onDemand != nil {
+		if err := e.validateOnDemand(query); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "on-demand", err)
+		}
+	} else if query.sourceLess {
 		if err := e.validateSourceLess(query.selections); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "select-once", err)
 		}
@@ -2412,6 +2416,19 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 	if err := visitStreamNodeExpressions(query.input, visit); err != nil {
 		return err
 	}
+	if query.onDemand != nil {
+		if err := visit(query.onDemand.predicate); err != nil {
+			return err
+		}
+		for _, assignment := range query.onDemand.assignments {
+			if err := visit(assignment.Expr); err != nil {
+				return err
+			}
+			if err := visit(assignment.Index); err != nil {
+				return err
+			}
+		}
+	}
 	if err := visitSelectionsExpressions(query.selections, visit); err != nil {
 		return err
 	}
@@ -2881,6 +2898,16 @@ func sourceNode(node *streamNode) (*streamNode, error) {
 }
 
 func (e *Environment) resultSchema(query Query) (Schema, error) {
+	if query.onDemand != nil {
+		if query.input == nil {
+			return Schema{}, NewError(ErrorInvalidRule, "on-demand target is required")
+		}
+		source, err := sourceNode(query.input)
+		if err != nil {
+			return Schema{}, err
+		}
+		return e.sourceSchema(source)
+	}
 	if query.trigger != nil && query.trigger.target == triggerTargetNamedWindow && query.trigger.action == triggerSelectTable {
 		window, ok := e.NamedWindow(query.trigger.table)
 		if !ok {
@@ -3431,6 +3458,90 @@ func (e *Environment) validateIntoTable(query Query) error {
 	return nil
 }
 
+func (e *Environment) validateOnDemand(query Query) error {
+	if query.onDemand == nil {
+		return NewError(ErrorInvalidRule, "on-demand definition is required")
+	}
+	if query.input == nil {
+		return NewError(ErrorInvalidRule, "on-demand target is required")
+	}
+	if query.contextName != "" {
+		return NewError(ErrorInvalidRule, "on-demand mutation does not yet support a context selector")
+	}
+	if query.join != nil || query.aggregate != nil || query.pattern != nil || query.rowRecog != nil || query.trigger != nil || query.sourceLess {
+		return NewError(ErrorInvalidRule, "on-demand mutation cannot combine with another query operator")
+	}
+	if query.routeTarget != "" || query.tableTarget != "" {
+		return NewError(ErrorInvalidRule, "on-demand mutation cannot route or materialize into another target")
+	}
+	if query.input.kind != streamNamedWindow && query.input.kind != streamTable {
+		return NewError(ErrorInvalidRule, "on-demand target must be a root named window or table")
+	}
+	targetSchema, err := e.sourceSchema(query.input)
+	if err != nil {
+		return err
+	}
+	targetKind := "table-field"
+	if query.input.kind == streamNamedWindow {
+		targetKind = "named-window-field"
+	}
+	switch query.onDemand.action {
+	case onDemandInsert:
+		if len(query.onDemand.assignments) == 0 {
+			return NewError(ErrorInvalidRule, "on-demand insert requires at least one assignment")
+		}
+		for index, assignment := range query.onDemand.assignments {
+			if assignment.Wildcard {
+				return fmt.Errorf("on-demand insert assignment %d cannot be wildcard without an incoming event", index)
+			}
+			if err := validateTriggerAssignment(e, query.input, targetSchema, assignment, ""); err != nil {
+				return fmt.Errorf("assignment %d: %w", index, err)
+			}
+		}
+	case onDemandUpdate:
+		if query.onDemand.predicate == nil {
+			return NewError(ErrorInvalidRule, "on-demand update requires a predicate")
+		}
+		if query.onDemand.predicate.Type() != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "on-demand update predicate must return bool")
+		}
+		if len(query.onDemand.assignments) == 0 {
+			return NewError(ErrorInvalidRule, "on-demand update requires at least one assignment")
+		}
+		if err := e.validateTriggerTargetExpression(query.input, targetSchema, query.onDemand.predicate, targetKind); err != nil {
+			return fmt.Errorf("predicate: %w", err)
+		}
+		for index, assignment := range query.onDemand.assignments {
+			if assignment.Wildcard {
+				return fmt.Errorf("on-demand update assignment %d cannot be wildcard without an incoming event", index)
+			}
+			if err := validateTriggerAssignment(e, query.input, targetSchema, assignment, targetKind); err != nil {
+				return fmt.Errorf("assignment %d: %w", index, err)
+			}
+		}
+	case onDemandDelete:
+		if query.onDemand.predicate == nil {
+			return NewError(ErrorInvalidRule, "on-demand delete requires a predicate")
+		}
+		if query.onDemand.predicate.Type() != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "on-demand delete predicate must return bool")
+		}
+		if err := e.validateTriggerTargetExpression(query.input, targetSchema, query.onDemand.predicate, targetKind); err != nil {
+			return fmt.Errorf("predicate: %w", err)
+		}
+		if len(query.onDemand.assignments) != 0 {
+			return NewError(ErrorInvalidRule, "on-demand delete cannot have assignments")
+		}
+	case onDemandDeleteAll:
+		if query.onDemand.predicate != nil || len(query.onDemand.assignments) != 0 {
+			return NewError(ErrorInvalidRule, "on-demand delete-all cannot have a predicate or assignments")
+		}
+	default:
+		return NewError(ErrorInvalidRule, fmt.Sprintf("unknown on-demand action %d", query.onDemand.action))
+	}
+	return nil
+}
+
 func (e *Environment) validateAggregatePluginNodes(node *exprNode) error {
 	if node == nil {
 		return nil
@@ -3675,6 +3786,28 @@ func expressionNodeContainsAggregate(node *exprNode) bool {
 	if node == nil {
 		return false
 	}
+	if expressionNodeIsAggregate(node) {
+		return true
+	}
+	for _, child := range node.children {
+		if expressionNodeContainsAggregate(child) {
+			return true
+		}
+	}
+	return false
+}
+
+// expressionNodeIsAggregate reports whether the node itself is an aggregate
+// boundary.  It is deliberately separate from expressionNodeContainsAggregate:
+// callers that inspect scalar dependencies must not descend into the input
+// fields consumed by an aggregate function.
+func expressionNodeIsAggregate(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.kind == "linear-regression" || strings.HasPrefix(node.kind, "linear-regression-") || node.kind == "univariate-statistics" || strings.HasPrefix(node.kind, "univariate-statistics-") {
+		return true
+	}
 	if node.kind == "sorted-access" || strings.HasPrefix(node.kind, "sorted-access-") || node.kind == "window-access" || strings.HasPrefix(node.kind, "window-access-") {
 		return true
 	}
@@ -3683,13 +3816,8 @@ func expressionNodeContainsAggregate(node *exprNode) bool {
 		return true
 	}
 	switch node.kind {
-	case "aggregate-filter", "aggregate-local-group", "aggregate-distinct", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "aggregate-plugin-access-ref", "aggregate-multi-plugin", "aggregate-multi-plugin-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
+	case "aggregate-filter", "aggregate-local-group", "aggregate-distinct", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "aggregate-plugin-access-ref", "aggregate-multi-plugin", "aggregate-multi-plugin-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "count-ever-invalid", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "correlation", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
 		return true
-	}
-	for _, child := range node.children {
-		if expressionNodeContainsAggregate(child) {
-			return true
-		}
 	}
 	return false
 }

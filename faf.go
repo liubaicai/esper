@@ -5,9 +5,64 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
+
+type onDemandAction uint8
+
+const (
+	onDemandInsert onDemandAction = iota
+	onDemandUpdate
+	onDemandDelete
+	onDemandDeleteAll
+)
+
+type onDemandDefinition struct {
+	action      onDemandAction
+	predicate   Expr
+	assignments []TableAssignment
+}
+
+func (d *onDemandDefinition) description() string {
+	if d == nil {
+		return "on-demand(<nil>)"
+	}
+	action := "insert"
+	switch d.action {
+	case onDemandUpdate:
+		action = "update"
+	case onDemandDelete:
+		action = "delete"
+	case onDemandDeleteAll:
+		action = "delete-all"
+	}
+	parts := []string{action}
+	if d.predicate != nil {
+		parts = append(parts, "where("+d.predicate.Description()+")")
+	}
+	if len(d.assignments) > 0 {
+		assignments := make([]string, 0, len(d.assignments))
+		for _, assignment := range d.assignments {
+			if assignment.Wildcard {
+				assignments = append(assignments, "*")
+				continue
+			}
+			index := ""
+			if assignment.Index != nil {
+				index = "[" + assignment.Index.Description() + "]"
+			}
+			expression := "<nil>"
+			if assignment.Expr != nil {
+				expression = assignment.Expr.Description()
+			}
+			assignments = append(assignments, assignment.Column+index+"="+expression)
+		}
+		parts = append(parts, "set("+strings.Join(assignments, ",")+")")
+	}
+	return "on-demand(" + strings.Join(parts, ",") + ")"
+}
 
 // QueryResult is the read-only result of a Fire-and-Forget execution.
 type QueryResult struct {
@@ -188,6 +243,9 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 	if err := validateParameterBindings(parameterTypes, parameters); err != nil {
 		return QueryResult{}, err
 	}
+	if plan.query.onDemand != nil {
+		return e.executeFireAndForgetMutation(ctx, plan, parameters)
+	}
 	if plan.query.sourceLess {
 		e.mu.Lock()
 		e.refreshVariablesLocked()
@@ -270,6 +328,121 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 	}
 	batch := runtime.batch(delta, plan, now)
 	batch = runtime.applyOutput(plan.query.output, batch, false, now, plan)
+	return QueryResult{Batch: batch}, nil
+}
+
+// executeFireAndForgetMutation applies the target-side on-demand operation
+// under the same engine transaction boundary used by live trigger actions.
+// Named Window deltas are fed through consuming statements before listeners
+// are dispatched; Table mutations return no rows, matching Esper's FAF table
+// result contract.
+func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, parameters ParameterValues) (QueryResult, error) {
+	if err := contextErr(ctx); err != nil {
+		return QueryResult{}, err
+	}
+	if e == nil || e.env == nil || plan.query.onDemand == nil || plan.query.input == nil {
+		return QueryResult{}, NewError(ErrorDependency, "on-demand mutation has no engine, target or definition")
+	}
+	source := plan.query.input
+	if source.kind != streamNamedWindow && source.kind != streamTable {
+		return QueryResult{}, NewError(ErrorInvalidRule, "on-demand target must be a root named window or table")
+	}
+
+	e.mu.Lock()
+	if e.closed {
+		e.mu.Unlock()
+		return QueryResult{}, NewError(ErrorState, "engine is closed")
+	}
+	now := e.clock.Now()
+	e.refreshVariablesLocked()
+	variables := bindParameterValues(cloneValues(e.variables), parameters)
+	e.pendingStatementDispatches = nil
+	e.pendingNamedWindowDispatches = nil
+	e.pendingRoutedEvents = nil
+	e.pendingContextEvents = nil
+	e.pendingVariableChanges = nil
+	e.pendingMatchRecognizeStateLimits = nil
+	e.pendingPatternSubexpressionLimits = nil
+
+	definition := &triggerDefinition{
+		input:  source,
+		table:  source.sourceName,
+		where:  plan.query.onDemand.predicate,
+		action: triggerInsertTable,
+	}
+	switch plan.query.onDemand.action {
+	case onDemandInsert:
+		definition.action = triggerInsertTable
+	case onDemandUpdate:
+		definition.action = triggerUpdateTable
+	case onDemandDelete:
+		definition.action = triggerDeleteTable
+	case onDemandDeleteAll:
+		definition.action = triggerDeleteAllTable
+	default:
+		e.mu.Unlock()
+		return QueryResult{}, NewError(ErrorInvalidRule, fmt.Sprintf("unknown on-demand action %d", plan.query.onDemand.action))
+	}
+	definition.assignments = append([]TableAssignment(nil), plan.query.onDemand.assignments...)
+	if source.kind == streamNamedWindow {
+		definition.target = triggerTargetNamedWindow
+		if _, ok := e.ensureNamedWindowLocked(source.sourceName); !ok {
+			e.mu.Unlock()
+			return QueryResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
+		}
+	}
+
+	// A zero Event is intentional: on-demand expressions have no trigger
+	// event. Target fields resolve from EvalContext.Group, while literals,
+	// variables and bound parameters resolve from EvalContext.Variables.
+	mutation, err := executeTriggerAction(ctx, e, definition, Event{}, now, variables, nil, nil)
+	if err != nil {
+		e.mu.Unlock()
+		return QueryResult{}, err
+	}
+
+	var batch ResultBatch
+	batch.Time = now
+	if source.kind == streamNamedWindow {
+		switch plan.query.onDemand.action {
+		case onDemandDelete, onDemandDeleteAll:
+			batch.New = eventsToResults(mutation.oldEvents)
+		default:
+			batch.New = eventsToResults(mutation.newEvents)
+		}
+		if !batch.empty() {
+			batch.Sequence = 1
+		}
+	}
+
+	dispatches := make([]statementDispatch, 0, len(e.pendingStatementDispatches))
+	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches); err != nil {
+		e.mu.Unlock()
+		return QueryResult{}, err
+	}
+	dispatches = append(dispatches, e.pendingStatementDispatches...)
+	nestedNamedWindowDispatches := append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...)
+	variableChanges := e.takeVariableChangesLocked()
+	contextEvents := e.takeContextEventsLocked()
+	e.pendingStatementDispatches = nil
+	e.pendingNamedWindowDispatches = nil
+	e.pendingRoutedEvents = nil
+	e.pendingContextEvents = nil
+	e.pendingVariableChanges = nil
+	e.mu.Unlock()
+
+	e.dispatchVariableChanges(variableChanges)
+	e.dispatchContextEvents(contextEvents)
+	e.dispatchMatchRecognizeStateLimitEvents()
+	e.dispatchPatternSubexpressionLimitEvents()
+	if err := dispatchAll(ctx, dispatches); err != nil {
+		return QueryResult{}, err
+	}
+	for _, dispatch := range nestedNamedWindowDispatches {
+		if err := dispatch.window.dispatch(ctx, dispatch.delta); err != nil {
+			return QueryResult{}, err
+		}
+	}
 	return QueryResult{Batch: batch}, nil
 }
 

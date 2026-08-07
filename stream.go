@@ -1115,6 +1115,71 @@ func (s RecordStream) Query(options ...QueryOption) Query {
 	return newQuery(s.env, s.node, s.selections, options...)
 }
 
+// OnDemandStream is the fluent target-side view used to build a one-shot
+// mutation against a Table or Named Window.  It deliberately has no incoming
+// event stream: expressions are evaluated against the current target row
+// through TableField/NamedWindowField, while insert expressions normally use
+// literals, variables or parameters.
+type OnDemandStream struct {
+	env  *Environment
+	node *streamNode
+}
+
+// OnDemand starts a Fire-and-Forget state mutation chain for this source.
+// Build rejects sources that are not a root Table or Named Window.
+func (s RecordStream) OnDemand() OnDemandStream {
+	return OnDemandStream{env: s.env, node: s.node}
+}
+
+// OnDemand exposes the same target-side builder for callers that keep a
+// typed source handle.  A typed event stream is still rejected at Build time
+// unless its root is a Table or Named Window.
+func (s Stream[T]) OnDemand() OnDemandStream {
+	return OnDemandStream{env: s.env, node: s.node}
+}
+
+func (s OnDemandStream) query(action onDemandAction, predicate Expr, assignments []TableAssignment, options ...QueryOption) Query {
+	spec := querySpec{selector: SelectIStream, output: OutputAll()}
+	for _, option := range options {
+		if option != nil {
+			option(&spec)
+		}
+	}
+	return Query{
+		env:      s.env,
+		input:    s.node,
+		name:     spec.name,
+		selector: spec.selector,
+		output:   spec.output,
+		onDemand: &onDemandDefinition{action: action, predicate: predicate, assignments: append([]TableAssignment(nil), assignments...)},
+	}
+}
+
+// Insert appends one row/event to the target. Assignments are evaluated once
+// with no incoming event, which makes Literal, Variable and Parameter
+// expressions the natural Go equivalents of an on-demand values clause.
+func (s OnDemandStream) Insert(assignments ...TableAssignment) Query {
+	return s.query(onDemandInsert, nil, assignments)
+}
+
+// UpdateWhere updates every target row for which predicate is true. The
+// predicate and assignment expressions may read the current row with
+// TableField or NamedWindowField; assignments are applied in declaration
+// order and Initial*Field retains the pre-update value.
+func (s OnDemandStream) UpdateWhere(predicate Expression[bool], assignments ...TableAssignment) Query {
+	return s.query(onDemandUpdate, predicate, assignments)
+}
+
+// DeleteWhere deletes every target row for which predicate is true.
+func (s OnDemandStream) DeleteWhere(predicate Expression[bool]) Query {
+	return s.query(onDemandDelete, predicate, nil)
+}
+
+// DeleteAll deletes every row/event in the target.
+func (s OnDemandStream) DeleteAll() Query {
+	return s.query(onDemandDeleteAll, nil, nil)
+}
+
 func (s RecordStream) GroupBy(keys ...Expr) AggregateStream {
 	return AggregateStream{env: s.env, node: s.node, groupBy: append([]Expr(nil), keys...)}
 }
@@ -2302,6 +2367,7 @@ type Query struct {
 	pattern                    *patternDefinition
 	rowRecog                   *rowRecogDefinition
 	trigger                    *triggerDefinition
+	onDemand                   *onDemandDefinition
 	selections                 []Selection
 	joinSelections             []JoinSelection
 	joinWhere                  Expr
@@ -2326,6 +2392,10 @@ type Query struct {
 func (q Query) Name() string { return q.name }
 
 func (q Query) description() string {
+	if q.onDemand != nil {
+		parts := []string{q.input.describe(), q.onDemand.description()}
+		return strings.Join(parts, " -> ")
+	}
 	if q.sourceLess {
 		parts := []string{"select-once"}
 		selections := make([]string, 0, len(q.selections))

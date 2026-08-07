@@ -4897,6 +4897,29 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 		if group == nil || (len(group.events) == 0 && !aggregateDefinitionUsesEver(definition)) {
 			continue
 		}
+		if aggregateDefinitionIsRowForEvent(definition) && len(group.events) > 0 {
+			for _, current := range group.events {
+				values, visible := evaluateAggregateGroup(
+					definition,
+					group.events,
+					group.everEvents,
+					nil,
+					false,
+					group.groupingSet,
+					current,
+					r.aggregateState.allEvents,
+					r.aggregateState.allEverEvents,
+					now,
+					r.variables,
+					group.pluginStates,
+					group.multiPluginStates,
+				)
+				if visible {
+					entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), group: group, key: key})
+				}
+			}
+			continue
+		}
 		values, visible := evaluateAggregateGroup(
 			definition,
 			group.events,
@@ -9892,6 +9915,35 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				key:    key,
 			})
 		}
+		if aggregateDefinitionIsRowForEvent(definition) && len(delta.newEvents) > 0 && len(group.events) > 0 {
+			for _, current := range delta.newEvents {
+				values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+				if visible && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
+					newEntries = append(newEntries, aggregateResultEntry{
+						result: resultRow(newRow(plan.resultSchema, values)),
+						group:  group,
+						key:    key,
+					})
+				}
+			}
+			previous, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+			if visible {
+				group.previous = append([]Value(nil), previous...)
+				group.emitted = true
+			} else {
+				group.previous = nil
+				group.emitted = false
+			}
+			if len(group.events) == 0 && !aggregateDefinitionUsesEver(definition) {
+				for _, pluginState := range group.multiPluginStates {
+					if pluginState != nil {
+						pluginState.clear()
+					}
+				}
+				delete(state.groups, key)
+			}
+			continue
+		}
 		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
 		if visible && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 			newEntries = append(newEntries, aggregateResultEntry{
@@ -10288,6 +10340,57 @@ func aggregateDefinitionUsesEver(definition *aggregateDefinition) bool {
 		}
 	}
 	return expressionTreeContainsEver(definition.having)
+}
+
+// aggregateDefinitionIsRowForEvent identifies Esper's ungrouped
+// "row-for-event" result shape: at least one projection reads the current
+// event while another expression evaluates over the complete aggregate group.
+// Grouped and dimensional aggregates always produce one row per group, even
+// when a projection happens to read a representative event.
+func aggregateDefinitionIsRowForEvent(definition *aggregateDefinition) bool {
+	if definition == nil || definition.join != nil || len(definition.groupBy) != 0 || definition.grouping != aggregateGroupingPlain {
+		return false
+	}
+	hasAggregate := false
+	readsCurrentEvent := false
+	for _, selection := range definition.selections {
+		hasAggregate = hasAggregate || isAggregateExpression(selection.Expr)
+		readsCurrentEvent = readsCurrentEvent || expressionTreeReadsCurrentEvent(selection.Expr)
+	}
+	return hasAggregate && readsCurrentEvent
+}
+
+// expressionTreeReadsCurrentEvent identifies scalar projections that depend
+// on the ordinary input event.  Context metadata and lifecycle/pattern values
+// are represented as scalar expressions too, but they describe the context
+// partition rather than the event whose arrival caused the aggregate update;
+// they must therefore keep the normal one-row-per-group result shape.
+func expressionTreeReadsCurrentEvent(expression Expr) bool {
+	if expression == nil || expression.node() == nil {
+		return false
+	}
+	var visit func(*exprNode) bool
+	visit = func(node *exprNode) bool {
+		if node == nil {
+			return false
+		}
+		if strings.HasPrefix(node.kind, "tag-") {
+			return false
+		}
+		if expressionNodeIsAggregate(node) {
+			return false
+		}
+		if node.kind == "field" {
+			return true
+		}
+		for _, child := range node.children {
+			if visit(child) {
+				return true
+			}
+		}
+		return false
+	}
+	return visit(expression.node())
 }
 
 func expressionTreeContainsEver(expression Expr) bool {
