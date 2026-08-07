@@ -2519,6 +2519,11 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 						return err
 					}
 				}
+				for _, selection := range action.InsertSelections {
+					if err := visit(selection.Expr); err != nil {
+						return err
+					}
+				}
 			}
 		}
 		if err := visitSelectionsExpressions(query.trigger.selections, visit); err != nil {

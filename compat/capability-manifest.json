@@ -300,7 +300,7 @@
       "goRefs": ["trigger.go", "trigger_test.go", "state.go", "plan.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["full index/transaction semantics", "wildcard/multi-action projection", "nested/mapped property assignment beyond direct Map/ObjectArray composite columns", "representation-specific conversion and metadata", "all Java on-trigger cases", "persistence"]
+      "remaining": ["full index/transaction semantics", "wildcard/select projection across all event representations", "mapped/nested property assignment beyond direct Map/ObjectArray composite columns", "representation-specific conversion and metadata", "split-stream and complete on-trigger action ordering matrix", "all Java on-trigger cases", "persistence"]
     },
     {
       "id": "context.partition",
@@ -525,6 +525,17 @@
       "difference": "Go binds the matched Table row into TableField expressions during both clause conditions and assignments, while rejecting target-field references in not-matched branches; Named Window keeps the same explicit target scope. The test covers matched accumulation, delete old-stream output and re-insertion for both targets. Java wildcard select, representation-specific event conversion, broader multi-clause traces and exact diagnostics remain open."
     },
     {
+      "id": "case.trigger-merge-wildcard",
+      "javaRuntimeIds": ["java-runtime-240cb61eabb22eb2a215", "java-runtime-aaa45c95e95a919bd0c0"],
+      "javaNames": ["InfraOnMergeMatchNoMatch{namedWindow=true}", "InfraOnMergeMatchNoMatch{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerMergeWildcardCopiesMatchingFields"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "wildcard", "null-materialization"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go exposes CopyMatchingFields as an analyzable assignment: source fields matching target columns are copied, source-only fields are ignored, and not-matched target-only columns are materialized as Null; matched updates preserve an existing target-only value. The test covers Table and Named Window, including the Java named-window insert-select-star shape and the table equivalent. ObjectArray/JSON/Avro/variant representation conversion, exact Java conversion diagnostics and the broader wildcard matrix remain open."
+    },
+    {
       "id": "case.trigger-merge-single-sided",
       "javaRuntimeIds": ["java-runtime-651148621e89ec5465b0", "java-runtime-e51caa89fbde4ab34197", "java-runtime-8900ac7e3d063d8b8842", "java-runtime-b581753558f219b16a2a", "java-runtime-5cdc46289e4fac78a0c5", "java-runtime-8e9616eb8385c473d45a", "java-runtime-af614186a63cbeb33ae5", "java-runtime-eb7754c9e46c8c465c14", "java-runtime-f21a6fc889f14608828f", "java-runtime-f7a73c74e857ffbdfd15"],
       "javaNames": ["InfraInsertOnly"],
@@ -589,6 +600,39 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
       "difference": "Go adds TableMergeAction, ThenUpdate, ThenDelete and WhenMatchedActions to model Esper's ordered matched action chain. Conditions and assignments see the working target row, a delete terminates remaining actions, and Table/Named Window commit one final old/new mutation. The test mirrors InfraMultiactionDeleteUpdate's E1-E6 trace and adds a terminal-delete input that would otherwise satisfy a later update. Wildcard/select projection, representation-specific conversion, transaction/persistence and broader multi-action stream combinations remain open."
+    },
+    {
+      "id": "case.trigger-merge-insert-stream",
+      "javaRuntimeIds": ["java-runtime-2c687a68317caea3c148", "java-runtime-081455731ccafbf6847c"],
+      "javaNames": ["InfraOnMergeInsertStream{namedWindow=true}", "InfraOnMergeInsertStream{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerMergeInsertStreamActionsMatchInfraOnMergeInsertStream"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "insert-into", "action-chain", "new-old"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go maps ordered not-matched action chains to ThenInsertInto/ThenInsertIntoWhen for side-stream projections and ThenInsertIntoTarget for the final Table or Named Window insert. The test checks four side streams, a conditional side stream, target state and Table/Named Window behavior. Split-stream fan-out beyond this chain, representation conversion, rollback/transactional action batches and complete Java action-order/error diagnostics remain open."
+    },
+    {
+      "id": "case.trigger-merge-insert-stream",
+      "javaRuntimeIds": ["java-runtime-2c687a68317caea3c148", "java-runtime-081455731ccafbf6847c"],
+      "javaNames": ["InfraOnMergeInsertStream{namedWindow=true}", "InfraOnMergeInsertStream{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerMergeInsertStreamActionsMatchInfraOnMergeInsertStream"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "insert-into", "side-stream", "ordered"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go models a not-matched merge branch as ordered ThenInsertInto/ThenInsertIntoWhen side-stream actions followed by ThenInsertIntoTarget. Registered event schemas receive typed Row projections through the normal route queue, while the Table/Named Window target receives its final insert; the test covers StreamOne/Two/Three, conditional StreamFour, K1/K2 and both target kinds. Java wildcard select, inferred output event types, exact synchronous interleaving, representation conversion and rollback/transaction traces remain open."
+    },
+    {
+      "id": "case.trigger-merge-wildcard",
+      "javaRuntimeIds": ["java-runtime-403bba8c6b29e32b1a8f", "java-runtime-ae05c015767242106de7"],
+      "javaNames": ["InfraFlow{namedWindow=true}", "InfraFlow{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerMergeWildcardCopiesMatchingFields"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "wildcard", "copy-matching-fields"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Go adds CopyMatchingFields as a schema-bound wildcard assignment: source fields matching target names are copied, target-only columns retain existing values on update and materialize as null on insert. The direct Table/Named Window test covers insert and matched replacement. Java's full InfraFlow source-filter/delete/update/route lifecycle, wildcard event identity and representation matrix remain open."
     },
     {
       "id": "case.trigger-merge-subquery-not-matched",
@@ -2248,6 +2292,8 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-ordered-scalar-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-simple-insert"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-multiaction"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-insert-stream"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-wildcard"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-subquery-not-matched"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
