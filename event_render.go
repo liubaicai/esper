@@ -233,6 +233,12 @@ func renderJSONValue(value any, maxDepth, depth int) (any, error) {
 	if reflectValue.Type() == reflect.TypeOf(time.Time{}) {
 		return reflectValue.Interface().(time.Time).Format(time.RFC3339Nano), nil
 	}
+	if reflectValue.Type() == reflect.TypeOf(DateOnly("")) {
+		return string(reflectValue.Interface().(DateOnly)), nil
+	}
+	if reflectValue.Type() == reflect.TypeOf(UUID{}) {
+		return reflectValue.Interface().(UUID).String(), nil
+	}
 	if reflectValue.Type() == reflect.TypeOf(big.Int{}) {
 		integer := reflectValue.Interface().(big.Int)
 		return json.Number(integer.String()), nil

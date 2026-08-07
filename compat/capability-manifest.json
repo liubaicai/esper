@@ -54,11 +54,11 @@
       "domain": "event",
       "level": "S",
       "summary": "Schema-directed JSON conversion for nested structs, maps, arrays, enum-like strings, time and arbitrary-precision numeric values",
-      "javaRefs": ["EventJsonTypingCoreParse", "EventJsonTypingCoreWrite", "EventJsonTypingClassParseWrite", "EventJsonParserLaxness"],
-      "goRefs": ["schema.go", "event_render.go", "schema_test.go", "json_underlying_test.go"],
+      "javaRefs": ["EventJsonTypingCoreParse", "EventJsonTypingCoreWrite", "EventJsonTypingClassParseWrite", "EventJsonParserLaxness", "EventJsonProvidedUnderlyingClass"],
+      "goRefs": ["schema.go", "event_render.go", "schema_test.go", "json_underlying_test.go", "json_scalar_types.go", "json_provided_underlying_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["provided-underlying class adapters and recursive schema registration", "strict/lax conversion matrix and undeclared-content policy parity", "BigDecimal/BigInteger exact JSON write policy across all nested/dynamic values", "shared Java/Go parse-write trace and JSON schema evolution"]
+      "remaining": ["recursive nested provided types as independently registered schemas, fragments and complete metadata/identity propagation", "strict/lax conversion matrix and undeclared-content policy parity beyond the covered typed-struct boundary", "BigDecimal/BigInteger exact JSON write policy across all nested and dynamic values", "shared Java/Go parse-write trace, schema evolution and compatibility rules"]
     },
     {
       "id": "event.xml-tree",
@@ -479,6 +479,17 @@
       "status": "mapped",
       "evidence": ["java-suite-event-json-13-13", "java-runtime-inventory", "go-unit"],
       "difference": "Go matches Esper's JSON map underlying policy for dynamic and non-dynamic schemas: static schemas discard undeclared input fields, dynamic schemas retain them, declared-but-omitted fields are materialized as nil, and zero-declaration schemas produce either an empty or input-preserving map according to the dynamic flag. The Go test covers all six Java executions and listener-equivalent parse traces; EventBean metadata, shared Java/Go trace serialization and the remaining JSON provided-underlying/class/laxness matrix remain open."
+    },
+    {
+      "id": "case.event-json-provided-underlying",
+      "javaRuntimeIds": ["java-runtime-aae0939c0d67c340b646", "java-runtime-4126f323a5b47eb54eca", "java-runtime-80dfca5c409f842b6777", "java-runtime-c5eb4152c3818ca69a73", "java-runtime-bd339067efa3ec4748c8", "java-runtime-b5849c7303cfdd9418b5", "java-runtime-d8237e0a5ca5bdd69920", "java-runtime-b2ab1cc201fcd29a7e73", "java-runtime-354b7f70ff5c84c7b9a6"],
+      "javaNames": ["EventJsonProvidedClassUsersEvent", "EventJsonProvidedClassUsersEventWithCreateSchema", "EventJsonProvidedClassClientsEvent", "EventJsonProvidedClassClientsEventWithCreateSchema", "EventJsonProvidedClassInvalid", "EventJsonProvidedClassFieldTypeMismatchInvalid", "EventJsonProvidedClassCreateSchemaTypeMismatchInvalid", "EventJsonProvidedClassSetNullForPrimitive", "EventJsonProvidedClassWArrayPatternInsert"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonProvidedUnderlyingClass.java"],
+      "goTests": ["TestJSONProvidedUnderlyingUsersRoundTripMatchesEsper", "TestJSONProvidedUnderlyingClientsRoundTripAndSendMatchesEsper", "TestJSONProvidedUnderlyingCreateSchemaKeepsTypedNestedValues", "TestJSONProvidedUnderlyingRejectsUnsupportedSchemaShapes", "TestJSONProvidedUnderlyingPreservesPrimitiveDefaultOnNull", "TestJSONProvidedUnderlyingPrimitiveDefaultSurvivesNullProjection", "TestJSONProvidedUnderlyingPatternInsertMaterializesTypedArray"],
+      "tags": ["correctness", "event", "json", "provided-underlying", "typed", "nested", "date", "uuid", "decimal"],
+      "status": "mapped",
+      "evidence": ["java-suite-event-json-13-13", "java-runtime-inventory", "go-unit"],
+      "difference": "Go maps all nine selected Java executions to explicit generic typed structs registered with RegisterJSONFor: nested struct/slice values, JSON tags, UUID, date-only, offset timestamp, exact rational decimal values, dynamic/parent/unknown-field/type validation, constructor-style primitive defaults, null projection routing and pattern-produced typed arrays are covered by Go-native tests. Engine.SendJSON is the Go event-sender boundary and RenderJSON supplies the serialization boundary. JVM-only public-class visibility, default-constructor and non-static-inner-class diagnostics are recorded as an intentional API difference: Go has zero-value struct construction and does not load JVM class names or reproduce Java annotation/compiler diagnostics."
     },
     {
       "id": "case.event-xml-tree",
@@ -2347,6 +2358,7 @@
     {"capabilityId": "event.contained", "caseId": "case.event-contained-split-type"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-typed"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-underlying"},
+    {"capabilityId": "event.json-typed", "caseId": "case.event-json-provided-underlying"},
     {"capabilityId": "event.xml-tree", "caseId": "case.event-xml-tree"},
     {"capabilityId": "event.inheritance", "caseId": "case.event-inheritance"},
     {"capabilityId": "view.derived-statistical", "caseId": "case.view-derived-statistical"},

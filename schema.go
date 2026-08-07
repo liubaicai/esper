@@ -134,6 +134,7 @@ type schemaConfig struct {
 	getters      []schemaGetterSpec
 	setters      []schemaSetterSpec
 	nested       map[string]Schema
+	defaults     map[string]any
 }
 
 func WithPropertyResolution(style PropertyResolutionStyle) SchemaOption {
@@ -245,6 +246,20 @@ func AllowDynamicFields() SchemaOption {
 	return func(cfg *schemaConfig) { cfg.allowDynamic = true }
 }
 
+// WithJSONDefaults supplies initial values for non-nullable fields on typed
+// JSON underlying values. It is useful when a Go struct deliberately models
+// a Java provided class with constructor-established primitive defaults.
+func WithJSONDefaults(defaults map[string]any) SchemaOption {
+	return func(cfg *schemaConfig) {
+		if cfg.defaults == nil {
+			cfg.defaults = make(map[string]any, len(defaults))
+		}
+		for name, value := range defaults {
+			cfg.defaults[name] = value
+		}
+	}
+}
+
 // WithSchemaParent adds an event-type parent. Parent fields precede child
 // fields, which also defines the positional order for ObjectArray schemas.
 func WithSchemaParent(parent Schema) SchemaOption {
@@ -264,6 +279,7 @@ type Schema struct {
 	resolution     PropertyResolutionStyle
 	accessor       AccessorStyle
 	allowDynamic   bool
+	defaults       map[string]any
 	variantMode    VariantMode
 	variantMembers []string
 	parents        []Schema
@@ -308,14 +324,59 @@ func NewJSONSchemaFor[T any](name string, fields []FieldSpec, opts ...SchemaOpti
 	if base.Kind() != reflect.Struct {
 		return Schema{}, fmt.Errorf("esper: typed JSON schema %q requires a struct type, got %s", name, typ)
 	}
-	if len(fields) == 0 && schemaConfigFromOptions(opts).accessor != AccessorExplicit {
+	config := schemaConfigFromOptions(opts)
+	if config.allowDynamic {
+		return Schema{}, fmt.Errorf("esper: typed JSON schema %q does not support dynamic fields", name)
+	}
+	if len(config.parents) > 0 {
+		return Schema{}, fmt.Errorf("esper: typed JSON schema %q does not support schema parents", name)
+	}
+	if len(fields) == 0 && config.accessor != AccessorExplicit {
 		inferred, err := structFields(base, nil)
 		if err != nil {
 			return Schema{}, err
 		}
 		fields = inferred
 	}
+	if err := validateTypedJSONFields(base, fields); err != nil {
+		return Schema{}, fmt.Errorf("esper: typed JSON schema %q: %w", name, err)
+	}
+	if err := validateTypedJSONDefaults(base, config.defaults); err != nil {
+		return Schema{}, fmt.Errorf("esper: typed JSON schema %q: %w", name, err)
+	}
 	return newSchema(name, SchemaJSON, typ, fields, opts)
+}
+
+func validateTypedJSONFields(typ reflect.Type, fields []FieldSpec) error {
+	zero := reflect.New(typ).Elem()
+	for _, field := range fields {
+		value := structFieldValue(zero, field.Name, PropertyCaseSensitive, nil)
+		if !value.IsValid() {
+			return fmt.Errorf("field %q is not present on struct %s", field.Name, typ)
+		}
+		if field.Type == nil || field.Type == typeOf[any]() || field.Type == value.Type() {
+			continue
+		}
+		if numericTypes(field.Type, value.Type()) {
+			continue
+		}
+		return fmt.Errorf("field %q declares %s but struct field is %s", field.Name, field.Type, value.Type())
+	}
+	return nil
+}
+
+func validateTypedJSONDefaults(typ reflect.Type, defaults map[string]any) error {
+	zero := reflect.New(typ).Elem()
+	for name, value := range defaults {
+		field := structFieldValue(zero, name, PropertyCaseSensitive, nil)
+		if !field.IsValid() {
+			return fmt.Errorf("default field %q is not present on struct %s", name, typ)
+		}
+		if _, err := assignReflectValue(field.Type(), value); err != nil {
+			return fmt.Errorf("default field %q: %w", name, err)
+		}
+	}
+	return nil
 }
 
 func NewXMLSchema(name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
@@ -627,6 +688,7 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		resolution:   cfg.resolution,
 		accessor:     cfg.accessor,
 		allowDynamic: cfg.allowDynamic,
+		defaults:     cloneAnyMap(cfg.defaults),
 		parents:      append([]Schema(nil), cfg.parents...),
 		parentNames:  parentNames,
 	}, nil
@@ -639,6 +701,17 @@ func schemaFieldsContain(fields []FieldSpec, name string) bool {
 		}
 	}
 	return false
+}
+
+func cloneAnyMap(values map[string]any) map[string]any {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make(map[string]any, len(values))
+	for name, value := range values {
+		result[name] = value
+	}
+	return result
 }
 
 func normalizeGetterSpec(spec schemaGetterSpec, goType reflect.Type) (schemaGetterSpec, error) {
@@ -2321,7 +2394,15 @@ func mergeSchemaUnderlying(schema Schema, original any, updates map[string]any) 
 			value.Set(originalValue)
 		}
 	}
+	for name, defaultValue := range schema.defaults {
+		if err := setStructField(value, name, defaultValue, schema.resolution); err != nil {
+			return nil, fmt.Errorf("default property %q: %w", name, err)
+		}
+	}
 	for name, update := range updates {
+		if update == nil && schema.hasNonNullableDefault(name) {
+			continue
+		}
 		if setter, canonicalName, ok := schema.lookupSetter(name); ok {
 			if err := invokeRegisteredSetter(value, setter, update); err != nil {
 				return nil, fmt.Errorf("target property %q: %w", canonicalName, err)
@@ -2333,6 +2414,17 @@ func mergeSchemaUnderlying(schema Schema, original any, updates map[string]any) 
 		}
 	}
 	return value.Interface(), nil
+}
+
+func (schema Schema) hasNonNullableDefault(name string) bool {
+	if _, exists := schema.defaults[name]; !exists {
+		return false
+	}
+	field, exists := schema.Field(name)
+	if !exists {
+		return false
+	}
+	return !isOptionalReflectType(field.Type)
 }
 
 func invokeRegisteredSetter(value reflect.Value, setter schemaSetterSpec, update any) (err error) {
@@ -2747,6 +2839,9 @@ func ParseJSONWithOptions(schema Schema, data []byte, receivedAt time.Time, opti
 			converted = normalizeDynamicJSONValue(converted)
 			object[key] = converted
 			if schema.goType != nil {
+				if converted == nil && schema.hasNonNullableDefault(field.Name) {
+					continue
+				}
 				updates[field.Name] = converted
 			}
 		}
@@ -3122,10 +3217,21 @@ func coerceXMLValue(value any, target reflect.Type) any {
 
 func coerceTextValue(text string, target reflect.Type) any {
 	if target == nil || target == typeOf[any]() || target.Kind() == reflect.String {
+		if target == reflect.TypeOf(DateOnly("")) {
+			if parsed, err := ParseDateOnly(text); err == nil {
+				return parsed
+			}
+		}
 		return text
 	}
 	if target == reflect.TypeOf(time.Time{}) {
-		if parsed, err := time.Parse(time.RFC3339Nano, text); err == nil {
+		if parsed, err := parseJSONTime(text); err == nil {
+			return parsed
+		}
+		return text
+	}
+	if target == reflect.TypeOf(UUID{}) {
+		if parsed, err := ParseUUID(text); err == nil {
 			return parsed
 		}
 		return text
@@ -3188,7 +3294,7 @@ func jsonInputShapeMatchesTarget(value any, target reflect.Type) bool {
 	for target.Kind() == reflect.Pointer {
 		target = target.Elem()
 	}
-	if target == reflect.TypeOf(time.Time{}) || target == reflect.TypeOf(big.Int{}) || target == reflect.TypeOf(big.Rat{}) {
+	if target == reflect.TypeOf(time.Time{}) || target == reflect.TypeOf(DateOnly("")) || target == reflect.TypeOf(UUID{}) || target == reflect.TypeOf(big.Int{}) || target == reflect.TypeOf(big.Rat{}) {
 		return false
 	}
 	source := reflect.ValueOf(value)
@@ -3240,7 +3346,29 @@ func coerceJSONReflect(value any, target reflect.Type) (reflect.Value, bool) {
 		if !ok {
 			return reflect.Value{}, false
 		}
-		parsed, err := time.Parse(time.RFC3339Nano, text)
+		parsed, err := parseJSONTime(text)
+		if err != nil {
+			return reflect.Value{}, false
+		}
+		return reflect.ValueOf(parsed), true
+	}
+	if target == reflect.TypeOf(DateOnly("")) {
+		text, ok := jsonText(value)
+		if !ok {
+			return reflect.Value{}, false
+		}
+		parsed, err := ParseDateOnly(text)
+		if err != nil {
+			return reflect.Value{}, false
+		}
+		return reflect.ValueOf(parsed), true
+	}
+	if target == reflect.TypeOf(UUID{}) {
+		text, ok := jsonText(value)
+		if !ok {
+			return reflect.Value{}, false
+		}
+		parsed, err := ParseUUID(text)
 		if err != nil {
 			return reflect.Value{}, false
 		}

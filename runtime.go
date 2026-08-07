@@ -8485,10 +8485,43 @@ func mergePatternTagValues(parts ...map[string][]Event) map[string][]Event {
 	merged := make(map[string][]Event, count)
 	for _, part := range parts {
 		for tag, events := range part {
-			merged[tag] = append(merged[tag], events...)
+			merged[tag] = mergePatternEventHistory(merged[tag], events)
 		}
 	}
 	return merged
+}
+
+// mergePatternEventHistory combines tag histories from nested progress
+// branches. A restarted repetition inherits the parent history so predicates
+// can still read outer/repeated tags; that inherited prefix must not be
+// appended a second time when the child transition is merged back into the
+// parent. Independent branches still append their non-overlapping histories.
+func mergePatternEventHistory(existing, incoming []Event) []Event {
+	if len(existing) == 0 {
+		return append([]Event(nil), incoming...)
+	}
+	if len(incoming) == 0 {
+		return append([]Event(nil), existing...)
+	}
+	if patternEventHistoryPrefix(existing, incoming) {
+		return append([]Event(nil), incoming...)
+	}
+	if patternEventHistoryPrefix(incoming, existing) {
+		return append([]Event(nil), existing...)
+	}
+	return append(append([]Event(nil), existing...), incoming...)
+}
+
+func patternEventHistoryPrefix(prefix, values []Event) bool {
+	if len(prefix) > len(values) {
+		return false
+	}
+	for index := range prefix {
+		if prefix[index].identity == nil || values[index].identity == nil || prefix[index].identity != values[index].identity {
+			return false
+		}
+	}
+	return true
 }
 
 func clonePatternProgress(progress *patternProgress) *patternProgress {
@@ -9147,6 +9180,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 							next.child = nil
 						} else {
 							next.child = newPatternProgress(base.node.child)
+							inheritPatternProgressTags(next, next.child)
 							armPatternProgressTimers(next.child, trigger.now, variables)
 						}
 					}
@@ -9174,6 +9208,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					next.child = nil
 				} else {
 					next.child = newPatternProgress(progress.node.child)
+					inheritPatternProgressTags(next, next.child)
 					armPatternProgressTimers(next.child, trigger.now, variables)
 				}
 			}
@@ -9197,6 +9232,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				if childTransition.complete {
 					next.count++
 					next.child = newPatternProgress(progress.node.child)
+					inheritPatternProgressTags(next, next.child)
 					armPatternProgressTimers(next.child, trigger.now, variables)
 					next.started = true
 				}
