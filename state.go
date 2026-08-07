@@ -93,6 +93,7 @@ type tableConfig struct {
 // TableDefinition is an immutable compile-time table declaration.
 type TableDefinition struct {
 	name       string
+	moduleName string
 	columns    []TableColumn
 	schema     Schema
 	primaryKey []string
@@ -162,6 +163,7 @@ func NewTableDefinition(name string, columns []TableColumn, options ...TableOpti
 }
 
 func (d TableDefinition) Name() string           { return d.name }
+func (d TableDefinition) Module() string         { return d.moduleName }
 func (d TableDefinition) Schema() Schema         { return d.schema }
 func (d TableDefinition) Columns() []TableColumn { return append([]TableColumn(nil), d.columns...) }
 func (d TableDefinition) PrimaryKey() []string   { return append([]string(nil), d.primaryKey...) }
@@ -174,6 +176,12 @@ func (d TableDefinition) Indexes() []TableIndexDefinition {
 }
 
 func (e *Environment) RegisterTable(name string, columns []TableColumn, options ...TableOption) (TableDefinition, error) {
+	return e.RegisterTableInModule("", name, columns, options...)
+}
+
+// RegisterTableInModule registers a table under a module-local logical name.
+// The default module is the original unqualified catalog.
+func (e *Environment) RegisterTableInModule(moduleName, name string, columns []TableColumn, options ...TableOption) (TableDefinition, error) {
 	definition, err := NewTableDefinition(name, columns, options...)
 	if err != nil {
 		return TableDefinition{}, err
@@ -181,12 +189,21 @@ func (e *Environment) RegisterTable(name string, columns []TableColumn, options 
 	if e == nil {
 		return TableDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
+	moduleName = normalizeModuleName(moduleName)
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if _, exists := e.tables[name]; exists {
-		return TableDefinition{}, NewError(ErrorDependency, fmt.Sprintf("table %q is already registered", name))
+	if moduleName != "" {
+		if _, exists := e.modules[moduleName]; !exists {
+			return TableDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("module %q is not registered", moduleName))
+		}
 	}
-	e.tables[name] = definition
+	key := catalogKey(moduleName, name)
+	if _, exists := e.tables[key]; exists {
+		return TableDefinition{}, NewError(ErrorDependency, fmt.Sprintf("table %q is already registered in module %q", name, moduleName))
+	}
+	definition.moduleName = moduleName
+	definition.schema.name = "table:" + key
+	e.tables[key] = definition
 	return definition, nil
 }
 
@@ -197,13 +214,24 @@ func CreateTable(env *Environment, name string, columns []TableColumn, options .
 	return env.RegisterTable(name, columns, options...)
 }
 
+func CreateTableInModule(env *Environment, moduleName, name string, columns []TableColumn, options ...TableOption) (TableDefinition, error) {
+	if env == nil {
+		return TableDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	return env.RegisterTableInModule(moduleName, name, columns, options...)
+}
+
 func (e *Environment) Table(name string) (TableDefinition, bool) {
+	return e.TableInModule("", name)
+}
+
+func (e *Environment) TableInModule(moduleName, name string) (TableDefinition, bool) {
 	if e == nil {
 		return TableDefinition{}, false
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	definition, ok := e.tables[name]
+	definition, ok := e.tables[catalogKey(moduleName, name)]
 	return definition, ok
 }
 
@@ -715,6 +743,7 @@ func encodeKey(values []any) string {
 // multiple consumers.
 type NamedWindowDefinition struct {
 	name          string
+	moduleName    string
 	schema        Schema
 	retention     WindowSpec
 	contextName   string
@@ -817,6 +846,7 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 }
 
 func (d NamedWindowDefinition) Name() string          { return d.name }
+func (d NamedWindowDefinition) Module() string        { return d.moduleName }
 func (d NamedWindowDefinition) Schema() Schema        { return d.schema }
 func (d NamedWindowDefinition) Retention() WindowSpec { return d.retention }
 func (d NamedWindowDefinition) Context() string       { return d.contextName }
@@ -829,6 +859,13 @@ func (d NamedWindowDefinition) Indexes() []NamedWindowIndexDefinition {
 }
 
 func (e *Environment) RegisterNamedWindow(name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
+	return e.RegisterNamedWindowInModule("", name, schema, options...)
+}
+
+// RegisterNamedWindowInModule registers a named window under a module-local
+// logical name. A module-local object keeps its Java-style protected/public
+// resolution boundary without exposing an EPL module declaration.
+func (e *Environment) RegisterNamedWindowInModule(moduleName, name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
 	definition, err := NewNamedWindowDefinition(name, schema, options...)
 	if err != nil {
 		return NamedWindowDefinition{}, err
@@ -841,12 +878,20 @@ func (e *Environment) RegisterNamedWindow(name string, schema Schema, options ..
 			return NamedWindowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", definition.contextName))
 		}
 	}
+	moduleName = normalizeModuleName(moduleName)
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if _, exists := e.namedWindows[name]; exists {
-		return NamedWindowDefinition{}, NewError(ErrorDependency, fmt.Sprintf("named window %q is already registered", name))
+	if moduleName != "" {
+		if _, exists := e.modules[moduleName]; !exists {
+			return NamedWindowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("module %q is not registered", moduleName))
+		}
 	}
-	e.namedWindows[name] = definition
+	key := catalogKey(moduleName, name)
+	if _, exists := e.namedWindows[key]; exists {
+		return NamedWindowDefinition{}, NewError(ErrorDependency, fmt.Sprintf("named window %q is already registered in module %q", name, moduleName))
+	}
+	definition.moduleName = moduleName
+	e.namedWindows[key] = definition
 	return definition, nil
 }
 
@@ -857,13 +902,24 @@ func CreateNamedWindow(env *Environment, name string, schema Schema, options ...
 	return env.RegisterNamedWindow(name, schema, options...)
 }
 
+func CreateNamedWindowInModule(env *Environment, moduleName, name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
+	if env == nil {
+		return NamedWindowDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	return env.RegisterNamedWindowInModule(moduleName, name, schema, options...)
+}
+
 func (e *Environment) NamedWindow(name string) (NamedWindowDefinition, bool) {
+	return e.NamedWindowInModule("", name)
+}
+
+func (e *Environment) NamedWindowInModule(moduleName, name string) (NamedWindowDefinition, bool) {
 	if e == nil {
 		return NamedWindowDefinition{}, false
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	definition, ok := e.namedWindows[name]
+	definition, ok := e.namedWindows[catalogKey(moduleName, name)]
 	return definition, ok
 }
 

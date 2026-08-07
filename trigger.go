@@ -202,10 +202,11 @@ func WhenNotMatchedActions(actions ...TableMergeAction) TableMergeClause {
 }
 
 type triggerDefinition struct {
-	input  *streamNode
-	table  string
-	target triggerTargetKind
-	action triggerActionKind
+	input      *streamNode
+	table      string
+	moduleName string
+	target     triggerTargetKind
+	action     triggerActionKind
 	// onDemand distinguishes fire-and-forget target-row evaluation from a
 	// live on-trigger.  Live triggers keep the incoming event as the outer
 	// scope; FAF mutations use the candidate target row as OuterEvent so a
@@ -656,7 +657,7 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 	if definition.target == triggerTargetNamedWindow {
 		return e.validateNamedWindowTrigger(definition)
 	}
-	table, ok := e.Table(definition.table)
+	table, ok := e.TableInModule(definition.moduleName, definition.table)
 	if !ok {
 		return NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown table %q", definition.table))
 	}
@@ -884,7 +885,7 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 }
 
 func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) error {
-	window, ok := e.NamedWindow(definition.table)
+	window, ok := e.NamedWindowInModule(definition.moduleName, definition.table)
 	if !ok {
 		return NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown named window %q", definition.table))
 	}
@@ -1260,11 +1261,11 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 		result.Old = append(result.Old, eventsToResults(mutation.oldEvents)...)
 		result.New = append(result.New, eventsToResults(mutation.newEvents)...)
 		if len(mutation.oldRows) > 0 || len(mutation.newRows) > 0 {
-			oldResults, convertErr := tableRowsToResults(s.engine.tables[definition.table], definition.table, mutation.oldRows, now)
+			oldResults, convertErr := tableRowsToResults(s.engine.tables[catalogKey(definition.moduleName, definition.table)], definition.table, mutation.oldRows, now)
 			if convertErr != nil {
 				return convertErr
 			}
-			newResults, convertErr := tableRowsToResults(s.engine.tables[definition.table], definition.table, mutation.newRows, now)
+			newResults, convertErr := tableRowsToResults(s.engine.tables[catalogKey(definition.moduleName, definition.table)], definition.table, mutation.newRows, now)
 			if convertErr != nil {
 				return convertErr
 			}
@@ -1361,7 +1362,7 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 	if engine == nil || definition == nil {
 		return ResultBatch{}, NewError(ErrorDependency, "nil table select trigger")
 	}
-	table := engine.tables[definition.table]
+	table := engine.tables[catalogKey(definition.moduleName, definition.table)]
 	if table == nil {
 		return ResultBatch{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger table %q is not available", definition.table))
 	}
@@ -1428,7 +1429,7 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 	if engine == nil || definition == nil {
 		return ResultBatch{}, NewError(ErrorDependency, "nil named-window select trigger")
 	}
-	window, ok := engine.namedWindows[definition.table]
+	window, ok := engine.namedWindows[catalogKey(definition.moduleName, definition.table)]
 	if !ok {
 		return ResultBatch{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger named window %q is not available", definition.table))
 	}
@@ -1666,7 +1667,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 	if engine == nil || definition == nil {
 		return tableMutationResult{}, NewError(ErrorDependency, "nil named-window trigger")
 	}
-	window, ok := engine.namedWindows[definition.table]
+	window, ok := engine.namedWindows[catalogKey(definition.moduleName, definition.table)]
 	if !ok {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger named window %q is not available", definition.table))
 	}
@@ -1861,7 +1862,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 	if definition.target == triggerTargetNamedWindow {
 		return executeNamedWindowAction(ctx, engine, definition, event, now, variables, owner)
 	}
-	table := engine.tables[definition.table]
+	table := engine.tables[catalogKey(definition.moduleName, definition.table)]
 	if table == nil {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger table %q is not available", definition.table))
 	}

@@ -132,7 +132,7 @@
       "level": "S",
       "summary": "Fluent Fire-and-Forget snapshots and target-side mutation for Named Windows and Tables",
       "javaRefs": ["InfraNWTableFAF", "InfraNWTableFAFSubstitutionParams", "InfraNWTableFAFSubquery", "InfraNWTableFAFIndex", "InfraNWTableFAFInsertMultirow", "InfraNWTableFAFResolve"],
-      "goRefs": ["faf.go", "stream.go", "plan.go", "runtime.go", "state.go", "subquery.go", "faf_mutation_test.go", "faf_multirow_test.go", "faf_substitution_params_test.go", "faf_subquery_parity_test.go", "infra_nwtable_faf_parity_test.go"],
+      "goRefs": ["faf.go", "stream.go", "plan.go", "runtime.go", "state.go", "subquery.go", "module.go", "faf_mutation_test.go", "faf_multirow_test.go", "faf_substitution_params_test.go", "faf_subquery_parity_test.go", "faf_resolve_parity_test.go", "infra_nwtable_faf_parity_test.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["context-partition selectors and partition-local mutation breadth", "prepared-parameter combinations across joins/subqueries/contexts and late-binding trace parity", "index selection, composite/range/in-key planning and query-plan hooks", "all event representations and schema-conversion diagnostics", "FAF subquery performance/index execution, broader cardinality/representation coverage, historical/method source and full invalid-rule matrix", "concurrent read/write snapshot and transaction semantics", "full Java execution trace parity"]
@@ -1180,6 +1180,17 @@
       "status": "partial",
       "evidence": ["java-maven-regression", "java-runtime-inventory", "go-unit"],
       "difference": "Go covers the first 15 functional InfraNWTableFAFSubquery executions with typed SubqueryValue/SubqueryGroupRows, OuterField correlation, Named Window/Table snapshots, on-demand insert/update/delete, context-local lookup, inner where/group-by and three FAF-only invalid constraints. The four Java performance executions are intentionally not claimed as timing parity; index selection/plan hooks, broader cardinality and event-representation combinations, historical/method sources, transactional concurrency and exact Java diagnostics remain open."
+    },
+    {
+      "id": "case.query-fire-and-forget-resolve",
+      "javaRuntimeIds": ["java-runtime-192b97fd8c79b3d51710", "java-runtime-67e14876d880b2248867"],
+      "javaNames": ["InfraSelectWildcard{namedWindow=true}", "InfraSelectWildcard{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableFAFResolve.java"],
+      "goTests": ["TestInfraFAFResolveModuleBoundNamedWindowsMatchEsper", "TestInfraFAFResolveModuleBoundTablesMatchEsper", "TestInfraFAFResolveRejectsUnknownModule"],
+      "tags": ["correctness", "query", "fire-and-forget", "module", "name-resolution", "named-window", "table", "invalidity"],
+      "status": "mapped",
+      "evidence": ["java-maven-regression", "java-runtime-inventory", "go-unit"],
+      "difference": "Go models Java module uses/name resolution with an explicit registered Module and module-bound NamedWindow/Table source handle. It does not parse module/EPL text or reproduce Java protected/public/uses option classes; module-local same-name objects have independent state, source schemas, Plan canonical identities and runtime lookup diagnostics."
     },
     {
       "id": "case.subquery-basic",
@@ -2725,6 +2736,7 @@
     {"capabilityId": "query.fire-and-forget", "caseId": "case.query-fire-and-forget-nwtable"},
     {"capabilityId": "query.fire-and-forget", "caseId": "case.query-fire-and-forget-substitution-params"},
     {"capabilityId": "query.fire-and-forget", "caseId": "case.query-fire-and-forget-subquery"},
+    {"capabilityId": "query.fire-and-forget", "caseId": "case.query-fire-and-forget-resolve"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-basic"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-empty-quantifiers"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-context"},

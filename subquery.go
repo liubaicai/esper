@@ -1255,9 +1255,9 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 		if base.kind == streamNamedWindow && contextName != "" && contextPartition != "" {
 			var window *NamedWindow
 			if engineLocked {
-				window = e.namedWindows[base.sourceName]
+				window = e.namedWindows[catalogKey(base.moduleName, base.sourceName)]
 			} else {
-				window, _ = e.NamedWindow(base.sourceName)
+				window, _ = e.NamedWindowInModule(base.moduleName, base.sourceName)
 			}
 			if window != nil && window.Definition().Context() == contextName {
 				events, err = window.SnapshotContext(context.Background(), contextPartition)

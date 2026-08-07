@@ -1031,22 +1031,30 @@ func (e *Engine) ContextVariableValues(ctx context.Context, contextName, partiti
 }
 
 func (e *Engine) Table(name string) (*Table, bool) {
+	return e.TableInModule("", name)
+}
+
+func (e *Engine) TableInModule(moduleName, name string) (*Table, bool) {
 	if e == nil {
 		return nil, false
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	table, ok := e.tables[name]
+	table, ok := e.tables[catalogKey(moduleName, name)]
 	return table, ok
 }
 
 func (e *Engine) NamedWindow(name string) (*NamedWindow, bool) {
+	return e.NamedWindowInModule("", name)
+}
+
+func (e *Engine) NamedWindowInModule(moduleName, name string) (*NamedWindow, bool) {
 	if e == nil {
 		return nil, false
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	return e.ensureNamedWindowLocked(name)
+	return e.ensureNamedWindowLockedInModule(moduleName, name)
 }
 
 // ensureNamedWindowLocked keeps the runtime catalog in sync with the
@@ -1055,27 +1063,36 @@ func (e *Engine) NamedWindow(name string) (*NamedWindow, bool) {
 // window; the first runtime lookup must still materialize that definition.
 // The engine mutex must be held by the caller.
 func (e *Engine) ensureNamedWindowLocked(name string) (*NamedWindow, bool) {
+	return e.ensureNamedWindowLockedInModule("", name)
+}
+
+func (e *Engine) ensureNamedWindowLockedInModule(moduleName, name string) (*NamedWindow, bool) {
 	if e == nil {
 		return nil, false
 	}
-	if window, ok := e.namedWindows[name]; ok {
+	key := catalogKey(moduleName, name)
+	if window, ok := e.namedWindows[key]; ok {
 		return window, true
 	}
 	if e.env == nil {
 		return nil, false
 	}
 	e.env.mu.RLock()
-	definition, ok := e.env.namedWindows[name]
+	definition, ok := e.env.namedWindows[key]
 	e.env.mu.RUnlock()
 	if !ok {
 		return nil, false
 	}
 	window := newNamedWindow(definition, e)
-	e.namedWindows[name] = window
+	e.namedWindows[key] = window
 	return window, true
 }
 
 func (e *Engine) InsertNamedWindow(ctx context.Context, name string, underlying any) error {
+	return e.InsertNamedWindowInModule(ctx, "", name, underlying)
+}
+
+func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name string, underlying any) error {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
@@ -1087,7 +1104,7 @@ func (e *Engine) InsertNamedWindow(ctx context.Context, name string, underlying 
 		e.mu.Unlock()
 		return NewError(ErrorState, "engine is closed")
 	}
-	window, ok := e.ensureNamedWindowLocked(name)
+	window, ok := e.ensureNamedWindowLockedInModule(moduleName, name)
 	if !ok {
 		e.mu.Unlock()
 		return NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", name))

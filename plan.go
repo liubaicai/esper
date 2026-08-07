@@ -30,6 +30,7 @@ type Environment struct {
 	enumPlugins           map[string]enumPluginDefinition
 	dateTimePlugins       map[string]dateTimePluginDefinition
 	scripts               map[string]scriptDefinition
+	modules               map[string]struct{}
 	tables                map[string]TableDefinition
 	namedWindows          map[string]NamedWindowDefinition
 	contexts              map[string]ContextDefinition
@@ -48,6 +49,7 @@ func NewEnvironment() *Environment {
 		enumPlugins:           make(map[string]enumPluginDefinition),
 		dateTimePlugins:       make(map[string]dateTimePluginDefinition),
 		scripts:               make(map[string]scriptDefinition),
+		modules:               make(map[string]struct{}),
 		tables:                make(map[string]TableDefinition),
 		namedWindows:          make(map[string]NamedWindowDefinition),
 		contexts:              make(map[string]ContextDefinition),
@@ -245,7 +247,9 @@ func (e *Environment) Tables() []TableDefinition {
 	for _, definition := range e.tables {
 		result = append(result, definition)
 	}
-	sort.Slice(result, func(i, j int) bool { return result[i].name < result[j].name })
+	sort.Slice(result, func(i, j int) bool {
+		return catalogKey(result[i].moduleName, result[i].name) < catalogKey(result[j].moduleName, result[j].name)
+	})
 	return result
 }
 
@@ -259,7 +263,9 @@ func (e *Environment) NamedWindows() []NamedWindowDefinition {
 	for _, definition := range e.namedWindows {
 		result = append(result, definition)
 	}
-	sort.Slice(result, func(i, j int) bool { return result[i].name < result[j].name })
+	sort.Slice(result, func(i, j int) bool {
+		return catalogKey(result[i].moduleName, result[i].name) < catalogKey(result[j].moduleName, result[j].name)
+	})
 	return result
 }
 
@@ -1339,7 +1345,7 @@ func (e *Environment) validateNode(node *streamNode) error {
 		}
 		return nil
 	case streamNamedWindow:
-		definition, ok := e.NamedWindow(node.sourceName)
+		definition, ok := e.NamedWindowInModule(node.moduleName, node.sourceName)
 		if !ok {
 			return NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", node.sourceName))
 		}
@@ -1350,7 +1356,7 @@ func (e *Environment) validateNode(node *streamNode) error {
 		}
 		return nil
 	case streamTable:
-		definition, ok := e.Table(node.sourceName)
+		definition, ok := e.TableInModule(node.moduleName, node.sourceName)
 		if !ok {
 			return NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", node.sourceName))
 		}
@@ -2195,14 +2201,14 @@ func (e *Environment) sourceSchema(source *streamNode) (Schema, error) {
 		return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("unnest child type %s has no registered schema", source.contained.childType))
 	}
 	if source.kind == streamNamedWindow {
-		definition, ok := e.NamedWindow(source.sourceName)
+		definition, ok := e.NamedWindowInModule(source.moduleName, source.sourceName)
 		if !ok {
 			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
 		}
 		return definition.schema, nil
 	}
 	if source.kind == streamTable {
-		definition, ok := e.Table(source.sourceName)
+		definition, ok := e.TableInModule(source.moduleName, source.sourceName)
 		if !ok {
 			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", source.sourceName))
 		}
@@ -3518,7 +3524,7 @@ func (e *Environment) validateOnDemand(query Query) error {
 		return NewError(ErrorInvalidRule, "on-demand target must be a root named window or table")
 	}
 	if query.contextName != "" && query.input.kind == streamNamedWindow {
-		window, ok := e.NamedWindow(query.input.sourceName)
+		window, ok := e.NamedWindowInModule(query.input.moduleName, query.input.sourceName)
 		if !ok {
 			return NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", query.input.sourceName))
 		}
@@ -3645,7 +3651,7 @@ func (e *Environment) validateFireAndForgetSubqueries(query Query) error {
 		if base.kind != streamNamedWindow {
 			continue
 		}
-		window, ok := e.NamedWindow(base.sourceName)
+		window, ok := e.NamedWindowInModule(base.moduleName, base.sourceName)
 		if !ok {
 			return NewError(ErrorUnknownName, fmt.Sprintf("subquery references unknown named window %q", base.sourceName))
 		}

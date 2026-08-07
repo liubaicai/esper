@@ -437,7 +437,7 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 	e.pendingPatternSubexpressionLimits = nil
 
 	if source.kind == streamNamedWindow {
-		if _, ok := e.ensureNamedWindowLocked(source.sourceName); !ok {
+		if _, ok := e.ensureNamedWindowLockedInModule(source.moduleName, source.sourceName); !ok {
 			e.mu.Unlock()
 			return QueryResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
 		}
@@ -451,11 +451,12 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 		mutation, err = e.executeFireAndForgetMultirowInsertLocked(ctx, plan, now, variables)
 	} else {
 		definition := &triggerDefinition{
-			input:    source,
-			table:    source.sourceName,
-			onDemand: true,
-			where:    plan.query.onDemand.predicate,
-			action:   triggerInsertTable,
+			input:      source,
+			table:      source.sourceName,
+			moduleName: source.moduleName,
+			onDemand:   true,
+			where:      plan.query.onDemand.predicate,
+			action:     triggerInsertTable,
 		}
 		switch plan.query.onDemand.action {
 		case onDemandInsert:
@@ -592,7 +593,7 @@ func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, p
 	}
 
 	if target.kind == streamTable {
-		table := e.tables[target.sourceName]
+		table := e.tables[catalogKey(target.moduleName, target.sourceName)]
 		if table == nil {
 			return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", target.sourceName))
 		}
@@ -613,7 +614,7 @@ func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, p
 		return mutation, nil
 	}
 
-	window := e.namedWindows[target.sourceName]
+	window := e.namedWindows[catalogKey(target.moduleName, target.sourceName)]
 	if window == nil {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", target.sourceName))
 	}
@@ -680,7 +681,7 @@ func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, 
 	partitions := make(map[string]contextMutationPartition)
 	switch source.kind {
 	case streamNamedWindow:
-		window := e.namedWindows[source.sourceName]
+		window := e.namedWindows[catalogKey(source.moduleName, source.sourceName)]
 		if window == nil {
 			return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
 		}
@@ -704,7 +705,7 @@ func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, 
 			}
 		}
 	case streamTable:
-		table := e.tables[source.sourceName]
+		table := e.tables[catalogKey(source.moduleName, source.sourceName)]
 		if table == nil {
 			return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", source.sourceName))
 		}
@@ -716,7 +717,7 @@ func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, 
 			if err := contextErr(ctx); err != nil {
 				return tableMutationResult{}, err
 			}
-			targetEvent, eventErr := tableRowEvent(table, source.sourceName, row, now)
+			targetEvent, eventErr := tableRowEvent(table, catalogKey(source.moduleName, source.sourceName), row, now)
 			if eventErr != nil {
 				return tableMutationResult{}, eventErr
 			}
@@ -773,6 +774,7 @@ func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, 
 		trigger := &triggerDefinition{
 			input:               source,
 			table:               source.sourceName,
+			moduleName:          source.moduleName,
 			onDemand:            true,
 			where:               plan.query.onDemand.predicate,
 			action:              triggerDeleteTable,
@@ -1291,9 +1293,9 @@ func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source
 		var window *NamedWindow
 		var ok bool
 		if engineLocked {
-			window, ok = e.namedWindows[source.sourceName]
+			window, ok = e.namedWindows[catalogKey(source.moduleName, source.sourceName)]
 		} else {
-			window, ok = e.NamedWindow(source.sourceName)
+			window, ok = e.NamedWindowInModule(source.moduleName, source.sourceName)
 		}
 		if !ok {
 			return nil, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
@@ -1303,9 +1305,9 @@ func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source
 		var table *Table
 		var ok bool
 		if engineLocked {
-			table, ok = e.tables[source.sourceName]
+			table, ok = e.tables[catalogKey(source.moduleName, source.sourceName)]
 		} else {
-			table, ok = e.Table(source.sourceName)
+			table, ok = e.TableInModule(source.moduleName, source.sourceName)
 		}
 		if !ok {
 			return nil, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", source.sourceName))
@@ -1325,6 +1327,10 @@ func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source
 			if eventErr != nil {
 				return nil, eventErr
 			}
+			// Table rows use the logical table name as their runtime stream type.
+			// The module remains part of the source node/catalog identity; putting
+			// it into Event.TypeName would make the existing source acceptance
+			// contract reject the row before projection.
 			event.typeName = source.sourceName
 			events = append(events, event)
 		}

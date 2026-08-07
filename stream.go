@@ -27,6 +27,7 @@ type streamNode struct {
 	kind               streamNodeKind
 	input              *streamNode
 	sourceName         string
+	moduleName         string
 	sourceType         reflect.Type
 	configurationError string
 	historical         *historicalDefinition
@@ -60,9 +61,9 @@ func (n *streamNode) describe() string {
 	case streamWindow:
 		return n.input.describe() + ".window(" + n.window.description() + ")"
 	case streamNamedWindow:
-		return "named-window(" + n.sourceName + ")"
+		return "named-window(" + catalogKey(n.moduleName, n.sourceName) + ")"
 	case streamTable:
-		return "table-source(" + n.sourceName + ")"
+		return "table-source(" + catalogKey(n.moduleName, n.sourceName) + ")"
 	case streamHistorical:
 		schemaName := "<nil>"
 		triggerName := ""
@@ -763,7 +764,13 @@ func FromAny(env *Environment, sourceName string) RecordStream {
 // The window itself owns retention; additional filter/window nodes are
 // consumer-local views.
 func FromNamedWindow(env *Environment, windowName string) RecordStream {
-	return RecordStream{env: env, node: &streamNode{kind: streamNamedWindow, sourceName: windowName, sourceType: typeOf[any]()}}
+	return FromNamedWindowInModule(env, "", windowName)
+}
+
+// FromNamedWindowInModule selects a module-local named window while keeping
+// the logical object name visible in the fluent chain.
+func FromNamedWindowInModule(env *Environment, moduleName, windowName string) RecordStream {
+	return RecordStream{env: env, node: &streamNode{kind: streamNamedWindow, sourceName: windowName, moduleName: normalizeModuleName(moduleName), sourceType: typeOf[any]()}}
 }
 
 // FromNamedWindowAs creates a typed consumer stream for a named window. It
@@ -774,11 +781,20 @@ func FromNamedWindowAs[T any](env *Environment, windowName string) Stream[T] {
 	return Stream[T]{env: env, node: &streamNode{kind: streamNamedWindow, sourceName: windowName, sourceType: typeOf[T]()}}
 }
 
+func FromNamedWindowAsInModule[T any](env *Environment, moduleName, windowName string) Stream[T] {
+	return Stream[T]{env: env, node: &streamNode{kind: streamNamedWindow, sourceName: windowName, moduleName: normalizeModuleName(moduleName), sourceType: typeOf[T]()}}
+}
+
 // FromTable creates a read-only record stream over a registered table. Table
 // sources are evaluated by Fire-and-Forget execution and are not fed by
 // ordinary event delivery.
 func FromTable(env *Environment, tableName string) RecordStream {
-	return RecordStream{env: env, node: &streamNode{kind: streamTable, sourceName: tableName, sourceType: typeOf[any]()}}
+	return FromTableInModule(env, "", tableName)
+}
+
+// FromTableInModule selects a module-local table source.
+func FromTableInModule(env *Environment, moduleName, tableName string) RecordStream {
+	return RecordStream{env: env, node: &streamNode{kind: streamTable, sourceName: tableName, moduleName: normalizeModuleName(moduleName), sourceType: typeOf[any]()}}
 }
 
 // FromHistorical creates a source whose rows are polled when an input event
