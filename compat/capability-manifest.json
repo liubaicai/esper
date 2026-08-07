@@ -679,6 +679,17 @@
       "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null→B/source-inner, true→source-inner, false→A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open."
     },
     {
+      "id": "case.trigger-pattern-multimatch",
+      "javaRuntimeIds": ["java-runtime-d28146beedb9cfdf9dbb", "java-runtime-ac7258306c8be9b66f8f"],
+      "javaNames": ["InfraPatternMultimatch{namedWindow=true}", "InfraPatternMultimatch{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerPatternMultimatchMatchesInfraPatternMultimatch"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "pattern", "merge", "multimatch", "route"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go expresses the pattern-to-merge pipeline as PatternFrom(...).FollowedBy(...).Every().Select(...).InsertInto(route) followed by an explicit OnRecord merge, preserving every A/B multimatch and composite-key duplicate suppression for Table and Named Window. A direct OnPattern trigger source, Java pattern statement deployment/observer lifecycle, atomic cross-statement route/merge transaction and complete pattern/merge shared trace remain open."
+    },
+    {
       "id": "case.named-window-unique-merge",
       "javaNames": ["ViewMultiKeyLastUniqueArrayKeyNamedWindow"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewMultikeyWArray.java"],
@@ -2310,6 +2321,7 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-single-sided"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-no-where"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-inner-type-variable"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-pattern-multimatch"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-array-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-nested-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-ordered-scalar-assignment"},
