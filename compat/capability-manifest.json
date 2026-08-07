@@ -613,6 +613,17 @@
       "difference": "Go maps ordered not-matched action chains to ThenInsertInto/ThenInsertIntoWhen for side-stream projections and ThenInsertIntoTarget for the final Table or Named Window insert. The test checks four side streams, a conditional side stream, target state and Table/Named Window behavior. Split-stream fan-out beyond this chain, representation conversion, rollback/transactional action batches and complete Java action-order/error diagnostics remain open."
     },
     {
+      "id": "case.trigger-merge-multiple-insert",
+      "javaRuntimeIds": ["java-runtime-2c4851ea026cc835d39b", "java-runtime-f075aa28d64b1ae78d2e"],
+      "javaNames": ["InfraMultipleInsert{namedWindow=true}", "InfraMultipleInsert{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerMultipleInsertBranchesMatchInfraMultipleInsert"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "multiple-insert", "projection", "duplicate-match"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go expresses Java's ordered not-matched branches with explicit typed predicates and assignments: A/B copy source fields, C projects a constant row, D composes a string and negates the numeric field. The test covers unmatched no-op, four new rows, duplicate matched key no-op and final Table/Named Window snapshots. Representation-specific projection conversion, multiple-insert rollback/transaction semantics and exact Java diagnostics remain open."
+    },
+    {
       "id": "case.trigger-merge-matched-side-stream",
       "javaRuntimeIds": ["java-runtime-c91b3df37512cfac454f", "java-runtime-b54b14998ff59e65f2fc", "java-runtime-945ba0790a1cfa2b1033", "java-runtime-fef4b3a46f9b7da65a72", "java-runtime-d8cb24fc9e29421236e2", "java-runtime-e22957dc02c3ac4b8bb7", "java-runtime-284497e8a9729bb76ac2", "java-runtime-f6718d2a96a3e3668239", "java-runtime-51773f11823a58156447", "java-runtime-b891f1f54423ccb8a628", "java-runtime-dd95faed8e31c95bec9f", "java-runtime-6e68e972f23cef8dde85"],
       "javaNames": ["InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=OBJECTARRAY}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=OBJECTARRAY}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=MAP}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=MAP}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=AVRO}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=AVRO}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=JSON}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=JSON}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=JSONCLASSPROVIDED}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=JSONCLASSPROVIDED}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=DEFAULT}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=DEFAULT}"],
@@ -2282,6 +2293,7 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-simple-insert"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-multiaction"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-insert-stream"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-multiple-insert"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-matched-side-stream"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-wildcard"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-subquery-not-matched"},

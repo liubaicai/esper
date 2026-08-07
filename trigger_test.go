@@ -34,6 +34,11 @@ type triggerMergeOtherStreamEvent struct {
 	Value float64 `esper:"value"`
 }
 
+type triggerMultipleInsertEvent struct {
+	In1 string `esper:"in1"`
+	In2 int    `esper:"in2"`
+}
+
 func TestTableTriggerBuilderAndLifecycle(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
@@ -1013,6 +1018,149 @@ func TestTableMergeWithoutPrimaryKeyUsesExistingRowAsMatch(t *testing.T) {
 		mergeBatches[2].New[0].Get("symbol").Any() != "B1" || mergeBatches[3].Old[0].Get("price").Any() != float64(5) ||
 		mergeBatches[3].New[0].Get("symbol").Any() != "Z" || mergeBatches[3].New[0].Get("price").Any() != float64(-1) {
 		t.Fatalf("no-key B/C branch lifecycle = %#v", mergeBatches)
+	}
+}
+
+func TestTriggerMultipleInsertBranchesMatchInfraMultipleInsert(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		namedWindow bool
+	}{
+		{name: "table"},
+		{name: "named-window", namedWindow: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			env := NewEnvironment()
+			if _, err := RegisterStruct[triggerMultipleInsertEvent](env, "TriggerMultipleInsertEvent"); err != nil {
+				t.Fatal(err)
+			}
+			const targetName = "trigger-multiple-insert-target"
+			if testCase.namedWindow {
+				schema, err := RegisterMap(env, "TriggerMultipleInsertTarget", []FieldSpec{
+					FieldDef("col1", reflect.TypeOf("")),
+					FieldDef("col2", reflect.TypeOf(int(0))),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, targetName, schema, NamedWindowRetention(KeepAll())); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := CreateTable(env, targetName, []TableColumn{
+				PrimaryKeyColumn[string]("col1"),
+				TableColumnOf[int]("col2"),
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			source := From[triggerMultipleInsertEvent](env, "TriggerMultipleInsertEvent")
+			in1 := Field[triggerMultipleInsertEvent, string]("in1")
+			in2 := Field[triggerMultipleInsertEvent, int]("in2")
+			clauses := []TableMergeClause{
+				WhenNotMatched(LikeOf(in1, Literal("A%")),
+					SetColumn("col1", in1), SetColumn("col2", in2)),
+				WhenNotMatched(LikeOf(in1, Literal("B%")),
+					SetColumn("col1", in1), SetColumn("col2", in2)),
+				WhenNotMatched(LikeOf(in1, Literal("C%")),
+					SetColumn("col1", Literal("Z")), SetColumn("col2", Literal(-1))),
+				WhenNotMatched(LikeOf(in1, Literal("D%")),
+					SetColumn("col1", ConcatOf(Literal("x"), in1, Literal("x"))),
+					SetColumn("col2", Negate[int](in2))),
+			}
+			var plan Plan
+			var err error
+			if testCase.namedWindow {
+				match := Equal[string](NamedWindowField[string]("col1"), in1)
+				plan, err = env.Build(OnEvent(source).MergeIntoNamedWindowWhen(targetName, match, clauses...).Query(StatementName("trigger-multiple-insert")))
+			} else {
+				plan, err = env.Build(OnEvent(source).MergeIntoTableWhen(targetName, []Expr{in1}, clauses...).Query(StatementName("trigger-multiple-insert")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			engine := NewEngine(env)
+			deployment, err := engine.Deploy(context.Background(), plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer deployment.Undeploy(context.Background())
+			var batches []ResultBatch
+			if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+				batches = append(batches, batch)
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			send := func(in1 string, in2 int) {
+				t.Helper()
+				if err := engine.SendEvent(context.Background(), triggerMultipleInsertEvent{In1: in1, In2: in2}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			assertLastNew := func(wantCol1 string, wantCol2 int) {
+				t.Helper()
+				if len(batches) == 0 {
+					t.Fatalf("multiple-insert listener has no batch, want %s/%d", wantCol1, wantCol2)
+				}
+				batch := batches[len(batches)-1]
+				if len(batch.New) != 1 || len(batch.Old) != 0 {
+					t.Fatalf("multiple-insert batch = %#v, want one new result", batch)
+				}
+				if batch.New[0].Get("col1").Any() != wantCol1 || batch.New[0].Get("col2").Any() != wantCol2 {
+					t.Fatalf("multiple-insert result = %#v, want %s/%d", batch.New[0], wantCol1, wantCol2)
+				}
+			}
+
+			send("E1", 0)
+			if len(batches) != 0 {
+				t.Fatalf("unmatched event without branch invoked listener: %#v", batches)
+			}
+			send("A1", 1)
+			assertLastNew("A1", 1)
+			send("B1", 2)
+			assertLastNew("B1", 2)
+			send("C1", 3)
+			assertLastNew("Z", -1)
+			send("D1", 4)
+			assertLastNew("xD1x", -4)
+			beforeDuplicate := len(batches)
+			send("B1", 2)
+			if len(batches) != beforeDuplicate {
+				t.Fatalf("existing matched key unexpectedly invoked not-matched listener: %#v", batches)
+			}
+
+			want := map[string]int{"A1": 1, "B1": 2, "Z": -1, "xD1x": -4}
+			got := make(map[string]int, len(want))
+			if testCase.namedWindow {
+				window, ok := engine.NamedWindow(targetName)
+				if !ok {
+					t.Fatal("multiple-insert named window is missing")
+				}
+				events, err := window.Snapshot(context.Background())
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, event := range events {
+					got[event.Get("col1").Any().(string)] = event.Get("col2").Any().(int)
+				}
+			} else {
+				table, ok := engine.Table(targetName)
+				if !ok {
+					t.Fatal("multiple-insert table is missing")
+				}
+				rows, err := table.Snapshot(context.Background())
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, row := range rows {
+					got[row.Get("col1").Any().(string)] = row.Get("col2").Any().(int)
+				}
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("multiple-insert target = %#v, want %#v", got, want)
+			}
+		})
 	}
 }
 
