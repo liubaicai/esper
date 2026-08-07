@@ -272,8 +272,9 @@ func (e *Environment) TableInModule(moduleName, name string) (TableDefinition, b
 }
 
 type TableRow struct {
-	values  map[string]Value
-	version uint64
+	values   map[string]Value
+	version  uint64
+	identity uint64
 }
 
 func (r TableRow) Get(name string) Value {
@@ -305,6 +306,7 @@ type tableState struct {
 	indexes      map[string]map[string][]string
 	indexEntries map[string][]tableIndexEntry
 	version      uint64
+	nextIdentity uint64
 	indexLookups atomic.Uint64
 }
 
@@ -328,6 +330,7 @@ type tableMutationSnapshot struct {
 	indexes      map[string]map[string][]string
 	indexEntries map[string][]tableIndexEntry
 	version      uint64
+	nextIdentity uint64
 }
 
 func (t *Table) snapshotMutationState() tableMutationSnapshot {
@@ -343,6 +346,7 @@ func (t *Table) snapshotMutationState() tableMutationSnapshot {
 		indexes:      make(map[string]map[string][]string, len(state.indexes)),
 		indexEntries: make(map[string][]tableIndexEntry, len(state.indexEntries)),
 		version:      state.version,
+		nextIdentity: state.nextIdentity,
 	}
 	for key, row := range state.rows {
 		snapshot.rows[key] = cloneTableRow(row)
@@ -393,6 +397,7 @@ func (t *Table) restoreMutationState(snapshot tableMutationSnapshot) {
 		state.indexEntries[name] = copied
 	}
 	state.version = snapshot.version
+	state.nextIdentity = snapshot.nextIdentity
 }
 
 func newTable(definition TableDefinition) *Table {
@@ -446,6 +451,7 @@ func (t *Table) Replace(ctx context.Context, rows []map[string]any) error {
 		indexes:      make(map[string]map[string][]string, len(state.def.indexes)),
 		indexEntries: make(map[string][]tableIndexEntry, len(state.def.indexes)),
 		version:      state.version,
+		nextIdentity: state.nextIdentity,
 	}
 	for _, definition := range state.def.indexes {
 		replacement.indexes[definition.Name] = make(map[string][]string)
@@ -514,7 +520,7 @@ func (t *Table) Update(ctx context.Context, key []any, values map[string]any) (T
 			return TableRow{}, NewError(ErrorState, "table row already exists")
 		}
 	}
-	updated := TableRow{values: converted}
+	updated := TableRow{values: converted, identity: existing.identity}
 	if err := state.validateIndexesLockedIgnoring(newRowKey, updated, rowKey); err != nil {
 		return TableRow{}, err
 	}
@@ -801,8 +807,11 @@ func (s *tableState) upsert(values map[string]any, insertOnly bool) (TableRow, e
 		return TableRow{}, err
 	}
 	if old, exists := s.rows[rowKey]; exists {
+		row.identity = old.identity
 		s.removeIndexesLocked(rowKey, old)
 	} else {
+		s.nextIdentity++
+		row.identity = s.nextIdentity
 		s.order = append(s.order, rowKey)
 	}
 	s.version++
@@ -974,7 +983,7 @@ func tableIndexValues(row TableRow, columns []string) []Value {
 }
 
 func cloneTableRow(row TableRow) TableRow {
-	return TableRow{values: row.Values(), version: row.version}
+	return TableRow{values: row.Values(), version: row.version, identity: row.identity}
 }
 
 func coerceTableValue(value any, target reflect.Type) (Value, error) {

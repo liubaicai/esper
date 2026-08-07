@@ -180,6 +180,7 @@ type Engine struct {
 	contextPartitionInstanceNextIDs    map[string]uint64
 	contextPartitionDescriptors        map[string]map[string]ContextPartitionDescriptor
 	contextPartitionListeners          map[string][]ContextPartitionStateListener
+	contextTableOwnership              map[string]map[string]map[uint64]tableContextRowOwnership
 	contextTemporalOrigins             map[string]time.Time
 	contextStateListeners              []ContextStateListener
 	contextCreated                     map[string]bool
@@ -233,6 +234,7 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		contextPartitionInstanceNextIDs: make(map[string]uint64),
 		contextPartitionDescriptors:     make(map[string]map[string]ContextPartitionDescriptor),
 		contextPartitionListeners:       make(map[string][]ContextPartitionStateListener),
+		contextTableOwnership:           make(map[string]map[string]map[uint64]tableContextRowOwnership),
 		contextTemporalOrigins:          make(map[string]time.Time),
 		contextCreated:                  make(map[string]bool),
 		contextStatementRefs:            make(map[string]int),

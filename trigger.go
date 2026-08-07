@@ -1867,7 +1867,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger table %q is not available", definition.table))
 	}
 	if definition.where != nil {
-		return executeTableWhereAction(ctx, table, definition, event, now, variables)
+		return executeTableWhereAction(ctx, engine, table, definition, event, now, variables)
 	}
 	mutation := tableMutationResult{}
 	switch definition.action {
@@ -2051,8 +2051,8 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 	}
 }
 
-func executeTableWhereAction(ctx context.Context, table *Table, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value) (tableMutationResult, error) {
-	if table == nil || definition == nil || definition.where == nil {
+func executeTableWhereAction(ctx context.Context, engine *Engine, table *Table, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value) (tableMutationResult, error) {
+	if engine == nil || table == nil || definition == nil || definition.where == nil {
 		return tableMutationResult{}, NewError(ErrorDependency, "nil table predicate trigger")
 	}
 	rows, err := table.Snapshot(ctx)
@@ -2069,11 +2069,11 @@ func executeTableWhereAction(ctx context.Context, table *Table, definition *trig
 			return tableMutationResult{}, eventErr
 		}
 		if definition.contextDefinition != nil {
-			partitionKey, active, partitionErr := definition.contextDefinition.partition(targetEvent, now, variables)
+			ownership, active, partitionErr := engine.resolveTableContextRowOwnershipLocked(*definition.contextDefinition, catalogKey(definition.moduleName, definition.table), row, targetEvent, now, variables)
 			if partitionErr != nil {
 				return tableMutationResult{}, partitionErr
 			}
-			if !active || partitionKey != definition.contextPartitionKey {
+			if !active || ownership.partitionKey != definition.contextPartitionKey {
 				continue
 			}
 		}
@@ -2094,6 +2094,9 @@ func executeTableWhereAction(ctx context.Context, table *Table, definition *trig
 			}
 			if found {
 				mutation.oldRows = append(mutation.oldRows, deleted)
+				if definition.contextDefinition != nil {
+					engine.forgetTableContextRowsLocked(definition.contextDefinition.name, catalogKey(definition.moduleName, definition.table), []TableRow{deleted})
+				}
 			}
 		case triggerUpdateTable:
 			values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, targetEvent.Underlying(), definition.assignments, evaluation, now)

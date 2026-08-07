@@ -164,6 +164,12 @@ func (e *Engine) DestroyContext(ctx context.Context, contextName string) error {
 	delete(e.contextVariables, contextName)
 	delete(e.contextStatementRefs, contextName)
 	delete(e.contextPartitionNextIDs, contextName)
+	for tableKey, byContext := range e.contextTableOwnership {
+		delete(byContext, contextName)
+		if len(byContext) == 0 {
+			delete(e.contextTableOwnership, tableKey)
+		}
+	}
 	e.queueContextDestroyedLocked(contextName)
 	events := e.takeContextEventsLocked()
 	e.mu.Unlock()

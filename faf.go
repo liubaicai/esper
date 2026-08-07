@@ -647,6 +647,87 @@ type contextMutationPartition struct {
 	contextProperties map[string]Value
 }
 
+// tableContextRowOwnership records the context partition assigned to one
+// logical Table row. Table storage is global in the Go runtime, while Esper
+// context tables retain row ownership independently of mutable row fields.
+// The representative event and properties keep descriptor selectors stable
+// after a context key/category field is updated in place.
+type tableContextRowOwnership struct {
+	partitionKey      string
+	representative    Event
+	contextProperties map[string]Value
+}
+
+func cloneTableContextRowOwnership(ownership tableContextRowOwnership) tableContextRowOwnership {
+	ownership.contextProperties = cloneValues(ownership.contextProperties)
+	return ownership
+}
+
+// resolveTableContextRowOwnershipLocked returns the persistent context
+// ownership for a Table row, creating it from the row's first observed
+// context projection when necessary. The caller holds Engine.mu.
+func (e *Engine) resolveTableContextRowOwnershipLocked(definition ContextDefinition, tableKey string, row TableRow, representative Event, now time.Time, variables map[string]Value) (tableContextRowOwnership, bool, error) {
+	if e == nil || definition.name == "" || tableKey == "" {
+		return tableContextRowOwnership{}, false, NewError(ErrorDependency, "table context ownership has no engine, context or table")
+	}
+	byTable := e.contextTableOwnership[tableKey]
+	if byTable == nil {
+		byTable = make(map[string]map[uint64]tableContextRowOwnership)
+		e.contextTableOwnership[tableKey] = byTable
+	}
+	byContext := byTable[definition.name]
+	if byContext == nil {
+		byContext = make(map[uint64]tableContextRowOwnership)
+		byTable[definition.name] = byContext
+	}
+	if row.identity != 0 {
+		if ownership, exists := byContext[row.identity]; exists {
+			return cloneTableContextRowOwnership(ownership), true, nil
+		}
+	}
+	partitionKey, active, err := definition.partition(representative, now, variables)
+	if err != nil {
+		return tableContextRowOwnership{}, false, err
+	}
+	if !active {
+		return tableContextRowOwnership{}, false, nil
+	}
+	ownership := tableContextRowOwnership{
+		partitionKey:      partitionKey,
+		representative:    representative,
+		contextProperties: definition.contextPropertyValues(representative, now, variables, -1),
+	}
+	if row.identity != 0 {
+		byContext[row.identity] = cloneTableContextRowOwnership(ownership)
+	}
+	return ownership, true, nil
+}
+
+// forgetTableContextRowsLocked removes ownership only after a Table row is
+// actually deleted. Updates deliberately retain the entry because Table.Update
+// preserves the row identity even when the primary key is re-keyed.
+func (e *Engine) forgetTableContextRowsLocked(contextName, tableKey string, rows []TableRow) {
+	if e == nil || contextName == "" || tableKey == "" {
+		return
+	}
+	byTable := e.contextTableOwnership[tableKey]
+	byContext := byTable[contextName]
+	if byContext == nil {
+		return
+	}
+	for _, row := range rows {
+		if row.identity != 0 {
+			delete(byContext, row.identity)
+		}
+	}
+	if len(byContext) == 0 {
+		delete(byTable, contextName)
+	}
+	if len(byTable) == 0 {
+		delete(e.contextTableOwnership, tableKey)
+	}
+}
+
 func contextMutationProperties(definition ContextDefinition, representative Event, stored map[string]Value, now time.Time, variables map[string]Value, partitionID int) map[string]Value {
 	properties := cloneValues(stored)
 	if len(properties) == 0 {
@@ -722,13 +803,17 @@ func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, 
 			if eventErr != nil {
 				return tableMutationResult{}, eventErr
 			}
-			key, active, partitionErr := definition.partition(targetEvent, now, variables)
+			ownership, active, partitionErr := e.resolveTableContextRowOwnershipLocked(definition, catalogKey(source.moduleName, source.sourceName), row, targetEvent, now, variables)
 			if partitionErr != nil {
 				return tableMutationResult{}, partitionErr
 			}
 			if active {
-				if _, exists := partitions[key]; !exists {
-					partitions[key] = contextMutationPartition{key: key, representative: targetEvent}
+				if _, exists := partitions[ownership.partitionKey]; !exists {
+					partitions[ownership.partitionKey] = contextMutationPartition{
+						key:               ownership.partitionKey,
+						representative:    ownership.representative,
+						contextProperties: cloneValues(ownership.contextProperties),
+					}
 				}
 			}
 		}
@@ -807,6 +892,9 @@ func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, 
 		partMutation, err := executeTriggerAction(ctx, e, trigger, Event{}, now, partitionVariables, nil, nil)
 		if err != nil {
 			return tableMutationResult{}, err
+		}
+		if source.kind == streamTable && (plan.query.onDemand.action == onDemandDelete || plan.query.onDemand.action == onDemandDeleteAll) {
+			e.forgetTableContextRowsLocked(definition.name, catalogKey(source.moduleName, source.sourceName), partMutation.oldRows)
 		}
 		mutation.oldRows = append(mutation.oldRows, partMutation.oldRows...)
 		mutation.newRows = append(mutation.newRows, partMutation.newRows...)

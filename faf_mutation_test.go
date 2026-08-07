@@ -514,15 +514,23 @@ func TestOnDemandContextPartitionUpdateAndDeleteAllRespectSelector(t *testing.T)
 			var err error
 			if namedWindow {
 				field := NamedWindowField[int64]("intPrimitive")
+				keyField := NamedWindowField[string]("theString")
 				target := FromNamedWindow(env, "CtxMutation").OnDemand().WithContext("context-mutation")
-				updatePlan, err = env.Build(target.UpdateWhere(Equal[string](ContextLabel(), Literal("negative")), SetColumn("intPrimitive", Add[int64](field, Literal[int64](10)))))
+				updatePlan, err = env.Build(target.UpdateWhere(Equal[string](ContextLabel(), Literal("negative")),
+					SetColumn("intPrimitive", Add[int64](field, Literal[int64](10))),
+					SetColumn("theString", Concat(keyField, Literal("-updated"))),
+				))
 				if err == nil {
 					deleteAllPlan, err = env.Build(target.DeleteAll())
 				}
 			} else {
 				field := TableField[int64]("intPrimitive")
+				keyField := TableField[string]("theString")
 				target := FromTable(env, "CtxMutation").OnDemand().WithContext("context-mutation")
-				updatePlan, err = env.Build(target.UpdateWhere(Equal[string](ContextLabel(), Literal("negative")), SetColumn("intPrimitive", Add[int64](field, Literal[int64](10)))))
+				updatePlan, err = env.Build(target.UpdateWhere(Equal[string](ContextLabel(), Literal("negative")),
+					SetColumn("intPrimitive", Add[int64](field, Literal[int64](10))),
+					SetColumn("theString", Concat(keyField, Literal("-updated"))),
+				))
 				if err == nil {
 					deleteAllPlan, err = env.Build(target.DeleteAll())
 				}
@@ -552,6 +560,13 @@ func TestOnDemandContextPartitionUpdateAndDeleteAllRespectSelector(t *testing.T)
 			}
 			if namedWindow && len(wrong.Results()) != 2 {
 				t.Fatalf("selected negative delete-all result = %#v", wrong.Results())
+			}
+			if !namedWindow {
+				table, _ := engine.Table("CtxMutation")
+				rows, snapshotErr := table.Snapshot(ctx)
+				if snapshotErr != nil || len(rows) != 2 {
+					t.Fatalf("context table negative delete-all rows = %#v, err=%v", rows, snapshotErr)
+				}
 			}
 			remaining, err := engine.ExecuteFireAndForgetWithSelector(ctx, deleteAllPlan, SelectContextPartitionCategories("positive"))
 			if err != nil {
