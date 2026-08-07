@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -21,6 +22,42 @@ type JSONRenderConfig struct {
 
 // JSONRenderOption changes JSON rendering behavior.
 type JSONRenderOption func(*JSONRenderConfig)
+
+type orderedJSONField struct {
+	name  string
+	value any
+}
+
+// orderedJSONObject is used for schema-backed JSON objects. encoding/json
+// sorts ordinary map keys, while Esper's JSON renderer writes declared fields
+// in schema/class order. A small Marshaler keeps that observable contract and
+// still delegates scalar escaping and number validation to encoding/json.
+type orderedJSONObject struct {
+	fields []orderedJSONField
+}
+
+func (object orderedJSONObject) MarshalJSON() ([]byte, error) {
+	var buffer bytes.Buffer
+	buffer.WriteByte('{')
+	for index, field := range object.fields {
+		if index > 0 {
+			buffer.WriteByte(',')
+		}
+		name, err := json.Marshal(field.name)
+		if err != nil {
+			return nil, err
+		}
+		buffer.Write(name)
+		buffer.WriteByte(':')
+		value, err := json.Marshal(field.value)
+		if err != nil {
+			return nil, err
+		}
+		buffer.Write(value)
+	}
+	buffer.WriteByte('}')
+	return buffer.Bytes(), nil
+}
 
 // WithJSONTitle wraps the rendered event in an object with the supplied key.
 func WithJSONTitle(title string) JSONRenderOption {
@@ -56,7 +93,7 @@ func RenderJSON(event Event, options ...JSONRenderOption) (string, error) {
 		return "", err
 	}
 	if config.Title != "" {
-		value = map[string]any{config.Title: value}
+		value = orderedJSONObject{fields: []orderedJSONField{{name: config.Title, value: value}}}
 	}
 	var encoded []byte
 	if config.Indent == "" {
@@ -74,10 +111,14 @@ func renderJSONEvent(event Event, maxDepth int) (any, error) {
 	if !event.Schema().valid() {
 		return nil, fmt.Errorf("esper: cannot render an event with an empty schema")
 	}
-	return renderJSONSchemaValue(event.Schema(), event.Underlying(), maxDepth, 0)
+	return renderJSONSchemaValueWithRaw(event.Schema(), event.Underlying(), maxDepth, 0, event.jsonRaw)
 }
 
 func renderJSONSchemaValue(schema Schema, underlying any, maxDepth, depth int) (any, error) {
+	return renderJSONSchemaValueWithRaw(schema, underlying, maxDepth, depth, nil)
+}
+
+func renderJSONSchemaValueWithRaw(schema Schema, underlying any, maxDepth, depth int, raw any) (any, error) {
 	if depth > maxDepth {
 		return nil, fmt.Errorf("esper: JSON event value exceeds max depth %d", maxDepth)
 	}
@@ -85,19 +126,23 @@ func renderJSONSchemaValue(schema Schema, underlying any, maxDepth, depth int) (
 		return nil, nil
 	}
 	if nested, ok := underlying.(Event); ok {
-		return renderJSONEventAtDepth(nested, maxDepth, depth+1)
+		return renderJSONEventAtDepthWithRaw(nested, maxDepth, depth+1, raw)
 	}
 	if row, ok := underlying.(Row); ok {
-		return renderJSONRow(row, maxDepth, depth+1)
+		return renderJSONRowWithRaw(row, maxDepth, depth+1, raw)
 	}
 	if schema.valid() && len(schema.fields) > 0 {
-		return renderJSONSchemaObject(schema, underlying, maxDepth, depth)
+		return renderJSONSchemaObjectWithRaw(schema, underlying, maxDepth, depth, raw)
 	}
-	return renderJSONValue(underlying, maxDepth, depth)
+	return renderJSONValueWithRaw(underlying, maxDepth, depth, raw, nil)
 }
 
-func renderJSONSchemaObject(schema Schema, underlying any, maxDepth, depth int) (map[string]any, error) {
-	result := make(map[string]any, len(schema.fields))
+func renderJSONSchemaObject(schema Schema, underlying any, maxDepth, depth int) (orderedJSONObject, error) {
+	return renderJSONSchemaObjectWithRaw(schema, underlying, maxDepth, depth, nil)
+}
+
+func renderJSONSchemaObjectWithRaw(schema Schema, underlying any, maxDepth, depth int, raw any) (orderedJSONObject, error) {
+	result := orderedJSONObject{fields: make([]orderedJSONField, 0, len(schema.fields))}
 	known := make(map[string]struct{}, len(schema.fields))
 	for _, field := range schema.fields {
 		known[field.Name] = struct{}{}
@@ -105,34 +150,51 @@ func renderJSONSchemaObject(schema Schema, underlying any, maxDepth, depth int) 
 		if value.IsMissing() {
 			continue
 		}
-		normalized, err := renderJSONSchemaProperty(schema, field.Name, value, maxDepth, depth+1)
+		rawValue, _ := rawJSONSchemaField(raw, schema, field.Name)
+		normalized, err := renderJSONSchemaPropertyWithRaw(schema, field.Name, value, rawValue, field.Type, maxDepth, depth+1)
 		if err != nil {
-			return nil, fmt.Errorf("property %q: %w", field.Name, err)
+			return orderedJSONObject{}, fmt.Errorf("property %q: %w", field.Name, err)
 		}
-		result[field.Name] = normalized
+		result.fields = append(result.fields, orderedJSONField{name: field.Name, value: normalized})
 	}
-	for name, value := range dynamicMapFields(underlying) {
+	dynamic := dynamicMapFields(underlying)
+	names := make([]string, 0, len(dynamic))
+	for name := range dynamic {
 		if _, exists := known[name]; exists {
 			continue
 		}
-		normalized, err := renderJSONValue(value, maxDepth, depth+1)
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		value := dynamic[name]
+		rawValue, _ := rawJSONNamedField(raw, name)
+		normalized, err := renderJSONValueWithRaw(value, maxDepth, depth+1, rawValue, nil)
 		if err != nil {
-			return nil, fmt.Errorf("property %q: %w", name, err)
+			return orderedJSONObject{}, fmt.Errorf("property %q: %w", name, err)
 		}
-		result[name] = normalized
+		result.fields = append(result.fields, orderedJSONField{name: name, value: normalized})
 	}
 	return result, nil
 }
 
 func renderJSONSchemaProperty(schema Schema, name string, value Value, maxDepth, depth int) (any, error) {
+	return renderJSONSchemaPropertyWithRaw(schema, name, value, nil, nil, maxDepth, depth)
+}
+
+func renderJSONSchemaPropertyWithRaw(schema Schema, name string, value Value, raw any, declaredType reflect.Type, maxDepth, depth int) (any, error) {
 	nested, ok := schema.lookupNestedSchema(name)
 	if !ok || value.IsMissing() || value.IsNull() {
-		return renderJSONValueState(value, maxDepth, depth)
+		return renderJSONValueStateWithRaw(value, maxDepth, depth, raw, declaredType)
 	}
-	return renderJSONNestedSchemaValue(nested, value.Any(), maxDepth, depth)
+	return renderJSONNestedSchemaValueWithRaw(nested, value.Any(), maxDepth, depth, raw, declaredType)
 }
 
 func renderJSONNestedSchemaValue(schema Schema, underlying any, maxDepth, depth int) (any, error) {
+	return renderJSONNestedSchemaValueWithRaw(schema, underlying, maxDepth, depth, nil, nil)
+}
+
+func renderJSONNestedSchemaValueWithRaw(schema Schema, underlying any, maxDepth, depth int, raw any, declaredType reflect.Type) (any, error) {
 	if underlying == nil {
 		return nil, nil
 	}
@@ -145,8 +207,16 @@ func renderJSONNestedSchemaValue(schema Schema, underlying any, maxDepth, depth 
 	}
 	if value.IsValid() && (value.Kind() == reflect.Array || value.Kind() == reflect.Slice) && value.Type() != reflect.TypeOf([]byte{}) {
 		result := make([]any, value.Len())
+		elementType := reflect.Type(nil)
+		if declaredType != nil {
+			elementType = reflectElementType(declaredType)
+		}
+		if elementType == nil {
+			elementType = value.Type().Elem()
+		}
 		for index := 0; index < value.Len(); index++ {
-			item, err := renderJSONNestedSchemaValue(schema, value.Index(index).Interface(), maxDepth, depth+1)
+			rawItem, _ := rawJSONIndex(raw, index)
+			item, err := renderJSONNestedSchemaValueWithRaw(schema, value.Index(index).Interface(), maxDepth, depth+1, rawItem, elementType)
 			if err != nil {
 				return nil, err
 			}
@@ -154,23 +224,38 @@ func renderJSONNestedSchemaValue(schema Schema, underlying any, maxDepth, depth 
 		}
 		return result, nil
 	}
-	return renderJSONSchemaValue(schema, underlying, maxDepth, depth)
+	return renderJSONSchemaValueWithRaw(schema, underlying, maxDepth, depth, raw)
 }
 
 func renderJSONEventAtDepth(event Event, maxDepth, depth int) (any, error) {
+	return renderJSONEventAtDepthWithRaw(event, maxDepth, depth, nil)
+}
+
+func renderJSONEventAtDepthWithRaw(event Event, maxDepth, depth int, raw any) (any, error) {
 	if depth > maxDepth {
 		return nil, fmt.Errorf("esper: JSON event value exceeds max depth %d", maxDepth)
 	}
-	return renderJSONSchemaValue(event.Schema(), event.Underlying(), maxDepth, depth)
+	if raw == nil {
+		raw = event.jsonRaw
+	}
+	return renderJSONSchemaValueWithRaw(event.Schema(), event.Underlying(), maxDepth, depth, raw)
 }
 
 func renderJSONRow(row Row, maxDepth, depth int) (any, error) {
-	fields := row.schema.fields
-	return renderJSONObject(fields, row.Get, nil, maxDepth, depth)
+	return renderJSONRowWithRaw(row, maxDepth, depth, nil)
 }
 
-func renderJSONObject(fields []FieldSpec, get func(string) Value, underlying any, maxDepth, depth int) (map[string]any, error) {
-	result := make(map[string]any, len(fields))
+func renderJSONRowWithRaw(row Row, maxDepth, depth int, raw any) (any, error) {
+	fields := row.schema.fields
+	return renderJSONObjectWithRaw(fields, row.Get, nil, maxDepth, depth, raw)
+}
+
+func renderJSONObject(fields []FieldSpec, get func(string) Value, underlying any, maxDepth, depth int) (orderedJSONObject, error) {
+	return renderJSONObjectWithRaw(fields, get, underlying, maxDepth, depth, nil)
+}
+
+func renderJSONObjectWithRaw(fields []FieldSpec, get func(string) Value, underlying any, maxDepth, depth int, raw any) (orderedJSONObject, error) {
+	result := orderedJSONObject{fields: make([]orderedJSONField, 0, len(fields))}
 	known := make(map[string]struct{}, len(fields))
 	for _, field := range fields {
 		known[field.Name] = struct{}{}
@@ -178,33 +263,50 @@ func renderJSONObject(fields []FieldSpec, get func(string) Value, underlying any
 		if value.IsMissing() {
 			continue
 		}
-		normalized, err := renderJSONValueState(value, maxDepth, depth+1)
+		rawValue, _ := rawJSONNamedField(raw, field.Name)
+		normalized, err := renderJSONValueStateWithRaw(value, maxDepth, depth+1, rawValue, field.Type)
 		if err != nil {
-			return nil, fmt.Errorf("property %q: %w", field.Name, err)
+			return orderedJSONObject{}, fmt.Errorf("property %q: %w", field.Name, err)
 		}
-		result[field.Name] = normalized
+		result.fields = append(result.fields, orderedJSONField{name: field.Name, value: normalized})
 	}
-	for name, value := range dynamicMapFields(underlying) {
+	dynamic := dynamicMapFields(underlying)
+	names := make([]string, 0, len(dynamic))
+	for name := range dynamic {
 		if _, exists := known[name]; exists {
 			continue
 		}
-		normalized, err := renderJSONValue(value, maxDepth, depth+1)
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		value := dynamic[name]
+		rawValue, _ := rawJSONNamedField(raw, name)
+		normalized, err := renderJSONValueWithRaw(value, maxDepth, depth+1, rawValue, nil)
 		if err != nil {
-			return nil, fmt.Errorf("property %q: %w", name, err)
+			return orderedJSONObject{}, fmt.Errorf("property %q: %w", name, err)
 		}
-		result[name] = normalized
+		result.fields = append(result.fields, orderedJSONField{name: name, value: normalized})
 	}
 	return result, nil
 }
 
 func renderJSONValueState(value Value, maxDepth, depth int) (any, error) {
+	return renderJSONValueStateWithRaw(value, maxDepth, depth, nil, nil)
+}
+
+func renderJSONValueStateWithRaw(value Value, maxDepth, depth int, raw any, declaredType reflect.Type) (any, error) {
 	if value.IsMissing() || value.IsNull() {
 		return nil, nil
 	}
-	return renderJSONValue(value.Any(), maxDepth, depth)
+	return renderJSONValueWithRaw(value.Any(), maxDepth, depth, raw, declaredType)
 }
 
 func renderJSONValue(value any, maxDepth, depth int) (any, error) {
+	return renderJSONValueWithRaw(value, maxDepth, depth, nil, nil)
+}
+
+func renderJSONValueWithRaw(value any, maxDepth, depth int, raw any, declaredType reflect.Type) (any, error) {
 	if depth > maxDepth {
 		return nil, fmt.Errorf("value exceeds max depth %d", maxDepth)
 	}
@@ -212,13 +314,13 @@ func renderJSONValue(value any, maxDepth, depth int) (any, error) {
 		return nil, nil
 	}
 	if wrapped, ok := value.(Value); ok {
-		return renderJSONValueState(wrapped, maxDepth, depth+1)
+		return renderJSONValueStateWithRaw(wrapped, maxDepth, depth+1, raw, declaredType)
 	}
 	if event, ok := value.(Event); ok {
-		return renderJSONEventAtDepth(event, maxDepth, depth+1)
+		return renderJSONEventAtDepthWithRaw(event, maxDepth, depth+1, raw)
 	}
 	if row, ok := value.(Row); ok {
-		return renderJSONRow(row, maxDepth, depth+1)
+		return renderJSONRowWithRaw(row, maxDepth, depth+1, raw)
 	}
 	reflectValue := reflect.ValueOf(value)
 	for reflectValue.Kind() == reflect.Pointer || reflectValue.Kind() == reflect.Interface {
@@ -230,7 +332,16 @@ func renderJSONValue(value any, maxDepth, depth int) (any, error) {
 	if !reflectValue.IsValid() {
 		return nil, nil
 	}
+	if number, ok := raw.(json.Number); ok && jsonRawNumberCompatible(number, declaredType, reflectValue) {
+		return number, nil
+	}
+	if character, ok := rawJSONCharacter(raw, declaredType, reflectValue); ok {
+		return character, nil
+	}
 	if reflectValue.Type() == reflect.TypeOf(time.Time{}) {
+		if text, ok := raw.(string); ok {
+			return text, nil
+		}
 		return reflectValue.Interface().(time.Time).Format(time.RFC3339Nano), nil
 	}
 	if reflectValue.Type() == reflect.TypeOf(DateOnly("")) {
@@ -257,38 +368,165 @@ func renderJSONValue(value any, maxDepth, depth int) (any, error) {
 		if reflectValue.IsNil() {
 			return nil, nil
 		}
-		result := make(map[string]any, reflectValue.Len())
+		result := orderedJSONObject{fields: make([]orderedJSONField, 0, reflectValue.Len())}
+		elementType := reflectElementType(declaredType)
+		if elementType == nil {
+			elementType = reflectValue.Type().Elem()
+		}
 		iterator := reflectValue.MapRange()
+		fields := make([]struct {
+			name  string
+			value reflect.Value
+		}, 0, reflectValue.Len())
 		for iterator.Next() {
-			key := fmt.Sprint(iterator.Key().Interface())
-			normalized, err := renderJSONValue(iterator.Value().Interface(), maxDepth, depth+1)
+			fields = append(fields, struct {
+				name  string
+				value reflect.Value
+			}{name: fmt.Sprint(iterator.Key().Interface()), value: iterator.Value()})
+		}
+		sort.Slice(fields, func(left, right int) bool { return fields[left].name < fields[right].name })
+		for _, field := range fields {
+			rawValue, _ := rawJSONNamedField(raw, field.name)
+			normalized, err := renderJSONValueWithRaw(field.value.Interface(), maxDepth, depth+1, rawValue, elementType)
 			if err != nil {
 				return nil, err
 			}
-			result[key] = normalized
+			result.fields = append(result.fields, orderedJSONField{name: field.name, value: normalized})
 		}
 		return result, nil
 	case reflect.Struct:
 		fields := genericStructFields(reflectValue)
-		return renderJSONObject(fields, func(name string) Value {
+		return renderJSONObjectWithRaw(fields, func(name string) Value {
 			return genericStructProperty(reflectValue, name)
-		}, value, maxDepth, depth)
+		}, value, maxDepth, depth, raw)
 	case reflect.Array, reflect.Slice:
 		if reflectValue.Kind() == reflect.Slice && reflectValue.IsNil() {
 			return nil, nil
 		}
 		result := make([]any, reflectValue.Len())
+		elementType := reflectElementType(declaredType)
+		if elementType == nil {
+			elementType = reflectValue.Type().Elem()
+		}
 		for index := 0; index < reflectValue.Len(); index++ {
-			normalized, err := renderJSONValue(reflectValue.Index(index).Interface(), maxDepth, depth+1)
+			rawValue, _ := rawJSONIndex(raw, index)
+			normalized, err := renderJSONValueWithRaw(reflectValue.Index(index).Interface(), maxDepth, depth+1, rawValue, elementType)
 			if err != nil {
 				return nil, err
 			}
 			result[index] = normalized
 		}
 		return result, nil
+	case reflect.Float32, reflect.Float64:
+		text := strconv.FormatFloat(reflectValue.Float(), 'g', -1, reflectValue.Type().Bits())
+		if !strings.ContainsAny(text, ".eE") {
+			text += ".0"
+		}
+		return json.Number(text), nil
 	default:
 		return value, nil
 	}
+}
+
+func reflectElementType(typ reflect.Type) reflect.Type {
+	for typ != nil && typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	if typ == nil || (typ.Kind() != reflect.Array && typ.Kind() != reflect.Slice && typ.Kind() != reflect.Map) {
+		return nil
+	}
+	return typ.Elem()
+}
+
+func jsonRawNumberCompatible(number json.Number, declaredType reflect.Type, value reflect.Value) bool {
+	if declaredType != nil {
+		for declaredType.Kind() == reflect.Pointer {
+			declaredType = declaredType.Elem()
+		}
+		if declaredType.Kind() == reflect.Interface || declaredType.Kind() == reflect.String || declaredType.Kind() == reflect.Bool {
+			return declaredType == reflect.TypeOf(json.Number(""))
+		}
+		if declaredType == reflect.TypeOf(time.Time{}) || declaredType == reflect.TypeOf(DateOnly("")) || declaredType == reflect.TypeOf(UUID{}) || declaredType == reflect.TypeOf(URL("")) || declaredType == reflect.TypeOf(URI("")) {
+			return false
+		}
+		if declaredType == reflect.TypeOf(big.Int{}) || declaredType == reflect.TypeOf(big.Rat{}) {
+			return true
+		}
+		switch declaredType.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+			return true
+		default:
+			return false
+		}
+	}
+	for value.IsValid() && (value.Kind() == reflect.Pointer || value.Kind() == reflect.Interface) {
+		if value.IsNil() {
+			return false
+		}
+		value = value.Elem()
+	}
+	if !value.IsValid() {
+		return false
+	}
+	return value.Type() == reflect.TypeOf(json.Number("")) || isNumericKind(value.Kind())
+}
+
+func rawJSONCharacter(raw any, declaredType reflect.Type, value reflect.Value) (string, bool) {
+	text, ok := raw.(string)
+	if !ok || declaredType == nil {
+		return "", false
+	}
+	for declaredType.Kind() == reflect.Pointer {
+		declaredType = declaredType.Elem()
+	}
+	if declaredType.Kind() != reflect.Int32 {
+		return "", false
+	}
+	for value.IsValid() && (value.Kind() == reflect.Pointer || value.Kind() == reflect.Interface) {
+		if value.IsNil() {
+			return "", false
+		}
+		value = value.Elem()
+	}
+	if !value.IsValid() || value.Kind() != reflect.Int32 || len([]rune(text)) != 1 {
+		return "", false
+	}
+	return text, true
+}
+
+func rawJSONSchemaField(raw any, schema Schema, name string) (any, bool) {
+	object, ok := raw.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	if key, exists := findJSONField(object, schema, name); exists {
+		return object[key], true
+	}
+	return nil, false
+}
+
+func rawJSONNamedField(raw any, name string) (any, bool) {
+	object, ok := raw.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	if value, exists := object[name]; exists {
+		return value, true
+	}
+	for key, value := range object {
+		if strings.EqualFold(key, name) {
+			return value, true
+		}
+	}
+	return nil, false
+}
+
+func rawJSONIndex(raw any, index int) (any, bool) {
+	items, ok := raw.([]any)
+	if !ok || index < 0 || index >= len(items) {
+		return nil, false
+	}
+	return items[index], true
 }
 
 // XMLRenderConfig controls XML output. XML uses repeated element names for
@@ -629,7 +867,6 @@ func genericStructFields(value reflect.Value) []FieldSpec {
 		}
 		fields = append(fields, FieldSpec{Name: name, Type: field.Type})
 	}
-	sort.Slice(fields, func(left, right int) bool { return fields[left].Name < fields[right].Name })
 	return fields
 }
 

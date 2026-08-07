@@ -161,5 +161,24 @@ func parseJSONTime(text string) (time.Time, error) {
 	if parsed, err := time.Parse(time.RFC3339Nano, text); err == nil {
 		return parsed, nil
 	}
-	return time.Parse("2006-01-02", text)
+	// Java's LocalDateTime has no offset, while ZonedDateTime may append a
+	// region identifier in brackets. time.Time is the idiomatic Go carrier for
+	// both shapes; preserve the original JSON text in the event renderer.
+	parseText := text
+	if bracket := strings.IndexByte(parseText, '['); bracket > 0 && strings.HasSuffix(parseText, "]") {
+		parseText = parseText[:bracket]
+	}
+	if parsed, err := time.Parse(time.RFC3339Nano, parseText); err == nil {
+		return parsed, nil
+	}
+	for _, layout := range []string{
+		"2006-01-02T15:04:05.999999999",
+		"2006-01-02T15:04:05",
+		"2006-01-02",
+	} {
+		if parsed, err := time.Parse(layout, parseText); err == nil {
+			return parsed, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("esper: invalid JSON time %q", text)
 }

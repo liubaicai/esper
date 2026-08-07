@@ -2186,6 +2186,12 @@ type Event struct {
 	streamType string
 	schema     Schema
 	underlying any
+	// jsonRaw retains the decoder-level JSON tree for events parsed through
+	// ParseJSONWithOptions. Typed JSON values may lose information that the
+	// Esper renderer still observes, such as a numeric literal's scale or a
+	// Character's string representation. The tree is private metadata: event
+	// property access continues to expose the materialized Go value.
+	jsonRaw    any
 	receivedAt time.Time
 	parent     *Event
 }
@@ -2209,7 +2215,7 @@ func newEvent(schema Schema, underlying any, receivedAt time.Time) (Event, error
 		if identity == nil {
 			identity = &eventIdentityToken{marker: 1}
 		}
-		return Event{identity: identity, typeName: routed.TypeName(), streamType: schema.name, schema: routed.Schema(), underlying: routed.Underlying(), receivedAt: receivedAt}, nil
+		return Event{identity: identity, typeName: routed.TypeName(), streamType: schema.name, schema: routed.Schema(), underlying: routed.Underlying(), jsonRaw: routed.jsonRaw, receivedAt: receivedAt}, nil
 	}
 	if schema.kind == SchemaObjectArray {
 		normalized, err := normalizeObjectArray(schema, underlying)
@@ -2822,6 +2828,7 @@ func ParseJSONWithOptions(schema Schema, data []byte, receivedAt time.Time, opti
 	if err := validateJSONDepth(object, config.MaxDepth, 0); err != nil {
 		return Event{}, fmt.Errorf("esper: JSON event %q: %w", schema.Name(), err)
 	}
+	rawObject := cloneJSONRawValue(object)
 	if config.RejectUnknownFields && !schema.allowDynamic {
 		for name := range object {
 			if _, _, err := schema.lookupField(name); err != nil {
@@ -2854,12 +2861,46 @@ func ParseJSONWithOptions(schema Schema, data []byte, receivedAt time.Time, opti
 		if err != nil {
 			return Event{}, fmt.Errorf("esper: materialize typed JSON event %q: %w", schema.Name(), err)
 		}
-		return newEvent(schema, underlying, receivedAt)
+		event, err := newEvent(schema, underlying, receivedAt)
+		if err != nil {
+			return Event{}, err
+		}
+		event.jsonRaw = rawObject
+		return event, nil
 	}
 	if schema.kind == SchemaJSON {
-		return newEvent(schema, normalizeJSONMapUnderlying(schema, object), receivedAt)
+		event, err := newEvent(schema, normalizeJSONMapUnderlying(schema, object), receivedAt)
+		if err != nil {
+			return Event{}, err
+		}
+		event.jsonRaw = rawObject
+		return event, nil
 	}
-	return newEvent(schema, object, receivedAt)
+	event, err := newEvent(schema, object, receivedAt)
+	if err != nil {
+		return Event{}, err
+	}
+	event.jsonRaw = rawObject
+	return event, nil
+}
+
+func cloneJSONRawValue(value any) any {
+	switch current := value.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(current))
+		for key, nested := range current {
+			result[key] = cloneJSONRawValue(nested)
+		}
+		return result
+	case []any:
+		result := make([]any, len(current))
+		for index, nested := range current {
+			result[index] = cloneJSONRawValue(nested)
+		}
+		return result
+	default:
+		return value
+	}
 }
 
 func normalizeJSONMapUnderlying(schema Schema, object map[string]any) map[string]any {
@@ -3452,6 +3493,19 @@ func coerceJSONReflect(value any, target reflect.Type) (reflect.Value, bool) {
 			}
 		}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		// Java Character is represented by Go's rune (an int32 alias) but
+		// JSON carries it as a one-character string. Keep ordinary numeric
+		// int32 input numeric while accepting the Character-shaped string.
+		if target.Kind() == reflect.Int32 {
+			if character, ok := value.(string); ok {
+				runes := []rune(character)
+				if len(runes) == 1 {
+					converted := reflect.New(target).Elem()
+					converted.SetInt(int64(runes[0]))
+					return converted, true
+				}
+			}
+		}
 		if text, ok := jsonText(value); ok {
 			if parsed, err := strconv.ParseInt(text, 10, target.Bits()); err == nil {
 				converted := reflect.New(target).Elem()
@@ -3535,9 +3589,10 @@ func coerceJSONReflect(value any, target reflect.Type) (reflect.Value, bool) {
 				continue
 			}
 			converted, ok := coerceJSONReflect(raw, field.Type())
-			if ok {
-				field.Set(converted)
+			if !ok {
+				return reflect.Value{}, false
 			}
+			field.Set(converted)
 		}
 		return result, true
 	}
