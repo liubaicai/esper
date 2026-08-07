@@ -3222,6 +3222,16 @@ func coerceTextValue(text string, target reflect.Type) any {
 				return parsed
 			}
 		}
+		if target == reflect.TypeOf(URL("")) {
+			if parsed, err := ParseURL(text); err == nil {
+				return parsed
+			}
+		}
+		if target == reflect.TypeOf(URI("")) {
+			if parsed, err := ParseURI(text); err == nil {
+				return parsed
+			}
+		}
 		return text
 	}
 	if target == reflect.TypeOf(time.Time{}) {
@@ -3294,8 +3304,9 @@ func jsonInputShapeMatchesTarget(value any, target reflect.Type) bool {
 	for target.Kind() == reflect.Pointer {
 		target = target.Elem()
 	}
-	if target == reflect.TypeOf(time.Time{}) || target == reflect.TypeOf(DateOnly("")) || target == reflect.TypeOf(UUID{}) || target == reflect.TypeOf(big.Int{}) || target == reflect.TypeOf(big.Rat{}) {
-		return false
+	if target == reflect.TypeOf(time.Time{}) || target == reflect.TypeOf(DateOnly("")) || target == reflect.TypeOf(UUID{}) || target == reflect.TypeOf(URL("")) || target == reflect.TypeOf(URI("")) || target == reflect.TypeOf(big.Int{}) || target == reflect.TypeOf(big.Rat{}) {
+		source := reflect.ValueOf(value)
+		return source.IsValid() && source.Kind() != reflect.Map && source.Kind() != reflect.Slice && source.Kind() != reflect.Array
 	}
 	source := reflect.ValueOf(value)
 	if !source.IsValid() {
@@ -3369,6 +3380,28 @@ func coerceJSONReflect(value any, target reflect.Type) (reflect.Value, bool) {
 			return reflect.Value{}, false
 		}
 		parsed, err := ParseUUID(text)
+		if err != nil {
+			return reflect.Value{}, false
+		}
+		return reflect.ValueOf(parsed), true
+	}
+	if target == reflect.TypeOf(URL("")) {
+		text, ok := jsonText(value)
+		if !ok {
+			return reflect.Value{}, false
+		}
+		parsed, err := ParseURL(text)
+		if err != nil {
+			return reflect.Value{}, false
+		}
+		return reflect.ValueOf(parsed), true
+	}
+	if target == reflect.TypeOf(URI("")) {
+		text, ok := jsonText(value)
+		if !ok {
+			return reflect.Value{}, false
+		}
+		parsed, err := ParseURI(text)
 		if err != nil {
 			return reflect.Value{}, false
 		}

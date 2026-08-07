@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -79,6 +80,76 @@ func (value *DateOnly) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	parsed, err := ParseDateOnly(text)
+	if err != nil {
+		return err
+	}
+	*value = parsed
+	return nil
+}
+
+// URL is the portable Go scalar used for JSON values that must contain an
+// absolute URL. Keeping it as a string-like type makes it render as the same
+// JSON string that Esper exposes while still validating the URL at parse time.
+type URL string
+
+// ParseURL parses an absolute URL with a scheme and host.
+func ParseURL(text string) (URL, error) {
+	parsed, err := url.Parse(text)
+	if err != nil {
+		return "", fmt.Errorf("esper: invalid URL %q: %w", text, err)
+	}
+	if parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("esper: invalid URL %q: absolute URL required", text)
+	}
+	return URL(text), nil
+}
+
+func (value URL) String() string { return string(value) }
+
+func (value URL) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(value))
+}
+
+func (value *URL) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := json.Unmarshal(data, &text); err != nil {
+		return err
+	}
+	parsed, err := ParseURL(text)
+	if err != nil {
+		return err
+	}
+	*value = parsed
+	return nil
+}
+
+// URI is the portable Go scalar counterpart for java.net.URI in typed JSON
+// schemas. URI accepts relative references; malformed URI text is rejected.
+type URI string
+
+// ParseURI validates URI syntax while preserving the original text.
+func ParseURI(text string) (URI, error) {
+	if strings.ContainsAny(text, " \t\r\n") {
+		return "", fmt.Errorf("esper: invalid URI %q: whitespace is not allowed", text)
+	}
+	if _, err := url.Parse(text); err != nil {
+		return "", fmt.Errorf("esper: invalid URI %q: %w", text, err)
+	}
+	return URI(text), nil
+}
+
+func (value URI) String() string { return string(value) }
+
+func (value URI) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(value))
+}
+
+func (value *URI) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := json.Unmarshal(data, &text); err != nil {
+		return err
+	}
+	parsed, err := ParseURI(text)
 	if err != nil {
 		return err
 	}

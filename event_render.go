@@ -239,6 +239,12 @@ func renderJSONValue(value any, maxDepth, depth int) (any, error) {
 	if reflectValue.Type() == reflect.TypeOf(UUID{}) {
 		return reflectValue.Interface().(UUID).String(), nil
 	}
+	if reflectValue.Type() == reflect.TypeOf(URL("")) {
+		return string(reflectValue.Interface().(URL)), nil
+	}
+	if reflectValue.Type() == reflect.TypeOf(URI("")) {
+		return string(reflectValue.Interface().(URI)), nil
+	}
 	if reflectValue.Type() == reflect.TypeOf(big.Int{}) {
 		integer := reflectValue.Interface().(big.Int)
 		return json.Number(integer.String()), nil
