@@ -31,6 +31,12 @@ type infraIndexJoinRight struct {
 	Amount int64  `esper:"amount"`
 }
 
+type infraIndexCompositeJoinEvent struct {
+	ID  string `esper:"id"`
+	Key string `esper:"key"`
+	Seq int64  `esper:"seq"`
+}
+
 func TestInfraFAFIndexMultikeyArrayParity(t *testing.T) {
 	for _, namedWindow := range []bool{true, false} {
 		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
@@ -341,9 +347,347 @@ func TestInfraFAFIndexJoinChoiceParity(t *testing.T) {
 					t.Fatalf("join source %d index plan = %#v", sourceIndex, selection)
 				}
 			}
+			var leftLookups, rightLookups func() uint64
+			if namedWindow {
+				leftWindow, ok := engine.NamedWindow("W1")
+				if !ok {
+					t.Fatal("W1 named window is missing")
+				}
+				rightWindow, ok := engine.NamedWindow("W2")
+				if !ok {
+					t.Fatal("W2 named window is missing")
+				}
+				leftLookups = func() uint64 { return leftWindow.state.indexLookups.Load() }
+				rightLookups = func() uint64 { return rightWindow.state.indexLookups.Load() }
+			} else {
+				leftTable, ok := engine.Table("W1")
+				if !ok {
+					t.Fatal("W1 table is missing")
+				}
+				rightTable, ok := engine.Table("W2")
+				if !ok {
+					t.Fatal("W2 table is missing")
+				}
+				leftLookups = func() uint64 { return leftTable.state.indexLookups.Load() }
+				rightLookups = func() uint64 { return rightTable.state.indexLookups.Load() }
+			}
+			leftBefore, rightBefore := leftLookups(), rightLookups()
 			result, err := engine.ExecuteFireAndForget(ctx, plan)
 			if err != nil || len(result.Results()) != 2 {
 				t.Fatalf("join index result = %#v, err=%v", result.Results(), err)
+			}
+			if rightAfter := rightLookups(); rightAfter <= rightBefore {
+				t.Fatalf("join right source did not use its hash candidate index: before=%d after=%d", rightBefore, rightAfter)
+			}
+			if leftAfter := leftLookups(); leftAfter != leftBefore {
+				t.Fatalf("join left source unexpectedly probed its index: before=%d after=%d", leftBefore, leftAfter)
+			}
+
+			autoPlan, err := env.Build(join.Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			for sourceIndex, expected := range []string{"W1Key", "W2Key"} {
+				selection, ok := autoPlan.IndexPlan().ForSource(sourceIndex)
+				if !ok || selection.IndexName != expected || selection.Access != IndexAccessEquality {
+					t.Fatalf("automatic join source %d index plan = %#v", sourceIndex, selection)
+				}
+			}
+			leftBefore, rightBefore = leftLookups(), rightLookups()
+			autoResult, err := engine.ExecuteFireAndForget(ctx, autoPlan)
+			if err != nil || len(autoResult.Results()) != 2 {
+				t.Fatalf("automatic join index result = %#v, err=%v", autoResult.Results(), err)
+			}
+			if rightAfter := rightLookups(); rightAfter <= rightBefore {
+				t.Fatalf("automatic join did not use its hash candidate index: before=%d after=%d", rightBefore, rightAfter)
+			}
+			if leftAfter := leftLookups(); leftAfter != leftBefore {
+				t.Fatalf("automatic join left source unexpectedly probed its index: before=%d after=%d", leftBefore, leftAfter)
+			}
+
+			orPlan, err := env.Build(join.Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Where(Or(
+				GreaterOrEqual[int64](JoinField[int64](1, "amount"), Literal[int64](10)),
+				Less[int64](JoinField[int64](1, "amount"), Literal[int64](0)),
+			)).Query(UseIndexOn(0, "W1Key"), UseIndexOn(1, "W2Key")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			leftBefore, rightBefore = leftLookups(), rightLookups()
+			orResult, err := engine.ExecuteFireAndForget(ctx, orPlan)
+			if err != nil || len(orResult.Results()) != 2 {
+				t.Fatalf("join OR fallback result = %#v, err=%v", orResult.Results(), err)
+			}
+			if rightAfter := rightLookups(); rightAfter != rightBefore {
+				t.Fatalf("join OR fallback unexpectedly probed the right index: before=%d after=%d", rightBefore, rightAfter)
+			}
+			if leftAfter := leftLookups(); leftAfter != leftBefore {
+				t.Fatalf("join OR fallback unexpectedly probed the left index: before=%d after=%d", leftBefore, leftAfter)
+			}
+
+			filteredJoin := JoinMany(JoinRecordSource(left), JoinRecordSource(right.Filter(
+				EqualOf(Field[any, string]("key"), Literal("X")),
+			))).On(
+				OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+			)
+			filteredPlan, err := env.Build(filteredJoin.Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query(UseIndexOn(0, "W1Key"), UseIndexOn(1, "W2Key")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			leftBefore, rightBefore = leftLookups(), rightLookups()
+			filteredResult, err := engine.ExecuteFireAndForget(ctx, filteredPlan)
+			if err != nil || len(filteredResult.Results()) != 1 {
+				t.Fatalf("filtered join candidate result = %#v, err=%v", filteredResult.Results(), err)
+			}
+			if rightAfter := rightLookups(); rightAfter <= rightBefore {
+				t.Fatalf("filtered join did not use its right candidate index: before=%d after=%d", rightBefore, rightAfter)
+			}
+			if leftAfter := leftLookups(); leftAfter != leftBefore {
+				t.Fatalf("filtered join left source unexpectedly probed its index: before=%d after=%d", leftBefore, leftAfter)
+			}
+
+			identity := Func1[string, string]("identity-join-key", func(value string) string { return value }, Field[any, string]("key"))
+			udfJoin := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(
+				OnSourcesEqual(0, identity, 1, Field[any, string]("key")),
+			)
+			udfPlan, err := env.Build(udfJoin.Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query(UseIndexOn(1, "W2Key")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			leftBefore, rightBefore = leftLookups(), rightLookups()
+			udfResult, err := engine.ExecuteFireAndForget(ctx, udfPlan)
+			if err != nil || len(udfResult.Results()) != 2 {
+				t.Fatalf("join UDF fallback result = %#v, err=%v", udfResult.Results(), err)
+			}
+			if rightAfter := rightLookups(); rightAfter != rightBefore {
+				t.Fatalf("join UDF fallback unexpectedly probed the right index: before=%d after=%d", rightBefore, rightAfter)
+			}
+			if leftAfter := leftLookups(); leftAfter != leftBefore {
+				t.Fatalf("join UDF fallback unexpectedly probed the left index: before=%d after=%d", leftBefore, leftAfter)
+			}
+		})
+	}
+}
+
+func TestInfraFAFIndexJoinOuterFallbackAndProbeBoundParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env := NewEnvironment()
+			leftSchema, err := RegisterStruct[infraIndexJoinLeft](env, "InfraIndexOuterLeft")
+			if err != nil {
+				t.Fatal(err)
+			}
+			rightSchema, err := RegisterStruct[infraIndexJoinRight](env, "InfraIndexOuterRight")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var left, right RecordStream
+			if namedWindow {
+				if _, err := CreateNamedWindow(env, "W1", leftSchema, NamedWindowIndex("W1Key", "key")); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, "W2", rightSchema, NamedWindowIndex("W2Key", "key")); err != nil {
+					t.Fatal(err)
+				}
+				left, right = FromNamedWindow(env, "W1"), FromNamedWindow(env, "W2")
+			} else {
+				if _, err := CreateTable(env, "W1", []TableColumn{PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key")}, SecondaryIndex("W1Key", "key")); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateTable(env, "W2", []TableColumn{PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("amount")}, SecondaryIndex("W2Key", "key")); err != nil {
+					t.Fatal(err)
+				}
+				left, right = FromTable(env, "W1"), FromTable(env, "W2")
+			}
+			engine := NewEngine(env)
+			ctx := context.Background()
+			if namedWindow {
+				for _, row := range []any{infraIndexJoinLeft{ID: "L1", Key: "X"}, infraIndexJoinLeft{ID: "L2", Key: "Y"}} {
+					if err := engine.InsertNamedWindow(ctx, "W1", row); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if err := engine.InsertNamedWindow(ctx, "W2", infraIndexJoinRight{ID: "R1", Key: "X", Amount: 10}); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				leftTable, _ := engine.Table("W1")
+				rightTable, _ := engine.Table("W2")
+				for _, row := range []map[string]any{{"id": "L1", "key": "X"}, {"id": "L2", "key": "Y"}} {
+					if _, err := leftTable.Insert(ctx, row); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if _, err := rightTable.Insert(ctx, map[string]any{"id": "R1", "key": "X", "amount": int64(10)}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			join := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(
+				OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+			).LeftOuter()
+			plan, err := env.Build(join.Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query(UseIndexOn(0, "W1Key"), UseIndexOn(1, "W2Key")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var leftLookups, rightLookups func() uint64
+			if namedWindow {
+				leftWindow, _ := engine.NamedWindow("W1")
+				rightWindow, _ := engine.NamedWindow("W2")
+				leftLookups = func() uint64 { return leftWindow.state.indexLookups.Load() }
+				rightLookups = func() uint64 { return rightWindow.state.indexLookups.Load() }
+			} else {
+				leftTable, _ := engine.Table("W1")
+				rightTable, _ := engine.Table("W2")
+				leftLookups = func() uint64 { return leftTable.state.indexLookups.Load() }
+				rightLookups = func() uint64 { return rightTable.state.indexLookups.Load() }
+			}
+			leftBefore, rightBefore := leftLookups(), rightLookups()
+			result, err := engine.ExecuteFireAndForget(ctx, plan)
+			if err != nil || len(result.Results()) != 2 {
+				t.Fatalf("outer join result = %#v, err=%v", result.Results(), err)
+			}
+			if leftLookups() != leftBefore || rightLookups() != rightBefore {
+				t.Fatalf("outer join unexpectedly used an inner candidate path: left %d->%d, right %d->%d", leftBefore, leftLookups(), rightBefore, rightLookups())
+			}
+		})
+	}
+
+	sides := [][]storedEvent{make([]storedEvent, maxIndexProbeKeys+1), nil}
+	tupleProbes, usable := joinIndexProbeTuples(sides, []bool{true, false}, 1)
+	if usable || tupleProbes != nil {
+		t.Fatalf("oversized join probe unexpectedly remained usable: tuples=%d usable=%v", len(tupleProbes), usable)
+	}
+	tupleProbes, usable = joinIndexProbeTuples([][]storedEvent{nil, nil}, []bool{true, false}, 1)
+	if !usable || tupleProbes != nil {
+		t.Fatalf("empty loaded join side was not represented as a usable empty probe: tuples=%v usable=%v", tupleProbes, usable)
+	}
+}
+
+func TestInfraFAFIndexJoinCompositeEqualityAndDuplicateProbeParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env := NewEnvironment()
+			schema, err := RegisterStruct[infraIndexCompositeJoinEvent](env, "InfraIndexCompositeJoinEvent")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var left, right RecordStream
+			if namedWindow {
+				if _, err := CreateNamedWindow(env, "W1", schema, NamedWindowIndex("composite", "key", "seq")); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, "W2", schema, NamedWindowIndex("composite", "key", "seq")); err != nil {
+					t.Fatal(err)
+				}
+				left, right = FromNamedWindow(env, "W1"), FromNamedWindow(env, "W2")
+			} else {
+				columns := []TableColumn{
+					PrimaryKeyColumn[string]("id"),
+					TableColumnOf[string]("key"),
+					TableColumnOf[int64]("seq"),
+				}
+				if _, err := CreateTable(env, "W1", columns, SecondaryIndex("composite", "key", "seq")); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateTable(env, "W2", columns, SecondaryIndex("composite", "key", "seq")); err != nil {
+					t.Fatal(err)
+				}
+				left, right = FromTable(env, "W1"), FromTable(env, "W2")
+			}
+			engine := NewEngine(env)
+			ctx := context.Background()
+			leftRows := []infraIndexCompositeJoinEvent{
+				{ID: "L1", Key: "X", Seq: 7},
+				{ID: "L2", Key: "X", Seq: 7},
+				{ID: "L3", Key: "Y", Seq: 8},
+			}
+			rightRows := []infraIndexCompositeJoinEvent{
+				{ID: "R1", Key: "X", Seq: 7},
+				{ID: "R2", Key: "X", Seq: 9},
+				{ID: "R3", Key: "Y", Seq: 8},
+			}
+			insert := func(source string, rows []infraIndexCompositeJoinEvent) {
+				t.Helper()
+				for _, row := range rows {
+					if namedWindow {
+						if err := engine.InsertNamedWindow(ctx, source, row); err != nil {
+							t.Fatal(err)
+						}
+						continue
+					}
+					table, ok := engine.Table(source)
+					if !ok {
+						t.Fatalf("table %s is missing", source)
+					}
+					if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "seq": row.Seq}); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			insert("W1", leftRows)
+			insert("W2", rightRows)
+
+			join := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(
+				OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+				OnSourcesEqual(0, Field[any, int64]("seq"), 1, Field[any, int64]("seq")),
+			)
+			plan, err := env.Build(join.Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok := plan.IndexPlan().ForSource(1)
+			if !ok || selection.IndexName != "composite" || selection.Access != IndexAccessEquality || !reflect.DeepEqual(selection.Columns, []string{"key", "seq"}) || !reflect.DeepEqual(selection.MatchedColumns, []string{"key", "seq"}) {
+				t.Fatalf("composite join index plan = %#v", selection)
+			}
+			var leftLookups, rightLookups func() uint64
+			if namedWindow {
+				leftWindow, _ := engine.NamedWindow("W1")
+				rightWindow, _ := engine.NamedWindow("W2")
+				leftLookups = func() uint64 { return leftWindow.state.indexLookups.Load() }
+				rightLookups = func() uint64 { return rightWindow.state.indexLookups.Load() }
+			} else {
+				leftTable, _ := engine.Table("W1")
+				rightTable, _ := engine.Table("W2")
+				leftLookups = func() uint64 { return leftTable.state.indexLookups.Load() }
+				rightLookups = func() uint64 { return rightTable.state.indexLookups.Load() }
+			}
+			leftBefore, rightBefore := leftLookups(), rightLookups()
+			result, err := engine.ExecuteFireAndForget(ctx, plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(result.Results()) != 3 {
+				t.Fatalf("composite join result = %#v, want three rows", result.Results())
+			}
+			pairs := make([]string, 0, len(result.Results()))
+			for _, row := range result.Results() {
+				pairs = append(pairs, row.Get("left").Any().(string)+"/"+row.Get("right").Any().(string))
+			}
+			if !reflect.DeepEqual(pairs, []string{"L1/R1", "L2/R1", "L3/R3"}) {
+				t.Fatalf("composite join result order = %#v", pairs)
+			}
+			if rightAfter := rightLookups(); rightAfter != rightBefore+1 {
+				t.Fatalf("composite join expected one deduplicated right lookup: before=%d after=%d", rightBefore, rightAfter)
+			}
+			if leftAfter := leftLookups(); leftAfter != leftBefore {
+				t.Fatalf("composite join left source unexpectedly probed its index: before=%d after=%d", leftBefore, leftAfter)
 			}
 		})
 	}

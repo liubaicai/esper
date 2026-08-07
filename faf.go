@@ -925,6 +925,7 @@ func (e *Engine) executeJoinFireAndForget(ctx context.Context, plan Plan, parame
 	runtime.ctx = ctx
 	runtime.variables = variablesWithEngine(variables, e)
 	runtime.joinState = &joinRuntimeState{sides: make([][]storedEvent, len(sources))}
+	loaded := make([]bool, len(sources))
 	evaluationOrder, err := methodJoinEvaluationOrder(plan.query.join)
 	if err != nil {
 		return QueryResult{}, err
@@ -965,15 +966,27 @@ func (e *Engine) executeJoinFireAndForget(ctx context.Context, plan Plan, parame
 					return QueryResult{}, appendErr
 				}
 			}
+			loaded[index] = true
 			continue
 		}
-		events, err := e.snapshotFireAndForgetSource(ctx, base, now, variables)
+		selection, _ := plan.indexPlan.ForSource(index)
+		events, usedIndex, err := e.snapshotFireAndForgetJoinSourceWithIndex(
+			ctx, source, selection, index, plan.query.join, plan.query.joinWhere,
+			runtime.joinState.sides, loaded, sourceIndexFilterExpressions(source), now, variables,
+		)
+		if err != nil {
+			return QueryResult{}, err
+		}
+		if !usedIndex {
+			events, err = e.snapshotFireAndForgetSource(ctx, base, now, variables)
+		}
 		if err != nil {
 			return QueryResult{}, err
 		}
 		if appendErr := appendFireAndForgetJoinSource(&runtime, &runtime.joinState.sides[index], input, events, now, nil); appendErr != nil {
 			return QueryResult{}, appendErr
 		}
+		loaded[index] = true
 	}
 	tuples := joinTuples(plan.query.join, runtime.joinState, now, &runtime)
 	var batch ResultBatch

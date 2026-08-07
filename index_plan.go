@@ -356,18 +356,31 @@ func sourceIndexPredicatesForJoin(condition JoinCondition, result map[int][]inde
 	if condition.Left == nil || condition.Right == nil {
 		return
 	}
-	leftColumn := fieldColumn(condition.Left.node())
-	rightColumn := fieldColumn(condition.Right.node())
 	leftSource, rightSource := joinConditionSources(condition)
-	if leftColumn == "" || rightColumn == "" || leftSource < 0 || rightSource < 0 {
+	if leftSource < 0 || rightSource < 0 {
 		return
 	}
 	access := IndexAccessEquality
 	if condition.Comparison != JoinEqual {
 		access = IndexAccessRange
 	}
-	result[leftSource] = append(result[leftSource], indexPredicate{columns: []string{leftColumn}, access: access})
-	result[rightSource] = append(result[rightSource], indexPredicate{columns: []string{rightColumn}, access: access})
+	if leftColumn := joinConditionIndexColumn(condition.Left.node(), leftSource); leftColumn != "" {
+		result[leftSource] = append(result[leftSource], indexPredicate{columns: []string{leftColumn}, access: access})
+	}
+	if rightColumn := joinConditionIndexColumn(condition.Right.node(), rightSource); rightColumn != "" {
+		result[rightSource] = append(result[rightSource], indexPredicate{columns: []string{rightColumn}, access: access})
+	}
+}
+
+func joinConditionIndexColumn(node *exprNode, source int) string {
+	if column := fieldColumn(node); column != "" {
+		return column
+	}
+	joinSource, column, ok := joinFieldColumn(node)
+	if ok && joinSource == source {
+		return column
+	}
+	return ""
 }
 
 func joinFieldColumn(node *exprNode) (int, string, bool) {

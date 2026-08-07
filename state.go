@@ -666,6 +666,44 @@ func (t *Table) lookupMany(ctx context.Context, indexName string, keys [][]any) 
 	return rows, nil
 }
 
+// lookupPrimaryMany is the complete-key counterpart for a table primary key.
+// Primary keys are row identity rather than secondary index buckets, but FAF
+// candidate execution still needs one consistent snapshot and insertion-order
+// result assembly when probing several keys.
+func (t *Table) lookupPrimaryMany(ctx context.Context, keys [][]any) ([]TableRow, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	if t == nil || t.state == nil {
+		return nil, NewError(ErrorState, "nil table")
+	}
+	state := t.state
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	state.indexLookups.Add(1)
+	wanted := make(map[string]struct{}, len(keys))
+	for _, key := range keys {
+		if err := contextErr(ctx); err != nil {
+			return nil, err
+		}
+		rowKey, err := state.keyFromValues(key)
+		if err != nil {
+			return nil, err
+		}
+		wanted[rowKey] = struct{}{}
+	}
+	rows := make([]TableRow, 0, len(wanted))
+	for _, rowKey := range state.order {
+		if _, exists := wanted[rowKey]; !exists {
+			continue
+		}
+		if row, exists := state.rows[rowKey]; exists {
+			rows = append(rows, cloneTableRow(row))
+		}
+	}
+	return rows, nil
+}
+
 // lookupRange walks the ordered members of a B-tree index and returns matched
 // rows in table insertion order. The ordered members are kept separately from
 // the hash buckets so the runtime never has to reverse-engineer encodeKey.

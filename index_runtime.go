@@ -595,6 +595,377 @@ func (e *Engine) indexProbeKeys(source *streamNode, selection IndexSelection, ex
 	return result, len(result) > 0
 }
 
+// joinIndexConstraint is one equality value for a target-side index column.
+// source identifies the tuple side used as the current Event when value is a
+// plain Field expression; JoinField expressions use their own source metadata.
+// A negative source means that value is independent of the join tuple (for
+// example a literal, variable or prepared parameter).
+type joinIndexConstraint struct {
+	value  Expr
+	node   *exprNode
+	source int
+}
+
+func expressionReferencesJoinSource(node *exprNode, source int) bool {
+	if node == nil {
+		return false
+	}
+	if (node.kind == "join-field" || node.kind == "join-event") && node.joinSource == source {
+		return true
+	}
+	for _, child := range node.children {
+		if expressionReferencesJoinSource(child, source) {
+			return true
+		}
+	}
+	return false
+}
+
+func joinIndexTargetColumn(expression Expr, targetSource, declaredSource int) (string, bool) {
+	if expression == nil || expression.node() == nil {
+		return "", false
+	}
+	return joinIndexTargetNode(expression.node(), targetSource, declaredSource)
+}
+
+func joinIndexTargetNode(node *exprNode, targetSource, declaredSource int) (string, bool) {
+	if node == nil {
+		return "", false
+	}
+	if column := fieldColumn(node); column != "" {
+		return column, declaredSource == targetSource
+	}
+	joinSource, column, ok := joinFieldColumn(node)
+	return column, ok && joinSource == targetSource
+}
+
+func safeJoinIndexProbeValueNode(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	switch node.kind {
+	case "literal", "null", "field", "join-field", "variable", "parameter":
+		return true
+	default:
+		// Do not evaluate UDFs, arithmetic, property chains or other dynamic
+		// expressions once per loaded tuple and use the result to prune the
+		// target side. The ordinary join evaluator remains the source of truth.
+		return false
+	}
+}
+
+func addJoinIndexConstraint(constraints map[string]joinIndexConstraint, expression Expr, value Expr, targetSource, declaredTargetSource, valueSource int) bool {
+	column, ok := joinIndexTargetColumn(expression, targetSource, declaredTargetSource)
+	if !ok || value == nil || value.node() == nil || !safeJoinIndexProbeValueNode(value.node()) || expressionReferencesJoinSource(value.node(), targetSource) {
+		return false
+	}
+	if _, exists := constraints[column]; !exists {
+		constraints[column] = joinIndexConstraint{value: value, source: valueSource}
+	}
+	return true
+}
+
+func addJoinIndexNodeConstraint(constraints map[string]joinIndexConstraint, target, value *exprNode, targetSource, declaredTargetSource, valueSource int) bool {
+	column, ok := joinIndexTargetNode(target, targetSource, declaredTargetSource)
+	if !ok || value == nil || expressionReferencesJoinSource(value, targetSource) {
+		return false
+	}
+	if _, exists := constraints[column]; !exists {
+		constraints[column] = joinIndexConstraint{node: value, source: valueSource}
+	}
+	return true
+}
+
+// collectJoinConditionIndexConstraints extracts only safe equality leaves
+// from a JoinCondition. AnyJoin is deliberately rejected: using one branch's
+// key as the sole candidate can miss rows matching another branch. Non-equal
+// leaves are left to the final Join predicate and do not make an equality
+// candidate unsafe.
+func collectJoinConditionIndexConstraints(condition JoinCondition, targetSource int, constraints map[string]joinIndexConstraint) bool {
+	if len(condition.all) > 0 {
+		for _, child := range condition.all {
+			if !collectJoinConditionIndexConstraints(child, targetSource, constraints) {
+				return false
+			}
+		}
+		return true
+	}
+	if len(condition.any) > 0 {
+		return false
+	}
+	if condition.Comparison != JoinEqual || condition.Left == nil || condition.Right == nil {
+		return true
+	}
+	leftSource, rightSource := joinConditionSources(condition)
+	switch {
+	case leftSource == targetSource && rightSource != targetSource:
+		return addJoinIndexConstraint(constraints, condition.Left, condition.Right, targetSource, leftSource, rightSource)
+	case rightSource == targetSource && leftSource != targetSource:
+		return addJoinIndexConstraint(constraints, condition.Right, condition.Left, targetSource, rightSource, leftSource)
+	case leftSource == targetSource || rightSource == targetSource:
+		return false
+	default:
+		return true
+	}
+}
+
+// collectJoinWhereIndexConstraints handles the analyzable JoinField form of
+// a post-join Where. Ordinary non-index predicates are intentionally ignored
+// because the runtime evaluates them after candidate retrieval; OR is unsafe
+// and therefore forces snapshot fallback.
+func collectJoinWhereIndexConstraints(node *exprNode, targetSource int, constraints map[string]joinIndexConstraint) bool {
+	if node == nil {
+		return true
+	}
+	if node.kind == "and" {
+		for _, child := range node.children {
+			if !collectJoinWhereIndexConstraints(child, targetSource, constraints) {
+				return false
+			}
+		}
+		return true
+	}
+	if node.kind == "or" {
+		return false
+	}
+	if node.kind != "eq" && node.kind != "equal-of" && node.kind != "is" || len(node.children) < 2 {
+		return true
+	}
+	leftSource, _, leftOK := joinFieldColumn(node.children[0])
+	rightSource, _, rightOK := joinFieldColumn(node.children[1])
+	if leftOK && leftSource == targetSource && (!rightOK || rightSource != targetSource) {
+		if rightOK {
+			return addJoinIndexNodeConstraint(constraints, node.children[0], node.children[1], targetSource, leftSource, rightSource)
+		}
+		return addJoinIndexNodeConstraint(constraints, node.children[0], node.children[1], targetSource, leftSource, -1)
+	}
+	if rightOK && rightSource == targetSource && (!leftOK || leftSource != targetSource) {
+		if leftOK {
+			return addJoinIndexNodeConstraint(constraints, node.children[1], node.children[0], targetSource, rightSource, leftSource)
+		}
+		return addJoinIndexNodeConstraint(constraints, node.children[1], node.children[0], targetSource, rightSource, -1)
+	}
+	return true
+}
+
+func joinIndexProbeTuples(sides [][]storedEvent, loaded []bool, targetSource int) ([][]Event, bool) {
+	if len(sides) == 0 || targetSource < 0 || targetSource >= len(sides) {
+		return nil, false
+	}
+	for source := range sides {
+		if source != targetSource && source < len(loaded) && loaded[source] && len(sides[source]) == 0 {
+			// A loaded empty source makes the inner join empty. This is a
+			// usable result, not a reason to scan the target source.
+			return nil, true
+		}
+	}
+	current := make([]Event, len(sides))
+	result := make([][]Event, 0, 1)
+	var visit func(int) bool
+	visit = func(source int) bool {
+		if source == len(sides) {
+			if len(result) >= maxIndexProbeKeys {
+				return false
+			}
+			result = append(result, append([]Event(nil), current...))
+			return true
+		}
+		if source == targetSource || source >= len(loaded) || !loaded[source] {
+			return visit(source + 1)
+		}
+		if len(sides[source]) == 0 {
+			return false
+		}
+		for _, stored := range sides[source] {
+			current[source] = stored.event
+			if !visit(source + 1) {
+				return false
+			}
+		}
+		current[source] = Event{}
+		return true
+	}
+	if !visit(0) {
+		return nil, false
+	}
+	return result, true
+}
+
+func evaluateJoinIndexConstraint(constraint joinIndexConstraint, tuple []Event, now time.Time, variables map[string]Value) (any, bool) {
+	node := constraint.node
+	if constraint.value != nil {
+		node = constraint.value.node()
+	}
+	if node == nil {
+		return nil, false
+	}
+	current := Event{}
+	if constraint.source >= 0 {
+		if constraint.source >= len(tuple) || !tuple[constraint.source].Schema().valid() {
+			return nil, false
+		}
+		current = tuple[constraint.source]
+	}
+	if constraint.value == nil {
+		return evaluateSimpleJoinIndexNode(node, current, tuple, now, variables)
+	}
+	value := constraint.value.eval(EvalContext{
+		Event: current, JoinEvents: tuple, OuterEvent: current, Now: now,
+		Variables: variables, Parameters: parameterValuesFromVariables(variables),
+	})
+	if !value.IsPresent() {
+		return nil, false
+	}
+	return value.Any(), true
+}
+
+func evaluateSimpleJoinIndexNode(node *exprNode, current Event, tuple []Event, now time.Time, variables map[string]Value) (any, bool) {
+	if node == nil {
+		return nil, false
+	}
+	switch node.kind {
+	case "literal":
+		return node.literalValue, true
+	case "null":
+		return nil, false
+	case "field":
+		value := current.Get(node.fieldName)
+		return value.Any(), value.IsPresent()
+	case "join-field":
+		if node.joinSource < 0 || node.joinSource >= len(tuple) || !tuple[node.joinSource].Schema().valid() {
+			return nil, false
+		}
+		value := tuple[node.joinSource].Get(node.fieldName)
+		return value.Any(), value.IsPresent()
+	case "variable":
+		value, ok := variables[node.variableName]
+		return value.Any(), ok && value.IsPresent()
+	case "parameter":
+		if parameters := parameterValuesFromVariables(variables); parameters != nil {
+			if value, ok := parameters[node.parameterName]; ok {
+				return value.Any(), value.IsPresent()
+			}
+		}
+		return nil, false
+	default:
+		return nil, false
+	}
+}
+
+// joinIndexProbeKeys extracts complete equality keys for one source from the
+// already loaded join sides. It returns usable=false for any shape that could
+// produce an incomplete candidate set; callers must then use the ordinary
+// snapshot path. A usable empty key set is a valid empty result when a loaded
+// source has no rows.
+func (e *Engine) joinIndexProbeKeys(source *streamNode, selection IndexSelection, targetSource int, definition *joinDefinition, joinWhere Expr, sides [][]storedEvent, loaded []bool, filterExpressions []Expr, now time.Time, variables map[string]Value) ([][]any, bool) {
+	if e == nil || source == nil || selection.Access != IndexAccessEquality || len(selection.Columns) == 0 || len(selection.MatchedColumns) != len(selection.Columns) || (strings.HasPrefix(selection.IndexName, "<") && selection.IndexName != "<primary-key>") {
+		return nil, false
+	}
+	if definition == nil || definition.kind != JoinInner || joinDefinitionHasUnidirectional(definition) {
+		return nil, false
+	}
+	for _, edge := range definition.edges {
+		if edge.kind != JoinInner {
+			return nil, false
+		}
+	}
+	base, err := sourceNode(source)
+	if err != nil || (base.kind != streamNamedWindow && base.kind != streamTable) {
+		return nil, false
+	}
+	schema, err := e.env.sourceSchema(base)
+	if err != nil {
+		return nil, false
+	}
+	ctx := EvalContext{Now: now, Variables: variables, Parameters: parameterValuesFromVariables(variables)}
+	fixed := make(indexProbeConstraints)
+	for _, expression := range filterExpressions {
+		if expression != nil {
+			collectIndexProbeConstraints(expression.node(), ctx, fixed)
+		}
+	}
+	constraints := make(map[string]joinIndexConstraint)
+	if definition != nil {
+		for _, condition := range joinDefinitionConditions(definition) {
+			if !collectJoinConditionIndexConstraints(condition, targetSource, constraints) {
+				return nil, false
+			}
+		}
+	}
+	if joinWhere != nil && !collectJoinWhereIndexConstraints(joinWhere.node(), targetSource, constraints) {
+		return nil, false
+	}
+	for _, column := range selection.Columns {
+		if values := fixed[column]; len(values) > 1 {
+			return nil, false
+		}
+		if len(fixed[column]) == 0 {
+			if _, exists := constraints[column]; !exists {
+				return nil, false
+			}
+		}
+	}
+	tupleProbes, probesUsable := joinIndexProbeTuples(sides, loaded, targetSource)
+	if !probesUsable {
+		return nil, false
+	}
+	if tupleProbes == nil {
+		return nil, true
+	}
+	keys := make([][]any, 0, len(tupleProbes))
+	seen := make(map[string]struct{}, len(tupleProbes))
+	for _, tuple := range tupleProbes {
+		key := make([]any, 0, len(selection.Columns))
+		for _, column := range selection.Columns {
+			var value any
+			if fixedValues := fixed[column]; len(fixedValues) == 1 {
+				value = fixedValues[0]
+			} else {
+				var ok bool
+				value, ok = evaluateJoinIndexConstraint(constraints[column], tuple, now, variables)
+				if !ok {
+					return nil, false
+				}
+			}
+			field, exists := schema.Field(column)
+			fieldType := reflect.Type(nil)
+			if exists {
+				fieldType = field.Type
+			}
+			normalized, ok := normalizeIndexProbeValue(value, fieldType)
+			if !ok || normalized == nil || isNilReflectValue(reflect.ValueOf(normalized)) {
+				return nil, false
+			}
+			key = append(key, normalized)
+		}
+		encoded := encodeKey(key)
+		if _, exists := seen[encoded]; exists {
+			continue
+		}
+		seen[encoded] = struct{}{}
+		keys = append(keys, key)
+		if len(keys) > maxIndexProbeKeys {
+			return nil, false
+		}
+	}
+	return keys, true
+}
+
+func (e *Engine) snapshotFireAndForgetJoinSourceWithIndex(ctx context.Context, source *streamNode, selection IndexSelection, targetSource int, definition *joinDefinition, joinWhere Expr, sides [][]storedEvent, loaded []bool, filterExpressions []Expr, now time.Time, variables map[string]Value) ([]Event, bool, error) {
+	keys, usable := e.joinIndexProbeKeys(source, selection, targetSource, definition, joinWhere, sides, loaded, filterExpressions, now, variables)
+	if !usable {
+		return nil, false, nil
+	}
+	if len(keys) == 0 {
+		return nil, true, nil
+	}
+	events, err := e.lookupIndexedFireAndForgetSource(ctx, source, selection, keys, now)
+	if err != nil {
+		return nil, true, err
+	}
+	return events, true, nil
+}
+
 func tableRowsAsEvents(source *streamNode, definition TableDefinition, rows []TableRow, now time.Time) ([]Event, error) {
 	events := make([]Event, 0, len(rows))
 	for _, row := range rows {
@@ -612,6 +983,46 @@ func tableRowsAsEvents(source *streamNode, definition TableDefinition, rows []Ta
 		events = append(events, event)
 	}
 	return events, nil
+}
+
+// lookupIndexedFireAndForgetSource resolves complete equality keys against a
+// declared Table/Named Window index. It is shared by single-source FAF and
+// the Join candidate path so both paths have identical source identity and
+// Table primary-key handling.
+func (e *Engine) lookupIndexedFireAndForgetSource(ctx context.Context, source *streamNode, selection IndexSelection, keys [][]any, now time.Time) ([]Event, error) {
+	base, err := sourceNode(source)
+	if err != nil {
+		return nil, err
+	}
+	switch base.kind {
+	case streamNamedWindow:
+		if strings.HasPrefix(selection.IndexName, "<") {
+			return nil, NewError(ErrorUnknownName, "named window retention index is not a declared lookup index")
+		}
+		window, ok := e.NamedWindowInModule(base.moduleName, base.sourceName)
+		if !ok {
+			return nil, NewError(ErrorUnknownName, "named window "+base.sourceName+" is not registered")
+		}
+		return window.lookupMany(ctx, selection.IndexName, keys)
+	case streamTable:
+		table, ok := e.TableInModule(base.moduleName, base.sourceName)
+		if !ok {
+			return nil, NewError(ErrorUnknownName, "table "+base.sourceName+" is not registered")
+		}
+		definition := table.Definition()
+		var rows []TableRow
+		if selection.IndexName == "<primary-key>" {
+			rows, err = table.lookupPrimaryMany(ctx, keys)
+		} else {
+			rows, err = table.lookupMany(ctx, selection.IndexName, keys)
+		}
+		if err != nil {
+			return nil, err
+		}
+		return tableRowsAsEvents(base, definition, rows, now)
+	default:
+		return nil, NewError(ErrorInvalidRule, "indexed FAF source must be a named window or table")
+	}
 }
 
 func (e *Engine) snapshotFireAndForgetSourceWithIndex(ctx context.Context, source *streamNode, selection IndexSelection, expressions []Expr, now time.Time, variables map[string]Value) ([]Event, error) {
@@ -656,44 +1067,10 @@ func (e *Engine) snapshotFireAndForgetSourceWithIndex(ctx context.Context, sourc
 	if err != nil {
 		return nil, err
 	}
-	switch base.kind {
-	case streamNamedWindow:
-		if strings.HasPrefix(selection.IndexName, "<") {
-			return e.snapshotFireAndForgetSource(ctx, source, now, variables)
-		}
-		window, ok := e.NamedWindowInModule(base.moduleName, base.sourceName)
-		if !ok {
-			return nil, NewError(ErrorUnknownName, "named window "+base.sourceName+" is not registered")
-		}
-		return window.lookupMany(ctx, selection.IndexName, keys)
-	case streamTable:
-		table, ok := e.TableInModule(base.moduleName, base.sourceName)
-		if !ok {
-			return nil, NewError(ErrorUnknownName, "table "+base.sourceName+" is not registered")
-		}
-		definition := table.Definition()
-		var rows []TableRow
-		if selection.IndexName == "<primary-key>" {
-			// Primary keys are already the table's row identity and are not
-			// duplicated into the secondary-index map. Probe each complete key;
-			// this path is used only for a complete equality key.
-			for _, key := range keys {
-				row, found, getErr := table.Get(ctx, key...)
-				if getErr != nil {
-					return nil, getErr
-				}
-				if found {
-					rows = append(rows, row)
-				}
-			}
-		} else {
-			rows, err = table.lookupMany(ctx, selection.IndexName, keys)
-			if err != nil {
-				return nil, err
-			}
-		}
-		return tableRowsAsEvents(base, definition, rows, now)
-	default:
+	if base.kind == streamNamedWindow && strings.HasPrefix(selection.IndexName, "<") {
+		// Retention indexes are planner-visible summaries, not declared
+		// Named Window lookup indexes. Preserve the ordinary snapshot path.
 		return e.snapshotFireAndForgetSource(ctx, source, now, variables)
 	}
+	return e.lookupIndexedFireAndForgetSource(ctx, source, selection, keys, now)
 }
