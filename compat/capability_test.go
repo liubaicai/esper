@@ -81,6 +81,23 @@ func TestCapabilityManifestAcceptsPartialCaseWithCapabilityMapping(t *testing.T)
 	}
 }
 
+func TestCapabilityManifestRejectsStaticJavaIDInRuntimeReferences(t *testing.T) {
+	manifest := CapabilityManifest{
+		Version:    CapabilityManifestVersion,
+		JavaCommit: "java",
+		Capabilities: []CapabilityRecord{{
+			ID: "cap-a", Level: "S", Phase: 1, Status: "prototype",
+		}},
+		Cases: []CapabilityCase{{
+			ID: "case-a", JavaRuntimeIDs: []string{"java-static-a"}, Status: "mapped",
+		}},
+		Mappings: []CapabilityMapping{{CapabilityID: "cap-a", CaseID: "case-a"}},
+	}
+	if err := manifest.Validate(); err == nil || !strings.Contains(err.Error(), "javaStaticIds") {
+		t.Fatalf("static Java runtime id error = %v", err)
+	}
+}
+
 func TestCapabilityManifestRejectsNonPlannedCapabilityWithoutCaseMapping(t *testing.T) {
 	manifest := CapabilityManifest{
 		Version:    CapabilityManifestVersion,

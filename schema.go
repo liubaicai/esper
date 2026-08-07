@@ -2294,6 +2294,14 @@ func mergeSchemaUnderlying(schema Schema, original any, updates map[string]any) 
 					result[name] = value
 				}
 			}
+		} else {
+			// A declared map property exists in the event type even when an
+			// insert projection omits it. Materialize that property as nil so
+			// Event.Get reports Null, matching Esper's map event semantics,
+			// rather than treating it as an undeclared/missing property.
+			for _, field := range schema.fields {
+				result[field.Name] = nil
+			}
 		}
 		for name, value := range updates {
 			result[name] = value

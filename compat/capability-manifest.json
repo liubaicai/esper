@@ -297,10 +297,10 @@
       "level": "S",
       "summary": "Table and Named Window on-trigger mutation, merge branches, consumer dispatch and new/old streams",
       "javaRefs": ["InfraTableOnUpdate", "InfraNamedWindowOnMerge", "InfraNWTableOnDelete", "InfraNWTableOnMerge"],
-      "goRefs": ["trigger.go", "trigger_test.go", "trigger_merge_representation_test.go", "trigger_infra_insert_other_stream_test.go", "state.go", "plan.go"],
+      "goRefs": ["trigger.go", "trigger_test.go", "trigger_merge_representation_test.go", "trigger_infra_insert_other_stream_test.go", "trigger_namedwindow_merge_test.go", "schema.go", "state.go", "plan.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["full index/transaction semantics", "wildcard/select projection across all event representations", "mapped/nested property assignment beyond direct Map/ObjectArray composite columns", "representation-specific conversion and metadata", "split-stream and complete on-trigger action ordering matrix", "all Java on-trigger cases", "persistence"]
+      "remaining": ["full index/transaction semantics", "wildcard/select projection across all event representations", "mapped/nested property assignment beyond direct Map/ObjectArray composite columns", "representation-specific conversion and metadata", "split-stream and complete on-trigger action ordering matrix", "remaining Java on-trigger cases outside the mapped InfraNamedWindowOnMerge and selected InfraNWTableOnMerge slices", "persistence"]
     },
     {
       "id": "context.partition",
@@ -504,7 +504,7 @@
     },
     {
       "id": "case.view-window-core",
-      "javaRuntimeIds": ["java-runtime-e437d690b8616ec31d3d", "java-runtime-ef732e81fa1b495b9921", "java-runtime-2dc028c1cc8ea92e6830", "java-runtime-8e05e86e010f321e8b8c", "java-runtime-a0635bfb38c5df32309c", "java-runtime-958290132d07e2e8f8d0", "java-runtime-7074d83d6ae4d604971e", "java-runtime-db6c4e961c13852cd758", "java-runtime-55e24324e2e760d77be6", "java-runtime-184f3540a34c287cbc8f", "java-runtime-58eda839ac1747f3c801", "java-runtime-5656d781a022470fdc6c", "java-runtime-2260e6c8f09ed035dccb", "java-runtime-f2e4866fa348414ab524", "java-runtime-ef63ec3b3d45469ef855", "java-runtime-c166fa2485ce9b6a5547", "java-runtime-68459d9d5e709a02b32c", "java-runtime-1a08cc49d0839b5bdab9", "java-runtime-379a9a3567e60ff81896", "java-runtime-bb86eace4dae5c1c130f", "java-runtime-0652854f960214bc4473", "java-runtime-4f00badc903c01a57422", "java-runtime-7f484bec5fd437a0a6da", "java-runtime-dd9cd68812a55026189d", "java-runtime-ebcedaa82c50553f4aa0", "java-runtime-6aacb234a8ab8f62814c", "java-runtime-0ff5bbf3d4b3e14f6b2e", "java-runtime-2a0d6340a2f57c6b5498", "java-runtime-d687142f433b3dc07e90", "java-runtime-fefaec8c8a2d920753fe", "java-runtime-03d7a90330576c907a50", "java-runtime-87c510d30fc9bd7c1829", "java-runtime-f4af21f7f9e1b222f712", "java-runtime-3f3d09204a9f45ae766d", "java-runtime-0ecb0d838725b95d5dc5", "java-runtime-446806e006e4e94f557a", "java-runtime-437a569afc8b9686721f", "java-runtime-82b46f086fc32e21fb2d", "java-runtime-be1068f9d0f38ba24c7a"],
+      "javaRuntimeIds": ["java-runtime-e437d690b8616ec31d3d", "java-runtime-ef732e81fa1b495b9921", "java-runtime-2dc028c1cc8ea92e6830", "java-runtime-8e05e86e010f321e8b8c", "java-runtime-a0635bfb38c5df32309c", "java-runtime-958290132d07e2e8f8d0", "java-runtime-7074d83d6ae4d604971e", "java-runtime-db6c4e961c13852cd758", "java-runtime-55e24324e2e760d77be6", "java-runtime-184f3540a34c287cbc8f", "java-runtime-58eda839ac1747f3c801", "java-runtime-5656d781a022470fdc6c", "java-runtime-2260e6c8f09ed035dccb", "java-runtime-f2e4866fa348414ab524", "java-runtime-ef63ec3b3d45469ef855", "java-runtime-c166fa2485ce9b6a5547", "java-runtime-68459d9d5e709a02b32c", "java-runtime-1a08cc49d0839b5bdab9", "java-runtime-379a9a3567e60ff81896", "java-runtime-bb86eace4dae5c1c130f", "java-runtime-0652854f960214bc4473", "java-runtime-4f00badc903c01a57422", "java-runtime-7f484bec5fd437a0a6da", "java-runtime-dd9cd68812a55026189d", "java-runtime-ebcedaa82c50553f4aa0", "java-runtime-6aacb234a8ab8f62814d", "java-runtime-0ff5bbf3d4b3e14f6b2e", "java-runtime-2a0d6340a2f57c6b5498", "java-runtime-d687142f433b3dc07e90", "java-runtime-fefaec8c8a2d920753fe", "java-runtime-03d7a90330576c907a50", "java-runtime-87c510d30fc9bd7c1829", "java-runtime-f4af21f7f9e1b222f712", "java-runtime-3f3d09204a9f45ae766d", "java-runtime-0ecb0d838725b95d5dc5", "java-runtime-446806e006e4e94f557a", "java-runtime-437a569afc8b9686721f", "java-runtime-82b46f086fc32e21fb2d", "java-runtime-be1068f9d0f38ba24c7a"],
       "javaNames": ["ViewMultiKeyLastUniqueTwoKey", "ViewMultiKeyFirstUnique", "ViewMultiKeyGroupWin", "ViewMultiKeyRank", "ViewMultiKeyLastUniqueThreeKey", "ViewMultiKeyLastUniqueOneKeyArrayOfLongPrimitive", "ViewMultiKeyLastUniqueOneKeyArrayOfObjectArray", "ViewMultiKeyLastUniqueOneKey2DimArray", "ViewMultiKeyLastUniqueTwoKeyAllArrayOfPrimitive", "ViewMultiKeyLastUniqueTwoKeyAllArrayOfObject", "ViewMultiKeyLastUniqueArrayKeyIntersection", "ViewMultiKeyLastUniqueArrayKeyUnion", "ViewMultiKeyLastUniqueArrayKeySubquery", "ViewMultiKeyLastUniqueArrayKeyNamedWindow", "ViewMultiKeyLastUniqueArrayKeySubqueryInFilter", "ViewMultiKeyLastUniqueArrayKeyDataflow", "ViewRankedSceneOne", "ViewRankedPrev", "ViewRankPrevAndGroupWin", "ViewRankMultiexpression", "ViewRankRemoveStream", "ViewRankRanked", "ViewRankInvalid", "ViewTimeOrderSceneOne", "ViewTimeOrderSceneTwo", "ViewTimeOrderTTLTimeToLive", "ViewTimeOrderTTLMonthScoped", "ViewTimeOrderTTLTimeOrderRemoveStream", "ViewTimeOrderTTLTimeOrder", "ViewTimeOrderTTLGroupedWindow", "ViewTimeOrderTTLInvalid", "ViewTimeOrderTTLPreviousAndPriorSceneOne", "ViewTimeOrderTTLPreviousAndPriorSceneTwo", "ViewSortSceneOne", "ViewSortSceneTwo", "ViewSortedSingleKeyBuiltin", "ViewSortedMultikey", "ViewSortedPrimitiveKey", "ViewSortedPrev"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewMultikeyWArray.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewRank.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewSort.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeOrderAndTimeToLive.java", "regression-run/src/test/java/com/espertech/esper/regressionrun/suite/view/TestSuiteView.java"],
       "goTests": ["TestLengthBatchWindowEmitsAtBatchBoundary", "TestTimeBatchWindowFlushesOnVirtualTime", "TestLastAndUniqueWindowsProduceReplacementOldStream", "TestUniqueWindowSnapshotAndNestedHistory", "TestMultiKeyUniqueWindowsUseAllKeyValues", "TestUniqueWindowUsesArrayKeyContent", "TestUniqueWindowUsesObjectAndTwoDimensionalArrayContent", "TestRankWindowUsesArrayUniqueKeyContent", "TestNamedWindowArrayUniqueRetentionMatchesEsper", "TestNamedWindowArrayUniqueSubqueryWindowMatchesEsper", "TestNamedWindowArrayUniqueSubqueryCountFilterMatchesEsper", "TestEventStreamUniqueSubqueryWindowMatchesEsper", "TestEventStreamUniqueSubqueryCountFilterMatchesEsper", "TestDataflowArrayKeySubqueryWindowMatchesEsper", "TestGroupWindowKeepsIndependentLengthState", "TestGroupWindowExpiresEachPartitionOnVirtualTime", "TestGroupWindowUsesArrayKeyIdentity", "TestUnionWindowRetainsEventUntilAllChildrenExpire", "TestIntersectWindowRequiresEveryChild", "TestCompositeUniqueWindowsUseArrayKeyContent", "TestExternallyTimedAndSortedWindows", "TestTimeOrderWindowUsesEventTimestampOrder", "TestTimeOrderWindowExpiresOnVirtualTimeAndRejectsLateEvents", "TestTimeOrderCalendarWindowUsesExactMonthBoundary", "TestTimeOrderCalendarWindowRejectsInvalidPeriod", "TestGroupedTimeOrderWindowMatchesExpiryLifecycle", "TestTimeToLiveAtWindowUsesAbsoluteEventExpiry", "TestTimeToLiveAtWindowRejectsNonIntegralTimestamp", "TestNamedWindowTimeToLiveAtUsesAbsoluteEventExpiry", "TestRankWindowByReplacesUniqueKeysAndEvictsWorst", "TestGroupedRankWindowMatchesEsperReplacementLifecycle", "TestRankWindowPreviousAccessMatchesEsper", "TestSortAndRankWindowsPreserveEsperTieArrivalOrder", "TestTimeOrderPreviousAccessMatchesEsper", "TestSortedPreviousAccessUsesPostEvictionViewForNewRows", "TestGroupedSortedPreviousAccessUsesPartitionView", "TestPreviousViewNavigationUsesWindowAndArrivalOrders", "TestTimeOrderPreviousNavigationMatchesExpiryLifecycle"],
@@ -721,6 +721,50 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
       "difference": "Go maps Java's OrderBean[books] and SupportBean_Container[beans] property-evaluation sources to typed Unnest chains. The tests preserve contained order for not-matched inserts and apply each repeated child update to the same Table/Named Window target, with the final value matching Java's last-child-wins trace. Java property-evaluator implementation details, representation conversion, transaction/persistence and the remaining on-merge matrix remain open."
+    },
+    {
+      "id": "case.trigger-named-window-merge-setter",
+      "javaRuntimeIds": ["java-runtime-632e8ae867962b00e1c8"],
+      "javaNames": ["InfraNamedWindowOnMergeUpdateNonPropertySet"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnMerge.java"],
+      "goTests": ["TestNamedWindowMergeUpdateNonPropertySetMatchesEsper"],
+      "tags": ["correctness", "infra", "named-window", "merge", "setter", "ordered-assignment"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go maps Esper's non-property setter update through a JavaBean-discovered SetDoublePrimitive method and explicit ordered fluent assignments. The test verifies setter materialization, initial target value plus one, and working-target propagation into doubleBoxed. Go keeps side effects visible as assignments and registered methods rather than exposing arbitrary EPL method-call syntax; the broader setter/error/transaction matrix remains open."
+    },
+    {
+      "id": "case.trigger-named-window-merge-dispatch",
+      "javaRuntimeIds": ["java-runtime-a809b5bcf261e8ef702f"],
+      "javaNames": ["InfraMergeTriggeredByAnotherWindow"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnMerge.java"],
+      "goTests": ["TestNamedWindowMergeTriggeredByNamedWindowDispatchMatchesEsper"],
+      "tags": ["correctness", "infra", "named-window", "merge", "dispatch", "insert-stream"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go covers both Java dispatch halves: a named-window insert triggers a second unique-window merge with duplicate suppression, and an insert-stream-only merge emits side-stream c0/istream values for repeated events while updating the target LastEvent window. The fluent runtime uses explicit named-window insertion/streams instead of Java module deployment text; atomic cross-statement transaction and full dispatch ordering diagnostics remain open."
+    },
+    {
+      "id": "case.trigger-named-window-merge-property",
+      "javaRuntimeIds": ["java-runtime-23c2f6d7578f6107e339", "java-runtime-ae897542f9960bbc653b"],
+      "javaNames": ["InfraPropertyInsertBean", "InfraNamedWindowOnMergeSamePropertyNameAsStreamName"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnMerge.java"],
+      "goTests": ["TestNamedWindowMergePropertyInsertAndMethodProjectionMatchesEsper"],
+      "tags": ["correctness", "infra", "named-window", "merge", "property", "method-projection", "null"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go materializes declared but omitted Map target properties as Null, then maps the same-property-name projection through an explicit receiver method in the fluent expression tree. The test verifies unique-window rows for both partial and complete projections. It does not claim Java static-method registration, all Bean/Map/ObjectArray property descriptors or exact compiler diagnostics."
+    },
+    {
+      "id": "case.trigger-named-window-merge-representations",
+      "javaRuntimeIds": ["java-runtime-6138e1f8e932480d9f5b", "java-runtime-dda8f31a23ef9cb737c4", "java-runtime-be3de825a8f0e5500e65", "java-runtime-7df664f5a9da669db1ed", "java-runtime-cd06e6370855e3ded695", "java-runtime-d599757ab1e88d4db38c"],
+      "javaNames": ["InfraSubselect", "InfraDocExample", "InfraOnMergeWhere1Eq2InsertSelectStar", "InfraOnMergeNoWhereClauseInsertSelectStar", "InfraOnMergeNoWhereClauseInsertTranspose", "InfraOnMergeSetRHSEvent"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnMerge.java"],
+      "goTests": ["TestNamedWindowMergeSubselectRepresentationMatrix", "TestNamedWindowMergeDocExampleRepresentationMatrix", "TestNamedWindowMergeInsertOnlyContainedEventsMatchesEsper", "TestNamedWindowMergeAssignsCurrentAndPreviousEventsMatchesEsper"],
+      "tags": ["correctness", "infra", "named-window", "merge", "subquery", "representation", "map", "object-array", "avro", "json", "contained", "rhs-event"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go maps the remaining InfraNamedWindowOnMerge execution family with fluent rules: correlated A/B/C LastEvent subqueries drive not-matched insert, matched update and delete; the documentation product/order example uses the same plan across Map, ObjectArray, Avro, JSON, JSON class-provided and typed Go struct representations; contained no-where/where-false/transpose inserts preserve child order; and Event-valued current/previous assignments retain source envelopes. Java fragment metadata, XML/serde details, exact index plans and the wider cross-representation transaction trace remain open."
     },
     {
       "id": "case.trigger-merge-delete-then-update",
@@ -1029,7 +1073,7 @@
     },
     {
       "id": "case.dataflow-exceptions",
-      "javaRuntimeIds": ["java-runtime-76175156292855f373cf"],
+      "javaRuntimeIds": ["java-runtime-c1d106a7e1cc70655006"],
       "javaNames": ["EPLDataflowAPIExceptions"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIExceptions.java"],
       "goTests": ["TestDataflowOptionsExceptionsAndSavedConfiguration", "TestDataflowOperatorExceptionCompletesWithEsperContext", "TestDataflowEventBusOperatorExceptionCompletesInstance", "TestDataflowSourceExceptionContextMatchesEsper", "TestDataflowCustomSourceErrorPropagatesThroughRun"],
@@ -1040,7 +1084,7 @@
     },
     {
       "id": "case.dataflow-custom-properties",
-      "javaRuntimeIds": ["java-88f76182eb9661badb9d", "java-b8709f812fb06cfa80b1", "java-e4d74dd55d150cd17138"],
+      "javaStaticIds": ["java-88f76182eb9661badb9d", "java-b8709f812fb06cfa80b1", "java-e4d74dd55d150cd17138"],
       "javaNames": ["EPLDataflowNestedProps", "EPLDataflowCatchAllProps", "EPLDataflowCustomProps"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowCustomProperties.java"],
       "goTests": ["TestDataflowCustomPropertiesAreTypedAndInstanceIsolated", "TestDataflowCustomPropertiesHaveStablePlanIdentity"],
@@ -1139,7 +1183,7 @@
     },
     {
       "id": "case.expr-declared",
-      "javaRuntimeIds": ["java-runtime-fe88aa9f7b78478355ae", "java-runtime-11c39858b2fb936c60bb", "java-runtime-48b280bc6b857cf5fa3a", "java-runtime-b787900abf907e4d27c7", "java-runtime-c80bac042daa8019b9f3", "java-runtime-9916c8da4f513eb522c1", "java-runtime-e13d8266311bca7fc491", "java-runtime-f99da8bbca4256d388b7", "java-runtime-9159bf72b2622a56931f", "java-runtime-58539b9c66bae857d0e6", "java-runtime-97b23e465870d3b1d72d"],
+      "javaRuntimeIds": ["java-runtime-fe88aa9f7b78478355ae", "java-runtime-11c39858b2fb936c60bb", "java-runtime-48ad005a26abc8e19951", "java-runtime-b787900abf907e4d27c7", "java-runtime-c80bac042daa8019b9f3", "java-runtime-9916c8da4f513eb522c1", "java-runtime-e13d8266311bca7fc491", "java-runtime-f99da8bbca4256d388b7", "java-runtime-9159bf72b2622a56931f", "java-runtime-58539b9c66bae857d0e6", "java-runtime-97b23e465870d3b1d72d"],
       "javaNames": ["EPLSubselectMultirowGroupedUncorrelatedIteratorAndExpressionDef", "ExprDefineValueParameterV", "ExprDefineValueParameterInvalid", "ExprDefineValueParameterEV", "ExprDefineValueParameterVEVE", "ExprDefineEventParamPatternPOJO", "ExprDefineEventParamSubqueryPOJO", "ExprDefineEventParamPatternMap", "ExprDefineEventParamSubqueryMap", "ExprDefineEventParamContextProperty", "ExprDefineEventParamSubqueryMapWithWhere"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedMultirowAndColumn.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineValueParameter.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineEventParameterNonStream.java"],
       "goTests": ["TestNamedExpressionReferenceEvaluatesAndEntersPlanIdentity", "TestNamedExpressionReferenceRejectsInvalidDependencies", "TestNamedExpressionGroupedSubquerySnapshotAndEnumChainMatchEsper", "TestParameterizedNamedExpressionReferenceMatchesJavaValueParameterSemantics", "TestParameterizedNamedExpressionReferenceRejectsArityAndTypeMismatch", "TestParameterizedNamedExpressionReferenceSupportsEventValueParameters", "TestParameterizedNamedExpressionReferenceSupportsJoinedEventValues", "TestParameterizedNamedExpressionReferenceSupportsPatternEventValues", "TestParameterizedNamedExpressionReferenceSupportsSubqueryEventValues", "TestParameterizedNamedExpressionReferenceSupportsMapPatternEventValues", "TestParameterizedNamedExpressionReferenceSupportsMapSubqueryEventValues", "TestParameterizedNamedExpressionReferenceSupportsContextPatternEventValues", "TestParameterizedNamedExpressionReferenceSupportsMultirowSubqueryValues", "TestParameterizedNamedExpressionReferenceSupportsContextInitiatingEventValues", "TestParameterizedNamedExpressionReferenceSupportsMapSubqueryWhereAndCardinality", "TestSubqueryGroupedSnapshotExposesIteratorView"],
@@ -1183,7 +1227,7 @@
     },
     {
       "id": "case.expr-core-current-evaluation-context",
-      "javaRuntimeIds": ["java-runtime-2efbbb4fce55aa6ce513", "java-runtime-ca0799a6d2f163a49f7f"],
+      "javaRuntimeIds": ["java-runtime-2efbbb4fce55aa6ce513", "java-runtime-ca0799a6f2d163a49f7f"],
       "javaNames": ["ExprCoreCurrentEvalCtx{soda=false}", "ExprCoreCurrentEvalCtx{soda=true}"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCurrentEvaluationContext.java"],
       "goTests": ["TestCurrentEvaluationContextMatchesJavaMetadataContract", "TestCurrentEvaluationContextNormalizesDirectEvaluationPartitionID"],
@@ -1435,7 +1479,7 @@
     },
     {
       "id": "case.expr-enum-sources",
-      "javaRuntimeIds": ["java-62aa90c3249a161c5f38"],
+      "javaStaticIds": ["java-62aa90c3249a161c5f38"],
       "javaNames": ["ExprEnumProperty"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDataSources.java"],
       "goTests": ["TestEnumerableCollectsMapValuesAndIterators", "TestEnumerableSupportsExactBigNumbersAndArrayCollections", "TestEnumerableTableWindowSourceMatchesJava", "TestEnumerableWindowAccessAggregateSourceMatchesJava", "TestEnumerableMethodPropertyAndNestedSourcesMatchJava"],
@@ -1446,7 +1490,7 @@
     },
     {
       "id": "case.expr-enum-invalid",
-      "javaRuntimeIds": ["java-5a117b08f2037d0e6133", "java-e13263e2eb138bd9f692", "java-d854379572241786dd56", "java-96a5c897c1d7f67d851f", "java-167415d6e7af87a7a111"],
+      "javaStaticIds": ["java-5a117b08f2037d0e6133", "java-e13263e2eb138bd9f692", "java-d854379572241786dd56", "java-96a5c897c1d7f67d851f", "java-167415d6e7af87a7a111"],
       "javaNames": ["ExprEnumInvalid", "ExprEnumAllOfAnyOfInvalid", "ExprEnumExceptIntersectUnion.ExprEnumInvalid", "ExprEnumToMapInvalid", "ExprEnumMinMax.ExprEnumInvalid"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumInvalid.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumAllOfAnyOf.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumExceptIntersectUnion.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumToMap.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java"],
       "goTests": ["TestEnumerableBuildRejectsMissingRequiredExpressions"],
@@ -1600,7 +1644,7 @@
     },
     {
       "id": "case.context-partitioning",
-      "javaRuntimeIds": ["java-runtime-3418bdab4165eb2024ab", "java-runtime-7048a375b9f343924c7c", "java-runtime-edb899dd318dc4e8711e", "java-runtime-64de4048398d4829c445", "java-runtime-4ae568a55d9923073521", "java-runtime-b22438598e5a61f21b63", "java-runtime-ff056690ea7294649b4a", "java-runtime-ea6fd826ff841fc4b10b", "java-runtime-4b19317271be7df8b569", "java-runtime-81ca9d4f0d34ba460d2d", "java-runtime-2e991ab4c62f16b80a30", "java-runtime-67c0d47278e45cc8407a", "java-runtime-61d4f2f4e683b9fbac02", "java-runtime-d8420feb762d4f29563a", "java-runtime-5f16f5572cbb95b8d5a0", "java-runtime-4449ff62ddd405a75c89", "java-runtime-5dda093c21bd6b075462", "java-runtime-786b9a60d88de2e10fca", "java-runtime-133d9b0460ecb38ba1e2", "java-runtime-48f5615c894006027aa9", "java-runtime-6aa9bf8995c016259f14", "java-runtime-df709b1c195efb70fa200", "java-runtime-e7e977b7827820a24082", "java-runtime-229872ae86cacee2694c", "java-runtime-71fcef5de9b15b0e743a", "java-runtime-0d946f8f7b3a0c9afdcd", "java-runtime-1da794026834900ba946", "java-runtime-4f7224de7f4a4a153c43"],
+      "javaRuntimeIds": ["java-runtime-3418bdab4165eb2024ab", "java-runtime-7048a375b9f343924c7c", "java-runtime-edb899dd318dc4e8711e", "java-runtime-64de4048398d4829c445", "java-runtime-4ae568a55d9923073521", "java-runtime-b22438598e5a61f21b63", "java-runtime-ff056690ea7294649b4a", "java-runtime-ea6fd826ff841fc4b10b", "java-runtime-4b19317271be7df8b569", "java-runtime-81ca9d4f0d34ba460d2d", "java-runtime-2e991ab4c62f16b80a30", "java-runtime-67c0d47278e45cc8407a", "java-runtime-61d4f2f4e683b9fbac02", "java-runtime-d8420feb762d4f29563a", "java-runtime-5f16f5572cbb95b8d5a0", "java-runtime-4449ff62ddd405a75c89", "java-runtime-5dda093c21bd6b075462", "java-runtime-786b9a60d88de2e10fca", "java-runtime-133d9b0460ecb38ba1e2", "java-runtime-48f5615c894006027aa9", "java-runtime-6aa9bf8995c016259f14", "java-runtime-df7094c9925d0dc1ba64", "java-runtime-e7e977b7827820a24082", "java-runtime-229872ae86cacee2694c", "java-runtime-71fcef5de9b15b0e743a", "java-runtime-0d946f8f7b3a0c9afdcd", "java-runtime-1da794026834900ba946", "java-runtime-4f7224de7f4a4a153c43"],
       "javaNames": ["ContextKeySegmentedJoin", "ContextHashSegmentedBasic", "ContextCategorySceneOne", "ContextInitTermNoTerminationCondition", "ContextStartEndNoTerminationCondition", "ContextInitTermWithTermEvent{overlapping=false}", "ContextInitTermWithTermEvent{overlapping=true}", "ContextInitTermFilterInitiatedFilterTerminatedCorrelatedOutputSnapshot", "ContextInitTermOutputSnapshotWhenTerminated", "ContextInitTermOutputAllEvery2AndTerminated", "ContextInitTermOutputWhenExprWhenTerminatedCondition", "ContextInitTermOutputOnlyWhenTerminatedCondition", "ContextInitTermOutputOnlyWhenSetAndWhenTerminatedSet", "ContextInitTermOutputOnlyWhenTerminatedThenSet", "ContextNestedWithFilterUDF", "ContextKeySegmentedNullKeyMultiKey", "ContextInitTermWithDistinctNullSingleKey", "ContextInitTermWithDistinctNullKeyMultiKey", "ContextInitTermWithDistinctOverlappingSingleKey", "ContextInitTermWithDistinctOverlappingMultiKey", "ContextInitTermWithDistinctMultikeyWArray", "ContextStartEndStartAfterEndAfter", "ContextStartEndNWSameContextOnExpr", "ContextStartEndNWFireAndForget", "ContextStartEndMultiCrontab", "ContextStartEndPatternCorrelated", "ContextInitTermPatternCorrelated", "ContextStartEndPatternWithPatternCorrelatedWithAsName"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextHashSegmented.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextCategory.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTerm.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermWithDistinct.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextNested.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermTemporalFixed.java"],
       "goTests": ["TestContextStateAndPartitionLifecycleListeners", "TestVariableChangeListenerAndContextPartitionIDUpdate", "TestContextPartitionStateListenerUsesSharedLifecycle", "TestKeyContextPartitionsWindowState", "TestContextFieldsExposeStableKeyNameAndID", "TestContextFieldsRequireAStatementContext", "TestContextFieldsAreAvailableInFireAndForgetPartitions", "TestCategoryContextFieldsExposeLabel", "TestNestedContextFieldsExposeParentKey", "TestContextPartitionDescriptorsExposeSnapshotProperties", "TestCategoryContextPartitionDescriptorExposesLabel", "TestInitiatedTerminatedContextPartitionDescriptorFollowsLifecycle", "TestInitiatedTerminatedContextFieldsExposeBoundaryEvents", "TestInitiatedTerminatedContextSnapshotExcludesTerminatingEvent", "TestInitiatedTerminatedContextCanCombineEveryOutputWithTerminationSnapshot", "TestInitiatedTerminatedContextCanFlushPendingOutputAtTermination", "TestPatternInitiatedTerminatedContextCorrelatesCapturedTags", "TestPatternInitiatedContextEveryCreatesOverlappingPartitions", "TestPatternContextTerminationSnapshotCarriesEndTags", "TestPatternTimerContextStartsAndTerminatesOnVirtualClock", "TestPatternTimerScheduleContextCreatesRecurringOverlappingPartitions", "TestPatternTimerCronContextCreatesAllDueCalendarPartitions", "TestPatternTimerObserverComposesWithEvents", "TestPatternTimerObserverAndEventCompletesOnClock", "TestPatternTimerContextComposesTimerAndEventLifecycle", "TestPatternContextWithinOrMaxStopsOverlappingPartitions", "TestContextVariablesArePartitionScopedAndSharedAcrossStatements", "TestContextVariableManagementSnapshotsAndAtomicBatch", "TestContextVariableScopeValidation", "TestInitiatedTerminatedContextVariablesResetAfterLastPartitionEnds", "TestMultiKeyContextPartitionsByCompleteTuple", "TestMultiKeyHashContextUsesCompleteTuple", "TestMultiKeyContextKeepsNullTupleComponentStable", "TestMultiKeyContextUsesArrayComponentContent", "TestMultiKeyContextConstructorsRejectInvalidKeys", "TestContextSelectorValidationRejectsMismatchedBuiltIns", "TestContextSnapshotWithSelectorFiltersIteratorState", "TestContextPartitionedAggregateKeepsRollupStateIsolated", "TestContextFireAndForgetAggregateHonorsPartitionSelector", "TestHashAndCategoryContextsMaterializeExpectedPartitions", "TestCategoryContextRejectsNoCategories", "TestInitiatedTerminatedContextFireAndForgetIsRejected", "TestContextPartitionedNamedWindowConsumerRoutesByPartition", "TestOutputAtSnapshotRebuildsContextNamedWindowState", "TestTimePeriodContextCyclesWithVirtualClock", "TestDailyTimeContextUsesLocalCalendarBoundaries", "TestCronTimeContextUsesNextCalendarEnd", "TestTemporalContextTerminationSnapshotAtWindowBoundary", "TestInitiatedTerminatedContextCreatesAndRemovesPartition", "TestTemporalContextNamedWindowReleasesPartitionAtBoundary", "TestInitiatedContextNamedWindowReleasesPartitionOnTermination", "TestMultiKeyInitiatedTerminatedContextUsesTupleIdentity", "TestDistinctInitiatedTerminatedContextBroadcastsAndSuppressesDuplicate", "TestDistinctInitiatedTerminatedContextSupportsArrayTupleIdentity", "TestDistinctInitiatedTerminatedContextKeepsNullTupleStable", "TestInitiatedTerminatedContextTerminatesFromDifferentEventType", "TestInitiatedContextWithoutTerminationConditionIsNonOverlapping", "TestOverlappingInitiatedContextCreatesBroadcastInstances", "TestOverlappingInitiatedTerminatedContextCorrelatesEachInstance", "TestNestedContextCombinesParentAndChildPartitions", "TestNestedInitiatedTerminatedChildUsesParentPartition"],
@@ -1883,7 +1927,7 @@
     },
     {
       "id": "case.dataflow-invalid-graph",
-      "javaRuntimeIds": ["java-6163dd659f409b462303", "java-c883534b279f4d80c0b6"],
+      "javaStaticIds": ["java-6163dd659f409b462303", "java-c883534b279f4d80c0b6"],
       "javaNames": ["EPLDataflowInvalidCompile", "EPLDataflowInvalidInstantiate"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowInvalidGraph.java"],
       "goTests": ["TestDataflowGraphValidation", "TestDataflowTypedPortsFanInAndFanOutMatchesEsper", "TestDataflowInvalidGraphTopologyMatchesEsper", "TestDataflowFeedbackMustCloseOrdinaryPathAndEntersPlanIdentity", "TestDataflowUnmarkedCycleStillRejected"],
@@ -1894,7 +1938,8 @@
     },
     {
       "id": "case.dataflow-captive-emitter-ports",
-      "javaRuntimeIds": ["java-runtime-6309a6b7e0f0ba981a97", "java-98ad6f7cdc7876aaf6b3"],
+      "javaRuntimeIds": ["java-runtime-6309a6b7e0f0ba981a97"],
+      "javaStaticIds": ["java-98ad6f7cdc7876aaf6b3"],
       "javaNames": ["EPLDataflowFanInOut", "EPLDataflowAPIStartCaptive", "EPDataFlowEmitterOperator"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowInputOutputVariations.java", "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIStartCaptive.java", "common/src/main/java/com/espertech/esper/common/client/dataflow/core/EPDataFlowEmitterOperator.java"],
       "goTests": ["TestDataflowCaptiveEmitterNamedPortsMatchEsperSubmitPort", "TestDataflowSingleNamedEmitterPortSupportsSubmit", "TestDataflowCustomSourceSignalFansOutAllNamedPorts", "TestDataflowEmitterPortDefinitionsEnterPlanIdentity"],
@@ -1938,7 +1983,7 @@
     },
     {
       "id": "case.dataflow-signal",
-      "javaRuntimeIds": ["java-98ad6f7cdc7876aaf6b3"],
+      "javaStaticIds": ["java-98ad6f7cdc7876aaf6b3"],
       "javaNames": ["EPLDataflowAPIStartCaptive", "EPLDataflowOpSelect"],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIStartCaptive.java",
@@ -2002,7 +2047,7 @@
     },
     {
       "id": "case.rowrecog-inventory",
-      "javaRuntimeIds": ["java-runtime-4218efffe652a86fc0de", "java-runtime-5a8696e6c905be60e32b", "java-runtime-e080d886b12d6636c514", "java-runtime-8863f3b6b60bb8576c25", "java-runtime-254b2ace6ea437689d15", "java-runtime-0de4e4485dc851b8c4a5", "java-runtime-1c630e0baf1bf23116c7", "java-runtime-b6efff48a6d560023d45", "java-runtime-93248525d09df7ca7bd5", "java-runtime-e608cad5abe81efea8a9", "java-runtime-e3c5ff615a7a95ce2df6", "java-runtime-15159bb534c31e23213b5", "java-runtime-e1f505424597dd0459d7", "java-runtime-4a015f272b0b8ab057b9", "java-runtime-5d523df20b3ff08ba404"],
+      "javaRuntimeIds": ["java-runtime-4218efffe652a86fc0de", "java-runtime-5a8696e6c905be60e32b", "java-runtime-e080d886b12d6636c514", "java-runtime-8863f3b6b60bb8576c25", "java-runtime-254b2ace6ea437689d15", "java-runtime-0de4e4485dc851b8c4a5", "java-runtime-1c630e0baf1bf23116c7", "java-runtime-b6efff48a6d560023d45", "java-runtime-93248525d09df7ca7bd5", "java-runtime-e608cad5abe81efea8a9", "java-runtime-e3c5ff615a7a95ce2df6", "java-runtime-15159bb534c31e232135", "java-runtime-e1f505424597dd0459d7", "java-runtime-4a015f272b0b8ab057b9", "java-runtime-5d523df20b3ff08ba404"],
       "javaSourceFiles": [
         "regression-run/src/test/java/com/espertech/esper/regressionrun/suite/rowrecog/TestSuiteRowRecog.java",
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogArrayAccess.java",
@@ -2380,6 +2425,10 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-wildcard"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-subquery-not-matched"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-property-eval"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-named-window-merge-setter"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-named-window-merge-dispatch"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-named-window-merge-property"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-named-window-merge-representations"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-delete-then-update"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},

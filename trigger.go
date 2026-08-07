@@ -279,10 +279,11 @@ func (s TriggerStream[T]) MergeInsertIntoTable(table string, keys []Expr, assign
 // MergeIntoNamedWindowWhen applies ordered matched and not-matched branches
 // to events in a named window. The match expression may read the incoming
 // event through Field and the candidate window event through NamedWindowField.
-// A nil match expression means that no explicit match predicate was supplied:
-// every existing target event is treated as matched, while an empty window
-// reaches the not-matched branches. Use Literal(false) for an insert-only
-// rule that must insert every trigger event.
+// A nil match expression means that no explicit match predicate was supplied.
+// When matched branches exist, every existing target event is treated as
+// matched; when the rule contains only not-matched actions, each trigger event
+// reaches those actions. Use Literal(false) when an explicit always-unmatched
+// predicate is clearer than the no-matched-branch form.
 func (s TriggerStream[T]) MergeIntoNamedWindowWhen(window string, match Expression[bool], clauses ...NamedWindowMergeClause) TriggerQuery {
 	return TriggerQuery{
 		env: s.env,
@@ -1660,7 +1661,23 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		}
 		return tableMutationResult{newEvents: append([]Event(nil), delta.New...)}, nil
 	case triggerMergeTable:
+		hasMatchedClause := false
+		for _, clause := range definition.merge {
+			if clause.Matched {
+				hasMatchedClause = true
+				break
+			}
+		}
 		delta, err := target.mergeWhere(ctx, func(candidate Event) (namedWindowMergeDecision, error) {
+			// Esper's insert-only "merge Window insert ..." form has no
+			// matched branch. With no where clause, every incoming event is
+			// therefore an unmatched trigger, including later events after a
+			// keep-all target has already received earlier events. Treating the
+			// existing rows as matched here would silently drop all but the
+			// first child of a contained expansion.
+			if definition.where == nil && !hasMatchedClause {
+				return namedWindowMergeDecision{}, nil
+			}
 			evaluation := EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
 			if definition.where != nil {
 				matched, ok := boolValue(definition.where.eval(evaluation))

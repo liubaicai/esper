@@ -43,6 +43,7 @@ type CapabilityRecord struct {
 type CapabilityCase struct {
 	ID              string   `json:"id"`
 	JavaRuntimeIDs  []string `json:"javaRuntimeIds,omitempty"`
+	JavaStaticIDs   []string `json:"javaStaticIds,omitempty"`
 	JavaNames       []string `json:"javaNames,omitempty"`
 	JavaSourceFiles []string `json:"javaSourceFiles,omitempty"`
 	GoTests         []string `json:"goTests,omitempty"`
@@ -112,8 +113,13 @@ func (m CapabilityManifest) Validate() error {
 		if !validCaseStatus(parityCase.Status) {
 			return fmt.Errorf("compat: case %q has invalid status %q", parityCase.ID, parityCase.Status)
 		}
-		if len(parityCase.JavaRuntimeIDs) == 0 && len(parityCase.JavaSourceFiles) == 0 {
+		if len(parityCase.JavaRuntimeIDs) == 0 && len(parityCase.JavaStaticIDs) == 0 && len(parityCase.JavaSourceFiles) == 0 {
 			return fmt.Errorf("compat: case %q has no Java reference", parityCase.ID)
+		}
+		for _, runtimeID := range parityCase.JavaRuntimeIDs {
+			if strings.HasPrefix(runtimeID, "java-") && !strings.HasPrefix(runtimeID, "java-runtime-") {
+				return fmt.Errorf("compat: case %q places static Java id %q in javaRuntimeIds; use javaStaticIds", parityCase.ID, runtimeID)
+			}
 		}
 	}
 	pairs := make(map[string]struct{}, len(m.Mappings))
