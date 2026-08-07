@@ -1851,10 +1851,19 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 	}
 }
 
-func executeTriggerAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, owner *Statement, runtime *statementRuntime) (tableMutationResult, error) {
+func executeTriggerAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, owner *Statement, runtime *statementRuntime) (mutation tableMutationResult, err error) {
 	if engine == nil || definition == nil {
 		return tableMutationResult{}, NewError(ErrorDependency, "nil table trigger")
 	}
+	defer func() {
+		if err != nil || definition.target == triggerTargetNamedWindow || definition.action == triggerSetVariables || runtime == nil {
+			return
+		}
+		if ownershipErr := engine.recordLiveTableContextMutationLocked(runtime, definition, mutation, event, now, variables); ownershipErr != nil {
+			mutation = tableMutationResult{}
+			err = ownershipErr
+		}
+	}()
 	evaluation := EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}
 	if definition.action == triggerSetVariables {
 		return tableMutationResult{}, executeVariableTriggerAction(ctx, engine, definition, evaluation, variables, runtime)
@@ -1869,7 +1878,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 	if definition.where != nil {
 		return executeTableWhereAction(ctx, engine, table, definition, event, now, variables)
 	}
-	mutation := tableMutationResult{}
+	mutation = tableMutationResult{}
 	switch definition.action {
 	case triggerInsertTable:
 		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, nil, definition.assignments, evaluation, now)

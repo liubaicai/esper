@@ -886,6 +886,70 @@ func (e *Engine) forgetTableContextRowsLocked(contextName, tableKey string, rows
 	}
 }
 
+// recordLiveTableContextMutationLocked persists the first context partition
+// that owns rows created or first touched by a live context statement. Table
+// storage itself is global in the Go runtime, so this ownership is the part
+// that makes a later Context FAF scan behave like Esper's per-partition table
+// instances. Existing row identities are deliberately left unchanged: an
+// upsert or update must not move a row merely because a mutable context field
+// was changed by a later event.
+//
+// The caller holds Engine.mu. A nil runtime means that the action came from a
+// non-live path (for example ordinary FAF); those paths resolve ownership when
+// they first scan the target and must not be assigned to an arbitrary
+// partition here.
+func (e *Engine) recordLiveTableContextMutationLocked(runtime *statementRuntime, definition *triggerDefinition, mutation tableMutationResult, representative Event, now time.Time, variables map[string]Value) error {
+	if e == nil || runtime == nil || definition == nil || definition.target == triggerTargetNamedWindow || definition.action == triggerSetVariables || runtime.partitionContextName == "" || runtime.partitionKey == "" {
+		return nil
+	}
+	if len(mutation.newRows) == 0 && len(mutation.oldRows) == 0 {
+		return nil
+	}
+	if e.env == nil {
+		return NewError(ErrorDependency, "live table context ownership has no environment")
+	}
+	contextDefinition, ok := e.env.Context(runtime.partitionContextName)
+	if !ok {
+		return NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", runtime.partitionContextName))
+	}
+	tableKey := catalogKey(definition.moduleName, definition.table)
+	if tableKey == "" {
+		return NewError(ErrorDependency, "live table context ownership has no table")
+	}
+	byTable := e.contextTableOwnership[tableKey]
+	if byTable == nil {
+		byTable = make(map[string]map[uint64]tableContextRowOwnership)
+		e.contextTableOwnership[tableKey] = byTable
+	}
+	byContext := byTable[runtime.partitionContextName]
+	if byContext == nil {
+		byContext = make(map[uint64]tableContextRowOwnership)
+		byTable[runtime.partitionContextName] = byContext
+	}
+	properties := contextMutationProperties(contextDefinition, representative, runtime.contextProperties, now, variables, runtime.partitionID)
+	for _, row := range mutation.newRows {
+		if row.identity == 0 {
+			continue
+		}
+		if _, exists := byContext[row.identity]; exists {
+			continue
+		}
+		byContext[row.identity] = tableContextRowOwnership{
+			partitionKey:      runtime.partitionKey,
+			representative:    representative,
+			contextProperties: cloneValues(properties),
+		}
+	}
+	deleting := definition.action == triggerDeleteTable || definition.action == triggerDeleteAllTable
+	if definition.action == triggerMergeTable && len(mutation.oldRows) > 0 && len(mutation.newRows) == 0 {
+		deleting = true
+	}
+	if deleting {
+		e.forgetTableContextRowsLocked(runtime.partitionContextName, tableKey, mutation.oldRows)
+	}
+	return nil
+}
+
 func contextMutationProperties(definition ContextDefinition, representative Event, stored map[string]Value, now time.Time, variables map[string]Value, partitionID int) map[string]Value {
 	properties := cloneValues(stored)
 	if len(properties) == 0 {
