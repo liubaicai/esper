@@ -801,6 +801,312 @@ func infraContextIndexResultIDs(results []Result) []string {
 	return ids
 }
 
+func TestInfraFAFContextJoinIndexCandidateEqualityParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env := NewEnvironment()
+			leftSchema, err := RegisterStruct[infraIndexJoinLeft](env, "InfraContextJoinLeft")
+			if err != nil {
+				t.Fatal(err)
+			}
+			rightSchema, err := RegisterStruct[infraIndexJoinRight](env, "InfraContextJoinRight")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := CreateKeyContext(env, "infra-context-join", Field[any, string]("key")); err != nil {
+				t.Fatal(err)
+			}
+			var left, right RecordStream
+			if namedWindow {
+				if _, err := CreateNamedWindow(env, "ContextJoinLeft", leftSchema); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, "ContextJoinRight", rightSchema, NamedWindowIndex("by-key", "key")); err != nil {
+					t.Fatal(err)
+				}
+				left, right = FromNamedWindow(env, "ContextJoinLeft"), FromNamedWindow(env, "ContextJoinRight")
+			} else {
+				if _, err := CreateTable(env, "ContextJoinLeft", []TableColumn{
+					PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"),
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateTable(env, "ContextJoinRight", []TableColumn{
+					PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("amount"),
+				}, SecondaryIndex("by-key", "key")); err != nil {
+					t.Fatal(err)
+				}
+				left, right = FromTable(env, "ContextJoinLeft"), FromTable(env, "ContextJoinRight")
+			}
+
+			engine := NewEngine(env)
+			ctx := context.Background()
+			insertLeft := func(row infraIndexJoinLeft) {
+				t.Helper()
+				if namedWindow {
+					if err := engine.InsertNamedWindow(ctx, "ContextJoinLeft", row); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				table, ok := engine.Table("ContextJoinLeft")
+				if !ok {
+					t.Fatal("context join left table is missing")
+				}
+				if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			insertRight := func(row infraIndexJoinRight) {
+				t.Helper()
+				if namedWindow {
+					if err := engine.InsertNamedWindow(ctx, "ContextJoinRight", row); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				table, ok := engine.Table("ContextJoinRight")
+				if !ok {
+					t.Fatal("context join right table is missing")
+				}
+				if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "amount": row.Amount}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			insertLeft(infraIndexJoinLeft{ID: "L1", Key: "A"})
+			insertLeft(infraIndexJoinLeft{ID: "L2", Key: "A"})
+			insertLeft(infraIndexJoinLeft{ID: "L3", Key: "B"})
+			insertRight(infraIndexJoinRight{ID: "R1", Key: "A", Amount: 10})
+			insertRight(infraIndexJoinRight{ID: "R2", Key: "B", Amount: 20})
+			insertRight(infraIndexJoinRight{ID: "R3", Key: "C", Amount: 30})
+
+			plan, err := env.Build(JoinMany(
+				JoinRecordSource(left), JoinRecordSource(right),
+			).On(OnSourcesEqual(
+				0, Field[any, string]("key"), 1, Field[any, string]("key"),
+			)).Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query(WithContext("infra-context-join")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok := plan.IndexPlan().ForSource(1)
+			if !ok || selection.IndexName != "by-key" || selection.Access != IndexAccessEquality {
+				t.Fatalf("context join equality index plan = %#v", selection)
+			}
+
+			var rightLookups func() uint64
+			if namedWindow {
+				window, ok := engine.NamedWindow("ContextJoinRight")
+				if !ok {
+					t.Fatal("context join right named window is missing")
+				}
+				rightLookups = func() uint64 { return window.state.indexLookups.Load() }
+			} else {
+				table, ok := engine.Table("ContextJoinRight")
+				if !ok {
+					t.Fatal("context join right table is missing")
+				}
+				rightLookups = func() uint64 { return table.state.indexLookups.Load() }
+			}
+
+			before := rightLookups()
+			all, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			pairs := make([]string, 0, len(all.Results()))
+			for _, result := range all.Results() {
+				pairs = append(pairs, result.Get("left").Any().(string)+"/"+result.Get("right").Any().(string))
+			}
+			if !reflect.DeepEqual(pairs, []string{"L1/R1", "L2/R1", "L3/R2"}) {
+				t.Fatalf("context equality join result = %#v", pairs)
+			}
+			if rightLookups() <= before {
+				t.Fatalf("context equality join did not use right index: before=%d after=%d", before, rightLookups())
+			}
+
+			keyA := encodeKey([]any{ValuePresent, "A"})
+			before = rightLookups()
+			selected, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, SelectContextPartitions(keyA))
+			if err != nil {
+				t.Fatal(err)
+			}
+			selectedPairs := make([]string, 0, len(selected.Results()))
+			for _, result := range selected.Results() {
+				selectedPairs = append(selectedPairs, result.Get("left").Any().(string)+"/"+result.Get("right").Any().(string))
+			}
+			if !reflect.DeepEqual(selectedPairs, []string{"L1/R1", "L2/R1"}) {
+				t.Fatalf("context equality selected join result = %#v", selectedPairs)
+			}
+			if rightLookups() != before+1 {
+				t.Fatalf("context equality selected join expected one lookup: before=%d after=%d", before, rightLookups())
+			}
+
+			keyB := encodeKey([]any{ValuePresent, "B"})
+			wrong, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, SelectContextPartitions(keyB))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(wrong.Results()) != 1 || wrong.Results()[0].Get("left").Any() != "L3" || wrong.Results()[0].Get("right").Any() != "R2" {
+				t.Fatalf("context equality B selector result = %#v", wrong.Results())
+			}
+		})
+	}
+}
+
+func TestInfraFAFContextJoinIndexCandidateRangeParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env := NewEnvironment()
+			leftSchema, err := RegisterStruct[infraIndexRangeJoinLeft](env, "InfraContextRangeJoinLeft")
+			if err != nil {
+				t.Fatal(err)
+			}
+			rightSchema, err := RegisterStruct[infraIndexRangeJoinRight](env, "InfraContextRangeJoinRight")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := CreateKeyContext(env, "infra-context-range-join", Field[any, string]("key")); err != nil {
+				t.Fatal(err)
+			}
+			var left, right RecordStream
+			if namedWindow {
+				if _, err := CreateNamedWindow(env, "ContextRangeJoinLeft", leftSchema); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, "ContextRangeJoinRight", rightSchema, NamedWindowBTreeIndex("range", "key", "value")); err != nil {
+					t.Fatal(err)
+				}
+				left, right = FromNamedWindow(env, "ContextRangeJoinLeft"), FromNamedWindow(env, "ContextRangeJoinRight")
+			} else {
+				if _, err := CreateTable(env, "ContextRangeJoinLeft", []TableColumn{
+					PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("min"), TableColumnOf[int64]("max"),
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateTable(env, "ContextRangeJoinRight", []TableColumn{
+					PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("value"),
+				}, SecondaryBTreeIndex("range", "key", "value")); err != nil {
+					t.Fatal(err)
+				}
+				left, right = FromTable(env, "ContextRangeJoinLeft"), FromTable(env, "ContextRangeJoinRight")
+			}
+
+			engine := NewEngine(env)
+			ctx := context.Background()
+			insertLeft := func(row infraIndexRangeJoinLeft) {
+				t.Helper()
+				if namedWindow {
+					if err := engine.InsertNamedWindow(ctx, "ContextRangeJoinLeft", row); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				table, ok := engine.Table("ContextRangeJoinLeft")
+				if !ok {
+					t.Fatal("context range left table is missing")
+				}
+				if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "min": row.Min, "max": row.Max}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			insertRight := func(row infraIndexRangeJoinRight) {
+				t.Helper()
+				if namedWindow {
+					if err := engine.InsertNamedWindow(ctx, "ContextRangeJoinRight", row); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				table, ok := engine.Table("ContextRangeJoinRight")
+				if !ok {
+					t.Fatal("context range right table is missing")
+				}
+				if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "value": row.Value}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, row := range []infraIndexRangeJoinLeft{
+				{ID: "L1", Key: "X", Min: 10, Max: 20},
+				{ID: "L2", Key: "X", Min: 20, Max: 30},
+				{ID: "L3", Key: "Y", Min: 0, Max: 5},
+			} {
+				insertLeft(row)
+			}
+			for _, row := range []infraIndexRangeJoinRight{
+				{ID: "R1", Key: "X", Value: 5},
+				{ID: "R2", Key: "X", Value: 10},
+				{ID: "R3", Key: "X", Value: 15},
+				{ID: "R4", Key: "X", Value: 20},
+				{ID: "R5", Key: "X", Value: 25},
+				{ID: "R6", Key: "Y", Value: 5},
+				{ID: "R7", Key: "Y", Value: 6},
+			} {
+				insertRight(row)
+			}
+
+			plan, err := env.Build(JoinMany(
+				JoinRecordSource(left), JoinRecordSource(right),
+			).On(AllJoin(
+				OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+				OnSourcesCompare(0, Field[any, int64]("min"), 1, Field[any, int64]("value"), JoinLessOrEqual),
+				OnSourcesCompare(0, Field[any, int64]("max"), 1, Field[any, int64]("value"), JoinGreaterOrEqual),
+			)).Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query(WithContext("infra-context-range-join")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok := plan.IndexPlan().ForSource(1)
+			if !ok || selection.IndexName != "range" || selection.Access != IndexAccessRange || selection.Backing != IndexBackingBTree {
+				t.Fatalf("context join range index plan = %#v", selection)
+			}
+
+			var rightLookups func() uint64
+			if namedWindow {
+				window, ok := engine.NamedWindow("ContextRangeJoinRight")
+				if !ok {
+					t.Fatal("context range right named window is missing")
+				}
+				rightLookups = func() uint64 { return window.state.indexLookups.Load() }
+			} else {
+				table, ok := engine.Table("ContextRangeJoinRight")
+				if !ok {
+					t.Fatal("context range right table is missing")
+				}
+				rightLookups = func() uint64 { return table.state.indexLookups.Load() }
+			}
+			before := rightLookups()
+			result, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			pairs := make([]string, 0, len(result.Results()))
+			for _, row := range result.Results() {
+				pairs = append(pairs, row.Get("left").Any().(string)+"/"+row.Get("right").Any().(string))
+			}
+			if !reflect.DeepEqual(pairs, []string{"L1/R2", "L1/R3", "L1/R4", "L2/R4", "L2/R5", "L3/R6"}) {
+				t.Fatalf("context range join result = %#v", pairs)
+			}
+			if rightLookups() <= before {
+				t.Fatalf("context range join did not use right index: before=%d after=%d", before, rightLookups())
+			}
+
+			keyA := encodeKey([]any{ValuePresent, "X"})
+			selected, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, SelectContextPartitions(keyA))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(selected.Results()) != 5 {
+				t.Fatalf("context range selected X result = %#v", selected.Results())
+			}
+		})
+	}
+}
+
 func TestInfraFAFIndexJoinCompositeEqualityAndDuplicateProbeParity(t *testing.T) {
 	for _, namedWindow := range []bool{true, false} {
 		t.Run(indexStoreName(namedWindow), func(t *testing.T) {

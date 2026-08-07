@@ -1058,6 +1058,11 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 	now := e.clock.Now()
 	variables := bindParameterValues(cloneValues(e.variables), parameters)
 	e.mu.Unlock()
+	if result, used, indexedErr := e.executeContextJoinFireAndForgetWithIndex(
+		ctx, plan, selector, definition, sources, evaluationOrder, now, variables,
+	); used {
+		return result, indexedErr
+	}
 	grouped := make([]map[string][]Event, len(sources))
 	allKeys := make(map[string]struct{})
 	for index, source := range sources {
@@ -1181,6 +1186,285 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 		result.Sequence = 1
 	}
 	return QueryResult{Batch: result}, nil
+}
+
+// executeContextJoinFireAndForgetWithIndex evaluates the safe physical
+// candidate path for a context-scoped join. Context partitioning is a logical
+// boundary, not a separate storage index: the first loaded source enumerates
+// the possible partition keys and every indexed candidate is filtered back to
+// the current key after lookup. This preserves selector and partition
+// semantics while avoiding a full scan of the optional/target source.
+//
+// The helper deliberately handles only inner joins (including an all-inner
+// left-deep chain) without unidirectional sources. Outer, mixed-edge,
+// unidirectional and otherwise unsupported shapes return used=false so the
+// established complete-snapshot implementation remains the source of truth.
+func (e *Engine) executeContextJoinFireAndForgetWithIndex(
+	ctx context.Context,
+	plan Plan,
+	selector ContextPartitionSelector,
+	definition ContextDefinition,
+	sources []*streamNode,
+	evaluationOrder []int,
+	now time.Time,
+	variables map[string]Value,
+) (QueryResult, bool, error) {
+	if e == nil || plan.query.join == nil || len(sources) < 2 || len(evaluationOrder) == 0 {
+		return QueryResult{}, false, nil
+	}
+	if !contextJoinIndexShapeAllowed(plan.query.join) {
+		return QueryResult{}, false, nil
+	}
+	driverIndex := evaluationOrder[0]
+	if driverIndex < 0 || driverIndex >= len(sources) {
+		return QueryResult{}, false, nil
+	}
+	if base, err := sourceNode(sources[driverIndex]); err != nil || base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
+		return QueryResult{}, false, nil
+	}
+
+	indexed := make(map[int]IndexSelection)
+	for _, index := range evaluationOrder {
+		if index == driverIndex {
+			continue
+		}
+		selection, ok := plan.indexPlan.ForSource(index)
+		if !ok || !contextJoinIndexSelectionUsable(selection) || !joinIndexCandidateAllowed(plan.query.join, index) {
+			continue
+		}
+		base, err := sourceNode(sources[index])
+		if err != nil || (base.kind != streamNamedWindow && base.kind != streamTable) {
+			continue
+		}
+		indexed[index] = selection
+	}
+	if len(indexed) == 0 {
+		return QueryResult{}, false, nil
+	}
+
+	driver, err := sourceNode(sources[driverIndex])
+	if err != nil {
+		return QueryResult{}, false, nil
+	}
+	driverEvents, err := e.snapshotFireAndForgetSource(ctx, driver, now, variables)
+	if err != nil {
+		return QueryResult{}, true, err
+	}
+	grouped := make([]map[string][]Event, len(sources))
+	grouped[driverIndex] = make(map[string][]Event)
+	allKeys := make(map[string]struct{})
+	for _, event := range driverEvents {
+		key, active, partitionErr := definition.partition(event, now, variables)
+		if partitionErr != nil {
+			return QueryResult{}, true, partitionErr
+		}
+		if !active {
+			continue
+		}
+		grouped[driverIndex][key] = append(grouped[driverIndex][key], event)
+		allKeys[key] = struct{}{}
+	}
+	groupedReady := make([]bool, len(sources))
+	groupedReady[driverIndex] = true
+
+	ensureGrouped := func(index int) (map[string][]Event, error) {
+		if groupedReady[index] {
+			return grouped[index], nil
+		}
+		base, baseErr := sourceNode(sources[index])
+		if baseErr != nil {
+			return nil, baseErr
+		}
+		events, snapshotErr := e.snapshotFireAndForgetSource(ctx, base, now, variables)
+		if snapshotErr != nil {
+			return nil, snapshotErr
+		}
+		byPartition := make(map[string][]Event)
+		for _, event := range events {
+			key, active, partitionErr := definition.partition(event, now, variables)
+			if partitionErr != nil {
+				return nil, partitionErr
+			}
+			if active {
+				byPartition[key] = append(byPartition[key], event)
+			}
+		}
+		grouped[index] = byPartition
+		groupedReady[index] = true
+		return byPartition, nil
+	}
+
+	keys := make([]string, 0, len(allKeys))
+	for key := range allKeys {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	result := ResultBatch{Time: now}
+	for snapshotIndex, key := range keys {
+		partitionID := e.contextPartitionSnapshotID(definition.name, key, snapshotIndex)
+		representative := grouped[driverIndex][key][0]
+		contextProperties := definition.contextPropertyValues(representative, now, variables, partitionID)
+		descriptor := ContextPartitionDescriptor{ID: partitionID, Key: key, ContextName: definition.name, properties: cloneValues(contextProperties)}
+		if !contextPartitionSelectedWithDescriptor(selector, descriptor) {
+			continue
+		}
+
+		query := plan.query
+		query.contextName = ""
+		partitionPlan := plan
+		partitionPlan.query = query
+		runtime := newStatementRuntime(query)
+		runtime.engine = e
+		runtime.partitionContextName = definition.name
+		runtime.partitionKey = key
+		runtime.initializeAt(now)
+		runtime.ctx = ctx
+		runtime.partitionID = partitionID
+		runtime.contextProperties = contextProperties
+		runtime.variables = runtime.withContextVariables(variablesWithEngine(cloneValues(variables), e))
+		runtime.variables = runtime.withContextProperties(runtime.variables)
+		runtime.joinState = &joinRuntimeState{sides: make([][]storedEvent, len(sources))}
+		loaded := make([]bool, len(sources))
+		for _, index := range evaluationOrder {
+			if index < 0 || index >= len(sources) {
+				return QueryResult{}, true, NewError(ErrorInvalidRule, "context fire-and-forget join evaluation order contains an invalid source")
+			}
+			source := sources[index]
+			base, baseErr := sourceNode(source)
+			if baseErr != nil {
+				return QueryResult{}, true, baseErr
+			}
+			input := source
+			if base.kind == streamHistorical {
+				input = replaceStreamBase(source, base, &streamNode{kind: streamSource, sourceName: base.historical.schema.Name(), sourceType: typeOf[any]()})
+			} else if base.kind == streamMethod {
+				input = replaceStreamBase(source, base, &streamNode{kind: streamSource, sourceName: base.method.schema.Name(), sourceType: typeOf[any]()})
+			}
+			if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
+				invocations, invocationErr := methodDependencyInvocations(base.method.dependencies, sources, runtime.joinState)
+				if invocationErr != nil {
+					return QueryResult{}, true, invocationErr
+				}
+				for _, invocation := range invocations {
+					previous := runtime.methodDependencies
+					runtime.methodDependencies = invocation.events
+					events, pollErr := base.method.provider.Poll(ctx, MethodRequest{
+						Now: now, Variables: visibleVariableValues(runtime.variables), Parameters: parameterValuesFromVariables(runtime.variables),
+						Dependencies: cloneMethodDependencies(invocation.events),
+						Invocation:   runtime.methodInvocationContext(base.sourceName),
+					})
+					runtime.methodDependencies = previous
+					if pollErr != nil {
+						return QueryResult{}, true, pollErr
+					}
+					if appendErr := appendFireAndForgetJoinSource(&runtime, &runtime.joinState.sides[index], input, events, now, invocation.lineage); appendErr != nil {
+						return QueryResult{}, true, appendErr
+					}
+				}
+				loaded[index] = true
+				continue
+			}
+
+			var events []Event
+			if index == driverIndex {
+				events = grouped[driverIndex][key]
+			} else if selection, ok := indexed[index]; ok {
+				candidate, usedIndex, lookupErr := e.snapshotFireAndForgetJoinSourceWithIndex(
+					ctx, source, selection, index, plan.query.join, plan.query.joinWhere,
+					runtime.joinState.sides, loaded, sourceIndexFilterExpressions(source), now, runtime.variables,
+				)
+				if lookupErr != nil {
+					return QueryResult{}, true, lookupErr
+				}
+				if usedIndex {
+					events, lookupErr = contextJoinPartitionEvents(definition, candidate, key, now, runtime.variables)
+					if lookupErr != nil {
+						return QueryResult{}, true, lookupErr
+					}
+				} else {
+					fallback, fallbackErr := ensureGrouped(index)
+					if fallbackErr != nil {
+						return QueryResult{}, true, fallbackErr
+					}
+					events = fallback[key]
+				}
+			} else {
+				fallback, fallbackErr := ensureGrouped(index)
+				if fallbackErr != nil {
+					return QueryResult{}, true, fallbackErr
+				}
+				events = fallback[key]
+			}
+			if appendErr := appendFireAndForgetJoinSource(&runtime, &runtime.joinState.sides[index], input, events, now, nil); appendErr != nil {
+				return QueryResult{}, true, appendErr
+			}
+			loaded[index] = true
+		}
+
+		tuples := joinTuples(query.join, runtime.joinState, now, &runtime)
+		var batch ResultBatch
+		if query.aggregate != nil {
+			batch, err = runtime.aggregateBatch(joinDeltaEvents(joinDelta{newTuples: tuples}, now), partitionPlan, now)
+		} else {
+			batch = runtime.joinBatch(joinDeltaWithPairs(joinDelta{newTuples: tuples}), partitionPlan, now)
+		}
+		if err != nil {
+			return QueryResult{}, true, err
+		}
+		batch = runtime.applyOutput(query.output, batch, false, now, partitionPlan)
+		result.New = append(result.New, batch.New...)
+		result.Old = append(result.Old, batch.Old...)
+	}
+	if !result.empty() {
+		result.Sequence = 1
+	}
+	return QueryResult{Batch: result}, true, nil
+}
+
+func contextJoinIndexShapeAllowed(definition *joinDefinition) bool {
+	if definition == nil || joinDefinitionHasUnidirectional(definition) {
+		return false
+	}
+	if len(definition.edges) > 0 {
+		for _, edge := range definition.edges {
+			if edge.kind != JoinInner {
+				return false
+			}
+		}
+		return true
+	}
+	return definition.kind == JoinInner
+}
+
+func contextJoinIndexSelectionUsable(selection IndexSelection) bool {
+	if selection.IndexName == "" || strings.HasPrefix(selection.IndexName, "<") || len(selection.Columns) == 0 || len(selection.MatchedColumns) == 0 {
+		return false
+	}
+	switch selection.Access {
+	case IndexAccessEquality:
+		return len(selection.MatchedColumns) == len(selection.Columns)
+	case IndexAccessRange:
+		return (selection.Backing == IndexBackingBTree || selection.Backing == IndexBackingUniqueBTree) && len(selection.MatchedColumns) <= len(selection.Columns)
+	default:
+		return false
+	}
+}
+
+func contextJoinPartitionEvents(definition ContextDefinition, events []Event, key string, now time.Time, variables map[string]Value) ([]Event, error) {
+	if len(events) == 0 {
+		return nil, nil
+	}
+	result := make([]Event, 0, len(events))
+	for _, event := range events {
+		partitionKey, active, err := definition.partition(event, now, variables)
+		if err != nil {
+			return nil, err
+		}
+		if active && partitionKey == key {
+			result = append(result, event)
+		}
+	}
+	return result, nil
 }
 
 func (e *Engine) executeContextFireAndForget(ctx context.Context, plan Plan, selector ContextPartitionSelector, parameters ParameterValues) (QueryResult, error) {
