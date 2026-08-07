@@ -1510,6 +1510,10 @@ type triggerOrderedScalarAssignmentEvent struct {
 	ID  int    `esper:"id"`
 }
 
+type triggerSubqueryNotMatchedLookupEvent struct {
+	ID int `esper:"id"`
+}
+
 func TestTriggerArrayAssignmentsPreserveOrderedWorkingAndInitialValues(t *testing.T) {
 	setups := []struct {
 		name        string
@@ -2177,6 +2181,158 @@ func TestTriggerMergeInsertOnlyConvenienceMatchesInfraOnMergeSimpleInsert(t *tes
 					t.Fatalf("insert-only table snapshot = %#v, err=%v", rows, snapshotErr)
 				}
 			}
+		})
+	}
+}
+
+func TestTriggerMergeNotMatchedAssignmentUsesCorrelatedSubquery(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		namedWindow bool
+	}{
+		{name: "table"},
+		{name: "named-window", namedWindow: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			env := NewEnvironment()
+			if _, err := RegisterStruct[runtimeTestTrade](env, "SubqueryNotMatchedOuter"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := RegisterStruct[triggerSubqueryNotMatchedLookupEvent](env, "SubqueryNotMatchedLookupEvent"); err != nil {
+				t.Fatal(err)
+			}
+			const lookupName = "subquery-not-matched-two"
+			const targetName = "subquery-not-matched-one"
+			lookupFields := []FieldSpec{
+				FieldDef("val0", reflect.TypeOf("")),
+				FieldDef("val1", reflect.TypeOf(int(0))),
+			}
+			if testCase.namedWindow {
+				lookupSchema, err := RegisterMap(env, "SubqueryNotMatchedLookup", lookupFields)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, lookupName, lookupSchema, NamedWindowRetention(Unique(Field[any, string]("val0")))); err != nil {
+					t.Fatal(err)
+				}
+				targetSchema, err := RegisterMap(env, "SubqueryNotMatchedTarget", []FieldSpec{
+					FieldDef("string", reflect.TypeOf("")),
+					FieldDef("intPrimitive", reflect.TypeOf(int(0))),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, targetName, targetSchema, NamedWindowRetention(Unique(Field[any, string]("string")))); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if _, err := CreateTable(env, lookupName, []TableColumn{
+					PrimaryKeyColumn[string]("val0"),
+					TableColumnOf[int]("val1"),
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateTable(env, targetName, []TableColumn{
+					PrimaryKeyColumn[string]("string"),
+					TableColumnOf[int]("intPrimitive"),
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			lookupSource := From[triggerSubqueryNotMatchedLookupEvent](env, "SubqueryNotMatchedLookupEvent")
+			lookupID := Field[triggerSubqueryNotMatchedLookupEvent, int]("id")
+			var lookupPlan Plan
+			var err error
+			if testCase.namedWindow {
+				lookupPlan, err = env.Build(OnEvent(lookupSource).InsertIntoNamedWindow(lookupName,
+					SetColumn("val0", Literal("W2")), SetColumn("val1", lookupID),
+				).Query(StatementName("subquery-not-matched-lookup")))
+			} else {
+				lookupPlan, err = env.Build(OnEvent(lookupSource).InsertIntoTable(lookupName,
+					SetColumn("val0", Literal("W2")), SetColumn("val1", lookupID),
+				).Query(StatementName("subquery-not-matched-lookup")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			outerSource := From[runtimeTestTrade](env, "SubqueryNotMatchedOuter")
+			outerSymbol := Field[runtimeTestTrade, string]("symbol")
+			lookupStream := func() RecordStream {
+				if testCase.namedWindow {
+					return FromNamedWindow(env, lookupName)
+				}
+				return FromTable(env, lookupName)
+			}()
+			lookupValue := SubqueryValue[int](lookupStream, Field[any, int]("val1"),
+				Equal[string](Field[any, string]("val0"), OuterField[string]("symbol")),
+			)
+			var targetPlan Plan
+			if testCase.namedWindow {
+				match := Equal[string](NamedWindowField[string]("string"), outerSymbol)
+				targetPlan, err = env.Build(OnEvent(outerSource).MergeIntoNamedWindowWhen(targetName, match,
+					WhenNotMatchedAny(SetColumn("string", Literal("Y")), SetColumn("intPrimitive", lookupValue)),
+				).Query(StatementName("subquery-not-matched-target")))
+			} else {
+				targetPlan, err = env.Build(OnEvent(outerSource).MergeIntoTableWhen(targetName, []Expr{outerSymbol},
+					WhenNotMatchedAny(SetColumn("string", Literal("Y")), SetColumn("intPrimitive", lookupValue)),
+				).Query(StatementName("subquery-not-matched-target")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			engine := NewEngine(env)
+			lookupDeployment, err := engine.Deploy(context.Background(), lookupPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := engine.SendEvent(context.Background(), triggerSubqueryNotMatchedLookupEvent{ID: 50}); err != nil {
+				t.Fatal(err)
+			}
+			targetDeployment, err := engine.Deploy(context.Background(), targetPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "W2", Price: 1}); err != nil {
+				t.Fatal(err)
+			}
+			assertTarget := func(want int) {
+				t.Helper()
+				if testCase.namedWindow {
+					window, ok := engine.NamedWindow(targetName)
+					if !ok {
+						t.Fatal("subquery not-matched target window is missing")
+					}
+					events, snapshotErr := window.Snapshot(context.Background())
+					if snapshotErr != nil || len(events) != 1 || events[0].Get("string").Any() != "Y" || events[0].Get("intPrimitive").Any() != want {
+						t.Fatalf("subquery not-matched window = %#v, err=%v", events, snapshotErr)
+					}
+				} else {
+					table, ok := engine.Table(targetName)
+					if !ok {
+						t.Fatal("subquery not-matched target table is missing")
+					}
+					rows, snapshotErr := table.Snapshot(context.Background())
+					if snapshotErr != nil || len(rows) != 1 || rows[0].Get("string").Any() != "Y" || rows[0].Get("intPrimitive").Any() != want {
+						t.Fatalf("subquery not-matched table = %#v, err=%v", rows, snapshotErr)
+					}
+				}
+			}
+			assertTarget(50)
+
+			if testCase.namedWindow {
+				if err := engine.SendEvent(context.Background(), triggerSubqueryNotMatchedLookupEvent{ID: 51}); err != nil {
+					t.Fatal(err)
+				}
+				if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "W2", Price: 2}); err != nil {
+					t.Fatal(err)
+				}
+				assertTarget(51)
+			}
+			_ = lookupDeployment
+			_ = targetDeployment
 		})
 	}
 }
