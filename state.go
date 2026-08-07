@@ -760,15 +760,16 @@ func (d NamedWindowDelta) empty() bool { return len(d.New) == 0 && len(d.Old) ==
 type NamedWindowListener func(context.Context, NamedWindowDelta) error
 
 type namedWindowRuntime struct {
-	mu         sync.RWMutex
-	def        NamedWindowDefinition
-	contextKey string
-	partitions map[string]*namedWindowRuntime
-	entries    []storedEvent
-	keyed      map[string]storedEvent
-	keyOrder   []string
-	listeners  map[uint64]NamedWindowListener
-	nextID     uint64
+	mu                sync.RWMutex
+	def               NamedWindowDefinition
+	contextKey        string
+	contextProperties map[string]Value
+	partitions        map[string]*namedWindowRuntime
+	entries           []storedEvent
+	keyed             map[string]storedEvent
+	keyOrder          []string
+	listeners         map[uint64]NamedWindowListener
+	nextID            uint64
 }
 
 type NamedWindow struct {
@@ -793,6 +794,39 @@ func newNamedWindowRuntime(definition NamedWindowDefinition, contextKey string) 
 		state.keyed = make(map[string]storedEvent)
 	}
 	return state
+}
+
+func (state *namedWindowRuntime) contextPropertiesSnapshot() map[string]Value {
+	if state == nil {
+		return nil
+	}
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	return cloneValues(state.contextProperties)
+}
+
+func (state *namedWindowRuntime) rememberContextProperties(properties map[string]Value) {
+	if state == nil || len(properties) == 0 || state.def.contextName == "" {
+		return
+	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if len(state.contextProperties) == 0 {
+		state.contextProperties = cloneValues(properties)
+	}
+}
+
+func contextPropertiesFromVariables(variables map[string]Value) map[string]Value {
+	if len(variables) == 0 {
+		return nil
+	}
+	properties := make(map[string]Value)
+	for name, value := range variables {
+		if strings.HasPrefix(name, contextVariablePrefix) {
+			properties[strings.TrimPrefix(name, contextVariablePrefix)] = value
+		}
+	}
+	return properties
 }
 
 func normalizeSortedNamedWindowEntries(entries []storedEvent, retention SortedWindowSpec, now time.Time) ([]storedEvent, map[string]storedEvent) {
@@ -1521,6 +1555,15 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 			if err != nil {
 				return NamedWindowDelta{}, err
 			}
+		}
+	}
+	if state.def.contextName != "" {
+		if definition, ok := w.engineContextDefinition(); ok {
+			properties := definition.contextPropertyValues(event, now, variables, 0)
+			for name, value := range contextPropertiesFromVariables(variables) {
+				properties[name] = value
+			}
+			state.rememberContextProperties(properties)
 		}
 	}
 	state.mu.Lock()

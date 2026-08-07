@@ -244,7 +244,7 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 		return QueryResult{}, err
 	}
 	if plan.query.onDemand != nil {
-		return e.executeFireAndForgetMutation(ctx, plan, parameters)
+		return e.executeFireAndForgetMutation(ctx, plan, selector, parameters)
 	}
 	if plan.query.sourceLess {
 		e.mu.Lock()
@@ -336,7 +336,7 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 // Named Window deltas are fed through consuming statements before listeners
 // are dispatched; Table mutations return no rows, matching Esper's FAF table
 // result contract.
-func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, parameters ParameterValues) (QueryResult, error) {
+func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, selector ContextPartitionSelector, parameters ParameterValues) (QueryResult, error) {
 	if err := contextErr(ctx); err != nil {
 		return QueryResult{}, err
 	}
@@ -364,38 +364,47 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, pa
 	e.pendingMatchRecognizeStateLimits = nil
 	e.pendingPatternSubexpressionLimits = nil
 
-	definition := &triggerDefinition{
-		input:  source,
-		table:  source.sourceName,
-		where:  plan.query.onDemand.predicate,
-		action: triggerInsertTable,
-	}
-	switch plan.query.onDemand.action {
-	case onDemandInsert:
-		definition.action = triggerInsertTable
-	case onDemandUpdate:
-		definition.action = triggerUpdateTable
-	case onDemandDelete:
-		definition.action = triggerDeleteTable
-	case onDemandDeleteAll:
-		definition.action = triggerDeleteAllTable
-	default:
-		e.mu.Unlock()
-		return QueryResult{}, NewError(ErrorInvalidRule, fmt.Sprintf("unknown on-demand action %d", plan.query.onDemand.action))
-	}
-	definition.assignments = append([]TableAssignment(nil), plan.query.onDemand.assignments...)
 	if source.kind == streamNamedWindow {
-		definition.target = triggerTargetNamedWindow
 		if _, ok := e.ensureNamedWindowLocked(source.sourceName); !ok {
 			e.mu.Unlock()
 			return QueryResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
 		}
 	}
 
-	// A zero Event is intentional: on-demand expressions have no trigger
-	// event. Target fields resolve from EvalContext.Group, while literals,
-	// variables and bound parameters resolve from EvalContext.Variables.
-	mutation, err := executeTriggerAction(ctx, e, definition, Event{}, now, variables, nil, nil)
+	var mutation tableMutationResult
+	var err error
+	if plan.query.contextName != "" {
+		mutation, err = e.executeContextFireAndForgetMutationLocked(ctx, plan, selector, now, variables)
+	} else {
+		definition := &triggerDefinition{
+			input:  source,
+			table:  source.sourceName,
+			where:  plan.query.onDemand.predicate,
+			action: triggerInsertTable,
+		}
+		switch plan.query.onDemand.action {
+		case onDemandInsert:
+			definition.action = triggerInsertTable
+		case onDemandUpdate:
+			definition.action = triggerUpdateTable
+		case onDemandDelete:
+			definition.action = triggerDeleteTable
+		case onDemandDeleteAll:
+			definition.action = triggerDeleteAllTable
+		default:
+			e.mu.Unlock()
+			return QueryResult{}, NewError(ErrorInvalidRule, fmt.Sprintf("unknown on-demand action %d", plan.query.onDemand.action))
+		}
+		definition.assignments = append([]TableAssignment(nil), plan.query.onDemand.assignments...)
+		if source.kind == streamNamedWindow {
+			definition.target = triggerTargetNamedWindow
+		}
+
+		// A zero Event is intentional: on-demand expressions have no trigger
+		// event. Target fields resolve from EvalContext.Group, while literals,
+		// variables and bound parameters resolve from EvalContext.Variables.
+		mutation, err = executeTriggerAction(ctx, e, definition, Event{}, now, variables, nil, nil)
+	}
 	if err != nil {
 		e.mu.Unlock()
 		return QueryResult{}, err
@@ -444,6 +453,179 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, pa
 		}
 	}
 	return QueryResult{Batch: batch}, nil
+}
+
+type contextMutationPartition struct {
+	key               string
+	representative    Event
+	contextProperties map[string]Value
+}
+
+func contextMutationProperties(definition ContextDefinition, representative Event, stored map[string]Value, now time.Time, variables map[string]Value, partitionID int) map[string]Value {
+	properties := cloneValues(stored)
+	if len(properties) == 0 {
+		properties = definition.contextPropertyValues(representative, now, variables, partitionID)
+	}
+	if properties == nil {
+		properties = make(map[string]Value)
+	}
+	properties["name"] = Present(definition.name)
+	properties["id"] = Present(partitionID)
+	return properties
+}
+
+// executeContextFireAndForgetMutationLocked applies one on-demand mutation to
+// each selected context partition. The caller holds e.mu, matching the normal
+// FAF mutation path and the live trigger transaction boundary.
+func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, plan Plan, selector ContextPartitionSelector, now time.Time, variables map[string]Value) (tableMutationResult, error) {
+	if e == nil || e.env == nil || plan.query.onDemand == nil || plan.query.input == nil {
+		return tableMutationResult{}, NewError(ErrorDependency, "context on-demand mutation has no engine, target or definition")
+	}
+	definition, ok := e.env.Context(plan.query.contextName)
+	if !ok {
+		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", plan.query.contextName))
+	}
+	if definition.kind == ContextInitiatedTerminated {
+		return tableMutationResult{}, NewError(ErrorInvalidRule, "on-demand context mutation does not support initiated-terminated lifecycle")
+	}
+	if plan.query.onDemand.action == onDemandInsert {
+		return tableMutationResult{}, NewError(ErrorInvalidRule, "context on-demand insert is not supported without an incoming partition event")
+	}
+
+	source := plan.query.input
+	partitions := make(map[string]contextMutationPartition)
+	switch source.kind {
+	case streamNamedWindow:
+		window := e.namedWindows[source.sourceName]
+		if window == nil {
+			return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
+		}
+		if window.Definition().Context() != definition.name {
+			return tableMutationResult{}, NewError(ErrorInvalidRule, fmt.Sprintf("named window %q is not bound to context %q", source.sourceName, definition.name))
+		}
+		for _, state := range window.contextPartitionStates() {
+			if state == nil || state.contextKey == "" {
+				continue
+			}
+			events := snapshotNamedWindowState(state)
+			if len(events) == 0 {
+				continue
+			}
+			if _, exists := partitions[state.contextKey]; !exists {
+				partitions[state.contextKey] = contextMutationPartition{
+					key:               state.contextKey,
+					representative:    events[0],
+					contextProperties: state.contextPropertiesSnapshot(),
+				}
+			}
+		}
+	case streamTable:
+		table := e.tables[source.sourceName]
+		if table == nil {
+			return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", source.sourceName))
+		}
+		rows, err := table.Snapshot(ctx)
+		if err != nil {
+			return tableMutationResult{}, err
+		}
+		for _, row := range rows {
+			if err := contextErr(ctx); err != nil {
+				return tableMutationResult{}, err
+			}
+			targetEvent, eventErr := tableRowEvent(table, source.sourceName, row, now)
+			if eventErr != nil {
+				return tableMutationResult{}, eventErr
+			}
+			key, active, partitionErr := definition.partition(targetEvent, now, variables)
+			if partitionErr != nil {
+				return tableMutationResult{}, partitionErr
+			}
+			if active {
+				if _, exists := partitions[key]; !exists {
+					partitions[key] = contextMutationPartition{key: key, representative: targetEvent}
+				}
+			}
+		}
+	default:
+		return tableMutationResult{}, NewError(ErrorInvalidRule, "context on-demand target must be a root named window or table")
+	}
+
+	keys := make([]string, 0, len(partitions))
+	for key := range partitions {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	mutation := tableMutationResult{}
+	for index, key := range keys {
+		if err := contextErr(ctx); err != nil {
+			return tableMutationResult{}, err
+		}
+		partition := partitions[key]
+		partitionID := index
+		if ids := e.contextPartitionIDs[definition.name]; ids != nil {
+			if existing, exists := ids[key]; exists {
+				partitionID = existing
+			} else {
+				partitionID = e.allocateContextPartitionIDLocked(definition.name, key)
+			}
+		} else {
+			partitionID = e.allocateContextPartitionIDLocked(definition.name, key)
+		}
+		properties := contextMutationProperties(definition, partition.representative, partition.contextProperties, now, variables, partitionID)
+		descriptor := ContextPartitionDescriptor{ID: partitionID, Key: key, BaseKey: contextPartitionBaseKey(key), ContextName: definition.name, properties: cloneValues(properties)}
+		if !contextPartitionSelectedWithDescriptor(selector, descriptor) {
+			continue
+		}
+
+		partitionRuntime := newStatementRuntime(Query{})
+		partitionRuntime.engine = e
+		partitionRuntime.partitionContextName = definition.name
+		partitionRuntime.partitionKey = key
+		partitionRuntime.partitionID = partitionID
+		partitionRuntime.contextProperties = properties
+		partitionVariables := partitionRuntime.withContextVariables(cloneValues(variables))
+		partitionVariables = partitionRuntime.withContextProperties(partitionVariables)
+
+		trigger := &triggerDefinition{
+			input:               source,
+			table:               source.sourceName,
+			where:               plan.query.onDemand.predicate,
+			action:              triggerDeleteTable,
+			assignments:         append([]TableAssignment(nil), plan.query.onDemand.assignments...),
+			contextDefinition:   &definition,
+			contextPartitionKey: key,
+		}
+		switch plan.query.onDemand.action {
+		case onDemandUpdate:
+			trigger.action = triggerUpdateTable
+		case onDemandDelete:
+			trigger.action = triggerDeleteTable
+		case onDemandDeleteAll:
+			if source.kind == streamTable {
+				// Table.Clear is necessarily global. Turn delete-all into the
+				// same target-row scan used by delete-where so the context
+				// partition predicate remains in force.
+				trigger.action = triggerDeleteTable
+				trigger.where = Literal(true)
+			} else {
+				trigger.action = triggerDeleteAllTable
+			}
+		default:
+			return tableMutationResult{}, NewError(ErrorInvalidRule, fmt.Sprintf("unknown on-demand action %d", plan.query.onDemand.action))
+		}
+		if source.kind == streamNamedWindow {
+			trigger.target = triggerTargetNamedWindow
+		}
+		partMutation, err := executeTriggerAction(ctx, e, trigger, Event{}, now, partitionVariables, nil, nil)
+		if err != nil {
+			return tableMutationResult{}, err
+		}
+		mutation.oldRows = append(mutation.oldRows, partMutation.oldRows...)
+		mutation.newRows = append(mutation.newRows, partMutation.newRows...)
+		mutation.oldEvents = append(mutation.oldEvents, partMutation.oldEvents...)
+		mutation.newEvents = append(mutation.newEvents, partMutation.newEvents...)
+	}
+	return mutation, nil
 }
 
 func validateParameterValue(name string, value any, expected reflect.Type) error {

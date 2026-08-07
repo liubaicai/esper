@@ -1121,8 +1121,9 @@ func (s RecordStream) Query(options ...QueryOption) Query {
 // through TableField/NamedWindowField, while insert expressions normally use
 // literals, variables or parameters.
 type OnDemandStream struct {
-	env  *Environment
-	node *streamNode
+	env         *Environment
+	node        *streamNode
+	contextName string
 }
 
 // OnDemand starts a Fire-and-Forget state mutation chain for this source.
@@ -1138,20 +1139,30 @@ func (s Stream[T]) OnDemand() OnDemandStream {
 	return OnDemandStream{env: s.env, node: s.node}
 }
 
+// WithContext scopes the on-demand mutation chain to the named context.
+// ExecuteFireAndForgetWithSelector can then select the context partitions
+// that receive the mutation. Keeping this on the target-side builder makes
+// the scope visible in the same fluent chain as the mutation itself.
+func (s OnDemandStream) WithContext(name string) OnDemandStream {
+	s.contextName = strings.TrimSpace(name)
+	return s
+}
+
 func (s OnDemandStream) query(action onDemandAction, predicate Expr, assignments []TableAssignment, options ...QueryOption) Query {
-	spec := querySpec{selector: SelectIStream, output: OutputAll()}
+	spec := querySpec{selector: SelectIStream, output: OutputAll(), contextName: s.contextName}
 	for _, option := range options {
 		if option != nil {
 			option(&spec)
 		}
 	}
 	return Query{
-		env:      s.env,
-		input:    s.node,
-		name:     spec.name,
-		selector: spec.selector,
-		output:   spec.output,
-		onDemand: &onDemandDefinition{action: action, predicate: predicate, assignments: append([]TableAssignment(nil), assignments...)},
+		env:         s.env,
+		input:       s.node,
+		name:        spec.name,
+		selector:    spec.selector,
+		output:      spec.output,
+		contextName: spec.contextName,
+		onDemand:    &onDemandDefinition{action: action, predicate: predicate, assignments: append([]TableAssignment(nil), assignments...)},
 	}
 }
 
@@ -2394,6 +2405,9 @@ func (q Query) Name() string { return q.name }
 func (q Query) description() string {
 	if q.onDemand != nil {
 		parts := []string{q.input.describe(), q.onDemand.description()}
+		if q.contextName != "" {
+			parts = append(parts, "context("+q.contextName+")")
+		}
 		return strings.Join(parts, " -> ")
 	}
 	if q.sourceLess {

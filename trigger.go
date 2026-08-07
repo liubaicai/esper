@@ -212,6 +212,13 @@ type triggerDefinition struct {
 	merge               []TableMergeClause
 	variableAssignments []VariableAssignmentExpr
 	selections          []Selection
+	// contextDefinition/contextPartitionKey are populated only by an
+	// on-demand context mutation. Live trigger definitions use the ordinary
+	// statement runtime partition scope instead. Table storage is global in the
+	// Go runtime, so the context pair lets a target-row scan apply the same
+	// partition predicate that a context-bound Table has in Esper.
+	contextDefinition   *ContextDefinition
+	contextPartitionKey string
 }
 
 type tableMutationResult struct {
@@ -2040,6 +2047,15 @@ func executeTableWhereAction(ctx context.Context, table *Table, definition *trig
 		targetEvent, eventErr := tableRowEvent(table, definition.table, row, now)
 		if eventErr != nil {
 			return tableMutationResult{}, eventErr
+		}
+		if definition.contextDefinition != nil {
+			partitionKey, active, partitionErr := definition.contextDefinition.partition(targetEvent, now, variables)
+			if partitionErr != nil {
+				return tableMutationResult{}, partitionErr
+			}
+			if !active || partitionKey != definition.contextPartitionKey {
+				continue
+			}
 		}
 		evaluation := EvalContext{Event: event, Group: []Event{targetEvent}, Now: now, Variables: variables}
 		matched, ok := boolValue(definition.where.eval(evaluation))

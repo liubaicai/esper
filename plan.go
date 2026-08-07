@@ -3465,9 +3465,6 @@ func (e *Environment) validateOnDemand(query Query) error {
 	if query.input == nil {
 		return NewError(ErrorInvalidRule, "on-demand target is required")
 	}
-	if query.contextName != "" {
-		return NewError(ErrorInvalidRule, "on-demand mutation does not yet support a context selector")
-	}
 	if query.join != nil || query.aggregate != nil || query.pattern != nil || query.rowRecog != nil || query.trigger != nil || query.sourceLess {
 		return NewError(ErrorInvalidRule, "on-demand mutation cannot combine with another query operator")
 	}
@@ -3476,6 +3473,15 @@ func (e *Environment) validateOnDemand(query Query) error {
 	}
 	if query.input.kind != streamNamedWindow && query.input.kind != streamTable {
 		return NewError(ErrorInvalidRule, "on-demand target must be a root named window or table")
+	}
+	if query.contextName != "" && query.input.kind == streamNamedWindow {
+		window, ok := e.NamedWindow(query.input.sourceName)
+		if !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", query.input.sourceName))
+		}
+		if window.Context() != query.contextName {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("named window %q was declared with context %q; on-demand mutation uses context %q", query.input.sourceName, window.Context(), query.contextName))
+		}
 	}
 	targetSchema, err := e.sourceSchema(query.input)
 	if err != nil {
