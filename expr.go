@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -344,6 +345,27 @@ type EvalContext struct {
 }
 
 const parameterValuesVariable = "\x00esper.parameters"
+
+// positionalParameterPrefix is deliberately outside the user-visible name
+// space.  Positional substitution parameters still use the same immutable
+// expression node and runtime value channel as named parameters, but their
+// binding key cannot collide with a caller's named Parameter value.
+const positionalParameterPrefix = "\x00esper.positional:"
+
+func positionalParameterName(position int) string {
+	return positionalParameterPrefix + strconv.Itoa(position)
+}
+
+func positionalParameterPosition(name string) (int, bool) {
+	if !strings.HasPrefix(name, positionalParameterPrefix) {
+		return 0, false
+	}
+	position, err := strconv.Atoi(strings.TrimPrefix(name, positionalParameterPrefix))
+	if err != nil || position < 1 {
+		return 0, false
+	}
+	return position, true
+}
 
 // Leaving reports whether the current result is being emitted on the remove
 // stream. It is false for insert-stream evaluation and for contexts that do
@@ -1483,6 +1505,11 @@ func Parameter[T any](name string) Expression[T] {
 	if name == "" {
 		return makeExpr[T]("parameter", "<invalid-parameter>", nil, func(EvalContext) Value { return Missing() })
 	}
+	if strings.HasPrefix(name, positionalParameterPrefix) {
+		expression := makeExpr[T]("parameter", "<invalid-parameter>", nil, func(EvalContext) Value { return Missing() })
+		expression.node().configurationError = "named parameter name uses a reserved positional-parameter prefix"
+		return expression
+	}
 	node := &exprNode{
 		kind:          "parameter",
 		typ:           typeOf[T](),
@@ -1515,6 +1542,49 @@ func Parameter[T any](name string) Expression[T] {
 // Param is a concise alias for Parameter for fluent rules that prefer the
 // shorter spelling.
 func Param[T any](name string) Expression[T] { return Parameter[T](name) }
+
+// ParameterAt creates a 1-based positional substitution parameter.  The
+// explicit index mirrors Esper's PreparedQuery setObject(index, value)
+// contract while keeping the rule itself typed and free of EPL text.  Use
+// ExecuteFireAndForgetWithPositionalParameters or the corresponding
+// PreparedQuery method to supply values in declaration order.
+func ParameterAt[T any](position int) Expression[T] {
+	if position < 1 {
+		expression := makeExpr[T]("parameter", "<invalid-positional-parameter>", nil, func(EvalContext) Value { return Missing() })
+		expression.node().configurationError = "positional parameter index must be at least 1"
+		return expression
+	}
+	name := positionalParameterName(position)
+	node := &exprNode{
+		kind:          "parameter",
+		typ:           typeOf[T](),
+		description:   fmt.Sprintf("param(?%d:%s)", position, typeOf[T]()),
+		parameterName: name,
+	}
+	return typedExpr[T]{n: node, fn: func(ctx EvalContext) Value {
+		if ctx.Parameters != nil {
+			if value, ok := ctx.Parameters[name]; ok {
+				return value
+			}
+		}
+		if ctx.Variables != nil {
+			if bound, ok := ctx.Variables[parameterValuesVariable]; ok && bound.IsPresent() {
+				if values, ok := bound.Any().(map[string]Value); ok {
+					if value, exists := values[name]; exists {
+						return value
+					}
+				}
+			}
+		}
+		return Missing()
+	}}
+}
+
+// PositionalParameter is a descriptive alias for ParameterAt.  ParameterAt
+// is the shorter spelling used by the rest of the fluent API.
+func PositionalParameter[T any](position int) Expression[T] {
+	return ParameterAt[T](position)
+}
 
 // ExpressionParam creates a parameter that is local to a named expression
 // definition.  It is deliberately distinct from Parameter: Parameter binds a

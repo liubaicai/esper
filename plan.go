@@ -2338,7 +2338,39 @@ func queryParameterTypes(environment *Environment, query Query) (map[string]refl
 			}
 		}
 	}
+	if err := validateQueryParameterModes(parameterTypes); err != nil {
+		return nil, err
+	}
 	return parameterTypes, nil
+}
+
+// validateQueryParameterModes keeps the two Java substitution-parameter
+// forms explicit in the Go API. A plan may use named parameters or positional
+// parameters, but a single query cannot mix the two forms. Positional indexes
+// are 1-based and contiguous, while repeated references to one index are
+// allowed and must retain one compatible type.
+func validateQueryParameterModes(parameterTypes map[string]reflect.Type) error {
+	hasNamed := false
+	positions := make(map[int]struct{})
+	for name := range parameterTypes {
+		if position, positional := positionalParameterPosition(name); positional {
+			positions[position] = struct{}{}
+			continue
+		}
+		hasNamed = true
+	}
+	if hasNamed && len(positions) > 0 {
+		return fmt.Errorf("inconsistent use of substitution parameters, use either all named or all positional parameters")
+	}
+	if len(positions) == 0 {
+		return nil
+	}
+	for position := 1; position <= len(positions); position++ {
+		if _, exists := positions[position]; !exists {
+			return fmt.Errorf("positional substitution parameters must be contiguous starting at index 1 (missing index %d)", position)
+		}
+	}
+	return nil
 }
 
 func visitContextDefinitionExpressions(definition *ContextDefinition, visit func(Expr) error, visited map[*ContextDefinition]struct{}) error {

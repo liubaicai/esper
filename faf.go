@@ -118,9 +118,31 @@ func (e *Engine) ExecuteFireAndForgetWithParameters(ctx context.Context, plan Pl
 	return e.executeFireAndForget(ctx, plan, nil, parameters)
 }
 
+// ExecuteFireAndForgetWithPositionalParameters executes a plan whose
+// expressions use ParameterAt. Values are supplied in 1-based parameter
+// order, matching Esper's prepared-query contract while keeping the Go call
+// site allocation-free and immutable for the duration of one execution.
+func (e *Engine) ExecuteFireAndForgetWithPositionalParameters(ctx context.Context, plan Plan, values ...any) (QueryResult, error) {
+	parameters, err := positionalParameterBindings(plan, values)
+	if err != nil {
+		return QueryResult{}, err
+	}
+	return e.executeFireAndForget(ctx, plan, nil, parameters)
+}
+
 // ExecuteFireAndForgetWithSelectorAndParameters combines context partition
 // selection with execution-time parameter binding.
 func (e *Engine) ExecuteFireAndForgetWithSelectorAndParameters(ctx context.Context, plan Plan, selector ContextPartitionSelector, parameters ParameterValues) (QueryResult, error) {
+	return e.executeFireAndForget(ctx, plan, selector, parameters)
+}
+
+// ExecuteFireAndForgetWithSelectorAndPositionalParameters combines a
+// positional binding snapshot with context-partition selection.
+func (e *Engine) ExecuteFireAndForgetWithSelectorAndPositionalParameters(ctx context.Context, plan Plan, selector ContextPartitionSelector, values ...any) (QueryResult, error) {
+	parameters, err := positionalParameterBindings(plan, values)
+	if err != nil {
+		return QueryResult{}, err
+	}
 	return e.executeFireAndForget(ctx, plan, selector, parameters)
 }
 
@@ -145,9 +167,29 @@ func (e *Engine) ExecuteFireAndForgetAndRouteWithParameters(ctx context.Context,
 	return e.executeFireAndForgetAndRoute(ctx, plan, nil, parameters)
 }
 
+// ExecuteFireAndForgetAndRouteWithPositionalParameters evaluates and routes
+// a positional-parameter plan in one explicit side-effecting operation.
+func (e *Engine) ExecuteFireAndForgetAndRouteWithPositionalParameters(ctx context.Context, plan Plan, values ...any) (QueryResult, error) {
+	parameters, err := positionalParameterBindings(plan, values)
+	if err != nil {
+		return QueryResult{}, err
+	}
+	return e.executeFireAndForgetAndRoute(ctx, plan, nil, parameters)
+}
+
 // ExecuteFireAndForgetAndRouteWithSelectorAndParameters combines context
 // partition selection, parameter binding and explicit result routing.
 func (e *Engine) ExecuteFireAndForgetAndRouteWithSelectorAndParameters(ctx context.Context, plan Plan, selector ContextPartitionSelector, parameters ParameterValues) (QueryResult, error) {
+	return e.executeFireAndForgetAndRoute(ctx, plan, selector, parameters)
+}
+
+// ExecuteFireAndForgetAndRouteWithSelectorAndPositionalParameters combines
+// positional bindings, context selection and explicit result routing.
+func (e *Engine) ExecuteFireAndForgetAndRouteWithSelectorAndPositionalParameters(ctx context.Context, plan Plan, selector ContextPartitionSelector, values ...any) (QueryResult, error) {
+	parameters, err := positionalParameterBindings(plan, values)
+	if err != nil {
+		return QueryResult{}, err
+	}
 	return e.executeFireAndForgetAndRoute(ctx, plan, selector, parameters)
 }
 
@@ -762,6 +804,13 @@ func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, 
 	return mutation, nil
 }
 
+func parameterDisplayName(name string) string {
+	if position, positional := positionalParameterPosition(name); positional {
+		return fmt.Sprintf("positional parameter %d", position)
+	}
+	return name
+}
+
 func validateParameterValue(name string, value any, expected reflect.Type) error {
 	if value == nil || expected == nil || expected == typeOf[any]() {
 		return nil
@@ -770,7 +819,7 @@ func validateParameterValue(name string, value any, expected reflect.Type) error
 	if actual.AssignableTo(expected) {
 		return nil
 	}
-	return NewError(ErrorTypeMismatch, fmt.Sprintf("fire-and-forget parameter %q expects %s, got %s", name, parameterTypeDescription(expected), actual))
+	return NewError(ErrorTypeMismatch, fmt.Sprintf("fire-and-forget parameter %q expects %s, got %s", parameterDisplayName(name), parameterTypeDescription(expected), actual))
 }
 
 func validateParameterBindings(parameterTypes map[string]reflect.Type, parameters ParameterValues) error {
@@ -784,7 +833,7 @@ func validateParameterBindings(parameterTypes map[string]reflect.Type, parameter
 		declared[name] = struct{}{}
 		value, ok := parameters[name]
 		if !ok {
-			return NewError(ErrorInvalidRule, fmt.Sprintf("fire-and-forget parameter %q is not bound", name))
+			return NewError(ErrorInvalidRule, fmt.Sprintf("fire-and-forget parameter %q is not bound", parameterDisplayName(name)))
 		}
 		if err := validateParameterValue(name, value, parameterTypes[name]); err != nil {
 			return err
@@ -796,6 +845,54 @@ func validateParameterBindings(parameterTypes map[string]reflect.Type, parameter
 		}
 	}
 	return nil
+}
+
+// positionalParameterBindings translates the public variadic Go binding form
+// into the internal immutable map used by every expression evaluator. It is
+// intentionally plan-driven: the number, order and static type of values are
+// taken from the built query rather than inferred from the supplied slice.
+func positionalParameterBindings(plan Plan, values []any) (ParameterValues, error) {
+	parameterTypes, err := queryParameterTypes(plan.query.env, plan.query)
+	if err != nil {
+		return nil, WrapError(ErrorInvalidRule, "parameters", err)
+	}
+	positions := make(map[int]reflect.Type)
+	hasNamed := false
+	for name, typ := range parameterTypes {
+		if position, positional := positionalParameterPosition(name); positional {
+			positions[position] = typ
+		} else {
+			hasNamed = true
+		}
+	}
+	if hasNamed {
+		return nil, NewError(ErrorInvalidRule, "query uses named substitution parameters; use ExecuteFireAndForgetWithParameters")
+	}
+	if len(positions) == 0 {
+		if len(values) != 0 {
+			return nil, NewError(ErrorInvalidRule, "query has no positional substitution parameters")
+		}
+		return ParameterValues{}, nil
+	}
+	if len(values) != len(positions) {
+		if len(values) < len(positions) {
+			return nil, NewError(ErrorInvalidRule, fmt.Sprintf("missing value for positional parameter %d", len(values)+1))
+		}
+		return nil, NewError(ErrorInvalidRule, fmt.Sprintf("received %d positional parameter values, expected %d", len(values), len(positions)))
+	}
+	parameters := make(ParameterValues, len(values))
+	for index, value := range values {
+		position := index + 1
+		expected, exists := positions[position]
+		if !exists {
+			return nil, NewError(ErrorInvalidRule, fmt.Sprintf("positional parameter index %d is not declared", position))
+		}
+		if err := validateParameterValue(positionalParameterName(position), value, expected); err != nil {
+			return nil, err
+		}
+		parameters[positionalParameterName(position)] = value
+	}
+	return parameters, nil
 }
 
 func (e *Engine) executeJoinFireAndForget(ctx context.Context, plan Plan, parameters ParameterValues) (QueryResult, error) {
@@ -1372,6 +1469,21 @@ func (p *PreparedQuery) ExecuteWithParameters(ctx context.Context, parameters Pa
 		return QueryResult{}, NewError(ErrorState, "prepared query is closed")
 	}
 	return p.engine.ExecuteFireAndForgetWithParameters(ctx, p.plan, parameters)
+}
+
+// ExecuteWithPositionalParameters reuses a prepared plan built with
+// ParameterAt expressions. Values are supplied in 1-based parameter order;
+// the prepared handle does not retain the slice after execution returns.
+func (p *PreparedQuery) ExecuteWithPositionalParameters(ctx context.Context, values ...any) (QueryResult, error) {
+	if p == nil {
+		return QueryResult{}, NewError(ErrorState, "nil prepared query")
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.closed {
+		return QueryResult{}, NewError(ErrorState, "prepared query is closed")
+	}
+	return p.engine.ExecuteFireAndForgetWithPositionalParameters(ctx, p.plan, values...)
 }
 
 // ExecuteAndRoute evaluates the prepared plan and explicitly routes its

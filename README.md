@@ -32,7 +32,9 @@ go test -run '^TestSQL(Sink|HistoricalProvider)MySQLDocker$' -count=1
 
 本轮补充 Java `InfraNWTableFAF` 对照：`infra_nwtable_faf_parity_test.go` 覆盖 Named Window/Table 的 wildcard、filter、distinct、count/sum、group、IN、二流/三流 join 与 join where；`faf_mutation_test.go` 用 Go-native `OnDemand()` 链覆盖 insert/update/delete/delete-all、参数绑定、`InitialNamedWindowField`、Named Window consumer delta，以及 `WithContext` 下 hash/category selector 的分区内 delete/update/delete-all。Named Window 保存稳定的 partition properties，避免更新后的事件字段改变 selector 所属分区。另修正 ungrouped row-for-event 聚合，使每个源事件都返回共享 aggregate 值。Java `TestSuiteInfraNWTable` 26/26 通过。
 
-本轮新增 `faf_multirow_test.go` 对照 Java `InfraNWTableFAFInsertMultirow`：`OnDemand().InsertRows(InsertValues(...))` 支持 Named Window/Table positional multi-row insert、Named Window 子查询值、1000 行上限、列数诊断和 unique/primary-key 冲突整批回滚；`NamedWindowUniqueIndex` 提供严格唯一约束并区别于 `Unique` retention 的替换语义。Go immutable fluent Plan 对应 Java SODA/model 路径，核心验证不需要启动 MySQL Docker；FAF prepared 参数的完整 positional/named 矩阵、index plan、representation、resolve/historical source、invalid/transaction/concurrency 仍未完成。
+本轮新增 `faf_multirow_test.go` 对照 Java `InfraNWTableFAFInsertMultirow`：`OnDemand().InsertRows(InsertValues(...))` 支持 Named Window/Table positional multi-row insert、Named Window 子查询值、1000 行上限、列数诊断和 unique/primary-key 冲突整批回滚；`NamedWindowUniqueIndex` 提供严格唯一约束并区别于 `Unique` retention 的替换语义。Go immutable fluent Plan 对应 Java SODA/model 路径，核心验证不需要启动 MySQL Docker。
+
+本轮新增 `faf_substitution_params_test.go` 对照 Java `InfraNWTableFAFSubstitutionParams` 的 7 个 execution：增加 1-based typed `ParameterAt[T]`/`PositionalParameter[T]` 与 `ExecuteFireAndForgetWithPositionalParameters`、`PreparedQuery.ExecuteWithPositionalParameters`，覆盖 Named Window/Table 的单值、双值、slice-IN、具名参数、重复参数、缺参、额外参数、混用、跳号和类型错误。Go API 保留具名 `Parameter[T]` 的 immutable map 绑定；EPL 保留关键字解析和精确 Java 诊断不属于 Go fluent 契约。该切片不需要 MySQL Docker；FAF 跨 join/subquery/context 的参数组合、index plan、representation、resolve/historical source、事务/并发和完整 trace 仍未完成。
 
 本轮继续补齐 `EventJsonTypingCoreParse/CoreWrite`：`json_core_parity_test.go` 直接覆盖基本 scalar、Character 多字符取首 code point、wrapper/primitive 一维与二维数组、enum、`big.Int`/`big.Rat`、`Object`/`Object[]`/`Map` 容器，以及嵌套 BigDecimal 对象和数组的解析/渲染矩阵；`RenderJSON` 对 Character 恢复单字符 JSON string。Core JSON 定向测试通过，Java `TestSuiteEventJson` 13/13 仍通过；递归 schema/metadata、完整 dynamic strict-lax、所有 nested/dynamic arbitrary-precision 格式规则和共享 Java/Go trace 仍保持 partial。本轮不需要 MySQL Docker。
 
@@ -46,4 +48,4 @@ go test -run '^TestSQL(Sink|HistoricalProvider)MySQLDocker$' -count=1
 
 Java 基线的静态回归候选清单在 `compat/static-manifest.json`，运行态 execution 清单在 `compat/java-execution-inventory.jsonl`，非 Regression 的源资产盘点在 `compat/source-test-manifest.json`，首批 capability/case 映射在 `compat/capability-manifest.json`；这些清单都不是全量 Go 映射完成或 Java/Go 行为差分通过的证明。
 
-当前 capability 对账进度为：Java inventory 的 4,136 个可执行 runtime 中，manifest 已规范化并关联 1,276 个唯一 runtime，约 30.85%；184 个 capability case 中 179 个标为 mapped、1 个 partial、4 个 approved-difference。30.85% 是“已建立 Java runtime 对账/处置证据”的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
+当前 capability 对账进度为：Java inventory 的 4,136 个可执行 runtime 中，manifest 已规范化并关联 1,283 个唯一 runtime，约 31.02%；185 个 capability case 中 180 个标为 mapped、1 个 partial、4 个 approved-difference。31.02% 是“已建立 Java runtime 对账/处置证据”的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。

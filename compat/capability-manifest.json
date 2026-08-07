@@ -132,10 +132,10 @@
       "level": "S",
       "summary": "Fluent Fire-and-Forget snapshots and target-side mutation for Named Windows and Tables",
       "javaRefs": ["InfraNWTableFAF", "InfraNWTableFAFSubstitutionParams", "InfraNWTableFAFIndex", "InfraNWTableFAFInsertMultirow", "InfraNWTableFAFResolve"],
-      "goRefs": ["faf.go", "stream.go", "plan.go", "runtime.go", "state.go", "faf_mutation_test.go", "faf_multirow_test.go", "infra_nwtable_faf_parity_test.go"],
+      "goRefs": ["faf.go", "stream.go", "plan.go", "runtime.go", "state.go", "faf_mutation_test.go", "faf_multirow_test.go", "faf_substitution_params_test.go", "infra_nwtable_faf_parity_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["context-partition selectors and partition-local mutation", "complete positional/named prepared-parameter and late-binding matrix", "index selection, composite/range/in-key planning and query-plan hooks", "all event representations and schema-conversion diagnostics", "FAF subquery, historical/method source and full invalid-rule matrix", "concurrent read/write snapshot and transaction semantics", "full Java execution trace parity"]
+      "remaining": ["context-partition selectors and partition-local mutation", "prepared-parameter combinations across joins/subqueries/contexts and late-binding trace parity", "index selection, composite/range/in-key planning and query-plan hooks", "all event representations and schema-conversion diagnostics", "FAF subquery, historical/method source and full invalid-rule matrix", "concurrent read/write snapshot and transaction semantics", "full Java execution trace parity"]
     },
     {
       "id": "expr.enum",
@@ -1157,7 +1157,18 @@
       "tags": ["correctness", "query", "fire-and-forget", "named-window", "table", "snapshot", "mutation", "aggregate", "join", "parameter", "multi-row", "rollback"],
       "status": "mapped",
       "evidence": ["java-maven-regression", "java-runtime-inventory", "go-unit"],
-      "difference": "Go uses FromNamedWindow/FromTable plus OnDemand().Insert/InsertRows/UpdateWhere/DeleteWhere/DeleteAll for typed one-shot rules, and covers the Java wildcard/filter/distinct/count/aggregate/IN/join/join-where slice for both target kinds, including row-for-event aggregate output and Table-versus-Named-Window mutation result contracts. Positional InsertValues rows are evaluated with engine-backed subqueries, capped at 1000 rows, committed as one Named Window delta or atomic Table batch, and restored on unique/primary-key failure; NamedWindowUniqueIndex separates strict duplicate rejection from Unique retention replacement. Context-scoped delete/update/delete-all now supports fluent WithContext, hash-bucket or descriptor-hash/category selector filtering, partition-local Table scans, context-bound Named Window state and the Java old-row/empty-table result contract. The remaining prepared positional/named parameter breadth, index-plan hooks, representation matrix, FAF subquery/resolve/historical sources beyond the mapped insert-value case, invalid diagnostics, concurrent transaction semantics, persistent Table row-to-context ownership and exact shared trace remain open. Java SODA is represented by the immutable fluent Plan rather than a text/model parser, and exact Java diagnostic text is not a compatibility contract."
+      "difference": "Go uses FromNamedWindow/FromTable plus OnDemand().Insert/InsertRows/UpdateWhere/DeleteWhere/DeleteAll for typed one-shot rules, and covers the Java wildcard/filter/distinct/count/aggregate/IN/join/join-where slice for both target kinds, including row-for-event aggregate output and Table-versus-Named-Window mutation result contracts. Positional InsertValues rows are evaluated with engine-backed subqueries, capped at 1000 rows, committed as one Named Window delta or atomic Table batch, and restored on unique/primary-key failure; NamedWindowUniqueIndex separates strict duplicate rejection from Unique retention replacement. Named and positional FAF substitution parameters now have separate typed fluent constructors, immutable one-shot and PreparedQuery binding APIs, repeated-value/type validation, contiguous 1-based position checks, and the Java missing/mixed/typed invalid matrix. Context-scoped delete/update/delete-all now supports fluent WithContext, hash-bucket or descriptor-hash/category selector filtering, partition-local Table scans, context-bound Named Window state and the Java old-row/empty-table result contract. Index-plan hooks, representation matrix, FAF subquery/resolve/historical sources beyond the mapped insert-value case, broader invalid diagnostics, concurrent transaction semantics, persistent Table row-to-context ownership and exact shared trace remain open. Java SODA is represented by the immutable fluent Plan rather than a text/model parser, and exact Java diagnostic text is not a compatibility contract."
+    },
+    {
+      "id": "case.query-fire-and-forget-substitution-params",
+      "javaRuntimeIds": ["java-runtime-84f052c24b6691c4c9ba", "java-runtime-839c641f3f76537dfc4f", "java-runtime-1631538ca06e4cb6a7af", "java-runtime-15505945766cf1e16463", "java-runtime-b207ffe847bca6059b98", "java-runtime-5ff95eb63b189816d771", "java-runtime-84c9760295357bac5cc7"],
+      "javaNames": ["InfraParameterizedQuery{namedWindow=true}", "InfraParameterizedQuery{namedWindow=false}", "InfraParameterizedQueryNamedParameter", "InfraParameterizedQueryInvalidUse", "InfraParameterizedQueryInvalidInsufficientValues", "InfraParameterizedQueryInvalidParametersUntyped", "InfraParameterizedQueryInvalidParametersTyped"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableFAFSubstitutionParams.java"],
+      "goTests": ["TestFAFSubstitutionParametersMatchesEsper", "TestFAFSubstitutionParametersRejectMixedAndInvalidBindings"],
+      "tags": ["correctness", "query", "fire-and-forget", "parameter", "prepared-query", "positional", "named", "invalidity", "named-window", "table"],
+      "status": "mapped",
+      "evidence": ["java-maven-regression", "java-runtime-inventory", "go-unit"],
+      "difference": "Go exposes a typed ParameterAt[T](position) constructor and immutable variadic positional execution methods alongside Parameter[T](name) and named ParameterValues. The plan rejects mixed named/positional forms, positional gaps and incompatible repeated declarations; execution validates missing, extra and typed values without reproducing EPL syntax or Java's exact reserved-keyword parser diagnostics."
     },
     {
       "id": "case.subquery-basic",
@@ -2701,6 +2712,7 @@
     {"capabilityId": "resultset.aggregate-access", "caseId": "case.aggregate-sorted-table-selector"},
     {"capabilityId": "resultset.aggregate-local-group", "caseId": "case.aggregate-local-group"},
     {"capabilityId": "query.fire-and-forget", "caseId": "case.query-fire-and-forget-nwtable"},
+    {"capabilityId": "query.fire-and-forget", "caseId": "case.query-fire-and-forget-substitution-params"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-basic"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-empty-quantifiers"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-context"},
