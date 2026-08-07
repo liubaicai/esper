@@ -39,6 +39,17 @@ type triggerMultipleInsertEvent struct {
 	In2 int    `esper:"in2"`
 }
 
+type triggerInfraFlowEvent struct {
+	TheString     string `esper:"theString"`
+	IntPrimitive  int    `esper:"intPrimitive"`
+	IntBoxed      int    `esper:"intBoxed"`
+	BoolPrimitive bool   `esper:"boolPrimitive"`
+}
+
+type triggerInfraFlowDelete struct {
+	ID string `esper:"id"`
+}
+
 func TestTableTriggerBuilderAndLifecycle(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
@@ -1381,6 +1392,326 @@ func TestTriggerMergeWildcardCopiesMatchingFields(t *testing.T) {
 			assertSnapshot(7)
 			send(11, "still-ignored-on-target")
 			assertSnapshot(11)
+		})
+	}
+}
+
+func TestTriggerInfraFlowLifecycleAndRedeploy(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		namedWindow bool
+	}{
+		{name: "table"},
+		{name: "named-window", namedWindow: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			env := NewEnvironment()
+			if _, err := RegisterStruct[triggerInfraFlowEvent](env, "TriggerInfraFlowEvent"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := RegisterStruct[triggerInfraFlowDelete](env, "TriggerInfraFlowDelete"); err != nil {
+				t.Fatal(err)
+			}
+			const targetName = "trigger-infra-flow"
+			if testCase.namedWindow {
+				schema, err := RegisterMap(env, "TriggerInfraFlowTarget", []FieldSpec{
+					FieldDef("theString", reflect.TypeOf("")),
+					FieldDef("intPrimitive", reflect.TypeOf(int(0))),
+					FieldDef("intBoxed", reflect.TypeOf(int(0))),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, targetName, schema, NamedWindowRetention(Unique(Field[any, string]("theString")))); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := CreateTable(env, targetName, []TableColumn{
+				PrimaryKeyColumn[string]("theString"),
+				TableColumnOf[int]("intPrimitive"),
+				TableColumnOf[int]("intBoxed"),
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			source := From[triggerInfraFlowEvent](env, "TriggerInfraFlowEvent")
+			theString := Field[triggerInfraFlowEvent, string]("theString")
+			intPrimitive := Field[triggerInfraFlowEvent, int]("intPrimitive")
+			intBoxed := Field[triggerInfraFlowEvent, int]("intBoxed")
+			boolPrimitive := Field[triggerInfraFlowEvent, bool]("boolPrimitive")
+			trueSource := source.Filter(Equal[bool](boolPrimitive, Literal(true)))
+			falseSource := source.Filter(Equal[bool](boolPrimitive, Literal(false)))
+
+			var insertPlan Plan
+			var deletePlan Plan
+			var mergePlan Plan
+			var err error
+			if testCase.namedWindow {
+				insertPlan, err = env.Build(OnEvent(trueSource).InsertIntoNamedWindow(targetName,
+					SetColumn("theString", theString),
+					SetColumn("intPrimitive", intPrimitive),
+					SetColumn("intBoxed", intBoxed),
+				).Query(StatementName("infra-flow-insert")))
+				if err != nil {
+					t.Fatal(err)
+				}
+				deletePlan, err = env.Build(OnEvent(From[triggerInfraFlowDelete](env, "TriggerInfraFlowDelete")).DeleteAllFromNamedWindow(targetName).Query(StatementName("infra-flow-delete")))
+				if err != nil {
+					t.Fatal(err)
+				}
+				targetIntBoxed := NamedWindowField[int]("intBoxed")
+				match := Equal[string](NamedWindowField[string]("theString"), theString)
+				mergePlan, err = env.Build(OnEvent(falseSource).MergeIntoNamedWindowWhen(targetName, match,
+					WhenMatchedDelete(Less[int](intPrimitive, Literal(0))),
+					WhenMatched(Equal[int](intPrimitive, Literal(0)),
+						SetColumn("intPrimitive", Literal(0)),
+						SetColumn("intBoxed", Literal(0)),
+					),
+					WhenMatchedAny(
+						SetColumn("intPrimitive", intPrimitive),
+						SetColumn("intBoxed", Add[int](intBoxed, targetIntBoxed)),
+					),
+					WhenNotMatchedAny(
+						SetColumn("theString", theString),
+						SetColumn("intPrimitive", intPrimitive),
+						SetColumn("intBoxed", intBoxed),
+					),
+				).Query(StatementName("infra-flow-merge")))
+			} else {
+				insertPlan, err = env.Build(OnEvent(trueSource).InsertIntoTable(targetName,
+					SetColumn("theString", theString),
+					SetColumn("intPrimitive", intPrimitive),
+					SetColumn("intBoxed", intBoxed),
+				).Query(StatementName("infra-flow-insert")))
+				if err != nil {
+					t.Fatal(err)
+				}
+				deletePlan, err = env.Build(OnEvent(From[triggerInfraFlowDelete](env, "TriggerInfraFlowDelete")).DeleteAllFromTable(targetName).Query(StatementName("infra-flow-delete")))
+				if err != nil {
+					t.Fatal(err)
+				}
+				targetIntBoxed := TableField[int]("intBoxed")
+				mergePlan, err = env.Build(OnEvent(falseSource).MergeIntoTableWhen(targetName, []Expr{theString},
+					WhenMatchedDelete(Less[int](intPrimitive, Literal(0))),
+					WhenMatched(Equal[int](intPrimitive, Literal(0)),
+						SetColumn("intPrimitive", Literal(0)),
+						SetColumn("intBoxed", Literal(0)),
+					),
+					WhenMatchedAny(
+						SetColumn("intPrimitive", intPrimitive),
+						SetColumn("intBoxed", Add[int](intBoxed, targetIntBoxed)),
+					),
+					WhenNotMatchedAny(
+						SetColumn("theString", theString),
+						SetColumn("intPrimitive", intPrimitive),
+						SetColumn("intBoxed", intBoxed),
+					),
+				).Query(StatementName("infra-flow-merge")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			wildcardPlan, err := func() (Plan, error) {
+				if testCase.namedWindow {
+					match := Equal[string](NamedWindowField[string]("theString"), theString)
+					return env.Build(OnEvent(falseSource).MergeIntoNamedWindowWhen(targetName, match,
+						WhenNotMatchedAny(CopyMatchingFields()),
+					).Query(StatementName("infra-flow-merge-wildcard")))
+				}
+				return env.Build(OnEvent(falseSource).MergeIntoTableWhen(targetName, []Expr{theString},
+					WhenNotMatchedAny(CopyMatchingFields()),
+				).Query(StatementName("infra-flow-merge-wildcard")))
+			}()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			engine := NewEngine(env)
+			insertDeployment, err := engine.Deploy(context.Background(), insertPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer insertDeployment.Undeploy(context.Background())
+			deleteDeployment, err := engine.Deploy(context.Background(), deletePlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer deleteDeployment.Undeploy(context.Background())
+
+			var mergeDeployment *Deployment
+			var mergeBatches []ResultBatch
+			deployMerge := func(plan Plan) {
+				t.Helper()
+				var deployErr error
+				mergeDeployment, deployErr = engine.Deploy(context.Background(), plan)
+				if deployErr != nil {
+					t.Fatal(deployErr)
+				}
+				if _, subscribeErr := mergeDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+					mergeBatches = append(mergeBatches, batch)
+					return nil
+				}); subscribeErr != nil {
+					t.Fatal(subscribeErr)
+				}
+			}
+			undeployMerge := func() {
+				t.Helper()
+				if mergeDeployment != nil {
+					if err := mergeDeployment.Undeploy(context.Background()); err != nil {
+						t.Fatal(err)
+					}
+					mergeDeployment = nil
+				}
+			}
+
+			type targetRow struct {
+				intPrimitive int
+				intBoxed     int
+			}
+			readTarget := func() map[string]targetRow {
+				t.Helper()
+				result := make(map[string]targetRow)
+				if testCase.namedWindow {
+					window, ok := engine.NamedWindow(targetName)
+					if !ok {
+						t.Fatal("infra-flow named window is missing")
+					}
+					events, snapshotErr := window.Snapshot(context.Background())
+					if snapshotErr != nil {
+						t.Fatal(snapshotErr)
+					}
+					for _, event := range events {
+						result[event.Get("theString").Any().(string)] = targetRow{
+							intPrimitive: event.Get("intPrimitive").Any().(int),
+							intBoxed:     event.Get("intBoxed").Any().(int),
+						}
+					}
+					return result
+				}
+				table, ok := engine.Table(targetName)
+				if !ok {
+					t.Fatal("infra-flow table is missing")
+				}
+				rows, snapshotErr := table.Snapshot(context.Background())
+				if snapshotErr != nil {
+					t.Fatal(snapshotErr)
+				}
+				for _, row := range rows {
+					result[row.Get("theString").Any().(string)] = targetRow{
+						intPrimitive: row.Get("intPrimitive").Any().(int),
+						intBoxed:     row.Get("intBoxed").Any().(int),
+					}
+				}
+				return result
+			}
+			assertState := func(want map[string]targetRow) {
+				t.Helper()
+				if got := readTarget(); !reflect.DeepEqual(got, want) {
+					t.Fatalf("infra-flow target = %#v, want %#v", got, want)
+				}
+			}
+			assertLastMerge := func(oldKey string, oldRow targetRow, newKey string, newRow targetRow) {
+				t.Helper()
+				if len(mergeBatches) == 0 {
+					t.Fatal("infra-flow merge emitted no batch")
+				}
+				batch := mergeBatches[len(mergeBatches)-1]
+				if len(batch.Old) != 1 || len(batch.New) != 1 {
+					t.Fatalf("infra-flow merge old/new = %#v", batch)
+				}
+				oldEvent, oldOK := batch.Old[0].Event()
+				newEvent, newOK := batch.New[0].Event()
+				if !oldOK || !newOK || oldEvent.Get("theString").Any() != oldKey || oldEvent.Get("intPrimitive").Any() != oldRow.intPrimitive || oldEvent.Get("intBoxed").Any() != oldRow.intBoxed || newEvent.Get("theString").Any() != newKey || newEvent.Get("intPrimitive").Any() != newRow.intPrimitive || newEvent.Get("intBoxed").Any() != newRow.intBoxed {
+					t.Fatalf("infra-flow merge old/new = %#v, want %s/%#v -> %s/%#v", batch, oldKey, oldRow, newKey, newRow)
+				}
+			}
+			assertLastMergeSingle := func(oldKey string, oldRow targetRow, wantNew bool) {
+				t.Helper()
+				if len(mergeBatches) == 0 {
+					t.Fatal("infra-flow merge emitted no batch")
+				}
+				batch := mergeBatches[len(mergeBatches)-1]
+				if len(batch.Old) != 1 || (wantNew && len(batch.New) != 1) || (!wantNew && len(batch.New) != 0) {
+					t.Fatalf("infra-flow merge single batch = %#v", batch)
+				}
+				oldEvent, oldOK := batch.Old[0].Event()
+				if !oldOK || oldEvent.Get("theString").Any() != oldKey || oldEvent.Get("intPrimitive").Any() != oldRow.intPrimitive || oldEvent.Get("intBoxed").Any() != oldRow.intBoxed {
+					t.Fatalf("infra-flow merge old = %#v, want %s/%#v", batch.Old[0], oldKey, oldRow)
+				}
+			}
+
+			runFlow := func() {
+				t.Helper()
+				mergeBatches = nil
+				send := func(event triggerInfraFlowEvent) {
+					t.Helper()
+					if err := engine.SendEvent(context.Background(), event); err != nil {
+						t.Fatal(err)
+					}
+				}
+				send(triggerInfraFlowEvent{TheString: "E1", IntPrimitive: 10, IntBoxed: 200, BoolPrimitive: true})
+				assertState(map[string]targetRow{"E1": {intPrimitive: 10, intBoxed: 200}})
+				if len(mergeBatches) != 0 {
+					t.Fatalf("infra-flow insert reached merge = %#v", mergeBatches)
+				}
+
+				send(triggerInfraFlowEvent{TheString: "E1", IntPrimitive: 11, IntBoxed: 201})
+				assertLastMerge("E1", targetRow{intPrimitive: 10, intBoxed: 200}, "E1", targetRow{intPrimitive: 11, intBoxed: 401})
+				assertState(map[string]targetRow{"E1": {intPrimitive: 11, intBoxed: 401}})
+
+				send(triggerInfraFlowEvent{TheString: "E2", IntPrimitive: 13, IntBoxed: 300})
+				if len(mergeBatches) != 2 || len(mergeBatches[1].Old) != 0 || len(mergeBatches[1].New) != 1 {
+					t.Fatalf("infra-flow E2 insert batch = %#v", mergeBatches)
+				}
+				assertState(map[string]targetRow{"E1": {intPrimitive: 11, intBoxed: 401}, "E2": {intPrimitive: 13, intBoxed: 300}})
+
+				send(triggerInfraFlowEvent{TheString: "E2", IntPrimitive: 14, IntBoxed: 301})
+				assertLastMerge("E2", targetRow{intPrimitive: 13, intBoxed: 300}, "E2", targetRow{intPrimitive: 14, intBoxed: 601})
+				send(triggerInfraFlowEvent{TheString: "E2", IntPrimitive: 15, IntBoxed: 302})
+				assertLastMerge("E2", targetRow{intPrimitive: 14, intBoxed: 601}, "E2", targetRow{intPrimitive: 15, intBoxed: 903})
+
+				send(triggerInfraFlowEvent{TheString: "E3", IntPrimitive: 40, IntBoxed: 400})
+				if len(mergeBatches) != 5 || len(mergeBatches[4].Old) != 0 || len(mergeBatches[4].New) != 1 {
+					t.Fatalf("infra-flow E3 insert batch = %#v", mergeBatches)
+				}
+				assertState(map[string]targetRow{"E1": {intPrimitive: 11, intBoxed: 401}, "E2": {intPrimitive: 15, intBoxed: 903}, "E3": {intPrimitive: 40, intBoxed: 400}})
+
+				send(triggerInfraFlowEvent{TheString: "E3", IntPrimitive: 0, IntBoxed: 1000})
+				assertLastMerge("E3", targetRow{intPrimitive: 40, intBoxed: 400}, "E3", targetRow{intPrimitive: 0, intBoxed: 0})
+
+				send(triggerInfraFlowEvent{TheString: "E2", IntPrimitive: -1, IntBoxed: 1000})
+				assertLastMergeSingle("E2", targetRow{intPrimitive: 15, intBoxed: 903}, false)
+				if len(mergeBatches) != 7 {
+					t.Fatalf("infra-flow delete batch count = %#v", mergeBatches)
+				}
+				send(triggerInfraFlowEvent{TheString: "E1", IntPrimitive: -1, IntBoxed: 1000})
+				assertLastMergeSingle("E1", targetRow{intPrimitive: 11, intBoxed: 401}, false)
+				assertState(map[string]targetRow{"E3": {intPrimitive: 0, intBoxed: 0}})
+			}
+
+			deployMerge(mergePlan)
+			runFlow()
+			undeployMerge()
+			if err := engine.SendEvent(context.Background(), triggerInfraFlowDelete{ID: "A1"}); err != nil {
+				t.Fatal(err)
+			}
+			assertState(map[string]targetRow{})
+			deployMerge(mergePlan)
+			runFlow()
+			undeployMerge()
+			if err := engine.SendEvent(context.Background(), triggerInfraFlowDelete{ID: "A2"}); err != nil {
+				t.Fatal(err)
+			}
+			assertState(map[string]targetRow{})
+			wildcardDeployment, err := engine.Deploy(context.Background(), wildcardPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer wildcardDeployment.Undeploy(context.Background())
+			if err := engine.SendEvent(context.Background(), triggerInfraFlowEvent{TheString: "E99", IntPrimitive: 2, IntBoxed: 3}); err != nil {
+				t.Fatal(err)
+			}
+			assertState(map[string]targetRow{"E99": {intPrimitive: 2, intBoxed: 3}})
 		})
 	}
 }
