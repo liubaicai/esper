@@ -571,6 +571,16 @@ func TestSubqueryGroupByAggregateAndHaving(t *testing.T) {
 	if _, err := env.Build(invalid); err == nil {
 		t.Fatal("grouped subquery aggregate key must be rejected")
 	}
+	invalid = Select(From[runtimeTestTrade](env, "Trade"),
+		Alias("bad", SubqueryGroupBy[float64, float64](
+			prices,
+			Prev[float64](0, price),
+			price,
+		)),
+	).Query(StatementName("invalid-subquery-previous-key"))
+	if _, err := env.Build(invalid); err == nil {
+		t.Fatal("grouped subquery previous/prior key must be rejected")
+	}
 }
 
 func TestSubqueryRowsAndGroupedRows(t *testing.T) {

@@ -296,11 +296,11 @@
       "domain": "infra",
       "level": "S",
       "summary": "Table and Named Window on-trigger mutation, merge branches, consumer dispatch and new/old streams",
-      "javaRefs": ["InfraTableOnUpdate", "InfraNamedWindowOnMerge", "InfraNWTableOnDelete"],
+      "javaRefs": ["InfraTableOnUpdate", "InfraNamedWindowOnMerge", "InfraNWTableOnDelete", "InfraNWTableOnMerge"],
       "goRefs": ["trigger.go", "trigger_test.go"],
       "phase": 1,
       "status": "partial",
-      "remaining": ["full index/transaction semantics", "wildcard/multi-action projection and nested/array assignment matrix", "all Java on-trigger cases", "persistence"]
+      "remaining": ["full index/transaction semantics", "wildcard/multi-action projection and nested assignment matrix", "all Java on-trigger cases", "persistence"]
     },
     {
       "id": "context.partition",
@@ -534,6 +534,17 @@
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "go-unit"],
       "difference": "Go exposes WhenNotMatchedAny, WhenMatchedAny and WhenMatchedDeleteAny as typed fluent branches. The test covers insert-only no-op on an existing key, matched update/delete, and Table/Named Window new/old batches. Java's equivalent/SODA/column-name variants are represented by the same behavioral slice; full wildcard event materialization, representation-specific metadata and shared Java/Go trace remain open."
+    },
+    {
+      "id": "case.trigger-array-assignment",
+      "javaRuntimeIds": ["java-runtime-b0318353bbb7db697423", "java-runtime-5f3c511e9e701f2720e1", "java-runtime-e52e9c3cfbf7b4923300"],
+      "javaNames": ["InfraSetArrayElementWithIndex", "InfraSetArrayElementWithIndexInvalid"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerArrayAssignmentsPreserveOrderedWorkingAndInitialValues", "TestTriggerArrayAssignmentsRejectInvalidBuildersAndRuntimeBounds"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "array", "indexed-assignment", "initial-value", "invalid"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go exposes SetArrayElement with analyzable index and value expressions, applies ordered assignments against a working target row, and exposes InitialTableField/InitialNamedWindowField for the pre-assignment snapshot. Table and Named Window tests cover direct and dynamic indexes, repeated ordered assignments, null arrays, type/index/schema validation and runtime bounds. Go intentionally keeps structured errors and fluent builders instead of Java EPL/SODA text diagnostics; mapped coverage does not imply the remaining nested/mapped-property, representation, transaction or persistence matrix is complete."
     },
     {
       "id": "case.trigger-merge-no-where",
@@ -2165,6 +2176,7 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-target-row"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-single-sided"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-no-where"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-array-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-variable"},

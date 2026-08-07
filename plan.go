@@ -2003,6 +2003,9 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 		if expressionContainsKind(definition.groupBy.node(), "outer-field") {
 			return NewError(ErrorInvalidRule, "subquery group-by key cannot reference the outer event")
 		}
+		if expressionContainsPreviousAccess(definition.groupBy.node()) {
+			return NewError(ErrorInvalidRule, "subquery group-by key cannot use previous or prior access")
+		}
 		if definition.groupedRowProjection && len(definition.columns) > 0 {
 			groupKeyDescription := definition.groupBy.Description()
 			for _, selection := range definition.columns {
@@ -2029,6 +2032,49 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 		}
 	}
 	return nil
+}
+
+// expressionContainsPreviousAccess identifies the view-resource navigation
+// family (prev, prior and their window/count/tail/dynamic variants). Esper
+// does not allow these expressions as grouped-subquery keys because the key
+// would depend on per-row view state rather than the subquery source alone.
+func expressionContainsPreviousAccess(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if strings.HasPrefix(node.kind, "prev") || strings.HasPrefix(node.kind, "prior") {
+		return true
+	}
+	for _, child := range node.children {
+		if expressionContainsPreviousAccess(child) {
+			return true
+		}
+	}
+	if node.subquery != nil {
+		if node.subquery.predicate != nil && expressionContainsPreviousAccess(node.subquery.predicate.node()) {
+			return true
+		}
+		if node.subquery.projection != nil && expressionContainsPreviousAccess(node.subquery.projection.node()) {
+			return true
+		}
+		for _, selection := range node.subquery.columns {
+			if selection.Expr != nil && expressionContainsPreviousAccess(selection.Expr.node()) {
+				return true
+			}
+		}
+		if node.subquery.groupBy != nil && expressionContainsPreviousAccess(node.subquery.groupBy.node()) {
+			return true
+		}
+		if node.subquery.having != nil && expressionContainsPreviousAccess(node.subquery.having.node()) {
+			return true
+		}
+		for _, order := range node.subquery.orderBy {
+			if order.Expression != nil && expressionContainsPreviousAccess(order.Expression.node()) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func validateSubqueryComparison(node *exprNode) error {

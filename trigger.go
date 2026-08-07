@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -31,11 +32,23 @@ const (
 // column. It is the Go builder equivalent of an on-trigger column assignment.
 type TableAssignment struct {
 	Column string
-	Expr   Expr
+	// Index is non-nil for an indexed assignment such as thearray[index].
+	// The index is evaluated against the same working target row as the value
+	// expression, so ordered assignments can feed later indexes.
+	Index Expr
+	Expr  Expr
 }
 
 func SetColumn(column string, expression Expr) TableAssignment {
 	return TableAssignment{Column: strings.TrimSpace(column), Expr: expression}
+}
+
+// SetArrayElement updates one element of a slice/array-valued target column.
+// It is the Go-native fluent equivalent of an on-trigger assignment such as
+// target.items[index] = value. The index and value remain analyzable
+// expressions instead of being embedded in a string rule.
+func SetArrayElement(column string, index, expression Expr) TableAssignment {
+	return TableAssignment{Column: strings.TrimSpace(column), Index: index, Expr: expression}
 }
 
 // VariableAssignmentExpr maps an incoming event expression to one registered
@@ -471,7 +484,11 @@ func describeTableAssignments(assignments []TableAssignment) string {
 		if assignment.Expr != nil {
 			expression = assignment.Expr.Description()
 		}
-		parts = append(parts, assignment.Column+"="+expression)
+		column := assignment.Column
+		if assignment.Index != nil {
+			column += "[" + assignment.Index.Description() + "]"
+		}
+		parts = append(parts, column+"="+expression)
 	}
 	return strings.Join(parts, ",")
 }
@@ -550,20 +567,9 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 	if definition.action != triggerDeleteTable && definition.action != triggerDeleteAllTable && definition.action != triggerMergeTable && len(definition.assignments) == 0 {
 		return NewError(ErrorInvalidRule, "table trigger requires at least one assignment")
 	}
-	seen := make(map[string]struct{}, len(definition.assignments))
 	for index, assignment := range definition.assignments {
-		if assignment.Column == "" || assignment.Expr == nil {
-			return NewError(ErrorInvalidRule, fmt.Sprintf("table trigger assignment %d is invalid", index))
-		}
-		if _, exists := seen[assignment.Column]; exists {
-			return NewError(ErrorInvalidRule, fmt.Sprintf("table trigger duplicates column %q", assignment.Column))
-		}
-		seen[assignment.Column] = struct{}{}
-		if _, exists := table.schema.Field(assignment.Column); !exists {
-			return NewError(ErrorUnknownName, fmt.Sprintf("table trigger references unknown column %q", assignment.Column))
-		}
-		if err := e.validateTriggerTargetExpression(definition.input, table.schema, assignment.Expr, "table-field"); err != nil {
-			return fmt.Errorf("assignment %q: %w", assignment.Column, err)
+		if err := validateTriggerAssignment(e, definition.input, table.schema, assignment, "table-field"); err != nil {
+			return fmt.Errorf("table trigger assignment %d: %w", index, err)
 		}
 	}
 	if definition.action == triggerUpdateTable || definition.action == triggerDeleteTable {
@@ -625,6 +631,9 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 				for _, assignment := range clause.Assignments {
 					targetFields = nil
 					assignment.Expr.node().referencedTargetFields("table-field", &targetFields)
+					if assignment.Index != nil {
+						assignment.Index.node().referencedTargetFields("table-field", &targetFields)
+					}
 					if len(targetFields) > 0 {
 						return fmt.Errorf("table merge clause %d not-matched assignment cannot reference table fields", index)
 					}
@@ -695,27 +704,19 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 			if err := e.validateTriggerTargetExpression(definition.input, targetSchema, clause.Condition, "named-window-field"); err != nil {
 				return fmt.Errorf("named-window merge clause %d condition: %w", index, err)
 			}
-			seen := make(map[string]struct{}, len(clause.Assignments))
 			for assignmentIndex, assignment := range clause.Assignments {
-				if assignment.Column == "" || assignment.Expr == nil {
-					return fmt.Errorf("named-window merge clause %d assignment %d is invalid", index, assignmentIndex)
-				}
-				if _, exists := seen[assignment.Column]; exists {
-					return fmt.Errorf("named-window merge clause %d duplicates column %q", index, assignment.Column)
-				}
-				seen[assignment.Column] = struct{}{}
-				if _, exists := targetSchema.Field(assignment.Column); !exists {
-					return NewError(ErrorUnknownName, fmt.Sprintf("named-window merge references unknown field %q", assignment.Column))
-				}
 				if !clause.Matched {
 					var targetFields []string
 					assignment.Expr.node().referencedTargetFields("named-window-field", &targetFields)
+					if assignment.Index != nil {
+						assignment.Index.node().referencedTargetFields("named-window-field", &targetFields)
+					}
 					if len(targetFields) > 0 {
 						return fmt.Errorf("named-window merge clause %d not-matched assignment cannot reference named-window fields", index)
 					}
 				}
-				if err := e.validateTriggerTargetExpression(definition.input, targetSchema, assignment.Expr, "named-window-field"); err != nil {
-					return fmt.Errorf("named-window merge assignment %q: %w", assignment.Column, err)
+				if err := validateTriggerAssignment(e, definition.input, targetSchema, assignment, "named-window-field"); err != nil {
+					return fmt.Errorf("named-window merge clause %d assignment %d: %w", index, assignmentIndex, err)
 				}
 			}
 		}
@@ -747,14 +748,8 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 	}
 	if definition.action == triggerDeleteAllTable || definition.action == triggerDeleteTable || definition.action == triggerSelectTable || definition.action == triggerUpdateTable || definition.action == triggerInsertTable {
 		for index, assignment := range definition.assignments {
-			if assignment.Column == "" || assignment.Expr == nil {
-				return fmt.Errorf("named-window assignment %d is invalid", index)
-			}
-			if _, exists := targetSchema.Field(assignment.Column); !exists {
-				return NewError(ErrorUnknownName, fmt.Sprintf("named-window trigger references unknown field %q", assignment.Column))
-			}
-			if err := e.validateTriggerTargetExpression(definition.input, targetSchema, assignment.Expr, "named-window-field"); err != nil {
-				return fmt.Errorf("named-window assignment %q: %w", assignment.Column, err)
+			if err := validateTriggerAssignment(e, definition.input, targetSchema, assignment, "named-window-field"); err != nil {
+				return fmt.Errorf("named-window assignment %d: %w", index, err)
 			}
 		}
 	}
@@ -763,7 +758,6 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 	}
 	return nil
 }
-
 func (e *Environment) validateVariableTriggerAssignments(definition *triggerDefinition) error {
 	if len(definition.variableAssignments) == 0 {
 		return NewError(ErrorInvalidRule, "variable trigger requires at least one assignment")
@@ -1150,7 +1144,10 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 	schema := target.Definition().schema
 	switch definition.action {
 	case triggerInsertTable:
-		values := evaluateTriggerAssignments(definition.assignments, EvalContext{Event: event, Now: now, Variables: variables})
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, definition.assignments, EvalContext{Event: event, Now: now, Variables: variables}, now)
+		if assignmentErr != nil {
+			return tableMutationResult{}, assignmentErr
+		}
 		underlying, err := mergeSchemaUnderlying(schema, nil, values)
 		if err != nil {
 			return tableMutationResult{}, err
@@ -1183,7 +1180,10 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 				if clause.Delete {
 					return namedWindowMergeDecision{matched: true, action: namedWindowMergeDelete}, nil
 				}
-				values := evaluateTriggerAssignments(clause.Assignments, evaluation)
+				values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, candidate.Underlying(), clause.Assignments, evaluation, now)
+				if assignmentErr != nil {
+					return namedWindowMergeDecision{}, assignmentErr
+				}
 				underlying, mergeErr := mergeSchemaUnderlying(schema, candidate.Underlying(), values)
 				if mergeErr != nil {
 					return namedWindowMergeDecision{}, mergeErr
@@ -1201,7 +1201,10 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 				if !ok || !condition {
 					continue
 				}
-				values := evaluateTriggerAssignments(clause.Assignments, evaluation)
+				values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, clause.Assignments, evaluation, now)
+				if assignmentErr != nil {
+					return nil, false, assignmentErr
+				}
 				original := any(nil)
 				if len(clause.Assignments) == 0 {
 					original = event.Underlying()
@@ -1251,7 +1254,10 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 			return ok && matched
 		}, func(candidate Event) (any, error) {
 			evaluation := EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
-			values := evaluateTriggerAssignments(definition.assignments, evaluation)
+			values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, candidate.Underlying(), definition.assignments, evaluation, now)
+			if assignmentErr != nil {
+				return nil, assignmentErr
+			}
 			return mergeSchemaUnderlying(schema, candidate.Underlying(), values)
 		})
 		if err != nil {
@@ -1284,17 +1290,13 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 	if definition.where != nil {
 		return executeTableWhereAction(ctx, table, definition, event, now, variables)
 	}
-	values := make(map[string]any, len(definition.assignments))
-	for _, assignment := range definition.assignments {
-		value := assignment.Expr.eval(evaluation)
-		if value.IsMissing() {
-			continue
-		}
-		values[assignment.Column] = value.Any()
-	}
 	mutation := tableMutationResult{}
 	switch definition.action {
 	case triggerInsertTable:
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, nil, definition.assignments, evaluation, now)
+		if assignmentErr != nil {
+			return tableMutationResult{}, assignmentErr
+		}
 		row, err := table.Insert(ctx, values)
 		if err != nil {
 			return tableMutationResult{}, err
@@ -1302,6 +1304,10 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		mutation.newRows = append(mutation.newRows, row)
 		return mutation, nil
 	case triggerUpsertTable:
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, nil, definition.assignments, evaluation, now)
+		if assignmentErr != nil {
+			return tableMutationResult{}, assignmentErr
+		}
 		old, found, err := tableRowForValues(ctx, table, values)
 		if err != nil {
 			return tableMutationResult{}, err
@@ -1326,6 +1332,15 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		}
 		if !found {
 			return tableMutationResult{}, nil
+		}
+		targetEvent, eventErr := tableRowEvent(table, definition.table, old, now)
+		if eventErr != nil {
+			return tableMutationResult{}, eventErr
+		}
+		evaluation.Group = []Event{targetEvent}
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, targetEvent.Underlying(), definition.assignments, evaluation, now)
+		if assignmentErr != nil {
+			return tableMutationResult{}, assignmentErr
 		}
 		row, err := table.Update(ctx, keys, values)
 		if err != nil {
@@ -1363,11 +1378,13 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if err != nil {
 			return tableMutationResult{}, err
 		}
+		var targetUnderlying any
 		if found {
 			targetEvent, eventErr := tableRowEvent(table, definition.table, old, now)
 			if eventErr != nil {
 				return tableMutationResult{}, eventErr
 			}
+			targetUnderlying = targetEvent.Underlying()
 			evaluation.Group = []Event{targetEvent}
 		}
 		for _, clause := range definition.merge {
@@ -1388,7 +1405,11 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 				}
 				return mutation, nil
 			}
-			values := evaluateTriggerAssignments(clause.Assignments, evaluation)
+			var assignmentErr error
+			values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, targetUnderlying, clause.Assignments, evaluation, now)
+			if assignmentErr != nil {
+				return tableMutationResult{}, assignmentErr
+			}
 			if found {
 				row, updateErr := table.Update(ctx, keys, values)
 				if updateErr != nil {
@@ -1444,7 +1465,10 @@ func executeTableWhereAction(ctx context.Context, table *Table, definition *trig
 				mutation.oldRows = append(mutation.oldRows, deleted)
 			}
 		case triggerUpdateTable:
-			values := evaluateTriggerAssignments(definition.assignments, evaluation)
+			values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, targetEvent.Underlying(), definition.assignments, evaluation, now)
+			if assignmentErr != nil {
+				return tableMutationResult{}, assignmentErr
+			}
 			updated, updateErr := table.Update(ctx, keys, values)
 			if updateErr != nil {
 				return tableMutationResult{}, updateErr
@@ -1559,41 +1583,233 @@ func validateTriggerAssignments(e *Environment, input *streamNode, table TableDe
 }
 
 func validateTriggerAssignmentsWithTarget(e *Environment, input *streamNode, table TableDefinition, assignments []TableAssignment, targetKind string) error {
-	seen := make(map[string]struct{}, len(assignments))
-	for index, assignment := range assignments {
-		if assignment.Column == "" || assignment.Expr == nil {
-			return fmt.Errorf("assignment %d is invalid", index)
-		}
-		if _, exists := seen[assignment.Column]; exists {
-			return fmt.Errorf("assignment column %q is duplicated", assignment.Column)
-		}
-		seen[assignment.Column] = struct{}{}
-		if _, exists := table.schema.Field(assignment.Column); !exists {
-			return fmt.Errorf("assignment references unknown column %q", assignment.Column)
-		}
-		var err error
-		if targetKind == "" {
-			err = e.validateExprFields(input, assignment.Expr)
-		} else {
-			err = e.validateTriggerTargetExpression(input, table.schema, assignment.Expr, targetKind)
-		}
-		if err != nil {
+	for _, assignment := range assignments {
+		if err := validateTriggerAssignment(e, input, table.schema, assignment, targetKind); err != nil {
 			return fmt.Errorf("assignment %q: %w", assignment.Column, err)
 		}
 	}
 	return nil
 }
 
-func evaluateTriggerAssignments(assignments []TableAssignment, evaluation EvalContext) map[string]any {
+func validateTriggerAssignment(e *Environment, input *streamNode, targetSchema Schema, assignment TableAssignment, targetKind string) error {
+	if assignment.Column == "" || assignment.Expr == nil {
+		return NewError(ErrorInvalidRule, "assignment is invalid")
+	}
+	field, exists := targetSchema.Field(assignment.Column)
+	if !exists {
+		return NewError(ErrorUnknownName, fmt.Sprintf("assignment references unknown column %q", assignment.Column))
+	}
+	validateExpression := func(expression Expr) error {
+		if expression == nil {
+			return NewError(ErrorInvalidRule, "assignment expression is nil")
+		}
+		if targetKind == "" {
+			return e.validateExprFields(input, expression)
+		}
+		return e.validateTriggerTargetExpression(input, targetSchema, expression, targetKind)
+	}
+	if err := validateExpression(assignment.Expr); err != nil {
+		return err
+	}
+	if assignment.Index == nil {
+		return nil
+	}
+	if err := validateExpression(assignment.Index); err != nil {
+		return fmt.Errorf("array index: %w", err)
+	}
+	if !isTriggerIntegerType(assignment.Index.Type()) {
+		return fmt.Errorf("array index expression must return an integer, got %s", triggerTypeDescription(assignment.Index.Type()))
+	}
+	arrayType := field.Type
+	for arrayType != nil && arrayType.Kind() == reflect.Pointer {
+		arrayType = arrayType.Elem()
+	}
+	if arrayType == nil || (arrayType.Kind() != reflect.Array && arrayType.Kind() != reflect.Slice) {
+		return fmt.Errorf("target column %q is not an array or slice", assignment.Column)
+	}
+	elementType := arrayType.Elem()
+	actualType := assignment.Expr.Type()
+	if actualType != nil && actualType != typeOf[any]() && elementType != nil && elementType != typeOf[any]() &&
+		!elementType.AssignableTo(actualType) && !actualType.AssignableTo(elementType) && !numericTypes(elementType, actualType) {
+		return fmt.Errorf("array column %q element type %s is incompatible with expression type %s", assignment.Column, elementType, actualType)
+	}
+	return nil
+}
+
+func isTriggerIntegerType(typ reflect.Type) bool {
+	if typ == nil {
+		return false
+	}
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	switch typ.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	default:
+		return false
+	}
+}
+
+func triggerTypeDescription(typ reflect.Type) string {
+	if typ == nil {
+		return "<nil>"
+	}
+	return typ.String()
+}
+
+func evaluateTriggerAssignmentsForTarget(schema Schema, original any, assignments []TableAssignment, evaluation EvalContext, now time.Time) (map[string]any, error) {
 	values := make(map[string]any, len(assignments))
+	initialGroup := append([]Event(nil), evaluation.Group...)
 	for _, assignment := range assignments {
-		value := assignment.Expr.eval(evaluation)
+		step := evaluation
+		step.InitialGroup = append([]Event(nil), initialGroup...)
+		if len(initialGroup) > 0 {
+			workingUnderlying, err := mergeSchemaUnderlying(schema, original, values)
+			if err != nil {
+				return nil, err
+			}
+			workingEvent, err := newEvent(schema, workingUnderlying, now)
+			if err != nil {
+				return nil, err
+			}
+			step.Group = []Event{workingEvent}
+		} else {
+			step.Group = nil
+		}
+		if assignment.Index != nil {
+			indexValue := assignment.Index.eval(step)
+			if indexValue.IsMissing() || indexValue.IsNull() {
+				continue
+			}
+			value := assignment.Expr.eval(step)
+			if value.IsMissing() {
+				continue
+			}
+			if err := applyIndexedTriggerAssignment(schema, original, values, assignment.Column, indexValue, value); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		value := assignment.Expr.eval(step)
 		if value.IsMissing() {
 			continue
 		}
 		values[assignment.Column] = value.Any()
 	}
-	return values
+	return values, nil
+}
+
+func applyIndexedTriggerAssignment(schema Schema, original any, updates map[string]any, column string, indexValue, value Value) error {
+	workingUnderlying, err := mergeSchemaUnderlying(schema, original, updates)
+	if err != nil {
+		return err
+	}
+	current := schema.get(workingUnderlying, column)
+	if !current.IsPresent() || current.IsNull() {
+		// Esper ignores an indexed write when the target array itself is null.
+		return nil
+	}
+	index, ok := triggerIndexValue(indexValue.Any())
+	if !ok {
+		return fmt.Errorf("array index for %q is not an integer", column)
+	}
+	array := reflect.ValueOf(current.Any())
+	if !array.IsValid() {
+		return nil
+	}
+	for array.Kind() == reflect.Interface {
+		if array.IsNil() {
+			return nil
+		}
+		array = array.Elem()
+	}
+	pointer := array.Kind() == reflect.Pointer
+	if pointer {
+		if array.IsNil() {
+			return nil
+		}
+		array = array.Elem()
+	}
+	if array.Kind() != reflect.Array && array.Kind() != reflect.Slice {
+		return fmt.Errorf("target column %q is not an array or slice", column)
+	}
+	if index < 0 || index >= array.Len() {
+		return fmt.Errorf("array index %d out of range for target column %q (length %d)", index, column, array.Len())
+	}
+	var copyValue reflect.Value
+	if array.Kind() == reflect.Slice {
+		copyValue = reflect.MakeSlice(array.Type(), array.Len(), array.Len())
+		reflect.Copy(copyValue, array)
+	} else {
+		copyValue = reflect.New(array.Type()).Elem()
+		copyValue.Set(array)
+	}
+	element := copyValue.Index(index)
+	if value.IsNull() || value.Any() == nil {
+		if isTriggerNilableType(element.Type()) {
+			element.Set(reflect.Zero(element.Type()))
+		}
+	} else {
+		converted, convertErr := assignReflectValue(element.Type(), value.Any())
+		if convertErr != nil {
+			return fmt.Errorf("array column %q element %d: %w", column, index, convertErr)
+		}
+		element.Set(converted)
+	}
+	if pointer {
+		result := reflect.New(copyValue.Type())
+		result.Elem().Set(copyValue)
+		updates[column] = result.Interface()
+	} else {
+		updates[column] = copyValue.Interface()
+	}
+	return nil
+}
+
+func triggerIndexValue(value any) (int, bool) {
+	reflected := reflect.ValueOf(value)
+	if !reflected.IsValid() {
+		return 0, false
+	}
+	for reflected.Kind() == reflect.Interface || reflected.Kind() == reflect.Pointer {
+		if reflected.IsNil() {
+			return 0, false
+		}
+		reflected = reflected.Elem()
+	}
+	switch reflected.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		index := reflected.Int()
+		if int64(int(index)) != index {
+			return 0, false
+		}
+		return int(index), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		index := reflected.Uint()
+		if uint64(int(index)) != index || int(index) < 0 {
+			return 0, false
+		}
+		return int(index), true
+	default:
+		return 0, false
+	}
+}
+
+func isTriggerNilableType(typ reflect.Type) bool {
+	if typ == nil {
+		return false
+	}
+	for typ.Kind() == reflect.Pointer {
+		return true
+	}
+	switch typ.Kind() {
+	case reflect.Interface, reflect.Map, reflect.Slice, reflect.Func, reflect.Chan:
+		return true
+	default:
+		return false
+	}
 }
 
 func evaluateTriggerKeys(keys []Expr, evaluation EvalContext) ([]any, error) {

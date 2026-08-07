@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -1491,5 +1492,263 @@ func TestTablePredicateSelectProjectsMatchingSnapshotRows(t *testing.T) {
 	}
 	if len(rows) != 1 || rows[0].Get("stored-symbol").Any() != "B" || rows[0].Get("stored-price").Any() != float64(8) || rows[0].Get("trigger-symbol").Any() != "T" {
 		t.Fatalf("table predicate select rows = %#v", rows)
+	}
+}
+
+type triggerArrayAssignmentEvent struct {
+	Index int     `esper:"index"`
+	Value float64 `esper:"value"`
+}
+
+type triggerArrayAssignmentRow struct {
+	Count int       `esper:"cnt"`
+	Array []float64 `esper:"thearray"`
+}
+
+func TestTriggerArrayAssignmentsPreserveOrderedWorkingAndInitialValues(t *testing.T) {
+	setups := []struct {
+		name        string
+		namedWindow bool
+	}{
+		{name: "table", namedWindow: false},
+		{name: "named-window", namedWindow: true},
+	}
+	assignments := []struct {
+		name string
+		list func() []TableAssignment
+		want []float64
+		cnt  int
+	}{
+		{
+			name: "direct-indexes",
+			list: func() []TableAssignment {
+				return []TableAssignment{
+					SetArrayElement("thearray", TableField[int]("cnt"), Literal[float64](1)),
+					SetArrayElement("thearray", Field[triggerArrayAssignmentEvent, int]("index"), Literal[float64](2)),
+				}
+			},
+			want: []float64{1, 2, 0}, cnt: 0,
+		},
+		{
+			name: "working-count",
+			list: func() []TableAssignment {
+				return []TableAssignment{
+					SetColumn("cnt", Add[int](TableField[int]("cnt"), Literal[int](1))),
+					SetArrayElement("thearray", TableField[int]("cnt"), Literal[float64](1)),
+				}
+			},
+			want: []float64{0, 1, 0}, cnt: 1,
+		},
+		{
+			name: "working-count-twice",
+			list: func() []TableAssignment {
+				return []TableAssignment{
+					SetColumn("cnt", Add[int](TableField[int]("cnt"), Literal[int](1))),
+					SetArrayElement("thearray", TableField[int]("cnt"), Literal[float64](3)),
+					SetColumn("cnt", Add[int](TableField[int]("cnt"), Literal[int](1))),
+					SetArrayElement("thearray", TableField[int]("cnt"), Literal[float64](4)),
+				}
+			},
+			want: []float64{0, 3, 4}, cnt: 2,
+		},
+		{
+			name: "initial-count",
+			list: func() []TableAssignment {
+				return []TableAssignment{
+					SetColumn("cnt", Add[int](TableField[int]("cnt"), Literal[int](1))),
+					SetArrayElement("thearray", InitialTableField[int]("cnt"), Literal[float64](3)),
+				}
+			},
+			want: []float64{3, 0, 0}, cnt: 1,
+		},
+	}
+
+	for _, setup := range setups {
+		for _, assignment := range assignments {
+			t.Run(setup.name+"/"+assignment.name, func(t *testing.T) {
+				env := NewEnvironment()
+				_, err := RegisterStruct[triggerArrayAssignmentEvent](env, "TriggerArrayAssignmentEvent")
+				if err != nil {
+					t.Fatal(err)
+				}
+				var targetName string
+				if setup.namedWindow {
+					targetName = "trigger-array-window"
+					targetSchema, schemaErr := RegisterStruct[triggerArrayAssignmentRow](env, "TriggerArrayAssignmentRow")
+					if schemaErr != nil {
+						t.Fatal(schemaErr)
+					}
+					if _, err := CreateNamedWindow(env, targetName, targetSchema, NamedWindowRetention(KeepAll())); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					targetName = "trigger-array-table"
+					if _, err := CreateTable(env, targetName, []TableColumn{
+						TableColumnOf[int]("cnt"),
+						TableColumnOf[[]float64]("thearray"),
+					}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				source := From[triggerArrayAssignmentEvent](env, "TriggerArrayAssignmentEvent")
+				var createPlan, updatePlan Plan
+				if setup.namedWindow {
+					createPlan, err = env.Build(OnEvent(source).MergeIntoNamedWindowWhen(targetName, Literal(false),
+						WhenNotMatchedAny(
+							SetColumn("cnt", Literal[int](0)),
+							SetColumn("thearray", Literal[[]float64]([]float64{0, 0, 0})),
+						),
+					).Query(StatementName("trigger-array-create")))
+					if err != nil {
+						t.Fatal(err)
+					}
+					updatePlan, err = env.Build(OnEvent(source).UpdateNamedWindow(targetName, Literal(true), assignment.list()...).Query(StatementName("trigger-array-update")))
+				} else {
+					createPlan, err = env.Build(OnEvent(source).MergeIntoTableWhen(targetName, nil,
+						WhenNotMatchedAny(
+							SetColumn("cnt", Literal[int](0)),
+							SetColumn("thearray", Literal[[]float64]([]float64{0, 0, 0})),
+						),
+					).Query(StatementName("trigger-array-create")))
+					if err != nil {
+						t.Fatal(err)
+					}
+					updatePlan, err = env.Build(OnEvent(source).UpdateTableWhere(targetName, Literal(true), assignment.list()...).Query(StatementName("trigger-array-update")))
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				engine := NewEngine(env)
+				if _, err := engine.Deploy(context.Background(), createPlan); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := engine.Deploy(context.Background(), updatePlan); err != nil {
+					t.Fatal(err)
+				}
+				if err := engine.SendEvent(context.Background(), triggerArrayAssignmentEvent{Index: 1, Value: 2}); err != nil {
+					t.Fatal(err)
+				}
+				if setup.namedWindow {
+					window, ok := engine.NamedWindow(targetName)
+					if !ok {
+						t.Fatal("named window is missing")
+					}
+					// The public snapshot is sufficient for the mutation contract.
+					events, snapshotErr := window.Snapshot(context.Background())
+					if snapshotErr != nil {
+						t.Fatal(snapshotErr)
+					}
+					if len(events) != 1 {
+						t.Fatalf("named-window rows = %d", len(events))
+					}
+					if got := events[0].Get("cnt").Any(); got != assignment.cnt {
+						t.Fatalf("named-window cnt = %#v, want %d", got, assignment.cnt)
+					}
+					if got := events[0].Get("thearray").Any(); !reflect.DeepEqual(got, assignment.want) {
+						t.Fatalf("named-window array = %#v, want %#v", got, assignment.want)
+					}
+				} else {
+					table, ok := engine.Table(targetName)
+					if !ok {
+						t.Fatal("table is missing")
+					}
+					rows, snapshotErr := table.Snapshot(context.Background())
+					if snapshotErr != nil {
+						t.Fatal(snapshotErr)
+					}
+					if len(rows) != 1 {
+						t.Fatalf("table rows = %d", len(rows))
+					}
+					if got := rows[0].Get("cnt").Any(); got != assignment.cnt {
+						t.Fatalf("table cnt = %#v, want %d", got, assignment.cnt)
+					}
+					if got := rows[0].Get("thearray").Any(); !reflect.DeepEqual(got, assignment.want) {
+						t.Fatalf("table array = %#v, want %#v", got, assignment.want)
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestTriggerArrayAssignmentsRejectInvalidBuildersAndRuntimeBounds(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[triggerArrayAssignmentEvent](env, "TriggerArrayAssignmentEvent"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "trigger-array-invalid", []TableColumn{
+		PrimaryKeyColumn[string]("id"),
+		OptionalTableColumnOf[[]int]("numbers"),
+		TableColumnOf[int]("scalar"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	source := From[triggerArrayAssignmentEvent](env, "TriggerArrayAssignmentEvent")
+	invalid := []struct {
+		name string
+		set  TableAssignment
+	}{
+		{name: "unknown-column", set: SetArrayElement("missing", Literal[int](0), Literal[int](1))},
+		{name: "non-array-column", set: SetArrayElement("scalar", Literal[int](0), Literal[int](1))},
+		{name: "non-integer-index", set: SetArrayElement("numbers", Literal("bad"), Literal[int](1))},
+		{name: "incompatible-element", set: SetArrayElement("numbers", Literal[int](0), Literal[string]("bad"))},
+	}
+	for _, testCase := range invalid {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := env.Build(OnEvent(source).UpdateTableWhere("trigger-array-invalid", Literal(true), testCase.set).
+				Query(StatementName("invalid-array-" + testCase.name)))
+			if err == nil {
+				t.Fatalf("invalid array assignment %q was accepted", testCase.name)
+			}
+		})
+	}
+
+	engine := NewEngine(env)
+	table, ok := engine.Table("trigger-array-invalid")
+	if !ok {
+		t.Fatal("invalid-assignment table is missing")
+	}
+	if _, err := table.Insert(context.Background(), map[string]any{"id": "present", "numbers": []int{1, 2}, "scalar": 0}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := table.Insert(context.Background(), map[string]any{"id": "null", "numbers": nil, "scalar": 0}); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(OnEvent(source).UpdateTableWhere("trigger-array-invalid", Literal(true),
+		SetArrayElement("numbers", Literal[int](0), Literal[int](9)),
+	).Query(StatementName("array-bounds")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), triggerArrayAssignmentEvent{}); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := table.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || !reflect.DeepEqual(rows[0].Get("numbers").Any(), []int{9, 2}) || !rows[1].Get("numbers").IsNull() {
+		t.Fatalf("null-array indexed assignment rows = %#v", rows)
+	}
+	if err := engine.Undeploy(context.Background(), deployment.ID()); err != nil {
+		t.Fatal(err)
+	}
+
+	plan, err = env.Build(OnEvent(source).UpdateTableWhere("trigger-array-invalid", Literal(true),
+		SetArrayElement("numbers", Literal[int](2), Literal[int](9)),
+	).Query(StatementName("array-out-of-range")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err = engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), triggerArrayAssignmentEvent{}); err == nil {
+		t.Fatal("out-of-range array assignment did not fail")
 	}
 }

@@ -35,6 +35,7 @@ type exprNode struct {
 	typ                             reflect.Type
 	description                     string
 	fieldName                       string
+	initialTarget                   bool
 	tagName                         string
 	variableName                    string
 	parameterName                   string
@@ -233,9 +234,13 @@ type EvalContext struct {
 	// Engine is populated by deployed statement evaluation. It is intentionally
 	// absent from the public builder API; subquery expressions use it to obtain
 	// a consistent named-window/table snapshot.
-	Engine    *Engine
-	Group     []Event
-	EverGroup []Event
+	Engine *Engine
+	Group  []Event
+	// InitialGroup preserves the target row as it existed before an ordered
+	// on-trigger assignment list started. TableField follows the working row
+	// while InitialTableField deliberately remains bound to this snapshot.
+	InitialGroup []Event
+	EverGroup    []Event
 	// AllGroup and AllEverGroup are the statement-level current and retained
 	// event ranges used by local group-by aggregates. They are populated by
 	// aggregate statement evaluation; ordinary expressions fall back to Group
@@ -875,6 +880,14 @@ func TableField[V any](name string) Expression[V] {
 	return targetField[V]("table-field", "table."+name, name)
 }
 
+// InitialTableField reads the target table row before the current ordered
+// assignment list began. It is the Go-native counterpart of Esper's
+// initial.property access and is useful when a later assignment needs both
+// the working value and the original value.
+func InitialTableField[V any](name string) Expression[V] {
+	return initialTargetField[V]("table-field", "initial.table."+name, name)
+}
+
 // NamedWindowField is the equivalent target-row expression for a named-window
 // on-trigger operation. It is kept distinct from TableField so validation can
 // reject accidentally mixing state targets.
@@ -882,16 +895,34 @@ func NamedWindowField[V any](name string) Expression[V] {
 	return targetField[V]("named-window-field", "named-window."+name, name)
 }
 
+// InitialNamedWindowField is the named-window counterpart of
+// InitialTableField.
+func InitialNamedWindowField[V any](name string) Expression[V] {
+	return initialTargetField[V]("named-window-field", "initial.named-window."+name, name)
+}
+
 func targetField[V any](kind, description, name string) Expression[V] {
+	return targetFieldWithScope[V](kind, description, name, false)
+}
+
+func initialTargetField[V any](kind, description, name string) Expression[V] {
+	return targetFieldWithScope[V](kind, description, name, true)
+}
+
+func targetFieldWithScope[V any](kind, description, name string, initial bool) Expression[V] {
 	if strings.TrimSpace(name) == "" {
 		return makeExpr[V](kind, "<invalid-target-field>", nil, func(EvalContext) Value { return Missing() })
 	}
-	node := &exprNode{kind: kind, typ: typeOf[V](), description: description, fieldName: name}
+	node := &exprNode{kind: kind, typ: typeOf[V](), description: description, fieldName: name, initialTarget: initial}
 	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
-		if len(ctx.Group) == 0 {
+		group := ctx.Group
+		if node.initialTarget && len(ctx.InitialGroup) > 0 {
+			group = ctx.InitialGroup
+		}
+		if len(group) == 0 {
 			return Missing()
 		}
-		return ctx.Group[0].Get(name)
+		return group[0].Get(name)
 	}}
 }
 
