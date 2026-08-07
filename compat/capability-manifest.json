@@ -55,7 +55,7 @@
       "level": "S",
       "summary": "Schema-directed JSON conversion for nested structs, maps, arrays, enum-like strings, time and arbitrary-precision numeric values",
       "javaRefs": ["EventJsonTypingCoreParse", "EventJsonTypingCoreWrite", "EventJsonTypingClassParseWrite", "EventJsonParserLaxness"],
-      "goRefs": ["schema.go", "event_render.go", "schema_test.go"],
+      "goRefs": ["schema.go", "event_render.go", "schema_test.go", "json_underlying_test.go"],
       "phase": 1,
       "status": "partial",
       "remaining": ["provided-underlying class adapters and recursive schema registration", "strict/lax conversion matrix and undeclared-content policy parity", "BigDecimal/BigInteger exact JSON write policy across all nested/dynamic values", "shared Java/Go parse-write trace and JSON schema evolution"]
@@ -468,6 +468,17 @@
       "status": "mapped",
       "evidence": ["java-suite-event-json-13-13", "go-unit"],
       "difference": "Go now recursively converts declared JSON fields into typed slices/arrays/maps/structs, enum-like string aliases, time.Time, big.Int and big.Rat, preserves null pointers, accepts Java-style scalar string coercions, reports invalid scalar/array conversions, maps incompatible object/array shapes to Null, rejects trailing data, supports optional max depth and unknown-field rejection, materializes typed struct underlying values through SendJSON, and renders arbitrary-precision values as JSON numbers. Java's JSON suite has 13 JUnit entries in the selected run and additionally covers provided-underlying class/list adapters, full dynamic JSON value matrix, exact BigDecimal/BigInteger formatting, recursive schema inheritance and event sender integration; typed struct/list coverage is now mapped, while shared parse-write trace, provided-class serialization conventions and the remaining dynamic matrix remain open."
+    },
+    {
+      "id": "case.event-json-underlying",
+      "javaRuntimeIds": ["java-runtime-1818ac2301761eddd97d", "java-runtime-fbd34cb62b92c3cf59f0", "java-runtime-2f41e67a017701e5a62c", "java-runtime-f3ef98516b1e419b0e16", "java-runtime-2badae05685b3d562aa8", "java-runtime-d74ba3d2a59266487cb6"],
+      "javaNames": ["EventJsonUnderlyingMapDynamicZeroDeclared", "EventJsonUnderlyingMapDynamicOneDeclared", "EventJsonUnderlyingMapDynamicTwoDeclared", "EventJsonUnderlyingMapNonDynamicZeroDeclared", "EventJsonUnderlyingMapNonDynamicOneDeclared", "EventJsonUnderlyingMapNonDynamicTwoDeclared"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonUnderlying.java"],
+      "goTests": ["TestJSONUnderlyingMapRepresentationMatchesEsper"],
+      "tags": ["correctness", "event", "json", "underlying", "dynamic", "schema", "map"],
+      "status": "mapped",
+      "evidence": ["java-suite-event-json-13-13", "java-runtime-inventory", "go-unit"],
+      "difference": "Go matches Esper's JSON map underlying policy for dynamic and non-dynamic schemas: static schemas discard undeclared input fields, dynamic schemas retain them, declared-but-omitted fields are materialized as nil, and zero-declaration schemas produce either an empty or input-preserving map according to the dynamic flag. The Go test covers all six Java executions and listener-equivalent parse traces; EventBean metadata, shared Java/Go trace serialization and the remaining JSON provided-underlying/class/laxness matrix remain open."
     },
     {
       "id": "case.event-xml-tree",
@@ -2335,6 +2346,7 @@
     {"capabilityId": "event.contained", "caseId": "case.event-contained-named-window-nested"},
     {"capabilityId": "event.contained", "caseId": "case.event-contained-split-type"},
     {"capabilityId": "event.json-typed", "caseId": "case.event-json-typed"},
+    {"capabilityId": "event.json-typed", "caseId": "case.event-json-underlying"},
     {"capabilityId": "event.xml-tree", "caseId": "case.event-xml-tree"},
     {"capabilityId": "event.inheritance", "caseId": "case.event-inheritance"},
     {"capabilityId": "view.derived-statistical", "caseId": "case.view-derived-statistical"},

@@ -2761,7 +2761,34 @@ func ParseJSONWithOptions(schema Schema, data []byte, receivedAt time.Time, opti
 		}
 		return newEvent(schema, underlying, receivedAt)
 	}
+	if schema.kind == SchemaJSON {
+		return newEvent(schema, normalizeJSONMapUnderlying(schema, object), receivedAt)
+	}
 	return newEvent(schema, object, receivedAt)
+}
+
+func normalizeJSONMapUnderlying(schema Schema, object map[string]any) map[string]any {
+	result := make(map[string]any, len(schema.fields)+len(object))
+	consumed := make(map[string]struct{}, len(schema.fields))
+	for _, field := range schema.fields {
+		if key, exists := findJSONField(object, schema, field.Name); exists {
+			result[field.Name] = object[key]
+			consumed[key] = struct{}{}
+			continue
+		}
+		// Esper's JSON map event type exposes every declared property. An
+		// omitted property is therefore present with a null value, while
+		// undeclared properties are retained only for dynamic schemas.
+		result[field.Name] = nil
+	}
+	if schema.allowDynamic {
+		for key, value := range object {
+			if _, exists := consumed[key]; !exists {
+				result[key] = value
+			}
+		}
+	}
+	return result
 }
 
 func findJSONField(object map[string]any, schema Schema, name string) (string, bool) {
