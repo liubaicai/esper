@@ -771,11 +771,11 @@
       "javaRuntimeIds": ["java-runtime-5816ec0ef519ec8a48e1", "java-runtime-3cca4ced23a6097b5023"],
       "javaNames": ["InfraDeleteThenUpdate{namedWindow=true}", "InfraDeleteThenUpdate{namedWindow=false}"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
-      "goTests": ["TestTriggerInfraDeleteThenUpdateUsesTerminalDeleteContract"],
-      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "multi-action", "delete", "difference"],
-      "status": "partial",
+      "goTests": ["TestTriggerInfraDeleteThenUpdateMatchesEsperTargetSemantics"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "multi-action", "delete", "target-semantics"],
+      "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "Go's ThenDelete is an explicit terminal action: delete removes the matched row and prevents the later ThenUpdate from running, so both Table and Named Window end empty. The Java regression documents no guaranteed winner; its asserted trace observes an empty Table but a Named Window retaining A/10. The Go test records this deliberate action-chain contract rather than claiming Named Window parity."
+      "difference": "Go matches the Java 9.0.0 observed target-specific trace: Table deletion wins and leaves no row, while a Named Window's simple two-action delete followed by an unconditional update retains A/10. Conditional multi-action chains remain terminal on delete, matching InfraMultiactionDeleteUpdate; Java itself documents that the delete/update winner is not guaranteed, so broader transaction and ordering combinations remain open."
     },
     {
       "id": "case.named-window-unique-merge",

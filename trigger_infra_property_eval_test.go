@@ -229,7 +229,7 @@ func TestTriggerInfraPropertyEvalUpdate(t *testing.T) {
 	}
 }
 
-func TestTriggerInfraDeleteThenUpdateUsesTerminalDeleteContract(t *testing.T) {
+func TestTriggerInfraDeleteThenUpdateMatchesEsperTargetSemantics(t *testing.T) {
 	for _, namedWindow := range []bool{true, false} {
 		t.Run(map[bool]string{true: "named-window", false: "table"}[namedWindow], func(t *testing.T) {
 			env := NewEnvironment()
@@ -304,7 +304,7 @@ func TestTriggerInfraDeleteThenUpdateUsesTerminalDeleteContract(t *testing.T) {
 					t.Fatal("delete-then-update named window is missing")
 				}
 				events, err := window.Snapshot(context.Background())
-				if err != nil || len(events) != 0 {
+				if err != nil || len(events) != 1 || events[0].Get("p0").Any() != "A" || events[0].Get("p1").Any() != 10 {
 					t.Fatalf("delete-then-update named-window snapshot = %#v, err=%v", events, err)
 				}
 			} else {

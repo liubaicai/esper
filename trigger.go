@@ -75,9 +75,11 @@ func SetVariableExpr(name string, expression Expr) VariableAssignmentExpr {
 }
 
 // TableMergeAction is one ordered action in a merge branch. Matched update and
-// delete actions are evaluated against the working target row and a delete
-// stops the chain. InsertTarget actions route side-stream projections from
-// either branch and may read the current target on a matched branch;
+// delete actions are evaluated against the working target row. Table deletes
+// terminate the branch; Named Window retains Esper's observed simple
+// delete-then-unconditional-update behavior while conditional multi-action
+// chains remain terminal on delete.
+// InsertTarget actions route side-stream projections from either branch and may read the current target on a matched branch;
 // InsertIntoTarget is reserved for a not-matched insert into the current
 // target. Assignments in a later action see earlier updates, while
 // InitialTableField/InitialNamedWindowField remain bound to the action-chain
@@ -98,7 +100,9 @@ func ThenUpdate(condition Expr, assignments ...TableAssignment) TableMergeAction
 }
 
 // ThenDelete creates one conditional delete action for a matched merge
-// branch. A delete terminates the remaining actions for the target row.
+// branch. For Table targets it terminates the action chain. Named Window
+// targets also terminate conditional multi-action chains, while preserving
+// Esper's observed simple delete-then-unconditional-update behavior.
 func ThenDelete(condition Expr) TableMergeAction {
 	return TableMergeAction{Condition: condition, Delete: true}
 }
@@ -1452,8 +1456,11 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 // evaluateTableMergeActions evaluates a matched action chain against a
 // detached working target. The caller commits the returned final value once,
 // which keeps the old/new lifecycle equivalent to one Esper merge action even
-// when several conditional actions ran internally.
-func evaluateTableMergeActions(engine *Engine, schema Schema, original any, evaluation EvalContext, actions []TableMergeAction, now time.Time) (underlying any, matched, deleted, updated bool, err error) {
+// when several conditional actions ran internally. Table targets terminate on
+// delete. Named Window targets preserve the one observed Java exception where
+// a two-action delete followed by an unconditional update updates the row;
+// conditional multi-action chains still terminate on delete.
+func evaluateTableMergeActions(engine *Engine, schema Schema, original any, evaluation EvalContext, actions []TableMergeAction, now time.Time, deleteTerminates bool) (underlying any, matched, deleted, updated bool, err error) {
 	initialGroup := append([]Event(nil), evaluation.InitialGroup...)
 	if len(initialGroup) == 0 {
 		initialGroup = append([]Event(nil), evaluation.Group...)
@@ -1472,7 +1479,7 @@ func evaluateTableMergeActions(engine *Engine, schema Schema, original any, eval
 		hasWorkingEvent = true
 	}
 
-	for _, action := range actions {
+	for actionIndex, action := range actions {
 		step := evaluation
 		if hasWorkingEvent {
 			step.Group = []Event{workingEvent}
@@ -1495,7 +1502,12 @@ func evaluateTableMergeActions(engine *Engine, schema Schema, original any, eval
 			return nil, false, false, false, NewError(ErrorInvalidRule, "matched merge action cannot insert into the merge target")
 		}
 		if action.Delete {
-			return workingUnderlying, true, true, updated, nil
+			deleted = true
+			updated = false
+			if deleteTerminates || !canContinueAfterNamedWindowDelete(actions, actionIndex) {
+				return workingUnderlying, true, true, false, nil
+			}
+			continue
 		}
 		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, workingUnderlying, action.Assignments, step, now)
 		if assignmentErr != nil {
@@ -1510,9 +1522,22 @@ func evaluateTableMergeActions(engine *Engine, schema Schema, original any, eval
 			return nil, false, false, false, err
 		}
 		hasWorkingEvent = true
+		deleted = false
 		updated = true
 	}
 	return workingUnderlying, matched, false, updated, nil
+}
+
+func canContinueAfterNamedWindowDelete(actions []TableMergeAction, deleteIndex int) bool {
+	if deleteIndex != 0 || len(actions) != 2 {
+		return false
+	}
+	next := actions[1]
+	if next.Delete || next.InsertTarget != "" || next.InsertIntoTarget || len(next.Assignments) == 0 || next.Condition == nil {
+		return false
+	}
+	node := next.Condition.node()
+	return node != nil && node.kind == "literal" && node.description == "true"
 }
 
 func materializeMergeInsertEvent(engine *Engine, action TableMergeAction, evaluation EvalContext, now time.Time) (Event, error) {
@@ -1690,7 +1715,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 				if !clause.Matched {
 					continue
 				}
-				underlying, actionMatched, deleted, updated, actionErr := evaluateTableMergeActions(engine, schema, candidate.Underlying(), evaluation, tableMergeClauseActions(clause), now)
+				underlying, actionMatched, deleted, updated, actionErr := evaluateTableMergeActions(engine, schema, candidate.Underlying(), evaluation, tableMergeClauseActions(clause), now, false)
 				if actionErr != nil {
 					return namedWindowMergeDecision{}, actionErr
 				}
@@ -1922,7 +1947,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 				continue
 			}
 			if found {
-				underlying, actionMatched, deleted, updated, actionErr := evaluateTableMergeActions(engine, table.Definition().schema, targetUnderlying, evaluation, tableMergeClauseActions(clause), now)
+				underlying, actionMatched, deleted, updated, actionErr := evaluateTableMergeActions(engine, table.Definition().schema, targetUnderlying, evaluation, tableMergeClauseActions(clause), now, true)
 				if actionErr != nil {
 					return tableMutationResult{}, actionErr
 				}

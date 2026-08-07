@@ -19,7 +19,8 @@
 | 本轮补充复核 | Draft 2.34（2026-08-07）：新增 `InfraInsertOtherStream` bootstrap 对照，覆盖 Table route-before-merge、Named Window merge-before-route、deployment-order 语义和 struct/Map/ObjectArray target representation 保留；Avro/JSON/JSONCLASSPROVIDED/XML 仍为 partial。 |
 | 本次增量复核 | Draft 2.35（2026-08-07）：对账 `InfraNWTableOnMerge` execution inventory 后登记此前遗漏的 6 个 runtime：`InfraPropertyEvalInsertNoMatch`/`InfraPropertyEvalUpdate` 的 4 个 Table/Named Window 变体已由 typed `Unnest` 测试映射；`InfraDeleteThenUpdate` 的 2 个变体登记为 `partial`，明确 Go terminal-delete 与 Java Named Window 观察结果的差异。 |
 | 本次切片复核 | Draft 2.36（2026-08-07）：补齐 Java `InfraNamedWindowOnMerge` 的 10 个 runtime 对账：JavaBean setter/working-target 更新、Named Window 级联 dispatch 与 insert-stream-only、Map omitted-property Null 和 method projection，以及 `InfraSubselect`/`InfraDocExample`/contained insert/RHS Event 的 Map/ObjectArray/Avro/JSON/JSON-class-provided/struct 表示矩阵；新增 4 个 capability case 和 manifest mapping。Java `TestSuiteInfraNamedWindow` 17/17 通过，Go 定向切片通过；本轮不需要 MySQL Docker。 |
-| 本次清单复核 | Draft 2.37（2026-08-07）：修正 6 个旧 Java runtime ID，区分 12 个静态候选 ID 与运行态 `javaRuntimeIds`，并增加 manifest 校验防止两类 ID 混用；当前唯一运行态引用为 1,179/4,136（28.51%）。全量 Go、race、vet 和 compat 门禁均通过；本轮仍不需要 MySQL Docker。 |
+| 本次清单复核 | Draft 2.37（2026-08-07）：修正 6 个旧 Java runtime ID，区分 12 个静态候选 ID 与运行态 `javaRuntimeIds`，并增加 manifest 校验防止两类 ID 混用；当时唯一运行态引用为 1,179/4,136（28.51%）。全量 Go、race、vet 和 compat 门禁均通过；本轮仍不需要 MySQL Docker。 |
+| 本次语义复核 | Draft 2.38（2026-08-07）：关闭 `InfraDeleteThenUpdate` 的 2 个 partial runtime：Go 现在复现 Java 的 Table 删除结果与 Named Window `A/10` 保留结果；同时保留 `InfraMultiactionDeleteUpdate` 的条件多 action terminal-delete 语义，避免扩大未被 Java 证据支持的规则。新增 target-specific evaluator 对照，当前不需要 MySQL Docker。 |
 
 本轮复核补充：对照 Java `InfraUpdateNestedEvent` 的 `java-runtime-065003de88aca37795b8`/`java-runtime-2e8d691b5e2c927038d7`，新增 `TestTriggerNestedAssignmentsPreserveMapAndObjectArrayValues`，覆盖 Map/ObjectArray × Table/Named Window 的直接复合列赋值及 `cflat.c0`、`carr[0].c0`、`carr[1].c0` 读取。修复 Table materialization 遗漏：`TableColumn` 支持 `WithTableColumnNestedSchema`，Table schema 与 Plan canonical 保留复合列/数组元素 nested metadata。该 slice 已登记为 `case.trigger-nested-assignment` 并映射到 `trigger.table-named-window`；wildcard、多 action、mapped/nested path 写入、representation-specific conversion/metadata、事务/持久化和 `InfraNWTableOnMerge` 其余 execution 仍未完成。JDK 17/Maven 可用，当前验证不需要 MySQL。
 
@@ -121,7 +122,7 @@
 - regression-run 静态扫描到约 860 个 public test 入口方法。
 - examples 下有 17 个示例项目、34 个 Java 测试源文件和 181 个 Java 主源码文件，需要按用例价值转换为 Go 示例或端到端测试。
 - 回归标签包含多线程、性能、无效输入、即席查询、序列化、数据流、运行时操作、编译器操作和事件发送器等维度。
-- 当前 capability manifest 已关联 1,179/4,136 个唯一 Java runtime（约 28.51% 的 Java runtime 对账/处置进度）；159 个 case 中 155 个 mapped、1 个 partial、3 个 approved-difference。该比例不是 Java/Go 行为 parity 通过率，也不是全量移植完成度。
+- 当前 capability manifest 已关联 1,179/4,136 个唯一 Java runtime（约 28.51% 的 Java runtime 对账/处置进度）；159 个 case 中 156 个 mapped、3 个 approved-difference。该比例不是 Java/Go 行为 parity 通过率，也不是全量移植完成度。
 - 除 regression-lib 外，common/compiler/runtime/common-avro/common-xmlxsd 共 371 个 Java 单元测试文件、regression-run 有 82 个入口源文件、EsperIO 共 58 个测试文件，也必须逐项分类；不能只迁移 RegressionExecution。
 - 17 个示例为 autoid、benchmark、cycledetect、marketdatafeed、matchmaker、namedwinquery、ohlcpluginview、qos_sla、rfidassetzone、runtimeconfig、servershell、stockticker、terminalsvc、terminalsvc-jse、transaction、trivia、virtualdw。
 
@@ -1871,7 +1872,7 @@ output-when 另外补了一条表达式矩阵：`TestOutputWhenExpressionLikeAnd
 
 本轮验证：Java 使用 JDK 17/Maven 3.9.11 执行 `mvn -pl regression-run '-Dtest=TestSuiteInfraNWTable' '-DfailIfNoTests=false' '-Dgpg.skip=true' test`，26/26 通过；Go 的 `go test ./...`、`go vet ./...`、`go test ./compat`、`go test -run '^TestTriggerInfraInsertOtherStreamBootstrapMatchesInfraInsertOtherStream$' .`、`go test -run '^TestTriggerMergeInsertOtherStreamRepresentationMatrix$' .` 与 `go test -race -run 'TestTrigger|TestSubquery' .` 均通过，manifest 当前为 153 cases/153 mappings 且 runtime/case/test 引用无缺失。本轮核心与对照测试均不需要启动 MySQL。
 
-本轮补充对账：`compat/java-execution-inventory.jsonl` 中 `InfraNWTableOnMerge` 的 ordinal 52–57 之前未进入 capability manifest。现新增 `case.trigger-merge-property-eval`，由 `TestTriggerInfraPropertyEvalInsertNoMatch` 和 `TestTriggerInfraPropertyEvalUpdate` 覆盖 Table/Named Window 的 contained property evaluation、插入顺序和 repeated update；另新增 `case.trigger-merge-delete-then-update`，由 `TestTriggerInfraDeleteThenUpdateUsesTerminalDeleteContract` 固定 Go 的 terminal-delete 语义。后者明确标为 `partial`，因为 Java Named Window 回归断言最终保留 `A/10`，而 Go 的 `ThenDelete` 合同终止 action-chain 后最终为空。为使这个差异可机器校验，CapabilityCase status 新增合法值 `partial`；manifest 更新后为 155 cases/155 mappings。上述切片仍不需要 MySQL Docker。
+本轮补充对账：`compat/java-execution-inventory.jsonl` 中 `InfraNWTableOnMerge` 的 ordinal 52–57 之前未进入 capability manifest。`case.trigger-merge-property-eval` 覆盖 Table/Named Window 的 contained property evaluation、插入顺序和 repeated update；`case.trigger-merge-delete-then-update` 现由 `TestTriggerInfraDeleteThenUpdateMatchesEsperTargetSemantics` 覆盖 Table 删除与 Named Window `A/10` 保留两种 Java 轨迹，状态从 `partial` 提升为 `mapped`。该提升只关闭这两个 runtime 的已观察行为，不代表完整 merge 事务、未定义 winner 组合或全量 on-trigger trace 已完成；上述切片仍不需要 MySQL Docker。
 
 补充门禁：`go test -race -run 'TestTrigger|TestSubquery' .` 也通过；完整 `go test -race ./...` 仍保留为 CI 分片级资源门禁，不能用本轮定向竞态结果替代。
 
