@@ -62,14 +62,39 @@ func SetVariableExpr(name string, expression Expr) VariableAssignmentExpr {
 	return VariableAssignmentExpr{Name: strings.TrimSpace(name), Expr: expression}
 }
 
+// TableMergeAction is one ordered action in a matched merge branch. Esper
+// evaluates these actions against the working target row and stops the chain
+// after a delete. Assignments in a later action therefore see updates made by
+// earlier actions, while InitialTableField/InitialNamedWindowField continue to
+// refer to the row at the start of the action chain.
+type TableMergeAction struct {
+	Condition   Expr
+	Assignments []TableAssignment
+	Delete      bool
+}
+
+// ThenUpdate creates one conditional update action for a matched merge
+// branch.
+func ThenUpdate(condition Expr, assignments ...TableAssignment) TableMergeAction {
+	return TableMergeAction{Condition: condition, Assignments: append([]TableAssignment(nil), assignments...)}
+}
+
+// ThenDelete creates one conditional delete action for a matched merge
+// branch. A delete terminates the remaining actions for the target row.
+func ThenDelete(condition Expr) TableMergeAction {
+	return TableMergeAction{Condition: condition, Delete: true}
+}
+
 // TableMergeClause is one ordered matched or not-matched branch of a table
-// merge. Conditions are evaluated against the triggering event; assignments
-// are applied to the existing row or the new row respectively.
+// merge. The legacy Condition/Assignments/Delete fields represent one action.
+// Matched clauses can instead use Actions to express Esper's repeated
+// "then update/delete where ..." action chain.
 type TableMergeClause struct {
 	Matched     bool
 	Condition   Expr
 	Assignments []TableAssignment
 	Delete      bool
+	Actions     []TableMergeAction
 }
 
 // NamedWindowMergeClause uses the same ordered branch contract as table
@@ -104,6 +129,15 @@ func WhenMatchedDelete(condition Expr) TableMergeClause {
 // WhenMatchedDeleteAny creates an unconditional matched delete branch.
 func WhenMatchedDeleteAny() TableMergeClause {
 	return WhenMatchedDelete(Literal(true))
+}
+
+// WhenMatchedActions creates a matched merge branch with an ordered action
+// chain. Keeping the action list explicit makes the evaluation order visible
+// in the logical plan and avoids embedding EPL text in the Go API.
+func WhenMatchedActions(actions ...TableMergeAction) TableMergeClause {
+	copyActions := make([]TableMergeAction, len(actions))
+	copy(copyActions, actions)
+	return TableMergeClause{Matched: true, Actions: copyActions}
 }
 
 type triggerDefinition struct {
@@ -426,6 +460,22 @@ func (d *triggerDefinition) description() string {
 			if clause.Matched {
 				branch = "matched"
 			}
+			if clause.Actions != nil {
+				actions := make([]string, 0, len(clause.Actions))
+				for _, action := range clause.Actions {
+					condition := "<nil>"
+					if action.Condition != nil {
+						condition = action.Condition.Description()
+					}
+					if action.Delete {
+						actions = append(actions, "delete("+condition+")")
+					} else {
+						actions = append(actions, "update("+condition+")->"+describeTableAssignments(action.Assignments))
+					}
+				}
+				clauses = append(clauses, branch+"-actions["+strings.Join(actions, "|")+"]")
+				continue
+			}
 			condition := "<nil>"
 			if clause.Condition != nil {
 				condition = clause.Condition.Description()
@@ -624,50 +674,59 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 			return NewError(ErrorInvalidRule, "table merge requires at least one clause")
 		}
 		for index, clause := range definition.merge {
-			if clause.Condition == nil || clause.Condition.Type() != typeOf[bool]() {
-				return fmt.Errorf("table merge clause %d requires a bool condition", index)
+			if clause.Actions != nil && (!clause.Matched || clause.Condition != nil || len(clause.Assignments) != 0 || clause.Delete) {
+				return fmt.Errorf("table merge clause %d action chain cannot be combined with legacy clause fields or a not-matched branch", index)
 			}
-			if clause.Delete && !clause.Matched {
-				return fmt.Errorf("table merge delete clause %d must be matched", index)
+			actions := tableMergeClauseActions(clause)
+			if len(actions) == 0 {
+				return fmt.Errorf("table merge clause %d requires at least one action", index)
 			}
-			if clause.Delete && len(clause.Assignments) > 0 {
-				return fmt.Errorf("table merge delete clause %d cannot assign columns", index)
-			}
-			if !clause.Delete && len(clause.Assignments) == 0 {
-				return fmt.Errorf("table merge clause %d requires assignments", index)
-			}
-			if !clause.Matched {
-				var targetFields []string
-				clause.Condition.node().referencedTargetFields("table-field", &targetFields)
-				if len(targetFields) > 0 {
-					return fmt.Errorf("table merge clause %d not-matched condition cannot reference table fields", index)
+			for actionIndex, action := range actions {
+				if action.Condition == nil || action.Condition.Type() != typeOf[bool]() {
+					return fmt.Errorf("table merge clause %d action %d requires a bool condition", index, actionIndex)
 				}
-				for _, assignment := range clause.Assignments {
-					targetFields = nil
-					assignment.Expr.node().referencedTargetFields("table-field", &targetFields)
-					if assignment.Index != nil {
-						assignment.Index.node().referencedTargetFields("table-field", &targetFields)
-					}
+				if action.Delete && !clause.Matched {
+					return fmt.Errorf("table merge delete clause %d must be matched", index)
+				}
+				if action.Delete && len(action.Assignments) > 0 {
+					return fmt.Errorf("table merge clause %d action %d delete cannot assign columns", index, actionIndex)
+				}
+				if !action.Delete && len(action.Assignments) == 0 {
+					return fmt.Errorf("table merge clause %d action %d requires assignments", index, actionIndex)
+				}
+				if !clause.Matched {
+					var targetFields []string
+					action.Condition.node().referencedTargetFields("table-field", &targetFields)
 					if len(targetFields) > 0 {
-						return fmt.Errorf("table merge clause %d not-matched assignment cannot reference table fields", index)
+						return fmt.Errorf("table merge clause %d not-matched condition cannot reference table fields", index)
+					}
+					for _, assignment := range action.Assignments {
+						targetFields = nil
+						assignment.Expr.node().referencedTargetFields("table-field", &targetFields)
+						if assignment.Index != nil {
+							assignment.Index.node().referencedTargetFields("table-field", &targetFields)
+						}
+						if len(targetFields) > 0 {
+							return fmt.Errorf("table merge clause %d not-matched assignment cannot reference table fields", index)
+						}
 					}
 				}
-			}
-			assignmentTargetKind := ""
-			if clause.Matched {
-				assignmentTargetKind = "table-field"
-			}
-			if err := validateTriggerAssignmentsWithTarget(e, definition.input, table, clause.Assignments, assignmentTargetKind); err != nil {
-				return fmt.Errorf("table merge clause %d: %w", index, err)
-			}
-			var conditionErr error
-			if clause.Matched {
-				conditionErr = e.validateTriggerTargetExpression(definition.input, table.schema, clause.Condition, "table-field")
-			} else {
-				conditionErr = e.validateExprFields(definition.input, clause.Condition)
-			}
-			if conditionErr != nil {
-				return fmt.Errorf("table merge clause %d condition: %w", index, conditionErr)
+				assignmentTargetKind := ""
+				if clause.Matched {
+					assignmentTargetKind = "table-field"
+				}
+				if err := validateTriggerAssignmentsWithTarget(e, definition.input, table, action.Assignments, assignmentTargetKind); err != nil {
+					return fmt.Errorf("table merge clause %d action %d: %w", index, actionIndex, err)
+				}
+				var conditionErr error
+				if clause.Matched {
+					conditionErr = e.validateTriggerTargetExpression(definition.input, table.schema, action.Condition, "table-field")
+				} else {
+					conditionErr = e.validateExprFields(definition.input, action.Condition)
+				}
+				if conditionErr != nil {
+					return fmt.Errorf("table merge clause %d action %d condition: %w", index, actionIndex, conditionErr)
+				}
 			}
 		}
 	}
@@ -696,41 +755,50 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 			return NewError(ErrorInvalidRule, "named-window merge requires at least one clause")
 		}
 		for index, clause := range definition.merge {
-			if clause.Condition == nil || clause.Condition.Type() != typeOf[bool]() {
-				return fmt.Errorf("named-window merge clause %d requires a bool condition", index)
+			if clause.Actions != nil && (!clause.Matched || clause.Condition != nil || len(clause.Assignments) != 0 || clause.Delete) {
+				return fmt.Errorf("named-window merge clause %d action chain cannot be combined with legacy clause fields or a not-matched branch", index)
 			}
-			if !clause.Matched {
-				var targetFields []string
-				clause.Condition.node().referencedTargetFields("named-window-field", &targetFields)
-				if len(targetFields) > 0 {
-					return fmt.Errorf("named-window merge clause %d not-matched condition cannot reference named-window fields", index)
+			actions := tableMergeClauseActions(clause)
+			if len(actions) == 0 {
+				return fmt.Errorf("named-window merge clause %d requires at least one action", index)
+			}
+			for actionIndex, action := range actions {
+				if action.Condition == nil || action.Condition.Type() != typeOf[bool]() {
+					return fmt.Errorf("named-window merge clause %d action %d requires a bool condition", index, actionIndex)
 				}
-			}
-			if clause.Delete && !clause.Matched {
-				return fmt.Errorf("named-window merge clause %d cannot delete on not-matched", index)
-			}
-			if !clause.Delete && clause.Matched && len(clause.Assignments) == 0 {
-				return fmt.Errorf("named-window merge clause %d requires assignments", index)
-			}
-			if clause.Delete && len(clause.Assignments) != 0 {
-				return fmt.Errorf("named-window merge clause %d delete cannot have assignments", index)
-			}
-			if err := e.validateTriggerTargetExpression(definition.input, targetSchema, clause.Condition, "named-window-field"); err != nil {
-				return fmt.Errorf("named-window merge clause %d condition: %w", index, err)
-			}
-			for assignmentIndex, assignment := range clause.Assignments {
 				if !clause.Matched {
 					var targetFields []string
-					assignment.Expr.node().referencedTargetFields("named-window-field", &targetFields)
-					if assignment.Index != nil {
-						assignment.Index.node().referencedTargetFields("named-window-field", &targetFields)
-					}
+					action.Condition.node().referencedTargetFields("named-window-field", &targetFields)
 					if len(targetFields) > 0 {
-						return fmt.Errorf("named-window merge clause %d not-matched assignment cannot reference named-window fields", index)
+						return fmt.Errorf("named-window merge clause %d not-matched condition cannot reference named-window fields", index)
 					}
 				}
-				if err := validateTriggerAssignment(e, definition.input, targetSchema, assignment, "named-window-field"); err != nil {
-					return fmt.Errorf("named-window merge clause %d assignment %d: %w", index, assignmentIndex, err)
+				if action.Delete && !clause.Matched {
+					return fmt.Errorf("named-window merge clause %d cannot delete on not-matched", index)
+				}
+				if !action.Delete && clause.Matched && len(action.Assignments) == 0 {
+					return fmt.Errorf("named-window merge clause %d action %d requires assignments", index, actionIndex)
+				}
+				if action.Delete && len(action.Assignments) != 0 {
+					return fmt.Errorf("named-window merge clause %d action %d delete cannot have assignments", index, actionIndex)
+				}
+				if err := e.validateTriggerTargetExpression(definition.input, targetSchema, action.Condition, "named-window-field"); err != nil {
+					return fmt.Errorf("named-window merge clause %d action %d condition: %w", index, actionIndex, err)
+				}
+				for assignmentIndex, assignment := range action.Assignments {
+					if !clause.Matched {
+						var targetFields []string
+						assignment.Expr.node().referencedTargetFields("named-window-field", &targetFields)
+						if assignment.Index != nil {
+							assignment.Index.node().referencedTargetFields("named-window-field", &targetFields)
+						}
+						if len(targetFields) > 0 {
+							return fmt.Errorf("named-window merge clause %d not-matched assignment cannot reference named-window fields", index)
+						}
+					}
+					if err := validateTriggerAssignment(e, definition.input, targetSchema, assignment, "named-window-field"); err != nil {
+						return fmt.Errorf("named-window merge clause %d action %d assignment %d: %w", index, actionIndex, assignmentIndex, err)
+					}
 				}
 			}
 		}
@@ -1139,6 +1207,62 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 	return result, nil
 }
 
+// evaluateTableMergeActions evaluates a matched action chain against a
+// detached working target. The caller commits the returned final value once,
+// which keeps the old/new lifecycle equivalent to one Esper merge action even
+// when several conditional actions ran internally.
+func evaluateTableMergeActions(schema Schema, original any, evaluation EvalContext, actions []TableMergeAction, now time.Time) (underlying any, matched, deleted bool, err error) {
+	initialGroup := append([]Event(nil), evaluation.InitialGroup...)
+	if len(initialGroup) == 0 {
+		initialGroup = append([]Event(nil), evaluation.Group...)
+	}
+	workingUnderlying := original
+	var workingEvent Event
+	hasWorkingEvent := false
+	if len(initialGroup) > 0 {
+		workingEvent = initialGroup[0]
+		hasWorkingEvent = true
+	} else if original != nil {
+		workingEvent, err = newEvent(schema, original, now)
+		if err != nil {
+			return nil, false, false, err
+		}
+		hasWorkingEvent = true
+	}
+
+	for _, action := range actions {
+		step := evaluation
+		if hasWorkingEvent {
+			step.Group = []Event{workingEvent}
+		} else {
+			step.Group = nil
+		}
+		step.InitialGroup = append([]Event(nil), initialGroup...)
+		condition, ok := boolValue(action.Condition.eval(step))
+		if !ok || !condition {
+			continue
+		}
+		matched = true
+		if action.Delete {
+			return workingUnderlying, true, true, nil
+		}
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, workingUnderlying, action.Assignments, step, now)
+		if assignmentErr != nil {
+			return nil, false, false, assignmentErr
+		}
+		workingUnderlying, err = mergeSchemaUnderlying(schema, workingUnderlying, values)
+		if err != nil {
+			return nil, false, false, err
+		}
+		workingEvent, err = newEvent(schema, workingUnderlying, now)
+		if err != nil {
+			return nil, false, false, err
+		}
+		hasWorkingEvent = true
+	}
+	return workingUnderlying, matched, false, nil
+}
+
 func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, owner *Statement) (tableMutationResult, error) {
 	if engine == nil || definition == nil {
 		return tableMutationResult{}, NewError(ErrorDependency, "nil named-window trigger")
@@ -1183,24 +1307,20 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 					return namedWindowMergeDecision{}, nil
 				}
 			}
+			evaluation.InitialGroup = []Event{candidate}
 			for _, clause := range definition.merge {
 				if !clause.Matched {
 					continue
 				}
-				condition, ok := boolValue(clause.Condition.eval(evaluation))
-				if !ok || !condition {
+				underlying, actionMatched, deleted, actionErr := evaluateTableMergeActions(schema, candidate.Underlying(), evaluation, tableMergeClauseActions(clause), now)
+				if actionErr != nil {
+					return namedWindowMergeDecision{}, actionErr
+				}
+				if !actionMatched {
 					continue
 				}
-				if clause.Delete {
+				if deleted {
 					return namedWindowMergeDecision{matched: true, action: namedWindowMergeDelete}, nil
-				}
-				values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, candidate.Underlying(), clause.Assignments, evaluation, now)
-				if assignmentErr != nil {
-					return namedWindowMergeDecision{}, assignmentErr
-				}
-				underlying, mergeErr := mergeSchemaUnderlying(schema, candidate.Underlying(), values)
-				if mergeErr != nil {
-					return namedWindowMergeDecision{}, mergeErr
 				}
 				return namedWindowMergeDecision{matched: true, action: namedWindowMergeUpdate, underlying: underlying}, nil
 			}
@@ -1400,10 +1520,37 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 			}
 			targetUnderlying = targetEvent.Underlying()
 			evaluation.Group = []Event{targetEvent}
+			evaluation.InitialGroup = []Event{targetEvent}
 		}
 		for _, clause := range definition.merge {
 			if clause.Matched != found {
 				continue
+			}
+			if found {
+				underlying, actionMatched, deleted, actionErr := evaluateTableMergeActions(table.Definition().schema, targetUnderlying, evaluation, tableMergeClauseActions(clause), now)
+				if actionErr != nil {
+					return tableMutationResult{}, actionErr
+				}
+				if !actionMatched {
+					continue
+				}
+				if deleted {
+					row, deletedRow, deleteErr := table.Delete(ctx, keys...)
+					if deleteErr != nil {
+						return tableMutationResult{}, deleteErr
+					}
+					if deletedRow {
+						mutation.oldRows = append(mutation.oldRows, row)
+					}
+					return mutation, nil
+				}
+				row, updateErr := table.Update(ctx, keys, valuesFromMergeUnderlying(table.Definition().schema, underlying))
+				if updateErr != nil {
+					return tableMutationResult{}, updateErr
+				}
+				mutation.oldRows = append(mutation.oldRows, old)
+				mutation.newRows = append(mutation.newRows, row)
+				return mutation, nil
 			}
 			condition, ok := boolValue(clause.Condition.eval(evaluation))
 			if !ok || !condition {
@@ -1517,6 +1664,17 @@ func tableRowForValues(ctx context.Context, table *Table, values map[string]any)
 	return table.Get(ctx, keys...)
 }
 
+func valuesFromMergeUnderlying(schema Schema, underlying any) map[string]any {
+	values := make(map[string]any, len(schema.fields))
+	for _, field := range schema.fields {
+		value := schema.get(underlying, field.Name)
+		if !value.IsMissing() {
+			values[field.Name] = value.Any()
+		}
+	}
+	return values
+}
+
 func executeVariableTriggerAction(ctx context.Context, engine *Engine, definition *triggerDefinition, evaluation EvalContext, variables map[string]Value, runtime *statementRuntime) error {
 	working := cloneValues(variables)
 	if working == nil {
@@ -1588,8 +1746,27 @@ func cloneTableMergeClauses(clauses []TableMergeClause) []TableMergeClause {
 	result := append([]TableMergeClause(nil), clauses...)
 	for index := range result {
 		result[index].Assignments = append([]TableAssignment(nil), result[index].Assignments...)
+		if result[index].Actions != nil {
+			actions := make([]TableMergeAction, len(result[index].Actions))
+			for actionIndex, action := range result[index].Actions {
+				actions[actionIndex] = action
+				actions[actionIndex].Assignments = append([]TableAssignment(nil), action.Assignments...)
+			}
+			result[index].Actions = actions
+		}
 	}
 	return result
+}
+
+func tableMergeClauseActions(clause TableMergeClause) []TableMergeAction {
+	if clause.Actions != nil {
+		return clause.Actions
+	}
+	return []TableMergeAction{{
+		Condition:   clause.Condition,
+		Assignments: clause.Assignments,
+		Delete:      clause.Delete,
+	}}
 }
 
 func validateTriggerAssignments(e *Environment, input *streamNode, table TableDefinition, assignments []TableAssignment) error {
@@ -1675,7 +1852,10 @@ func triggerTypeDescription(typ reflect.Type) string {
 
 func evaluateTriggerAssignmentsForTarget(schema Schema, original any, assignments []TableAssignment, evaluation EvalContext, now time.Time) (map[string]any, error) {
 	values := make(map[string]any, len(assignments))
-	initialGroup := append([]Event(nil), evaluation.Group...)
+	initialGroup := append([]Event(nil), evaluation.InitialGroup...)
+	if len(initialGroup) == 0 {
+		initialGroup = append([]Event(nil), evaluation.Group...)
+	}
 	for _, assignment := range assignments {
 		step := evaluation
 		step.InitialGroup = append([]Event(nil), initialGroup...)

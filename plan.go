@@ -2497,6 +2497,9 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 			if err := visit(assignment.Expr); err != nil {
 				return err
 			}
+			if err := visit(assignment.Index); err != nil {
+				return err
+			}
 		}
 		for _, assignment := range query.trigger.variableAssignments {
 			if err := visit(assignment.Expr); err != nil {
@@ -2504,12 +2507,17 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 			}
 		}
 		for _, clause := range query.trigger.merge {
-			if err := visit(clause.Condition); err != nil {
-				return err
-			}
-			for _, assignment := range clause.Assignments {
-				if err := visit(assignment.Expr); err != nil {
+			for _, action := range tableMergeClauseActions(clause) {
+				if err := visit(action.Condition); err != nil {
 					return err
+				}
+				for _, assignment := range action.Assignments {
+					if err := visit(assignment.Expr); err != nil {
+						return err
+					}
+					if err := visit(assignment.Index); err != nil {
+						return err
+					}
 				}
 			}
 		}

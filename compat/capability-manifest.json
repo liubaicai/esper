@@ -580,6 +580,17 @@
       "difference": "Go adds explicit MergeInsertIntoTable and MergeInsertIntoNamedWindow builders for Java's insertion-only merge form. Existing matching rows are left unchanged, while unmatched events are assigned and inserted; the test covers both targets and a duplicate-key no-op beyond the Java smoke sequence. Exact EPL/SODA syntax and broader merge projection/representation combinations remain open."
     },
     {
+      "id": "case.trigger-merge-multiaction",
+      "javaRuntimeIds": ["java-runtime-dfa83c0593d19172be7d", "java-runtime-ffbda0563d50878dafd8"],
+      "javaNames": ["InfraMultiactionDeleteUpdate{namedWindow=true}", "InfraMultiactionDeleteUpdate{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerMultiActionMergeMatchesInfraMultiactionDeleteUpdate"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "multi-action", "ordered", "delete"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go adds TableMergeAction, ThenUpdate, ThenDelete and WhenMatchedActions to model Esper's ordered matched action chain. Conditions and assignments see the working target row, a delete terminates remaining actions, and Table/Named Window commit one final old/new mutation. The test mirrors InfraMultiactionDeleteUpdate's E1-E6 trace and adds a terminal-delete input that would otherwise satisfy a later update. Wildcard/select projection, representation-specific conversion, transaction/persistence and broader multi-action stream combinations remain open."
+    },
+    {
       "id": "case.trigger-merge-subquery-not-matched",
       "javaRuntimeIds": ["java-runtime-905164d98662721e5509", "java-runtime-d3e1f3aa50c4375f657f"],
       "javaNames": ["InfraSubqueryNotMatched{namedWindow=true}", "InfraSubqueryNotMatched{namedWindow=false}"],
@@ -718,6 +729,17 @@
       "status": "mapped",
       "evidence": ["java-baseline", "go-unit"],
       "difference": "Go now covers fluent exists/scalar/IN subqueries over Named Window, Table and regular event-stream snapshots, correlated OuterField evaluation, nested subquery scope, parameter binding, statement-owned independent source-window state, Fire-and-Forget consistent snapshots, count/sum/avg projections, aggregate WindowValues projection as one row over a retained group, non-grouped aggregate SubqueryHaving over the complete inner group with outer-field thresholds, SubqueryExistsValue and option-bearing IN/ANY/SOME/ALL forms, array-key Unique replacement in subquery count filters, explicit any/all/some quantifiers with three-valued null handling, scalar order/offset/limit plus first/null-on-multiple options, typed SubqueryGroupBy map buckets with inner where, per-group having, scalar projections and aggregate projections, SubqueryGroupByAny typed ordered buckets for slice/array keys with preserved Value state, SubqueryRow/SubqueryRows/SubqueryGroupRows map rows for scalar, aggregate and grouped multi-column results, recursive result-schema fragment metadata, Row/Event scalar GetFragment and indexed GetFragments materialization for nested subquery maps/slices, a SubqueryRows -> EnumWhere -> EnumSelectMap chain preserving row order and index, static FragmentEventType-shaped metadata for multi-column rows with defensive nested copies, Java EPLSubselectMultirow single-column WindowValues over keep-all/late length-window snapshots, correlated WindowEvents as typed []Event underlying values, null-on-empty aggregate access, empty typed collection subqueries and chained EnumSelect/EnumCount behavior. Java additionally covers fragment materialization across all event representations, iterator/enum-method/error/cardinality diagnostics, context/pattern/Dataflow combinations, indexing and broader invalid-rule/trace matrices; those remaining contracts and the full shared trace remain open."
+    },
+    {
+      "id": "case.subquery-empty-quantifiers",
+      "javaRuntimeIds": ["java-runtime-ad44331ab7f0645a4e7a", "java-runtime-29c66b744c3754d59ec7"],
+      "javaNames": ["EPLSubselectRelationalOpNullOrNoRows", "EPLSubselectEqualsInNullOrNoRows"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAllAnySomeExpr.java"],
+      "goTests": ["TestSubqueryEmptyQuantifiersFollowEsperTruthTable"],
+      "tags": ["correctness", "query", "subquery", "quantifier", "all", "any", "some", "in", "null", "empty-set"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go fixes the Esper empty-set truth table for fluent ALL/ANY/IN evaluation: ALL is true, ANY/SOME and IN are false even when the outer value is null; a non-empty set containing a null candidate still yields Null when no decisive comparison exists. The test also covers the transition from an empty Named Window to a null-valued candidate. Java equality/not-equality ALL/ANY and the complete operator matrix remain represented by the broader subquery case."
     },
     {
       "id": "case.subquery-context",
@@ -2203,6 +2225,7 @@
     {"capabilityId": "resultset.aggregate-access", "caseId": "case.aggregate-sorted-table-selector"},
     {"capabilityId": "resultset.aggregate-local-group", "caseId": "case.aggregate-local-group"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-basic"},
+    {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-empty-quantifiers"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-context"},
     {"capabilityId": "query.subquery-basic", "caseId": "case.subquery-pattern"},
     {"capabilityId": "join.basic", "caseId": "case.join-basic"},
@@ -2224,6 +2247,7 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-nested-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-ordered-scalar-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-simple-insert"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-multiaction"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-subquery-not-matched"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},

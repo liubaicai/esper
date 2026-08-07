@@ -22,9 +22,13 @@
 
 本轮补充 Java `InfraOnMergeSimpleInsert`（`java-runtime-dbf13fb6d1ca3a37275a`、`java-runtime-df3d7a21bdd769f1acce`）：新增 `MergeInsertIntoTable`/`MergeInsertIntoNamedWindow` 两个 Go-native 链式便捷入口，明确表达只执行 not-matched insert 的 merge；`TestTriggerMergeInsertOnlyConvenienceMatchesInfraOnMergeSimpleInsert` 覆盖 Table/Named Window 的 A/B 插入、重复 A 不更新以及最终快照。该 case 已登记到 manifest。Java 的多 action insert-into stream、wildcard/select projection、representation-specific conversion 和完整 on-merge trace 仍待后续切片处理。
 
+本轮继续对照 Java `InfraMultiactionDeleteUpdate`（Named Window `java-runtime-dfa83c0593d19172be7d`、Table `java-runtime-ffbda0563d50878dafd8`）：新增 `TableMergeAction`、`ThenUpdate`、`ThenDelete`、`WhenMatchedActions`，按 working target 顺序求值，后续动作可读取前一动作的更新，delete 终止动作链，最终只提交一次 old/new mutation；`TestTriggerMultiActionMergeMatchesInfraMultiactionDeleteUpdate` 覆盖 E1-E6 的 Java 轨迹、Table/Named Window、plan identity 和 terminal-delete 边界，已登记为 `case.trigger-merge-multiaction`。该切片仍不等于完整 on-merge：wildcard/select projection、insert-into stream、多表示转换、mapped/nested path 写入、事务/持久化、pattern/subquery 组合和共享 Java/Go trace 继续保持 partial；本轮不需要 MySQL Docker。
+
 本文以实施规划为主，不把当前 Go 原型的签名视为最终稳定 API。文中出现的方法名和调用链只表示目标 API 形态，除第 17 节外不代表对应功能已经完成。
 
 本轮继续补齐子查询与 on-trigger 交界：`SubqueryRow`/`SubqueryRows`/`SubqueryGroupRows` 的静态 nested fragment metadata 已进入 projection result schema，`Row.GetFragment(s)`/`Event.GetFragment(s)` 可 materialize 标量、数组和递归嵌套 map/slice fragment；Join projection 同时完成 `JoinSelection` 到普通 `Selection` 的适配，避免 metadata schema 构建破坏全局编译。新增 `TestSubqueryMultiColumnRowsMaterializeScalarAndIndexedFragments`。另新增 `TestTriggerMergeNotMatchedAssignmentUsesCorrelatedSubquery`，对照 Java `InfraSubqueryNotMatched` 的两个 runtime（`java-runtime-905164d98662721e5509`、`java-runtime-d3e1f3aa50c4375f657f`），覆盖 Table/Named Window 的 not-matched assignment 中 `SubqueryValue + OuterField` 相关查询及 Named Window unique replacement；相关 case 已登记到 manifest。Java 的跨表示 fragment、iterator/cardinality/error、index-plan 和更广 merge/subquery 组合仍保持 partial。
+
+本轮量词复核（2026-08-07）：对照 Java `EPLSubselectAllAnySomeExpr` 的 `EPLSubselectRelationalOpNullOrNoRows` 与 `EPLSubselectEqualsInNullOrNoRows`，补充 `TestSubqueryEmptyQuantifiersFollowEsperTruthTable`。固定空集合时 `ALL=true`、`ANY/SOME=false`、`IN=false`，包括 outer value 为 null 的情况；非空集合遇到 null candidate 时保留 Esper 的 Null 结果。该切片已登记为 `case.subquery-empty-quantifiers`，Java runtime 为 `java-runtime-ad44331ab7f0645a4e7a` 与 `java-runtime-29c66b744c3754d59ec7`。`go test ./...`、`go vet ./...` 与子查询/触发器竞态测试仍是本轮门禁；核心测试不需要启动 MySQL，数据库/SQL connector 测试继续按需使用本机 Docker MySQL。
 
 ## 2. 目标与完成定义
 

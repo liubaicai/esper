@@ -888,11 +888,22 @@ func SubqueryIn[T comparable](value Expression[T], source RecordStream, projecti
 func SubqueryInWithOptions[T comparable](value Expression[T], source RecordStream, projection Expression[T], options ...SubqueryOption) Expression[bool] {
 	definition := subqueryWithProjectionOptions(source, projection, options...)
 	return makeSubqueryExprWithChildren[bool]("subquery-in", "("+value.Description()+" in "+subqueryDescription(definition)+")", definition, []*exprNode{value.node()}, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		// Esper follows the SQL empty-set rule for IN: there is no matching
+		// candidate, even when the outer value itself is null.
+		if len(values) == 0 {
+			if definition.aggregateProjection {
+				// An aggregate subquery with a HAVING clause can produce no
+				// aggregate result row. Esper exposes that missing aggregate row
+				// as Null rather than as a scalar empty collection.
+				return Null()
+			}
+			return Present(false)
+		}
 		outer := value.eval(ctx)
 		if !outer.IsPresent() {
 			return Null()
 		}
-		values := evaluateSubqueryValues(definition, ctx)
 		hasNull := false
 		for _, candidate := range values {
 			if !candidate.IsPresent() {
@@ -985,7 +996,7 @@ func SubqueryAnyWithOptions[T any](value Expression[T], source RecordStream, pro
 	definition.comparison = comparison
 	description := fmt.Sprintf("%s %s any (%s)", value.Description(), comparison.symbol(), subqueryDescription(definition))
 	return makeSubqueryExprWithChildren[bool]("subquery-any", description, definition, []*exprNode{value.node()}, func(ctx EvalContext) Value {
-		return evaluateQuantifiedSubquery(value.eval(ctx), evaluateSubqueryValues(definition, ctx), comparison, false)
+		return evaluateQuantifiedSubquery(value.eval(ctx), evaluateSubqueryValues(definition, ctx), comparison, false, definition.aggregateProjection)
 	})
 }
 
@@ -1016,7 +1027,7 @@ func SubqueryAllWithOptions[T any](value Expression[T], source RecordStream, pro
 	definition.comparison = comparison
 	description := fmt.Sprintf("%s %s all (%s)", value.Description(), comparison.symbol(), subqueryDescription(definition))
 	return makeSubqueryExprWithChildren[bool]("subquery-all", description, definition, []*exprNode{value.node()}, func(ctx EvalContext) Value {
-		return evaluateQuantifiedSubquery(value.eval(ctx), evaluateSubqueryValues(definition, ctx), comparison, true)
+		return evaluateQuantifiedSubquery(value.eval(ctx), evaluateSubqueryValues(definition, ctx), comparison, true, definition.aggregateProjection)
 	})
 }
 
@@ -1066,8 +1077,17 @@ func isAggregateExpression(expression Expr) bool {
 	return expressionNodeContainsAggregate(expression.node())
 }
 
-func evaluateQuantifiedSubquery(left Value, values []Value, comparison SubqueryComparison, all bool) Value {
-	if !left.IsPresent() || len(values) == 0 {
+func evaluateQuantifiedSubquery(left Value, values []Value, comparison SubqueryComparison, all, aggregateEmpty bool) Value {
+	if len(values) == 0 {
+		if aggregateEmpty {
+			return Null()
+		}
+		if all {
+			return Present(true)
+		}
+		return Present(false)
+	}
+	if !left.IsPresent() {
 		return Null()
 	}
 	hasNull := false

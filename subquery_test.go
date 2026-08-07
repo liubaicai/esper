@@ -382,7 +382,7 @@ func TestSubqueryAggregatesAndQuantifiedComparisons(t *testing.T) {
 	if row.Get("less_any").Any() != true || row.Get("less_all").Any() != false {
 		t.Fatalf("subquery quantified values = %#v", row)
 	}
-	if row.Get("empty_count").Any() != int64(0) || !row.Get("empty_sum").IsNull() || !row.Get("empty_any").IsNull() || !row.Get("empty_all").IsNull() {
+	if row.Get("empty_count").Any() != int64(0) || !row.Get("empty_sum").IsNull() || row.Get("empty_any").Any() != false || row.Get("empty_all").Any() != true {
 		t.Fatalf("subquery empty-set values = %#v", row)
 	}
 	invalid := From[runtimeTestTrade](env, "Trade").Filter(SubqueryAny[float64](
@@ -392,6 +392,84 @@ func TestSubqueryAggregatesAndQuantifiedComparisons(t *testing.T) {
 		t.Fatal("invalid quantified subquery comparison must be rejected")
 	}
 
+}
+
+func TestSubqueryEmptyQuantifiersFollowEsperTruthTable(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "SubqueryQuantifierTrigger", []FieldSpec{
+		OptionalFieldDef("value", reflect.TypeOf(float64(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	innerSchema, err := RegisterMap(env, "SubqueryQuantifierInner", []FieldSpec{
+		OptionalFieldDef("value", reflect.TypeOf(float64(0))),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "SubqueryQuantifierWindow", innerSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+
+	outerValue := Field[any, float64]("value")
+	innerValue := Field[any, float64]("value")
+	window := FromNamedWindow(env, "SubqueryQuantifierWindow")
+	query := Select(
+		From[map[string]any](env, "SubqueryQuantifierTrigger"),
+		Alias("all", SubqueryAll[float64](outerValue, window, innerValue, SubqueryLess)),
+		Alias("any", SubqueryAny[float64](outerValue, window, innerValue, SubqueryLess)),
+		Alias("in", SubqueryIn[float64](outerValue, window, innerValue)),
+	).Query(StatementName("subquery-empty-quantifiers"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("empty quantifier result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	send := func(value *float64) Row {
+		t.Helper()
+		before := len(rows)
+		if err := engine.Send(context.Background(), "SubqueryQuantifierTrigger", map[string]any{"value": value}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != before+1 {
+			t.Fatalf("empty quantifier rows = %#v", rows)
+		}
+		return rows[len(rows)-1]
+	}
+
+	row := send(nil)
+	if row.Get("all").Any() != true || row.Get("any").Any() != false || row.Get("in").Any() != false {
+		t.Fatalf("empty quantifier null outer = %#v, want all=true any=false in=false", row)
+	}
+	one := 1.0
+	row = send(&one)
+	if row.Get("all").Any() != true || row.Get("any").Any() != false || row.Get("in").Any() != false {
+		t.Fatalf("empty quantifier present outer = %#v, want all=true any=false in=false", row)
+	}
+	if err := engine.InsertNamedWindow(context.Background(), "SubqueryQuantifierWindow", map[string]any{"value": nil}); err != nil {
+		t.Fatal(err)
+	}
+	row = send(&one)
+	if !row.Get("all").IsNull() || !row.Get("any").IsNull() || !row.Get("in").IsNull() {
+		t.Fatalf("null candidate quantifier values = %#v, want all/any/in null", row)
+	}
 }
 
 func TestSubqueryScalarOptionsOrderLimitOffsetAndCardinality(t *testing.T) {
@@ -537,14 +615,14 @@ func TestSubqueryUngroupedHavingCorrelatesAndTracksWindowState(t *testing.T) {
 	}
 
 	row := sendTrigger(15)
-	if !row.Get("value").IsNull() || row.Get("exists").Any() != false || row.Get("in").Any() != false || !row.Get("any").IsNull() || !row.Get("all").IsNull() {
+	if !row.Get("value").IsNull() || row.Get("exists").Any() != false || !row.Get("in").IsNull() || !row.Get("any").IsNull() || !row.Get("all").IsNull() {
 		t.Fatalf("empty aggregate having result = %#v", rows[len(rows)-1])
 	}
 	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: 10}); err != nil {
 		t.Fatal(err)
 	}
 	row = sendTrigger(15)
-	if !row.Get("value").IsNull() || row.Get("exists").Any() != false || row.Get("in").Any() != false || !row.Get("any").IsNull() || !row.Get("all").IsNull() {
+	if !row.Get("value").IsNull() || row.Get("exists").Any() != false || !row.Get("in").IsNull() || !row.Get("any").IsNull() || !row.Get("all").IsNull() {
 		t.Fatalf("below-threshold aggregate having result = %#v", rows[len(rows)-1])
 	}
 	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: 5}); err != nil {
@@ -558,7 +636,7 @@ func TestSubqueryUngroupedHavingCorrelatesAndTracksWindowState(t *testing.T) {
 		t.Fatal(err)
 	}
 	row = sendTrigger(15)
-	if !row.Get("value").IsNull() || row.Get("exists").Any() != false || row.Get("in").Any() != false || !row.Get("any").IsNull() || !row.Get("all").IsNull() {
+	if !row.Get("value").IsNull() || row.Get("exists").Any() != false || !row.Get("in").IsNull() || !row.Get("any").IsNull() || !row.Get("all").IsNull() {
 		t.Fatalf("aggregate having after removal-like update = %#v", rows[len(rows)-1])
 	}
 	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: 1}); err != nil {

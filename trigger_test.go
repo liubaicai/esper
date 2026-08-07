@@ -12,6 +12,11 @@ type triggerTestReset struct {
 	ID string `esper:"id"`
 }
 
+type triggerMultiActionEvent struct {
+	Key string `esper:"key"`
+	P00 int    `esper:"p00"`
+}
+
 func TestTableTriggerBuilderAndLifecycle(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
@@ -2078,6 +2083,196 @@ func TestTriggerOrderedScalarAssignmentsMatchInfraUpdateOrderOfFields(t *testing
 			}
 			sendAndAssert("E1", 5, 5, 1.0)
 			sendAndAssert("E1", 7, 7, 5.0)
+		})
+	}
+}
+
+func TestTriggerMultiActionMergeMatchesInfraMultiactionDeleteUpdate(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		namedWindow bool
+	}{
+		{name: "named-window", namedWindow: true},
+		{name: "table"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			env := NewEnvironment()
+			if _, err := RegisterStruct[triggerMultiActionEvent](env, "TriggerMultiActionEvent"); err != nil {
+				t.Fatal(err)
+			}
+			const targetName = "trigger-multi-action"
+			fields := []FieldSpec{
+				FieldDef("theString", reflect.TypeOf("")),
+				FieldDef("intPrimitive", reflect.TypeOf(int(0))),
+			}
+			if testCase.namedWindow {
+				schema, err := RegisterMap(env, "TriggerMultiActionTarget", fields)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, targetName, schema, NamedWindowRetention(KeepAll())); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := CreateTable(env, targetName, []TableColumn{
+				PrimaryKeyColumn[string]("theString"),
+				TableColumnOf[int]("intPrimitive"),
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			source := From[triggerMultiActionEvent](env, "TriggerMultiActionEvent")
+			key := Field[triggerMultiActionEvent, string]("key")
+			p00 := Field[triggerMultiActionEvent, int]("p00")
+			var targetInt Expression[int]
+			if testCase.namedWindow {
+				targetInt = NamedWindowField[int]("intPrimitive")
+			} else {
+				targetInt = TableField[int]("intPrimitive")
+			}
+			actions := WhenMatchedActions(
+				ThenDelete(Less[int](targetInt, Literal[int](0))),
+				ThenUpdate(
+					Or(
+						Equal[int](targetInt, Literal[int](3000)),
+						Equal[int](p00, Literal[int](3000)),
+					),
+					SetColumn("intPrimitive", p00),
+				),
+				ThenUpdate(Equal[int](targetInt, Literal[int](1000)), SetColumn("intPrimitive", Literal[int](999))),
+				ThenDelete(Equal[int](targetInt, Literal[int](1000))),
+				ThenUpdate(Equal[int](targetInt, Literal[int](2000)), SetColumn("intPrimitive", Literal[int](1999))),
+				ThenDelete(Equal[int](targetInt, Literal[int](2000))),
+			)
+			var plan Plan
+			var err error
+			if testCase.namedWindow {
+				match := Equal[string](NamedWindowField[string]("theString"), key)
+				plan, err = env.Build(OnEvent(source).MergeIntoNamedWindowWhen(targetName, match, actions).Query(StatementName("trigger-multi-action")))
+			} else {
+				plan, err = env.Build(OnEvent(source).MergeIntoTableWhen(targetName, []Expr{key}, actions).Query(StatementName("trigger-multi-action")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			var differentPlan Plan
+			if testCase.namedWindow {
+				match := Equal[string](NamedWindowField[string]("theString"), key)
+				differentPlan, err = env.Build(OnEvent(source).MergeIntoNamedWindowWhen(targetName, match,
+					WhenMatchedActions(
+						ThenDelete(Less[int](targetInt, Literal[int](0))),
+						ThenUpdate(Equal[int](targetInt, Literal[int](3000)), SetColumn("intPrimitive", p00)),
+					),
+				).Query(StatementName("trigger-multi-action-different")))
+			} else {
+				differentPlan, err = env.Build(OnEvent(source).MergeIntoTableWhen(targetName, []Expr{key},
+					WhenMatchedActions(
+						ThenDelete(Less[int](targetInt, Literal[int](0))),
+						ThenUpdate(Equal[int](targetInt, Literal[int](3000)), SetColumn("intPrimitive", p00)),
+					),
+				).Query(StatementName("trigger-multi-action-different")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if plan.Hash() == differentPlan.Hash() {
+				t.Fatal("different merge action chains share a plan hash")
+			}
+
+			engine := NewEngine(env)
+			initial := []struct {
+				key   string
+				value int
+			}{
+				{key: "E1", value: 1},
+				{key: "E2", value: -1},
+				{key: "E3", value: 3000},
+				{key: "E4", value: 4},
+				{key: "E5", value: 1000},
+				{key: "E6", value: 2000},
+			}
+			for _, row := range initial {
+				if testCase.namedWindow {
+					if err := engine.InsertNamedWindow(context.Background(), targetName, map[string]any{"theString": row.key, "intPrimitive": row.value}); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					table, ok := engine.Table(targetName)
+					if !ok {
+						t.Fatal("multi-action table is missing")
+					}
+					if _, err := table.Insert(context.Background(), map[string]any{"theString": row.key, "intPrimitive": row.value}); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			deployment, err := engine.Deploy(context.Background(), plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer deployment.Undeploy(context.Background())
+
+			send := func(key string, p00 int) {
+				t.Helper()
+				if err := engine.SendEvent(context.Background(), triggerMultiActionEvent{Key: key, P00: p00}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			snapshot := func() map[string]int {
+				t.Helper()
+				result := make(map[string]int)
+				if testCase.namedWindow {
+					window, ok := engine.NamedWindow(targetName)
+					if !ok {
+						t.Fatal("multi-action named window is missing")
+					}
+					events, err := window.Snapshot(context.Background())
+					if err != nil {
+						t.Fatal(err)
+					}
+					for _, event := range events {
+						value, ok := event.Get("intPrimitive").Any().(int)
+						if !ok {
+							t.Fatalf("multi-action named-window value = %#v", event.Get("intPrimitive"))
+						}
+						result[event.Get("theString").Any().(string)] = value
+					}
+					return result
+				}
+				table, ok := engine.Table(targetName)
+				if !ok {
+					t.Fatal("multi-action table is missing")
+				}
+				rows, err := table.Snapshot(context.Background())
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, row := range rows {
+					result[row.Get("theString").Any().(string)] = row.Get("intPrimitive").Any().(int)
+				}
+				return result
+			}
+			assertSnapshot := func(want map[string]int) {
+				t.Helper()
+				got := snapshot()
+				if !reflect.DeepEqual(got, want) {
+					t.Fatalf("multi-action snapshot = %#v, want %#v", got, want)
+				}
+			}
+
+			send("E1", 0)
+			assertSnapshot(map[string]int{"E1": 1, "E2": -1, "E3": 3000, "E4": 4, "E5": 1000, "E6": 2000})
+			// The trigger value also satisfies the later update action. Esper's
+			// delete must terminate the chain, so E2 must stay absent.
+			send("E2", 3000)
+			assertSnapshot(map[string]int{"E1": 1, "E3": 3000, "E4": 4, "E5": 1000, "E6": 2000})
+			send("E3", 3)
+			assertSnapshot(map[string]int{"E1": 1, "E3": 3, "E4": 4, "E5": 1000, "E6": 2000})
+			send("E4", 3000)
+			assertSnapshot(map[string]int{"E1": 1, "E3": 3, "E4": 3000, "E5": 1000, "E6": 2000})
+			send("E5", 0)
+			assertSnapshot(map[string]int{"E1": 1, "E3": 3, "E4": 3000, "E5": 999, "E6": 2000})
+			send("E6", 0)
+			assertSnapshot(map[string]int{"E1": 1, "E3": 3, "E4": 3000, "E5": 999, "E6": 1999})
 		})
 	}
 }
