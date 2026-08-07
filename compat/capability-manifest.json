@@ -1742,6 +1742,17 @@
       "difference": "The Go EnumCollect API normalizes arrays, slices, iter.Seq, maps.Values-backed sources and explicit pull iterators into []T without inventing map order. Table-backed WindowAccessValue rows can be unwrapped through the typed Values method, WindowValues access aggregates can be consumed by EnumAnyOf/EnumAllOf, and Method/Property can feed nested enumeration chains, matching the Java table-row, window(*) and nested method/property source traces. EnumerationMetadata now exposes the normalized collection/component/result types and the attached method footprint for all built-in enum nodes; dynamic/representation-backed generic descriptors and the full Java source matrix remain open."
     },
     {
+      "id": "case.expr-enum-data-source-propagation",
+      "javaRuntimeIds": ["java-runtime-2b9f3c7bb37749b78f11", "java-runtime-af8d0c456940430a3ccd", "java-runtime-4407a3aec9ef6d4397d3", "java-runtime-e0708453fd00a206d99f", "java-runtime-e7a7bf9208b7263939cb", "java-runtime-5160be85b646e4b6e37b", "java-runtime-9df2083c2bf7ff4916fe3", "java-runtime-a6d3d86841e5c87e1180"],
+      "javaNames": ["ExprEnumSubstitutionParameter", "ExprEnumPrevWindowSorted", "ExprEnumNamedWindow", "ExprEnumPropertySchema", "ExprEnumPrevFuncs", "ExprEnumVariable", "ExprEnumAccessAggregation", "ExprEnumTableRow"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDataSources.java"],
+      "goTests": ["TestEnumDataSourcesPreviousWindowMatchesEsper", "TestEnumDataSourcesSortedPreviousWindowMatchesEsper", "TestEnumDataSourcesNamedWindowAndSubqueryMatchesEsper", "TestEnumDataSourcesNestedPropertySchemaMatchesEsper", "TestEnumDataSourcesVariableAndSubstitutionMatchEsper", "TestEnumerableWindowAccessAggregateSourceMatchesJava", "TestEnumerableTableWindowSourceMatchesJava"],
+      "tags": ["correctness", "expression", "enum", "data-source", "previous", "named-window", "parameter", "variable", "nested-property"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go now propagates typed enumeration expressions through retained ordinary/sorted previous windows, named-window snapshots, schema-backed nested arrays, late-bound deployment parameters and variables, while preserving Java's view order, eviction and empty-collection ALL semantics. The selected Java execution family also contains join, pattern, access-aggregate variants beyond the representative access/table traces, generic component descriptors (including Optional), match-recognize/context properties and full invalid/type diagnostics; those combinations and shared Java/Go trace remain open."
+    },
+    {
       "id": "case.expr-enum-invalid",
       "javaStaticIds": ["java-5a117b08f2037d0e6133", "java-e13263e2eb138bd9f692", "java-d854379572241786dd56", "java-96a5c897c1d7f67d851f", "java-167415d6e7af87a7a111"],
       "javaNames": ["ExprEnumInvalid", "ExprEnumAllOfAnyOfInvalid", "ExprEnumExceptIntersectUnion.ExprEnumInvalid", "ExprEnumToMapInvalid", "ExprEnumMinMax.ExprEnumInvalid"],
@@ -2655,6 +2666,7 @@
     {"capabilityId": "expr.declared", "caseId": "case.expr-declared"},
     {"capabilityId": "expr.script", "caseId": "case.expr-script-provider"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-sources"},
+    {"capabilityId": "expr.enum", "caseId": "case.expr-enum-data-source-propagation"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-invalid"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-footprints"},
     {"capabilityId": "expr.enum", "caseId": "case.expr-enum-subquery-udf"},
