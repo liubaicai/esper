@@ -178,6 +178,13 @@ func (s TriggerStream[T]) MergeIntoTableWhen(table string, keys []Expr, clauses 
 	}
 }
 
+// MergeInsertIntoTable is the concise insertion-only merge form. Existing
+// rows that match the supplied primary-key expressions are left unchanged;
+// only the not-matched branch evaluates assignments and inserts a row.
+func (s TriggerStream[T]) MergeInsertIntoTable(table string, keys []Expr, assignments ...TableAssignment) TriggerQuery {
+	return s.MergeIntoTableWhen(table, keys, WhenNotMatchedAny(assignments...))
+}
+
 // MergeIntoNamedWindowWhen applies ordered matched and not-matched branches
 // to events in a named window. The match expression may read the incoming
 // event through Field and the candidate window event through NamedWindowField.
@@ -197,6 +204,13 @@ func (s TriggerStream[T]) MergeIntoNamedWindowWhen(window string, match Expressi
 			merge:  cloneTableMergeClauses(clauses),
 		},
 	}
+}
+
+// MergeInsertIntoNamedWindow is the insertion-only named-window merge form.
+// A matching target event is retained and produces no mutation; a trigger
+// event with no matching target is materialized from assignments.
+func (s TriggerStream[T]) MergeInsertIntoNamedWindow(window string, match Expression[bool], assignments ...TableAssignment) TriggerQuery {
+	return s.MergeIntoNamedWindowWhen(window, match, WhenNotMatchedAny(assignments...))
 }
 
 // MergeIntoNamedWindow is the concise alias for MergeIntoNamedWindowWhen.

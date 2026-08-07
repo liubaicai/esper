@@ -569,6 +569,17 @@
       "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1→5/5/1, then 5→7/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text."
     },
     {
+      "id": "case.trigger-merge-simple-insert",
+      "javaRuntimeIds": ["java-runtime-dbf13fb6d1ca3a37275a", "java-runtime-df3d7a21bdd769f1acce"],
+      "javaNames": ["InfraOnMergeSimpleInsert{namedWindow=true}", "InfraOnMergeSimpleInsert{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerMergeInsertOnlyConvenienceMatchesInfraOnMergeSimpleInsert"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "insert-only", "convenience-api"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go adds explicit MergeInsertIntoTable and MergeInsertIntoNamedWindow builders for Java's insertion-only merge form. Existing matching rows are left unchanged, while unmatched events are assigned and inserted; the test covers both targets and a duplicate-key no-op beyond the Java smoke sequence. Exact EPL/SODA syntax and broader merge projection/representation combinations remain open."
+    },
+    {
       "id": "case.trigger-merge-no-where",
       "javaRuntimeIds": ["java-runtime-0dc6b8eb05a1d3989b23", "java-runtime-c6f6bda40f34d29acb8c"],
       "javaNames": ["InfraNoWhereClause"],
@@ -2201,6 +2212,7 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-array-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-nested-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-ordered-scalar-assignment"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-simple-insert"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-variable"},

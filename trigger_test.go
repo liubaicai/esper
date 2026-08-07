@@ -2077,3 +2077,106 @@ func TestTriggerOrderedScalarAssignmentsMatchInfraUpdateOrderOfFields(t *testing
 		})
 	}
 }
+
+func TestTriggerMergeInsertOnlyConvenienceMatchesInfraOnMergeSimpleInsert(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		namedWindow bool
+	}{
+		{name: "table"},
+		{name: "named-window", namedWindow: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			env := NewEnvironment()
+			if _, err := RegisterStruct[runtimeTestTrade](env, "MergeInsertOnlyTrade"); err != nil {
+				t.Fatal(err)
+			}
+			const targetName = "merge-insert-only"
+			if testCase.namedWindow {
+				schema, ok := env.Schema("MergeInsertOnlyTrade")
+				if !ok {
+					t.Fatal("merge insert-only schema is missing")
+				}
+				if _, err := CreateNamedWindow(env, targetName, schema, NamedWindowRetention(KeepAll())); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := CreateTable(env, targetName, []TableColumn{
+				PrimaryKeyColumn[string]("symbol"),
+				TableColumnOf[float64]("price"),
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			source := From[runtimeTestTrade](env, "MergeInsertOnlyTrade")
+			symbol := Field[runtimeTestTrade, string]("symbol")
+			price := Field[runtimeTestTrade, float64]("price")
+			var plan Plan
+			var err error
+			if testCase.namedWindow {
+				match := Equal[string](NamedWindowField[string]("symbol"), symbol)
+				plan, err = env.Build(OnEvent(source).MergeInsertIntoNamedWindow(targetName, match,
+					SetColumn("symbol", symbol), SetColumn("price", price),
+				).Query(StatementName("merge-insert-only")))
+			} else {
+				plan, err = env.Build(OnEvent(source).MergeInsertIntoTable(targetName, []Expr{symbol},
+					SetColumn("symbol", symbol), SetColumn("price", price),
+				).Query(StatementName("merge-insert-only")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			engine := NewEngine(env)
+			deployment, err := engine.Deploy(context.Background(), plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var batches []ResultBatch
+			if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+				batches = append(batches, batch)
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			send := func(event runtimeTestTrade) {
+				t.Helper()
+				if err := engine.SendEvent(context.Background(), event); err != nil {
+					t.Fatal(err)
+				}
+			}
+			send(runtimeTestTrade{Symbol: "A", Price: 1})
+			send(runtimeTestTrade{Symbol: "B", Price: 2})
+			send(runtimeTestTrade{Symbol: "A", Price: 9})
+			if len(batches) != 2 || len(batches[0].New) != 1 || len(batches[1].New) != 1 {
+				t.Fatalf("insert-only merge batches = %#v", batches)
+			}
+			for index, expected := range []struct {
+				symbol string
+				price  float64
+			}{{symbol: "A", price: 1}, {symbol: "B", price: 2}} {
+				event, ok := batches[index].New[0].Event()
+				if !ok || event.Get("symbol").Any() != expected.symbol || event.Get("price").Any() != expected.price {
+					t.Fatalf("insert-only merge result[%d] = %#v", index, batches[index].New[0])
+				}
+			}
+			if testCase.namedWindow {
+				window, ok := engine.NamedWindow(targetName)
+				if !ok {
+					t.Fatal("merge insert-only named window is missing")
+				}
+				events, snapshotErr := window.Snapshot(context.Background())
+				if snapshotErr != nil || len(events) != 2 || events[0].Get("price").Any() != float64(1) || events[1].Get("price").Any() != float64(2) {
+					t.Fatalf("insert-only named-window snapshot = %#v, err=%v", events, snapshotErr)
+				}
+			} else {
+				table, ok := engine.Table(targetName)
+				if !ok {
+					t.Fatal("merge insert-only table is missing")
+				}
+				rows, snapshotErr := table.Snapshot(context.Background())
+				if snapshotErr != nil || len(rows) != 2 || rows[0].Get("price").Any() != float64(1) || rows[1].Get("price").Any() != float64(2) {
+					t.Fatalf("insert-only table snapshot = %#v, err=%v", rows, snapshotErr)
+				}
+			}
+		})
+	}
+}

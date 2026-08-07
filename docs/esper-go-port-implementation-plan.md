@@ -20,6 +20,8 @@
 
 本轮继续对照 Java `InfraNWTableOnMerge.InfraUpdateOrderOfFields`（`java-runtime-3034e5da517c1235da22`、`java-runtime-cb5eefe84a486b090e53`）和 `InfraNWTableOnUpdate.InfraUpdateOrderOfFields`（`java-runtime-fdc71005421b6648a890`、`java-runtime-06eb4a56203c92fe01a6`）：新增 `TestTriggerOrderedScalarAssignmentsMatchInfraUpdateOrderOfFields`，覆盖 Table/Named Window × Merge/Update 四种入口；按 Java 顺序验证 `intPrimitive=trigger.id`、`intBoxed=working.intPrimitive`、`doublePrimitive=initial.intPrimitive`，并固定 E1 的 `5/5/1.0` 与后续 `7/7/5.0` 结果。该 case 已登记到 `trigger.table-named-window`。这补齐的是 scalar ordered assignment 的对照证据，不代表 wildcard、多 action、mapped/representation、subquery/pattern 和其余 on-trigger execution 已完成。
 
+本轮补充 Java `InfraOnMergeSimpleInsert`（`java-runtime-dbf13fb6d1ca3a37275a`、`java-runtime-df3d7a21bdd769f1acce`）：新增 `MergeInsertIntoTable`/`MergeInsertIntoNamedWindow` 两个 Go-native 链式便捷入口，明确表达只执行 not-matched insert 的 merge；`TestTriggerMergeInsertOnlyConvenienceMatchesInfraOnMergeSimpleInsert` 覆盖 Table/Named Window 的 A/B 插入、重复 A 不更新以及最终快照。该 case 已登记到 manifest。Java 的多 action insert-into stream、wildcard/select projection、representation-specific conversion 和完整 on-merge trace 仍待后续切片处理。
+
 本文以实施规划为主，不把当前 Go 原型的签名视为最终稳定 API。文中出现的方法名和调用链只表示目标 API 形态，除第 17 节外不代表对应功能已经完成。
 
 ## 2. 目标与完成定义
