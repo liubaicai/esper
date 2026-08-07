@@ -1,6 +1,7 @@
 package esper
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 )
@@ -111,6 +112,35 @@ func EqualValues(left, right Value) Value {
 // compared exactly when both operands are integral; a floating-point operand
 // promotes the comparison to float64, matching the numeric comparison path.
 func numericEqual(left, right any) (bool, bool) {
+	if leftNumber, ok := left.(json.Number); ok {
+		leftValue, err := leftNumber.Float64()
+		if err != nil {
+			return false, false
+		}
+		if rightNumber, ok := right.(json.Number); ok {
+			rightValue, rightErr := rightNumber.Float64()
+			if rightErr != nil {
+				return false, false
+			}
+			return leftValue == rightValue, true
+		}
+		rightValue, ok := numericAnyFloat(right)
+		if !ok {
+			return false, false
+		}
+		return leftValue == rightValue, true
+	}
+	if rightNumber, ok := right.(json.Number); ok {
+		rightValue, err := rightNumber.Float64()
+		if err != nil {
+			return false, false
+		}
+		leftValue, ok := numericAnyFloat(left)
+		if !ok {
+			return false, false
+		}
+		return leftValue == rightValue, true
+	}
 	lv := reflect.ValueOf(left)
 	rv := reflect.ValueOf(right)
 	for lv.IsValid() && (lv.Kind() == reflect.Pointer || lv.Kind() == reflect.Interface) {
@@ -151,6 +181,24 @@ func numericEqual(left, right any) (bool, bool) {
 		return false, true
 	}
 	return uint64(lv.Int()) == rv.Uint(), true
+}
+
+func numericAnyFloat(value any) (float64, bool) {
+	if number, ok := value.(json.Number); ok {
+		parsed, err := number.Float64()
+		return parsed, err == nil
+	}
+	reflected := reflect.ValueOf(value)
+	for reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {
+		if reflected.IsNil() {
+			return 0, false
+		}
+		reflected = reflected.Elem()
+	}
+	if !reflected.IsValid() || !isNumericKind(reflected.Kind()) {
+		return 0, false
+	}
+	return numericReflectFloat(reflected), true
 }
 
 func isNumericKind(kind reflect.Kind) bool {
@@ -203,6 +251,10 @@ func boolValue(v Value) (bool, bool) {
 func numericValue(v Value) (float64, bool) {
 	if !v.IsPresent() {
 		return 0, false
+	}
+	if number, ok := v.data.(json.Number); ok {
+		parsed, err := number.Float64()
+		return parsed, err == nil
 	}
 	reflected := reflect.ValueOf(v.data)
 	for reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {

@@ -2902,8 +2902,11 @@ func findJSONField(object map[string]any, schema Schema, name string) (string, b
 }
 
 // normalizeDynamicJSONValue maps decoder-level json.Number values to the
-// ordinary Go values exposed by a dynamic JSON property. Declared numeric
-// fields are converted before this function runs, while arbitrary-precision
+// ordinary Go values exposed by a dynamic JSON property. Integral literals
+// become int (or int64/big.Int when required), while decimal and exponent
+// literals remain json.Number so RenderJSON can preserve their JSON number
+// spelling (for example, 42.0 must not become 42). Declared numeric fields
+// are converted before this function runs, while arbitrary-precision
 // declared fields (big.Int/big.Rat) are already materialized and remain
 // untouched. The recursive walk also normalizes numbers inside a declared
 // map[string]any or []any field.
@@ -2912,9 +2915,6 @@ func normalizeDynamicJSONValue(value any) any {
 	case json.Number:
 		text := string(current)
 		if strings.ContainsAny(text, ".eE") {
-			if parsed, err := strconv.ParseFloat(text, 64); err == nil {
-				return parsed
-			}
 			return current
 		}
 		if parsed, err := strconv.ParseInt(text, 10, 64); err == nil {

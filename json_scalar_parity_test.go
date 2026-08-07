@@ -181,3 +181,63 @@ func TestJSONScalarRoundTripTypes(t *testing.T) {
 		}
 	}
 }
+
+func TestJSONDynamicValueMatrixAndNumberLexemesMatchEsper(t *testing.T) {
+	schema, err := NewJSONSchema("JSONDynamicMatrix", nil, AllowDynamicFields())
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := `{"a_string":"abc","a_integer":42,"a_decimal":42.0,"a_exponent":4.2E+1,"a_boolean":true,"a_null":null,"a_object":{"value":"def","decimal":43.0},"a_array":["a",1,{"value":"nested"},false,null],"a_nested_array":[[1,2],[[3,4],5],[6,[[7,8],[9],[]]]]} `
+	event, err := ParseJSON(schema, []byte(input), time.Unix(0, 0).UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	underlying, ok := event.Underlying().(map[string]any)
+	if !ok {
+		t.Fatalf("dynamic underlying = %T", event.Underlying())
+	}
+	if underlying["a_string"] != "abc" || underlying["a_integer"] != 42 || underlying["a_boolean"] != true || underlying["a_null"] != nil {
+		t.Fatalf("dynamic scalar values = %#v", underlying)
+	}
+	for name, want := range map[string]string{
+		"a_decimal":  "42.0",
+		"a_exponent": "4.2E+1",
+	} {
+		number, ok := underlying[name].(json.Number)
+		if !ok || number.String() != want {
+			t.Fatalf("dynamic number %s = %#v (%T), want json.Number(%q)", name, underlying[name], underlying[name], want)
+		}
+	}
+	nested, ok := underlying["a_object"].(map[string]any)
+	if !ok || nested["value"] != "def" {
+		t.Fatalf("dynamic object = %#v", underlying["a_object"])
+	}
+	if number, ok := nested["decimal"].(json.Number); !ok || number.String() != "43.0" {
+		t.Fatalf("nested dynamic number = %#v (%T)", nested["decimal"], nested["decimal"])
+	}
+	array, ok := underlying["a_array"].([]any)
+	if !ok || len(array) != 5 || array[0] != "a" || array[1] != 1 || array[3] != false || array[4] != nil {
+		t.Fatalf("dynamic mixed array = %#v", underlying["a_array"])
+	}
+	if object, ok := array[2].(map[string]any); !ok || object["value"] != "nested" {
+		t.Fatalf("dynamic mixed array object = %#v", array[2])
+	}
+	nestedArray, ok := underlying["a_nested_array"].([]any)
+	if !ok || len(nestedArray) != 3 {
+		t.Fatalf("dynamic nested array = %#v", underlying["a_nested_array"])
+	}
+	rendered, err := RenderJSON(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertJSONEquivalent(t, input, rendered)
+
+	// Iterator consumers observe the same event underlying and must retain the
+	// lexical number representation as well.
+	if got := event.Get("a_decimal").Any(); got != json.Number("42.0") {
+		t.Fatalf("dynamic decimal property = %#v (%T)", got, got)
+	}
+	if !EqualValues(event.Get("a_decimal"), Present(42)).Equal(Present(true)) {
+		t.Fatal("dynamic json.Number should retain numeric comparison semantics")
+	}
+}

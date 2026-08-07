@@ -1,6 +1,7 @@
 package esper
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
@@ -221,6 +222,9 @@ func castToBool(source any) Value {
 }
 
 func castToNativeNumber(source any, sourceValue reflect.Value, target reflect.Type) Value {
+	if number, ok := source.(json.Number); ok {
+		return parseStringNumber(number.String(), target)
+	}
 	if text, ok := source.(string); ok {
 		return parseStringNumber(text, target)
 	}
