@@ -64,6 +64,23 @@ func TestCapabilityManifestRejectsMappedCaseWithoutCapabilityMapping(t *testing.
 	}
 }
 
+func TestCapabilityManifestAcceptsPartialCaseWithCapabilityMapping(t *testing.T) {
+	manifest := CapabilityManifest{
+		Version:    CapabilityManifestVersion,
+		JavaCommit: "java",
+		Capabilities: []CapabilityRecord{{
+			ID: "cap-a", Level: "S", Phase: 1, Status: "partial",
+		}},
+		Cases: []CapabilityCase{{
+			ID: "case-a", JavaRuntimeIDs: []string{"runtime-a"}, Status: "partial",
+		}},
+		Mappings: []CapabilityMapping{{CapabilityID: "cap-a", CaseID: "case-a"}},
+	}
+	if err := manifest.Validate(); err != nil {
+		t.Fatalf("partial case with an explicit capability mapping should validate: %v", err)
+	}
+}
+
 func TestCapabilityManifestRejectsNonPlannedCapabilityWithoutCaseMapping(t *testing.T) {
 	manifest := CapabilityManifest{
 		Version:    CapabilityManifestVersion,

@@ -165,7 +165,7 @@ func validateID(kind, value string) error {
 
 func validCaseStatus(status string) bool {
 	switch status {
-	case "unmapped", "mapped", "passing", "blocked", "approved-difference":
+	case "unmapped", "partial", "mapped", "passing", "blocked", "approved-difference":
 		return true
 	default:
 		return false

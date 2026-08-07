@@ -712,6 +712,28 @@
       "difference": "Go rejects missing target columns, target-field scope in not-matched clauses, incompatible scalar/composite assignments, indexed writes to scalar columns, empty clauses, not-matched delete/update action shapes, malformed wildcard actions, unknown side-stream targets and target inserts on matched branches at Build time. It uses structured errors rather than Java's exact EPL compiler text; the remaining InfraInvalid matrix, representation-specific diagnostics, rollback/transaction and shared trace remain open."
     },
     {
+      "id": "case.trigger-merge-property-eval",
+      "javaRuntimeIds": ["java-runtime-6b310c479a52959b4613", "java-runtime-ffb66ad27dd5ba2c89e0", "java-runtime-ab506c0774b4e0bfab5a", "java-runtime-65e2502b3627cece614c"],
+      "javaNames": ["InfraPropertyEvalInsertNoMatch{namedWindow=true}", "InfraPropertyEvalInsertNoMatch{namedWindow=false}", "InfraPropertyEvalUpdate{namedWindow=true}", "InfraPropertyEvalUpdate{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerInfraPropertyEvalInsertNoMatch", "TestTriggerInfraPropertyEvalUpdate"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "property-eval", "contained", "unnest"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go maps Java's OrderBean[books] and SupportBean_Container[beans] property-evaluation sources to typed Unnest chains. The tests preserve contained order for not-matched inserts and apply each repeated child update to the same Table/Named Window target, with the final value matching Java's last-child-wins trace. Java property-evaluator implementation details, representation conversion, transaction/persistence and the remaining on-merge matrix remain open."
+    },
+    {
+      "id": "case.trigger-merge-delete-then-update",
+      "javaRuntimeIds": ["java-runtime-5816ec0ef519ec8a48e1", "java-runtime-3cca4ced23a6097b5023"],
+      "javaNames": ["InfraDeleteThenUpdate{namedWindow=true}", "InfraDeleteThenUpdate{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerInfraDeleteThenUpdateUsesTerminalDeleteContract"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "multi-action", "delete", "difference"],
+      "status": "partial",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go's ThenDelete is an explicit terminal action: delete removes the matched row and prevents the later ThenUpdate from running, so both Table and Named Window end empty. The Java regression documents no guaranteed winner; its asserted trace observes an empty Table but a Named Window retaining A/10. The Go test records this deliberate action-chain contract rather than claiming Named Window parity."
+    },
+    {
       "id": "case.named-window-unique-merge",
       "javaNames": ["ViewMultiKeyLastUniqueArrayKeyNamedWindow"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewMultikeyWArray.java"],
@@ -2357,6 +2379,8 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-insert-other-stream-bootstrap"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-wildcard"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-subquery-not-matched"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-property-eval"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-delete-then-update"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-static"},
     {"capabilityId": "output.cron-basic", "caseId": "case.output-crontab-variable"},
