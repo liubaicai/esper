@@ -1050,7 +1050,7 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 	if len(sources) < 2 {
 		return QueryResult{}, NewError(ErrorInvalidRule, "fire-and-forget context join requires at least two sources")
 	}
-	evaluationOrder, err := methodJoinEvaluationOrder(plan.query.join)
+	evaluationOrder, err := fireAndForgetJoinEvaluationOrder(plan.query.join)
 	if err != nil {
 		return QueryResult{}, err
 	}
@@ -1195,10 +1195,14 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 // the current key after lookup. This preserves selector and partition
 // semantics while avoiding a full scan of the optional/target source.
 //
-// The helper deliberately handles only inner joins (including an all-inner
-// left-deep chain) without unidirectional sources. Outer, mixed-edge,
-// unidirectional and otherwise unsupported shapes return used=false so the
-// established complete-snapshot implementation remains the source of truth.
+// The helper handles inner joins (including an all-inner left-deep chain) and
+// two-stream left/right outer joins without unidirectional sources. For an
+// outer join, the evaluation order is required to load the preserved side
+// first; the optional side can then be safely reduced to index candidates,
+// including an empty candidate set which lets joinTuples emit the unmatched
+// preserved row. FullOuter, mixed-edge, chained outer and unidirectional
+// shapes return used=false so the established complete-snapshot implementation
+// remains the source of truth.
 func (e *Engine) executeContextJoinFireAndForgetWithIndex(
 	ctx context.Context,
 	plan Plan,
@@ -1217,6 +1221,9 @@ func (e *Engine) executeContextJoinFireAndForgetWithIndex(
 	}
 	driverIndex := evaluationOrder[0]
 	if driverIndex < 0 || driverIndex >= len(sources) {
+		return QueryResult{}, false, nil
+	}
+	if !contextJoinIndexDriverAllowed(plan.query.join, driverIndex) {
 		return QueryResult{}, false, nil
 	}
 	if base, err := sourceNode(sources[driverIndex]); err != nil || base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {
@@ -1433,7 +1440,29 @@ func contextJoinIndexShapeAllowed(definition *joinDefinition) bool {
 		}
 		return true
 	}
-	return definition.kind == JoinInner
+	sources := joinDefinitionSources(definition)
+	switch definition.kind {
+	case JoinInner:
+		return true
+	case JoinLeftOuter, JoinRightOuter:
+		return len(sources) == 2
+	default:
+		return false
+	}
+}
+
+func contextJoinIndexDriverAllowed(definition *joinDefinition, driverIndex int) bool {
+	if definition == nil || len(definition.edges) > 0 {
+		return true
+	}
+	switch definition.kind {
+	case JoinLeftOuter:
+		return driverIndex == 0
+	case JoinRightOuter:
+		return driverIndex == 1
+	default:
+		return true
+	}
 }
 
 func contextJoinIndexSelectionUsable(selection IndexSelection) bool {

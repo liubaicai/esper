@@ -801,6 +801,205 @@ func infraContextIndexResultIDs(results []Result) []string {
 	return ids
 }
 
+func TestInfraFAFContextOuterJoinIndexCandidateRangeParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		for _, kind := range []JoinKind{JoinLeftOuter, JoinRightOuter} {
+			name := indexStoreName(namedWindow) + "-" + joinKindDescription(kind)
+			t.Run(name, func(t *testing.T) {
+				env := NewEnvironment()
+				leftSchema, err := RegisterStruct[infraIndexRangeJoinLeft](env, "InfraContextOuterRangeLeft")
+				if err != nil {
+					t.Fatal(err)
+				}
+				rightSchema, err := RegisterStruct[infraIndexRangeJoinRight](env, "InfraContextOuterRangeRight")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateKeyContext(env, "infra-context-outer-range", Field[any, string]("key")); err != nil {
+					t.Fatal(err)
+				}
+				var left, right RecordStream
+				if namedWindow {
+					if _, err := CreateNamedWindow(env, "ContextOuterRangeLeft", leftSchema,
+						NamedWindowBTreeIndex("left-range", "key", "min")); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := CreateNamedWindow(env, "ContextOuterRangeRight", rightSchema,
+						NamedWindowBTreeIndex("range", "key", "value")); err != nil {
+						t.Fatal(err)
+					}
+					left, right = FromNamedWindow(env, "ContextOuterRangeLeft"), FromNamedWindow(env, "ContextOuterRangeRight")
+				} else {
+					if _, err := CreateTable(env, "ContextOuterRangeLeft", []TableColumn{
+						PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("min"), TableColumnOf[int64]("max"),
+					}, SecondaryBTreeIndex("left-range", "key", "min")); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := CreateTable(env, "ContextOuterRangeRight", []TableColumn{
+						PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("value"),
+					}, SecondaryBTreeIndex("range", "key", "value")); err != nil {
+						t.Fatal(err)
+					}
+					left, right = FromTable(env, "ContextOuterRangeLeft"), FromTable(env, "ContextOuterRangeRight")
+				}
+
+				engine := NewEngine(env)
+				ctx := context.Background()
+				insertLeft := func(row infraIndexRangeJoinLeft) {
+					t.Helper()
+					if namedWindow {
+						if err := engine.InsertNamedWindow(ctx, "ContextOuterRangeLeft", row); err != nil {
+							t.Fatal(err)
+						}
+						return
+					}
+					table, ok := engine.Table("ContextOuterRangeLeft")
+					if !ok {
+						t.Fatal("context outer left table is missing")
+					}
+					if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "min": row.Min, "max": row.Max}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				insertRight := func(row infraIndexRangeJoinRight) {
+					t.Helper()
+					if namedWindow {
+						if err := engine.InsertNamedWindow(ctx, "ContextOuterRangeRight", row); err != nil {
+							t.Fatal(err)
+						}
+						return
+					}
+					table, ok := engine.Table("ContextOuterRangeRight")
+					if !ok {
+						t.Fatal("context outer right table is missing")
+					}
+					if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "value": row.Value}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				for _, row := range []infraIndexRangeJoinLeft{
+					{ID: "L1", Key: "X", Min: 10, Max: 20},
+					{ID: "L2", Key: "X", Min: 20, Max: 30},
+					{ID: "L3", Key: "Y", Min: 0, Max: 5},
+					{ID: "L4", Key: "Q", Min: 100, Max: 110},
+				} {
+					insertLeft(row)
+				}
+				for _, row := range []infraIndexRangeJoinRight{
+					{ID: "R1", Key: "X", Value: 5},
+					{ID: "R2", Key: "X", Value: 10},
+					{ID: "R3", Key: "X", Value: 15},
+					{ID: "R4", Key: "X", Value: 25},
+					{ID: "R5", Key: "Y", Value: 3},
+					{ID: "R6", Key: "Z", Value: 1},
+				} {
+					insertRight(row)
+				}
+
+				join := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(AllJoin(
+					OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+					OnSourcesCompare(0, Field[any, int64]("min"), 1, Field[any, int64]("value"), JoinLessOrEqual),
+					OnSourcesCompare(0, Field[any, int64]("max"), 1, Field[any, int64]("value"), JoinGreaterOrEqual),
+				))
+				if kind == JoinLeftOuter {
+					join = join.LeftOuter()
+				} else {
+					join = join.RightOuter()
+				}
+				options := []QueryOption{WithContext("infra-context-outer-range")}
+				if kind == JoinLeftOuter {
+					options = append(options, UseIndexOn(1, "range"))
+				} else {
+					options = append(options, UseIndexOn(0, "left-range"))
+				}
+				plan, err := env.Build(join.Select(
+					SelectFrom(0, "left", JoinField[string](0, "id")),
+					SelectFrom(1, "right", JoinField[string](1, "id")),
+				).Query(options...))
+				if err != nil {
+					t.Fatal(err)
+				}
+				targetSource := 1
+				wantSelection := "range"
+				if kind == JoinRightOuter {
+					targetSource = 0
+					wantSelection = "left-range"
+				}
+				selection, ok := plan.IndexPlan().ForSource(targetSource)
+				if !ok || selection.IndexName != wantSelection || selection.Access != IndexAccessRange {
+					t.Fatalf("context outer range index plan = %#v", selection)
+				}
+
+				var leftLookups, rightLookups func() uint64
+				if namedWindow {
+					leftWindow, _ := engine.NamedWindow("ContextOuterRangeLeft")
+					rightWindow, _ := engine.NamedWindow("ContextOuterRangeRight")
+					leftLookups = func() uint64 { return leftWindow.state.indexLookups.Load() }
+					rightLookups = func() uint64 { return rightWindow.state.indexLookups.Load() }
+				} else {
+					leftTable, _ := engine.Table("ContextOuterRangeLeft")
+					rightTable, _ := engine.Table("ContextOuterRangeRight")
+					leftLookups = func() uint64 { return leftTable.state.indexLookups.Load() }
+					rightLookups = func() uint64 { return rightTable.state.indexLookups.Load() }
+				}
+				formatID := func(value Value) string {
+					if !value.IsPresent() {
+						return "<missing>"
+					}
+					return value.Any().(string)
+				}
+				beforeLeft, beforeRight := leftLookups(), rightLookups()
+				result, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got := make([]string, 0, len(result.Results()))
+				for _, row := range result.Results() {
+					got = append(got, formatID(row.Get("left"))+"/"+formatID(row.Get("right")))
+				}
+				want := []string{"L4/<missing>", "L1/R2", "L1/R3", "L2/R4", "L3/R5"}
+				if kind == JoinRightOuter {
+					want = []string{"L1/R2", "L1/R3", "L2/R4", "<missing>/R1", "L3/R5", "<missing>/R6"}
+				}
+				if !reflect.DeepEqual(got, want) {
+					t.Fatalf("context outer range result = %#v, want %#v", got, want)
+				}
+				if kind == JoinLeftOuter {
+					if leftLookups() != beforeLeft || rightLookups() != beforeRight+3 {
+						t.Fatalf("context left outer range counters = left %d->%d right %d->%d", beforeLeft, leftLookups(), beforeRight, rightLookups())
+					}
+				} else if leftLookups() != beforeLeft+3 || rightLookups() != beforeRight {
+					t.Fatalf("context right outer range counters = left %d->%d right %d->%d", beforeLeft, leftLookups(), beforeRight, rightLookups())
+				}
+
+				beforeLeft, beforeRight = leftLookups(), rightLookups()
+				selected, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, SelectContextPartitions(encodeKey([]any{ValuePresent, "X"})))
+				if err != nil {
+					t.Fatal(err)
+				}
+				selectedGot := make([]string, 0, len(selected.Results()))
+				for _, row := range selected.Results() {
+					selectedGot = append(selectedGot, formatID(row.Get("left"))+"/"+formatID(row.Get("right")))
+				}
+				selectedWant := []string{"L1/R2", "L1/R3", "L2/R4"}
+				if kind == JoinRightOuter {
+					selectedWant = []string{"L1/R2", "L1/R3", "L2/R4", "<missing>/R1"}
+				}
+				if !reflect.DeepEqual(selectedGot, selectedWant) {
+					t.Fatalf("selected context outer range result = %#v, want %#v", selectedGot, selectedWant)
+				}
+				if kind == JoinLeftOuter {
+					if leftLookups() != beforeLeft || rightLookups() != beforeRight+1 {
+						t.Fatalf("selected context left outer range counters = left %d->%d right %d->%d", beforeLeft, leftLookups(), beforeRight, rightLookups())
+					}
+				} else if leftLookups() != beforeLeft+1 || rightLookups() != beforeRight {
+					t.Fatalf("selected context right outer range counters = left %d->%d right %d->%d", beforeLeft, leftLookups(), beforeRight, rightLookups())
+				}
+			})
+		}
+	}
+}
+
 func TestInfraFAFContextJoinIndexCandidateEqualityParity(t *testing.T) {
 	for _, namedWindow := range []bool{true, false} {
 		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
