@@ -29,6 +29,11 @@ type triggerMergeInsertStreamEvent struct {
 	P00  int    `esper:"p00"`
 }
 
+type triggerMergeOtherStreamEvent struct {
+	Name  string  `esper:"name"`
+	Value float64 `esper:"value"`
+}
+
 func TestTableTriggerBuilderAndLifecycle(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
@@ -2570,6 +2575,330 @@ func TestTriggerMergeInsertStreamActionsMatchInfraOnMergeInsertStream(t *testing
 			assertStream("StreamThree", 2, "ID1", "K2")
 			assertStream("StreamFour", 1, "ID1", "K2")
 			assertTarget(map[string]int{"K1": 1, "K2": 2})
+		})
+	}
+}
+
+func TestTriggerMatchedMergeInsertStreamReadsTargetRow(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		namedWindow bool
+	}{
+		{name: "table"},
+		{name: "named-window", namedWindow: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			env := NewEnvironment()
+			if _, err := RegisterStruct[triggerMergeOtherStreamEvent](env, "TriggerMergeOtherStreamEvent"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := RegisterMap(env, "TriggerMergeOtherStream", []FieldSpec{
+				FieldDef("event_name", reflect.TypeOf("")),
+				FieldDef("status", reflect.TypeOf(float64(0))),
+				FieldDef("trigger_value", reflect.TypeOf(float64(0))),
+			}); err != nil {
+				t.Fatal(err)
+			}
+			const targetName = "trigger-merge-other-stream-target"
+			if testCase.namedWindow {
+				targetSchema, err := RegisterMap(env, "TriggerMergeOtherStreamTarget", []FieldSpec{
+					FieldDef("name", reflect.TypeOf("")),
+					FieldDef("value", reflect.TypeOf(float64(0))),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, targetName, targetSchema, NamedWindowRetention(KeepAll())); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := CreateTable(env, targetName, []TableColumn{
+				PrimaryKeyColumn[string]("name"),
+				TableColumnOf[float64]("value"),
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			engine := NewEngine(env)
+			initial := map[string]any{"name": "name1", "value": float64(10)}
+			if testCase.namedWindow {
+				if err := engine.InsertNamedWindow(context.Background(), targetName, initial); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				table, ok := engine.Table(targetName)
+				if !ok {
+					t.Fatal("matched side-stream table is missing")
+				}
+				if _, err := table.Insert(context.Background(), initial); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			source := From[triggerMergeOtherStreamEvent](env, "TriggerMergeOtherStreamEvent")
+			name := Field[triggerMergeOtherStreamEvent, string]("name")
+			value := Field[triggerMergeOtherStreamEvent, float64]("value")
+			var targetValue Expression[float64]
+			var plan Plan
+			var err error
+			if testCase.namedWindow {
+				targetValue = NamedWindowField[float64]("value")
+				match := Equal[string](NamedWindowField[string]("name"), name)
+				plan, err = env.Build(OnEvent(source).MergeIntoNamedWindowWhen(targetName, match,
+					WhenMatchedActions(
+						ThenInsertInto("TriggerMergeOtherStream",
+							Alias("event_name", name),
+							Alias("status", targetValue),
+							Alias("trigger_value", value),
+						),
+						ThenUpdate(Greater[float64](value, Literal[float64](11)), SetColumn("value", value)),
+					),
+				).Query(StatementName("trigger-merge-matched-side-stream")))
+			} else {
+				targetValue = TableField[float64]("value")
+				plan, err = env.Build(OnEvent(source).MergeIntoTableWhen(targetName, []Expr{name},
+					WhenMatchedActions(
+						ThenInsertInto("TriggerMergeOtherStream",
+							Alias("event_name", name),
+							Alias("status", targetValue),
+							Alias("trigger_value", value),
+						),
+						ThenUpdate(Greater[float64](value, Literal[float64](11)), SetColumn("value", value)),
+					),
+				).Query(StatementName("trigger-merge-matched-side-stream")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			consumerPlan, err := env.Build(FromAny(env, "TriggerMergeOtherStream").Query(StatementName("consume-trigger-merge-other-stream")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			mergeDeployment, err := engine.Deploy(context.Background(), plan)
+			if err != nil {
+				_ = consumerDeployment.Undeploy(context.Background())
+				t.Fatal(err)
+			}
+			defer func() {
+				_ = mergeDeployment.Undeploy(context.Background())
+				_ = consumerDeployment.Undeploy(context.Background())
+			}()
+
+			var sideBatches []ResultBatch
+			if _, err := consumerDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+				sideBatches = append(sideBatches, batch)
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			var mutationBatches []ResultBatch
+			if _, err := mergeDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+				mutationBatches = append(mutationBatches, batch)
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			readTarget := func() float64 {
+				t.Helper()
+				if testCase.namedWindow {
+					window, ok := engine.NamedWindow(targetName)
+					if !ok {
+						t.Fatal("matched side-stream named window is missing")
+					}
+					events, snapshotErr := window.Snapshot(context.Background())
+					if snapshotErr != nil || len(events) != 1 {
+						t.Fatalf("matched side-stream named-window snapshot = %#v, err=%v", events, snapshotErr)
+					}
+					return events[0].Get("value").Any().(float64)
+				}
+				table, ok := engine.Table(targetName)
+				if !ok {
+					t.Fatal("matched side-stream table is missing")
+				}
+				row, found, getErr := table.Get(context.Background(), "name1")
+				if getErr != nil || !found {
+					t.Fatalf("matched side-stream table row = %#v, found=%v, err=%v", row, found, getErr)
+				}
+				return row.Get("value").Any().(float64)
+			}
+			assertSide := func(index int, wantStatus, wantTrigger float64) {
+				t.Helper()
+				if len(sideBatches) <= index || len(sideBatches[index].New) != 1 {
+					t.Fatalf("matched side-stream batches = %#v", sideBatches)
+				}
+				event, ok := sideBatches[index].New[0].Event()
+				if !ok {
+					t.Fatalf("matched side-stream result is not an event: %#v", sideBatches[index].New[0])
+				}
+				if event.Get("event_name").Any() != "name1" || event.Get("status").Any() != wantStatus || event.Get("trigger_value").Any() != wantTrigger {
+					t.Fatalf("matched side-stream event = %#v, want name1/%v/%v", event, wantStatus, wantTrigger)
+				}
+			}
+
+			if err := engine.SendEvent(context.Background(), triggerMergeOtherStreamEvent{Name: "name1", Value: 11}); err != nil {
+				t.Fatal(err)
+			}
+			assertSide(0, 10, 11)
+			if len(mutationBatches) != 0 {
+				t.Fatalf("side-stream-only matched merge emitted target mutation = %#v", mutationBatches)
+			}
+			if got := readTarget(); got != 10 {
+				t.Fatalf("side-stream-only target value = %v, want 10", got)
+			}
+
+			if err := engine.SendEvent(context.Background(), triggerMergeOtherStreamEvent{Name: "name1", Value: 12}); err != nil {
+				t.Fatal(err)
+			}
+			assertSide(1, 10, 12)
+			if len(mutationBatches) != 1 || len(mutationBatches[0].Old) != 1 || len(mutationBatches[0].New) != 1 {
+				t.Fatalf("side-stream plus update mutation batches = %#v, want one old/new batch", mutationBatches)
+			}
+			oldEvent, oldOK := mutationBatches[0].Old[0].Event()
+			newEvent, newOK := mutationBatches[0].New[0].Event()
+			if !oldOK || !newOK || oldEvent.Get("value").Any() != 10.0 || newEvent.Get("value").Any() != 12.0 {
+				t.Fatalf("side-stream plus update old/new = %#v/%#v", mutationBatches[0].Old[0], mutationBatches[0].New[0])
+			}
+			if got := readTarget(); got != 12 {
+				t.Fatalf("side-stream plus update target value = %v, want 12", got)
+			}
+		})
+	}
+}
+
+func TestTriggerMatchedMergeInsertStreamReadsTargetRowTypedSource(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		namedWindow bool
+	}{
+		{name: "table"},
+		{name: "named-window", namedWindow: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			env := NewEnvironment()
+			if _, err := RegisterStruct[triggerMergeInsertStreamEvent](env, "MatchedMergeSource"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := RegisterMap(env, "MatchedMergeStream", []FieldSpec{
+				FieldDef("id", reflect.TypeOf("")),
+				FieldDef("key0", reflect.TypeOf("")),
+				FieldDef("previous", reflect.TypeOf(int(0))),
+			}); err != nil {
+				t.Fatal(err)
+			}
+			const targetName = "matched-merge-target"
+			if testCase.namedWindow {
+				schema, err := RegisterMap(env, "MatchedMergeTarget", []FieldSpec{
+					FieldDef("v1", reflect.TypeOf("")),
+					FieldDef("v2", reflect.TypeOf(int(0))),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, targetName, schema, NamedWindowRetention(KeepAll())); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := CreateTable(env, targetName, []TableColumn{
+				PrimaryKeyColumn[string]("v1"),
+				TableColumnOf[int]("v2"),
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			source := From[triggerMergeInsertStreamEvent](env, "MatchedMergeSource")
+			id := Field[triggerMergeInsertStreamEvent, string]("id")
+			key0 := Field[triggerMergeInsertStreamEvent, string]("key0")
+			p00 := Field[triggerMergeInsertStreamEvent, int]("p00")
+			var previous Expr
+			var mergePlan Plan
+			var err error
+			if testCase.namedWindow {
+				previous = NamedWindowField[int]("v2")
+				match := Equal[string](NamedWindowField[string]("v1"), key0)
+				mergePlan, err = env.Build(OnEvent(source).MergeIntoNamedWindowWhen(targetName, match,
+					WhenNotMatchedAny(SetColumn("v1", key0), SetColumn("v2", p00)),
+					WhenMatchedActions(
+						ThenInsertInto("MatchedMergeStream", Alias("id", id), Alias("key0", key0), Alias("previous", previous)),
+						ThenUpdate(Literal(true), SetColumn("v2", p00)),
+					),
+				).Query(StatementName("matched-merge-side-stream")))
+			} else {
+				previous = TableField[int]("v2")
+				mergePlan, err = env.Build(OnEvent(source).MergeIntoTableWhen(targetName, []Expr{key0},
+					WhenNotMatchedAny(SetColumn("v1", key0), SetColumn("v2", p00)),
+					WhenMatchedActions(
+						ThenInsertInto("MatchedMergeStream", Alias("id", id), Alias("key0", key0), Alias("previous", previous)),
+						ThenUpdate(Literal(true), SetColumn("v2", p00)),
+					),
+				).Query(StatementName("matched-merge-side-stream")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			consumerPlan, err := env.Build(FromAny(env, "MatchedMergeStream").Query(StatementName("matched-merge-consumer")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			engine := NewEngine(env)
+			consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer consumerDeployment.Undeploy(context.Background())
+			var batches []ResultBatch
+			if _, err := consumerDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+				batches = append(batches, batch)
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			mergeDeployment, err := engine.Deploy(context.Background(), mergePlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer mergeDeployment.Undeploy(context.Background())
+
+			if err := engine.SendEvent(context.Background(), triggerMergeInsertStreamEvent{ID: "ID1", Key0: "K1", P00: 1}); err != nil {
+				t.Fatal(err)
+			}
+			if len(batches) != 0 {
+				t.Fatalf("matched side stream fired for not-matched insert: %#v", batches)
+			}
+			if err := engine.SendEvent(context.Background(), triggerMergeInsertStreamEvent{ID: "ID2", Key0: "K1", P00: 5}); err != nil {
+				t.Fatal(err)
+			}
+			if len(batches) != 1 || len(batches[0].New) != 1 {
+				t.Fatalf("matched side stream batches = %#v", batches)
+			}
+			sideEvent, ok := batches[0].New[0].Event()
+			if !ok || sideEvent.Get("id").Any() != "ID2" || sideEvent.Get("key0").Any() != "K1" || sideEvent.Get("previous").Any() != 1 {
+				t.Fatalf("matched side stream event = %#v", batches[0].New[0])
+			}
+
+			if testCase.namedWindow {
+				window, ok := engine.NamedWindow(targetName)
+				if !ok {
+					t.Fatal("matched merge named window is missing")
+				}
+				events, err := window.Snapshot(context.Background())
+				if err != nil || len(events) != 1 || events[0].Get("v2").Any() != 5 {
+					t.Fatalf("matched merge named-window snapshot = %#v, err=%v", events, err)
+				}
+			} else {
+				table, ok := engine.Table(targetName)
+				if !ok {
+					t.Fatal("matched merge table is missing")
+				}
+				rows, err := table.Snapshot(context.Background())
+				if err != nil || len(rows) != 1 || rows[0].Get("v2").Any() != 5 {
+					t.Fatalf("matched merge table snapshot = %#v, err=%v", rows, err)
+				}
+			}
 		})
 	}
 }

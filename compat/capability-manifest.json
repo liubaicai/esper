@@ -613,26 +613,15 @@
       "difference": "Go maps ordered not-matched action chains to ThenInsertInto/ThenInsertIntoWhen for side-stream projections and ThenInsertIntoTarget for the final Table or Named Window insert. The test checks four side streams, a conditional side stream, target state and Table/Named Window behavior. Split-stream fan-out beyond this chain, representation conversion, rollback/transactional action batches and complete Java action-order/error diagnostics remain open."
     },
     {
-      "id": "case.trigger-merge-insert-stream",
-      "javaRuntimeIds": ["java-runtime-2c687a68317caea3c148", "java-runtime-081455731ccafbf6847c"],
-      "javaNames": ["InfraOnMergeInsertStream{namedWindow=true}", "InfraOnMergeInsertStream{namedWindow=false}"],
+      "id": "case.trigger-merge-matched-side-stream",
+      "javaRuntimeIds": ["java-runtime-c91b3df37512cfac454f", "java-runtime-b54b14998ff59e65f2fc", "java-runtime-945ba0790a1cfa2b1033", "java-runtime-fef4b3a46f9b7da65a72", "java-runtime-d8cb24fc9e29421236e2", "java-runtime-e22957dc02c3ac4b8bb7", "java-runtime-284497e8a9729bb76ac2", "java-runtime-f6718d2a96a3e3668239", "java-runtime-51773f11823a58156447", "java-runtime-b891f1f54423ccb8a628", "java-runtime-dd95faed8e31c95bec9f", "java-runtime-6e68e972f23cef8dde85"],
+      "javaNames": ["InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=OBJECTARRAY}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=OBJECTARRAY}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=MAP}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=MAP}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=AVRO}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=AVRO}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=JSON}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=JSON}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=JSONCLASSPROVIDED}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=JSONCLASSPROVIDED}", "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=DEFAULT}", "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=DEFAULT}"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
-      "goTests": ["TestTriggerMergeInsertStreamActionsMatchInfraOnMergeInsertStream"],
-      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "insert-into", "side-stream", "ordered"],
+      "goTests": ["TestTriggerMatchedMergeInsertStreamReadsTargetRow", "TestTriggerMatchedMergeInsertStreamReadsTargetRowTypedSource"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "insert-into", "matched", "target-row"],
       "status": "mapped",
       "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
-      "difference": "Go models a not-matched merge branch as ordered ThenInsertInto/ThenInsertIntoWhen side-stream actions followed by ThenInsertIntoTarget. Registered event schemas receive typed Row projections through the normal route queue, while the Table/Named Window target receives its final insert; the test covers StreamOne/Two/Three, conditional StreamFour, K1/K2 and both target kinds. Java wildcard select, inferred output event types, exact synchronous interleaving, representation conversion and rollback/transaction traces remain open."
-    },
-    {
-      "id": "case.trigger-merge-wildcard",
-      "javaRuntimeIds": ["java-runtime-403bba8c6b29e32b1a8f", "java-runtime-ae05c015767242106de7"],
-      "javaNames": ["InfraFlow{namedWindow=true}", "InfraFlow{namedWindow=false}"],
-      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
-      "goTests": ["TestTriggerMergeWildcardCopiesMatchingFields"],
-      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "wildcard", "copy-matching-fields"],
-      "status": "mapped",
-      "evidence": ["java-runtime-inventory", "go-unit"],
-      "difference": "Go adds CopyMatchingFields as a schema-bound wildcard assignment: source fields matching target names are copied, target-only columns retain existing values on update and materialize as null on insert. The direct Table/Named Window test covers insert and matched replacement. Java's full InfraFlow source-filter/delete/update/route lifecycle, wildcard event identity and representation matrix remain open."
+      "difference": "Go permits a matched side-stream projection to read the current target row, while a later ThenUpdate commits the target mutation; a side-stream-only matched action does not fabricate target new/old output. The Go test covers the same target-row/action-chain behavior for Table and Named Window and registers all 12 Java representation/target executions as the source matrix. Go still uses schema-bound map targets and does not yet cover ObjectArray/Avro/JSON/JSON-class-provided/XML representation conversion, the Java insert-into target bootstrap, InnerType/Variable, invalid/rollback, split-stream, transaction/persistence, index-plan or exact diagnostic matrix."
     },
     {
       "id": "case.trigger-merge-subquery-not-matched",
@@ -2293,6 +2282,7 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-simple-insert"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-multiaction"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-insert-stream"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-matched-side-stream"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-wildcard"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-subquery-not-matched"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.named-window-unique-merge"},
