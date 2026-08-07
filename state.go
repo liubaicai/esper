@@ -708,6 +708,14 @@ func (t *Table) lookupPrimaryMany(ctx context.Context, keys [][]any) ([]TableRow
 // rows in table insertion order. The ordered members are kept separately from
 // the hash buckets so the runtime never has to reverse-engineer encodeKey.
 func (t *Table) lookupRange(ctx context.Context, indexName string, query indexRangeSpec) ([]TableRow, error) {
+	return t.lookupRangeMany(ctx, indexName, []indexRangeSpec{query})
+}
+
+// lookupRangeMany unions several complete range probes in one locked
+// insertion-order snapshot. FAF Join range candidates can be driven by more
+// than one loaded-side tuple; probing them as a batch avoids duplicate rows
+// and keeps result order independent of probe order.
+func (t *Table) lookupRangeMany(ctx context.Context, indexName string, queries []indexRangeSpec) ([]TableRow, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
@@ -726,8 +734,11 @@ func (t *Table) lookupRange(ctx context.Context, indexName string, query indexRa
 		if err := contextErr(ctx); err != nil {
 			return nil, err
 		}
-		if indexRangeEntryMatches(entry.values, query) {
-			wanted[entry.rowKey] = struct{}{}
+		for _, query := range queries {
+			if indexRangeEntryMatches(entry.values, query) {
+				wanted[entry.rowKey] = struct{}{}
+				break
+			}
 		}
 	}
 	rows := make([]TableRow, 0, len(wanted))
@@ -1796,6 +1807,10 @@ func (w *NamedWindow) lookupMany(ctx context.Context, indexName string, keys [][
 // events in retention/insertion order. Context-bound root windows search
 // partitions in the same deterministic order as Lookup.
 func (w *NamedWindow) lookupRange(ctx context.Context, indexName string, query indexRangeSpec) ([]Event, error) {
+	return w.lookupRangeMany(ctx, indexName, []indexRangeSpec{query})
+}
+
+func (w *NamedWindow) lookupRangeMany(ctx context.Context, indexName string, queries []indexRangeSpec) ([]Event, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
@@ -1806,7 +1821,7 @@ func (w *NamedWindow) lookupRange(ctx context.Context, indexName string, query i
 		return nil, NewError(ErrorUnknownName, fmt.Sprintf("named window index %q does not exist", indexName))
 	}
 	if w.state.def.contextName == "" || w.state.contextKey != "" {
-		return lookupNamedWindowRangeState(w.state, indexName, query, ctx)
+		return lookupNamedWindowRangeStateMany(w.state, indexName, queries, ctx)
 	}
 	w.state.mu.RLock()
 	partitionKeys := make([]string, 0, len(w.state.partitions))
@@ -1822,7 +1837,7 @@ func (w *NamedWindow) lookupRange(ctx context.Context, indexName string, query i
 		if err := contextErr(ctx); err != nil {
 			return nil, err
 		}
-		partitionResult, err := lookupNamedWindowRangeState(partitions[partitionKey], indexName, query, ctx)
+		partitionResult, err := lookupNamedWindowRangeStateMany(partitions[partitionKey], indexName, queries, ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -1832,6 +1847,10 @@ func (w *NamedWindow) lookupRange(ctx context.Context, indexName string, query i
 }
 
 func lookupNamedWindowRangeState(state *namedWindowRuntime, indexName string, query indexRangeSpec, ctx context.Context) ([]Event, error) {
+	return lookupNamedWindowRangeStateMany(state, indexName, []indexRangeSpec{query}, ctx)
+}
+
+func lookupNamedWindowRangeStateMany(state *namedWindowRuntime, indexName string, queries []indexRangeSpec, ctx context.Context) ([]Event, error) {
 	if state == nil {
 		return nil, nil
 	}
@@ -1843,8 +1862,11 @@ func lookupNamedWindowRangeState(state *namedWindowRuntime, indexName string, qu
 		if err := contextErr(ctx); err != nil {
 			return nil, err
 		}
-		if indexRangeEntryMatches(entry.values, query) {
-			wanted[entry.position] = struct{}{}
+		for _, query := range queries {
+			if indexRangeEntryMatches(entry.values, query) {
+				wanted[entry.position] = struct{}{}
+				break
+			}
 		}
 	}
 	result := make([]Event, 0, len(wanted))

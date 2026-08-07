@@ -37,6 +37,19 @@ type infraIndexCompositeJoinEvent struct {
 	Seq int64  `esper:"seq"`
 }
 
+type infraIndexRangeJoinLeft struct {
+	ID  string `esper:"id"`
+	Key string `esper:"key"`
+	Min int64  `esper:"min"`
+	Max int64  `esper:"max"`
+}
+
+type infraIndexRangeJoinRight struct {
+	ID    string `esper:"id"`
+	Key   string `esper:"key"`
+	Value int64  `esper:"value"`
+}
+
 func TestInfraFAFIndexMultikeyArrayParity(t *testing.T) {
 	for _, namedWindow := range []bool{true, false} {
 		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
@@ -688,6 +701,210 @@ func TestInfraFAFIndexJoinCompositeEqualityAndDuplicateProbeParity(t *testing.T)
 			}
 			if leftAfter := leftLookups(); leftAfter != leftBefore {
 				t.Fatalf("composite join left source unexpectedly probed its index: before=%d after=%d", leftBefore, leftAfter)
+			}
+		})
+	}
+}
+
+func TestInfraFAFIndexJoinBTreeRangeCandidateParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env := NewEnvironment()
+			leftSchema, err := RegisterStruct[infraIndexRangeJoinLeft](env, "InfraIndexRangeJoinLeft")
+			if err != nil {
+				t.Fatal(err)
+			}
+			rightSchema, err := RegisterStruct[infraIndexRangeJoinRight](env, "InfraIndexRangeJoinRight")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var left, right RecordStream
+			if namedWindow {
+				if _, err := CreateNamedWindow(env, "W1", leftSchema); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, "W2", rightSchema, NamedWindowBTreeIndex("range", "key", "value")); err != nil {
+					t.Fatal(err)
+				}
+				left, right = FromNamedWindow(env, "W1"), FromNamedWindow(env, "W2")
+			} else {
+				if _, err := CreateTable(env, "W1", []TableColumn{
+					PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("min"), TableColumnOf[int64]("max"),
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateTable(env, "W2", []TableColumn{
+					PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("value"),
+				}, SecondaryBTreeIndex("range", "key", "value")); err != nil {
+					t.Fatal(err)
+				}
+				left, right = FromTable(env, "W1"), FromTable(env, "W2")
+			}
+			engine := NewEngine(env)
+			ctx := context.Background()
+			leftRows := []infraIndexRangeJoinLeft{
+				{ID: "L1", Key: "X", Min: 10, Max: 20},
+				{ID: "L2", Key: "X", Min: 20, Max: 30},
+				{ID: "L3", Key: "Y", Min: 0, Max: 5},
+			}
+			rightRows := []infraIndexRangeJoinRight{
+				{ID: "R1", Key: "X", Value: 5},
+				{ID: "R2", Key: "X", Value: 10},
+				{ID: "R3", Key: "X", Value: 15},
+				{ID: "R4", Key: "X", Value: 20},
+				{ID: "R5", Key: "X", Value: 25},
+				{ID: "R6", Key: "Y", Value: 5},
+				{ID: "R7", Key: "Y", Value: 6},
+			}
+			insertLeft := func(row infraIndexRangeJoinLeft) {
+				t.Helper()
+				if namedWindow {
+					if err := engine.InsertNamedWindow(ctx, "W1", row); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				table, _ := engine.Table("W1")
+				if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "min": row.Min, "max": row.Max}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			insertRight := func(row infraIndexRangeJoinRight) {
+				t.Helper()
+				if namedWindow {
+					if err := engine.InsertNamedWindow(ctx, "W2", row); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				table, _ := engine.Table("W2")
+				if _, err := table.Insert(ctx, map[string]any{"id": row.ID, "key": row.Key, "value": row.Value}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, row := range leftRows {
+				insertLeft(row)
+			}
+			for _, row := range rightRows {
+				insertRight(row)
+			}
+
+			join := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(AllJoin(
+				OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+				OnSourcesCompare(0, Field[any, int64]("min"), 1, Field[any, int64]("value"), JoinLessOrEqual),
+				OnSourcesCompare(0, Field[any, int64]("max"), 1, Field[any, int64]("value"), JoinGreaterOrEqual),
+			)).Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query()
+			plan, err := env.Build(join)
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok := plan.IndexPlan().ForSource(1)
+			if !ok || selection.IndexName != "range" || selection.Access != IndexAccessRange || selection.Backing != IndexBackingBTree || !reflect.DeepEqual(selection.Columns, []string{"key", "value"}) || !reflect.DeepEqual(selection.MatchedColumns, []string{"key", "value"}) {
+				t.Fatalf("range join index plan = %#v", selection)
+			}
+			var leftLookups, rightLookups func() uint64
+			if namedWindow {
+				leftWindow, _ := engine.NamedWindow("W1")
+				rightWindow, _ := engine.NamedWindow("W2")
+				leftLookups = func() uint64 { return leftWindow.state.indexLookups.Load() }
+				rightLookups = func() uint64 { return rightWindow.state.indexLookups.Load() }
+			} else {
+				leftTable, _ := engine.Table("W1")
+				rightTable, _ := engine.Table("W2")
+				leftLookups = func() uint64 { return leftTable.state.indexLookups.Load() }
+				rightLookups = func() uint64 { return rightTable.state.indexLookups.Load() }
+			}
+			leftBefore, rightBefore := leftLookups(), rightLookups()
+			result, err := engine.ExecuteFireAndForget(ctx, plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			pairs := make([]string, 0, len(result.Results()))
+			for _, row := range result.Results() {
+				pairs = append(pairs, row.Get("left").Any().(string)+"/"+row.Get("right").Any().(string))
+			}
+			if !reflect.DeepEqual(pairs, []string{"L1/R2", "L1/R3", "L1/R4", "L2/R4", "L2/R5", "L3/R6"}) {
+				t.Fatalf("range join result = %#v", pairs)
+			}
+			if rightAfter := rightLookups(); rightAfter != rightBefore+1 {
+				t.Fatalf("range join expected one batched right lookup: before=%d after=%d", rightBefore, rightAfter)
+			}
+			if leftAfter := leftLookups(); leftAfter != leftBefore {
+				t.Fatalf("range join left source unexpectedly probed its index: before=%d after=%d", leftBefore, leftAfter)
+			}
+
+			reversedQuery := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(AllJoin(
+				OnSourcesEqual(1, Field[any, string]("key"), 0, Field[any, string]("key")),
+				OnSourcesCompare(1, Field[any, int64]("value"), 0, Field[any, int64]("min"), JoinGreaterOrEqual),
+				OnSourcesCompare(1, Field[any, int64]("value"), 0, Field[any, int64]("max"), JoinLessOrEqual),
+			)).Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Query()
+			reversedPlan, err := env.Build(reversedQuery)
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok = reversedPlan.IndexPlan().ForSource(1)
+			if !ok || selection.IndexName != "range" || selection.Access != IndexAccessRange {
+				t.Fatalf("reversed range join index plan = %#v", selection)
+			}
+			leftBefore, rightBefore = leftLookups(), rightLookups()
+			reversedResult, err := engine.ExecuteFireAndForget(ctx, reversedPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			reversedPairs := make([]string, 0, len(reversedResult.Results()))
+			for _, row := range reversedResult.Results() {
+				reversedPairs = append(reversedPairs, row.Get("left").Any().(string)+"/"+row.Get("right").Any().(string))
+			}
+			if !reflect.DeepEqual(reversedPairs, []string{"L1/R2", "L1/R3", "L1/R4", "L2/R4", "L2/R5", "L3/R6"}) {
+				t.Fatalf("reversed range join result = %#v", reversedPairs)
+			}
+			if rightAfter := rightLookups(); rightAfter != rightBefore+1 {
+				t.Fatalf("reversed range join expected one batched right lookup: before=%d after=%d", rightBefore, rightAfter)
+			}
+			if leftAfter := leftLookups(); leftAfter != leftBefore {
+				t.Fatalf("reversed range join left source unexpectedly probed its index: before=%d after=%d", leftBefore, leftAfter)
+			}
+
+			whereQuery := JoinMany(JoinRecordSource(left), JoinRecordSource(right)).On(
+				OnSourcesEqual(0, Field[any, string]("key"), 1, Field[any, string]("key")),
+			).Select(
+				SelectFrom(0, "left", JoinField[string](0, "id")),
+				SelectFrom(1, "right", JoinField[string](1, "id")),
+			).Where(And(
+				GreaterOrEqual[int64](JoinField[int64](1, "value"), JoinField[int64](0, "min")),
+				LessOrEqual[int64](JoinField[int64](1, "value"), JoinField[int64](0, "max")),
+			)).Query()
+			wherePlan, err := env.Build(whereQuery)
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection, ok = wherePlan.IndexPlan().ForSource(1)
+			if !ok || selection.IndexName != "range" || selection.Access != IndexAccessRange {
+				t.Fatalf("join-where range index plan = %#v", selection)
+			}
+			leftBefore, rightBefore = leftLookups(), rightLookups()
+			whereResult, err := engine.ExecuteFireAndForget(ctx, wherePlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wherePairs := make([]string, 0, len(whereResult.Results()))
+			for _, row := range whereResult.Results() {
+				wherePairs = append(wherePairs, row.Get("left").Any().(string)+"/"+row.Get("right").Any().(string))
+			}
+			if !reflect.DeepEqual(wherePairs, []string{"L1/R2", "L1/R3", "L1/R4", "L2/R4", "L2/R5", "L3/R6"}) {
+				t.Fatalf("join-where range result = %#v", wherePairs)
+			}
+			if rightAfter := rightLookups(); rightAfter != rightBefore+1 {
+				t.Fatalf("join-where range expected one batched right lookup: before=%d after=%d", rightBefore, rightAfter)
+			}
+			if leftAfter := leftLookups(); leftAfter != leftBefore {
+				t.Fatalf("join-where range left source unexpectedly probed its index: before=%d after=%d", leftBefore, leftAfter)
 			}
 		})
 	}

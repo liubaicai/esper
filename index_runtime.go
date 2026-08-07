@@ -430,6 +430,14 @@ func normalizeIndexProbeValue(value any, fieldType reflect.Type) (any, bool) {
 	return coerced.Any(), coerced.IsPresent()
 }
 
+func schemaFieldType(schema Schema, column string) reflect.Type {
+	field, exists := schema.Field(column)
+	if !exists {
+		return nil
+	}
+	return field.Type
+}
+
 func normalizeIndexRangeBound(bound *indexRangeBound, fieldType reflect.Type) (*indexRangeBound, bool) {
 	if bound == nil {
 		return nil, true
@@ -606,6 +614,18 @@ type joinIndexConstraint struct {
 	source int
 }
 
+type joinIndexRangeBound struct {
+	value     Expr
+	node      *exprNode
+	source    int
+	inclusive bool
+}
+
+type joinIndexRangeConstraint struct {
+	lower []joinIndexRangeBound
+	upper []joinIndexRangeBound
+}
+
 func expressionReferencesJoinSource(node *exprNode, source int) bool {
 	if node == nil {
 		return false
@@ -709,6 +729,77 @@ func collectJoinConditionIndexConstraints(condition JoinCondition, targetSource 
 	}
 }
 
+func invertJoinRangeComparison(comparison JoinComparison) (JoinComparison, bool) {
+	switch comparison {
+	case JoinLess:
+		return JoinGreater, true
+	case JoinLessOrEqual:
+		return JoinGreaterOrEqual, true
+	case JoinGreater:
+		return JoinLess, true
+	case JoinGreaterOrEqual:
+		return JoinLessOrEqual, true
+	default:
+		return JoinEqual, false
+	}
+}
+
+func addJoinIndexRangeConstraint(constraints map[string]joinIndexRangeConstraint, expression Expr, value Expr, targetSource, declaredTargetSource, valueSource int, comparison JoinComparison) bool {
+	column, ok := joinIndexTargetColumn(expression, targetSource, declaredTargetSource)
+	if !ok || value == nil || value.node() == nil || !safeJoinIndexProbeValueNode(value.node()) || expressionReferencesJoinSource(value.node(), targetSource) {
+		return false
+	}
+	bound := joinIndexRangeBound{value: value, source: valueSource, inclusive: comparison == JoinGreaterOrEqual || comparison == JoinLessOrEqual}
+	if comparison == JoinGreater || comparison == JoinGreaterOrEqual {
+		current := constraints[column]
+		current.lower = append(current.lower, bound)
+		constraints[column] = current
+		return true
+	}
+	if comparison == JoinLess || comparison == JoinLessOrEqual {
+		current := constraints[column]
+		current.upper = append(current.upper, bound)
+		constraints[column] = current
+		return true
+	}
+	return false
+}
+
+// collectJoinConditionRangeIndexConstraints extracts range leaves whose
+// target side is one indexed source and whose bound is independent of that
+// target. Unsupported OR/complex target expressions force snapshot fallback.
+func collectJoinConditionRangeIndexConstraints(condition JoinCondition, targetSource int, constraints map[string]joinIndexRangeConstraint) bool {
+	if len(condition.all) > 0 {
+		for _, child := range condition.all {
+			if !collectJoinConditionRangeIndexConstraints(child, targetSource, constraints) {
+				return false
+			}
+		}
+		return true
+	}
+	if len(condition.any) > 0 {
+		return false
+	}
+	if condition.Left == nil || condition.Right == nil {
+		return true
+	}
+	comparison, rangeComparison := invertJoinRangeComparison(condition.Comparison)
+	if !rangeComparison {
+		return true
+	}
+	leftSource, rightSource := joinConditionSources(condition)
+	switch {
+	case leftSource == targetSource && rightSource != targetSource:
+		return addJoinIndexRangeConstraint(constraints, condition.Left, condition.Right, targetSource, leftSource, rightSource, condition.Comparison)
+	case rightSource == targetSource && leftSource != targetSource:
+		return addJoinIndexRangeConstraint(constraints, condition.Right, condition.Left, targetSource, rightSource, leftSource, comparison)
+	case leftSource == targetSource || rightSource == targetSource:
+		return false
+	default:
+		return true
+	}
+}
+
 // collectJoinWhereIndexConstraints handles the analyzable JoinField form of
 // a post-join Where. Ordinary non-index predicates are intentionally ignored
 // because the runtime evaluates them after candidate retrieval; OR is unsafe
@@ -745,6 +836,95 @@ func collectJoinWhereIndexConstraints(node *exprNode, targetSource int, constrai
 		}
 		return addJoinIndexNodeConstraint(constraints, node.children[1], node.children[0], targetSource, rightSource, -1)
 	}
+	return true
+}
+
+func joinWhereComparisonKind(kind string) (JoinComparison, bool) {
+	switch kind {
+	case "gt", "exact-gt", "greater-of":
+		return JoinGreater, true
+	case "gte", "exact-gte", "greater-equal-of":
+		return JoinGreaterOrEqual, true
+	case "lt", "exact-lt", "less-of":
+		return JoinLess, true
+	case "lte", "exact-lte", "less-equal-of":
+		return JoinLessOrEqual, true
+	default:
+		return JoinEqual, false
+	}
+}
+
+func collectJoinWhereRangeIndexConstraints(node *exprNode, targetSource int, constraints map[string]joinIndexRangeConstraint) bool {
+	if node == nil {
+		return true
+	}
+	if node.kind == "and" {
+		for _, child := range node.children {
+			if !collectJoinWhereRangeIndexConstraints(child, targetSource, constraints) {
+				return false
+			}
+		}
+		return true
+	}
+	if node.kind == "or" {
+		return false
+	}
+	if comparison, ok := joinWhereComparisonKind(node.kind); ok {
+		if len(node.children) < 2 {
+			return true
+		}
+		leftSource, _, leftOK := joinFieldColumn(node.children[0])
+		rightSource, _, rightOK := joinFieldColumn(node.children[1])
+		switch {
+		case leftOK && leftSource == targetSource && (!rightOK || rightSource != targetSource):
+			return addJoinIndexRangeNodeConstraint(constraints, node.children[0], node.children[1], targetSource, leftSource, -1, comparison, rightOK, rightSource)
+		case rightOK && rightSource == targetSource && (!leftOK || leftSource != targetSource):
+			inverted, invertedOK := invertJoinRangeComparison(comparison)
+			if !invertedOK {
+				return false
+			}
+			return addJoinIndexRangeNodeConstraint(constraints, node.children[1], node.children[0], targetSource, rightSource, -1, inverted, leftOK, leftSource)
+		case leftOK && leftSource == targetSource || rightOK && rightSource == targetSource:
+			return false
+		default:
+			return true
+		}
+	}
+	if node.kind != "between" && node.kind != "between-of" || len(node.children) != 3 {
+		return true
+	}
+	targetSourceIndex, column, targetOK := joinFieldColumn(node.children[0])
+	if !targetOK || targetSourceIndex != targetSource {
+		return true
+	}
+	if !safeJoinIndexProbeValueNode(node.children[1]) || !safeJoinIndexProbeValueNode(node.children[2]) || expressionReferencesJoinSource(node.children[1], targetSource) || expressionReferencesJoinSource(node.children[2], targetSource) {
+		return false
+	}
+	current := constraints[column]
+	current.lower = append(current.lower, joinIndexRangeBound{node: node.children[1], source: -1, inclusive: true})
+	current.upper = append(current.upper, joinIndexRangeBound{node: node.children[2], source: -1, inclusive: true})
+	constraints[column] = current
+	return true
+}
+
+func addJoinIndexRangeNodeConstraint(constraints map[string]joinIndexRangeConstraint, target, value *exprNode, targetSource, declaredTargetSource, valueSource int, comparison JoinComparison, valueIsJoinField bool, actualValueSource int) bool {
+	column, ok := joinIndexTargetNode(target, targetSource, declaredTargetSource)
+	if !ok || value == nil || !safeJoinIndexProbeValueNode(value) || expressionReferencesJoinSource(value, targetSource) {
+		return false
+	}
+	if valueIsJoinField {
+		valueSource = actualValueSource
+	}
+	bound := joinIndexRangeBound{node: value, source: valueSource, inclusive: comparison == JoinGreaterOrEqual || comparison == JoinLessOrEqual}
+	current := constraints[column]
+	if comparison == JoinGreater || comparison == JoinGreaterOrEqual {
+		current.lower = append(current.lower, bound)
+	} else if comparison == JoinLess || comparison == JoinLessOrEqual {
+		current.upper = append(current.upper, bound)
+	} else {
+		return false
+	}
+	constraints[column] = current
 	return true
 }
 
@@ -951,7 +1131,224 @@ func (e *Engine) joinIndexProbeKeys(source *streamNode, selection IndexSelection
 	return keys, true
 }
 
+func evaluateJoinIndexRangeBound(bound joinIndexRangeBound, tuple []Event, now time.Time, variables map[string]Value) (*indexRangeBound, bool) {
+	value, ok := evaluateJoinIndexConstraint(joinIndexConstraint{value: bound.value, node: bound.node, source: bound.source}, tuple, now, variables)
+	if !ok {
+		return nil, false
+	}
+	return &indexRangeBound{value: value, inclusive: bound.inclusive}, true
+}
+
+func mergeJoinIndexRangeBound(bounds *indexProbeBounds, bound *indexRangeBound, lower bool) {
+	if bounds == nil || bound == nil {
+		return
+	}
+	if lower {
+		mergeIndexLowerBound(bounds, *bound)
+		return
+	}
+	mergeIndexUpperBound(bounds, *bound)
+}
+
+func (e *Engine) joinIndexProbeRangeSpecs(source *streamNode, selection IndexSelection, targetSource int, definition *joinDefinition, joinWhere Expr, sides [][]storedEvent, loaded []bool, filterExpressions []Expr, now time.Time, variables map[string]Value) ([]indexRangeSpec, bool) {
+	if e == nil || source == nil || selection.Access != IndexAccessRange || (selection.Backing != IndexBackingBTree && selection.Backing != IndexBackingUniqueBTree) || len(selection.Columns) == 0 || len(selection.MatchedColumns) == 0 || len(selection.MatchedColumns) > len(selection.Columns) || strings.HasPrefix(selection.IndexName, "<") {
+		return nil, false
+	}
+	if definition == nil || definition.kind != JoinInner || joinDefinitionHasUnidirectional(definition) {
+		return nil, false
+	}
+	for _, edge := range definition.edges {
+		if edge.kind != JoinInner {
+			return nil, false
+		}
+	}
+	base, err := sourceNode(source)
+	if err != nil || (base.kind != streamNamedWindow && base.kind != streamTable) {
+		return nil, false
+	}
+	schema, err := e.env.sourceSchema(base)
+	if err != nil {
+		return nil, false
+	}
+	rangePosition := len(selection.MatchedColumns) - 1
+	if rangePosition < 0 || rangePosition >= len(selection.Columns) {
+		return nil, false
+	}
+	ctx := EvalContext{Now: now, Variables: variables, Parameters: parameterValuesFromVariables(variables)}
+	fixed := make(indexProbeConstraints)
+	filterRanges := make(map[string]*indexProbeBounds)
+	for _, expression := range filterExpressions {
+		if expression != nil {
+			collectIndexProbeRangeConstraints(expression.node(), ctx, fixed, filterRanges)
+		}
+	}
+	exact := make(map[string]joinIndexConstraint)
+	joinRanges := make(map[string]joinIndexRangeConstraint)
+	for _, condition := range joinDefinitionConditions(definition) {
+		if !collectJoinConditionIndexConstraints(condition, targetSource, exact) || !collectJoinConditionRangeIndexConstraints(condition, targetSource, joinRanges) {
+			return nil, false
+		}
+	}
+	if joinWhere != nil {
+		if !collectJoinWhereIndexConstraints(joinWhere.node(), targetSource, exact) || !collectJoinWhereRangeIndexConstraints(joinWhere.node(), targetSource, joinRanges) {
+			return nil, false
+		}
+	}
+	for _, column := range selection.Columns[:rangePosition] {
+		if len(fixed[column]) > 1 {
+			return nil, false
+		}
+		if len(fixed[column]) == 0 {
+			if _, exists := exact[column]; !exists {
+				return nil, false
+			}
+		}
+	}
+	rangeColumn := selection.Columns[rangePosition]
+	if len(fixed[rangeColumn]) > 1 {
+		return nil, false
+	}
+	tupleProbes, probesUsable := joinIndexProbeTuples(sides, loaded, targetSource)
+	if !probesUsable {
+		return nil, false
+	}
+	if tupleProbes == nil {
+		return nil, true
+	}
+	queries := make([]indexRangeSpec, 0, len(tupleProbes))
+	seen := make(map[string]struct{}, len(tupleProbes))
+	for _, tuple := range tupleProbes {
+		query := indexRangeSpec{rangePosition: rangePosition, prefix: make([]any, 0, rangePosition)}
+		for _, column := range selection.Columns[:rangePosition] {
+			var value any
+			if values := fixed[column]; len(values) == 1 {
+				value = values[0]
+			} else {
+				var ok bool
+				value, ok = evaluateJoinIndexConstraint(exact[column], tuple, now, variables)
+				if !ok {
+					return nil, false
+				}
+			}
+			field, exists := schema.Field(column)
+			fieldType := reflect.Type(nil)
+			if exists {
+				fieldType = field.Type
+			}
+			normalized, ok := normalizeIndexProbeValue(value, fieldType)
+			if !ok || normalized == nil || isNilReflectValue(reflect.ValueOf(normalized)) {
+				return nil, false
+			}
+			query.prefix = append(query.prefix, normalized)
+		}
+
+		rangeBounds := &indexProbeBounds{}
+		if bounds := filterRanges[rangeColumn]; bounds != nil {
+			if bounds.lower != nil {
+				normalized, ok := normalizeIndexRangeBound(bounds.lower, schemaFieldType(schema, rangeColumn))
+				if !ok {
+					return nil, false
+				}
+				mergeJoinIndexRangeBound(rangeBounds, normalized, true)
+			}
+			if bounds.upper != nil {
+				normalized, ok := normalizeIndexRangeBound(bounds.upper, schemaFieldType(schema, rangeColumn))
+				if !ok {
+					return nil, false
+				}
+				mergeJoinIndexRangeBound(rangeBounds, normalized, false)
+			}
+		}
+		if values := fixed[rangeColumn]; len(values) == 1 {
+			value, ok := normalizeIndexProbeValue(values[0], schemaFieldType(schema, rangeColumn))
+			if !ok || value == nil || isNilReflectValue(reflect.ValueOf(value)) {
+				return nil, false
+			}
+			point := &indexRangeBound{value: value, inclusive: true}
+			mergeJoinIndexRangeBound(rangeBounds, point, true)
+			mergeJoinIndexRangeBound(rangeBounds, point, false)
+		} else if constraint, exists := exact[rangeColumn]; exists {
+			value, ok := evaluateJoinIndexConstraint(constraint, tuple, now, variables)
+			if !ok || value == nil || isNilReflectValue(reflect.ValueOf(value)) {
+				return nil, false
+			}
+			normalized, ok := normalizeIndexProbeValue(value, schemaFieldType(schema, rangeColumn))
+			if !ok || normalized == nil || isNilReflectValue(reflect.ValueOf(normalized)) {
+				return nil, false
+			}
+			point := &indexRangeBound{value: normalized, inclusive: true}
+			mergeJoinIndexRangeBound(rangeBounds, point, true)
+			mergeJoinIndexRangeBound(rangeBounds, point, false)
+		}
+		if constraints := joinRanges[rangeColumn]; len(constraints.lower) > 0 || len(constraints.upper) > 0 {
+			for _, bound := range constraints.lower {
+				normalized, ok := evaluateJoinIndexRangeBound(bound, tuple, now, variables)
+				if !ok {
+					return nil, false
+				}
+				normalized, ok = normalizeIndexRangeBound(normalized, schemaFieldType(schema, rangeColumn))
+				if !ok {
+					return nil, false
+				}
+				mergeJoinIndexRangeBound(rangeBounds, normalized, true)
+			}
+			for _, bound := range constraints.upper {
+				normalized, ok := evaluateJoinIndexRangeBound(bound, tuple, now, variables)
+				if !ok {
+					return nil, false
+				}
+				normalized, ok = normalizeIndexRangeBound(normalized, schemaFieldType(schema, rangeColumn))
+				if !ok {
+					return nil, false
+				}
+				mergeJoinIndexRangeBound(rangeBounds, normalized, false)
+			}
+		}
+		if rangeBounds.lower == nil && rangeBounds.upper == nil {
+			return nil, false
+		}
+		query.lower = rangeBounds.lower
+		query.upper = rangeBounds.upper
+		if query.lower != nil && query.upper != nil {
+			comparison, comparable := compareValues(Present(query.lower.value), Present(query.upper.value))
+			if !comparable {
+				return nil, false
+			}
+			if comparison > 0 || (comparison == 0 && (!query.lower.inclusive || !query.upper.inclusive)) {
+				query.empty = true
+			}
+		}
+		if query.empty {
+			continue
+		}
+		encoded := encodeKey([]any{query.prefix, query.rangePosition, query.lower, query.upper})
+		if _, exists := seen[encoded]; exists {
+			continue
+		}
+		seen[encoded] = struct{}{}
+		queries = append(queries, query)
+		if len(queries) > maxIndexProbeKeys {
+			return nil, false
+		}
+	}
+	return queries, true
+}
+
 func (e *Engine) snapshotFireAndForgetJoinSourceWithIndex(ctx context.Context, source *streamNode, selection IndexSelection, targetSource int, definition *joinDefinition, joinWhere Expr, sides [][]storedEvent, loaded []bool, filterExpressions []Expr, now time.Time, variables map[string]Value) ([]Event, bool, error) {
+	if selection.Access == IndexAccessRange {
+		queries, usable := e.joinIndexProbeRangeSpecs(source, selection, targetSource, definition, joinWhere, sides, loaded, filterExpressions, now, variables)
+		if !usable {
+			return nil, false, nil
+		}
+		if len(queries) == 0 {
+			return nil, true, nil
+		}
+		events, err := e.lookupIndexedFireAndForgetRangeSource(ctx, source, selection, queries, now)
+		if err != nil {
+			return nil, true, err
+		}
+		return events, true, nil
+	}
 	keys, usable := e.joinIndexProbeKeys(source, selection, targetSource, definition, joinWhere, sides, loaded, filterExpressions, now, variables)
 	if !usable {
 		return nil, false, nil
@@ -1022,6 +1419,33 @@ func (e *Engine) lookupIndexedFireAndForgetSource(ctx context.Context, source *s
 		return tableRowsAsEvents(base, definition, rows, now)
 	default:
 		return nil, NewError(ErrorInvalidRule, "indexed FAF source must be a named window or table")
+	}
+}
+
+func (e *Engine) lookupIndexedFireAndForgetRangeSource(ctx context.Context, source *streamNode, selection IndexSelection, queries []indexRangeSpec, now time.Time) ([]Event, error) {
+	base, err := sourceNode(source)
+	if err != nil {
+		return nil, err
+	}
+	switch base.kind {
+	case streamNamedWindow:
+		window, ok := e.NamedWindowInModule(base.moduleName, base.sourceName)
+		if !ok {
+			return nil, NewError(ErrorUnknownName, "named window "+base.sourceName+" is not registered")
+		}
+		return window.lookupRangeMany(ctx, selection.IndexName, queries)
+	case streamTable:
+		table, ok := e.TableInModule(base.moduleName, base.sourceName)
+		if !ok {
+			return nil, NewError(ErrorUnknownName, "table "+base.sourceName+" is not registered")
+		}
+		rows, err := table.lookupRangeMany(ctx, selection.IndexName, queries)
+		if err != nil {
+			return nil, err
+		}
+		return tableRowsAsEvents(base, table.Definition(), rows, now)
+	default:
+		return nil, NewError(ErrorInvalidRule, "range-indexed FAF source must be a named window or table")
 	}
 }
 
