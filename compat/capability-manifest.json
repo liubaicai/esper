@@ -668,6 +668,17 @@
       "difference": "Go's nil named-window match predicate treats every existing target event as matched and routes an empty target to the not-matched branch. A no-primary-key Table now uses the empty key as the same single-row no-where state, with A/B not-matched branches, C matched update, separate reset-event delete-all and new/old lifecycle coverage. Java's wildcard/multi-action projection, representation metadata and full shared trace remain open."
     },
     {
+      "id": "case.trigger-merge-inner-type-variable",
+      "javaRuntimeIds": ["java-runtime-3303d0922bd2d722fa3c", "java-runtime-f20972a347aabfcc0260", "java-runtime-484a8e636d3734b87673", "java-runtime-76d16e1334c83e6d4002", "java-runtime-462d190f20742a0c266d", "java-runtime-8495f57749c2105b15a8"],
+      "javaNames": ["InfraInnerTypeAndVariable{namedWindow=true, eventRepresentationEnum=OBJECTARRAY}", "InfraInnerTypeAndVariable{namedWindow=false, eventRepresentationEnum=OBJECTARRAY}", "InfraInnerTypeAndVariable{namedWindow=true, eventRepresentationEnum=MAP}", "InfraInnerTypeAndVariable{namedWindow=false, eventRepresentationEnum=MAP}", "InfraInnerTypeAndVariable{namedWindow=true, eventRepresentationEnum=DEFAULT}", "InfraInnerTypeAndVariable{namedWindow=false, eventRepresentationEnum=DEFAULT}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerInnerTypeAndVariableBranchesMatchInfraInnerTypeAndVariable"],
+      "tags": ["correctness", "infra", "table", "named-window", "trigger", "merge", "nested", "variable", "object-array", "map"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null→B/source-inner, true→source-inner, false→A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open."
+    },
+    {
       "id": "case.named-window-unique-merge",
       "javaNames": ["ViewMultiKeyLastUniqueArrayKeyNamedWindow"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewMultikeyWArray.java"],
@@ -2298,6 +2309,7 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-target-row"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-single-sided"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-no-where"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-inner-type-variable"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-array-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-nested-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-ordered-scalar-assignment"},
