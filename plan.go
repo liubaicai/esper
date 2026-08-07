@@ -1962,6 +1962,17 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 			return WrapError(ErrorInvalidRule, "subquery projection", err)
 		}
 	}
+	if definition.having != nil && !definition.grouped {
+		if !definition.aggregateProjection {
+			return NewError(ErrorInvalidRule, "subquery having requires an aggregate projection or group-by clause")
+		}
+		if definition.having.Type() != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "subquery having predicate must return bool")
+		}
+		if err := e.validateExprFields(definition.source, definition.having); err != nil {
+			return WrapError(ErrorInvalidRule, "subquery having", err)
+		}
+	}
 	if definition.multiColumn && len(definition.columns) == 0 {
 		return NewError(ErrorInvalidRule, "multi-column subquery requires at least one column")
 	}

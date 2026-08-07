@@ -393,6 +393,7 @@ type SubqueryOrderKey struct {
 // callers can inspect or wrap option builders without exposing runtime state.
 type SubqueryConfig struct {
 	Predicate   Expression[bool]
+	Having      Expression[bool]
 	Cardinality SubqueryCardinality
 	OrderBy     []SubqueryOrderKey
 	Offset      int
@@ -422,6 +423,14 @@ type SubqueryOption func(*SubqueryConfig)
 
 func SubqueryWhere(predicate Expression[bool]) SubqueryOption {
 	return func(config *SubqueryConfig) { config.Predicate = predicate }
+}
+
+// SubqueryHaving applies a post-aggregation predicate to an ungrouped
+// aggregate subquery. The predicate is evaluated once against the complete
+// inner aggregate group and may explicitly reference the outer event through
+// OuterField, matching Esper's correlated having clause.
+func SubqueryHaving(predicate Expression[bool]) SubqueryOption {
+	return func(config *SubqueryConfig) { config.Having = predicate }
 }
 
 func SubqueryOrderBy(expression Expr, descending bool) SubqueryOption {
@@ -467,6 +476,17 @@ func SubqueryExists(source RecordStream, predicate Expression[bool]) Expression[
 	})
 }
 
+// SubqueryExistsValue evaluates whether a projected subquery produces at
+// least one result row. Unlike Exists(SubqueryValue(...)), this keeps a
+// present aggregate row distinct from an aggregate value that happens to be
+// null and therefore supports correlated aggregate having clauses.
+func SubqueryExistsValue[T any](source RecordStream, projection Expression[T], options ...SubqueryOption) Expression[bool] {
+	definition := subqueryWithProjectionOptions(source, projection, options...)
+	return makeSubqueryExpr[bool]("subquery-exists-value", "exists("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		return Present(len(evaluateSubqueryValues(definition, ctx)) > 0)
+	})
+}
+
 // SubqueryValue returns the first matching projected value. The first-value
 // rule is deterministic because snapshots preserve named-window/table order;
 // a future scalar-cardinality option can reject or aggregate multiple rows
@@ -492,6 +512,7 @@ func SubqueryValueWithOptions[T any](source RecordStream, projection Expression[
 	definition := &subqueryDefinition{
 		source:              source.node,
 		predicate:           config.Predicate,
+		having:              config.Having,
 		projection:          projection,
 		aggregateProjection: isAggregateExpression(projection),
 		cardinality:         config.Cardinality,
@@ -527,6 +548,7 @@ func SubqueryValues[T any](source RecordStream, projection Expression[T], option
 	definition := &subqueryDefinition{
 		source:              source.node,
 		predicate:           config.Predicate,
+		having:              config.Having,
 		projection:          projection,
 		aggregateProjection: isAggregateExpression(projection),
 		orderBy:             append([]SubqueryOrderKey(nil), config.OrderBy...),
@@ -784,6 +806,7 @@ func newSubqueryColumnsDefinition(source RecordStream, selections []Selection, o
 	return &subqueryDefinition{
 		source:              source.node,
 		predicate:           config.Predicate,
+		having:              config.Having,
 		columns:             columns,
 		multiColumn:         true,
 		aggregateProjection: subqueryColumnsHaveAggregate(columns),
@@ -809,10 +832,18 @@ func subqueryColumnsHaveAggregate(columns []Selection) bool {
 // a null/missing outer value yields Null, a matching value yields true, and a
 // null inner value yields Null only when no present value matches.
 func SubqueryIn[T comparable](value Expression[T], source RecordStream, projection Expression[T], predicate ...Expression[bool]) Expression[bool] {
-	definition := &subqueryDefinition{source: source.node, projection: projection, aggregateProjection: isAggregateExpression(projection)}
+	options := make([]SubqueryOption, 0, 1)
 	if len(predicate) > 0 && predicate[0] != nil {
-		definition.predicate = predicate[0]
+		options = append(options, SubqueryWhere(predicate[0]))
 	}
+	return SubqueryInWithOptions[T](value, source, projection, options...)
+}
+
+// SubqueryInWithOptions adds post-aggregation having, ordering and other
+// analyzable options to an IN subquery while keeping SubqueryIn concise for
+// the common row-predicate form.
+func SubqueryInWithOptions[T comparable](value Expression[T], source RecordStream, projection Expression[T], options ...SubqueryOption) Expression[bool] {
+	definition := subqueryWithProjectionOptions(source, projection, options...)
 	return makeSubqueryExprWithChildren[bool]("subquery-in", "("+value.Description()+" in "+subqueryDescription(definition)+")", definition, []*exprNode{value.node()}, func(ctx EvalContext) Value {
 		outer := value.eval(ctx)
 		if !outer.IsPresent() {
@@ -896,7 +927,17 @@ func SubqueryAvg[T Numeric](source RecordStream, projection Expression[T], predi
 // returns true when at least one comparison is true. Null candidates preserve
 // three-valued semantics when no definite true result exists.
 func SubqueryAny[T any](value Expression[T], source RecordStream, projection Expression[T], comparison SubqueryComparison, predicate ...Expression[bool]) Expression[bool] {
-	definition := subqueryWithProjection(source, projection, predicate...)
+	options := make([]SubqueryOption, 0, 1)
+	if len(predicate) > 0 && predicate[0] != nil {
+		options = append(options, SubqueryWhere(predicate[0]))
+	}
+	return SubqueryAnyWithOptions[T](value, source, projection, comparison, options...)
+}
+
+// SubqueryAnyWithOptions is the option-bearing form of SubqueryAny. It is
+// useful for Esper-style aggregate subqueries with a having clause.
+func SubqueryAnyWithOptions[T any](value Expression[T], source RecordStream, projection Expression[T], comparison SubqueryComparison, options ...SubqueryOption) Expression[bool] {
+	definition := subqueryWithProjectionOptions(source, projection, options...)
 	definition.quantified = true
 	definition.comparison = comparison
 	description := fmt.Sprintf("%s %s any (%s)", value.Description(), comparison.symbol(), subqueryDescription(definition))
@@ -910,9 +951,24 @@ func SubquerySome[T any](value Expression[T], source RecordStream, projection Ex
 	return SubqueryAny[T](value, source, projection, comparison, predicate...)
 }
 
+// SubquerySomeWithOptions is the option-bearing synonym of
+// SubqueryAnyWithOptions.
+func SubquerySomeWithOptions[T any](value Expression[T], source RecordStream, projection Expression[T], comparison SubqueryComparison, options ...SubqueryOption) Expression[bool] {
+	return SubqueryAnyWithOptions[T](value, source, projection, comparison, options...)
+}
+
 // SubqueryAll applies a scalar comparison to every projected inner row.
 func SubqueryAll[T any](value Expression[T], source RecordStream, projection Expression[T], comparison SubqueryComparison, predicate ...Expression[bool]) Expression[bool] {
-	definition := subqueryWithProjection(source, projection, predicate...)
+	options := make([]SubqueryOption, 0, 1)
+	if len(predicate) > 0 && predicate[0] != nil {
+		options = append(options, SubqueryWhere(predicate[0]))
+	}
+	return SubqueryAllWithOptions[T](value, source, projection, comparison, options...)
+}
+
+// SubqueryAllWithOptions is the option-bearing form of SubqueryAll.
+func SubqueryAllWithOptions[T any](value Expression[T], source RecordStream, projection Expression[T], comparison SubqueryComparison, options ...SubqueryOption) Expression[bool] {
+	definition := subqueryWithProjectionOptions(source, projection, options...)
 	definition.quantified = true
 	definition.comparison = comparison
 	description := fmt.Sprintf("%s %s all (%s)", value.Description(), comparison.symbol(), subqueryDescription(definition))
@@ -922,11 +978,32 @@ func SubqueryAll[T any](value Expression[T], source RecordStream, projection Exp
 }
 
 func subqueryWithProjection(source RecordStream, projection Expr, predicate ...Expression[bool]) *subqueryDefinition {
-	definition := &subqueryDefinition{source: source.node, projection: projection, aggregateProjection: isAggregateExpression(projection)}
+	options := make([]SubqueryOption, 0, 1)
 	if len(predicate) > 0 && predicate[0] != nil {
-		definition.predicate = predicate[0]
+		options = append(options, SubqueryWhere(predicate[0]))
 	}
-	return definition
+	return subqueryWithProjectionOptions(source, projection, options...)
+}
+
+func subqueryWithProjectionOptions(source RecordStream, projection Expr, options ...SubqueryOption) *subqueryDefinition {
+	config := SubqueryConfig{Cardinality: SubqueryFirst}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	return &subqueryDefinition{
+		source:              source.node,
+		predicate:           config.Predicate,
+		having:              config.Having,
+		projection:          projection,
+		aggregateProjection: isAggregateExpression(projection),
+		cardinality:         config.Cardinality,
+		orderBy:             append([]SubqueryOrderKey(nil), config.OrderBy...),
+		offset:              config.Offset,
+		limit:               config.Limit,
+		limitSet:            config.LimitSet,
+	}
 }
 
 // isAggregateExpression identifies the expression shape rather than relying
@@ -1259,6 +1336,12 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 		}
 		if len(aggregateGroup) > 0 {
 			evaluation.Event = aggregateGroup[len(aggregateGroup)-1]
+		}
+		if definition.having != nil {
+			matched, ok := boolValue(definition.having.eval(evaluation))
+			if !ok || !matched {
+				return nil
+			}
 		}
 		candidates = append(candidates, subqueryCandidate{
 			value:      evaluateSubqueryProjection(definition, evaluation),

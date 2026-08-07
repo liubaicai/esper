@@ -7,6 +7,10 @@ import (
 	"testing"
 )
 
+type subqueryHavingTrigger struct {
+	Threshold float64 `esper:"threshold"`
+}
+
 func TestSubqueryExistsCorrelatesNamedWindowWithOuterField(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
@@ -469,6 +473,108 @@ func TestSubqueryScalarOptionsOrderLimitOffsetAndCardinality(t *testing.T) {
 	))).Query(StatementName("invalid-subquery-limit"))
 	if _, err := env.Build(invalid); err == nil {
 		t.Fatal("negative subquery limit must be rejected")
+	}
+}
+
+func TestSubqueryUngroupedHavingCorrelatesAndTracksWindowState(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "SubqueryHavingTrade"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[subqueryHavingTrigger](env, "SubqueryHavingTrigger"); err != nil {
+		t.Fatal(err)
+	}
+
+	inner := From[runtimeTestTrade](env, "SubqueryHavingTrade").Window(KeepAll()).AsRecord()
+	price := Field[any, float64]("price")
+	total := Sum[float64](price)
+	threshold := Field[subqueryHavingTrigger, float64]("threshold")
+	having := SubqueryHaving(GreaterOrEqual[float64](total, OuterField[float64]("threshold")))
+	value := SubqueryValueWithOptions[float64](inner, total,
+		having,
+	)
+	query := Select(
+		From[subqueryHavingTrigger](env, "SubqueryHavingTrigger"),
+		Alias("value", value),
+		Alias("exists", SubqueryExistsValue[float64](inner, total, having)),
+		Alias("in", SubqueryInWithOptions[float64](threshold, inner, total, having)),
+		Alias("any", SubqueryAnyWithOptions[float64](threshold, inner, total, SubqueryGreater, having)),
+		Alias("all", SubqueryAllWithOptions[float64](threshold, inner, total, SubqueryLessOrEqual, having)),
+	).Query(StatementName("subquery-ungrouped-having"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("subquery having result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	sendTrigger := func(threshold float64) Row {
+		t.Helper()
+		before := len(rows)
+		if err := engine.SendEvent(context.Background(), subqueryHavingTrigger{Threshold: threshold}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != before+1 {
+			t.Fatalf("subquery having rows = %#v", rows)
+		}
+		return rows[len(rows)-1]
+	}
+
+	row := sendTrigger(15)
+	if !row.Get("value").IsNull() || row.Get("exists").Any() != false || row.Get("in").Any() != false || !row.Get("any").IsNull() || !row.Get("all").IsNull() {
+		t.Fatalf("empty aggregate having result = %#v", rows[len(rows)-1])
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: 10}); err != nil {
+		t.Fatal(err)
+	}
+	row = sendTrigger(15)
+	if !row.Get("value").IsNull() || row.Get("exists").Any() != false || row.Get("in").Any() != false || !row.Get("any").IsNull() || !row.Get("all").IsNull() {
+		t.Fatalf("below-threshold aggregate having result = %#v", rows[len(rows)-1])
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: 5}); err != nil {
+		t.Fatal(err)
+	}
+	row = sendTrigger(15)
+	if got := row.Get("value").Any(); got != 15.0 || row.Get("exists").Any() != true || row.Get("in").Any() != true || row.Get("any").Any() != false || row.Get("all").Any() != true {
+		t.Fatalf("aggregate having result = %#v, want value=15 exists/in=false->true any=false all=true", row)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: -1}); err != nil {
+		t.Fatal(err)
+	}
+	row = sendTrigger(15)
+	if !row.Get("value").IsNull() || row.Get("exists").Any() != false || row.Get("in").Any() != false || !row.Get("any").IsNull() || !row.Get("all").IsNull() {
+		t.Fatalf("aggregate having after removal-like update = %#v", rows[len(rows)-1])
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	row = sendTrigger(15)
+	if got := row.Get("value").Any(); got != 15.0 || row.Get("exists").Any() != true || row.Get("in").Any() != true || row.Get("any").Any() != false || row.Get("all").Any() != true {
+		t.Fatalf("aggregate having recovered result = %#v, want value=15 exists/in=false->true any=false all=true", row)
+	}
+
+	invalid := Select(
+		From[subqueryHavingTrigger](env, "SubqueryHavingTrigger"),
+		Alias("bad", SubqueryValueWithOptions[float64](inner, price, SubqueryHaving(Literal(true)))),
+	).Query(StatementName("invalid-ungrouped-having"))
+	if _, err := env.Build(invalid); err == nil {
+		t.Fatal("having on a non-aggregate subquery must be rejected")
 	}
 }
 
