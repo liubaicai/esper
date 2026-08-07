@@ -210,9 +210,10 @@ func subqueryRuntimeFromVariables(variables map[string]Value) *subqueryRuntimeRe
 
 // subqueryIndexSelection returns a physical access path only when the
 // subquery has a declared lookup index that can satisfy a complete equality
-// or IN key.  The normal FAF planner exposes index selections for top-level
-// sources; subqueries are evaluated as expressions, so their access path is
-// derived here from the same analyzable predicate vocabulary.
+// or IN key, or an equality-prefix-plus-range B-tree probe. The normal FAF
+// planner exposes index selections for top-level sources; subqueries are
+// evaluated as expressions, so their access path is derived here from the
+// same analyzable predicate vocabulary.
 //
 // A retention summary such as a Named Window's unique retention is not a
 // declared lookup index.  It remains a logical planner candidate for other
@@ -235,6 +236,15 @@ func subqueryIndexSelection(e *Environment, base *streamNode, definition *subque
 	}
 	if base.kind == streamNamedWindow && strings.HasPrefix(selection.IndexName, "<") {
 		return IndexSelection{}, false
+	}
+	if selection.Access == IndexAccessRange {
+		if selection.Backing != IndexBackingBTree && selection.Backing != IndexBackingUniqueBTree {
+			return IndexSelection{}, false
+		}
+		if len(selection.Columns) == 0 || len(selection.MatchedColumns) == 0 || len(selection.MatchedColumns) > len(selection.Columns) {
+			return IndexSelection{}, false
+		}
+		return selection, true
 	}
 	if selection.Access != IndexAccessEquality && selection.Access != IndexAccessIn {
 		return IndexSelection{}, false
@@ -443,10 +453,11 @@ func subqueryContextScope(variables map[string]Value) (string, string) {
 	return contextName, partition
 }
 
-// snapshotFireAndForgetSubquerySourceWithIndex performs one complete-key
-// lookup for a scalar/exists subquery. It returns used=false whenever the
-// predicate cannot be proven to provide a complete candidate key; callers
-// then use the existing snapshot evaluator as the correctness path.
+// snapshotFireAndForgetSubquerySourceWithIndex performs one complete-key or
+// equality-prefix-plus-range lookup for a subquery expression. It returns
+// used=false whenever the predicate cannot be proven to provide a complete
+// candidate key/range; callers then use the existing snapshot evaluator as
+// the correctness path.
 func (e *Engine) snapshotFireAndForgetSubquerySourceWithIndex(
 	ctx context.Context,
 	definition *subqueryDefinition,
@@ -460,9 +471,28 @@ func (e *Engine) snapshotFireAndForgetSubquerySourceWithIndex(
 	if !usable {
 		return nil, false, nil
 	}
-	keys, usable := e.subqueryIndexProbeKeys(base, selection, definition.predicate, outer)
-	if !usable {
-		return nil, false, nil
+	var keys [][]any
+	var rangeQuery indexRangeSpec
+	if selection.Access == IndexAccessRange {
+		rangeQuery, usable = e.indexProbeRangeSpecWithOuter(
+			base,
+			selection,
+			[]Expr{definition.predicate},
+			now,
+			variables,
+			subqueryEnclosingEvent(outer),
+		)
+		if !usable {
+			return nil, false, nil
+		}
+		if rangeQuery.empty {
+			return nil, true, nil
+		}
+	} else {
+		keys, usable = e.subqueryIndexProbeKeys(base, selection, definition.predicate, outer)
+		if !usable {
+			return nil, false, nil
+		}
 	}
 	var events []Event
 	switch base.kind {
@@ -491,10 +521,26 @@ func (e *Engine) snapshotFireAndForgetSubquerySourceWithIndex(
 			if err := contextErr(ctx); err != nil {
 				return nil, true, err
 			}
-			events = lookupNamedWindowStateMany(partitionState, selection.IndexName, keys)
+			if selection.Access == IndexAccessRange {
+				var err error
+				events, err = lookupNamedWindowRangeStateMany(partitionState, selection.IndexName, []indexRangeSpec{rangeQuery}, ctx)
+				if err != nil {
+					return nil, true, err
+				}
+			} else {
+				keys, keyUsable := e.subqueryIndexProbeKeys(base, selection, definition.predicate, outer)
+				if !keyUsable {
+					return nil, false, nil
+				}
+				events = lookupNamedWindowStateMany(partitionState, selection.IndexName, keys)
+			}
 		} else {
 			var err error
-			events, err = window.lookupMany(ctx, selection.IndexName, keys)
+			if selection.Access == IndexAccessRange {
+				events, err = window.lookupRange(ctx, selection.IndexName, rangeQuery)
+			} else {
+				events, err = window.lookupMany(ctx, selection.IndexName, keys)
+			}
 			if err != nil {
 				return nil, true, err
 			}
@@ -512,7 +558,16 @@ func (e *Engine) snapshotFireAndForgetSubquerySourceWithIndex(
 		}
 		var rows []TableRow
 		if selection.IndexName == "<primary-key>" {
+			if selection.Access == IndexAccessRange {
+				return nil, false, nil
+			}
+			keys, keyUsable := e.subqueryIndexProbeKeys(base, selection, definition.predicate, outer)
+			if !keyUsable {
+				return nil, false, nil
+			}
 			rows, err = table.lookupPrimaryMany(ctx, keys)
+		} else if selection.Access == IndexAccessRange {
+			rows, err = table.lookupRange(ctx, selection.IndexName, rangeQuery)
 		} else {
 			rows, err = table.lookupMany(ctx, selection.IndexName, keys)
 		}

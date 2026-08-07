@@ -319,3 +319,244 @@ func TestInfraFAFSubqueryContextBoundIndexCandidatePartitionParity(t *testing.T)
 		t.Fatalf("selected context-bound correlated subquery expected one lookup: before=%d after=%d", before, after)
 	}
 }
+
+// TestInfraFAFSubqueryContextRangeIndexCandidateParity closes the B-tree
+// counterpart of the equality candidate path.  The index has an equality
+// prefix (lookup) followed by a correlated range (id); both operands are
+// fixed for the current outer row and the final subquery evaluator still
+// owns predicate and collection semantics.
+func TestInfraFAFSubqueryContextRangeIndexCandidateParity(t *testing.T) {
+	for _, namedInner := range []bool{true, false} {
+		t.Run(indexStoreName(namedInner), func(t *testing.T) {
+			env := NewEnvironment()
+			schema := newFAFSubqueryIndexSchema(t, env, "FAFSubqueryRangeSchema")
+			if _, err := CreateKeyContext(env, "faf-subquery-range-context", Field[any, string]("key")); err != nil {
+				t.Fatal(err)
+			}
+			engine := NewEngine(env)
+			outer := createFAFSubqueryStore(t, env, engine, "FAFSubqueryRangeOuter", schema, true, KeepAll(), "faf-subquery-range-context")
+
+			var inner RecordStream
+			if namedInner {
+				if _, err := CreateNamedWindow(env, "FAFSubqueryRangeInner", schema,
+					NamedWindowRetention(KeepAll()), NamedWindowBTreeIndex("by-lookup-id", "lookup", "id")); err != nil {
+					t.Fatal(err)
+				}
+				inner = FromNamedWindow(env, "FAFSubqueryRangeInner")
+			} else {
+				if _, err := CreateTable(env, "FAFSubqueryRangeInner", []TableColumn{
+					PrimaryKeyColumn[int64]("id"), TableColumnOf[string]("lookup"), TableColumnOf[string]("value"),
+				}, SecondaryBTreeIndex("by-lookup-id", "lookup", "id")); err != nil {
+					t.Fatal(err)
+				}
+				env.mu.RLock()
+				definition, ok := env.tables["FAFSubqueryRangeInner"]
+				env.mu.RUnlock()
+				if !ok {
+					t.Fatal("range-indexed subquery table definition is missing")
+				}
+				engine.tables[catalogKey(definition.moduleName, definition.name)] = newTable(definition)
+				inner = FromTable(env, "FAFSubqueryRangeInner")
+			}
+
+			insertInner := func(row map[string]any) {
+				t.Helper()
+				if namedInner {
+					if err := engine.InsertNamedWindow(context.Background(), "FAFSubqueryRangeInner", row); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				table, ok := engine.Table("FAFSubqueryRangeInner")
+				if !ok {
+					t.Fatal("range-indexed subquery table is missing")
+				}
+				if _, err := table.Insert(context.Background(), row); err != nil {
+					t.Fatal(err)
+				}
+			}
+			insertOuter := func(row map[string]any) {
+				t.Helper()
+				if err := engine.InsertNamedWindow(context.Background(), "FAFSubqueryRangeOuter", row); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			insertInner(map[string]any{"id": int64(10), "lookup": "A", "value": "A-10"})
+			insertInner(map[string]any{"id": int64(11), "lookup": "A", "value": "A-11"})
+			insertInner(map[string]any{"id": int64(12), "lookup": "A", "value": "A-12"})
+			insertInner(map[string]any{"id": int64(20), "lookup": "B", "value": "B-20"})
+			insertInner(map[string]any{"id": int64(21), "lookup": "B", "value": "B-21"})
+			insertOuter(map[string]any{"id": int64(11), "key": "A"})
+			insertOuter(map[string]any{"id": int64(20), "key": "B"})
+
+			predicate := And(
+				Equal[string](Field[any, string]("lookup"), OuterField[string]("key")),
+				GreaterOrEqual[int64](Field[any, int64]("id"), OuterField[int64]("id")),
+			)
+			values := SubqueryValues[string](inner, Field[any, string]("value"), SubqueryWhere(predicate))
+			plan, err := env.Build(outer.Select(
+				Alias("id", Field[any, int64]("id")),
+				Alias("values", values),
+			).Query(WithContext("faf-subquery-range-context")))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			indexLookups := func() uint64 {
+				if namedInner {
+					window, ok := engine.NamedWindow("FAFSubqueryRangeInner")
+					if !ok {
+						t.Fatal("range-indexed subquery named window is missing")
+					}
+					return window.state.indexLookups.Load()
+				}
+				table, ok := engine.Table("FAFSubqueryRangeInner")
+				if !ok {
+					t.Fatal("range-indexed subquery table is missing")
+				}
+				return table.state.indexLookups.Load()
+			}
+
+			before := indexLookups()
+			result, err := engine.ExecuteFireAndForgetWithSelector(context.Background(), plan, ContextPartitionSelectorAll{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(result.Results()) != 2 {
+				t.Fatalf("range correlated subquery rows = %#v", result.Results())
+			}
+			want := []struct {
+				id     int64
+				values []string
+			}{
+				{11, []string{"A-11", "A-12"}},
+				{20, []string{"B-20", "B-21"}},
+			}
+			for index, row := range result.Results() {
+				gotValues, ok := row.Get("values").Any().([]string)
+				if !ok || row.Get("id").Any() != want[index].id || !reflect.DeepEqual(gotValues, want[index].values) {
+					t.Fatalf("range correlated row %d = %#v, want id=%d values=%#v", index, row, want[index].id, want[index].values)
+				}
+			}
+			if after := indexLookups(); after != before+2 {
+				t.Fatalf("range correlated subquery expected one B-tree lookup per outer row: before=%d after=%d", before, after)
+			}
+
+			parameterized := SubqueryValues[string](inner, Field[any, string]("value"), SubqueryWhere(And(
+				Equal[string](Field[any, string]("lookup"), Parameter[string]("wanted")),
+				GreaterOrEqual[int64](Field[any, int64]("id"), Parameter[int64]("minimum")),
+			)))
+			parameterPlan, err := env.Build(outer.Select(
+				Alias("id", Field[any, int64]("id")),
+				Alias("values", parameterized),
+			).Query(WithContext("faf-subquery-range-context")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			before = indexLookups()
+			parameterResult, err := engine.ExecuteFireAndForgetWithSelectorAndParameters(
+				context.Background(), parameterPlan, ContextPartitionSelectorAll{},
+				ParameterValues{"wanted": "A", "minimum": int64(11)},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for index, row := range parameterResult.Results() {
+				gotValues, ok := row.Get("values").Any().([]string)
+				if !ok || !reflect.DeepEqual(gotValues, []string{"A-11", "A-12"}) {
+					t.Fatalf("parameterized range row %d = %#v", index, row)
+				}
+			}
+			if after := indexLookups(); after != before+2 {
+				t.Fatalf("parameterized range subquery expected one lookup per outer row: before=%d after=%d", before, after)
+			}
+		})
+	}
+}
+
+func TestInfraFAFSubqueryContextBoundRangeIndexCandidatePartitionParity(t *testing.T) {
+	env := NewEnvironment()
+	schema := newFAFSubqueryIndexSchema(t, env, "FAFSubqueryContextBoundRangeSchema")
+	if _, err := CreateKeyContext(env, "faf-subquery-context-bound-range", Field[any, string]("key")); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	outer := createFAFSubqueryStore(t, env, engine, "FAFSubqueryContextBoundRangeOuter", schema, true, KeepAll(), "faf-subquery-context-bound-range")
+	if _, err := CreateNamedWindow(env, "FAFSubqueryContextBoundRangeInner", schema,
+		NamedWindowRetention(KeepAll()),
+		NamedWindowContext("faf-subquery-context-bound-range"),
+		NamedWindowBTreeIndex("by-key-id", "key", "id")); err != nil {
+		t.Fatal(err)
+	}
+	inner := FromNamedWindow(env, "FAFSubqueryContextBoundRangeInner")
+	insert := func(name string, row map[string]any) {
+		t.Helper()
+		if err := engine.InsertNamedWindow(context.Background(), name, row); err != nil {
+			t.Fatal(err)
+		}
+	}
+	insert("FAFSubqueryContextBoundRangeInner", map[string]any{"id": int64(10), "key": "A", "value": "A-10"})
+	insert("FAFSubqueryContextBoundRangeInner", map[string]any{"id": int64(11), "key": "A", "value": "A-11"})
+	insert("FAFSubqueryContextBoundRangeInner", map[string]any{"id": int64(20), "key": "B", "value": "B-20"})
+	insert("FAFSubqueryContextBoundRangeInner", map[string]any{"id": int64(21), "key": "B", "value": "B-21"})
+	insert("FAFSubqueryContextBoundRangeOuter", map[string]any{"id": int64(11), "key": "A"})
+	insert("FAFSubqueryContextBoundRangeOuter", map[string]any{"id": int64(21), "key": "B"})
+
+	values := SubqueryValues[string](inner, Field[any, string]("value"), SubqueryWhere(And(
+		Equal[string](Field[any, string]("key"), OuterField[string]("key")),
+		GreaterOrEqual[int64](Field[any, int64]("id"), OuterField[int64]("id")),
+	)))
+	plan, err := env.Build(outer.Select(
+		Alias("id", Field[any, int64]("id")),
+		Alias("values", values),
+	).Query(WithContext("faf-subquery-context-bound-range")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	window, ok := engine.NamedWindow("FAFSubqueryContextBoundRangeInner")
+	if !ok {
+		t.Fatal("context-bound range subquery window is missing")
+	}
+	indexLookups := func() uint64 {
+		var total uint64
+		for _, partition := range window.contextPartitionStates() {
+			total += partition.indexLookups.Load()
+		}
+		return total
+	}
+	before := indexLookups()
+	result, err := engine.ExecuteFireAndForgetWithSelector(context.Background(), plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := [][]string{{"A-11"}, {"B-21"}}
+	if len(result.Results()) != len(want) {
+		t.Fatalf("context-bound range rows = %#v", result.Results())
+	}
+	for index, row := range result.Results() {
+		gotValues, ok := row.Get("values").Any().([]string)
+		if !ok || !reflect.DeepEqual(gotValues, want[index]) {
+			t.Fatalf("context-bound range row %d = %#v, want %#v", index, row, want[index])
+		}
+	}
+	if after := indexLookups(); after != before+2 {
+		t.Fatalf("context-bound range subquery expected one partition lookup per outer row: before=%d after=%d", before, after)
+	}
+
+	keyA := encodeKey([]any{ValuePresent, "A"})
+	before = indexLookups()
+	selected, err := engine.ExecuteFireAndForgetWithSelector(context.Background(), plan, SelectContextPartitions(keyA))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(selected.Results()) != 1 {
+		t.Fatalf("selected context-bound range rows = %#v", selected.Results())
+	}
+	if gotValues, ok := selected.Results()[0].Get("values").Any().([]string); !ok || !reflect.DeepEqual(gotValues, []string{"A-11"}) {
+		t.Fatalf("selected context-bound range values = %#v", selected.Results()[0])
+	}
+	if after := indexLookups(); after != before+1 {
+		t.Fatalf("selected context-bound range expected one partition lookup: before=%d after=%d", before, after)
+	}
+}

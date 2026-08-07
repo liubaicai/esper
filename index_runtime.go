@@ -137,6 +137,12 @@ func indexOperandValue(node *exprNode, ctx EvalContext) (Value, bool) {
 			}
 		}
 		return Missing(), false
+	case "outer-field":
+		if !ctx.OuterEvent.Schema().valid() {
+			return Missing(), false
+		}
+		value := ctx.OuterEvent.Get(node.fieldName)
+		return value, value.IsPresent()
 	default:
 		// Expressions such as arithmetic, UDF and nested property access need
 		// their original Expr closure to evaluate. Their child nodes carry
@@ -450,6 +456,14 @@ func normalizeIndexRangeBound(bound *indexRangeBound, fieldType reflect.Type) (*
 }
 
 func (e *Engine) indexProbeRangeSpec(source *streamNode, selection IndexSelection, expressions []Expr, now time.Time, variables map[string]Value) (indexRangeSpec, bool) {
+	return e.indexProbeRangeSpecWithOuter(source, selection, expressions, now, variables, Event{})
+}
+
+// indexProbeRangeSpecWithOuter is the range-probe counterpart used by
+// correlated subqueries.  OuterField is a safe probe operand because the
+// enclosing event is fixed for the current subquery evaluation; all other
+// dynamic expression forms retain the ordinary snapshot fallback.
+func (e *Engine) indexProbeRangeSpecWithOuter(source *streamNode, selection IndexSelection, expressions []Expr, now time.Time, variables map[string]Value, outer Event) (indexRangeSpec, bool) {
 	if e == nil || selection.Access != IndexAccessRange || (selection.Backing != IndexBackingBTree && selection.Backing != IndexBackingUniqueBTree) || len(selection.Columns) == 0 || len(selection.MatchedColumns) == 0 {
 		return indexRangeSpec{}, false
 	}
@@ -465,7 +479,7 @@ func (e *Engine) indexProbeRangeSpec(source *streamNode, selection IndexSelectio
 	if rangePosition < 0 || rangePosition >= len(selection.Columns) {
 		return indexRangeSpec{}, false
 	}
-	ctx := EvalContext{Now: now, Variables: variables, Parameters: parameterValuesFromVariables(variables)}
+	ctx := EvalContext{Now: now, Variables: variables, Parameters: parameterValuesFromVariables(variables), OuterEvent: outer}
 	exact := make(indexProbeConstraints)
 	ranges := make(map[string]*indexProbeBounds)
 	for _, expression := range expressions {
