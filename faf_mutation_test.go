@@ -164,6 +164,70 @@ func TestOnDemandTableMutationMatchesEsper(t *testing.T) {
 	}
 }
 
+func TestOnDemandUpdateAllMatchesInfraUpdate(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(map[bool]string{true: "named-window", false: "table"}[namedWindow], func(t *testing.T) {
+			env, engine, source := setupInfraFAFEventStore(t, namedWindow)
+			ctx := context.Background()
+			if namedWindow {
+				window, ok := engine.NamedWindow("InfraFAF")
+				if !ok {
+					t.Fatal("InfraFAF named window is missing")
+				}
+				// The same field is assigned twice deliberately. The second
+				// assignment reads InitialNamedWindowField, so the result proves
+				// both ordered assignment evaluation and the pre-update snapshot.
+				plan, err := env.Build(source.OnDemand().UpdateAll(
+					SetColumn("intPrimitive", Add[int64](NamedWindowField[int64]("intPrimitive"), Literal[int64](10))),
+					SetColumn("intPrimitive", Add[int64](InitialNamedWindowField[int64]("intPrimitive"), Literal[int64](100))),
+				))
+				if err != nil {
+					t.Fatal(err)
+				}
+				result, err := engine.ExecuteFireAndForget(ctx, plan)
+				if err != nil || len(result.Results()) != 4 {
+					t.Fatalf("on-demand named-window update-all = %#v, err=%v", result.Results(), err)
+				}
+				for index, expected := range []int64{110, 120, 130, 140} {
+					if got := result.Results()[index].Get("intPrimitive").Any(); got != expected {
+						t.Fatalf("named-window update-all row %d intPrimitive = %#v, want %d", index, got, expected)
+					}
+				}
+				events, err := window.Snapshot(ctx)
+				if err != nil || len(events) != 4 {
+					t.Fatalf("named-window update-all snapshot = %#v, err=%v", events, err)
+				}
+				return
+			}
+
+			table, ok := engine.Table("InfraFAF")
+			if !ok {
+				t.Fatal("InfraFAF table is missing")
+			}
+			plan, err := env.Build(source.OnDemand().UpdateAll(
+				SetColumn("intPrimitive", Add[int64](TableField[int64]("intPrimitive"), Literal[int64](10))),
+				SetColumn("intPrimitive", Add[int64](InitialTableField[int64]("intPrimitive"), Literal[int64](100))),
+			))
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := engine.ExecuteFireAndForget(ctx, plan)
+			if err != nil || len(result.Results()) != 0 {
+				t.Fatalf("on-demand table update-all = %#v, err=%v", result.Results(), err)
+			}
+			rows, err := table.Snapshot(ctx)
+			if err != nil || len(rows) != 4 {
+				t.Fatalf("table update-all snapshot = %#v, err=%v", rows, err)
+			}
+			for index, expected := range []int64{110, 120, 130, 140} {
+				if got := rows[index].Get("intPrimitive").Any(); got != expected {
+					t.Fatalf("table update-all row %d intPrimitive = %#v, want %d", index, got, expected)
+				}
+			}
+		})
+	}
+}
+
 func TestOnDemandContextPartitionMutationMatchesInfraDeleteContextPartitioned(t *testing.T) {
 	for _, namedWindow := range []bool{true, false} {
 		t.Run(map[bool]string{true: "named-window", false: "table"}[namedWindow], func(t *testing.T) {

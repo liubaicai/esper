@@ -498,17 +498,6 @@ func (t *Table) Update(ctx context.Context, key []any, values map[string]any) (T
 	if !ok {
 		return TableRow{}, NewError(ErrorUnknownName, "table row does not exist")
 	}
-	for _, primaryKey := range state.def.primaryKey {
-		if value, changes := values[primaryKey]; changes {
-			converted, convertErr := coerceTableValue(value, state.column(primaryKey).Type)
-			if convertErr != nil {
-				return TableRow{}, WrapError(ErrorTypeMismatch, "table."+primaryKey, convertErr)
-			}
-			if !existing.Get(primaryKey).Equal(converted) {
-				return TableRow{}, NewError(ErrorState, "table primary-key update is not allowed")
-			}
-		}
-	}
 	merged := make(map[string]any, len(existing.values))
 	for name, value := range existing.values {
 		merged[name] = value.Any()
@@ -516,7 +505,38 @@ func (t *Table) Update(ctx context.Context, key []any, values map[string]any) (T
 	for name, value := range values {
 		merged[name] = value
 	}
-	return state.upsert(merged, false)
+	converted, newRowKey, err := state.convertValues(merged)
+	if err != nil {
+		return TableRow{}, err
+	}
+	if newRowKey != rowKey {
+		if _, exists := state.rows[newRowKey]; exists {
+			return TableRow{}, NewError(ErrorState, "table row already exists")
+		}
+	}
+	updated := TableRow{values: converted}
+	if err := state.validateIndexesLockedIgnoring(newRowKey, updated, rowKey); err != nil {
+		return TableRow{}, err
+	}
+
+	// A table primary key is the row identity, but Esper permits an update to
+	// change that identity. Re-key in place so insertion order remains stable;
+	// removing and appending would make FAF/update iteration order observable.
+	state.removeIndexesLocked(rowKey, existing)
+	if newRowKey != rowKey {
+		delete(state.rows, rowKey)
+		for index, key := range state.order {
+			if key == rowKey {
+				state.order[index] = newRowKey
+				break
+			}
+		}
+	}
+	state.version++
+	updated.version = state.version
+	state.rows[newRowKey] = updated
+	state.addIndexesLocked(newRowKey, updated)
+	return cloneTableRow(updated), nil
 }
 
 func (t *Table) Delete(ctx context.Context, key ...any) (TableRow, bool, error) {
@@ -769,41 +789,10 @@ func (t *Table) lookupRangeMany(ctx context.Context, indexName string, queries [
 }
 
 func (s *tableState) upsert(values map[string]any, insertOnly bool) (TableRow, error) {
-	if values == nil {
-		values = map[string]any{}
+	converted, rowKey, err := s.convertValues(values)
+	if err != nil {
+		return TableRow{}, err
 	}
-	converted := make(map[string]Value, len(s.def.columns))
-	known := make(map[string]struct{}, len(s.def.columns))
-	for _, column := range s.def.columns {
-		known[column.Name] = struct{}{}
-		value, exists := values[column.Name]
-		if !exists {
-			if column.PrimaryKey || !column.Optional {
-				return TableRow{}, NewError(ErrorTypeMismatch, fmt.Sprintf("table column %q is required", column.Name))
-			}
-			converted[column.Name] = Null()
-			continue
-		}
-		convertedValue, err := coerceTableValue(value, column.Type)
-		if err != nil {
-			return TableRow{}, WrapError(ErrorTypeMismatch, "table."+column.Name, err)
-		}
-		converted[column.Name] = convertedValue
-	}
-	for name := range values {
-		if _, exists := known[name]; !exists {
-			return TableRow{}, NewError(ErrorUnknownName, fmt.Sprintf("table column %q is not defined", name))
-		}
-	}
-	keyValues := make([]any, 0, len(s.def.primaryKey))
-	for _, name := range s.def.primaryKey {
-		value := converted[name]
-		if !value.IsPresent() {
-			return TableRow{}, NewError(ErrorTypeMismatch, fmt.Sprintf("primary-key column %q cannot be null", name))
-		}
-		keyValues = append(keyValues, value.Any())
-	}
-	rowKey := encodeKey(keyValues)
 	if _, exists := s.rows[rowKey]; exists && insertOnly {
 		return TableRow{}, NewError(ErrorState, "table row already exists")
 	}
@@ -821,6 +810,44 @@ func (s *tableState) upsert(values map[string]any, insertOnly bool) (TableRow, e
 	s.rows[rowKey] = row
 	s.addIndexesLocked(rowKey, row)
 	return cloneTableRow(row), nil
+}
+
+func (s *tableState) convertValues(values map[string]any) (map[string]Value, string, error) {
+	if values == nil {
+		values = map[string]any{}
+	}
+	converted := make(map[string]Value, len(s.def.columns))
+	known := make(map[string]struct{}, len(s.def.columns))
+	for _, column := range s.def.columns {
+		known[column.Name] = struct{}{}
+		value, exists := values[column.Name]
+		if !exists {
+			if column.PrimaryKey || !column.Optional {
+				return nil, "", NewError(ErrorTypeMismatch, fmt.Sprintf("table column %q is required", column.Name))
+			}
+			converted[column.Name] = Null()
+			continue
+		}
+		convertedValue, err := coerceTableValue(value, column.Type)
+		if err != nil {
+			return nil, "", WrapError(ErrorTypeMismatch, "table."+column.Name, err)
+		}
+		converted[column.Name] = convertedValue
+	}
+	for name := range values {
+		if _, exists := known[name]; !exists {
+			return nil, "", NewError(ErrorUnknownName, fmt.Sprintf("table column %q is not defined", name))
+		}
+	}
+	keyValues := make([]any, 0, len(s.def.primaryKey))
+	for _, name := range s.def.primaryKey {
+		value := converted[name]
+		if !value.IsPresent() {
+			return nil, "", NewError(ErrorTypeMismatch, fmt.Sprintf("primary-key column %q cannot be null", name))
+		}
+		keyValues = append(keyValues, value.Any())
+	}
+	return converted, encodeKey(keyValues), nil
 }
 
 func (s *tableState) keyFromValues(key []any) (string, error) {
@@ -864,13 +891,17 @@ func (s *tableState) removeLocked(rowKey string, row TableRow) {
 }
 
 func (s *tableState) validateIndexesLocked(rowKey string, row TableRow) error {
+	return s.validateIndexesLockedIgnoring(rowKey, row, "")
+}
+
+func (s *tableState) validateIndexesLockedIgnoring(rowKey string, row TableRow, ignoredRowKey string) error {
 	for _, definition := range s.def.indexes {
 		if !definition.Unique {
 			continue
 		}
 		key := s.indexKey(row, definition.Columns)
 		for _, existing := range s.indexes[definition.Name][key] {
-			if existing != rowKey {
+			if existing != rowKey && existing != ignoredRowKey {
 				return NewError(ErrorState, fmt.Sprintf("unique table index %q rejected duplicate key", definition.Name))
 			}
 		}

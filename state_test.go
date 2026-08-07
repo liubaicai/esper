@@ -57,6 +57,61 @@ func TestTableUpsertSnapshotAndIndexes(t *testing.T) {
 	}
 }
 
+func TestTableUpdateRekeysPrimaryKeyInPlaceAndPreservesIndexes(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := CreateTable(env, "rekey", []TableColumn{
+		PrimaryKeyColumn[string]("symbol"),
+		TableColumnOf[string]("code"),
+		TableColumnOf[int64]("value"),
+	}, UniqueIndex("code-index", "code"), SecondaryBTreeIndex("value-index", "value")); err != nil {
+		t.Fatal(err)
+	}
+	table, ok := NewEngine(env).Table("rekey")
+	if !ok {
+		t.Fatal("rekey table is missing")
+	}
+	ctx := context.Background()
+	for _, row := range []map[string]any{
+		{"symbol": "A", "code": "a", "value": int64(1)},
+		{"symbol": "B", "code": "b", "value": int64(2)},
+	} {
+		if _, err := table.Insert(ctx, row); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := table.Update(ctx, []any{"A"}, map[string]any{
+		"symbol": "A2", "code": "a", "value": int64(3),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, found, err := table.Get(ctx, "A"); err != nil || found {
+		t.Fatalf("old primary key lookup = found=%v, err=%v", found, err)
+	}
+	row, found, err := table.Get(ctx, "A2")
+	if err != nil || !found || row.Get("value").Any() != int64(3) {
+		t.Fatalf("new primary key lookup = %#v, found=%v, err=%v", row.Values(), found, err)
+	}
+	byCode, err := table.Lookup(ctx, "code-index", "a")
+	if err != nil || len(byCode) != 1 || byCode[0].Get("symbol").Any() != "A2" {
+		t.Fatalf("rekeyed unique index lookup = %#v, err=%v", byCode, err)
+	}
+	rows, err := table.Snapshot(ctx)
+	if err != nil || len(rows) != 2 || rows[0].Get("symbol").Any() != "A2" || rows[1].Get("symbol").Any() != "B" {
+		t.Fatalf("rekeyed insertion order = %#v, err=%v", rows, err)
+	}
+
+	if _, err := table.Update(ctx, []any{"A2"}, map[string]any{"symbol": "B"}); err == nil {
+		t.Fatal("primary-key collision update succeeded")
+	}
+	if _, err := table.Update(ctx, []any{"A2"}, map[string]any{"code": "b"}); err == nil {
+		t.Fatal("unique secondary-index collision update succeeded")
+	}
+	row, found, err = table.Get(ctx, "A2")
+	if err != nil || !found || row.Get("code").Any() != "a" || row.Get("value").Any() != int64(3) {
+		t.Fatalf("failed rekey update changed row = %#v, found=%v, err=%v", row.Values(), found, err)
+	}
+}
+
 func TestTableKeyLookupCoercesNumericPrimaryKey(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := CreateTable(env, "numeric-keys", []TableColumn{

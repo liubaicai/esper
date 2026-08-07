@@ -1226,6 +1226,14 @@ func (s OnDemandStream) UpdateWhere(predicate Expression[bool], assignments ...T
 	return s.query(onDemandUpdate, predicate, assignments)
 }
 
+// UpdateAll updates every current target row/event.  It is the fluent
+// equivalent of an on-demand update without a where clause; assignments are
+// still evaluated per target in declaration order, and Initial*Field keeps
+// referring to the pre-update target snapshot.
+func (s OnDemandStream) UpdateAll(assignments ...TableAssignment) Query {
+	return s.query(onDemandUpdate, Literal(true), assignments)
+}
+
 // DeleteWhere deletes every target row for which predicate is true.
 func (s OnDemandStream) DeleteWhere(predicate Expression[bool]) Query {
 	return s.query(onDemandDelete, predicate, nil)
