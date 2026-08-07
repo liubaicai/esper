@@ -612,6 +612,25 @@ func (t *Table) statesSnapshot() []*tableState {
 	return states
 }
 
+// lookupScopesSnapshot returns the root state followed by every currently
+// materialized Context state in deterministic scope order. The root state is
+// always present for a valid Table; a missing scoped state is intentionally
+// omitted because an index probe against it cannot produce a row.
+func (t *Table) lookupScopesSnapshot() []string {
+	if t == nil || t.state == nil {
+		return nil
+	}
+	scopes := []string{""}
+	t.scopesMu.RLock()
+	keys := make([]string, 0, len(t.scopedState))
+	for key := range t.scopedState {
+		keys = append(keys, key)
+	}
+	t.scopesMu.RUnlock()
+	sort.Strings(keys)
+	return append(scopes, keys...)
+}
+
 func (t *Table) hasScopedState() bool {
 	if t == nil {
 		return false
@@ -872,6 +891,22 @@ func (t *Table) snapshotInScope(ctx context.Context, scope string) ([]TableRow, 
 	return rows, nil
 }
 
+func (t *Table) hasRowsInScope(ctx context.Context, scope string) (bool, error) {
+	if err := contextErr(ctx); err != nil {
+		return false, err
+	}
+	state, err := t.stateForScope(scope, false)
+	if err != nil {
+		return false, err
+	}
+	if state == nil {
+		return false, nil
+	}
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+	return len(state.rows) > 0, nil
+}
+
 func (t *Table) Clear(ctx context.Context) ([]TableRow, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
@@ -1006,6 +1041,24 @@ func (t *Table) lookupManyInScope(ctx context.Context, scope, indexName string, 
 	return rows, nil
 }
 
+// lookupManyAllScopes is the complete-state counterpart used by ordinary FAF
+// and Join candidate execution. A Context table is physically represented by
+// one root state plus zero or more partition states; probing every state keeps
+// the candidate set equivalent to Table.Snapshot while retaining index
+// pruning.
+func (t *Table) lookupManyAllScopes(ctx context.Context, indexName string, keys [][]any) ([]TableRow, error) {
+	rows := make([]TableRow, 0)
+	for _, scope := range t.lookupScopesSnapshot() {
+		part, err := t.lookupManyInScope(ctx, scope, indexName, keys)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, part...)
+	}
+	sort.SliceStable(rows, func(left, right int) bool { return rows[left].identity < rows[right].identity })
+	return rows, nil
+}
+
 // lookupPrimaryMany is the complete-key counterpart for a table primary key.
 // Primary keys are row identity rather than secondary index buckets, but FAF
 // candidate execution still needs one consistent snapshot and insertion-order
@@ -1048,6 +1101,19 @@ func (t *Table) lookupPrimaryManyInScope(ctx context.Context, scope string, keys
 			rows = append(rows, cloneTableRow(row))
 		}
 	}
+	return rows, nil
+}
+
+func (t *Table) lookupPrimaryManyAllScopes(ctx context.Context, keys [][]any) ([]TableRow, error) {
+	rows := make([]TableRow, 0)
+	for _, scope := range t.lookupScopesSnapshot() {
+		part, err := t.lookupPrimaryManyInScope(ctx, scope, keys)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, part...)
+	}
+	sort.SliceStable(rows, func(left, right int) bool { return rows[left].identity < rows[right].identity })
 	return rows, nil
 }
 
@@ -1123,6 +1189,19 @@ func (t *Table) lookupRangeManyInScope(ctx context.Context, scope, indexName str
 			rows = append(rows, cloneTableRow(row))
 		}
 	}
+	return rows, nil
+}
+
+func (t *Table) lookupRangeManyAllScopes(ctx context.Context, indexName string, queries []indexRangeSpec) ([]TableRow, error) {
+	rows := make([]TableRow, 0)
+	for _, scope := range t.lookupScopesSnapshot() {
+		part, err := t.lookupRangeManyInScope(ctx, scope, indexName, queries)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, part...)
+	}
+	sort.SliceStable(rows, func(left, right int) bool { return rows[left].identity < rows[right].identity })
 	return rows, nil
 }
 

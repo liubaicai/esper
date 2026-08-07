@@ -556,12 +556,25 @@ func (e *Engine) snapshotFireAndForgetSubquerySourceWithIndex(
 		if table == nil {
 			return nil, true, NewError(ErrorUnknownName, "table "+base.sourceName+" is not registered")
 		}
-		// A context Table owns an independent index per partition. Until the
-		// subquery candidate path carries the selected scope into every index
-		// probe, use the complete snapshot path so both scoped rows and legacy
-		// root rows remain visible with the correct context filter.
+		// A context Table owns an independent index per partition. A correlated
+		// subquery has the current context pair in its variables, so it can use
+		// that physical state directly when the root state is empty. Root rows
+		// may be legacy writes with persistent ownership metadata; seeing any of
+		// them requires the complete snapshot path to preserve that compatibility
+		// behavior instead of returning only the scoped candidate rows.
+		lookupScope := ""
 		if table.hasScopedState() {
-			return nil, false, nil
+			contextName, partitionKey, scoped := contextTableScopeValues(variables)
+			if scoped {
+				rootRows, rootErr := table.hasRowsInScope(ctx, "")
+				if rootErr != nil {
+					return nil, true, rootErr
+				}
+				if rootRows {
+					return nil, false, nil
+				}
+				lookupScope = tableContextScope(contextName, partitionKey)
+			}
 		}
 		var rows []TableRow
 		if selection.IndexName == "<primary-key>" {
@@ -572,11 +585,11 @@ func (e *Engine) snapshotFireAndForgetSubquerySourceWithIndex(
 			if !keyUsable {
 				return nil, false, nil
 			}
-			rows, err = table.lookupPrimaryMany(ctx, keys)
+			rows, err = table.lookupPrimaryManyInScope(ctx, lookupScope, keys)
 		} else if selection.Access == IndexAccessRange {
-			rows, err = table.lookupRange(ctx, selection.IndexName, rangeQuery)
+			rows, err = table.lookupRangeInScope(ctx, lookupScope, selection.IndexName, rangeQuery)
 		} else {
-			rows, err = table.lookupMany(ctx, selection.IndexName, keys)
+			rows, err = table.lookupManyInScope(ctx, lookupScope, selection.IndexName, keys)
 		}
 		if err != nil {
 			return nil, true, err

@@ -793,6 +793,122 @@ func TestInfraFAFContextIndexCandidateEqualityRangeParity(t *testing.T) {
 	}
 }
 
+// TestInfraFAFContextScopedTableIndexCandidateParity covers the single-source
+// FAF path after a Context table has materialized partition-local states. The
+// query is evaluated before a partition runtime exists, so the candidate
+// lookup must probe the root state and every scoped state, then let the normal
+// Context grouping/selector logic discard rows from other partitions.
+func TestInfraFAFContextScopedTableIndexCandidateParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraContextIndexEvent](env, "InfraScopedTableIndexEvent"); err != nil {
+		t.Fatal(err)
+	}
+	const contextName = "infra-scoped-table-index"
+	if _, err := CreateKeyContext(env, contextName, Field[any, string]("key")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "InfraScopedTableIndexStore", []TableColumn{
+		PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("value"),
+	}, SecondaryIndex("by-key", "key"), SecondaryBTreeIndex("by-key-value", "key", "value")); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	source := From[infraContextIndexEvent](env, "InfraScopedTableIndexEvent")
+	insertPlan, err := env.Build(OnRecord(source.AsRecord()).InsertIntoTable("InfraScopedTableIndexStore",
+		SetColumn("id", Field[any, string]("id")),
+		SetColumn("key", Field[any, string]("key")),
+		SetColumn("value", Field[any, int64]("value")),
+	).Query(StatementName("infra-scoped-table-index-insert"), WithContext(contextName)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(ctx, insertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []infraContextIndexEvent{
+		{ID: "A1", Key: "A", Value: 10},
+		{ID: "A2", Key: "A", Value: 20},
+		{ID: "B1", Key: "B", Value: 30},
+		{ID: "B2", Key: "B", Value: 40},
+	} {
+		if err := engine.SendEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := deployment.Undeploy(ctx); err != nil {
+		t.Fatal(err)
+	}
+	table, ok := engine.Table("InfraScopedTableIndexStore")
+	if !ok {
+		t.Fatal("scoped context table is missing")
+	}
+	indexLookups := func() uint64 {
+		total := table.state.indexLookups.Load()
+		table.scopesMu.RLock()
+		for _, state := range table.scopedState {
+			total += state.indexLookups.Load()
+		}
+		table.scopesMu.RUnlock()
+		return total
+	}
+
+	keyField := Field[any, string]("key")
+	equalityPlan, err := env.Build(FromTable(env, "InfraScopedTableIndexStore").Filter(
+		Equal[string](keyField, Parameter[string]("wanted")),
+	).Select(
+		Alias("id", Field[any, string]("id")),
+		Alias("key", keyField),
+	).Query(WithContext(contextName)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	selection, ok := equalityPlan.IndexPlan().ForSource(0)
+	if !ok || selection.IndexName != "by-key" || selection.Access != IndexAccessEquality {
+		t.Fatalf("scoped context equality index plan = %#v", selection)
+	}
+	before := indexLookups()
+	equalityResult, err := engine.ExecuteFireAndForgetWithSelectorAndParameters(ctx, equalityPlan,
+		ContextPartitionSelectorAll{}, ParameterValues{"wanted": "A"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := infraContextIndexResultIDs(equalityResult.Results()); !reflect.DeepEqual(got, []string{"A1", "A2"}) {
+		t.Fatalf("scoped context equality result = %#v", got)
+	}
+	if after := indexLookups(); after != before+3 {
+		t.Fatalf("scoped context equality expected one lookup for root plus two partitions: before=%d after=%d", before, after)
+	}
+
+	rangePlan, err := env.Build(FromTable(env, "InfraScopedTableIndexStore").Filter(And(
+		Equal[string](keyField, Literal("B")),
+		GreaterOrEqual[int64](Field[any, int64]("value"), Parameter[int64]("minimum")),
+	)).Select(
+		Alias("id", Field[any, string]("id")),
+		Alias("value", Field[any, int64]("value")),
+	).Query(WithContext(contextName)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	selection, ok = rangePlan.IndexPlan().ForSource(0)
+	if !ok || selection.IndexName != "by-key-value" || selection.Access != IndexAccessRange {
+		t.Fatalf("scoped context range index plan = %#v", selection)
+	}
+	before = indexLookups()
+	rangeResult, err := engine.ExecuteFireAndForgetWithSelectorAndParameters(ctx, rangePlan,
+		ContextPartitionSelectorAll{}, ParameterValues{"minimum": int64(35)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := infraContextIndexResultIDs(rangeResult.Results()); !reflect.DeepEqual(got, []string{"B2"}) {
+		t.Fatalf("scoped context range result = %#v", got)
+	}
+	if after := indexLookups(); after != before+3 {
+		t.Fatalf("scoped context range expected one lookup for root plus two partitions: before=%d after=%d", before, after)
+	}
+}
+
 func infraContextIndexResultIDs(results []Result) []string {
 	ids := make([]string, 0, len(results))
 	for _, result := range results {

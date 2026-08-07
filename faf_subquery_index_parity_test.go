@@ -320,6 +320,235 @@ func TestInfraFAFSubqueryContextBoundIndexCandidatePartitionParity(t *testing.T)
 	}
 }
 
+// TestInfraFAFSubqueryContextScopedTableIndexCandidateParity covers the
+// Context-table counterpart of the Java context subquery cases. The inner
+// Table has the same primary key in two Context partitions, so a global Table
+// lookup would either reject the second write or return the wrong partition's
+// value. The correlated FAF subquery must probe the current scoped index.
+func TestInfraFAFSubqueryContextScopedTableIndexCandidateParity(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterStruct[infraContextIndexEvent](env, "FAFSubqueryScopedTableEvent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const contextName = "faf-subquery-scoped-table"
+	if _, err := CreateKeyContext(env, contextName, Field[any, string]("key")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFSubqueryScopedTableOuter", schema,
+		NamedWindowRetention(KeepAll()), NamedWindowContext(contextName)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "FAFSubqueryScopedTableInner", []TableColumn{
+		PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("value"),
+	}, SecondaryIndex("by-key", "key")); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	source := From[infraContextIndexEvent](env, "FAFSubqueryScopedTableEvent")
+	insertPlan, err := env.Build(OnRecord(source.AsRecord()).InsertIntoTable("FAFSubqueryScopedTableInner",
+		SetColumn("id", Field[any, string]("id")),
+		SetColumn("key", Field[any, string]("key")),
+		SetColumn("value", Field[any, int64]("value")),
+	).Query(StatementName("faf-subquery-scoped-table-insert"), WithContext(contextName)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(ctx, insertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []infraContextIndexEvent{
+		{ID: "same", Key: "A", Value: 10},
+		{ID: "same", Key: "B", Value: 20},
+	} {
+		if err := engine.SendEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := deployment.Undeploy(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []infraContextIndexEvent{
+		{ID: "outer-a", Key: "A"},
+		{ID: "outer-b", Key: "B"},
+	} {
+		if err := engine.InsertNamedWindow(ctx, "FAFSubqueryScopedTableOuter", event); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	inner := FromTable(env, "FAFSubqueryScopedTableInner")
+	correlated := SubqueryValue[int64](inner, Field[any, int64]("value"),
+		Equal[string](Field[any, string]("key"), OuterField[string]("key")),
+	)
+	plan, err := env.Build(FromNamedWindow(env, "FAFSubqueryScopedTableOuter").Select(
+		Alias("id", Field[any, string]("id")),
+		Alias("value", correlated),
+	).Query(WithContext(contextName)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	table, ok := engine.Table("FAFSubqueryScopedTableInner")
+	if !ok {
+		t.Fatal("scoped subquery table is missing")
+	}
+	indexLookups := func() uint64 {
+		total := table.state.indexLookups.Load()
+		table.scopesMu.RLock()
+		for _, state := range table.scopedState {
+			total += state.indexLookups.Load()
+		}
+		table.scopesMu.RUnlock()
+		return total
+	}
+	before := indexLookups()
+	result, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := make(map[string]int64, len(result.Results()))
+	for _, row := range result.Results() {
+		got[row.Get("id").Any().(string)] = row.Get("value").Any().(int64)
+	}
+	want := map[string]int64{"outer-a": 10, "outer-b": 20}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("scoped table correlated subquery rows = %#v, want %#v", got, want)
+	}
+	if after := indexLookups(); after != before+2 {
+		t.Fatalf("scoped table correlated subquery expected one scoped lookup per outer row: before=%d after=%d", before, after)
+	}
+
+	// A root row may have been written through the public Table API before a
+	// context statement was deployed. The scoped candidate path must give way
+	// to the ownership-aware snapshot path rather than silently omitting it.
+	if _, err := table.Upsert(ctx, map[string]any{"id": "legacy", "key": "C", "value": int64(99)}); err != nil {
+		t.Fatal(err)
+	}
+	before = indexLookups()
+	legacyResult, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacyGot := make(map[string]int64, len(legacyResult.Results()))
+	for _, row := range legacyResult.Results() {
+		legacyGot[row.Get("id").Any().(string)] = row.Get("value").Any().(int64)
+	}
+	if !reflect.DeepEqual(legacyGot, want) {
+		t.Fatalf("legacy-root scoped subquery rows = %#v, want %#v", legacyGot, want)
+	}
+	if after := indexLookups(); after != before {
+		t.Fatalf("legacy-root scoped subquery unexpectedly used the scoped index: before=%d after=%d", before, after)
+	}
+}
+
+// TestInfraFAFSubqueryContextScopedTableRangeIndexCandidateParity is the
+// ordered-index counterpart. It exercises an equality prefix plus a
+// correlated range against each partition-local B-tree.
+func TestInfraFAFSubqueryContextScopedTableRangeIndexCandidateParity(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterStruct[infraContextIndexEvent](env, "FAFSubqueryScopedTableRangeEvent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const contextName = "faf-subquery-scoped-table-range"
+	if _, err := CreateKeyContext(env, contextName, Field[any, string]("key")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFSubqueryScopedTableRangeOuter", schema,
+		NamedWindowRetention(KeepAll()), NamedWindowContext(contextName)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "FAFSubqueryScopedTableRangeInner", []TableColumn{
+		PrimaryKeyColumn[string]("id"), TableColumnOf[string]("key"), TableColumnOf[int64]("value"),
+	}, SecondaryBTreeIndex("by-key-value", "key", "value")); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	source := From[infraContextIndexEvent](env, "FAFSubqueryScopedTableRangeEvent")
+	insertPlan, err := env.Build(OnRecord(source.AsRecord()).InsertIntoTable("FAFSubqueryScopedTableRangeInner",
+		SetColumn("id", Field[any, string]("id")),
+		SetColumn("key", Field[any, string]("key")),
+		SetColumn("value", Field[any, int64]("value")),
+	).Query(StatementName("faf-subquery-scoped-table-range-insert"), WithContext(contextName)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(ctx, insertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []infraContextIndexEvent{
+		{ID: "a-10", Key: "A", Value: 10},
+		{ID: "a-11", Key: "A", Value: 11},
+		{ID: "a-12", Key: "A", Value: 12},
+		{ID: "b-20", Key: "B", Value: 20},
+		{ID: "b-21", Key: "B", Value: 21},
+	} {
+		if err := engine.SendEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := deployment.Undeploy(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []infraContextIndexEvent{
+		{ID: "outer-a", Key: "A", Value: 11},
+		{ID: "outer-b", Key: "B", Value: 21},
+	} {
+		if err := engine.InsertNamedWindow(ctx, "FAFSubqueryScopedTableRangeOuter", event); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	inner := FromTable(env, "FAFSubqueryScopedTableRangeInner")
+	values := SubqueryValues[int64](inner, Field[any, int64]("value"), SubqueryWhere(And(
+		Equal[string](Field[any, string]("key"), OuterField[string]("key")),
+		GreaterOrEqual[int64](Field[any, int64]("value"), OuterField[int64]("value")),
+	)))
+	plan, err := env.Build(FromNamedWindow(env, "FAFSubqueryScopedTableRangeOuter").Select(
+		Alias("id", Field[any, string]("id")),
+		Alias("values", values),
+	).Query(WithContext(contextName)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	table, ok := engine.Table("FAFSubqueryScopedTableRangeInner")
+	if !ok {
+		t.Fatal("scoped range subquery table is missing")
+	}
+	indexLookups := func() uint64 {
+		total := table.state.indexLookups.Load()
+		table.scopesMu.RLock()
+		for _, state := range table.scopedState {
+			total += state.indexLookups.Load()
+		}
+		table.scopesMu.RUnlock()
+		return total
+	}
+	before := indexLookups()
+	result, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]int64{"outer-a": {11, 12}, "outer-b": {21}}
+	if len(result.Results()) != len(want) {
+		t.Fatalf("scoped table range result = %#v, want %#v", result.Results(), want)
+	}
+	for _, row := range result.Results() {
+		id := row.Get("id").Any().(string)
+		values, ok := row.Get("values").Any().([]int64)
+		if !ok || !reflect.DeepEqual(values, want[id]) {
+			t.Fatalf("scoped table range row = %#v, want id=%s values=%#v", row, id, want[id])
+		}
+	}
+	if after := indexLookups(); after != before+2 {
+		t.Fatalf("scoped table range subquery expected one B-tree lookup per outer row: before=%d after=%d", before, after)
+	}
+}
+
 // TestInfraFAFSubqueryContextRangeIndexCandidateParity closes the B-tree
 // counterpart of the equality candidate path.  The index has an equality
 // prefix (lookup) followed by a correlated range (id); both operands are

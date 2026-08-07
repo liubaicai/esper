@@ -1639,9 +1639,9 @@ func (e *Engine) lookupIndexedFireAndForgetSource(ctx context.Context, source *s
 		definition := table.Definition()
 		var rows []TableRow
 		if selection.IndexName == "<primary-key>" {
-			rows, err = table.lookupPrimaryMany(ctx, keys)
+			rows, err = table.lookupPrimaryManyAllScopes(ctx, keys)
 		} else {
-			rows, err = table.lookupMany(ctx, selection.IndexName, keys)
+			rows, err = table.lookupManyAllScopes(ctx, selection.IndexName, keys)
 		}
 		if err != nil {
 			return nil, err
@@ -1669,7 +1669,7 @@ func (e *Engine) lookupIndexedFireAndForgetRangeSource(ctx context.Context, sour
 		if !ok {
 			return nil, NewError(ErrorUnknownName, "table "+base.sourceName+" is not registered")
 		}
-		rows, err := table.lookupRangeMany(ctx, selection.IndexName, queries)
+		rows, err := table.lookupRangeManyAllScopes(ctx, selection.IndexName, queries)
 		if err != nil {
 			return nil, err
 		}
@@ -1680,16 +1680,6 @@ func (e *Engine) lookupIndexedFireAndForgetRangeSource(ctx context.Context, sour
 }
 
 func (e *Engine) snapshotFireAndForgetSourceWithIndex(ctx context.Context, source *streamNode, selection IndexSelection, expressions []Expr, now time.Time, variables map[string]Value) ([]Event, error) {
-	if base, baseErr := sourceNode(source); baseErr == nil && base != nil && base.kind == streamTable {
-		if table := e.tables[catalogKey(base.moduleName, base.sourceName)]; table != nil && table.hasScopedState() {
-			// A scoped Table has one independent primary/secondary index per
-			// context partition. The context planner may not yet have selected a
-			// partition (or may be evaluating a root/unscoped query), so preserve
-			// complete snapshot semantics until a scope-aware candidate path is
-			// available.
-			return e.snapshotFireAndForgetSource(ctx, source, now, variables)
-		}
-	}
 	if selection.Access == IndexAccessRange {
 		query, usable := e.indexProbeRangeSpec(source, selection, expressions, now, variables)
 		if !usable {
@@ -1714,7 +1704,7 @@ func (e *Engine) snapshotFireAndForgetSourceWithIndex(ctx context.Context, sourc
 			if !ok {
 				return nil, NewError(ErrorUnknownName, "table "+base.sourceName+" is not registered")
 			}
-			rows, err := table.lookupRange(ctx, selection.IndexName, query)
+			rows, err := table.lookupRangeManyAllScopes(ctx, selection.IndexName, []indexRangeSpec{query})
 			if err != nil {
 				return nil, err
 			}
