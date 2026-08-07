@@ -754,6 +754,9 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 				if action.Condition == nil || action.Condition.Type() != typeOf[bool]() {
 					return fmt.Errorf("table merge clause %d action %d requires a bool condition", index, actionIndex)
 				}
+				if !clause.Matched && clause.Actions != nil && action.InsertTarget == "" && !action.InsertIntoTarget && !action.Delete {
+					return fmt.Errorf("table merge clause %d action %d not-matched branch requires an insert action", index, actionIndex)
+				}
 				if action.InsertTarget != "" || action.InsertIntoTarget {
 					if action.InsertIntoTarget && clause.Matched {
 						return fmt.Errorf("table merge clause %d action %d target insert must be not-matched", index, actionIndex)
@@ -895,6 +898,9 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 			for actionIndex, action := range actions {
 				if action.Condition == nil || action.Condition.Type() != typeOf[bool]() {
 					return fmt.Errorf("named-window merge clause %d action %d requires a bool condition", index, actionIndex)
+				}
+				if !clause.Matched && clause.Actions != nil && action.InsertTarget == "" && !action.InsertIntoTarget && !action.Delete {
+					return fmt.Errorf("named-window merge clause %d action %d not-matched branch requires an insert action", index, actionIndex)
 				}
 				if action.InsertTarget != "" || action.InsertIntoTarget {
 					if action.InsertIntoTarget && clause.Matched {
@@ -2185,6 +2191,9 @@ func validateTriggerAssignment(e *Environment, input *streamNode, targetSchema S
 		return err
 	}
 	if assignment.Index == nil {
+		if err := validateTriggerAssignmentType(field.Type, assignment.Expr); err != nil {
+			return err
+		}
 		return nil
 	}
 	if err := validateExpression(assignment.Index); err != nil {
@@ -2201,12 +2210,30 @@ func validateTriggerAssignment(e *Environment, input *streamNode, targetSchema S
 		return fmt.Errorf("target column %q is not an array or slice", assignment.Column)
 	}
 	elementType := arrayType.Elem()
-	actualType := assignment.Expr.Type()
-	if actualType != nil && actualType != typeOf[any]() && elementType != nil && elementType != typeOf[any]() &&
-		!elementType.AssignableTo(actualType) && !actualType.AssignableTo(elementType) && !numericTypes(elementType, actualType) {
-		return fmt.Errorf("array column %q element type %s is incompatible with expression type %s", assignment.Column, elementType, actualType)
+	if err := validateTriggerAssignmentType(elementType, assignment.Expr); err != nil {
+		return fmt.Errorf("array column %q: %w", assignment.Column, err)
 	}
 	return nil
+}
+
+func validateTriggerAssignmentType(target reflect.Type, expression Expr) error {
+	if target == nil || expression == nil {
+		return nil
+	}
+	if node := expression.node(); node != nil && node.kind == "null" {
+		return nil
+	}
+	actual := expression.Type()
+	if actual == nil || actual == typeOf[any]() || target == typeOf[any]() {
+		return nil
+	}
+	if actual.AssignableTo(target) || numericTypes(actual, target) {
+		return nil
+	}
+	if target.Kind() == reflect.Pointer && actual.AssignableTo(target.Elem()) {
+		return nil
+	}
+	return fmt.Errorf("assignment expression type %s is incompatible with target type %s", actual, target)
 }
 
 func isTriggerIntegerType(typ reflect.Type) bool {

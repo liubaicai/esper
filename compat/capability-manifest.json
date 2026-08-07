@@ -690,6 +690,17 @@
       "difference": "Go expresses the pattern-to-merge pipeline as PatternFrom(...).FollowedBy(...).Every().Select(...).InsertInto(route) followed by an explicit OnRecord merge, preserving every A/B multimatch and composite-key duplicate suppression for Table and Named Window. A direct OnPattern trigger source, Java pattern statement deployment/observer lifecycle, atomic cross-statement route/merge transaction and complete pattern/merge shared trace remain open."
     },
     {
+      "id": "case.trigger-merge-invalid-build",
+      "javaRuntimeIds": ["java-runtime-99b2d413519187b56232", "java-runtime-33b1e837bc8b373bb198"],
+      "javaNames": ["InfraInvalid{namedWindow=true}", "InfraInvalid{namedWindow=false}"],
+      "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"],
+      "goTests": ["TestTriggerInfraInvalidBuildCases"],
+      "tags": ["invalid", "infra", "table", "named-window", "trigger", "merge", "build", "diagnostics", "nested"],
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "java-junit", "go-unit"],
+      "difference": "Go rejects missing target columns, target-field scope in not-matched clauses, incompatible scalar/composite assignments, indexed writes to scalar columns, empty clauses, not-matched delete/update action shapes, malformed wildcard actions, unknown side-stream targets and target inserts on matched branches at Build time. It uses structured errors rather than Java's exact EPL compiler text; the remaining InfraInvalid matrix, representation-specific diagnostics, rollback/transaction and shared trace remain open."
+    },
+    {
       "id": "case.named-window-unique-merge",
       "javaNames": ["ViewMultiKeyLastUniqueArrayKeyNamedWindow"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewMultikeyWArray.java"],
@@ -2322,6 +2333,7 @@
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-no-where"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-inner-type-variable"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-pattern-multimatch"},
+    {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-merge-invalid-build"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-array-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-nested-assignment"},
     {"capabilityId": "trigger.table-named-window", "caseId": "case.trigger-ordered-scalar-assignment"},
