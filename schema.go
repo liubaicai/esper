@@ -278,6 +278,31 @@ func WithNestedPropertySchema(name string, nested Schema) SchemaOption {
 	}
 }
 
+// WithNestedPropertySchemaFrom resolves a nested fragment schema from an
+// Environment catalog and attaches it to a root property. The lookup happens
+// when the option is created, which makes missing or cross-environment schema
+// references explicit before the root schema is constructed. This is the
+// Go-native counterpart of declaring a named JSON fragment type such as
+// Friend[] in a Java JSON schema definition.
+func WithNestedPropertySchemaFrom(env *Environment, property, schemaName string) (SchemaOption, error) {
+	property = strings.TrimSpace(property)
+	schemaName = strings.TrimSpace(schemaName)
+	if env == nil {
+		return nil, fmt.Errorf("esper: nested property schema %q cannot resolve %q from a nil environment", property, schemaName)
+	}
+	if property == "" {
+		return nil, fmt.Errorf("esper: nested property name is required")
+	}
+	if schemaName == "" {
+		return nil, fmt.Errorf("esper: nested property %q schema name is required", property)
+	}
+	nested, ok := env.Schema(schemaName)
+	if !ok {
+		return nil, fmt.Errorf("esper: nested property %q references unregistered schema %q", property, schemaName)
+	}
+	return WithNestedPropertySchema(property, nested), nil
+}
+
 // WithJSONFieldAdapter binds a string-based JSON adapter to one declared
 // property. The adapter is used by ParseJSON and RenderJSON in both map-backed
 // and typed-struct-backed JSON schemas.
