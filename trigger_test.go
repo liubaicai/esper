@@ -1505,6 +1505,11 @@ type triggerArrayAssignmentRow struct {
 	Array []float64 `esper:"thearray"`
 }
 
+type triggerOrderedScalarAssignmentEvent struct {
+	Key string `esper:"key"`
+	ID  int    `esper:"id"`
+}
+
 func TestTriggerArrayAssignmentsPreserveOrderedWorkingAndInitialValues(t *testing.T) {
 	setups := []struct {
 		name        string
@@ -1933,6 +1938,142 @@ func TestTriggerNestedAssignmentsPreserveMapAndObjectArrayValues(t *testing.T) {
 			if resultEvent.Get("cflat.c0").Any() != int(1) || resultEvent.Get("carr[0].c0").Any() != int(1) || resultEvent.Get("carr[1].c0").Any() != int(2) {
 				t.Fatalf("map nested assignment values = cflat=%#v carr0=%#v carr1=%#v", resultEvent.Get("cflat.c0"), resultEvent.Get("carr[0].c0"), resultEvent.Get("carr[1].c0"))
 			}
+		})
+	}
+}
+
+func TestTriggerOrderedScalarAssignmentsMatchInfraUpdateOrderOfFields(t *testing.T) {
+	cases := []struct {
+		name        string
+		namedWindow bool
+		merge       bool
+	}{
+		{name: "table-merge", merge: true},
+		{name: "named-window-merge", namedWindow: true, merge: true},
+		{name: "table-update"},
+		{name: "named-window-update", namedWindow: true},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			env := NewEnvironment()
+			if _, err := RegisterStruct[triggerOrderedScalarAssignmentEvent](env, "TriggerOrderedScalarAssignmentEvent"); err != nil {
+				t.Fatal(err)
+			}
+			const targetName = "trigger-ordered-scalar"
+			fields := []FieldSpec{
+				FieldDef("theString", reflect.TypeOf("")),
+				FieldDef("intPrimitive", reflect.TypeOf(int(0))),
+				FieldDef("intBoxed", reflect.TypeOf(int(0))),
+				FieldDef("doublePrimitive", reflect.TypeOf(float64(0))),
+			}
+			var table *Table
+			if testCase.namedWindow {
+				targetSchema, err := RegisterMap(env, "TriggerOrderedScalarTarget", fields)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, targetName, targetSchema, NamedWindowRetention(KeepAll())); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if _, err := CreateTable(env, targetName, []TableColumn{
+					PrimaryKeyColumn[string]("theString"),
+					TableColumnOf[int]("intPrimitive"),
+					TableColumnOf[int]("intBoxed"),
+					TableColumnOf[float64]("doublePrimitive"),
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			engine := NewEngine(env)
+			initial := map[string]any{
+				"theString":       "E1",
+				"intPrimitive":    1,
+				"intBoxed":        2,
+				"doublePrimitive": 2.0,
+			}
+			if testCase.namedWindow {
+				if err := engine.InsertNamedWindow(context.Background(), targetName, initial); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				table, _ = engine.Table(targetName)
+				if _, err := table.Insert(context.Background(), initial); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			source := From[triggerOrderedScalarAssignmentEvent](env, "TriggerOrderedScalarAssignmentEvent")
+			key := Field[triggerOrderedScalarAssignmentEvent, string]("key")
+			id := Field[triggerOrderedScalarAssignmentEvent, int]("id")
+			var targetInt Expression[int]
+			var initialInt Expression[int]
+			if testCase.namedWindow {
+				targetInt = NamedWindowField[int]("intPrimitive")
+				initialInt = InitialNamedWindowField[int]("intPrimitive")
+			} else {
+				targetInt = TableField[int]("intPrimitive")
+				initialInt = InitialTableField[int]("intPrimitive")
+			}
+			assignments := []TableAssignment{
+				SetColumn("intPrimitive", id),
+				SetColumn("intBoxed", targetInt),
+				SetColumn("doublePrimitive", Cast[int, float64](initialInt)),
+			}
+			var plan Plan
+			var err error
+			if testCase.merge {
+				if testCase.namedWindow {
+					match := Equal[string](NamedWindowField[string]("theString"), key)
+					plan, err = env.Build(OnEvent(source).MergeIntoNamedWindowWhen(targetName, match,
+						WhenMatchedAny(assignments...),
+					).Query(StatementName("trigger-ordered-scalar")))
+				} else {
+					plan, err = env.Build(OnEvent(source).MergeIntoTableWhen(targetName, []Expr{key},
+						WhenMatchedAny(assignments...),
+					).Query(StatementName("trigger-ordered-scalar")))
+				}
+			} else if testCase.namedWindow {
+				match := Equal[string](NamedWindowField[string]("theString"), key)
+				plan, err = env.Build(OnEvent(source).UpdateNamedWindow(targetName, match, assignments...).Query(StatementName("trigger-ordered-scalar")))
+			} else {
+				match := Equal[string](TableField[string]("theString"), key)
+				plan, err = env.Build(OnEvent(source).UpdateTableWhere(targetName, match, assignments...).Query(StatementName("trigger-ordered-scalar")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			deployment, err := engine.Deploy(context.Background(), plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var batches []ResultBatch
+			if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+				batches = append(batches, batch)
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			sendAndAssert := func(key string, id int, wantBoxed, wantDouble float64) {
+				t.Helper()
+				if err := engine.SendEvent(context.Background(), triggerOrderedScalarAssignmentEvent{Key: key, ID: id}); err != nil {
+					t.Fatal(err)
+				}
+				if len(batches) == 0 || len(batches[len(batches)-1].New) != 1 {
+					t.Fatalf("ordered scalar mutation batches = %#v", batches)
+				}
+				event, ok := batches[len(batches)-1].New[0].Event()
+				if !ok {
+					t.Fatalf("ordered scalar result is not an event: %#v", batches[len(batches)-1].New[0])
+				}
+				if event.Get("intPrimitive").Any() != id || event.Get("intBoxed").Any() != int(wantBoxed) || event.Get("doublePrimitive").Any() != wantDouble {
+					t.Fatalf("ordered scalar result = %v/%v/%v, want %d/%d/%v", event.Get("intPrimitive").Any(), event.Get("intBoxed").Any(), event.Get("doublePrimitive").Any(), id, int(wantBoxed), wantDouble)
+				}
+			}
+			sendAndAssert("E1", 5, 5, 1.0)
+			sendAndAssert("E1", 7, 7, 5.0)
 		})
 	}
 }
