@@ -1446,6 +1446,26 @@
       "remaining": [
         "EPLSubselectSelectWildcardNoName: auto-generated subselect_1 column name is EPL syntax sugar; Go requires explicit aliases (approved difference)"
       ]
+    },
+    {
+      "id": "epl.subselect.unfiltered",
+      "domain": "epl",
+      "level": "G",
+      "summary": "Unfiltered scalar subselects: unlimited streams and length/last-event windows, wildcard and expression projections, correlated where predicates with custom functions and computed results, self-referencing insert-into subselects, two-subselect projections, joins against unfiltered subselects, stream prior access, and build-time validation of invalid subselect shapes",
+      "javaRefs": [
+        "EPLSubselectUnfiltered"
+      ],
+      "goRefs": [
+        "subquery.go",
+        "plan.go",
+        "expr.go",
+        "epl_subselect_unfiltered_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "partial",
+      "remaining": [
+        "EPLSubselectInvalidSubselect group-by/order-by subselect rejection is not yet implemented in the Go builder (subselects nested inside GroupBy keys or OrderBy expressions should be rejected at Build time)"
+      ]
     }
   ],
   "cases": [
@@ -11543,6 +11563,96 @@
         "java-suite-EPLSubselectFiltered"
       ],
       "difference": "Non-aggregated subselect having filters rows one by one after the where clause (Esper semantics); the SameEvent/WherePrevious object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity tests. Scalar subselects use explicit SubqueryNullOnMultiple where Esper returns null on multiple rows. Multi-stream outer-join correlation uses JoinField(source, name); int-array correlation keys use null-safe Is deep equality; Esper prior(1, x) maps to Go Prior(0, x); wildcard join fragments (a.id) map to inserted Event values navigated with NestedField."
+    },
+    {
+      "id": "case.epl-subselect-unfiltered",
+      "javaRuntimeIds": [
+        "java-runtime-bd3151d2bfe783c68a4c",
+        "java-runtime-52465ccf64152468573b",
+        "java-runtime-35bb4012ba6240eb2b5e",
+        "java-runtime-30b11d518bcfb0d33da6",
+        "java-runtime-a39f50e203d9cc1c40be",
+        "java-runtime-30b43737a275b2cd8d47",
+        "java-runtime-789637b3336f1f52fec8",
+        "java-runtime-713de8bb7b8c70bc738d",
+        "java-runtime-45f056d567635a3db88a",
+        "java-runtime-b34d4694cf0d68157126",
+        "java-runtime-64658966cf5bbc74764d",
+        "java-runtime-09c51a2dd32cd67ca1f8",
+        "java-runtime-4b7fb8d3557174c882cc",
+        "java-runtime-464e8cfb8d6dac9f204c",
+        "java-runtime-259562d83a7bc9a095bb",
+        "java-runtime-d6cb26490b44ad3b14e8",
+        "java-runtime-c2ce866415b8744b057d",
+        "java-runtime-a953d3319b660ffd75ce",
+        "java-runtime-94b8ea136cef1aff1bca"
+      ],
+      "javaNames": [
+        "EPLSubselectUnfilteredExpression",
+        "EPLSubselectUnfilteredUnlimitedStream",
+        "EPLSubselectUnfilteredLengthWindow",
+        "EPLSubselectUnfilteredAsAfterSubselect",
+        "EPLSubselectUnfilteredWithAsWithinSubselect",
+        "EPLSubselectUnfilteredNoAs",
+        "EPLSubselectUnfilteredLastEvent",
+        "EPLSubselectStartStopStatement",
+        "EPLSubselectSelfSubselect",
+        "EPLSubselectComputedResult",
+        "EPLSubselectFilterInside",
+        "EPLSubselectWhereClauseWithExpression",
+        "EPLSubselectCustomFunction",
+        "EPLSubselectUnfilteredStreamPriorOM",
+        "EPLSubselectUnfilteredStreamPriorCompile",
+        "EPLSubselectTwoSubqSelect",
+        "EPLSubselectWhereClauseReturningTrue",
+        "EPLSubselectJoinUnfiltered",
+        "EPLSubselectInvalidSubselect"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectUnfiltered.java"
+      ],
+      "goTests": [
+        "TestSubselectUnfilteredExpressionParity",
+        "TestSubselectUnfilteredUnlimitedStreamParity",
+        "TestSubselectUnfilteredLengthWindowParity",
+        "TestSubselectUnfilteredAsAfterSubselectParity",
+        "TestSubselectUnfilteredWithAsWithinSubselectParity",
+        "TestSubselectUnfilteredNoAsParity",
+        "TestSubselectUnfilteredLastEventParity",
+        "TestSubselectUnfilteredStartStopStatementParity",
+        "TestSubselectUnfilteredSelfSubselectParity",
+        "TestSubselectUnfilteredComputedResultParity",
+        "TestSubselectUnfilteredFilterInsideParity",
+        "TestSubselectUnfilteredWhereClauseWithExpressionParity",
+        "TestSubselectUnfilteredCustomFunctionParity",
+        "TestSubselectUnfilteredStreamPriorParity",
+        "TestSubselectUnfilteredTwoSubqSelectParity",
+        "TestSubselectUnfilteredWhereClauseReturningTrueParity",
+        "TestSubselectUnfilteredJoinUnfilteredParity",
+        "TestSubselectUnfilteredInvalidSubselectParity"
+      ],
+      "tags": [
+        "correctness",
+        "epl",
+        "subselect",
+        "subquery",
+        "unfiltered",
+        "prior",
+        "join",
+        "wildcard",
+        "insert-into",
+        "validation",
+        "custom-function",
+        "last-event",
+        "length-window"
+      ],
+      "status": "partial",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit",
+        "java-suite-EPLSubselectUnfiltered"
+      ],
+      "difference": "Multi-row scalar subselects return null via explicit SubqueryNullOnMultiple where Esper coerces silently; the StreamPrior object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity test. Esper prior(0, x) is the candidate row itself and prior(N, x) maps to Go Prior(N-1, x). InvalidSubselect: nested-subquery rejection covers the scalar-projection shape Esper rejects, while Go keeps documented extensions for subqueries inside filter predicates (SubqueryExists scopes) and multi-column SubqueryRow fragments; the unqualified-correlation-property and IN-wildcard-type-mismatch scenarios are compile-time impossible in Go typed builders (approved differences); group-by/order-by subselect rejection remains."
     }
   ],
   "mappings": [
@@ -12321,6 +12431,10 @@
     {
       "capabilityId": "epl.subselect.filtered",
       "caseId": "case.epl-subselect-filtered"
+    },
+    {
+      "capabilityId": "epl.subselect.unfiltered",
+      "caseId": "case.epl-subselect-unfiltered"
     }
   ]
 }

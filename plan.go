@@ -2028,9 +2028,15 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 	if err := e.validateNode(definition.source); err != nil {
 		return err
 	}
+	if subqueryDefinitionContainsSubquery(definition) {
+		return NewError(ErrorInvalidRule, "subquery-within-subquery is not supported")
+	}
 	if definition.predicate != nil {
 		if definition.predicate.Type() != typeOf[bool]() {
 			return NewError(ErrorTypeMismatch, "subquery predicate must return bool")
+		}
+		if expressionNodeContainsAggregate(definition.predicate.node()) {
+			return NewError(ErrorInvalidRule, "aggregation functions are not supported within subquery filters, consider a having clause or insert-into instead")
 		}
 		if err := e.validateExprFields(definition.source, definition.predicate); err != nil {
 			return WrapError(ErrorInvalidRule, "subquery predicate", err)
@@ -2198,6 +2204,36 @@ func expressionContainsPreviousAccess(node *exprNode) bool {
 			if order.Expression != nil && expressionContainsPreviousAccess(order.Expression.node()) {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// subqueryDefinitionContainsSubquery reports whether the subquery's scalar
+// projection nests another subquery, which Esper rejects as
+// subquery-within-subquery. Go intentionally keeps supporting subqueries in
+// filter predicates (SubqueryExists scopes) and multi-column SubqueryRow
+// fragments, so those shapes are not rejected here.
+func subqueryDefinitionContainsSubquery(definition *subqueryDefinition) bool {
+	if definition == nil {
+		return false
+	}
+	if definition.projection != nil {
+		return expressionNodeContainsSubquery(definition.projection.node())
+	}
+	return false
+}
+
+func expressionNodeContainsSubquery(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.subquery != nil {
+		return true
+	}
+	for _, child := range node.children {
+		if expressionNodeContainsSubquery(child) {
+			return true
 		}
 	}
 	return false

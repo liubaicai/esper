@@ -53,12 +53,18 @@ type subselectFilteredListener struct {
 	invoked bool
 	lastNew []Row
 	lastOld []Row
+	allRows []Row
 }
 
 func (l *subselectFilteredListener) reset() {
 	l.invoked = false
 	l.lastNew = nil
 	l.lastOld = nil
+}
+
+func (l *subselectFilteredListener) resetAll() {
+	l.reset()
+	l.allRows = nil
 }
 
 func newSubselectFilteredEnvironment(t *testing.T) *Environment {
@@ -105,6 +111,7 @@ func deploySubselectFiltered(t *testing.T, env *Environment, query Query) (*Engi
 				t.Fatalf("subselect filtered result is not a row: %#v", result)
 			}
 			listener.lastNew = append(listener.lastNew, row)
+			listener.allRows = append(listener.allRows, row)
 		}
 		for _, result := range batch.Old {
 			row, ok := result.Row()
