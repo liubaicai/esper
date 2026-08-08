@@ -647,12 +647,14 @@ func TestSubqueryUngroupedHavingCorrelatesAndTracksWindowState(t *testing.T) {
 		t.Fatalf("aggregate having recovered result = %#v, want value=15 exists/in=false->true any=false all=true", row)
 	}
 
-	invalid := Select(
+	// A non-aggregated having is valid: Esper evaluates it row by row after
+	// the where clause (covered by the EPLSubselectFiltered parity tests).
+	nonAggregateHaving := Select(
 		From[subqueryHavingTrigger](env, "SubqueryHavingTrigger"),
-		Alias("bad", SubqueryValueWithOptions[float64](inner, price, SubqueryHaving(Literal(true)))),
-	).Query(StatementName("invalid-ungrouped-having"))
-	if _, err := env.Build(invalid); err == nil {
-		t.Fatal("having on a non-aggregate subquery must be rejected")
+		Alias("value", SubqueryValueWithOptions[float64](inner, price, SubqueryHaving(Greater[float64](price, Literal(0.0))))),
+	).Query(StatementName("non-aggregate-having"))
+	if _, err := env.Build(nonAggregateHaving); err != nil {
+		t.Fatalf("having on a non-aggregate subquery must be accepted, got %v", err)
 	}
 }
 

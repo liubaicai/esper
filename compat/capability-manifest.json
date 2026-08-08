@@ -1426,6 +1426,30 @@
         "EPLOtherDistinctWildcardJoinPatternOne/Two: every-distinct pattern + unidirectional join",
         "EPLOtherBeanEventWildcardSODA: Go has no SODA model parser (approved difference)"
       ]
+    },
+    {
+      "id": "epl.subselect.filtered",
+      "domain": "epl",
+      "level": "G",
+      "summary": "Filtered scalar subselects in select/where clauses: correlated predicates on outer fields, constant/range filters, non-aggregated per-row having, wildcard event payloads, prev projections, irstream outer windows and multi-subquery where composition",
+      "javaRefs": [
+        "EPLSubselectFiltered"
+      ],
+      "goRefs": [
+        "subquery.go",
+        "plan.go",
+        "epl_subselect_filtered_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "partial",
+      "remaining": [
+        "EPLSubselectSelectWhereJoined2Streams/3Streams/3SceneTwo/4Coercion/4BackCoercion: subqueries correlated to multi-stream outer joins with numeric coercion",
+        "EPLSubselectJoinFilteredOne/Two: join where clause with scalar/prior/prev subqueries and concat projection",
+        "EPLSubselectSubselectMixMax: sort-window wildcard subselect",
+        "EPLSubselectSubselectPrior: insert-into chain with coalesced lastevent subselect",
+        "EPLSubselectWhereClauseMultikeyWArrayPrimitive/2Field/Composite: int-array equality correlation keys",
+        "EPLSubselectSelectWildcardNoName: auto-generated subselect_1 column name is EPL syntax sugar; Go requires explicit aliases (approved difference)"
+      ]
     }
   ],
   "cases": [
@@ -11411,6 +11435,74 @@
         "EPLOtherDistinctWildcardJoinPatternOne/Two: every-distinct pattern + unidirectional join",
         "EPLOtherBeanEventWildcardSODA: Go has no SODA model parser (approved difference)"
       ]
+    },
+    {
+      "id": "case.epl-subselect-filtered",
+      "javaRuntimeIds": [
+        "java-runtime-bc6684a32b1cda80e244",
+        "java-runtime-9511e607f74ca4551624",
+        "java-runtime-0ef90e75f854b7845de0",
+        "java-runtime-7705828482936493f505",
+        "java-runtime-0626e0d5b878384ba989",
+        "java-runtime-4ec1d23f545746f81f20",
+        "java-runtime-b2be42620bdc328d006e",
+        "java-runtime-7e0f728f635710446f39",
+        "java-runtime-57e3956886ac655d387d",
+        "java-runtime-78f47a5bcdf6b87c9e68",
+        "java-runtime-b1c2169572264f9fd646",
+        "java-runtime-87fd9e194fcd61e0aba5",
+        "java-runtime-6034a5785b901739431e",
+        "java-runtime-1fcd5cdcc62015389f98"
+      ],
+      "javaNames": [
+        "EPLSubselectHavingNoAggNoFilterNoWhere",
+        "EPLSubselectHavingNoAggWWhere",
+        "EPLSubselectHavingNoAggWFilterWWhere",
+        "EPLSubselectSameEventCompile",
+        "EPLSubselectSameEventOM",
+        "EPLSubselectSameEvent",
+        "EPLSubselectSelectSceneOne",
+        "EPLSubselectSelectWildcard",
+        "EPLSubselectWhereConstant",
+        "EPLSubselectWherePrevious",
+        "EPLSubselectWherePreviousOM",
+        "EPLSubselectWherePreviousCompile",
+        "EPLSubselectSelectWithWhereJoined",
+        "EPLSubselectSelectWithWhere2Subqery"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectFiltered.java"
+      ],
+      "goTests": [
+        "TestSubselectFilteredHavingNoAggNoFilterNoWhereParity",
+        "TestSubselectFilteredHavingNoAggWWhereParity",
+        "TestSubselectFilteredHavingNoAggWFilterWWhereParity",
+        "TestSubselectFilteredSelectWithWhereJoinedParity",
+        "TestSubselectFilteredWhereConstantParity",
+        "TestSubselectFilteredWherePreviousParity",
+        "TestSubselectFilteredSameEventParity",
+        "TestSubselectFilteredSelectWildcardParity",
+        "TestSubselectFilteredSelectWithWhere2SubqueryParity",
+        "TestSubselectFilteredSceneOneParity"
+      ],
+      "tags": [
+        "correctness",
+        "epl",
+        "subselect",
+        "subquery",
+        "filtered",
+        "having",
+        "wildcard",
+        "prev",
+        "irstream"
+      ],
+      "status": "partial",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit",
+        "java-suite-EPLSubselectFiltered"
+      ],
+      "difference": "Non-aggregated subselect having filters rows one by one after the where clause (Esper semantics); the SameEvent/WherePrevious object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity tests. Scalar subselects use explicit SubqueryNullOnMultiple where Esper returns null on multiple rows."
     }
   ],
   "mappings": [
@@ -12185,6 +12277,10 @@
     {
       "capabilityId": "epl.other.distinct",
       "caseId": "case.epl-other-distinct"
+    },
+    {
+      "capabilityId": "epl.subselect.filtered",
+      "caseId": "case.epl-subselect-filtered"
     }
   ]
 }

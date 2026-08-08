@@ -1984,6 +1984,14 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 					continue
 				}
 			}
+			if definition.having != nil {
+				// A non-aggregated, non-grouped having filters row-by-row after
+				// the where clause (for example "having theString='ID1'").
+				matched, ok := boolValue(definition.having.eval(evaluation))
+				if !ok || !matched {
+					continue
+				}
+			}
 			if definition.projection == nil && len(definition.columns) == 0 {
 				candidates = append(candidates, subqueryCandidate{value: Present(candidate), evaluation: evaluation})
 				continue

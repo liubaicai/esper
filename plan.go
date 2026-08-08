@@ -2042,9 +2042,8 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 		}
 	}
 	if definition.having != nil && !definition.grouped {
-		if !definition.aggregateProjection {
-			return NewError(ErrorInvalidRule, "subquery having requires an aggregate projection or group-by clause")
-		}
+		// Esper also accepts a non-aggregated having without group-by: it
+		// filters subquery rows one by one after the where clause.
 		if definition.having.Type() != typeOf[bool]() {
 			return NewError(ErrorTypeMismatch, "subquery having predicate must return bool")
 		}
