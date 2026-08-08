@@ -1303,6 +1303,474 @@ func TestInfraNWViewsTimeAccumSceneTwoParity(t *testing.T) {
 	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), nil)
 }
 
+// TestInfraNWViewsExtTimeWindowParity mirrors InfraExtTimeWindow: an
+// ext_timed(value, 10 sec) window slides with arriving event timestamps and
+// expires events whose timestamp plus the period is reached by the newest
+// timestamp seen, in the same delta as the triggering insert.
+func TestInfraNWViewsExtTimeWindowParity(t *testing.T) {
+	h := newNWViewsHarness(t, "MyWindowETW", ExternallyTimed(Field[nwViewsKVLong, int64]("value"), 10*time.Second), "longBoxed", true, WithStartTime(time.Unix(0, 0).UTC()))
+
+	h.bean("E1", 1000)
+	nwViewsAssertNew(t, h.create, "create E1", []any{"E1", int64(1000)})
+	nwViewsAssertNew(t, h.consumer, "s0 E1", []any{"E1", int64(1000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E1", int64(1000)}})
+
+	h.bean("E2", 5000)
+	nwViewsAssertNew(t, h.create, "create E2", []any{"E2", int64(5000)})
+	nwViewsAssertNew(t, h.consumer, "s0 E2", []any{"E2", int64(5000)})
+
+	h.bean("E3", 10000)
+	nwViewsAssertNew(t, h.create, "create E3", []any{"E3", int64(10000)})
+	nwViewsAssertNew(t, h.consumer, "s0 E3", []any{"E3", int64(10000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E1", int64(1000)}, {"E2", int64(5000)}, {"E3", int64(10000)}})
+
+	h.bean("E4", 11000)
+	nwViewsAssertIRPair(t, h.create, "create E4", []any{"E4", int64(11000)}, []any{"E1", int64(1000)})
+	nwViewsAssertIRPair(t, h.consumer, "s0 E4", []any{"E4", int64(11000)}, []any{"E1", int64(1000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E2", int64(5000)}, {"E3", int64(10000)}, {"E4", int64(11000)}})
+
+	h.market("E2")
+	nwViewsAssertOld(t, h.create, "create delete E2", []any{"E2", int64(5000)})
+	nwViewsAssertOld(t, h.consumer, "s0 delete E2", []any{"E2", int64(5000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E3", int64(10000)}, {"E4", int64(11000)}})
+
+	h.bean("E5", 15000)
+	nwViewsAssertNew(t, h.create, "create E5", []any{"E5", int64(15000)})
+	nwViewsAssertNew(t, h.consumer, "s0 E5", []any{"E5", int64(15000)})
+}
+
+// TestInfraNWViewsExtTimeWindowSceneTwoParity mirrors
+// InfraExtTimeWindowSceneTwo: win:ext_timed(value, 10 sec) with milestones
+// and on-delete between sliding expiries.
+func TestInfraNWViewsExtTimeWindowSceneTwoParity(t *testing.T) {
+	h := newNWViewsHarness(t, "MyWindow", ExternallyTimed(Field[nwViewsKVLong, int64]("value"), 10*time.Second), "longBoxed", false, WithStartTime(time.Unix(0, 0).UTC()))
+
+	h.bean("G1", 0)
+	nwViewsAssertNew(t, h.create, "create G1", []any{"G1", int64(0)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", int64(0)}})
+	h.bean("G2", 5000)
+	nwViewsAssertNew(t, h.create, "create G2", []any{"G2", int64(5000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", int64(0)}, {"G2", int64(5000)}})
+	h.market("G2")
+	nwViewsAssertOld(t, h.create, "create delete G2", []any{"G2", int64(5000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", int64(0)}})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", int64(0)}})
+	h.bean("G3", 10000)
+	nwViewsAssertIRPair(t, h.create, "create G3", []any{"G3", int64(10000)}, []any{"G1", int64(0)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G3", int64(10000)}})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G3", int64(10000)}})
+	h.bean("G4", 15000)
+	nwViewsAssertNew(t, h.create, "create G4", []any{"G4", int64(15000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G3", int64(10000)}, {"G4", int64(15000)}})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G3", int64(10000)}, {"G4", int64(15000)}})
+	h.market("G3")
+	nwViewsAssertOld(t, h.create, "create delete G3", []any{"G3", int64(10000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G4", int64(15000)}})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G4", int64(15000)}})
+	h.bean("G5", 21000)
+	nwViewsAssertNew(t, h.create, "create G5", []any{"G5", int64(21000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G4", int64(15000)}, {"G5", int64(21000)}})
+}
+
+// TestInfraNWViewsExtTimeWindowSceneThreeParity mirrors
+// InfraExtTimeWindowSceneThree: despite the class name this is a
+// win:time(10 sec) window holding whole SupportBean events with an irstream
+// wildcard consumer and an on-delete trigger keyed by SupportBean_A.id.
+func TestInfraNWViewsExtTimeWindowSceneThreeParity(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterStruct[nwViewsBean](env, "SupportBean")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[nwViewsBeanA](env, "SupportBean_A"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "ABCWin", schema, NamedWindowRetention(TimeWindow(10*time.Second))); err != nil {
+		t.Fatal(err)
+	}
+	source := From[nwViewsBean](env, "SupportBean")
+	insertPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"ABCWin",
+		SetColumn("theString", Field[nwViewsBean, string]("theString")),
+		SetColumn("intBoxed", Field[nwViewsBean, int]("intBoxed")),
+		SetColumn("longBoxed", Field[nwViewsBean, int64]("longBoxed")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deletePlan, err := env.Build(OnEvent(From[nwViewsBeanA](env, "SupportBean_A")).DeleteFromNamedWindow(
+		"ABCWin",
+		Equal[string](NamedWindowField[string]("theString"), Field[nwViewsBeanA, string]("id")),
+	).Query(StatementName("delete")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromNamedWindow(env, "ABCWin").Query(
+		StatementName("s0"),
+		WithOldStream(),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deploy := func(plan Plan) *Deployment {
+		t.Helper()
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return deployment
+	}
+	consumerDeployment := deploy(consumerPlan)
+	deploy(insertPlan)
+	deploy(deletePlan)
+
+	probe := &nwViewsProbe{rowOf: func(event Event) []any { return []any{event.Get("theString").Any()} }}
+	nwViewsSubscribeStatement(t, consumerDeployment.Statements()[0], probe)
+
+	advance := func(millis int64) {
+		t.Helper()
+		if err := engine.AdvanceTime(context.Background(), time.UnixMilli(millis).UTC()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send := func(theString string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsBean{TheString: theString}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendA := func(id string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsBeanA{ID: id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	advance(0)
+
+	advance(1000)
+	send("E1")
+	nwViewsAssertNew(t, probe, "s0 E1", []any{"E1"})
+
+	advance(2000)
+	sendA("E1")
+	nwViewsAssertOld(t, probe, "s0 delete E1", []any{"E1"})
+
+	advance(3000)
+	send("E2")
+	nwViewsAssertNew(t, probe, "s0 E2", []any{"E2"})
+
+	advance(3000)
+	send("E3")
+	nwViewsAssertNew(t, probe, "s0 E3", []any{"E3"})
+
+	sendA("E3")
+	nwViewsAssertOld(t, probe, "s0 delete E3", []any{"E3"})
+
+	advance(12999)
+	nwViewsAssertNotInvoked(t, probe, "s0")
+	advance(13000)
+	nwViewsAssertOld(t, probe, "s0 expire E2", []any{"E2"})
+}
+
+// TestInfraNWViewsTimeOrderWindowParity mirrors InfraTimeOrderWindow: a
+// time_order(value, 10 sec) window keeps events sorted by their external
+// timestamp and expires them under the engine clock at timestamp plus the
+// period.
+func TestInfraNWViewsTimeOrderWindowParity(t *testing.T) {
+	h := newNWViewsHarness(t, "MyWindowTOW", TimeOrder(Field[nwViewsKVLong, int64]("value"), 10*time.Second), "longBoxed", true, WithStartTime(time.Unix(0, 0).UTC()))
+
+	h.advance(5000)
+	h.bean("E1", 3000)
+	nwViewsAssertNew(t, h.create, "create E1", []any{"E1", int64(3000)})
+	nwViewsAssertNew(t, h.consumer, "s0 E1", []any{"E1", int64(3000)})
+
+	h.advance(6000)
+	h.bean("E2", 2000)
+	nwViewsAssertNew(t, h.create, "create E2", []any{"E2", int64(2000)})
+	nwViewsAssertNew(t, h.consumer, "s0 E2", []any{"E2", int64(2000)})
+
+	h.advance(10000)
+	h.bean("E3", 1000)
+	nwViewsAssertNew(t, h.create, "create E3", []any{"E3", int64(1000)})
+	nwViewsAssertNew(t, h.consumer, "s0 E3", []any{"E3", int64(1000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E3", int64(1000)}, {"E2", int64(2000)}, {"E1", int64(3000)}})
+
+	h.advance(11000)
+	nwViewsAssertOld(t, h.create, "create expire E3", []any{"E3", int64(1000)})
+	nwViewsAssertOld(t, h.consumer, "s0 expire E3", []any{"E3", int64(1000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E2", int64(2000)}, {"E1", int64(3000)}})
+
+	h.market("E2")
+	nwViewsAssertOld(t, h.create, "create delete E2", []any{"E2", int64(2000)})
+	nwViewsAssertOld(t, h.consumer, "s0 delete E2", []any{"E2", int64(2000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E1", int64(3000)}})
+
+	h.advance(12999)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertNotInvoked(t, h.consumer, "s0")
+	h.advance(13000)
+	nwViewsAssertOld(t, h.create, "create expire E1", []any{"E1", int64(3000)})
+	nwViewsAssertOld(t, h.consumer, "s0 expire E1", []any{"E1", int64(3000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), nil)
+
+	h.advance(100000)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertNotInvoked(t, h.consumer, "s0")
+}
+
+// TestInfraNWViewsTimeOrderSceneTwoParity mirrors InfraTimeOrderSceneTwo:
+// ext:time_order(value, 10) with out-of-order arrivals; an event whose
+// external timestamp is already expired under the engine clock passes
+// straight through as an IR pair with itself.
+func TestInfraNWViewsTimeOrderSceneTwoParity(t *testing.T) {
+	h := newNWViewsHarness(t, "MyWindow", TimeOrder(Field[nwViewsKVLong, int64]("value"), 10*time.Second), "longBoxed", false, WithStartTime(time.Unix(0, 0).UTC()))
+
+	h.advance(20000)
+	h.bean("G1", 23000)
+	nwViewsAssertNew(t, h.create, "create G1", []any{"G1", int64(23000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", int64(23000)}})
+	h.advance(20000)
+	h.bean("G2", 19000)
+	nwViewsAssertNew(t, h.create, "create G2", []any{"G2", int64(19000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G2", int64(19000)}, {"G1", int64(23000)}})
+	h.advance(21000)
+	h.bean("G3", 10000)
+	nwViewsAssertIRPair(t, h.create, "create G3", []any{"G3", int64(10000)}, []any{"G3", int64(10000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G2", int64(19000)}, {"G1", int64(23000)}})
+	h.advance(21000)
+	h.market("G2")
+	nwViewsAssertOld(t, h.create, "create delete G2", []any{"G2", int64(19000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", int64(23000)}})
+	h.advance(22000)
+	h.bean("G4", 18000)
+	nwViewsAssertNew(t, h.create, "create G4", []any{"G4", int64(18000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G4", int64(18000)}, {"G1", int64(23000)}})
+	h.advance(23000)
+	h.bean("G5", 22000)
+	nwViewsAssertNew(t, h.create, "create G5", []any{"G5", int64(22000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G4", int64(18000)}, {"G5", int64(22000)}, {"G1", int64(23000)}})
+	h.advance(27999)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	h.advance(28000)
+	nwViewsAssertOld(t, h.create, "create expire G4", []any{"G4", int64(18000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G5", int64(22000)}, {"G1", int64(23000)}})
+	h.advance(31999)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	h.advance(32000)
+	nwViewsAssertOld(t, h.create, "create expire G5", []any{"G5", int64(22000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", int64(23000)}})
+	h.advance(32000)
+	h.bean("G6", 25000)
+	nwViewsAssertNew(t, h.create, "create G6", []any{"G6", int64(25000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", int64(23000)}, {"G6", int64(25000)}})
+	h.advance(32000)
+	h.market("G1")
+	nwViewsAssertOld(t, h.create, "create delete G1", []any{"G1", int64(23000)})
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G6", int64(25000)}})
+	h.advance(34999)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	h.advance(35000)
+	nwViewsAssertOld(t, h.create, "create expire G6", []any{"G6", int64(25000)})
+}
+
+// TestInfraNWViewsTimeLengthBatchParity mirrors InfraTimeLengthBatch: a
+// time_length_batch(10 sec, 3) window completes batches either at the size
+// boundary or at the anchored time boundary, whichever comes first; each
+// completed batch is one new-data delivery and the previous batch leaves as
+// old data in the same callback.
+func TestInfraNWViewsTimeLengthBatchParity(t *testing.T) {
+	h := newNWViewsHarness(t, "MyWindowTLB", TimeLengthBatch(10*time.Second, 3), "longBoxed", true, WithStartTime(time.Unix(0, 0).UTC()))
+
+	h.advance(1000)
+	h.bean("E1", 1)
+	h.bean("E2", 2)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertNotInvoked(t, h.consumer, "s0")
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E1", int64(1)}, {"E2", int64(2)}})
+
+	h.market("E2")
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertNotInvoked(t, h.consumer, "s0")
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E1", int64(1)}})
+
+	h.bean("E3", 3)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertNotInvoked(t, h.consumer, "s0")
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E1", int64(1)}, {"E3", int64(3)}})
+
+	h.bean("E4", 4)
+	nwViewsAssertNew(t, h.create, "create size flush", []any{"E1", int64(1)}, []any{"E3", int64(3)}, []any{"E4", int64(4)})
+	nwViewsAssertNew(t, h.consumer, "s0 size flush", []any{"E1", int64(1)}, []any{"E3", int64(3)}, []any{"E4", int64(4)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), nil)
+
+	h.advance(5000)
+	h.bean("E5", 5)
+	h.bean("E6", 6)
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E5", int64(5)}, {"E6", int64(6)}})
+
+	h.market("E5")
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertNotInvoked(t, h.consumer, "s0")
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E6", int64(6)}})
+
+	h.advance(10999)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertNotInvoked(t, h.consumer, "s0")
+
+	h.advance(11000)
+	if len(h.create.newRows) != 1 || len(h.create.oldRows) != 3 {
+		t.Fatalf("create time flush = new %#v old %#v, want new=[E6] old=[E1,E3,E4]", h.create.newRows, h.create.oldRows)
+	}
+	nwViewsAssertRows(t, "create time flush new", h.create.newRows, [][]any{{"E6", int64(6)}})
+	nwViewsAssertRows(t, "create time flush old", h.create.oldRows, [][]any{{"E1", int64(1)}, {"E3", int64(3)}, {"E4", int64(4)}})
+	h.create.reset()
+	h.consumer.reset()
+}
+
+// TestInfraNWViewsTimeLengthBatchSceneTwoParity mirrors
+// InfraTimeLengthBatchSceneTwo: win:time_length_batch(10 sec, 4); an
+// all-empty time rollover disarms the schedule and the next insert re-arms
+// it (first flush at 25000 after re-arm at 15000, not at the 21000 the
+// original schedule would have produced).
+func TestInfraNWViewsTimeLengthBatchSceneTwoParity(t *testing.T) {
+	h := newNWViewsHarness(t, "MyWindow", TimeLengthBatch(10*time.Second, 4), "intBoxed", false, WithStartTime(time.Unix(0, 0).UTC()))
+
+	h.advance(1000)
+	h.beanInt("G1", 1)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	h.advance(5000)
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", 1}})
+	h.beanInt("G2", 2)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", 1}, {"G2", 2}})
+	h.market("G2")
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", 1}})
+	h.market("G1")
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), nil)
+	h.advance(11000)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	h.advance(15000)
+	h.beanInt("G3", 3)
+	h.beanInt("G4", 4)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G3", 3}, {"G4", 4}})
+	h.advance(16000)
+	h.beanInt("G5", 5)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G3", 3}, {"G4", 4}, {"G5", 5}})
+	h.market("G5")
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G3", 3}, {"G4", 4}})
+	h.advance(18000)
+	h.beanInt("G6", 6)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	h.advance(24999)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	h.advance(25000)
+	nwViewsAssertNew(t, h.create, "create flush", []any{"G3", 3}, []any{"G4", 4}, []any{"G6", 6})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), nil)
+
+	h.advance(28000)
+	h.beanInt("G7", 7)
+	h.beanInt("G8", 8)
+	h.beanInt("G9", 9)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G7", 7}, {"G8", 8}, {"G9", 9}})
+	h.market("G7")
+	h.market("G9")
+	nwViewsAssertNotInvoked(t, h.create, "create")
+
+	h.advance(34999)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"G8", 8}})
+	h.advance(35000)
+	if len(h.create.newRows) != 1 || len(h.create.oldRows) != 3 {
+		t.Fatalf("create flush = new %#v old %#v, want new=[G8] old=[G3,G4,G6]", h.create.newRows, h.create.oldRows)
+	}
+	nwViewsAssertRows(t, "create flush new", h.create.newRows, [][]any{{"G8", 8}})
+	nwViewsAssertRows(t, "create flush old", h.create.oldRows, [][]any{{"G3", 3}, {"G4", 4}, {"G6", 6}})
+	h.create.reset()
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), nil)
+}
+
+// TestInfraNWViewsExternallyTimedBatchParity mirrors
+// InfraExternallyTimedBatch: an ext_timed_batch(value, 10 sec, 0L) window
+// accumulates events against epoch-anchored boundaries; deletes of
+// accumulated events fire old data, and an arriving event whose timestamp
+// crosses the next boundary flushes the accumulated batch as new data and
+// the previously completed batch as old data.
+func TestInfraNWViewsExternallyTimedBatchParity(t *testing.T) {
+	h := newNWViewsHarness(t, "MyWindowETB", ExternallyTimedBatch(Field[nwViewsKVLong, int64]("value"), 10*time.Second), "longBoxed", true, WithStartTime(time.Unix(0, 0).UTC()))
+
+	h.bean("E1", 1000)
+	h.bean("E2", 8000)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertNotInvoked(t, h.consumer, "s0")
+
+	h.bean("E3", 9999)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E1", int64(1000)}, {"E2", int64(8000)}, {"E3", int64(9999)}})
+
+	h.market("E2")
+	nwViewsAssertOld(t, h.create, "create delete E2", []any{"E2", int64(8000)})
+	nwViewsAssertOld(t, h.consumer, "s0 delete E2", []any{"E2", int64(8000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E1", int64(1000)}, {"E3", int64(9999)}})
+
+	h.bean("E4", 10000)
+	nwViewsAssertNew(t, h.create, "create flush", []any{"E1", int64(1000)}, []any{"E3", int64(9999)})
+	nwViewsAssertNew(t, h.consumer, "s0 flush", []any{"E1", int64(1000)}, []any{"E3", int64(9999)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E4", int64(10000)}})
+
+	h.market("E4")
+	nwViewsAssertOld(t, h.create, "create delete E4", []any{"E4", int64(10000)})
+	nwViewsAssertOld(t, h.consumer, "s0 delete E4", []any{"E4", int64(10000)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), nil)
+
+	h.bean("E5", 14000)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E5", int64(14000)}})
+
+	h.bean("E6", 21000)
+	if len(h.create.newRows) != 1 || len(h.create.oldRows) != 2 {
+		t.Fatalf("create flush = new %#v old %#v, want new=[E5] old=[E1,E3]", h.create.newRows, h.create.oldRows)
+	}
+	nwViewsAssertRows(t, "create flush new", h.create.newRows, [][]any{{"E5", int64(14000)}})
+	nwViewsAssertRows(t, "create flush old", h.create.oldRows, [][]any{{"E1", int64(1000)}, {"E3", int64(9999)}})
+	h.create.reset()
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E6", int64(21000)}})
+}
+
 // TestInfraNWViewsTimeFirstWindowParity mirrors InfraTimeFirstWindow: a
 // firsttime(10 sec) window admits events only before the oldest retained
 // event plus the period, drops later inserts silently and never expires
