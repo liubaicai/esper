@@ -1709,7 +1709,7 @@ type namedWindowRuntime struct {
 	partitions        map[string]*namedWindowRuntime
 	entries           []storedEvent
 	timeBatchBoundary time.Time
-	timeBatchLast     []Event
+	batchLast     []Event
 	indexes           map[string]map[string][]int
 	indexEntries      map[string][]namedWindowIndexEntry
 	keyed             map[string]storedEvent
@@ -2639,8 +2639,9 @@ func (w *NamedWindow) deleteWhereState(ctx context.Context, state *namedWindowRu
 		}
 	}
 	state.entries = kept
-	if _, timeBatch := state.def.retention.(TimeBatchWindowSpec); timeBatch {
-		// Events accumulated in the current time batch were never delivered
+	switch state.def.retention.(type) {
+	case TimeBatchWindowSpec, LengthBatchWindowSpec:
+		// Events accumulated in the current batch were never delivered
 		// as new data, so deleting them produces no remove stream either.
 		delta.Old = nil
 	}
@@ -2795,7 +2796,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 	}
 	if insertEvent {
 		switch state.def.retention.(type) {
-		case KeepAllWindowSpec, LengthWindowSpec, LastEventWindowSpec, FirstEventWindowSpec, TimeWindowSpec, FirstTimeWindowSpec, TimeBatchWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec:
+		case KeepAllWindowSpec, LengthWindowSpec, LengthBatchWindowSpec, FirstLengthWindowSpec, LastEventWindowSpec, FirstEventWindowSpec, TimeWindowSpec, FirstTimeWindowSpec, TimeBatchWindowSpec, TimeAccumWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec:
 		default:
 			return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", state.def.retention))
 		}
@@ -2869,6 +2870,27 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 				state.timeBatchBoundary = now.Add(retention.Duration)
 			}
 			entries = append(entries, storedEvent{event: preparedInsert, receivedAt: now})
+		case LengthBatchWindowSpec:
+			// A length_batch window accumulates the current batch silently and
+			// completes it as one new-data delivery at the size boundary; the
+			// previously completed batch leaves as old data in the same delta.
+			entries = append(entries, storedEvent{event: preparedInsert, receivedAt: now})
+			if len(entries) >= retention.Size {
+				delta.Old = append(delta.Old, state.batchLast...)
+				state.batchLast = make([]Event, 0, len(entries))
+				for _, entry := range entries {
+					state.batchLast = append(state.batchLast, entry.event)
+				}
+				delta.New = append(delta.New, state.batchLast...)
+				entries = nil
+			}
+		case FirstLengthWindowSpec:
+			// A firstlength window admits only the first size events; later
+			// inserts are dropped silently until deletes free a slot.
+			if len(entries) < retention.Size {
+				entries = append(entries, storedEvent{event: preparedInsert, receivedAt: now})
+				delta.New = append(delta.New, preparedInsert)
+			}
 		case UniqueWindowSpec:
 			entry := storedEvent{event: preparedInsert, receivedAt: now}
 			duplicate := -1
@@ -3017,6 +3039,34 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 		}
 		state.entries = append(state.entries, entry)
 		delta.New = nil
+	case LengthBatchWindowSpec:
+		// A length_batch window accumulates the current batch without a
+		// listener callback and completes it as one new-data delivery at the
+		// size boundary; the previously completed batch leaves as old data in
+		// the same delta (Esper length_batch second insert stream).
+		state.entries = append(state.entries, entry)
+		delta.New = nil
+		if len(state.entries) >= retention.Size {
+			delta.Old = append(delta.Old, state.batchLast...)
+			state.batchLast = make([]Event, 0, len(state.entries))
+			for _, retained := range state.entries {
+				state.batchLast = append(state.batchLast, retained.event)
+			}
+			delta.New = append(delta.New, state.batchLast...)
+			state.entries = nil
+		}
+	case FirstLengthWindowSpec:
+		// A firstlength window admits only the first size events; later
+		// inserts are dropped silently until deletes free a slot.
+		if len(state.entries) >= retention.Size {
+			return NamedWindowDelta{Time: now}, nil
+		}
+		state.entries = append(state.entries, entry)
+	case TimeAccumWindowSpec:
+		// A time_accum window delivers inserts immediately; all retained
+		// events expire together at the newest retained event plus the
+		// period (see expireNamedWindowState).
+		state.entries = append(state.entries, entry)
 	case TimeWindowSpec, TimeToLiveWindowSpec:
 		state.entries = append(state.entries, entry)
 	case TimeToLiveAtWindowSpec:
@@ -3139,6 +3189,23 @@ func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindow
 	defer state.mu.Unlock()
 	var duration time.Duration
 	switch retention := state.def.retention.(type) {
+	case TimeAccumWindowSpec:
+		// All retained events share one expiry time anchored at the newest
+		// retained event; deleting the newest re-anchors to the next newest
+		// (Esper time_accum). The whole window leaves together as old data.
+		if len(state.entries) == 0 {
+			return NamedWindowDelta{}
+		}
+		if state.entries[len(state.entries)-1].receivedAt.Add(retention.Duration).After(at) {
+			return NamedWindowDelta{}
+		}
+		delta := NamedWindowDelta{Time: at}
+		for _, entry := range state.entries {
+			delta.Old = append(delta.Old, entry.event)
+		}
+		state.entries = nil
+		rebuildNamedWindowIndexesLocked(state)
+		return delta
 	case TimeBatchWindowSpec:
 		// Batch rollover: the previously completed batch leaves as old data,
 		// the just-completed batch is delivered as new data and the window
@@ -3151,19 +3218,19 @@ func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindow
 		delta := NamedWindowDelta{Time: at}
 		changed := false
 		for !state.timeBatchBoundary.After(at) {
-			if len(state.timeBatchLast) > 0 {
-				delta.Old = append(delta.Old, state.timeBatchLast...)
+			if len(state.batchLast) > 0 {
+				delta.Old = append(delta.Old, state.batchLast...)
 			}
 			if len(state.entries) > 0 {
-				state.timeBatchLast = make([]Event, 0, len(state.entries))
+				state.batchLast = make([]Event, 0, len(state.entries))
 				for _, entry := range state.entries {
-					state.timeBatchLast = append(state.timeBatchLast, entry.event)
+					state.batchLast = append(state.batchLast, entry.event)
 				}
-				delta.New = append(delta.New, state.timeBatchLast...)
+				delta.New = append(delta.New, state.batchLast...)
 				state.entries = nil
 				changed = true
 			} else {
-				state.timeBatchLast = nil
+				state.batchLast = nil
 			}
 			state.timeBatchBoundary = state.timeBatchBoundary.Add(retention.Duration)
 		}

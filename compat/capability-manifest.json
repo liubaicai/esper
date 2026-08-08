@@ -1471,7 +1471,7 @@
       "id": "infra.namedwindow.views",
       "domain": "infra",
       "level": "S",
-      "summary": "Named Window data-window retention views: keep-all, length, last-event, first-event, unique/first-unique replacement and drop, and sort windows with sorted iteration, tie recency ordering and self-expel IR pairs, all with insert-into triggers, on-delete triggers, irstream consumer statements and snapshot iterator assertions; time(10) sliding expiry, firsttime anchored admission without timer expiry, and time_batch silent accumulation with anchored boundary rollover delivering completed batches as new-then-old data (including late aggregation consumers)",
+      "summary": "Named Window data-window retention views: keep-all, length, last-event, first-event, unique/first-unique replacement and drop, and sort windows with sorted iteration, tie recency ordering and self-expel IR pairs, all with insert-into triggers, on-delete triggers, irstream consumer statements and snapshot iterator assertions; time(10) sliding expiry, firsttime anchored admission without timer expiry, and time_batch silent accumulation with anchored boundary rollover delivering completed batches as new-then-old data (including late aggregation consumers); length_batch size-triggered batch rollover, firstlength silent drops, and time_accum shared expiry anchored at the newest retained event with delete re-anchoring",
       "javaRefs": [
         "InfraNamedWindowViews"
       ],
@@ -1483,7 +1483,7 @@
       "phase": 1,
       "status": "partial",
       "remaining": [
-        "InfraNamedWindowViews remaining views (ext_timed/timeorder/timeaccum/timelengthbatch/external-timed), length/first-length batch, per-group views, bean-backed/contained/deep-supertype, intersection, filtering consumer, late consumer/join, pattern, double-insert, delete-use-as variants, prior stats, select-stream-dot-star, grouped late-start/variable-iterate, on-insert preemptive two-window, TTL delete and invalid matrices remain"
+        "InfraNamedWindowViews remaining views (ext_timed/timeorder/timelengthbatch/external-timed), per-group views, bean-backed/contained/deep-supertype, intersection, filtering consumer, late consumer/join, pattern, double-insert, delete-use-as variants, prior stats, select-stream-dot-star, grouped late-start/variable-iterate, on-insert preemptive two-window, TTL delete and invalid matrices remain"
       ]
     }
   ],
@@ -11693,7 +11693,13 @@
         "java-runtime-5f5a65dd5f72c8e24619",
         "java-runtime-1ad42a8ed8025c4a0730",
         "java-runtime-1eb11f5cf275069ef6b5",
-        "java-runtime-bb926d092e7110db203f"
+        "java-runtime-bb926d092e7110db203f",
+        "java-runtime-81f4d92e62dbafdd7f2f",
+        "java-runtime-ce4a95ec7941743a7bfe",
+        "java-runtime-b53dbf8f541e79537f32",
+        "java-runtime-c656dd0eeae6618a4162",
+        "java-runtime-d74b2c9c614b26973637",
+        "java-runtime-8b4e2e7d81bb990c7d72"
       ],
       "javaNames": [
         "InfraKeepAllSimple",
@@ -11713,7 +11719,13 @@
         "InfraTimeFirstWindow",
         "InfraTimeBatch",
         "InfraTimeBatchSceneTwo",
-        "InfraTimeBatchLateConsumer"
+        "InfraTimeBatchLateConsumer",
+        "InfraLengthBatch",
+        "InfraLengthBatchSceneTwo",
+        "InfraLengthFirstWindow",
+        "InfraLengthWindowSceneThree",
+        "InfraTimeAccum",
+        "InfraTimeAccumSceneTwo"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
@@ -11736,7 +11748,13 @@
         "TestInfraNWViewsTimeFirstWindowParity",
         "TestInfraNWViewsTimeBatchParity",
         "TestInfraNWViewsTimeBatchSceneTwoParity",
-        "TestInfraNWViewsTimeBatchLateConsumerParity"
+        "TestInfraNWViewsTimeBatchLateConsumerParity",
+        "TestInfraNWViewsLengthBatchParity",
+        "TestInfraNWViewsLengthBatchSceneTwoParity",
+        "TestInfraNWViewsLengthFirstWindowParity",
+        "TestInfraNWViewsLengthWindowSceneThreeParity",
+        "TestInfraNWViewsTimeAccumParity",
+        "TestInfraNWViewsTimeAccumSceneTwoParity"
       ],
       "tags": [
         "correctness",
@@ -11757,7 +11775,10 @@
         "first-time",
         "time-batch",
         "virtual-clock",
-        "late-consumer"
+        "late-consumer",
+        "length-batch",
+        "first-length",
+        "time-accum"
       ],
       "status": "partial",
       "evidence": [
@@ -11765,7 +11786,7 @@
         "go-unit",
         "java-suite-InfraNamedWindowViews"
       ],
-      "difference": "Go inserts through OnEvent(...).InsertIntoNamedWindow trigger plans as the established equivalent of EPL insert-into select statements, and reads iterator state with NamedWindow.Snapshot in retention order. FirstEventWindowSpec retention is newly honored by named windows: a dropped firstevent insert produces no listener callback at all. Sort windows iterate in sort order with newer equal-key events before older ones (reverseSortedEqualRuns), and an event sorting beyond the retained size of a full window is inserted and removed in the same delta (IR pair with itself). Unique snapshot order follows first-seen key order where Esper asserts any-order. Time views run on a virtual clock via Engine.AdvanceTime: #time expires exactly at insert-time plus the period; firsttime admits only while the oldest retained event is younger than the period and never timer-expires; time_batch accumulates silently, delivers the completed batch as new data at the anchored boundary and as old data at the following boundary (one callback carries both when both exist), with silent deletes of unflushed events and a boundary schedule that slides by the period even across empty batches."
+      "difference": "Go inserts through OnEvent(...).InsertIntoNamedWindow trigger plans as the established equivalent of EPL insert-into select statements, and reads iterator state with NamedWindow.Snapshot in retention order. FirstEventWindowSpec retention is newly honored by named windows: a dropped firstevent insert produces no listener callback at all. Sort windows iterate in sort order with newer equal-key events before older ones (reverseSortedEqualRuns), and an event sorting beyond the retained size of a full window is inserted and removed in the same delta (IR pair with itself). Unique snapshot order follows first-seen key order where Esper asserts any-order. Time views run on a virtual clock via Engine.AdvanceTime: #time expires exactly at insert-time plus the period; firsttime admits only while the oldest retained event is younger than the period and never timer-expires; time_batch accumulates silently, delivers the completed batch as new data at the anchored boundary and as old data at the following boundary (one callback carries both when both exist), with silent deletes of unflushed events and a boundary schedule that slides by the period even across empty batches. length_batch shares the time_batch completed-batch state machine with a size trigger: accumulation and unflushed deletes are silent, each completed batch is one new-data delivery and leaves as old data when the next batch completes; firstlength drops inserts beyond the size silently until deletes free a slot; time_accum delivers inserts immediately and expires all retained events together at the newest retained event plus the period, re-anchoring when the newest event is deleted."
     }
   ],
   "mappings": [
