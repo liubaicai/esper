@@ -2056,3 +2056,389 @@ func TestInfraNWViewsTimeBatchPerGroupParity(t *testing.T) {
 	nwViewsAssertNew(t, h.consumer, "s0 flush", []any{"E1", int64(10)}, []any{"E4", int64(10)}, []any{"E2", int64(20)}, []any{"E3", int64(20)})
 	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), nil)
 }
+
+// nwViewsSubscribeResults captures consumer statement rows (projection and
+// aggregate results alike) into a plain probe for the WithDelete matrix.
+func nwViewsSubscribeResults(t *testing.T, statement *Statement, fields []string, probe *nwViewsProbe) {
+	t.Helper()
+	if _, err := statement.Subscribe(func(_ context.Context, batch ResultBatch) error {
+		probe.count++
+		probe.newRows = nil
+		for _, result := range batch.New {
+			row := make([]any, 0, len(fields))
+			for _, field := range fields {
+				row = append(row, result.Get(field).Any())
+			}
+			probe.newRows = append(probe.newRows, row)
+		}
+		probe.oldRows = nil
+		for _, result := range batch.Old {
+			row := make([]any, 0, len(fields))
+			for _, field := range fields {
+				row = append(row, result.Get(field).Any())
+			}
+			probe.oldRows = append(probe.oldRows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestInfraNWViewsWithDeleteParity mirrors InfraWithDeleteUseAs,
+// InfraWithDeleteFirstAs, InfraWithDeleteSecondAs and InfraWithDeleteNoAs:
+// the four EPL on-delete alias variants collapse into one Go chain
+// construction because typed trigger/window fields make stream aliases
+// unnecessary. The shared tryCreateWindow consumer matrix is asserted: s0
+// doubles values, s2 groups sums per key with IR pairs, s3 filters
+// value >= 10, and a no-op delete fires only the delete statement.
+func TestInfraNWViewsWithDeleteParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[nwViewsBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[nwViewsMarket](env, "SupportMarketDataBean"); err != nil {
+		t.Fatal(err)
+	}
+	windowSchema, err := RegisterStruct[nwViewsKVLong](env, "MyWindowWDKV")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowWD", windowSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	source := From[nwViewsBean](env, "SupportBean")
+	insertPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"MyWindowWD",
+		SetColumn("key", Field[nwViewsBean, string]("theString")),
+		SetColumn("value", Field[nwViewsBean, int64]("longBoxed")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deletePlan, err := env.Build(OnEvent(From[nwViewsMarket](env, "SupportMarketDataBean")).DeleteFromNamedWindow(
+		"MyWindowWD",
+		Equal[string](NamedWindowField[string]("key"), Field[nwViewsMarket, string]("symbol")),
+	).Query(StatementName("delete")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromNamedWindow(env, "MyWindowWD").Select(
+		Alias("key", Field[any, string]("key")),
+		Alias("value", Multiply[int64](Field[any, int64]("value"), Literal[int64](2))),
+	).Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s2Plan, err := env.Build(FromNamedWindow(env, "MyWindowWD").GroupBy(Field[any, string]("key")).Select(
+		Alias("key", Field[any, string]("key")),
+		Alias("value", Sum[int64](Field[any, int64]("value"))),
+	).Query(StatementName("s2"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s3Plan, err := env.Build(FromNamedWindow(env, "MyWindowWD").Filter(
+		GreaterOrEqual[int64](Field[any, int64]("value"), Literal[int64](10)),
+	).Query(StatementName("s3"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	deploy := func(plan Plan) *Deployment {
+		t.Helper()
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return deployment
+	}
+	s0Deployment := deploy(s0Plan)
+	s2Deployment := deploy(s2Plan)
+	s3Deployment := deploy(s3Plan)
+	deploy(insertPlan)
+	deleteDeployment := deploy(deletePlan)
+
+	window, ok := engine.NamedWindow("MyWindowWD")
+	if !ok {
+		t.Fatal("named window MyWindowWD is missing")
+	}
+	create := &nwViewsProbe{rowOf: nwViewsKVRow}
+	nwViewsSubscribeWindow(t, window, create)
+	s0 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s0Deployment.Statements()[0], []string{"key", "value"}, s0)
+	s2 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s2Deployment.Statements()[0], []string{"key", "value"}, s2)
+	s3 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s3Deployment.Statements()[0], []string{"key", "value"}, s3)
+	// Go delete-trigger statements deliver deleted window events as the old
+	// data of the trigger batch (Esper delivers them as the new data of the
+	// on-delete statement); both fire exactly when rows matched, so the Java
+	// invocation assertions are mirrored by counting batches.
+	deleteCount := 0
+	if _, err := deleteDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		deleteCount++
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sendBean := func(theString string, value int64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsBean{TheString: theString, LongBoxed: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendMarket := func(symbol string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsMarket{Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	snapshot := func(statement *Statement) [][]any {
+		t.Helper()
+		queryResult, err := statement.Snapshot(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		results := queryResult.Results()
+		rows := make([][]any, 0, len(results))
+		for _, result := range results {
+			rows = append(rows, []any{result.Get("key").Any(), result.Get("value").Any()})
+		}
+		return rows
+	}
+
+	sendBean("E1", 10)
+	nwViewsAssertNew(t, s0, "s0 E1", []any{"E1", int64(20)})
+	nwViewsAssertIRPair(t, s2, "s2 E1", []any{"E1", int64(10)}, []any{"E1", nil})
+	nwViewsAssertNew(t, s3, "s3 E1", []any{"E1", int64(10)})
+	nwViewsAssertNew(t, create, "create E1", []any{"E1", int64(10)})
+	nwViewsAssertRows(t, "create iterator", nwViewsSnapshot(t, window), [][]any{{"E1", int64(10)}})
+	nwViewsAssertRows(t, "s0 iterator", snapshot(s0Deployment.Statements()[0]), [][]any{{"E1", int64(20)}})
+
+	sendBean("E2", 20)
+	nwViewsAssertNew(t, s0, "s0 E2", []any{"E2", int64(40)})
+	nwViewsAssertIRPair(t, s2, "s2 E2", []any{"E2", int64(20)}, []any{"E2", nil})
+	nwViewsAssertNew(t, s3, "s3 E2", []any{"E2", int64(20)})
+	nwViewsAssertNew(t, create, "create E2", []any{"E2", int64(20)})
+	nwViewsAssertRows(t, "create iterator", nwViewsSnapshot(t, window), [][]any{{"E1", int64(10)}, {"E2", int64(20)}})
+	nwViewsAssertRows(t, "s0 iterator", snapshot(s0Deployment.Statements()[0]), [][]any{{"E1", int64(20)}, {"E2", int64(40)}})
+
+	sendBean("E3", 5)
+	nwViewsAssertNew(t, s0, "s0 E3", []any{"E3", int64(10)})
+	nwViewsAssertIRPair(t, s2, "s2 E3", []any{"E3", int64(5)}, []any{"E3", nil})
+	nwViewsAssertNotInvoked(t, s3, "s3")
+	nwViewsAssertNew(t, create, "create E3", []any{"E3", int64(5)})
+	nwViewsAssertRows(t, "create iterator", nwViewsSnapshot(t, window), [][]any{{"E1", int64(10)}, {"E2", int64(20)}, {"E3", int64(5)}})
+
+	sendMarket("E1")
+	if deleteCount != 1 {
+		t.Fatalf("delete invocations = %d, want 1", deleteCount)
+	}
+	nwViewsAssertOld(t, s0, "s0 delete E1", []any{"E1", int64(20)})
+	nwViewsAssertIRPair(t, s2, "s2 delete E1", []any{"E1", nil}, []any{"E1", int64(10)})
+	nwViewsAssertOld(t, s3, "s3 delete E1", []any{"E1", int64(10)})
+	nwViewsAssertOld(t, create, "create delete E1", []any{"E1", int64(10)})
+	nwViewsAssertRows(t, "create iterator", nwViewsSnapshot(t, window), [][]any{{"E2", int64(20)}, {"E3", int64(5)}})
+
+	// Deleting the same key again matches nothing: neither the window and
+	// its consumers nor the delete trigger fire (Esper on-delete child views
+	// deliver deleted events only when rows matched; the Java
+	// assertListenerInvoked here is satisfied by the lingering first-delete
+	// invocation and does not prove a no-op dispatch).
+	sendMarket("E1")
+	if deleteCount != 1 {
+		t.Fatalf("delete invocations = %d, want 1 after the no-op delete", deleteCount)
+	}
+	nwViewsAssertNotInvoked(t, s0, "s0")
+	nwViewsAssertNotInvoked(t, s2, "s2")
+	nwViewsAssertNotInvoked(t, create, "create")
+	nwViewsAssertRows(t, "create iterator", nwViewsSnapshot(t, window), [][]any{{"E2", int64(20)}, {"E3", int64(5)}})
+
+	sendMarket("E2")
+	nwViewsAssertOld(t, s0, "s0 delete E2", []any{"E2", int64(40)})
+	nwViewsAssertIRPair(t, s2, "s2 delete E2", []any{"E2", nil}, []any{"E2", int64(20)})
+	nwViewsAssertOld(t, s3, "s3 delete E2", []any{"E2", int64(20)})
+	nwViewsAssertOld(t, create, "create delete E2", []any{"E2", int64(20)})
+	nwViewsAssertRows(t, "create iterator", nwViewsSnapshot(t, window), [][]any{{"E3", int64(5)}})
+
+	sendMarket("E3")
+	nwViewsAssertOld(t, s0, "s0 delete E3", []any{"E3", int64(10)})
+	nwViewsAssertIRPair(t, s2, "s2 delete E3", []any{"E3", nil}, []any{"E3", int64(5)})
+	nwViewsAssertNotInvoked(t, s3, "s3")
+	nwViewsAssertOld(t, create, "create delete E3", []any{"E3", int64(5)})
+	if deleteCount != 3 {
+		t.Fatalf("delete invocations = %d, want 3", deleteCount)
+	}
+	nwViewsAssertRows(t, "create iterator", nwViewsSnapshot(t, window), nil)
+}
+
+// nwViewsStatementSnapshot reads a consumer statement iterator as property
+// rows, mirroring assertPropsPerRowIterator on consumer statements.
+func nwViewsStatementSnapshot(t *testing.T, statement *Statement, fields ...string) [][]any {
+	t.Helper()
+	queryResult, err := statement.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	results := queryResult.Results()
+	rows := make([][]any, 0, len(results))
+	for _, result := range results {
+		row := make([]any, 0, len(fields))
+		for _, field := range fields {
+			row = append(row, result.Get(field).Any())
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+// TestInfraNWViewsDoubleInsertSameWindowParity mirrors
+// InfraDoubleInsertSameWindow: two insert-into statements writing the same
+// window each deliver their own window delta (two listener invocations per
+// source event), and the consumer observes both rows flattened.
+func TestInfraNWViewsDoubleInsertSameWindowParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[nwViewsBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	windowSchema, err := RegisterStruct[nwViewsKVLong](env, "MyWindowDISMKV")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowDISM", windowSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	source := From[nwViewsBean](env, "SupportBean")
+	insertOnePlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"MyWindowDISM",
+		SetColumn("key", Field[nwViewsBean, string]("theString")),
+		SetColumn("value", Add[int64](Field[nwViewsBean, int64]("longBoxed"), Literal[int64](1))),
+	).Query(StatementName("insert-one")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	insertTwoPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"MyWindowDISM",
+		SetColumn("key", Field[nwViewsBean, string]("theString")),
+		SetColumn("value", Add[int64](Field[nwViewsBean, int64]("longBoxed"), Literal[int64](2))),
+	).Query(StatementName("insert-two")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromNamedWindow(env, "MyWindowDISM").Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	deploy := func(plan Plan) *Deployment {
+		t.Helper()
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return deployment
+	}
+	s0Deployment := deploy(s0Plan)
+	deploy(insertOnePlan)
+	deploy(insertTwoPlan)
+
+	window, ok := engine.NamedWindow("MyWindowDISM")
+	if !ok {
+		t.Fatal("named window MyWindowDISM is missing")
+	}
+	windowCalls := 0
+	var windowFlattened [][]any
+	if _, err := window.Subscribe(func(_ context.Context, delta NamedWindowDelta) error {
+		windowCalls++
+		for _, event := range delta.New {
+			windowFlattened = append(windowFlattened, nwViewsKVRow(event))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var s0Flattened [][]any
+	if _, err := s0Deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			event, ok := result.Event()
+			if !ok {
+				t.Fatalf("consumer result is not an event: %#v", result)
+			}
+			s0Flattened = append(s0Flattened, nwViewsKVRow(event))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := engine.SendEvent(context.Background(), nwViewsBean{TheString: "E1", LongBoxed: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if windowCalls != 2 {
+		t.Fatalf("window listener invocations = %d, want 2 individual deltas", windowCalls)
+	}
+	nwViewsAssertRows(t, "window flattened", windowFlattened, [][]any{{"E1", int64(11)}, {"E1", int64(12)}})
+	nwViewsAssertRows(t, "s0 flattened", s0Flattened, [][]any{{"E1", int64(11)}, {"E1", int64(12)}})
+}
+
+// TestInfraNWViewsFilteringConsumerParity mirrors InfraFilteringConsumer: a
+// unique(key) window with a filtered irstream consumer (value > 0 and
+// value < 10). The consumer sees only matching events as new and matching
+// removals as old; a unique replacement whose incoming event fails the
+// filter delivers only the old row.
+func TestInfraNWViewsFilteringConsumerParity(t *testing.T) {
+	h := newNWViewsHarness(t, "MyWindowFC", Unique(Field[nwViewsKVInt, string]("key")), "intBoxed", false)
+	s0Plan, err := h.env.Build(FromNamedWindow(h.env, "MyWindowFC").Filter(
+		And(
+			Greater[int](Field[any, int]("value"), Literal[int](0)),
+			Less[int](Field[any, int]("value"), Literal[int](10)),
+		),
+	).Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Deployment, err := h.engine.Deploy(context.Background(), s0Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s0Deployment.Statements()[0], []string{"key", "value"}, s0)
+	s0Snapshot := func() [][]any { return nwViewsStatementSnapshot(t, s0Deployment.Statements()[0], "key", "value") }
+
+	h.beanInt("G1", 5)
+	nwViewsAssertNew(t, s0, "s0 G1", []any{"G1", 5})
+	nwViewsAssertNew(t, h.create, "create G1", []any{"G1", 5})
+
+	h.beanInt("G1", 15)
+	nwViewsAssertOld(t, s0, "s0 replace G1", []any{"G1", 5})
+	nwViewsAssertIRPair(t, h.create, "create replace G1", []any{"G1", 15}, []any{"G1", 5})
+
+	h.beanInt("G2", 8)
+	nwViewsAssertNew(t, s0, "s0 G2", []any{"G2", 8})
+	nwViewsAssertNew(t, h.create, "create G2", []any{"G2", 8})
+	nwViewsAssertRowsAnyOrder(t, "create iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", 15}, {"G2", 8}})
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{"G2", 8}})
+
+	h.market("G2")
+	nwViewsAssertOld(t, s0, "s0 delete G2", []any{"G2", 8})
+	nwViewsAssertOld(t, h.create, "create delete G2", []any{"G2", 8})
+
+	h.beanInt("G3", -1)
+	nwViewsAssertNotInvoked(t, s0, "s0")
+	nwViewsAssertNew(t, h.create, "create G3", []any{"G3", -1})
+	nwViewsAssertRowsAnyOrder(t, "create iterator", nwViewsSnapshot(t, h.window), [][]any{{"G1", 15}, {"G3", -1}})
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), nil)
+
+	h.market("G3")
+	nwViewsAssertNotInvoked(t, s0, "s0")
+	nwViewsAssertOld(t, h.create, "create delete G3", []any{"G3", -1})
+
+	h.beanInt("G1", 6)
+	nwViewsAssertNew(t, s0, "s0 replace G1 back", []any{"G1", 6})
+	h.beanInt("G2", 7)
+	nwViewsAssertNew(t, s0, "s0 G2 back", []any{"G2", 7})
+	nwViewsAssertRowsAnyOrder(t, "s0 iterator", s0Snapshot(), [][]any{{"G1", 6}, {"G2", 7}})
+}

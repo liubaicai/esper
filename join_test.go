@@ -347,11 +347,16 @@ func TestJoinAggregateWhereFiltersTuplesBeforeGrouping(t *testing.T) {
 		t.Fatalf("filtered aggregate emitted early = %#v", batches)
 	}
 
-	// A later qualifying tuple creates the group, and a second qualifying row
-	// emits the previous and current aggregate values.
+	// A later qualifying tuple creates the group (emitting the Esper
+	// null-prior old row), and a second qualifying row emits the previous
+	// and current aggregate values.
 	sendPayment("O1", 10)
-	if len(batches) != 1 || len(batches[0].New) != 1 || len(batches[0].Old) != 0 {
+	if len(batches) != 1 || len(batches[0].New) != 1 || len(batches[0].Old) != 1 {
 		t.Fatalf("first filtered aggregate batch = %#v", batches)
+	}
+	prior, priorOK := batches[0].Old[0].Row()
+	if !priorOK || prior.Get("symbol").Any() != "A" || !prior.Get("count").IsNull() || !prior.Get("total").IsNull() {
+		t.Fatalf("first filtered aggregate null-prior row = %#v", batches[0].Old)
 	}
 	row, ok := batches[0].New[0].Row()
 	if !ok || row.Get("symbol").Any() != "A" || row.Get("count").Any() != int64(1) || row.Get("total").Any() != float64(10) {

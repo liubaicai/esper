@@ -10401,6 +10401,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		if group == nil {
 			continue
 		}
+		emittedBefore := group.emitted
 		if group.emitted && (plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) {
 			oldEntries = append(oldEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, group.previous)),
@@ -10441,6 +10442,24 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		if visible && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 			newEntries = append(newEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, newValues)),
+				group:  group,
+				key:    key,
+			})
+		}
+		if visible && !emittedBefore && len(definition.groupBy) > 0 && plan.query.selector == SelectIRStream {
+			// Esper group-by irstream semantics: creating a group pairs the
+			// first new row with a null-prior old row whose group-by columns
+			// are populated and whose aggregate columns are null.
+			nullPrior := make([]Value, len(newValues))
+			for index, selection := range definition.selections {
+				if isAggregateExpression(selection.Expr) {
+					nullPrior[index] = Null()
+				} else {
+					nullPrior[index] = newValues[index]
+				}
+			}
+			oldEntries = append(oldEntries, aggregateResultEntry{
+				result: resultRow(newRow(plan.resultSchema, nullPrior)),
 				group:  group,
 				key:    key,
 			})
