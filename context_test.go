@@ -3709,7 +3709,10 @@ func TestContextPartitionedNamedWindowConsumerRoutesByPartition(t *testing.T) {
 	if _, err := CreateKeyContext(env, "by-symbol", Field[any, string]("symbol")); err != nil {
 		t.Fatal(err)
 	}
-	plan, err := env.Build(FromNamedWindow(env, "live").Window(LengthWindow(1)).Query(
+	// Esper rejects data window views on named-window consumers, so the
+	// consumer reads the keep-all window directly; partition routing is
+	// observable through the per-symbol context partitions and new events.
+	plan, err := env.Build(FromNamedWindow(env, "live").Query(
 		StatementName("context-named-window"),
 		WithContext("by-symbol"),
 		WithOldStream(),
@@ -3735,12 +3738,12 @@ func TestContextPartitionedNamedWindowConsumerRoutesByPartition(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if len(batches) != 3 || len(batches[2].Old) != 1 {
+	if len(batches) != 3 || len(batches[2].New) != 1 {
 		t.Fatalf("context named-window batches = %#v", batches)
 	}
-	old, ok := batches[2].Old[0].Event()
-	if !ok || old.Underlying().(runtimeTestTrade).Price != 1 {
-		t.Fatalf("context named-window old event = %#v", batches[2].Old)
+	current, ok := batches[2].New[0].Event()
+	if !ok || current.Underlying().(runtimeTestTrade).Price != 3 {
+		t.Fatalf("context named-window new event = %#v", batches[2].New)
 	}
 	if statement.ContextPartitionCount() != 2 {
 		t.Fatalf("context named-window partitions = %d", statement.ContextPartitionCount())

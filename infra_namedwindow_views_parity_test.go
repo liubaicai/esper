@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -2441,4 +2442,171 @@ func TestInfraNWViewsFilteringConsumerParity(t *testing.T) {
 	h.beanInt("G2", 7)
 	nwViewsAssertNew(t, s0, "s0 G2 back", []any{"G2", 7})
 	nwViewsAssertRowsAnyOrder(t, "s0 iterator", s0Snapshot(), [][]any{{"G1", 6}, {"G2", 7}})
+}
+
+// nwViewsBeanTTL mirrors SupportBean (theString, longPrimitive) for the
+// InfraNamedWindowTimeToLiveDelete execution.
+type nwViewsBeanTTL struct {
+	TheString     string `esper:"theString"`
+	LongPrimitive int64  `esper:"longPrimitive"`
+}
+
+// nwViewsBeanS0 mirrors SupportBean_S0 (id, p00) delete triggers.
+type nwViewsBeanS0 struct {
+	ID  int    `esper:"id"`
+	P00 string `esper:"p00"`
+}
+
+// TestInfraNWViewsTimeToLiveDeleteParity mirrors InfraNamedWindowTimeToLiveDelete:
+// a whole-bean timetolive window retaining rows until
+// current_timestamp()+longPrimitive expires rows dynamically while an
+// on-delete trigger removes rows by p00.
+func TestInfraNWViewsTimeToLiveDeleteParity(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterStruct[nwViewsBeanTTL](env, "SupportBean")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[nwViewsBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	ttl := Func2("ttlDeadline", func(now time.Time, delta int64) int64 {
+		return now.UnixMilli() + delta
+	}, CurrentTime(), Field[nwViewsBeanTTL, int64]("longPrimitive"))
+	if _, err := CreateNamedWindow(env, "MyWindowTTL", schema, NamedWindowRetention(TimeToLiveAt(ttl))); err != nil {
+		t.Fatal(err)
+	}
+	mergePlan, err := env.Build(OnEvent(From[nwViewsBeanTTL](env, "SupportBean")).MergeInsertIntoNamedWindow(
+		"MyWindowTTL", Literal(false), CopyMatchingFields(),
+	).Query(StatementName("merge")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deletePlan, err := env.Build(OnEvent(From[nwViewsBeanS0](env, "SupportBean_S0")).DeleteFromNamedWindow(
+		"MyWindowTTL",
+		Equal[string](NamedWindowField[string]("theString"), Field[nwViewsBeanS0, string]("p00")),
+	).Query(StatementName("delete")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	for _, plan := range []Plan{mergePlan, deletePlan} {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	window, ok := engine.NamedWindow("MyWindowTTL")
+	if !ok {
+		t.Fatal("time-to-live window is missing")
+	}
+	assertIterate := func(want ...string) {
+		t.Helper()
+		events, err := window.Snapshot(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows := make([][]any, 0, len(events))
+		for _, event := range events {
+			rows = append(rows, []any{event.Get("theString").Any()})
+		}
+		wanted := make([][]any, 0, len(want))
+		for _, value := range want {
+			wanted = append(wanted, []any{value})
+		}
+		nwViewsAssertRowsAnyOrder(t, "iterate", rows, wanted)
+	}
+	sendBean := func(theString string, longPrimitive int64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsBeanTTL{TheString: theString, LongPrimitive: longPrimitive}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendS0 := func(p00 string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsBeanS0{P00: p00}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	advance := func(millis int64) {
+		t.Helper()
+		if err := engine.AdvanceTime(context.Background(), time.UnixMilli(millis).UTC()); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	sendBean("E1", 2000)
+	sendBean("E2", 3000)
+	sendBean("E3", 1000)
+	sendBean("E4", 2000)
+	assertIterate("E1", "E2", "E3", "E4")
+
+	advance(500)
+
+	sendS0("E2")
+	assertIterate("E1", "E3", "E4")
+
+	sendS0("E1")
+	assertIterate("E3", "E4")
+
+	advance(1000)
+	assertIterate("E4")
+
+	advance(2000)
+	assertIterate()
+}
+
+// TestInfraNWViewsInvalidParity mirrors the InfraInvalid,
+// InfraNamedWindowInvalidAlreadyExists and
+// InfraNamedWindowInvalidConsumerDataWindow executions: invalid named-window
+// declarations and consumers fail at register or build time in Go (Esper
+// reports the same boundaries at compile/deploy time).
+func TestInfraNWViewsInvalidParity(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterStruct[nwViewsKVLong](env, "MySimpleKeyValueMap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[nwViewsBeanA](env, "SupportBean_A"); err != nil {
+		t.Fatal(err)
+	}
+	value := Field[nwViewsKVLong, int64]("value")
+
+	// create window MyWindowI1#groupwin(value)#uni(value): the groupwin child
+	// must be a data window view.
+	if _, err := CreateNamedWindow(env, "MyWindowI1", schema, NamedWindowRetention(GroupWindow(value, Unique(value)))); err == nil {
+		t.Fatal("grouped unique named-window retention was accepted")
+	} else if !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("grouped unique retention error = %v, want %s", err, ErrorInvalidRule)
+	}
+
+	// on X delete from dummy: the named window has not been declared.
+	if _, err := env.Build(OnEvent(From[nwViewsBeanA](env, "SupportBean_A")).DeleteFromNamedWindow(
+		"dummy",
+		Equal[string](NamedWindowField[string]("key"), Field[nwViewsBeanA, string]("id")),
+	).Query(StatementName("delete-dummy"))); err == nil {
+		t.Fatal("delete from unknown named window was accepted")
+	} else if !errors.Is(err, ErrorUnknownName) {
+		t.Fatalf("delete from unknown window error = %v, want %s", err, ErrorUnknownName)
+	}
+
+	// A named window by the same name has already been created.
+	if _, err := CreateNamedWindow(env, "MyWindowAE", schema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowAE", schema, NamedWindowRetention(KeepAll())); err == nil {
+		t.Fatal("duplicate named window was accepted")
+	} else if !errors.Is(err, ErrorDependency) {
+		t.Fatalf("duplicate named window error = %v, want %s", err, ErrorDependency)
+	}
+
+	// select ... from MyWindowAE#time(10 sec): consumers cannot declare a data
+	// window view onto the named window.
+	if _, err := env.Build(FromNamedWindow(env, "MyWindowAE").Window(TimeWindow(10 * time.Second)).Query(
+		StatementName("consumer-data-window"),
+	)); err == nil {
+		t.Fatal("named-window consumer data window was accepted")
+	} else if !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("consumer data window error = %v, want %s", err, ErrorInvalidRule)
+	}
 }

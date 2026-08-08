@@ -1353,6 +1353,19 @@ func (e *Environment) validateQueryModifiers(query Query) error {
 	return nil
 }
 
+// namedWindowConsumerSource unwraps filter nodes and reports the named window
+// name when the chain consumes a named window. Esper rejects data window views
+// declared onto a named window by consuming statements.
+func namedWindowConsumerSource(node *streamNode) (string, bool) {
+	for node != nil && node.kind == streamFilter {
+		node = node.input
+	}
+	if node != nil && node.kind == streamNamedWindow {
+		return node.sourceName, true
+	}
+	return "", false
+}
+
 func (e *Environment) validateNode(node *streamNode) error {
 	if node == nil {
 		return fmt.Errorf("esper: nil stream node")
@@ -1541,6 +1554,15 @@ func (e *Environment) validateNode(node *streamNode) error {
 		}
 		if err := node.window.validate(); err != nil {
 			return err
+		}
+		if _, grouped := node.window.(GroupWindowSpec); !grouped {
+			if source, ok := namedWindowConsumerSource(node.input); ok {
+				// Esper rejects data window views on named-window consumers:
+				// "Consuming statements to a named window cannot declare a data
+				// window view onto the named window". A grouped (groupwin) view is
+				// exempt because it is not a data window view.
+				return NewError(ErrorInvalidRule, fmt.Sprintf("consuming statements to named window %q cannot declare a data window view onto the named window", source))
+			}
 		}
 		if unique, ok := node.window.(UniqueWindowSpec); ok {
 			if err := e.validateNode(node.input); err != nil {

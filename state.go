@@ -1547,6 +1547,17 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 	if err := config.retention.validate(); err != nil {
 		return NamedWindowDefinition{}, err
 	}
+	if grouped, ok := config.retention.(GroupWindowSpec); ok {
+		switch grouped.Inner.(type) {
+		case LengthWindowSpec, TimeBatchWindowSpec:
+		default:
+			// Esper rejects named-window view chains whose groupwin child is
+			// not a data window view at compile time (for example
+			// #groupwin(value)#uni(value)); Go mirrors that boundary for the
+			// grouped retentions the named-window runtime honors.
+			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window grouped retention %T is not a supported data window view", grouped.Inner))
+		}
+	}
 	seenIndexes := make(map[string]struct{}, len(config.indexes))
 	indexes := make([]NamedWindowIndexDefinition, 0, len(config.indexes))
 	uniqueIndexes := make([]NamedWindowIndexDefinition, 0, len(config.indexes))
