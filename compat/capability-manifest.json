@@ -999,11 +999,11 @@
       "javaRuntimeIds": ["java-runtime-ebf7298fb6953d41a106"],
       "javaNames": ["EventVariantSingleColumnConversion"],
       "javaSourceFiles": ["regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/variant/EventVariantStream.java"],
-      "goTests": [],
+      "goTests": ["TestVariantSingleColumnConversionMatchesEsper"],
       "tags": ["correctness", "event", "variant", "conversion", "method"],
-      "status": "partial",
-      "evidence": ["java-runtime-inventory"],
-      "difference": "The Java execution compiles a static method returning a concrete member from a Variant stream and inserts that single column into a Variant-typed window. Go has typed MethodProvider and explicit Event routing, but this exact method-backed member conversion path has not yet been fixed to a shared parity trace."
+      "status": "mapped",
+      "evidence": ["java-runtime-inventory", "go-unit"],
+      "difference": "Go uses InsertEventIntoNamedWindow with a chainable Func1: a concrete member value returned by the function is materialized through the target predefined Variant schema, preserving member identity and the Named Window envelope. The Java static-method reflection surface and exact EPL listener harness are intentionally replaced by explicit Go function and Event/Schema contracts."
     },
     {
       "id": "case.variant-coercion-boxed",

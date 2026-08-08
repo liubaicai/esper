@@ -2641,6 +2641,9 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 				return err
 			}
 		}
+		if err := visit(query.trigger.eventExpression); err != nil {
+			return err
+		}
 		for _, clause := range query.trigger.merge {
 			for _, action := range tableMergeClauseActions(clause) {
 				if err := visit(action.Condition); err != nil {

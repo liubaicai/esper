@@ -218,6 +218,12 @@ type triggerDefinition struct {
 	merge               []TableMergeClause
 	variableAssignments []VariableAssignmentExpr
 	selections          []Selection
+	// eventExpression is the single-event projection form used when a
+	// trigger inserts the result of a method/UDF into a Variant-typed named
+	// window.  It is deliberately separate from column assignments: a
+	// concrete member Event (or member underlying value) carries the identity
+	// that a predefined Variant requires.
+	eventExpression Expr
 	// contextDefinition/contextPartitionKey are populated only by an
 	// on-demand context mutation. Live trigger definitions use the ordinary
 	// statement runtime partition scope instead. Table storage is global in the
@@ -369,6 +375,25 @@ func (s TriggerStream[T]) DeleteAllFromTable(table string) TriggerQuery {
 // the incoming trigger event.
 func (s TriggerStream[T]) InsertIntoNamedWindow(window string, assignments ...TableAssignment) TriggerQuery {
 	return s.namedWindowTrigger(window, triggerInsertTable, nil, assignments, nil)
+}
+
+// InsertEventIntoNamedWindow inserts one event-valued expression into a
+// named window.  The expression may return an Event, or a concrete underlying
+// value whose registered schema is a member of the target predefined
+// Variant.  This is the Go fluent counterpart of a Java single-column
+// projection such as "insert into Window select staticMethod(event)" while
+// keeping the conversion and member identity explicit in the plan.
+func (s TriggerStream[T]) InsertEventIntoNamedWindow(window string, expression Expr) TriggerQuery {
+	return TriggerQuery{
+		env: s.env,
+		definition: &triggerDefinition{
+			input:           s.node,
+			table:           strings.TrimSpace(window),
+			target:          triggerTargetNamedWindow,
+			action:          triggerInsertTable,
+			eventExpression: expression,
+		},
+	}
 }
 
 // UpdateNamedWindow updates every named-window event matching predicate.
@@ -626,6 +651,9 @@ func (d *triggerDefinition) description() string {
 			where = ";where=" + d.where.Description()
 		}
 		return fmt.Sprintf("on(%s)->%s.select(keys[%s]%s;%s)", d.input.describe(), target, strings.Join(keys, ","), where, strings.Join(selections, ","))
+	}
+	if d.action == triggerInsertTable && d.eventExpression != nil {
+		return fmt.Sprintf("on(%s)->%s.insert-event(%s)", d.input.describe(), target, d.eventExpression.Description())
 	}
 	where := ""
 	if d.where != nil {
@@ -900,6 +928,20 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 		return NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown named window %q", definition.table))
 	}
 	targetSchema := window.schema
+	if definition.eventExpression != nil {
+		if definition.action != triggerInsertTable {
+			return NewError(ErrorInvalidRule, "named-window event insertion supports only insert")
+		}
+		if len(definition.assignments) != 0 || definition.where != nil || len(definition.selections) != 0 {
+			return NewError(ErrorInvalidRule, "named-window event insertion cannot combine with assignments, predicates or selections")
+		}
+		if targetSchema.kind != SchemaVariant {
+			return NewError(ErrorTypeMismatch, "named-window event insertion requires a predefined Variant target")
+		}
+		if err := e.validateExprFields(definition.input, definition.eventExpression); err != nil {
+			return fmt.Errorf("named-window event expression: %w", err)
+		}
+	}
 	if definition.where != nil {
 		if definition.action != triggerUpdateTable && definition.action != triggerDeleteTable && definition.action != triggerSelectTable && definition.action != triggerMergeTable {
 			return NewError(ErrorInvalidRule, "named-window predicate is supported only for select, update, delete or merge")
@@ -1026,7 +1068,7 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 		}
 		return nil
 	}
-	if definition.action == triggerInsertTable && len(definition.assignments) == 0 {
+	if definition.action == triggerInsertTable && len(definition.assignments) == 0 && definition.eventExpression == nil {
 		return NewError(ErrorInvalidRule, "named-window insert requires at least one assignment")
 	}
 	if definition.action == triggerUpdateTable && len(definition.assignments) == 0 {
@@ -1050,7 +1092,7 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 			}
 		}
 	}
-	if definition.action == triggerDeleteAllTable || definition.action == triggerDeleteTable || definition.action == triggerSelectTable || definition.action == triggerUpdateTable || definition.action == triggerInsertTable {
+	if definition.action == triggerDeleteAllTable || definition.action == triggerDeleteTable || definition.action == triggerSelectTable || definition.action == triggerUpdateTable || (definition.action == triggerInsertTable && definition.eventExpression == nil) {
 		for index, assignment := range definition.assignments {
 			if err := validateTriggerAssignment(e, definition.input, targetSchema, assignment, "named-window-field"); err != nil {
 				return fmt.Errorf("named-window assignment %d: %w", index, err)
@@ -1680,6 +1722,46 @@ func evaluateNamedWindowMergeNotMatchedActions(engine *Engine, schema Schema, ev
 	return targetUnderlying, shouldInsert, executed, nil
 }
 
+// materializeNamedWindowEventExpression converts the result of a
+// single-event named-window projection into the underlying shape accepted by
+// the target window. A predefined Variant cannot be reconstructed from a
+// bare interface value at insertion time, so a concrete member value is
+// first wrapped in its registered member Event. An already materialized
+// Event keeps its concrete identity and is validated by newEvent when the
+// target Variant is inserted.
+func materializeNamedWindowEventExpression(env *Environment, target Schema, value Value, receivedAt time.Time) (any, error) {
+	if !value.IsPresent() || value.IsNull() {
+		return nil, NewError(ErrorTypeMismatch, "named-window event expression returned null")
+	}
+	raw := value.Any()
+	if event, ok := raw.(Event); ok {
+		if !event.Schema().valid() {
+			return nil, NewError(ErrorTypeMismatch, "named-window event expression returned an invalid Event")
+		}
+		return event, nil
+	}
+	if event, ok := raw.(*Event); ok {
+		if event == nil || !event.Schema().valid() {
+			return nil, NewError(ErrorTypeMismatch, "named-window event expression returned an invalid Event")
+		}
+		return *event, nil
+	}
+	if env == nil || target.kind != SchemaVariant {
+		return nil, NewError(ErrorTypeMismatch, "named-window event expression requires a registered Variant member")
+	}
+	for _, member := range target.variantSchemas {
+		if !schemaUnderlyingMatches(member, raw) {
+			continue
+		}
+		memberEvent, err := newEvent(member, raw, receivedAt)
+		if err != nil {
+			return nil, err
+		}
+		return memberEvent, nil
+	}
+	return nil, fmt.Errorf("esper: event expression returned %T, which is not a member of Variant %q", raw, target.Name())
+}
+
 func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, owner *Statement) (tableMutationResult, error) {
 	if engine == nil || definition == nil {
 		return tableMutationResult{}, NewError(ErrorDependency, "nil named-window trigger")
@@ -1699,13 +1781,22 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 	schema := target.Definition().schema
 	switch definition.action {
 	case triggerInsertTable:
-		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, definition.assignments, EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}, now)
-		if assignmentErr != nil {
-			return tableMutationResult{}, assignmentErr
-		}
-		underlying, err := mergeSchemaUnderlying(schema, nil, values)
-		if err != nil {
-			return tableMutationResult{}, err
+		var underlying any
+		if definition.eventExpression != nil {
+			value := definition.eventExpression.eval(EvalContext{Engine: engine, Event: event, Now: now, Variables: variables})
+			underlying, err = materializeNamedWindowEventExpression(engine.env, schema, value, now)
+			if err != nil {
+				return tableMutationResult{}, err
+			}
+		} else {
+			values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, definition.assignments, EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}, now)
+			if assignmentErr != nil {
+				return tableMutationResult{}, assignmentErr
+			}
+			underlying, err = mergeSchemaUnderlying(schema, nil, values)
+			if err != nil {
+				return tableMutationResult{}, err
+			}
 		}
 		delta, err := target.insertWithVariables(now, underlying, variables)
 		if err != nil {
