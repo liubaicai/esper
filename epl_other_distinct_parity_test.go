@@ -27,6 +27,16 @@ type distinctSupportBeanN struct {
 	IntBoxed     int `esper:"intBoxed"`
 }
 
+// distinctTriggerS0 mirrors SupportBean_S0 (id int).
+type distinctTriggerS0 struct {
+	ID int `esper:"id"`
+}
+
+// distinctTriggerS1 mirrors SupportBean_S1 (id int).
+type distinctTriggerS1 struct {
+	ID int `esper:"id"`
+}
+
 func newDistinctEnvironment(t *testing.T) (*Environment, *Engine) {
 	t.Helper()
 	env := NewEnvironment()
@@ -40,6 +50,12 @@ func newDistinctEnvironment(t *testing.T) (*Environment, *Engine) {
 		t.Fatal(err)
 	}
 	if _, err := RegisterStruct[fcmEventWithManyArray](env, "SupportEventWithManyArray"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[distinctTriggerS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[distinctTriggerS1](env, "SupportBean_S1"); err != nil {
 		t.Fatal(err)
 	}
 	return env, NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
@@ -811,4 +827,276 @@ func TestDistinctFAFMultikeyWArrayParity(t *testing.T) {
 	assertDistinctRowsAnyOrder(t, distinctRowsToStrings(fafResultRows(resultTwo.Results())), [][]string{
 		{"[1,2]", "[3,4]"}, {"[3,4]", "[1,2]"}, {"[1,2]", "[3,5]"},
 	}, "distinct intOne,intTwo")
+}
+
+// TestDistinctOnSelectMultikeyWArrayParity mirrors
+// EPLOtherDistinctOnSelectMultikeyWArray: on-trigger select distinct from a
+// named window keyed by int arrays.
+func TestDistinctOnSelectMultikeyWArrayParity(t *testing.T) {
+	env, engine := newDistinctEnvironment(t)
+	schema, ok := env.Schema("SupportEventWithManyArray")
+	if !ok {
+		t.Fatal("SupportEventWithManyArray schema missing")
+	}
+	if _, err := CreateNamedWindow(env, "MyWindow", schema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	// Populate the window
+	data := []fcmEventWithManyArray{
+		{ID: "id", IntOne: []int{1, 2}, IntTwo: []int{3, 4}},
+		{ID: "id", IntOne: []int{3, 4}, IntTwo: []int{1, 2}},
+		{ID: "id", IntOne: []int{1, 2}, IntTwo: []int{3, 5}},
+		{ID: "id", IntOne: []int{3, 4}, IntTwo: []int{1, 2}},
+		{ID: "id", IntOne: []int{1, 2}, IntTwo: []int{3, 4}},
+	}
+	for _, e := range data {
+		if err := engine.InsertNamedWindow(ctx, "MyWindow", e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// s0: on SupportBean_S0 select distinct intOne from MyWindow
+	windowS0 := FromNamedWindow(env, "MyWindow")
+	s0Plan, err := env.Build(OnEvent(From[distinctTriggerS0](env, "SupportBean_S0")).SelectFromNamedWindow(
+		"MyWindow", nil,
+		Alias("intOne", NamedWindowField[[]int]("intOne")),
+	).Query(StatementName("s0"), WithDistinct()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Dep, err := engine.Deploy(ctx, s0Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s0Dep.Undeploy(ctx) })
+	var s0Rows []Row
+	if _, err := s0Dep.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				s0Rows = append(s0Rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// s1: on SupportBean_S1 select distinct intOne, intTwo from MyWindow
+	_ = windowS0
+	s1Plan, err := env.Build(OnEvent(From[distinctTriggerS1](env, "SupportBean_S1")).SelectFromNamedWindow(
+		"MyWindow", nil,
+		Alias("intOne", NamedWindowField[[]int]("intOne")),
+		Alias("intTwo", NamedWindowField[[]int]("intTwo")),
+	).Query(StatementName("s1"), WithDistinct()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s1Dep, err := engine.Deploy(ctx, s1Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s1Dep.Undeploy(ctx) })
+	var s1Rows []Row
+	if _, err := s1Dep.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				s1Rows = append(s1Rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Fire S0 trigger
+	if err := engine.SendEvent(ctx, distinctTriggerS0{ID: 0}); err != nil {
+		t.Fatal(err)
+	}
+	assertDistinctRowsAnyOrder(t, distinctRowsToStrings(s0Rows), [][]string{{"[1,2]"}, {"[3,4]"}}, "s0 distinct intOne")
+
+	// Fire S1 trigger
+	if err := engine.SendEvent(ctx, distinctTriggerS1{ID: 0}); err != nil {
+		t.Fatal(err)
+	}
+	assertDistinctRowsAnyOrder(t, distinctRowsToStrings(s1Rows), [][]string{
+		{"[1,2]", "[3,4]"}, {"[3,4]", "[1,2]"}, {"[1,2]", "[3,5]"},
+	}, "s1 distinct intOne,intTwo")
+}
+
+// TestDistinctVariantStreamParity mirrors EPLOtherDistinctVariantStream:
+// distinct over a variant stream with array keys.
+func TestDistinctVariantStreamParity(t *testing.T) {
+	env, engine := newDistinctEnvironment(t)
+	manyArraySchema, ok := env.Schema("SupportEventWithManyArray")
+	if !ok {
+		t.Fatal("SupportEventWithManyArray schema missing")
+	}
+	if _, err := RegisterVariant(env, "MyVariant", manyArraySchema); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	// Insert into variant: route SupportEventWithManyArray events to MyVariant
+	insertPlan, err := env.Build(From[fcmEventWithManyArray](env, "SupportEventWithManyArray").InsertInto(
+		"MyVariant", StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(ctx, insertPlan); err != nil {
+		t.Fatal(err)
+	}
+
+	// s1: select distinct intOne from MyVariant#keepall
+	s1Plan, err := env.Build(FromAny(env, "MyVariant").Window(KeepAll()).Select(
+		Alias("intOne", Field[any, []int]("intOne")),
+	).Query(StatementName("s1"), WithDistinct()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s1Dep, err := engine.Deploy(ctx, s1Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s1Dep.Undeploy(ctx) })
+
+	// s2: select distinct intOne, intTwo from MyVariant#keepall
+	s2Plan, err := env.Build(FromAny(env, "MyVariant").Window(KeepAll()).Select(
+		Alias("intOne", Field[any, []int]("intOne")),
+		Alias("intTwo", Field[any, []int]("intTwo")),
+	).Query(StatementName("s2"), WithDistinct()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s2Dep, err := engine.Deploy(ctx, s2Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s2Dep.Undeploy(ctx) })
+
+	// Send events
+	data := []fcmEventWithManyArray{
+		{ID: "id", IntOne: []int{1, 2}, IntTwo: []int{3, 4}},
+		{ID: "id", IntOne: []int{3, 4}, IntTwo: []int{1, 2}},
+		{ID: "id", IntOne: []int{1, 2}, IntTwo: []int{3, 5}},
+		{ID: "id", IntOne: []int{3, 4}, IntTwo: []int{1, 2}},
+		{ID: "id", IntOne: []int{1, 2}, IntTwo: []int{3, 4}},
+	}
+	for _, e := range data {
+		if err := engine.SendEvent(ctx, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Java asserts iterator lengths: s0=3, s1=2, s2=3
+	// s0 (wildcard distinct *) = 3 unique events
+	// s1 (distinct intOne) = 2
+	// s2 (distinct intOne, intTwo) = 3
+	assertDistinctRowsAnyOrder(t, distinctSnapshotRows(t, s1Dep.Statements()[0]),
+		[][]string{{"[1,2]"}, {"[3,4]"}}, "s1 distinct intOne")
+	assertDistinctRowsAnyOrder(t, distinctSnapshotRows(t, s2Dep.Statements()[0]),
+		[][]string{{"[1,2]", "[3,4]"}, {"[3,4]", "[1,2]"}, {"[1,2]", "[3,5]"}},
+		"s2 distinct intOne,intTwo")
+}
+
+// TestDistinctSubqueryParity mirrors EPLOtherSubquery: distinct inside an IN
+// subquery.
+func TestDistinctSubqueryParity(t *testing.T) {
+	env, _ := newDistinctEnvironment(t)
+	query := Select(
+		From[distinctSupportBean](env, "SupportBean").Filter(
+			SubqueryIn[string](
+				Field[distinctSupportBean, string]("theString"),
+				From[distinctSupportBeanA](env, "SupportBean_A").Window(KeepAll()).AsRecord(),
+				Field[distinctSupportBeanA, string]("id"),
+			),
+		),
+		Alias("theString", Field[distinctSupportBean, string]("theString")),
+		Alias("intPrimitive", Field[distinctSupportBean, int]("intPrimitive")),
+	).Query(StatementName("s0"))
+	engine, _, listener := deployDistinct(t, env, query)
+
+	sb := func(theString string, intPrimitive int) distinctSupportBean {
+		return distinctSupportBean{TheString: theString, IntPrimitive: intPrimitive}
+	}
+
+	// Send A("E1"), then Bean("E1",2) -> fires
+	if err := engine.SendEvent(context.Background(), distinctSupportBeanA{ID: "E1"}); err != nil {
+		t.Fatal(err)
+	}
+	listener.reset()
+	if err := engine.SendEvent(context.Background(), sb("E1", 2)); err != nil {
+		t.Fatal(err)
+	}
+	if !listener.invoked {
+		t.Fatal("listener not invoked for E1/2")
+	}
+	assertDistinctRowsAnyOrder(t, distinctRowsToStrings(listener.lastNew), [][]string{{"E1", "2"}}, "first match")
+
+	// Send another A("E1") (duplicate), then Bean("E1",3) -> still fires (distinct dedups subquery but IN matches)
+	if err := engine.SendEvent(context.Background(), distinctSupportBeanA{ID: "E1"}); err != nil {
+		t.Fatal(err)
+	}
+	listener.reset()
+	if err := engine.SendEvent(context.Background(), sb("E1", 3)); err != nil {
+		t.Fatal(err)
+	}
+	if !listener.invoked {
+		t.Fatal("listener not invoked for E1/3")
+	}
+	assertDistinctRowsAnyOrder(t, distinctRowsToStrings(listener.lastNew), [][]string{{"E1", "3"}}, "second match")
+}
+
+// TestDistinctOnDemandFAFParity mirrors EPLOtherOnDemandAndOnSelect: FAF
+// distinct + on-select distinct over a named window.
+func TestDistinctOnDemandAndOnSelectParity(t *testing.T) {
+	env, engine := newDistinctEnvironment(t)
+	schema, ok := env.Schema("SupportBean")
+	if !ok {
+		t.Fatal("SupportBean schema missing")
+	}
+	if _, err := CreateNamedWindow(env, "MyWindow", schema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	for _, e := range []distinctSupportBean{
+		{TheString: "E1", IntPrimitive: 1},
+		{TheString: "E1", IntPrimitive: 2},
+		{TheString: "E2", IntPrimitive: 2},
+		{TheString: "E1", IntPrimitive: 1},
+	} {
+		if err := engine.InsertNamedWindow(ctx, "MyWindow", e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// FAF: select distinct theString, intPrimitive from MyWindow order by theString, intPrimitive
+	window := FromNamedWindow(env, "MyWindow")
+	fafPlan, err := env.Build(window.Select(
+		Alias("theString", Field[any, string]("theString")),
+		Alias("intPrimitive", Field[any, int]("intPrimitive")),
+	).Query(WithDistinct(),
+		OrderBy(Ascending(ResultField[string]("theString"))),
+		OrderBy(Ascending(ResultField[int]("intPrimitive"))),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fafResult, err := engine.ExecuteFireAndForget(ctx, fafPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Java expects: {E1,1}, {E1,2}, {E2,2} ordered
+	fafRows := distinctRowsToStrings(fafResultRows(fafResult.Results()))
+	if len(fafRows) != 3 {
+		t.Fatalf("FAF distinct: got %d rows, want 3: %v", len(fafRows), fafRows)
+	}
+	expectedFAF := [][]string{{"E1", "1"}, {"E1", "2"}, {"E2", "2"}}
+	for i, row := range fafRows {
+		if strings.Join(row, "|") != strings.Join(expectedFAF[i], "|") {
+			t.Fatalf("FAF row %d: got %v, want %v", i, row, expectedFAF[i])
+		}
+	}
 }

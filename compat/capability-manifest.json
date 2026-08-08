@@ -1423,10 +1423,6 @@
       "status": "partial",
       "remaining": [
         "EPLOtherBatchWindowJoin: distinct over a length-batch join delta",
-        "EPLOtherOnDemandAndOnSelect: named-window FAF + on-select distinct",
-        "EPLOtherSubquery: distinct inside an IN subquery",
-        "EPLOtherDistinctOnSelectMultikeyWArray: on-select distinct with array keys",
-        "EPLOtherDistinctVariantStream: distinct over a variant stream",
         "EPLOtherDistinctWildcardJoinPatternOne/Two: every-distinct pattern + unidirectional join",
         "EPLOtherBeanEventWildcardSODA: Go has no SODA model parser (approved difference)"
       ]
@@ -11348,7 +11344,11 @@
         "java-runtime-fe86653eacb81851d04f",
         "java-runtime-f9a1dafb621a6605ef47",
         "java-runtime-4fab4842341b8021b1a2",
-        "java-runtime-c752f36ef07cc6280306"
+        "java-runtime-c752f36ef07cc6280306",
+        "java-runtime-d9d561caf48755690e5d",
+        "java-runtime-526d4b64636e45cc051d",
+        "java-runtime-9066a6d1932dae5ff6aa",
+        "java-runtime-deca832debc5d94d4dcc"
       ],
       "javaNames": [
         "EPLOtherOutputSimpleColumn",
@@ -11362,7 +11362,11 @@
         "EPLOtherDistinctOutputLimitMultikeyWArraySingleArray",
         "EPLOtherDistinctOutputLimitMultikeyWArrayTwoArray",
         "EPLOtherDistinctIterateMultikeyWArray",
-        "EPLOtherDistinctFireAndForgetMultikeyWArray"
+        "EPLOtherDistinctFireAndForgetMultikeyWArray",
+        "EPLOtherOnDemandAndOnSelect",
+        "EPLOtherSubquery",
+        "EPLOtherDistinctOnSelectMultikeyWArray",
+        "EPLOtherDistinctVariantStream"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherDistinct.java"
@@ -11378,7 +11382,11 @@
         "TestDistinctOutputSnapshotParity",
         "TestDistinctOutputLimitMultikeyWArrayParity",
         "TestDistinctIterateMultikeyWArrayParity",
-        "TestDistinctFAFMultikeyWArrayParity"
+        "TestDistinctFAFMultikeyWArrayParity",
+        "TestDistinctOnDemandAndOnSelectParity",
+        "TestDistinctSubqueryParity",
+        "TestDistinctOnSelectMultikeyWArrayParity",
+        "TestDistinctVariantStreamParity"
       ],
       "tags": [
         "correctness",
@@ -11397,7 +11405,12 @@
         "go-unit",
         "java-suite-EPLOtherDistinct"
       ],
-      "difference": "Distinct fires the first occurrence of each key within a single window update and tracks a global reference count so the old stream fires only when the last sharing event leaves; continuous views (keepall) re-emit per event while batching views (length_batch) dedup the batch. Snapshot/iterator and fire-and-forget dedup the projected set, and output-rate-limit (every-events, every-time, snapshot) dedup the flushed batch. Wildcard (select *) results are event-backed and read through Result.Get; SODA round-trip (EPLOtherBeanEventWildcardSODA) is an approved difference because Go uses an immutable fluent Plan instead of a text/model parser. Join-driven batch distinct, on-select, subquery and variant-stream variants remain open."
+      "difference": "Distinct fires the first occurrence of each key within a single window update and tracks a global reference count so the old stream fires only when the last sharing event leaves; continuous views (keepall) re-emit per event while batching views (length_batch) dedup the batch. Snapshot/iterator, fire-and-forget, on-trigger select, subquery IN, and output-rate-limit (every-events, every-time, snapshot) all dedup. Variant-stream distinct works through the variant member schema. Wildcard (select *) results are event-backed and read through Result.Get; SODA round-trip (EPLOtherBeanEventWildcardSODA) is an approved difference because Go uses an immutable fluent Plan instead of a text/model parser. Join-driven batch distinct (BatchWindowJoin) and every-distinct pattern joins (JoinPatternOne/Two) remain open.",
+      "remaining": [
+        "EPLOtherBatchWindowJoin: distinct over a length-batch join delta",
+        "EPLOtherDistinctWildcardJoinPatternOne/Two: every-distinct pattern + unidirectional join",
+        "EPLOtherBeanEventWildcardSODA: Go has no SODA model parser (approved difference)"
+      ]
     }
   ],
   "mappings": [

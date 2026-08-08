@@ -1344,6 +1344,10 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 		return ResultBatch{}, err
 	}
 	result = runtime.applyOutput(s.plan.query.output, result, false, now, s.plan)
+	if s.plan.query.distinct && !result.empty() {
+		result.New = distinctSnapshotResults(result.New)
+		result.Old = distinctSnapshotResults(result.Old)
+	}
 	if !result.empty() {
 		result.Sequence = runtime.seq.Add(1)
 	}
