@@ -1762,41 +1762,116 @@ func (e *Engine) seedEvaluateOnceJoinSidesLocked(ctx context.Context, statement 
 	now := e.clock.Now()
 	for _, definition := range definitions {
 		sources := joinDefinitionSources(definition)
+		order, orderErr := methodJoinEvaluationOrder(definition)
+		if orderErr != nil {
+			return orderErr
+		}
 		initialized := false
-		for index, source := range sources {
+		seeded := make([]bool, len(sources))
+		ensureInitialized := func() {
+			if initialized {
+				return
+			}
+			if statement.runtime.joinState == nil {
+				statement.runtime.joinState = &joinRuntimeState{}
+			}
+			if len(statement.runtime.joinState.sides) != len(sources) {
+				statement.runtime.joinState.sides = make([][]storedEvent, len(sources))
+			}
+			initialized = true
+		}
+		for _, index := range order {
+			source := sources[index]
 			base, err := sourceNode(source)
 			if err != nil {
 				return err
 			}
-			if base == nil || base.kind != streamMethod || base.method == nil || !base.method.evaluateOnce {
+			if base == nil || base.kind != streamMethod || base.method == nil {
 				continue
 			}
-			if !initialized {
-				if statement.runtime.joinState == nil {
-					statement.runtime.joinState = &joinRuntimeState{}
+			if base.method.evaluateOnce {
+				ensureInitialized()
+				events, err := base.method.provider.Poll(ctx, MethodRequest{
+					Now:        now,
+					Variables:  visibleVariableValues(statement.runtime.variables),
+					Parameters: parameterValuesFromVariables(statement.runtime.variables),
+					Invocation: statement.runtime.methodInvocationContext(base.sourceName),
+				})
+				if err != nil {
+					return err
 				}
-				if len(statement.runtime.joinState.sides) != len(sources) {
-					statement.runtime.joinState.sides = make([][]storedEvent, len(sources))
+				side := make([]storedEvent, 0, len(events))
+				for _, event := range events {
+					side = append(side, storedEvent{event: event, receivedAt: now, lineageID: statement.runtime.nextJoinLineageID()})
 				}
-				initialized = true
+				statement.runtime.joinState.sides[index] = side
+				seeded[index] = true
+				continue
 			}
-			events, err := base.method.provider.Poll(ctx, MethodRequest{
-				Now:        now,
-				Variables:  visibleVariableValues(statement.runtime.variables),
-				Parameters: parameterValuesFromVariables(statement.runtime.variables),
-				Invocation: statement.runtime.methodInvocationContext(base.sourceName),
-			})
+			if base.method.trigger != "" || len(base.method.dependencies) == 0 {
+				continue
+			}
+			// A triggerless subordinate method source whose dependencies were
+			// all seeded at deployment is itself evaluated once at deployment:
+			// Esper polls the subordinate at statement start per dependency row
+			// and retains the rows for the iterator.
+			dependenciesSeeded := true
+			for _, dependency := range base.method.dependencies {
+				dependencyIndex := joinSourceIndexByName(sources, dependency)
+				if dependencyIndex < 0 || !seeded[dependencyIndex] {
+					dependenciesSeeded = false
+					break
+				}
+			}
+			if !dependenciesSeeded {
+				continue
+			}
+			ensureInitialized()
+			invocations, err := methodDependencyInvocations(base.method.dependencies, sources, statement.runtime.joinState)
 			if err != nil {
 				return err
 			}
-			side := make([]storedEvent, 0, len(events))
-			for _, event := range events {
-				side = append(side, storedEvent{event: event, receivedAt: now, lineageID: statement.runtime.nextJoinLineageID()})
+			side := make([]storedEvent, 0, len(invocations))
+			for _, invocation := range invocations {
+				events, err := base.method.provider.Poll(ctx, MethodRequest{
+					Now:          now,
+					Variables:    visibleVariableValues(statement.runtime.variables),
+					Parameters:   parameterValuesFromVariables(statement.runtime.variables),
+					Dependencies: cloneMethodDependencies(invocation.events),
+					Invocation:   statement.runtime.methodInvocationContext(base.sourceName),
+				})
+				if err != nil {
+					return err
+				}
+				for _, event := range events {
+					side = append(side, storedEvent{
+						event: event, receivedAt: now,
+						lineageID: statement.runtime.nextJoinLineageID(),
+						lineage:   cloneMethodLineage(invocation.lineage),
+					})
+				}
 			}
 			statement.runtime.joinState.sides[index] = side
+			seeded[index] = true
 		}
 	}
 	return nil
+}
+
+// joinSourceIndexByName resolves a join source's logical name back to its
+// declaration index, or -1 when the name is unknown.
+func joinSourceIndexByName(sources []*streamNode, name string) int {
+	trimmed := strings.TrimSpace(name)
+	for index, source := range sources {
+		base, err := sourceNode(source)
+		if err != nil || base == nil {
+			continue
+		}
+		if base.logicalName() == trimmed {
+			return index
+		}
+	}
+	return -1
 }
 
 func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
@@ -3163,6 +3238,12 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			return batch, !batch.empty(), nil
 		}
 		batch, changed, err := partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
+		if changed && queryIteratorOnlyMethodSources(s.plan.query) {
+			// Esper keeps triggerless historical/method-only statements
+			// iterator-only: the cycle refreshed the retained state for the
+			// iterator, but no listener batch or route is ever posted.
+			return ResultBatch{Time: batch.Time}, false, err
+		}
 		if changed {
 			batch.Sequence = s.runtime.seq.Add(1)
 		}
@@ -3175,7 +3256,14 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		}
 		return batch, !batch.empty(), nil
 	}
-	return s.runtime.process(s.plan, event, now, variables)
+	batch, changed, err := s.runtime.process(s.plan, event, now, variables)
+	if err != nil {
+		return ResultBatch{}, false, err
+	}
+	if changed && queryIteratorOnlyMethodSources(s.plan.query) {
+		return ResultBatch{Time: batch.Time}, false, nil
+	}
+	return batch, changed, nil
 }
 
 // acceptContextSubqueryEventLocked advances every currently active context
@@ -3214,6 +3302,54 @@ func (s *Statement) contextPartitionVariables(partition *statementRuntime, varia
 		}
 	}
 	return result
+}
+
+// queryIteratorOnlyMethodSources reports whether every from-clause source of
+// the query bottoms out in a triggerless method source. Esper keeps such
+// statements iterator-only: an arriving event (including the event that sets
+// the variables the sources poll against) re-evaluates the sources and
+// refreshes the retained state, but no listener batch or route is ever posted
+// for the statement. SQL-historical sources intentionally keep the Go-native
+// poll-on-any-event delivery behavior.
+func queryIteratorOnlyMethodSources(query Query) bool {
+	if query.trigger != nil {
+		return false
+	}
+	definitions := make([]*joinDefinition, 0, 2)
+	if query.join != nil {
+		definitions = append(definitions, query.join)
+	}
+	if query.aggregate != nil && query.aggregate.join != nil {
+		definitions = append(definitions, query.aggregate.join)
+	}
+	if len(definitions) > 0 {
+		for _, definition := range definitions {
+			sources := joinDefinitionSources(definition)
+			if len(sources) == 0 {
+				return false
+			}
+			for _, source := range sources {
+				if !sourceIteratorOnlyMethod(source) {
+					return false
+				}
+			}
+		}
+		return true
+	}
+	if query.aggregate != nil || query.input == nil {
+		return false
+	}
+	return sourceIteratorOnlyMethod(query.input)
+}
+
+// sourceIteratorOnlyMethod reports whether the source chain bottoms out in a
+// method source without an explicit trigger.
+func sourceIteratorOnlyMethod(node *streamNode) bool {
+	base, err := sourceNode(node)
+	if err != nil || base == nil {
+		return false
+	}
+	return base.kind == streamMethod && base.method != nil && base.method.trigger == ""
 }
 
 func statementAcceptsEvent(query Query, event Event) bool {
