@@ -276,3 +276,112 @@ func TestDatabaseRestartStatementMatchesJava(t *testing.T) {
 		dep.Undeploy(context.Background())
 	}
 }
+
+func TestDatabase3StreamOuterJoinMatchesJava(t *testing.T) {
+	// Java EPLDatabase3StreamOuterJoin$EPLDatabaseOuterJoinLeftS0:
+	// SupportBean#lastevent LEFT OUTER JOIN SupportBeanTwo#lastevent
+	// LEFT OUTER JOIN sql:...['select myint from mytesttable']
+	// Conditions: sb.theString = sbt.stringTwo, s1.myint = sbt.intPrimitiveTwo
+	dbJoinSetHandler(dbJoinAllMyIntHandler)
+	env := NewEnvironment()
+	if _, err := RegisterStruct[dbJoinMiscBeanTwo](env, "SupportBeanTwo"); err != nil {
+		t.Fatal(err)
+	}
+	dbJoinRegisterSupportBean(t, env)
+	db := dbJoinOpenDB(t)
+	defer db.Close()
+
+	myintSchema, err := NewMapSchema("Hist3OuterMyInt", []FieldSpec{
+		FieldDef("myint", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	provider, err := NewSQLHistoricalProvider(db, myintSchema,
+		"select myint from mytesttable")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sbStream := From[dbJoinSupportBean](env, "SupportBean").Window(LengthWindow(1))
+	sbtStream := From[dbJoinMiscBeanTwo](env, "SupportBeanTwo").Window(LengthWindow(1))
+	hist := FromHistorical[map[string]any](env, "MyDB3Outer", myintSchema, provider)
+
+	query := JoinChain(JoinSource(sbStream)).
+		LeftOuterJoin(JoinSource(sbtStream),
+			OnSourcesEqual(0, Field[dbJoinSupportBean, string]("theString"),
+				1, Field[dbJoinMiscBeanTwo, string]("StringTwo"))).
+		LeftOuterJoin(JoinSource(hist),
+			OnSourcesEqual(2, Field[map[string]any, int]("myint"),
+				1, Field[dbJoinMiscBeanTwo, int]("IntPrimitiveTwo"))).
+		Select(
+		SelectFrom(0, "theString", Field[dbJoinSupportBean, string]("theString")),
+		SelectFrom(1, "stringTwo", Field[dbJoinMiscBeanTwo, string]("StringTwo")),
+		SelectFrom(2, "myint", Field[map[string]any, int]("myint")),
+	).Query(StatementName("s0-3stream-outer"))
+
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	getRows := dbJoinSubscribeRows(t, deployment.Statements()[0])
+
+	// Step 1: SupportBeanTwo("T1", 2) - no output (SupportBean empty)
+	if err := engine.SendEvent(context.Background(), dbJoinMiscBeanTwo{StringTwo: "T1", IntPrimitiveTwo: 2}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Step 2: SupportBean("T1", 3) - match on strings, but myint=2 not in table
+	// Left outer: {T1, T1, null}
+	if err := engine.SendEvent(context.Background(), dbJoinSupportBean{TheString: "T1", IntPrimitive: 3}); err != nil {
+		t.Fatal(err)
+	}
+	rows := getRows()
+	if len(rows) == 0 {
+		t.Fatal("expected output after T1/3")
+	}
+	dbJoinAssertRow(t, rows[len(rows)-1], map[string]any{
+		"theString": "T1", "stringTwo": "T1", "myint": nil,
+	})
+
+	// Step 3: SupportBeanTwo("T2", 30) - no match with current SupportBean("T1")
+	if err := engine.SendEvent(context.Background(), dbJoinMiscBeanTwo{StringTwo: "T2", IntPrimitiveTwo: 30}); err != nil {
+		t.Fatal(err)
+	}
+	// Step 4: SupportBean("T2", -2) - match, myint=30 found
+	// {T2, T2, 30}
+	if err := engine.SendEvent(context.Background(), dbJoinSupportBean{TheString: "T2", IntPrimitive: -2}); err != nil {
+		t.Fatal(err)
+	}
+	rows = getRows()
+	dbJoinAssertRow(t, rows[len(rows)-1], map[string]any{
+		"theString": "T2", "stringTwo": "T2", "myint": 30,
+	})
+
+	// Step 5: SupportBean("T3", -1) - no match with SupportBeanTwo("T2")
+	// Left outer: {T3, null, null}
+	if err := engine.SendEvent(context.Background(), dbJoinSupportBean{TheString: "T3", IntPrimitive: -1}); err != nil {
+		t.Fatal(err)
+	}
+	rows = getRows()
+	dbJoinAssertRow(t, rows[len(rows)-1], map[string]any{
+		"theString": "T3", "stringTwo": nil, "myint": nil,
+	})
+
+	// Step 6: SupportBeanTwo("T3", 40) - match with SupportBean("T3"), myint=40 found
+	// {T3, T3, 40}
+	if err := engine.SendEvent(context.Background(), dbJoinMiscBeanTwo{StringTwo: "T3", IntPrimitiveTwo: 40}); err != nil {
+		t.Fatal(err)
+	}
+	rows = getRows()
+	dbJoinAssertRow(t, rows[len(rows)-1], map[string]any{
+		"theString": "T3", "stringTwo": "T3", "myint": 40,
+	})
+}
