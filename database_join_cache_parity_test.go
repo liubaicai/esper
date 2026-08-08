@@ -245,3 +245,133 @@ func TestDatabaseJoinOptionsPlaceholderMatchesJava(t *testing.T) {
 		t.Fatalf("expected mydouble=8.2, got %v", rows[len(rows)-1]["mydouble"])
 	}
 }
+
+func TestDatabaseDataSourceFactoryMatchesJava(t *testing.T) {
+	// Java EPLDatabaseDataSourceFactory: parameterized SQL join with pooled
+	// LRU cache datasource. Correctness test (ignoring timing assertions).
+	// SQL returns myint where mybigint = intPrimitive.
+	dbJoinSetHandler(dbJoinMyIntWhereBigintHandler)
+	env := NewEnvironment()
+	dbJoinRegisterSupportBean(t, env)
+	db := dbJoinOpenDB(t)
+	defer db.Close()
+
+	schema, err := NewMapSchema("HistDSFMyInt", []FieldSpec{
+		FieldDef("myint", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	provider, err := NewSQLHistoricalProvider(db, schema,
+		"select myint from mytesttable where ? = mybigint",
+		func(request HistoricalRequest) any {
+			return request.Trigger.Get("intPrimitive").Any()
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hist := FromHistoricalOn[map[string]any](env, "MyDBDSF", "SupportBean", schema, provider)
+	plan, err := env.Build(Select(hist,
+		Alias("myint", Field[map[string]any, int]("myint")),
+	).Query(StatementName("s0-dsf")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	getRows := dbJoinSubscribeRows(t, deployment.Statements()[0])
+
+	// intPrimitive=10 -> mybigint=10 -> myint=100
+	if err := engine.SendEvent(context.Background(), dbJoinSupportBean{IntPrimitive: 10}); err != nil {
+		t.Fatal(err)
+	}
+	rows := getRows()
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 row after int=10, got %d", len(rows))
+	}
+	dbJoinAssertRow(t, rows[0], map[string]any{"myint": 100})
+
+	// intPrimitive=6 -> mybigint=6 -> myint=60
+	if err := engine.SendEvent(context.Background(), dbJoinSupportBean{IntPrimitive: 6}); err != nil {
+		t.Fatal(err)
+	}
+	rows = getRows()
+	dbJoinAssertRow(t, rows[len(rows)-1], map[string]any{"myint": 60})
+
+	// Repeat query to verify cache reuse
+	for i := 0; i < 10; i++ {
+		if err := engine.SendEvent(context.Background(), dbJoinSupportBean{IntPrimitive: 10}); err != nil {
+			t.Fatal(err)
+		}
+		rows = getRows()
+		dbJoinAssertRow(t, rows[len(rows)-1], map[string]any{"myint": 100})
+	}
+}
+
+func TestDatabaseSimpleJoinLeftMatchesJava(t *testing.T) {
+	// Java EPLDatabaseSimpleJoinLeft: SupportBean_S0 as s0,
+	// sql:...[ALL_FIELDS from mytesttable where id = mybigint] as s1
+	// Stream on left, SQL on right.
+	dbJoinSetHandler(dbJoinAllFieldsWhereBigintHandler)
+	env := NewEnvironment()
+	if _, err := RegisterStruct[dbJoinExtraS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	dbSchema := dbJoinMyTestTableSchema(t)
+	db := dbJoinOpenDB(t)
+	defer db.Close()
+
+	provider, err := NewSQLHistoricalProvider(db, dbSchema,
+		"select mybigint, myint, myvarchar, mychar, mybool, mynumeric, mydecimal, mydouble, myreal from mytesttable where ? = mybigint",
+		func(request HistoricalRequest) any {
+			return request.Trigger.Get("ID").Any()
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s0Stream := From[dbJoinExtraS0](env, "SupportBean_S0")
+	historical := FromHistoricalOn[map[string]any](env, "MyDBJoinLeft", "SupportBean_S0", dbSchema, provider)
+
+	query := Join(s0Stream, historical, OnEqual(
+		Field[dbJoinExtraS0, int]("ID"),
+		Field[map[string]any, int64]("mybigint"),
+	)).Select(
+		SelectLeft("ID", Field[dbJoinExtraS0, int]("ID")),
+		SelectRight("mybigint", Field[map[string]any, int64]("mybigint")),
+		SelectRight("myint", Field[map[string]any, int]("myint")),
+		SelectRight("myvarchar", Field[map[string]any, string]("myvarchar")),
+		SelectRight("mychar", Field[map[string]any, string]("mychar")),
+		SelectRight("mybool", Field[map[string]any, bool]("mybool")),
+	).Query(StatementName("s0-simple-left"))
+
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	getRows := dbJoinSubscribeRows(t, deployment.Statements()[0])
+
+	if err := engine.SendEvent(context.Background(), dbJoinExtraS0{ID: 1}); err != nil {
+		t.Fatal(err)
+	}
+	rows := getRows()
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(rows))
+	}
+	dbJoinAssertRow(t, rows[0], map[string]any{
+		"ID": 1, "mybigint": int64(1), "myint": 10,
+		"myvarchar": "A", "mychar": "Z", "mybool": true,
+	})
+}
