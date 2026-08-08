@@ -1224,6 +1224,54 @@
         "security limits",
         "round-trip parity"
       ]
+    },
+    {
+      "domain": "epl",
+      "level": "S",
+      "status": "partial",
+      "javaRefs": [
+        "EPLFromClauseMethod",
+        "EPLFromClauseMethodArrayNoArg",
+        "EPLFromClauseMethodObjectNoArg",
+        "EPLFromClauseMethodDifferentReturnTypes",
+        "EPLFromClauseMethodOverloaded",
+        "EPLFromClauseMethodInvalid"
+      ],
+      "id": "epl.fromclausemethod",
+      "summary": "Method-backed historical streams (method source) with array/object/single return, overloaded resolution, multiple representations and join/FAF usage",
+      "goRefs": [
+        "method_provider.go",
+        "method_provider_test.go",
+        "method_source_test.go",
+        "method_source_join_test.go",
+        "fromclausemethod_parity_test.go"
+      ],
+      "phase": 2,
+      "remaining": [
+        "N-stream dependent/independent join variants and outer joins",
+        "method cache LRU/expiry and join performance variants",
+        "variable-driven method sources and context-variable bindings",
+        "multikey/array-key method joins",
+        "method result as parameter and UDF/script-returning-event paths",
+        "full Java method metadata and invalid-rule diagnostics parity"
+      ],
+      "goTests": [
+        "TestFromClauseMethodArrayNoArgParity",
+        "TestFromClauseMethodObjectNoArgParity",
+        "TestFromClauseMethodDifferentReturnTypesMapParity",
+        "TestFromClauseMethodDifferentReturnTypesPOJOParity",
+        "TestFromClauseMethodDifferentReturnTypesObjectArrayParity",
+        "TestFromClauseMethodOverloadedParity",
+        "TestFromClauseMethodInvalidParity"
+      ],
+      "javaRuntimeIds": [
+        "java-runtime-46f715ed2a74ce455f5e",
+        "java-runtime-2c46a2d3cde0e7a5cac3",
+        "java-runtime-53a87b41fbc5aa05f781",
+        "java-runtime-b10d858855e19e7ee556",
+        "java-runtime-67fc960beba42e68707d",
+        "java-runtime-fcf85edd19810058de22"
+      ]
     }
   ],
   "cases": [
@@ -10945,6 +10993,55 @@
         "go-unit"
       ],
       "difference": "Go implements the equality/hash shared-index subset plus automatic equality-prefix + range B-tree shared indexes with a fluent NamedWindowSubqueryIndexSharing option, automatic internal index creation and reuse, explicit SubqueryUseIndex, consumer-side SubqueryDisableIndexSharing, SubqueryNoIndex, Build-time invalid-option diagnostics and index rebuild after insert/update/delete for global and Context-partitioned Named Windows. The current tests compare live listener and FAF values, late-start redeployment, insertion order, lookup counters, partition-local inheritance and fallback behavior; live coverage includes the assertion matrix, composite/range index choice and single/two-array keys. Structured tests also cover independent multiple-index hints, deterministic composite/range choice, explicit override, explicit and automatic multikey array keys, and table primary-key arrays. This still does not claim JVM query-plan hooks, Esper's full cost/selectivity model or 10k/1M performance thresholds."
+    },
+    {
+      "javaNames": [
+        "EPLFromClauseMethodOverloaded",
+        "EPLFromClauseMethodDifferentReturnTypes",
+        "EPLFromClauseMethodArrayNoArg",
+        "EPLFromClauseMethodObjectNoArg",
+        "EPLFromClauseMethodInvalid"
+      ],
+      "id": "case.epl-fromclausemethod-basic",
+      "status": "partial",
+      "difference": "Go provides typed MethodProvider/MethodProviderFunc and FromMethodOn/FromMethod builders instead of Java reflection-based static method invocation. The mapped slice covers no-argument array/object returns, method result returned as Map/POJO/ObjectArray, overloaded parameter dispatch by the provider, and basic invalid-build checks for unknown trigger stream and nil provider. N-stream joins, cache LRU/expiry, variable/context bindings, multikey/array-key joins, and full Java method footprint/return-type diagnostics remain open.",
+      "javaRuntimeIds": [
+        "java-runtime-46f715ed2a74ce455f5e",
+        "java-runtime-2c46a2d3cde0e7a5cac3",
+        "java-runtime-53a87b41fbc5aa05f781",
+        "java-runtime-b10d858855e19e7ee556",
+        "java-runtime-67fc960beba42e68707d",
+        "java-runtime-fcf85edd19810058de22"
+      ],
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "tags": [
+        "correctness",
+        "epl",
+        "from-clause-method",
+        "method-source",
+        "join",
+        "map",
+        "pojo",
+        "object-array",
+        "overloaded",
+        "invalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/fromclausemethod/EPLFromClauseMethod.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/fromclausemethod/EPLFromClauseMethodOuterNStream.java"
+      ],
+      "goTests": [
+        "TestFromClauseMethodArrayNoArgParity",
+        "TestFromClauseMethodObjectNoArgParity",
+        "TestFromClauseMethodDifferentReturnTypesMapParity",
+        "TestFromClauseMethodDifferentReturnTypesPOJOParity",
+        "TestFromClauseMethodDifferentReturnTypesObjectArrayParity",
+        "TestFromClauseMethodOverloadedParity",
+        "TestFromClauseMethodInvalidParity"
+      ]
     }
   ],
   "mappings": [
@@ -11711,6 +11808,10 @@
     {
       "capabilityId": "integration.esperio",
       "caseId": "case.esperio-kafka"
+    },
+    {
+      "caseId": "case.epl-fromclausemethod-basic",
+      "capabilityId": "epl.fromclausemethod"
     }
   ]
 }
