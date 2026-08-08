@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -787,5 +788,307 @@ func TestInfraFAFSubqueryContextBoundRangeIndexCandidatePartitionParity(t *testi
 	}
 	if after := indexLookups(); after != before+1 {
 		t.Fatalf("selected context-bound range expected one partition lookup: before=%d after=%d", before, after)
+	}
+}
+
+// TestInfraNWTableSubqCorrelIndexSharingParity covers the equality/hash
+// subquery-index-sharing slice of Java InfraNWTableSubqCorrelIndex. The same
+// fluent subquery is exercised with automatic sharing, consumer-side sharing
+// disable, set-no-index, an explicit declared index, and no sharing at all.
+func TestInfraNWTableSubqCorrelIndexSharingParity(t *testing.T) {
+	type testCase struct {
+		name          string
+		share         bool
+		declaredIndex bool
+		option        SubqueryOption
+		wantLookup    bool
+	}
+	cases := []testCase{
+		{name: "share", share: true, wantLookup: true},
+		{name: "no-share", wantLookup: false},
+		{name: "disable-consumer-share", share: true, option: SubqueryDisableIndexSharing(), wantLookup: false},
+		{name: "set-noindex", share: true, option: SubqueryNoIndex(), wantLookup: false},
+		{name: "explicit-index", declaredIndex: true, option: SubqueryUseIndex("by-lookup"), wantLookup: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			env := NewEnvironment()
+			schema := newFAFSubqueryIndexSchema(t, env, "NWSubqSharingSchema")
+			outerName := "NWSubqSharingOuter"
+			innerName := "NWSubqSharingInner"
+			if _, err := CreateNamedWindow(env, outerName, schema, NamedWindowRetention(KeepAll())); err != nil {
+				t.Fatal(err)
+			}
+			innerOptions := []NamedWindowOption{NamedWindowRetention(Unique(Field[any, string]("lookup")))}
+			if tc.share {
+				innerOptions = append(innerOptions, NamedWindowSubqueryIndexSharing())
+			}
+			if tc.declaredIndex {
+				innerOptions = append(innerOptions, NamedWindowIndex("by-lookup", "lookup"))
+			}
+			if _, err := CreateNamedWindow(env, innerName, schema, innerOptions...); err != nil {
+				t.Fatal(err)
+			}
+			engine := NewEngine(env)
+			ctx := context.Background()
+			for _, row := range []map[string]any{
+				{"id": int64(101), "key": "A", "lookup": "A", "value": "A-hit"},
+				{"id": int64(102), "key": "B", "lookup": "B", "value": "B-hit"},
+				{"id": int64(103), "key": "X", "lookup": "unused", "value": "not-selected"},
+			} {
+				if err := engine.InsertNamedWindow(ctx, innerName, row); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, row := range []map[string]any{
+				{"id": int64(1), "key": "A"},
+				{"id": int64(2), "key": "B"},
+			} {
+				if err := engine.InsertNamedWindow(ctx, outerName, row); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			inner := FromNamedWindow(env, innerName)
+			where := Equal[string](Field[any, string]("lookup"), OuterField[string]("key"))
+			options := []SubqueryOption{SubqueryWhere(where)}
+			if tc.option != nil {
+				options = append(options, tc.option)
+			}
+			first := SubqueryValueWithOptions[string](inner, Field[any, string]("value"), options...)
+			second := SubqueryValueWithOptions[string](inner, Field[any, string]("value"), options...)
+			plan, err := env.Build(FromNamedWindow(env, outerName).Select(
+				Alias("id", Field[any, int64]("id")),
+				Alias("first", first),
+				Alias("second", second),
+			).Query())
+			if err != nil {
+				t.Fatal(err)
+			}
+			window, ok := engine.NamedWindow(innerName)
+			if !ok {
+				t.Fatal("shared-index inner named window is missing")
+			}
+			before := window.state.indexLookups.Load()
+			result, err := engine.ExecuteFireAndForget(ctx, plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(result.Results()) != 2 {
+				t.Fatalf("shared-index result count = %d, want 2", len(result.Results()))
+			}
+			for index, want := range []struct {
+				id    int64
+				value string
+			}{
+				{id: 1, value: "A-hit"},
+				{id: 2, value: "B-hit"},
+			} {
+				row := result.Results()[index]
+				if row.Get("id").Any() != want.id || row.Get("first").Any() != want.value || row.Get("second").Any() != want.value {
+					t.Fatalf("shared-index row %d = %#v, want id=%d value=%q", index, row, want.id, want.value)
+				}
+			}
+			after := window.state.indexLookups.Load()
+			if tc.wantLookup {
+				if after != before+4 {
+					t.Fatalf("shared-index expected two lookups per outer row: before=%d after=%d", before, after)
+				}
+			} else if after != before {
+				t.Fatalf("subquery unexpectedly used an index: before=%d after=%d", before, after)
+			}
+			internalIndexes := 0
+			for _, index := range window.state.def.indexes {
+				if isSubquerySharedIndex(index.Name) {
+					internalIndexes++
+				}
+			}
+			wantInternal := 0
+			if tc.name == "share" {
+				wantInternal = 1
+			}
+			if internalIndexes != wantInternal {
+				t.Fatalf("shared-index definitions = %d, want %d", internalIndexes, wantInternal)
+			}
+		})
+	}
+}
+
+func TestInfraNWTableSubqCorrelIndexSharingContextPartitionParity(t *testing.T) {
+	env := NewEnvironment()
+	schema := newFAFSubqueryIndexSchema(t, env, "NWSubqSharingContextSchema")
+	const contextName = "nw-subq-sharing-context"
+	if _, err := CreateKeyContext(env, contextName, Field[any, string]("key")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "NWSubqSharingContextOuter", schema,
+		NamedWindowRetention(KeepAll()), NamedWindowContext(contextName)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "NWSubqSharingContextInner", schema,
+		NamedWindowRetention(KeepAll()), NamedWindowContext(contextName), NamedWindowSubqueryIndexSharing()); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	for _, row := range []map[string]any{
+		{"id": int64(101), "key": "A", "lookup": "A", "value": "A-local"},
+		{"id": int64(102), "key": "B", "lookup": "B", "value": "B-local"},
+	} {
+		if err := engine.InsertNamedWindow(ctx, "NWSubqSharingContextInner", row); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, row := range []map[string]any{
+		{"id": int64(1), "key": "A"},
+		{"id": int64(2), "key": "B"},
+	} {
+		if err := engine.InsertNamedWindow(ctx, "NWSubqSharingContextOuter", row); err != nil {
+			t.Fatal(err)
+		}
+	}
+	inner := FromNamedWindow(env, "NWSubqSharingContextInner")
+	plan, err := env.Build(FromNamedWindow(env, "NWSubqSharingContextOuter").Select(
+		Alias("id", Field[any, int64]("id")),
+		Alias("value", SubqueryValueWithOptions[string](inner, Field[any, string]("value"),
+			SubqueryWhere(Equal[string](Field[any, string]("lookup"), OuterField[string]("key"))),
+		)),
+	).Query(WithContext(contextName)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	window, ok := engine.NamedWindow("NWSubqSharingContextInner")
+	if !ok {
+		t.Fatal("context shared-index named window is missing")
+	}
+	indexLookups := func() uint64 {
+		var total uint64
+		for _, partition := range window.contextPartitionStates() {
+			total += partition.indexLookups.Load()
+		}
+		return total
+	}
+	before := indexLookups()
+	result, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := make(map[int64]string, len(result.Results()))
+	for _, row := range result.Results() {
+		got[row.Get("id").Any().(int64)] = row.Get("value").Any().(string)
+	}
+	want := map[int64]string{1: "A-local", 2: "B-local"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("context shared-index rows = %#v, want %#v", got, want)
+	}
+	if after := indexLookups(); after != before+2 {
+		t.Fatalf("context shared-index expected one lookup per partition row: before=%d after=%d", before, after)
+	}
+	for _, partition := range window.contextPartitionStates() {
+		found := false
+		for _, index := range partition.def.indexes {
+			if isSubquerySharedIndex(index.Name) && index.Kind == IndexHash && reflect.DeepEqual(index.Columns, []string{"lookup"}) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("context partition %q did not inherit the shared hash index", partition.contextKey)
+		}
+	}
+
+	// The same physical index must be rebuilt after update/delete mutations.
+	if _, err := window.UpdateWhere(ctx, func(event Event) bool {
+		return event.Get("lookup").Any() == "A"
+	}, func(event Event) (any, error) {
+		return map[string]any{
+			"id":     event.Get("id").Any(),
+			"key":    event.Get("key").Any(),
+			"lookup": event.Get("lookup").Any(),
+			"value":  "A-updated",
+		}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatedValues := make(map[int64]string, len(updated.Results()))
+	for _, row := range updated.Results() {
+		updatedValues[row.Get("id").Any().(int64)] = row.Get("value").Any().(string)
+	}
+	if want := map[int64]string{1: "A-updated", 2: "B-local"}; !reflect.DeepEqual(updatedValues, want) {
+		t.Fatalf("updated context shared-index rows = %#v, want %#v", updatedValues, want)
+	}
+	if _, err := window.DeleteWhere(ctx, func(event Event) bool {
+		return event.Get("lookup").Any() == "A"
+	}); err != nil {
+		t.Fatal(err)
+	}
+	deleted, err := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range deleted.Results() {
+		if row.Get("id").Any().(int64) == 1 && row.Get("value").IsPresent() {
+			t.Fatalf("deleted context shared-index row still matched: %#v", row)
+		}
+	}
+}
+
+// TestInfraNWTableSubqCorrelIndexOptionValidationParity keeps the invalid
+// option boundary explicit. Esper rejects a subquery index hint when the
+// named index is missing, when the predicate cannot expose a probe key, or
+// when no-index and an explicit index are combined. These are Build-time
+// contracts and must not be silently converted to a snapshot fallback.
+func TestInfraNWTableSubqCorrelIndexOptionValidationParity(t *testing.T) {
+	for _, namedWindow := range []bool{true, false} {
+		t.Run(indexStoreName(namedWindow), func(t *testing.T) {
+			env := NewEnvironment()
+			schema := newFAFSubqueryIndexSchema(t, env, "NWSubqSharingInvalidSchema")
+			if _, err := CreateNamedWindow(env, "NWSubqSharingInvalidOuter", schema, NamedWindowRetention(KeepAll())); err != nil {
+				t.Fatal(err)
+			}
+			var inner RecordStream
+			if namedWindow {
+				if _, err := CreateNamedWindow(env, "NWSubqSharingInvalidInner", schema,
+					NamedWindowRetention(KeepAll()), NamedWindowIndex("by-lookup", "lookup")); err != nil {
+					t.Fatal(err)
+				}
+				inner = FromNamedWindow(env, "NWSubqSharingInvalidInner")
+			} else {
+				if _, err := CreateTable(env, "NWSubqSharingInvalidInner", []TableColumn{
+					PrimaryKeyColumn[int64]("id"), TableColumnOf[string]("lookup"), TableColumnOf[string]("value"),
+				}, SecondaryIndex("by-lookup", "lookup")); err != nil {
+					t.Fatal(err)
+				}
+				inner = FromTable(env, "NWSubqSharingInvalidInner")
+			}
+
+			outer := FromNamedWindow(env, "NWSubqSharingInvalidOuter")
+			validPredicate := Equal[string](Field[any, string]("lookup"), OuterField[string]("key"))
+			build := func(options ...SubqueryOption) error {
+				subquery := SubqueryValueWithOptions[string](inner, Field[any, string]("value"), options...)
+				_, err := env.Build(outer.Select(Alias("value", subquery)).Query())
+				return err
+			}
+
+			if err := build(SubqueryWhere(validPredicate), SubqueryUseIndex("missing")); err == nil || !errors.Is(err, ErrorUnknownName) {
+				t.Fatalf("missing subquery index error = %v, want ErrorUnknownName", err)
+			}
+			// Both operands are inner fields, so no value is fixed by the outer
+			// row and the equality cannot be used as a correlated probe key.
+			invalidPredicate := Equal[string](Field[any, string]("lookup"), Field[any, string]("value"))
+			if err := build(SubqueryWhere(invalidPredicate), SubqueryUseIndex("by-lookup")); err == nil || !errors.Is(err, ErrorInvalidRule) {
+				t.Fatalf("unusable subquery predicate error = %v, want ErrorInvalidRule", err)
+			}
+			if err := build(SubqueryWhere(validPredicate), SubqueryNoIndex(), SubqueryUseIndex("by-lookup")); err == nil || !errors.Is(err, ErrorInvalidRule) {
+				t.Fatalf("no-index plus explicit index error = %v, want ErrorInvalidRule", err)
+			}
+			if err := build(SubqueryWhere(validPredicate), SubqueryUseIndex("by-lookup"), SubqueryDisableIndexSharing()); err != nil {
+				t.Fatalf("explicit index with sharing disabled unexpectedly failed: %v", err)
+			}
+		})
 	}
 }

@@ -1437,13 +1437,14 @@ func encodeKey(values []any) string {
 // retention policy. A named window has one immutable event schema and can have
 // multiple consumers.
 type NamedWindowDefinition struct {
-	name          string
-	moduleName    string
-	schema        Schema
-	retention     WindowSpec
-	contextName   string
-	indexes       []NamedWindowIndexDefinition
-	uniqueIndexes []NamedWindowIndexDefinition
+	name                 string
+	moduleName           string
+	schema               Schema
+	retention            WindowSpec
+	contextName          string
+	subqueryIndexSharing bool
+	indexes              []NamedWindowIndexDefinition
+	uniqueIndexes        []NamedWindowIndexDefinition
 }
 
 // NamedWindowIndexDefinition describes an index declared directly on a
@@ -1470,6 +1471,15 @@ func NamedWindowRetention(window WindowSpec) NamedWindowOption {
 // context use their partition-local snapshot.
 func NamedWindowContext(contextName string) NamedWindowOption {
 	return func(config *namedWindowConfig) { config.contextName = strings.TrimSpace(contextName) }
+}
+
+// NamedWindowSubqueryIndexSharing allows correlated subqueries to create and
+// reuse an internal equality/hash access path when no declared index matches.
+// The index is still only a candidate-pruning mechanism: the complete
+// subquery predicate is evaluated after lookup, preserving ordinary subquery
+// cardinality and null semantics.
+func NamedWindowSubqueryIndexSharing() NamedWindowOption {
+	return func(config *namedWindowConfig) { config.subqueryIndexSharing = true }
 }
 
 // NamedWindowIndex adds a non-unique hash index to a named window.
@@ -1511,10 +1521,11 @@ func NamedWindowUniqueBTreeIndex(name string, columns ...string) NamedWindowOpti
 }
 
 type namedWindowConfig struct {
-	retention     WindowSpec
-	contextName   string
-	indexes       []NamedWindowIndexDefinition
-	uniqueIndexes []NamedWindowIndexDefinition
+	retention            WindowSpec
+	contextName          string
+	subqueryIndexSharing bool
+	indexes              []NamedWindowIndexDefinition
+	uniqueIndexes        []NamedWindowIndexDefinition
 }
 
 func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
@@ -1544,6 +1555,9 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 		if definition.Name == "" || len(definition.Columns) == 0 {
 			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window index %d requires a name and columns", index+1))
 		}
+		if isSubquerySharedIndex(definition.Name) {
+			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window index %q uses a reserved internal index name", definition.Name))
+		}
 		if _, exists := seenIndexes[definition.Name]; exists {
 			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window duplicates index %q", definition.Name))
 		}
@@ -1571,22 +1585,45 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 			uniqueIndexes = append(uniqueIndexes, definition)
 		}
 	}
-	return NamedWindowDefinition{name: name, schema: schema, retention: config.retention, contextName: config.contextName, indexes: indexes, uniqueIndexes: uniqueIndexes}, nil
+	return NamedWindowDefinition{
+		name:                 name,
+		schema:               schema,
+		retention:            config.retention,
+		contextName:          config.contextName,
+		subqueryIndexSharing: config.subqueryIndexSharing,
+		indexes:              indexes,
+		uniqueIndexes:        uniqueIndexes,
+	}, nil
 }
 
-func (d NamedWindowDefinition) Name() string          { return d.name }
-func (d NamedWindowDefinition) Module() string        { return d.moduleName }
-func (d NamedWindowDefinition) Schema() Schema        { return d.schema }
-func (d NamedWindowDefinition) Retention() WindowSpec { return d.retention }
-func (d NamedWindowDefinition) Context() string       { return d.contextName }
+func (d NamedWindowDefinition) Name() string               { return d.name }
+func (d NamedWindowDefinition) Module() string             { return d.moduleName }
+func (d NamedWindowDefinition) Schema() Schema             { return d.schema }
+func (d NamedWindowDefinition) Retention() WindowSpec      { return d.retention }
+func (d NamedWindowDefinition) Context() string            { return d.contextName }
+func (d NamedWindowDefinition) SubqueryIndexSharing() bool { return d.subqueryIndexSharing }
 func (d NamedWindowDefinition) Indexes() []NamedWindowIndexDefinition {
-	return cloneNamedWindowIndexDefinitions(d.indexes)
+	public := make([]NamedWindowIndexDefinition, 0, len(d.indexes))
+	for _, index := range d.indexes {
+		if isSubquerySharedIndex(index.Name) {
+			continue
+		}
+		public = append(public, index)
+	}
+	return cloneNamedWindowIndexDefinitions(public)
 }
 
 // UniqueIndexes returns only strict unique constraints. Indexes returns both
 // unique and non-unique declarations.
 func (d NamedWindowDefinition) UniqueIndexes() []NamedWindowIndexDefinition {
-	return cloneNamedWindowIndexDefinitions(d.uniqueIndexes)
+	public := make([]NamedWindowIndexDefinition, 0, len(d.uniqueIndexes))
+	for _, index := range d.uniqueIndexes {
+		if isSubquerySharedIndex(index.Name) {
+			continue
+		}
+		public = append(public, index)
+	}
+	return cloneNamedWindowIndexDefinitions(public)
 }
 
 func (e *Environment) RegisterNamedWindow(name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
@@ -2014,6 +2051,89 @@ func (w *NamedWindow) partitionState(key string, create bool) (*namedWindowRunti
 		return nil, NewError(ErrorUnknownName, fmt.Sprintf("named window context partition %q is not active", key))
 	}
 	return partition, nil
+}
+
+const subquerySharedIndexPrefix = "<subquery-shared-hash:"
+
+func isSubquerySharedIndex(name string) bool {
+	return strings.HasPrefix(strings.TrimSpace(name), subquerySharedIndexPrefix)
+}
+
+// ensureSubquerySharedIndex installs one internal hash index on the root
+// Named Window runtime and propagates it to every already-materialized Context
+// partition. Future partitions inherit the root definition through
+// partitionState. The environment definition remains unchanged: shared
+// indexes are runtime access paths, not user-declared infrastructure indexes.
+func (w *NamedWindow) ensureSubquerySharedIndex(name string, columns []string) error {
+	if w == nil || w.state == nil {
+		return NewError(ErrorState, "nil named window")
+	}
+	name = strings.TrimSpace(name)
+	if !isSubquerySharedIndex(name) || len(columns) == 0 {
+		return NewError(ErrorInvalidRule, "invalid subquery shared index definition")
+	}
+	if !w.state.def.subqueryIndexSharing {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("named window %q does not enable subquery index sharing", w.state.def.name))
+	}
+	definition := NamedWindowIndexDefinition{
+		Name:    name,
+		Columns: append([]string(nil), columns...),
+		Kind:    IndexHash,
+	}
+	for _, column := range definition.Columns {
+		if _, ok := w.state.def.schema.Field(column); !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("subquery shared index %q references unknown column %q", name, column))
+		}
+	}
+
+	root := w.state
+	root.mu.Lock()
+	for _, existing := range root.def.indexes {
+		if existing.Name != name {
+			continue
+		}
+		if !isSubquerySharedIndex(existing.Name) || !reflect.DeepEqual(existing.Columns, definition.Columns) || existing.Kind != definition.Kind {
+			root.mu.Unlock()
+			return NewError(ErrorDependency, fmt.Sprintf("subquery shared index %q conflicts with an existing named-window index", name))
+		}
+		root.mu.Unlock()
+		return nil
+	}
+	root.def.indexes = append(root.def.indexes, definition)
+	if root.indexes == nil {
+		root.indexes = make(map[string]map[string][]int)
+	}
+	if root.indexEntries == nil {
+		root.indexEntries = make(map[string][]namedWindowIndexEntry)
+	}
+	// Snapshot pointers while holding the root lock. The definition is added
+	// before release, so a concurrently-created partition will inherit it.
+	partitions := make([]*namedWindowRuntime, 0, len(root.partitions))
+	for _, partition := range root.partitions {
+		partitions = append(partitions, partition)
+	}
+	rebuildNamedWindowIndexesLocked(root)
+	root.mu.Unlock()
+
+	for _, partition := range partitions {
+		if partition == nil {
+			continue
+		}
+		partition.mu.Lock()
+		alreadyPresent := false
+		for _, existing := range partition.def.indexes {
+			if existing.Name == name {
+				alreadyPresent = true
+				break
+			}
+		}
+		if !alreadyPresent {
+			partition.def.indexes = append(partition.def.indexes, definition)
+			rebuildNamedWindowIndexesLocked(partition)
+		}
+		partition.mu.Unlock()
+	}
+	return nil
 }
 
 // releaseContextPartition drops the storage owned by one lifecycle-managed

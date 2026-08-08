@@ -716,7 +716,7 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		for _, index := range window.indexes {
 			indexes = append(indexes, fmt.Sprintf("%s:%s:%t:%s", index.Name, strings.Join(index.Columns, ","), index.Unique, index.Kind))
 		}
-		canonicalParts = append(canonicalParts, "named-window("+catalogKey(window.moduleName, window.name)+":"+window.schema.Name()+":"+window.retention.description()+":context="+window.contextName+":"+strings.Join(fields, ",")+":indexes="+strings.Join(indexes, ",")+")")
+		canonicalParts = append(canonicalParts, "named-window("+catalogKey(window.moduleName, window.name)+":"+window.schema.Name()+":"+window.retention.description()+":context="+window.contextName+":subquery-index-sharing="+fmt.Sprint(window.subqueryIndexSharing)+":"+strings.Join(fields, ",")+":indexes="+strings.Join(indexes, ",")+")")
 	}
 	for _, context := range e.Contexts() {
 		canonicalParts = append(canonicalParts, "context("+context.name+":"+context.description()+")")
@@ -1984,6 +1984,9 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 	if err != nil {
 		return err
 	}
+	if err := e.validateSubqueryIndexOptions(definition, base); err != nil {
+		return err
+	}
 	if base.kind != streamSource && base.kind != streamNamedWindow && base.kind != streamTable && base.kind != streamHistorical && base.kind != streamMethod {
 		return NewError(ErrorInvalidRule, "subquery source must be an event stream, named window, table, historical source, or method source")
 	}
@@ -2092,6 +2095,39 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 		if err := e.validateExprFields(definition.source, order.Expression); err != nil {
 			return WrapError(ErrorInvalidRule, fmt.Sprintf("subquery order key %d", index), err)
 		}
+	}
+	return nil
+}
+
+func (e *Environment) validateSubqueryIndexOptions(definition *subqueryDefinition, base *streamNode) error {
+	if definition == nil {
+		return nil
+	}
+	if definition.noIndex && definition.indexName != "" {
+		return NewError(ErrorInvalidRule, "subquery cannot combine no-index and an explicit index")
+	}
+	if definition.indexName == "" {
+		return nil
+	}
+	if base == nil || (base.kind != streamNamedWindow && base.kind != streamTable) {
+		return NewError(ErrorInvalidRule, "subquery index options require a named-window or table root source")
+	}
+	if definition.source != base {
+		return NewError(ErrorInvalidRule, "subquery index options require an unwrapped root source")
+	}
+	if strings.HasPrefix(definition.indexName, "<") {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("subquery index %q is an internal access path", definition.indexName))
+	}
+	predicates := indexPredicatesFromExpression(definition.predicate)
+	if len(predicates) == 0 {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("subquery index %q requires an analyzable equality, IN, or range predicate", definition.indexName))
+	}
+	selection, err := chooseIndexSelection(e, base, 0, predicates, &indexHint{name: definition.indexName})
+	if err != nil {
+		return err
+	}
+	if selection.IndexName != definition.indexName {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("subquery index %q cannot satisfy the predicate", definition.indexName))
 	}
 	return nil
 }

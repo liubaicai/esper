@@ -223,6 +223,9 @@ func subqueryIndexSelection(e *Environment, base *streamNode, definition *subque
 	if e == nil || base == nil || definition == nil || definition.predicate == nil || definition.source != base {
 		return IndexSelection{}, false
 	}
+	if definition.noIndex {
+		return IndexSelection{}, false
+	}
 	if base.kind != streamNamedWindow && base.kind != streamTable {
 		return IndexSelection{}, false
 	}
@@ -230,11 +233,54 @@ func subqueryIndexSelection(e *Environment, base *streamNode, definition *subque
 	if len(predicates) == 0 {
 		return IndexSelection{}, false
 	}
-	selection, err := chooseIndexSelection(e, base, 0, predicates, nil)
-	if err != nil || selection.IndexName == "" {
+	var hint *indexHint
+	if definition.indexName != "" {
+		hint = &indexHint{name: definition.indexName}
+	} else if base.kind == streamNamedWindow {
+		// A user-declared index takes precedence over the logical retention
+		// summary. This mirrors Esper's preference for a concrete backing index
+		// in the subquery plan while still allowing automatic sharing when no
+		// declared index can satisfy the predicate.
+		if declared, ok := subqueryNamedWindowDeclaredIndexSelection(e, base, predicates); ok {
+			return declared, true
+		}
+	}
+	selection, err := chooseIndexSelection(e, base, 0, predicates, hint)
+	if err != nil {
 		return IndexSelection{}, false
 	}
-	if base.kind == streamNamedWindow && strings.HasPrefix(selection.IndexName, "<") {
+	if base.kind == streamNamedWindow {
+		if selection.IndexName != "" && !strings.HasPrefix(selection.IndexName, "<") {
+			return selection, true
+		}
+		if selection.IndexName == "" && definition.indexName != "" {
+			return IndexSelection{}, false
+		}
+		// A retention-unique summary is not a declared subquery index. When
+		// sharing is enabled, replace that logical candidate with the stable
+		// internal equality index for this predicate. Consumer-side disabling
+		// deliberately leaves the old snapshot path intact.
+		window, ok := e.NamedWindowInModule(base.moduleName, base.sourceName)
+		if !ok || !window.SubqueryIndexSharing() || definition.disableIndexSharing || definition.indexName != "" {
+			return IndexSelection{}, false
+		}
+		columns := subquerySharedEqualityColumns(predicates)
+		if len(columns) == 0 {
+			return IndexSelection{}, false
+		}
+		name := subquerySharedIndexName(columns)
+		return IndexSelection{
+			Source:         0,
+			Module:         base.moduleName,
+			Object:         base.sourceName,
+			IndexName:      name,
+			Columns:        columns,
+			MatchedColumns: append([]string(nil), columns...),
+			Access:         subquerySharedIndexAccess(predicates, columns),
+			Backing:        IndexBackingHash,
+		}, true
+	}
+	if selection.IndexName == "" {
 		return IndexSelection{}, false
 	}
 	if selection.Access == IndexAccessRange {
@@ -253,6 +299,91 @@ func subqueryIndexSelection(e *Environment, base *streamNode, definition *subque
 		return IndexSelection{}, false
 	}
 	return selection, true
+}
+
+func subqueryNamedWindowDeclaredIndexSelection(e *Environment, base *streamNode, predicates []indexPredicate) (IndexSelection, bool) {
+	if e == nil || base == nil || base.kind != streamNamedWindow {
+		return IndexSelection{}, false
+	}
+	definition, ok := e.NamedWindowInModule(base.moduleName, base.sourceName)
+	if !ok {
+		return IndexSelection{}, false
+	}
+	bestScore := -1
+	var best NamedWindowIndexDefinition
+	var bestAccess IndexAccessKind
+	var bestMatched []string
+	for _, index := range definition.Indexes() {
+		candidate := indexCandidate{name: index.Name, columns: append([]string(nil), index.Columns...), unique: index.Unique, kind: index.Kind}
+		access, matched, usable := matchIndex(candidate, predicates)
+		if !usable {
+			continue
+		}
+		score := len(matched) * 10
+		if access == IndexAccessRange {
+			score += 2
+		}
+		if index.Unique {
+			score++
+		}
+		if score > bestScore || (score == bestScore && index.Name < best.Name) {
+			bestScore = score
+			best = index
+			bestAccess = access
+			bestMatched = append([]string(nil), matched...)
+		}
+	}
+	if bestScore < 0 {
+		return IndexSelection{}, false
+	}
+	return IndexSelection{
+		Source:         0,
+		Module:         base.moduleName,
+		Object:         base.sourceName,
+		IndexName:      best.Name,
+		Columns:        append([]string(nil), best.Columns...),
+		MatchedColumns: bestMatched,
+		Access:         bestAccess,
+		Backing:        indexBacking(best.Kind, best.Unique),
+	}, true
+}
+
+func subquerySharedEqualityColumns(predicates []indexPredicate) []string {
+	columns := make([]string, 0, len(predicates))
+	seen := make(map[string]struct{}, len(predicates))
+	for _, predicate := range predicates {
+		if predicate.access != IndexAccessEquality && predicate.access != IndexAccessIn {
+			continue
+		}
+		for _, column := range predicate.columns {
+			column = strings.TrimSpace(column)
+			if column == "" {
+				continue
+			}
+			if _, exists := seen[column]; exists {
+				continue
+			}
+			seen[column] = struct{}{}
+			columns = append(columns, column)
+		}
+	}
+	sort.Strings(columns)
+	return columns
+}
+
+func subquerySharedIndexName(columns []string) string {
+	return subquerySharedIndexPrefix + strings.Join(columns, ",") + ">"
+}
+
+func subquerySharedIndexAccess(predicates []indexPredicate, columns []string) IndexAccessKind {
+	for _, column := range columns {
+		for _, predicate := range predicates {
+			if len(predicate.columns) == 1 && predicate.columns[0] == column && predicate.access == IndexAccessIn {
+				return IndexAccessIn
+			}
+		}
+	}
+	return IndexAccessEquality
 }
 
 func subqueryIndexOperandValue(node *exprNode, outer EvalContext) (Value, bool) {
@@ -506,6 +637,11 @@ func (e *Engine) snapshotFireAndForgetSubquerySourceWithIndex(
 		if window == nil {
 			return nil, true, NewError(ErrorUnknownName, "named window "+base.sourceName+" is not registered")
 		}
+		if isSubquerySharedIndex(selection.IndexName) {
+			if err := window.ensureSubquerySharedIndex(selection.IndexName, selection.Columns); err != nil {
+				return nil, true, err
+			}
+		}
 		contextName, partition := subqueryContextScope(variables)
 		windowContext := strings.TrimSpace(window.Definition().Context())
 		if windowContext != "" {
@@ -622,6 +758,9 @@ type subqueryDefinition struct {
 	offset               int
 	limit                int
 	limitSet             bool
+	indexName            string
+	noIndex              bool
+	disableIndexSharing  bool
 }
 
 // SubqueryColumnMetadata describes one named column in a multi-column
@@ -831,13 +970,16 @@ type SubqueryOrderKey struct {
 // SubqueryConfig is the option surface for scalar subqueries. It is public so
 // callers can inspect or wrap option builders without exposing runtime state.
 type SubqueryConfig struct {
-	Predicate   Expression[bool]
-	Having      Expression[bool]
-	Cardinality SubqueryCardinality
-	OrderBy     []SubqueryOrderKey
-	Offset      int
-	Limit       int
-	LimitSet    bool
+	Predicate           Expression[bool]
+	Having              Expression[bool]
+	Cardinality         SubqueryCardinality
+	OrderBy             []SubqueryOrderKey
+	Offset              int
+	Limit               int
+	LimitSet            bool
+	IndexName           string
+	NoIndex             bool
+	DisableIndexSharing bool
 }
 
 // SubqueryGroupConfig controls the filter and post-group predicate for a
@@ -901,13 +1043,47 @@ func SubqueryCardinalityMode(mode SubqueryCardinality) SubqueryOption {
 	return func(config *SubqueryConfig) { config.Cardinality = mode }
 }
 
+// SubqueryUseIndex binds a correlated subquery to one declared hash/B-tree
+// index on its root Named Window or Table source. It is the structured Go
+// counterpart of Esper's subquery index hint.
+func SubqueryUseIndex(name string) SubqueryOption {
+	return func(config *SubqueryConfig) { config.IndexName = strings.TrimSpace(name) }
+}
+
+// SubqueryNoIndex forces the complete source snapshot path for this subquery,
+// even when a declared or shared index could otherwise satisfy its predicate.
+func SubqueryNoIndex() SubqueryOption {
+	return func(config *SubqueryConfig) { config.NoIndex = true }
+}
+
+// SubqueryDisableIndexSharing disables only automatic Named Window shared
+// indexes for this consumer. Explicitly declared indexes remain eligible.
+func SubqueryDisableIndexSharing() SubqueryOption {
+	return func(config *SubqueryConfig) { config.DisableIndexSharing = true }
+}
+
 // SubqueryExists evaluates whether at least one event from a named-window or
 // table source satisfies predicate. Field expressions in predicate address
 // the inner source; OuterField expressions address the enclosing event.
 func SubqueryExists(source RecordStream, predicate Expression[bool]) Expression[bool] {
-	definition := &subqueryDefinition{source: source.node}
-	if predicate != nil {
-		definition.predicate = predicate
+	return SubqueryExistsWithOptions(source, predicate)
+}
+
+// SubqueryExistsWithOptions is the option-bearing form of SubqueryExists. It
+// supports the same structured index controls as projected subqueries.
+func SubqueryExistsWithOptions(source RecordStream, predicate Expression[bool], options ...SubqueryOption) Expression[bool] {
+	config := SubqueryConfig{Cardinality: SubqueryFirst, Predicate: predicate}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	definition := &subqueryDefinition{
+		source:              source.node,
+		predicate:           config.Predicate,
+		indexName:           config.IndexName,
+		noIndex:             config.NoIndex,
+		disableIndexSharing: config.DisableIndexSharing,
 	}
 	return makeSubqueryExpr[bool]("subquery-exists", "exists("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		values := evaluateSubqueryValues(definition, ctx)
@@ -959,6 +1135,9 @@ func SubqueryValueWithOptions[T any](source RecordStream, projection Expression[
 		offset:              config.Offset,
 		limit:               config.Limit,
 		limitSet:            config.LimitSet,
+		indexName:           config.IndexName,
+		noIndex:             config.NoIndex,
+		disableIndexSharing: config.DisableIndexSharing,
 	}
 	return makeSubqueryExpr[T]("subquery-value", "value("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		values := evaluateSubqueryValues(definition, ctx)
@@ -994,6 +1173,9 @@ func SubqueryValues[T any](source RecordStream, projection Expression[T], option
 		offset:              config.Offset,
 		limit:               config.Limit,
 		limitSet:            config.LimitSet,
+		indexName:           config.IndexName,
+		noIndex:             config.NoIndex,
+		disableIndexSharing: config.DisableIndexSharing,
 	}
 	return makeSubqueryExpr[[]T]("subquery-values", "values("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		values := evaluateSubqueryValues(definition, ctx)
@@ -1254,6 +1436,9 @@ func newSubqueryColumnsDefinition(source RecordStream, selections []Selection, o
 		offset:              config.Offset,
 		limit:               config.Limit,
 		limitSet:            config.LimitSet,
+		indexName:           config.IndexName,
+		noIndex:             config.NoIndex,
+		disableIndexSharing: config.DisableIndexSharing,
 	}
 }
 
@@ -1453,6 +1638,9 @@ func subqueryWithProjectionOptions(source RecordStream, projection Expr, options
 		offset:              config.Offset,
 		limit:               config.Limit,
 		limitSet:            config.LimitSet,
+		indexName:           config.IndexName,
+		noIndex:             config.NoIndex,
+		disableIndexSharing: config.DisableIndexSharing,
 	}
 }
 
@@ -1593,6 +1781,15 @@ func subqueryDescription(definition *subqueryDefinition) string {
 	}
 	if definition.limitSet {
 		description += fmt.Sprintf(".limit(%d)", definition.limit)
+	}
+	if definition.indexName != "" {
+		description += ".useIndex(" + definition.indexName + ")"
+	}
+	if definition.noIndex {
+		description += ".noIndex()"
+	}
+	if definition.disableIndexSharing {
+		description += ".disableIndexSharing()"
 	}
 	return description
 }
