@@ -1471,7 +1471,7 @@
       "id": "infra.namedwindow.views",
       "domain": "infra",
       "level": "S",
-      "summary": "Named Window data-window retention views: keep-all, length, last-event, first-event, unique/first-unique replacement and drop, and sort windows with sorted iteration, tie recency ordering and self-expel IR pairs, all with insert-into triggers, on-delete triggers, irstream consumer statements and snapshot iterator assertions",
+      "summary": "Named Window data-window retention views: keep-all, length, last-event, first-event, unique/first-unique replacement and drop, and sort windows with sorted iteration, tie recency ordering and self-expel IR pairs, all with insert-into triggers, on-delete triggers, irstream consumer statements and snapshot iterator assertions; time(10) sliding expiry, firsttime anchored admission without timer expiry, and time_batch silent accumulation with anchored boundary rollover delivering completed batches as new-then-old data (including late aggregation consumers)",
       "javaRefs": [
         "InfraNamedWindowViews"
       ],
@@ -1483,7 +1483,7 @@
       "phase": 1,
       "status": "partial",
       "remaining": [
-        "InfraNamedWindowViews time-based views (timewindow/firsttime/exttime/timeorder/timeaccum/timebatch/timelengthbatch/external-timed), length/first-length batch, per-group views, bean-backed/contained/deep-supertype, intersection, filtering consumer, late consumer/join, pattern, double-insert, delete-use-as variants, prior stats, select-stream-dot-star, grouped late-start/variable-iterate, on-insert preemptive two-window, TTL delete and invalid matrices remain"
+        "InfraNamedWindowViews remaining views (ext_timed/timeorder/timeaccum/timelengthbatch/external-timed), length/first-length batch, per-group views, bean-backed/contained/deep-supertype, intersection, filtering consumer, late consumer/join, pattern, double-insert, delete-use-as variants, prior stats, select-stream-dot-star, grouped late-start/variable-iterate, on-insert preemptive two-window, TTL delete and invalid matrices remain"
       ]
     }
   ],
@@ -11687,7 +11687,13 @@
         "java-runtime-1ee31df7428f7c8e85eb",
         "java-runtime-bb670bc21e9d4333cefd",
         "java-runtime-7edfd8382e4eee6892dc",
-        "java-runtime-5fb3e9a4d20bc3964f5f"
+        "java-runtime-5fb3e9a4d20bc3964f5f",
+        "java-runtime-d00485a2855b2128289f",
+        "java-runtime-879d6ad8aee378657a02",
+        "java-runtime-5f5a65dd5f72c8e24619",
+        "java-runtime-1ad42a8ed8025c4a0730",
+        "java-runtime-1eb11f5cf275069ef6b5",
+        "java-runtime-bb926d092e7110db203f"
       ],
       "javaNames": [
         "InfraKeepAllSimple",
@@ -11701,7 +11707,13 @@
         "InfraUniqueSceneTwo",
         "InfraFirstUnique",
         "InfraSortWindow",
-        "InfraSortWindowSceneTwo"
+        "InfraSortWindowSceneTwo",
+        "InfraTimeWindow",
+        "InfraTimeWindowSceneTwo",
+        "InfraTimeFirstWindow",
+        "InfraTimeBatch",
+        "InfraTimeBatchSceneTwo",
+        "InfraTimeBatchLateConsumer"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
@@ -11718,7 +11730,13 @@
         "TestInfraNWViewsUniqueSceneTwoParity",
         "TestInfraNWViewsFirstUniqueParity",
         "TestInfraNWViewsSortWindowParity",
-        "TestInfraNWViewsSortWindowSceneTwoParity"
+        "TestInfraNWViewsSortWindowSceneTwoParity",
+        "TestInfraNWViewsTimeWindowParity",
+        "TestInfraNWViewsTimeWindowSceneTwoParity",
+        "TestInfraNWViewsTimeFirstWindowParity",
+        "TestInfraNWViewsTimeBatchParity",
+        "TestInfraNWViewsTimeBatchSceneTwoParity",
+        "TestInfraNWViewsTimeBatchLateConsumerParity"
       ],
       "tags": [
         "correctness",
@@ -11734,7 +11752,12 @@
         "first-unique",
         "sort",
         "on-delete",
-        "irstream"
+        "irstream",
+        "time-window",
+        "first-time",
+        "time-batch",
+        "virtual-clock",
+        "late-consumer"
       ],
       "status": "partial",
       "evidence": [
@@ -11742,7 +11765,7 @@
         "go-unit",
         "java-suite-InfraNamedWindowViews"
       ],
-      "difference": "Go inserts through OnEvent(...).InsertIntoNamedWindow trigger plans as the established equivalent of EPL insert-into select statements, and reads iterator state with NamedWindow.Snapshot in retention order. FirstEventWindowSpec retention is newly honored by named windows: a dropped firstevent insert produces no listener callback at all. Sort windows iterate in sort order with newer equal-key events before older ones (reverseSortedEqualRuns), and an event sorting beyond the retained size of a full window is inserted and removed in the same delta (IR pair with itself). Unique snapshot order follows first-seen key order where Esper asserts any-order."
+      "difference": "Go inserts through OnEvent(...).InsertIntoNamedWindow trigger plans as the established equivalent of EPL insert-into select statements, and reads iterator state with NamedWindow.Snapshot in retention order. FirstEventWindowSpec retention is newly honored by named windows: a dropped firstevent insert produces no listener callback at all. Sort windows iterate in sort order with newer equal-key events before older ones (reverseSortedEqualRuns), and an event sorting beyond the retained size of a full window is inserted and removed in the same delta (IR pair with itself). Unique snapshot order follows first-seen key order where Esper asserts any-order. Time views run on a virtual clock via Engine.AdvanceTime: #time expires exactly at insert-time plus the period; firsttime admits only while the oldest retained event is younger than the period and never timer-expires; time_batch accumulates silently, delivers the completed batch as new data at the anchored boundary and as old data at the following boundary (one callback carries both when both exist), with silent deletes of unflushed events and a boundary schedule that slides by the period even across empty batches."
     }
   ],
   "mappings": [
