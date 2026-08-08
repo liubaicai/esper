@@ -2641,11 +2641,17 @@ func (w *NamedWindow) deleteWhereState(ctx context.Context, state *namedWindowRu
 		}
 	}
 	state.entries = kept
-	switch state.def.retention.(type) {
+	switch retention := state.def.retention.(type) {
 	case TimeBatchWindowSpec, LengthBatchWindowSpec, TimeLengthBatchWindowSpec:
 		// Events accumulated in the current batch were never delivered
 		// as new data, so deleting them produces no remove stream either.
 		delta.Old = nil
+	case GroupWindowSpec:
+		// The same silent-delete rule applies when the grouped inner view
+		// accumulates silently (#groupwin(key)#time_batch).
+		if _, isBatch := retention.Inner.(TimeBatchWindowSpec); isBatch {
+			delta.Old = nil
+		}
 	}
 	w.rebuildUniqueStateForLocked(state)
 	return delta, nil
@@ -2798,7 +2804,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 	}
 	if insertEvent {
 		switch state.def.retention.(type) {
-		case KeepAllWindowSpec, LengthWindowSpec, LengthBatchWindowSpec, FirstLengthWindowSpec, LastEventWindowSpec, FirstEventWindowSpec, TimeWindowSpec, FirstTimeWindowSpec, TimeBatchWindowSpec, TimeLengthBatchWindowSpec, TimeAccumWindowSpec, ExternallyTimedWindowSpec, TimeOrderWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec:
+		case KeepAllWindowSpec, LengthWindowSpec, LengthBatchWindowSpec, FirstLengthWindowSpec, LastEventWindowSpec, FirstEventWindowSpec, TimeWindowSpec, FirstTimeWindowSpec, TimeBatchWindowSpec, TimeLengthBatchWindowSpec, TimeAccumWindowSpec, ExternallyTimedWindowSpec, TimeOrderWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec, GroupWindowSpec:
 		default:
 			return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", state.def.retention))
 		}
@@ -2968,6 +2974,29 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 			copy(entries[position+1:], entries[position:])
 			entries[position] = entry
 			delta.New = append(delta.New, preparedInsert)
+		case GroupWindowSpec:
+			switch inner := retention.Inner.(type) {
+			case LengthWindowSpec:
+				// #groupwin(key)#length(size) retains the newest size events
+				// per group; the oldest events of an over-full group leave
+				// as old data in the same delta as the triggering insert.
+				entries = append(entries, storedEvent{event: preparedInsert, receivedAt: now})
+				delta.New = append(delta.New, preparedInsert)
+				kept, expelled := expelGroupedLengthOverflow(entries, retention.Key, inner.Size, now, nil)
+				entries = kept
+				delta.Old = append(delta.Old, expelled...)
+			case TimeBatchWindowSpec:
+				// #groupwin(key)#time_batch(duration) accumulates silently
+				// against the anchored boundary schedule; the rollover
+				// delivers each completed batch with events grouped by key
+				// (see expireNamedWindowGroupedBatchRollover).
+				if state.timeBatchBoundary.IsZero() {
+					state.timeBatchBoundary = now.Add(inner.Duration)
+				}
+				entries = append(entries, storedEvent{event: preparedInsert, receivedAt: now})
+			default:
+				return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window grouped retention %T", retention.Inner))
+			}
 		case UniqueWindowSpec:
 			entry := storedEvent{event: preparedInsert, receivedAt: now}
 			duplicate := -1
@@ -3234,6 +3263,29 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 		state.entries = append(state.entries, storedEvent{})
 		copy(state.entries[position+1:], state.entries[position:])
 		state.entries[position] = entry
+	case GroupWindowSpec:
+		switch inner := retention.Inner.(type) {
+		case LengthWindowSpec:
+			// #groupwin(key)#length(size) retains the newest size events per
+			// group; the oldest events of an over-full group leave as old
+			// data in the same delta as the triggering insert.
+			state.entries = append(state.entries, entry)
+			kept, expelled := expelGroupedLengthOverflow(state.entries, retention.Key, inner.Size, now, variables)
+			state.entries = kept
+			delta.Old = append(delta.Old, expelled...)
+		case TimeBatchWindowSpec:
+			// #groupwin(key)#time_batch(duration) accumulates silently
+			// against the anchored boundary schedule; the rollover delivers
+			// each completed batch with events grouped by key (see
+			// expireNamedWindowGroupedBatchRollover).
+			if state.timeBatchBoundary.IsZero() {
+				state.timeBatchBoundary = now.Add(inner.Duration)
+			}
+			state.entries = append(state.entries, entry)
+			delta.New = nil
+		default:
+			return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window grouped retention %T", retention.Inner))
+		}
 	case TimeWindowSpec, TimeToLiveWindowSpec:
 		state.entries = append(state.entries, entry)
 	case TimeToLiveAtWindowSpec:
@@ -3392,6 +3444,15 @@ func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindow
 			return NamedWindowDelta{}
 		}
 		return expireNamedWindowBatchRollover(state, at, retention.Duration, true)
+	case GroupWindowSpec:
+		// #groupwin(key)#time_batch(duration) rolls over on the same
+		// anchored boundary schedule as time_batch; the completed batch is
+		// delivered with events grouped by key.
+		inner, ok := retention.Inner.(TimeBatchWindowSpec)
+		if !ok || state.timeBatchBoundary.IsZero() {
+			return NamedWindowDelta{}
+		}
+		return expireNamedWindowGroupedBatchRollover(state, at, inner.Duration, retention.Key)
 	case TimeOrderWindowSpec:
 		// time_order keeps events sorted by their external timestamp and
 		// expires them under the engine clock at timestamp plus the period.
@@ -3476,6 +3537,77 @@ func expireNamedWindowBatchRollover(state *namedWindowRuntime, at time.Time, dur
 		rebuildNamedWindowIndexesLocked(state)
 	}
 	return delta
+}
+
+// expireNamedWindowGroupedBatchRollover runs the #groupwin(key)#time_batch
+// boundary schedule: identical to time_batch except the just-completed
+// batch is delivered with events grouped by the group key in first-seen
+// group order (Esper concatenates the per-group completed batches into one
+// new-data delivery).
+func expireNamedWindowGroupedBatchRollover(state *namedWindowRuntime, at time.Time, duration time.Duration, key Expr) NamedWindowDelta {
+	delta := NamedWindowDelta{Time: at}
+	changed := false
+	for !state.timeBatchBoundary.After(at) {
+		if len(state.batchLast) > 0 {
+			delta.Old = append(delta.Old, state.batchLast...)
+		}
+		if len(state.entries) > 0 {
+			state.batchLast = make([]Event, 0, len(state.entries))
+			groupOrder := make([]string, 0)
+			grouped := make(map[string][]Event)
+			for _, entry := range state.entries {
+				groupKey := groupWindowKey(key, entry.event, at, nil)
+				if _, seen := grouped[groupKey]; !seen {
+					groupOrder = append(groupOrder, groupKey)
+				}
+				grouped[groupKey] = append(grouped[groupKey], entry.event)
+			}
+			for _, groupKey := range groupOrder {
+				state.batchLast = append(state.batchLast, grouped[groupKey]...)
+			}
+			delta.New = append(delta.New, state.batchLast...)
+			state.entries = nil
+			changed = true
+		} else {
+			state.batchLast = nil
+		}
+		state.timeBatchBoundary = state.timeBatchBoundary.Add(duration)
+	}
+	if changed {
+		rebuildNamedWindowIndexesLocked(state)
+	}
+	return delta
+}
+
+// expelGroupedLengthOverflow removes the oldest events of every group whose
+// retained count exceeds the per-group size, returning the kept entries and
+// the expelled events oldest-first (Esper #groupwin(key)#length(size)).
+func expelGroupedLengthOverflow(entries []storedEvent, key Expr, size int, now time.Time, variables map[string]Value) ([]storedEvent, []Event) {
+	counts := make(map[string]int)
+	for _, entry := range entries {
+		counts[groupWindowKey(key, entry.event, now, variables)]++
+	}
+	excess := make(map[string]int)
+	for groupKey, count := range counts {
+		if count > size {
+			excess[groupKey] = count - size
+		}
+	}
+	if len(excess) == 0 {
+		return entries, nil
+	}
+	kept := entries[:0]
+	var expelled []Event
+	for _, entry := range entries {
+		groupKey := groupWindowKey(key, entry.event, now, variables)
+		if excess[groupKey] > 0 {
+			excess[groupKey]--
+			expelled = append(expelled, entry.event)
+			continue
+		}
+		kept = append(kept, entry)
+	}
+	return kept, expelled
 }
 
 func (w *NamedWindow) dispatch(ctx context.Context, delta NamedWindowDelta) error {

@@ -1471,7 +1471,7 @@
       "id": "infra.namedwindow.views",
       "domain": "infra",
       "level": "S",
-      "summary": "Named Window data-window retention views: keep-all, length, last-event, first-event, unique/first-unique replacement and drop, and sort windows with sorted iteration, tie recency ordering and self-expel IR pairs, all with insert-into triggers, on-delete triggers, irstream consumer statements and snapshot iterator assertions; time(10) sliding expiry, firsttime anchored admission without timer expiry, and time_batch silent accumulation with anchored boundary rollover delivering completed batches as new-then-old data (including late aggregation consumers); length_batch size-triggered batch rollover, firstlength silent drops, and time_accum shared expiry anchored at the newest retained event with delete re-anchoring; ext_timed sliding external-timestamp expiry riding the triggering insert delta as IR pairs, ext_timed_batch epoch-anchored silent accumulation with boundary-crossing flush, time_order timestamp-sorted retention expiring under the engine clock with pass-through self IR pairs, and time_length_batch size-or-time batch rollover with empty-rollover disarm and insert re-arm",
+      "summary": "Named Window data-window retention views: keep-all, length, last-event, first-event, unique/first-unique replacement and drop, and sort windows with sorted iteration, tie recency ordering and self-expel IR pairs, all with insert-into triggers, on-delete triggers, irstream consumer statements and snapshot iterator assertions; time(10) sliding expiry, firsttime anchored admission without timer expiry, and time_batch silent accumulation with anchored boundary rollover delivering completed batches as new-then-old data (including late aggregation consumers); length_batch size-triggered batch rollover, firstlength silent drops, and time_accum shared expiry anchored at the newest retained event with delete re-anchoring; ext_timed sliding external-timestamp expiry riding the triggering insert delta as IR pairs, ext_timed_batch epoch-anchored silent accumulation with boundary-crossing flush, time_order timestamp-sorted retention expiring under the engine clock with pass-through self IR pairs, and time_length_batch size-or-time batch rollover with empty-rollover disarm and insert re-arm; per-group retention via GroupWindow(key, inner): grouped length windows expel the oldest events of an over-full group per insert, and grouped time_batch flushes the completed batch grouped by key in first-seen group order",
       "javaRefs": [
         "InfraNamedWindowViews"
       ],
@@ -1483,7 +1483,7 @@
       "phase": 1,
       "status": "partial",
       "remaining": [
-        "InfraNamedWindowViews remaining views: per-group views (groupwin length/timebatch), bean-backed/schema-backed/contained/deep-supertype, intersection, filtering consumer, late consumer/join, pattern, double-insert, delete-use-as variants, prior stats, select-stream-dot-star, grouped late-start/variable-iterate, on-insert preemptive two-window, TTL delete and invalid matrices remain"
+        "InfraNamedWindowViews remaining views: bean-backed/schema-backed/contained/deep-supertype, intersection, filtering consumer, late consumer/join, pattern, double-insert, delete-use-as variants, prior stats, select-stream-dot-star, grouped late-start/variable-iterate, on-insert preemptive two-window, TTL delete and invalid matrices remain"
       ]
     }
   ],
@@ -11707,7 +11707,9 @@
         "java-runtime-ed5bfc247d088a603224",
         "java-runtime-22bf6b3644a24862df7d",
         "java-runtime-dd924e1b7e500df135f8",
-        "java-runtime-3af75eefff14ce16ae81"
+        "java-runtime-3af75eefff14ce16ae81",
+        "java-runtime-083a289ee5f82dd87ad3",
+        "java-runtime-accaf82c3c846493832b"
       ],
       "javaNames": [
         "InfraKeepAllSimple",
@@ -11741,7 +11743,9 @@
         "InfraTimeOrderSceneTwo",
         "InfraTimeLengthBatch",
         "InfraTimeLengthBatchSceneTwo",
-        "InfraExternallyTimedBatch"
+        "InfraExternallyTimedBatch",
+        "InfraLengthWindowPerGroup",
+        "InfraTimeBatchPerGroup"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
@@ -11778,7 +11782,9 @@
         "TestInfraNWViewsTimeOrderSceneTwoParity",
         "TestInfraNWViewsTimeLengthBatchParity",
         "TestInfraNWViewsTimeLengthBatchSceneTwoParity",
-        "TestInfraNWViewsExternallyTimedBatchParity"
+        "TestInfraNWViewsExternallyTimedBatchParity",
+        "TestInfraNWViewsLengthWindowPerGroupParity",
+        "TestInfraNWViewsTimeBatchPerGroupParity"
       ],
       "tags": [
         "correctness",
@@ -11806,7 +11812,9 @@
         "ext-timed",
         "ext-timed-batch",
         "time-order",
-        "time-length-batch"
+        "time-length-batch",
+        "per-group",
+        "groupwin"
       ],
       "status": "partial",
       "evidence": [
@@ -11814,7 +11822,7 @@
         "go-unit",
         "java-suite-InfraNamedWindowViews"
       ],
-      "difference": "Go inserts through OnEvent(...).InsertIntoNamedWindow trigger plans as the established equivalent of EPL insert-into select statements, and reads iterator state with NamedWindow.Snapshot in retention order. FirstEventWindowSpec retention is newly honored by named windows: a dropped firstevent insert produces no listener callback at all. Sort windows iterate in sort order with newer equal-key events before older ones (reverseSortedEqualRuns), and an event sorting beyond the retained size of a full window is inserted and removed in the same delta (IR pair with itself). Unique snapshot order follows first-seen key order where Esper asserts any-order. Time views run on a virtual clock via Engine.AdvanceTime: #time expires exactly at insert-time plus the period; firsttime admits only while the oldest retained event is younger than the period and never timer-expires; time_batch accumulates silently, delivers the completed batch as new data at the anchored boundary and as old data at the following boundary (one callback carries both when both exist), with silent deletes of unflushed events and a boundary schedule that slides by the period even across empty batches. length_batch shares the time_batch completed-batch state machine with a size trigger: accumulation and unflushed deletes are silent, each completed batch is one new-data delivery and leaves as old data when the next batch completes; firstlength drops inserts beyond the size silently until deletes free a slot; time_accum delivers inserts immediately and expires all retained events together at the newest retained event plus the period, re-anchoring when the newest event is deleted. ext_timed(value, period) slides with arriving event timestamps: each event expires when the newest timestamp seen reaches its timestamp plus the period, expiries ride in the same delta as the triggering insert and both the window listener and the irstream consumer observe the IR pair. ext_timed_batch anchors boundaries at the epoch reference, accumulates silently, fires old data for deletes of accumulated events, and an arriving event whose timestamp crosses the next boundary flushes the accumulated batch as new data and the previously completed batch as old data. time_order keeps events sorted by their external timestamp, expires them under the engine clock at timestamp plus the period, and an arrival whose external timestamp is already expired passes straight through as an IR pair with itself. time_length_batch shares the time_batch anchored rollover with an additional size trigger, silent accumulation and silent unflushed deletes, and an all-empty rollover disarms the schedule until the next insert re-anchors it (Esper re-anchoring)."
+      "difference": "Go inserts through OnEvent(...).InsertIntoNamedWindow trigger plans as the established equivalent of EPL insert-into select statements, and reads iterator state with NamedWindow.Snapshot in retention order. FirstEventWindowSpec retention is newly honored by named windows: a dropped firstevent insert produces no listener callback at all. Sort windows iterate in sort order with newer equal-key events before older ones (reverseSortedEqualRuns), and an event sorting beyond the retained size of a full window is inserted and removed in the same delta (IR pair with itself). Unique snapshot order follows first-seen key order where Esper asserts any-order. Time views run on a virtual clock via Engine.AdvanceTime: #time expires exactly at insert-time plus the period; firsttime admits only while the oldest retained event is younger than the period and never timer-expires; time_batch accumulates silently, delivers the completed batch as new data at the anchored boundary and as old data at the following boundary (one callback carries both when both exist), with silent deletes of unflushed events and a boundary schedule that slides by the period even across empty batches. length_batch shares the time_batch completed-batch state machine with a size trigger: accumulation and unflushed deletes are silent, each completed batch is one new-data delivery and leaves as old data when the next batch completes; firstlength drops inserts beyond the size silently until deletes free a slot; time_accum delivers inserts immediately and expires all retained events together at the newest retained event plus the period, re-anchoring when the newest event is deleted. ext_timed(value, period) slides with arriving event timestamps: each event expires when the newest timestamp seen reaches its timestamp plus the period, expiries ride in the same delta as the triggering insert and both the window listener and the irstream consumer observe the IR pair. ext_timed_batch anchors boundaries at the epoch reference, accumulates silently, fires old data for deletes of accumulated events, and an arriving event whose timestamp crosses the next boundary flushes the accumulated batch as new data and the previously completed batch as old data. time_order keeps events sorted by their external timestamp, expires them under the engine clock at timestamp plus the period, and an arrival whose external timestamp is already expired passes straight through as an IR pair with itself. time_length_batch shares the time_batch anchored rollover with an additional size trigger, silent accumulation and silent unflushed deletes, and an all-empty rollover disarms the schedule until the next insert re-anchors it (Esper re-anchoring). #groupwin(key)#length(size) retains the newest size events per group with the flat iterator in insertion order, expelling the oldest events of an over-full group as old data in the triggering insert delta; #groupwin(key)#time_batch(duration) shares the anchored time_batch rollover and silent accumulation/deletes, delivering the completed batch with events grouped by key in first-seen group order."
     }
   ],
   "mappings": [

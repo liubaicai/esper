@@ -1985,3 +1985,74 @@ func TestInfraNWViewsTimeBatchLateConsumerParity(t *testing.T) {
 	}
 	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), nil)
 }
+
+// TestInfraNWViewsLengthWindowPerGroupParity mirrors
+// InfraLengthWindowPerGroup: a #groupwin(value)#length(2) window retains
+// the newest two events per group; the oldest event of an over-full group
+// leaves as old data in the same delta as the triggering insert.
+func TestInfraNWViewsLengthWindowPerGroupParity(t *testing.T) {
+	h := newNWViewsHarness(t, "MyWindowWPG", GroupWindow(Field[nwViewsKVLong, int64]("value"), LengthWindow(2)), "longBoxed", true)
+
+	h.bean("E1", 1)
+	nwViewsAssertNew(t, h.create, "create E1", []any{"E1", int64(1)})
+	nwViewsAssertNew(t, h.consumer, "s0 E1", []any{"E1", int64(1)})
+
+	h.bean("E2", 1)
+	nwViewsAssertNew(t, h.create, "create E2", []any{"E2", int64(1)})
+	nwViewsAssertNew(t, h.consumer, "s0 E2", []any{"E2", int64(1)})
+
+	h.bean("E3", 2)
+	nwViewsAssertNew(t, h.create, "create E3", []any{"E3", int64(2)})
+	nwViewsAssertNew(t, h.consumer, "s0 E3", []any{"E3", int64(2)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E1", int64(1)}, {"E2", int64(1)}, {"E3", int64(2)}})
+
+	h.market("E2")
+	nwViewsAssertOld(t, h.create, "create delete E2", []any{"E2", int64(1)})
+	nwViewsAssertOld(t, h.consumer, "s0 delete E2", []any{"E2", int64(1)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), [][]any{{"E1", int64(1)}, {"E3", int64(2)}})
+
+	h.bean("E4", 1)
+	nwViewsAssertNew(t, h.create, "create E4", []any{"E4", int64(1)})
+	nwViewsAssertNew(t, h.consumer, "s0 E4", []any{"E4", int64(1)})
+
+	h.bean("E5", 1)
+	nwViewsAssertIRPair(t, h.create, "create E5", []any{"E5", int64(1)}, []any{"E1", int64(1)})
+	nwViewsAssertIRPair(t, h.consumer, "s0 E5", []any{"E5", int64(1)}, []any{"E1", int64(1)})
+
+	h.bean("E6", 2)
+	nwViewsAssertNew(t, h.create, "create E6", []any{"E6", int64(2)})
+	nwViewsAssertNew(t, h.consumer, "s0 E6", []any{"E6", int64(2)})
+
+	h.market("E6")
+	nwViewsAssertOld(t, h.create, "create delete E6", []any{"E6", int64(2)})
+	nwViewsAssertOld(t, h.consumer, "s0 delete E6", []any{"E6", int64(2)})
+
+	h.bean("E7", 2)
+	nwViewsAssertNew(t, h.create, "create E7", []any{"E7", int64(2)})
+	nwViewsAssertNew(t, h.consumer, "s0 E7", []any{"E7", int64(2)})
+
+	h.bean("E8", 2)
+	nwViewsAssertIRPair(t, h.create, "create E8", []any{"E8", int64(2)}, []any{"E3", int64(2)})
+	nwViewsAssertIRPair(t, h.consumer, "s0 E8", []any{"E8", int64(2)}, []any{"E3", int64(2)})
+}
+
+// TestInfraNWViewsTimeBatchPerGroupParity mirrors InfraTimeBatchPerGroup:
+// a #groupwin(value)#time_batch(10 sec) window accumulates silently against
+// the anchored boundary schedule and delivers the completed batch with
+// events grouped by the group key in first-seen group order.
+func TestInfraNWViewsTimeBatchPerGroupParity(t *testing.T) {
+	h := newNWViewsHarness(t, "MyWindowTBPG", GroupWindow(Field[nwViewsKVLong, int64]("value"), TimeBatch(10*time.Second)), "longBoxed", true, WithStartTime(time.Unix(0, 0).UTC()))
+
+	h.advance(1000)
+	h.bean("E1", 10)
+	h.bean("E2", 20)
+	h.bean("E3", 20)
+	h.bean("E4", 10)
+	nwViewsAssertNotInvoked(t, h.create, "create")
+	nwViewsAssertNotInvoked(t, h.consumer, "s0")
+
+	h.advance(11000)
+	nwViewsAssertNew(t, h.create, "create flush", []any{"E1", int64(10)}, []any{"E4", int64(10)}, []any{"E2", int64(20)}, []any{"E3", int64(20)})
+	nwViewsAssertNew(t, h.consumer, "s0 flush", []any{"E1", int64(10)}, []any{"E4", int64(10)}, []any{"E2", int64(20)}, []any{"E3", int64(20)})
+	nwViewsAssertRows(t, "iterator", nwViewsSnapshot(t, h.window), nil)
+}
