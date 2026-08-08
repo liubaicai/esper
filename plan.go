@@ -491,8 +491,9 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	if err := e.validateRoute(query); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "route", err)
 	}
-	if _, err := queryParameterTypes(e, query); err != nil {
-		return Plan{}, WrapError(ErrorInvalidRule, "parameters", err)
+	parameterTypes, parameterErr := queryParameterTypes(e, query)
+	if parameterErr != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "parameters", parameterErr)
 	}
 	if err := validateOutputPolicy(query.output); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "output", err)
@@ -524,6 +525,21 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		description += " -> route(" + query.routeTarget + ")"
 	}
 	canonicalParts := []string{planSchemaVersion, description}
+	parameterNames := make([]string, 0, len(parameterTypes))
+	for name := range parameterTypes {
+		parameterNames = append(parameterNames, name)
+	}
+	sort.Strings(parameterNames)
+	parameterDescriptions := make([]string, 0, len(parameterNames))
+	for _, name := range parameterNames {
+		typ := parameterTypes[name]
+		typeDescription := "any"
+		if typ != nil {
+			typeDescription = typ.String()
+		}
+		parameterDescriptions = append(parameterDescriptions, name+":"+typeDescription)
+	}
+	canonicalParts = append(canonicalParts, "parameters("+strings.Join(parameterDescriptions, ",")+")")
 	for _, schema := range e.Schemas() {
 		fields := make([]string, 0, len(schema.fields))
 		for _, field := range schema.fields {
@@ -2384,6 +2400,21 @@ func queryParameterTypes(environment *Environment, query Query) (map[string]refl
 	if err := visitQueryExpressions(environment, query, visit); err != nil {
 		return nil, err
 	}
+	if err := collectSQLHistoricalParameterTypes(query.input, parameterTypes); err != nil {
+		return nil, err
+	}
+	if query.aggregate != nil {
+		if err := collectSQLHistoricalParameterTypes(query.aggregate.input, parameterTypes); err != nil {
+			return nil, err
+		}
+	}
+	if query.join != nil {
+		for _, source := range joinDefinitionSources(query.join) {
+			if err := collectSQLHistoricalParameterTypes(source, parameterTypes); err != nil {
+				return nil, err
+			}
+		}
+	}
 	if strings.TrimSpace(query.contextName) != "" && environment != nil {
 		if definition, ok := environment.Context(query.contextName); ok {
 			definitionCopy := definition
@@ -2396,6 +2427,31 @@ func queryParameterTypes(environment *Environment, query Query) (map[string]refl
 		return nil, err
 	}
 	return parameterTypes, nil
+}
+
+func collectSQLHistoricalParameterTypes(node *streamNode, parameterTypes map[string]reflect.Type) error {
+	for current := node; current != nil; current = current.input {
+		if current.kind != streamHistorical || current.historical == nil || current.historical.provider == nil {
+			continue
+		}
+		provider, ok := current.historical.provider.(*SQLHistoricalProvider)
+		if !ok {
+			continue
+		}
+		for name, typ := range provider.parameterTypes {
+			if previous, exists := parameterTypes[name]; exists {
+				if !parameterTypesCompatible(previous, typ) {
+					return fmt.Errorf("parameter %q has incompatible type assignment between %s and %s", name, parameterTypeDescription(previous), parameterTypeDescription(typ))
+				}
+				if previous == typeOf[any]() && typ != typeOf[any]() {
+					parameterTypes[name] = typ
+				}
+				continue
+			}
+			parameterTypes[name] = typ
+		}
+	}
+	return nil
 }
 
 // validateQueryParameterModes keeps the two Java substitution-parameter

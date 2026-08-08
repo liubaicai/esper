@@ -242,6 +242,16 @@ type SQLHistoricalColumnMetadata struct {
 	ScanType         reflect.Type
 }
 
+// SQLHistoricalRowMetadata describes the SQL result shape supplied to a
+// whole-row converter. Columns are ordered as returned by database/sql and
+// the schema is the fluent target schema used to materialize the converted
+// row.
+type SQLHistoricalRowMetadata struct {
+	Statement string
+	Schema    Schema
+	Columns   []SQLHistoricalColumnMetadata
+}
+
 // SQLHistoricalMetadataMode controls how a driver result's ColumnTypes
 // metadata is used. Default is best-effort, Required returns metadata errors,
 // and Skip avoids metadata interrogation entirely.
@@ -262,6 +272,12 @@ const (
 // conversion for a result column. The returned value is stored as-is in the
 // map-backed historical event.
 type SQLHistoricalValueConverter func(SQLHistoricalColumnMetadata, any, reflect.Type) (any, error)
+
+// SQLHistoricalRowConverter is the Go-native counterpart to Esper's SQLROW
+// output hook. It receives one already column-converted row and may return an
+// underlying value accepted by the provider schema. Returning nil skips the
+// row, matching the Java hook's null-row behavior.
+type SQLHistoricalRowConverter func(SQLHistoricalRowMetadata, map[string]any) (any, error)
 
 // SQLHistoricalStatementRewriter adapts a statement to a driver's placeholder
 // convention. It is called once when the provider is constructed.
@@ -333,6 +349,11 @@ func (c SQLHistoricalCacheConfig) validate() error {
 // changing the original constructor that accepts argument functions.
 type SQLHistoricalProviderOptions struct {
 	Arguments []func(HistoricalRequest) any
+	// ParameterTypes declares the named execution parameters consumed by the
+	// provider's argument functions. SQL itself remains an opaque external
+	// statement; declarations keep the Go Plan analyzable and let execution
+	// validate missing, extra and incompatible values.
+	ParameterTypes map[string]reflect.Type
 	// MetadataStatement is executed only when MetadataMode is
 	// SQLHistoricalMetadataSample. MetadataArguments defaults to Arguments
 	// when omitted, which matches a metadata SQL statement that uses the same
@@ -342,6 +363,7 @@ type SQLHistoricalProviderOptions struct {
 	Cache             SQLHistoricalCacheConfig
 	ColumnCase        SQLColumnCase
 	ValueConverter    SQLHistoricalValueConverter
+	RowConverter      SQLHistoricalRowConverter
 	StatementRewriter SQLHistoricalStatementRewriter
 	PrepareStatement  bool
 	MetadataMode      SQLHistoricalMetadataMode
@@ -377,8 +399,10 @@ type SQLHistoricalProvider struct {
 	metadataArguments []func(HistoricalRequest) any
 	columnCase        SQLColumnCase
 	converter         SQLHistoricalValueConverter
+	rowConverter      SQLHistoricalRowConverter
 	typeBindings      map[string]reflect.Type
 	metadataMode      SQLHistoricalMetadataMode
+	parameterTypes    map[string]reflect.Type
 	prepare           bool
 	statement         *sql.Stmt
 	metadataStmt      *sql.Stmt
@@ -436,6 +460,10 @@ func NewSQLHistoricalProviderWithQueryer(queryer SQLHistoricalQueryer, schema Sc
 	if err := options.Cache.validate(); err != nil {
 		return nil, err
 	}
+	parameterTypes, parameterTypeErr := cloneSQLHistoricalParameterTypes(options.ParameterTypes)
+	if parameterTypeErr != nil {
+		return nil, parameterTypeErr
+	}
 	preparedStatement := statement
 	if options.StatementRewriter != nil {
 		var rewriteErr error
@@ -476,11 +504,34 @@ func NewSQLHistoricalProviderWithQueryer(queryer SQLHistoricalQueryer, schema Sc
 		metadataArguments: append([]func(HistoricalRequest) any(nil), metadataArguments...),
 		columnCase:        options.ColumnCase,
 		converter:         options.ValueConverter,
+		rowConverter:      options.RowConverter,
 		typeBindings:      cloneHistoricalTypeBindings(options.TypeBindings),
 		metadataMode:      options.MetadataMode,
+		parameterTypes:    parameterTypes,
 		prepare:           options.PrepareStatement,
 		cache:             newHistoricalSQLCache(options.Cache),
 	}, nil
+}
+
+func cloneSQLHistoricalParameterTypes(types map[string]reflect.Type) (map[string]reflect.Type, error) {
+	if len(types) == 0 {
+		return nil, nil
+	}
+	cloned := make(map[string]reflect.Type, len(types))
+	for name, typ := range types {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return nil, NewError(ErrorInvalidRule, "historical SQL parameter name cannot be blank")
+		}
+		if typ == nil {
+			return nil, NewError(ErrorInvalidRule, fmt.Sprintf("historical SQL parameter %q has no type", name))
+		}
+		if previous, exists := cloned[name]; exists && !parameterTypesCompatible(previous, typ) {
+			return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("historical SQL parameter %q has incompatible types", name))
+		}
+		cloned[name] = typ
+	}
+	return cloned, nil
 }
 
 // ConfigureCache replaces the provider cache. Configure a provider before it
@@ -607,7 +658,6 @@ func (p *SQLHistoricalProvider) Poll(ctx context.Context, request HistoricalRequ
 		}
 	}
 	result := make([]Event, 0)
-	seenFields := make(map[string]string, len(columns))
 	for rows.Next() {
 		values := make([]any, len(columns))
 		destinations := make([]any, len(columns))
@@ -618,17 +668,29 @@ func (p *SQLHistoricalProvider) Poll(ctx context.Context, request HistoricalRequ
 			return nil, err
 		}
 		underlying := make(map[string]any, len(columns))
+		// Column aliases are unique within one SQL result row. Do not carry
+		// this bookkeeping into the next row; a multi-row result naturally
+		// repeats the same column names.
+		seenFields := make(map[string]string, len(columns))
 		for index, column := range columns {
 			lookupColumn := metadata[index].Name
-			field, ok := p.Schema.Field(lookupColumn)
-			if !ok {
-				return nil, NewError(ErrorUnknownName, fmt.Sprintf("historical SQL column %q is absent from schema %q", lookupColumn, p.Schema.Name()))
+			fieldName := lookupColumn
+			targetType := metadata[index].ScanType
+			if p.rowConverter == nil {
+				field, ok := p.Schema.Field(lookupColumn)
+				if !ok {
+					return nil, NewError(ErrorUnknownName, fmt.Sprintf("historical SQL column %q is absent from schema %q", lookupColumn, p.Schema.Name()))
+				}
+				fieldName = field.Name
+				targetType = field.Type
 			}
-			if previous, duplicate := seenFields[field.Name]; duplicate {
-				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("historical SQL columns %q and %q both map to schema field %q", previous, column, field.Name))
+			if previous, duplicate := seenFields[fieldName]; duplicate {
+				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("historical SQL columns %q and %q both map to field %q", previous, column, fieldName))
 			}
-			seenFields[field.Name] = column
-			targetType := field.Type
+			seenFields[fieldName] = column
+			if targetType == nil && values[index] != nil {
+				targetType = reflect.TypeOf(values[index])
+			}
 			if binding, bound := p.typeBindings[strings.ToUpper(metadata[index].DatabaseTypeName)]; bound {
 				targetType = binding
 			}
@@ -642,15 +704,32 @@ func (p *SQLHistoricalProvider) Poll(ctx context.Context, request HistoricalRequ
 			if coerceErr != nil {
 				return nil, fmt.Errorf("historical SQL column %q: %w", column, coerceErr)
 			}
-			underlying[field.Name] = coerced
+			underlying[fieldName] = coerced
 		}
-		// Normalize the row through the same representation boundary used by
-		// SendRecord/InsertInto. This keeps SQL historical results useful for
-		// typed struct, typed JSON, object-array and Avro schemas instead of
-		// silently limiting the provider to map-backed events.
-		materialized, materializeErr := projectMapToSchema(p.Schema, underlying)
-		if materializeErr != nil {
-			return nil, fmt.Errorf("historical SQL row: %w", materializeErr)
+		var materialized any = underlying
+		if p.rowConverter != nil {
+			converted, convertErr := p.rowConverter(SQLHistoricalRowMetadata{
+				Statement: p.Statement,
+				Schema:    p.Schema,
+				Columns:   append([]SQLHistoricalColumnMetadata(nil), metadata...),
+			}, underlying)
+			if convertErr != nil {
+				return nil, fmt.Errorf("historical SQL row conversion: %w", convertErr)
+			}
+			if converted == nil {
+				continue
+			}
+			materialized = converted
+		} else {
+			// Normalize the row through the same representation boundary used
+			// by SendRecord/InsertInto. This keeps SQL historical results useful
+			// for typed struct, typed JSON, object-array and Avro schemas instead
+			// of silently limiting the provider to map-backed events.
+			var materializeErr error
+			materialized, materializeErr = projectMapToSchema(p.Schema, underlying)
+			if materializeErr != nil {
+				return nil, fmt.Errorf("historical SQL row: %w", materializeErr)
+			}
 		}
 		event, eventErr := newEvent(p.Schema, materialized, request.Now)
 		if eventErr != nil {

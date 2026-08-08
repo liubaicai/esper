@@ -21,8 +21,10 @@ go test -race ./...
 
 ```powershell
 $env:ESPER_MYSQL_DSN='root:password@tcp(127.0.0.1:3306)/test?parseTime=true&charset=utf8mb4'
-go test -run '^TestSQL(Sink|HistoricalProvider)MySQLDocker$' -count=1
+go test ./... -run '^Test(SQLHistoricalProvider|SQLSink|SQLHistoricalFireAndForget|DBConnector)MySQLDocker$' -count=1
 ```
+
+SQL FAF 的 `EPLDatabaseFAF` 10 个 Java execution 已有 `database_faf_parity_test.go` 对照用例，覆盖多行快照、column/whole-row hook、prepared reuse/close、typed substitution、distinct/where、变量、fluent Plan、SQL 文本参数子查询和 invalid/closed query；`SQLHistoricalProviderOptions.ParameterTypes` 声明 opaque SQL 参数类型，`RowConverter` 支持整行物化与 nil-row skip。fake `database/sql` driver 单元测试不替代上面的真实 MySQL 门禁。
 
 本轮新增基础五字段及可选秒/毫秒 `CronSchedule`/`OutputAt` 与 Pattern `TimerCron`：支持 `CronEvery`、`CronRange`、`CronWildcard`、变量/参数字段、虚拟时钟下一次触发和日月/周 OR 语义；不等于 Esper 全部 cron 能力。
 
@@ -66,6 +68,6 @@ go test -run '^TestSQL(Sink|HistoricalProvider)MySQLDocker$' -count=1
 
 Java 基线的静态回归候选清单在 `compat/static-manifest.json`，运行态 execution 清单在 `compat/java-execution-inventory.jsonl`，非 Regression 的源资产盘点在 `compat/source-test-manifest.json`，首批 capability/case 映射在 `compat/capability-manifest.json`；这些清单都不是全量 Go 映射完成或 Java/Go 行为差分通过的证明。
 
-当前 capability 对账进度为：Java inventory 的 4,136 个可执行 runtime 中，manifest 已建立 1,364 条关联、覆盖 1,338 个唯一 runtime，约 32.35%；191 个 capability case 中 185 个标为 mapped、2 个 partial、4 个 approved-difference。32.35% 是“已建立 Java runtime 对账/处置证据”的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
+当前 capability 对账进度为：Java inventory 的 4,136 个可执行 runtime 中，manifest 已建立 1,373 条 runtime 关联、覆盖 1,347 个唯一 runtime，约 32.57%；191 个 capability case 中 185 个标为 mapped、2 个 partial、4 个 approved-difference。32.57% 是“已建立 Java runtime 对账/处置证据”的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
 
 本轮继续对照 Java `InfraUpdate`/`InfraNWTableFAF` 的失败路径：`ExecuteFireAndForget` 在 Table 或 Named Window mutation 中途失败，以及 pending routed event processing 返回错误时，恢复目标存储、Context 分区状态、Context Table row ownership 和待派发队列；新增 `TestOnDemandTableMutationRollsBackAfterMidBatchFailure`、`TestOnDemandNamedWindowMutationRollsBackAfterAssignmentFailure`、`TestOnDemandMutationRollsBackAfterRoutedProcessingFailure` 与 `TestOnDemandContextTableMutationRollsBackAcrossPartitions`，覆盖 Table/Named Window 的跨行赋值失败、route cycle limit 失败及跨 category partition 的 primary-key collision。该回滚边界只保证当前 FAF 目标 mutation 的状态恢复，不等同于跨 statement、跨目标路由副作用、listener dispatch 或外部资源的完整事务；本轮不需要 MySQL Docker。
