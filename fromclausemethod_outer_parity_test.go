@@ -509,6 +509,172 @@ func TestFromClauseMethodOuterOneStreamTwoHistStarNoSubordinateLeftRightParity(t
 	})
 }
 
+// makeFCMOuterDepCountProvider mirrors fetchVal(prefix, s0.pNN) with a
+// constant prefix: the row count is read from the named dependency event so
+// the method stays subordinate to its driving stream exactly like Java's
+// argument analysis.
+func makeFCMOuterDepCountProvider(histSchema Schema, prefix, depSource, countField string) MethodProvider {
+	return MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		dep, ok := request.Dependency(depSource)
+		if !ok {
+			return nil, fmt.Errorf("missing dependency %s", depSource)
+		}
+		count, _ := dep.Get(countField).Any().(int)
+		if count <= 0 {
+			return nil, nil
+		}
+		rows := make([]map[string]any, 0, count)
+		for i := 1; i <= count; i++ {
+			rows = append(rows, map[string]any{"val": fmt.Sprintf("%s%d", prefix, i), "index": i})
+		}
+		return newEventsFrom(histSchema, rows, request.Now)
+	})
+
+}
+
+// fcmOuterForwardStep is one event of the Java tryAssertionThree/Four/Five
+// matrices: with a #lastevent anchor stream the lastNew batch and the
+// iterator always hold exactly the current tuple set.
+type fcmOuterForwardStep struct {
+	event    fcmBeanInt
+	expected [][]string
+}
+
+func fcmOuterRunForwardMatrix(t *testing.T, env *Environment, query Query, fields []string, steps []fcmOuterForwardStep) {
+	t.Helper()
+	engine, stmt, listener := fcmOuterDeploy(t, env, query)
+	fcmOuterAssertRows(t, fcmOuterSnapshot(t, stmt), fields, nil, "deploy iterator")
+	for _, step := range steps {
+		fcmOuterStep(t, engine, stmt, listener, fields, step.event, step.expected, step.expected, step.event.ID)
+	}
+
+}
+
+func fcmOuterLastEventS0(env *Environment) Stream[fcmBeanInt] {
+	return FromAs[fcmBeanInt](env, "s0").Filter(StartsWith(Field[fcmBeanInt, string]("id"), Literal("E"))).Window(LastEvent())
+}
+
+// TestFromClauseMethodOuterOneStreamTwoHistForwardSubordinateParity mirrors
+// tryAssertionThree (java-runtime-b2283f546f03c3d53930): a #lastevent stream
+// left-outer joined to two forward subordinate method streams.
+func TestFromClauseMethodOuterOneStreamTwoHistForwardSubordinateParity(t *testing.T) {
+	env := newFCMEnvironmentWithInt(t)
+	histSchema := fcmHistSchema(t, env)
+	s0 := fcmOuterLastEventS0(env)
+	h0 := FromMethodOn[map[string]any](env, "h0", "SupportBeanInt", histSchema,
+		makeFCMOuterDepCountProvider(histSchema, "H0", "s0", "p00")).DependingOn("s0")
+	h1 := FromMethodOn[map[string]any](env, "h1", "SupportBeanInt", histSchema,
+		makeFCMOuterDepCountProvider(histSchema, "H1", "s0", "p01")).DependingOn("s0")
+	query := JoinChain(JoinSource(s0)).
+		LeftOuterJoin(JoinSource(h0), OnSourcesEqual(0, Field[fcmBeanInt, int]("p02"), 1, Field[map[string]any, int]("index"))).
+		LeftOuterJoin(JoinSource(h1), OnSourcesEqual(1, Field[map[string]any, int]("index"), 2, Field[map[string]any, int]("index"))).
+		Select(
+			SelectFrom(0, "id", Field[fcmBeanInt, string]("id")),
+			SelectFrom(1, "valh0", Field[map[string]any, string]("val")),
+			SelectFrom(2, "valh1", Field[map[string]any, string]("val")),
+		).Query(StatementName("fcm-outer-1s2h-forward"))
+	fcmOuterRunForwardMatrix(t, env, query, []string{"id", "valh0", "valh1"}, []fcmOuterForwardStep{
+		{fcmBeanInt{ID: "E1", P00: 0, P01: 0, P02: 1}, [][]string{{"E1", "", ""}}},
+		{fcmBeanInt{ID: "E2", P00: 0, P01: 1, P02: 1}, [][]string{{"E2", "", ""}}},
+		{fcmBeanInt{ID: "E3", P00: 1, P01: 0, P02: 1}, [][]string{{"E3", "H01", ""}}},
+		{fcmBeanInt{ID: "E4", P00: 1, P01: 1, P02: 1}, [][]string{{"E4", "H01", "H11"}}},
+		{fcmBeanInt{ID: "E5", P00: 4, P01: 4, P02: 2}, [][]string{{"E5", "H02", "H12"}}},
+	})
+}
+
+// TestFromClauseMethodOuterOneStreamThreeHistForwardSubordinateParity mirrors
+// tryAssertionFour (java-runtime-51307ad5fea63359ec49): three forward
+// subordinate method streams; Java's second variant declares right/left/full
+// edges, which the fluent port runs as declared because dependency-bound rows
+// never anchor placeholders and unevaluable outer edges pass partial tuples
+// through unchanged.
+func TestFromClauseMethodOuterOneStreamThreeHistForwardSubordinateParity(t *testing.T) {
+	sources := func(env *Environment, histSchema Schema) (s0 Stream[fcmBeanInt], h0, h1, h2 Stream[map[string]any]) {
+		s0 = fcmOuterLastEventS0(env)
+		h0 = FromMethodOn[map[string]any](env, "h0", "SupportBeanInt", histSchema,
+			makeFCMOuterDepCountProvider(histSchema, "H0", "s0", "p00")).DependingOn("s0")
+		h1 = FromMethodOn[map[string]any](env, "h1", "SupportBeanInt", histSchema,
+			makeFCMOuterDepCountProvider(histSchema, "H1", "s0", "p01")).DependingOn("s0")
+		h2 = FromMethodOn[map[string]any](env, "h2", "SupportBeanInt", histSchema,
+			makeFCMOuterDepCountProvider(histSchema, "H2", "s0", "p02")).DependingOn("s0")
+		return s0, h0, h1, h2
+	}
+	steps := []fcmOuterForwardStep{
+		{fcmBeanInt{ID: "E1", P00: 0, P01: 0, P02: 0, P03: 1}, [][]string{{"E1", "", "", ""}}},
+		{fcmBeanInt{ID: "E2", P00: 0, P01: 1, P02: 1, P03: 1}, [][]string{{"E2", "", "", ""}}},
+		{fcmBeanInt{ID: "E3", P00: 1, P01: 1, P02: 1, P03: 1}, [][]string{{"E3", "H01", "H11", "H21"}}},
+		{fcmBeanInt{ID: "E4", P00: 1, P01: 0, P02: 1, P03: 1}, [][]string{{"E4", "H01", "", ""}}},
+		{fcmBeanInt{ID: "E5", P00: 4, P01: 4, P02: 4, P03: 2}, [][]string{{"E5", "H02", "H12", "H22"}}},
+	}
+
+	t.Run("s0-left-h0-left-h1-left-h2", func(t *testing.T) {
+		env := newFCMEnvironmentWithInt(t)
+		histSchema := fcmHistSchema(t, env)
+		s0, h0, h1, h2 := sources(env, histSchema)
+		query := JoinChain(JoinSource(s0)).
+			LeftOuterJoin(JoinSource(h0), OnSourcesEqual(0, Field[fcmBeanInt, int]("p03"), 1, Field[map[string]any, int]("index"))).
+			LeftOuterJoin(JoinSource(h1), OnSourcesEqual(1, Field[map[string]any, int]("index"), 2, Field[map[string]any, int]("index"))).
+			LeftOuterJoin(JoinSource(h2), OnSourcesEqual(2, Field[map[string]any, int]("index"), 3, Field[map[string]any, int]("index"))).
+			Select(
+				SelectFrom(0, "id", Field[fcmBeanInt, string]("id")),
+				SelectFrom(1, "valh0", Field[map[string]any, string]("val")),
+				SelectFrom(2, "valh1", Field[map[string]any, string]("val")),
+				SelectFrom(3, "valh2", Field[map[string]any, string]("val")),
+			).Query(StatementName("fcm-outer-1s3h-forward-left"))
+		fcmOuterRunForwardMatrix(t, env, query, []string{"id", "valh0", "valh1", "valh2"}, steps)
+	})
+
+	t.Run("h0-right-s0-left-h1-full-h2", func(t *testing.T) {
+		env := newFCMEnvironmentWithInt(t)
+		histSchema := fcmHistSchema(t, env)
+		s0, h0, h1, h2 := sources(env, histSchema)
+		query := JoinChain(JoinSource(h0)).
+			RightOuterJoin(JoinSource(s0), OnSourcesEqual(1, Field[fcmBeanInt, int]("p03"), 0, Field[map[string]any, int]("index"))).
+			LeftOuterJoin(JoinSource(h1), OnSourcesEqual(0, Field[map[string]any, int]("index"), 2, Field[map[string]any, int]("index"))).
+			FullOuterJoin(JoinSource(h2), OnSourcesEqual(2, Field[map[string]any, int]("index"), 3, Field[map[string]any, int]("index"))).
+			Select(
+				SelectFrom(1, "id", Field[fcmBeanInt, string]("id")),
+				SelectFrom(0, "valh0", Field[map[string]any, string]("val")),
+				SelectFrom(2, "valh1", Field[map[string]any, string]("val")),
+				SelectFrom(3, "valh2", Field[map[string]any, string]("val")),
+			).Query(StatementName("fcm-outer-1s3h-forward-mixed"))
+		fcmOuterRunForwardMatrix(t, env, query, []string{"id", "valh0", "valh1", "valh2"}, steps)
+	})
+}
+
+// TestFromClauseMethodOuterOneStreamThreeHistForwardSubordinateChainParity
+// mirrors tryAssertionFive (java-runtime-9cc6163d0e611f7d3020): each method
+// stream's val prefix chains off the previous stream's row
+// (fetchVal(s0.id||'-H0')/fetchVal(h0.val||'-H1')/fetchVal(h1.val||'-H2')).
+func TestFromClauseMethodOuterOneStreamThreeHistForwardSubordinateChainParity(t *testing.T) {
+	env := newFCMEnvironmentWithInt(t)
+	histSchema := fcmHistSchema(t, env)
+	s0 := fcmOuterLastEventS0(env)
+	h0 := FromMethodOn[map[string]any](env, "h0", "SupportBeanInt", histSchema,
+		makeFCMOuterIDProvider(histSchema, "s0", "-H0", "p00")).DependingOn("s0")
+	h1 := FromMethodOn[map[string]any](env, "h1", "SupportBeanInt", histSchema,
+		makeFCMDependentHistProvider(histSchema, "h0", "-H1", "p01")).DependingOn("h0")
+	h2 := FromMethodOn[map[string]any](env, "h2", "SupportBeanInt", histSchema,
+		makeFCMDependentHistProvider(histSchema, "h1", "-H2", "p02")).DependingOn("h1")
+	query := JoinChain(JoinSource(s0)).
+		LeftOuterJoin(JoinSource(h0), OnSourcesEqual(0, Field[fcmBeanInt, int]("p03"), 1, Field[map[string]any, int]("index"))).
+		LeftOuterJoin(JoinSource(h1), OnSourcesEqual(1, Field[map[string]any, int]("index"), 2, Field[map[string]any, int]("index"))).
+		LeftOuterJoin(JoinSource(h2), OnSourcesEqual(2, Field[map[string]any, int]("index"), 3, Field[map[string]any, int]("index"))).
+		Select(
+			SelectFrom(0, "id", Field[fcmBeanInt, string]("id")),
+			SelectFrom(1, "valh0", Field[map[string]any, string]("val")),
+			SelectFrom(2, "valh1", Field[map[string]any, string]("val")),
+			SelectFrom(3, "valh2", Field[map[string]any, string]("val")),
+		).Query(StatementName("fcm-outer-1s3h-forward-chain"))
+	fcmOuterRunForwardMatrix(t, env, query, []string{"id", "valh0", "valh1", "valh2"}, []fcmOuterForwardStep{
+		{fcmBeanInt{ID: "E1", P00: 0, P01: 0, P02: 0, P03: 1}, [][]string{{"E1", "", "", ""}}},
+		{fcmBeanInt{ID: "E2", P00: 0, P01: 1, P02: 1, P03: 1}, [][]string{{"E2", "", "", ""}}},
+		{fcmBeanInt{ID: "E3", P00: 1, P01: 1, P02: 1, P03: 1}, [][]string{{"E3", "E3-H01", "E3-H01-H11", "E3-H01-H11-H21"}}},
+		{fcmBeanInt{ID: "E4", P00: 1, P01: 0, P02: 1, P03: 1}, [][]string{{"E4", "E4-H01", "", ""}}},
+		{fcmBeanInt{ID: "E5", P00: 4, P01: 4, P02: 4, P03: 2}, [][]string{{"E5", "E5-H02", "E5-H02-H12", "E5-H02-H12-H22"}}},
+	})
+}
+
 // TestFromClauseMethodOuterInvalidParity mirrors EPLFromClauseMethodInvalid:
 // a method stream may not depend on its own outer-join child/descendant, and
 // a required stream may not depend on an optional (full-outer) stream.

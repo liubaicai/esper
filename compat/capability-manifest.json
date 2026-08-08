@@ -1268,7 +1268,6 @@
         "method cache LRU/expiry and join performance variants",
         "variable-driven method sources and context-variable bindings",
         "multikey/array-key method joins",
-        "outer forward/3-hist subordinate exact matrices (OuterNStream tryAssertionThree/Four/Five)",
         "method result as parameter and UDF/script-returning-event paths",
         "full Java method metadata and invalid-rule diagnostics parity"
       ],
@@ -1295,7 +1294,10 @@
         "TestFromClauseMethodOuterOneStreamTwoHistStarSubordinateLeftRightParity",
         "TestFromClauseMethodOuterTwoStreamOneHistStarSubordinateLeftRightParity",
         "TestFromClauseMethodOuterOneStreamTwoHistStarNoSubordinateLeftRightParity",
-        "TestFromClauseMethodOuterInvalidParity"
+        "TestFromClauseMethodOuterInvalidParity",
+        "TestFromClauseMethodOuterOneStreamTwoHistForwardSubordinateParity",
+        "TestFromClauseMethodOuterOneStreamThreeHistForwardSubordinateParity",
+        "TestFromClauseMethodOuterOneStreamThreeHistForwardSubordinateChainParity"
       ],
       "javaRuntimeIds": [
         "java-runtime-46f715ed2a74ce455f5e",
@@ -11067,7 +11069,7 @@
       ],
       "id": "case.epl-fromclausemethod-basic",
       "status": "partial",
-      "difference": "Go provides typed MethodProvider/MethodProviderFunc and FromMethodOn/FromMethod builders instead of Java reflection-based static method invocation. The mapped slice covers no-argument array/object returns, method result returned as Map/POJO/ObjectArray, overloaded parameter dispatch by the provider, basic invalid-build checks for unknown trigger stream and nil provider, N-stream method-historical joins with star-subordinate CartesianLast, forward/chain subordinate and joined-keepall semantics, 2-stream/3-stream alias-driven subordinate lookups, variable-driven 3-historical pure/no-subordinate, 1-subordinate and chained-subordinate snapshots, named-window-twice aliased method joins (Stream.As logical source aliases), and outer N-stream joins: inner/left/right/full chained variants of the 1-stream-2-hist and 2-stream-1-hist subordinate matrices, evaluate-once constant-argument method streams (Stream.EvaluateOnce) seeded once at deployment with outer placeholders visible to the iterator, and unsatisfiable outer-dependency build diagnostics. Esper anchors every outer-join tuple on the dependency-owning stream: dependency-bound method rows never anchor placeholder tuples (joinStoredTupleHasAnchor), and a partial tuple whose accumulated streams are not referenced by a later outer edge passes through unchanged (joinChainedEdgeAnchored). Java NoSubordinate second textual variant (h1 left outer join s0 right outer join h0) asserts the identical tryAssertionSeven matrix in Java and is modeled through the observably equivalent s0-anchored right-outer chain. Cache LRU/expiry, context bindings, multikey/array-key joins, outer forward/3-hist subordinate exact matrices, join performance and full Java method footprint/return-type diagnostics remain open.",
+      "difference": "Go provides typed MethodProvider/MethodProviderFunc and FromMethodOn/FromMethod builders instead of Java reflection-based static method invocation. The mapped slice covers no-argument array/object returns, method result returned as Map/POJO/ObjectArray, overloaded parameter dispatch by the provider, basic invalid-build checks for unknown trigger stream and nil provider, N-stream method-historical joins with star-subordinate CartesianLast, forward/chain subordinate and joined-keepall semantics, 2-stream/3-stream alias-driven subordinate lookups, variable-driven 3-historical pure/no-subordinate, 1-subordinate and chained-subordinate snapshots, named-window-twice aliased method joins (Stream.As logical source aliases), and outer N-stream joins: inner/left/right/full chained variants of the 1-stream-2-hist and 2-stream-1-hist subordinate matrices, evaluate-once constant-argument method streams (Stream.EvaluateOnce) seeded once at deployment with outer placeholders visible to the iterator, unsatisfiable outer-dependency build diagnostics, and the outer forward matrices: 1-stream-2-hist/1-stream-3-hist #lastevent forward subordinate left-outer chains, the mixed right/left/full 3-hist variant run as declared, and the chained-prefix 3-hist variant (fetchVal(s0.id||-H0)/fetchVal(h0.val||-H1)/fetchVal(h1.val||-H2)). Esper anchors every outer-join tuple on the dependency-owning stream: dependency-bound method rows never anchor placeholder tuples (joinStoredTupleHasAnchor), and a partial tuple whose accumulated streams are not referenced by a later outer edge passes through unchanged (joinChainedEdgeAnchored). Java NoSubordinate second textual variant (h1 left outer join s0 right outer join h0) asserts the identical tryAssertionSeven matrix in Java and is modeled through the observably equivalent s0-anchored right-outer chain. Cache LRU/expiry, context bindings, multikey/array-key joins, join performance and full Java method footprint/return-type diagnostics remain open.",
       "javaRuntimeIds": [
         "java-runtime-46f715ed2a74ce455f5e",
         "java-runtime-2c46a2d3cde0e7a5cac3",
@@ -11140,7 +11142,10 @@
         "TestFromClauseMethodOuterOneStreamTwoHistStarSubordinateLeftRightParity",
         "TestFromClauseMethodOuterTwoStreamOneHistStarSubordinateLeftRightParity",
         "TestFromClauseMethodOuterOneStreamTwoHistStarNoSubordinateLeftRightParity",
-        "TestFromClauseMethodOuterInvalidParity"
+        "TestFromClauseMethodOuterInvalidParity",
+        "TestFromClauseMethodOuterOneStreamTwoHistForwardSubordinateParity",
+        "TestFromClauseMethodOuterOneStreamThreeHistForwardSubordinateParity",
+        "TestFromClauseMethodOuterOneStreamThreeHistForwardSubordinateChainParity"
       ]
     }
   ],
