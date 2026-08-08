@@ -1236,7 +1236,12 @@
         "EPLFromClauseMethodDifferentReturnTypes",
         "EPLFromClauseMethodOverloaded",
         "EPLFromClauseMethodInvalid",
-        "EPLFromClauseMethod1Stream2HistStarSubordinateJoinedKeepall"
+        "EPLFromClauseMethod1Stream2HistStarSubordinateJoinedKeepall",
+        "EPLFromClauseMethod1Stream2HistStarSubordinateCartesianLast",
+        "EPLFromClauseMethod1Stream2HistForwardSubordinate",
+        "EPLFromClauseMethod1Stream3HistStarSubordinateCartesianLast",
+        "EPLFromClauseMethod1Stream3HistForwardSubordinate",
+        "EPLFromClauseMethod1Stream3HistChainSubordinate"
       ],
       "id": "epl.fromclausemethod",
       "summary": "Method-backed historical streams (method source) with array/object/single return, overloaded resolution, multiple representations and join/FAF usage",
@@ -1249,10 +1254,11 @@
       ],
       "phase": 2,
       "remaining": [
-        "N-stream dependent/independent join variants and outer joins",
+        "2-stream/3-stream method-historical star-subordinate, pure-no-subordinate and NW-twice variants",
         "method cache LRU/expiry and join performance variants",
         "variable-driven method sources and context-variable bindings",
         "multikey/array-key method joins",
+        "outer joins (OuterNStream)",
         "method result as parameter and UDF/script-returning-event paths",
         "full Java method metadata and invalid-rule diagnostics parity"
       ],
@@ -1263,7 +1269,12 @@
         "TestFromClauseMethodDifferentReturnTypesPOJOParity",
         "TestFromClauseMethodDifferentReturnTypesObjectArrayParity",
         "TestFromClauseMethodOverloadedParity",
-        "TestFromClauseMethodInvalidParity"
+        "TestFromClauseMethodInvalidParity",
+        "TestFromClauseMethodOneStreamTwoHistStarSubordinateCartesianLastParity",
+        "TestFromClauseMethodOneStreamTwoHistForwardSubordinateParity",
+        "TestFromClauseMethodOneStreamThreeHistStarSubordinateCartesianLastParity",
+        "TestFromClauseMethodOneStreamThreeHistForwardSubordinateParity",
+        "TestFromClauseMethodOneStreamThreeHistChainSubordinateParity"
       ],
       "javaRuntimeIds": [
         "java-runtime-46f715ed2a74ce455f5e",
@@ -1272,7 +1283,15 @@
         "java-runtime-b10d858855e19e7ee556",
         "java-runtime-67fc960beba42e68707d",
         "java-runtime-fcf85edd19810058de22",
-        "java-runtime-8f8296005b6297feb52d"
+        "java-runtime-8f8296005b6297feb52d",
+        "java-runtime-3be00366216aea3c967d",
+        "java-runtime-f6b78c563ee22b6bc71d",
+        "java-runtime-b2283f546f03c3d53930",
+        "java-runtime-40574a2ed45c7fbf33d3",
+        "java-runtime-c3578b44719efaa0b38b",
+        "java-runtime-51307ad5fea63359ec49",
+        "java-runtime-9cc6163d0e611f7d3020",
+        "java-runtime-93978f529b48869200a6"
       ]
     }
   ],
@@ -11003,11 +11022,16 @@
         "EPLFromClauseMethodArrayNoArg",
         "EPLFromClauseMethodObjectNoArg",
         "EPLFromClauseMethodInvalid",
-        "EPLFromClauseMethod1Stream2HistStarSubordinateJoinedKeepall"
+        "EPLFromClauseMethod1Stream2HistStarSubordinateJoinedKeepall",
+        "EPLFromClauseMethod1Stream2HistStarSubordinateCartesianLast",
+        "EPLFromClauseMethod1Stream2HistForwardSubordinate",
+        "EPLFromClauseMethod1Stream3HistStarSubordinateCartesianLast",
+        "EPLFromClauseMethod1Stream3HistForwardSubordinate",
+        "EPLFromClauseMethod1Stream3HistChainSubordinate"
       ],
       "id": "case.epl-fromclausemethod-basic",
       "status": "partial",
-      "difference": "Go provides typed MethodProvider/MethodProviderFunc and FromMethodOn/FromMethod builders instead of Java reflection-based static method invocation. The mapped slice covers no-argument array/object returns, method result returned as Map/POJO/ObjectArray, overloaded parameter dispatch by the provider, and basic invalid-build checks for unknown trigger stream and nil provider. N-stream joins, cache LRU/expiry, variable/context bindings, multikey/array-key joins, and full Java method footprint/return-type diagnostics remain open.",
+      "difference": "Go provides typed MethodProvider/MethodProviderFunc and FromMethodOn/FromMethod builders instead of Java reflection-based static method invocation. The mapped slice covers no-argument array/object returns, method result returned as Map/POJO/ObjectArray, overloaded parameter dispatch by the provider, basic invalid-build checks for unknown trigger stream and nil provider, and N-stream method-historical joins with star-subordinate CartesianLast, forward/chain subordinate and joined-keepall semantics. Cache LRU/expiry, variable/context bindings, multikey/array-key joins, 2-stream/3-stream/NW-twice method joins, pure-no-subordinate combinations, outer joins, join performance and full Java method footprint/return-type diagnostics remain open.",
       "javaRuntimeIds": [
         "java-runtime-46f715ed2a74ce455f5e",
         "java-runtime-2c46a2d3cde0e7a5cac3",
@@ -11015,7 +11039,15 @@
         "java-runtime-b10d858855e19e7ee556",
         "java-runtime-67fc960beba42e68707d",
         "java-runtime-fcf85edd19810058de22",
-        "java-runtime-8f8296005b6297feb52d"
+        "java-runtime-8f8296005b6297feb52d",
+        "java-runtime-3be00366216aea3c967d",
+        "java-runtime-f6b78c563ee22b6bc71d",
+        "java-runtime-b2283f546f03c3d53930",
+        "java-runtime-40574a2ed45c7fbf33d3",
+        "java-runtime-c3578b44719efaa0b38b",
+        "java-runtime-51307ad5fea63359ec49",
+        "java-runtime-9cc6163d0e611f7d3020",
+        "java-runtime-93978f529b48869200a6"
       ],
       "evidence": [
         "java-runtime-inventory",
@@ -11045,7 +11077,12 @@
         "TestFromClauseMethodDifferentReturnTypesObjectArrayParity",
         "TestFromClauseMethodOverloadedParity",
         "TestFromClauseMethodInvalidParity",
-        "TestFromClauseMethodOneStreamTwoHistJoinedKeepallParity"
+        "TestFromClauseMethodOneStreamTwoHistJoinedKeepallParity",
+        "TestFromClauseMethodOneStreamTwoHistStarSubordinateCartesianLastParity",
+        "TestFromClauseMethodOneStreamTwoHistForwardSubordinateParity",
+        "TestFromClauseMethodOneStreamThreeHistStarSubordinateCartesianLastParity",
+        "TestFromClauseMethodOneStreamThreeHistForwardSubordinateParity",
+        "TestFromClauseMethodOneStreamThreeHistChainSubordinateParity"
       ]
     }
   ],
