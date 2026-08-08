@@ -9622,7 +9622,10 @@
         "java-runtime-d08cfa82fd92a8e36daf",
         "java-runtime-8e6bf764e892da3054cc",
         "java-runtime-ce59597514a34ae4be1e",
-        "java-runtime-c95712eb926e95925f93"
+        "java-runtime-c95712eb926e95925f93",
+        "java-runtime-81e4600dcd9eb3662030",
+        "java-runtime-c957d42efacb559ec6a9",
+        "java-runtime-27292b381d32d3e536a2"
       ],
       "javaNames": [
         "EPLDatabaseSimpleJoinLeft",
@@ -9658,7 +9661,10 @@
         "EPLDatabaseExpressionPoll",
         "EPLDatabaseNullSelect",
         "EPLDatabaseSubstitutionParameter",
-        "EPLDatabaseSQLTextParamSubquery"
+        "EPLDatabaseSQLTextParamSubquery",
+        "EPLDatabaseOutputColumnConversion",
+        "EPLDatabaseInputParameterConversion",
+        "EPLDatabaseOutputRowConversion"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java",
@@ -9670,7 +9676,8 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/fromclausemethod/EPLFromClauseMethod.java",
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/fromclausemethod/EPLFromClauseMethodNStream.java",
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/fromclausemethod/EPLFromClauseMethodOuterNStream.java",
-        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabase2StreamOuterJoin.java"
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabase2StreamOuterJoin.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseHintHook.java"
       ],
       "goTests": [
         "TestSQLHistoricalProviderMapsRowsAndBindsArguments",
@@ -9736,7 +9743,10 @@
         "TestDatabaseNoJoinExpressionPollMatchesJava",
         "TestDatabaseNoJoinVariablesPollMatchesJava",
         "TestDatabaseNoJoinSubstitutionParameterMatchesJava",
-        "TestDatabaseNoJoinSQLTextParamSubqueryMatchesJava"
+        "TestDatabaseNoJoinSQLTextParamSubqueryMatchesJava",
+        "TestDatabaseHintOutputColumnConversionMatchesJava",
+        "TestDatabaseHintInputParameterConversionMatchesJava",
+        "TestDatabaseHintOutputRowConversionMatchesJava"
       ],
       "tags": [
         "correctness",
