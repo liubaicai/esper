@@ -43,13 +43,16 @@ type Binding struct {
 // DMLSpec describes a parameterized DML statement. Retry is the total number
 // of attempts; zero means one attempt. RetryInterval is context-cancellable.
 type DMLSpec struct {
-	Executor      Executor
-	Statement     string
-	Bindings      []Binding
-	Prepare       bool
-	Retry         int
-	RetryInterval time.Duration
-	Placeholder   func(index int) string
+	Executor         Executor
+	Statement        string
+	Bindings         []Binding
+	Prepare          bool
+	Retry            int
+	RetryInterval    time.Duration
+	Placeholder      func(index int) string
+	WorkExecutor     WorkExecutor
+	ExecutorName     string
+	ExecutorServices *ExecutorServices
 }
 
 // DMLSink executes a DML statement for each event. It owns prepared
@@ -58,15 +61,21 @@ type DMLSink struct {
 	manager *connectors.StateManager
 	spec    DMLSpec
 
-	mu   sync.Mutex
-	stmt *sql.Stmt
+	mu          sync.Mutex
+	lifecycleMu sync.RWMutex
+	stmt        *sql.Stmt
 }
 
 func NewDMLSink(spec DMLSpec) (*DMLSink, error) {
 	if err := validateDMLSpec(spec); err != nil {
 		return nil, err
 	}
+	workExecutor, err := resolveWorkExecutor(spec.WorkExecutor, spec.ExecutorName, spec.ExecutorServices)
+	if err != nil {
+		return nil, err
+	}
 	spec.Bindings = append([]Binding(nil), spec.Bindings...)
+	spec.WorkExecutor = workExecutor
 	return &DMLSink{manager: connectors.NewStateManager(), spec: spec}, nil
 }
 
@@ -82,6 +91,12 @@ func validateDMLSpec(spec DMLSpec) error {
 	}
 	if spec.RetryInterval < 0 {
 		return fmt.Errorf("db: DML RetryInterval cannot be negative")
+	}
+	if spec.WorkExecutor != nil && strings.TrimSpace(spec.ExecutorName) != "" {
+		return fmt.Errorf("db: DML WorkExecutor and ExecutorName are mutually exclusive")
+	}
+	if strings.TrimSpace(spec.ExecutorName) != "" && spec.ExecutorServices == nil {
+		return fmt.Errorf("db: DML ExecutorServices is required for ExecutorName %q", spec.ExecutorName)
 	}
 	if spec.Prepare {
 		if _, ok := spec.Executor.(preparer); !ok {
@@ -108,6 +123,8 @@ func (s *DMLSink) Start() error {
 	if err := s.manager.Start(); err != nil {
 		return err
 	}
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
 	if s.spec.Prepare {
 		s.mu.Lock()
 		stmt, err := s.spec.Executor.(preparer).PrepareContext(context.Background(), s.spec.Statement)
@@ -130,6 +147,8 @@ func (s *DMLSink) Stop() error {
 	if err := s.manager.Stop(); err != nil {
 		return err
 	}
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
 	return s.closeStatement()
 }
 
@@ -154,6 +173,8 @@ func (s *DMLSink) Destroy() error {
 	if err := s.manager.Destroy(); err != nil {
 		return err
 	}
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
 	return s.closeStatement()
 }
 
@@ -172,13 +193,47 @@ func (s *DMLSink) Write(ctx context.Context, value any) error {
 	if err := s.manager.RequireStarted(); err != nil {
 		return err
 	}
-	record, err := valueRecord(value)
+	args, err := s.dmlArgs(value)
 	if err != nil {
 		return err
 	}
+	return s.executeWithLifecycle(ctx, args)
+}
+
+// WriteAsync submits one DML action to the configured work executor. With no
+// work executor configured, the default same-thread executor runs it inline.
+// Submission errors are returned immediately; SQL and retry errors are
+// returned by Task.Wait.
+func (s *DMLSink) WriteAsync(ctx context.Context, value any) (*Task, error) {
+	if s == nil {
+		return nil, connectors.ErrDestroyed
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err := s.manager.RequireStarted(); err != nil {
+		return nil, err
+	}
+	args, err := s.dmlArgs(value)
+	if err != nil {
+		return nil, err
+	}
+	return s.spec.WorkExecutor.Submit(ctx, func(workCtx context.Context) error {
+		return s.executeWithLifecycle(workCtx, args)
+	})
+}
+
+func (s *DMLSink) dmlArgs(value any) ([]any, error) {
+	record, err := valueRecord(value)
+	if err != nil {
+		return nil, err
+	}
 	bindings, err := normalizeBindings(s.spec.Bindings)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	args := make([]any, len(bindings))
 	for index, binding := range bindings {
@@ -188,7 +243,7 @@ func (s *DMLSink) Write(ctx context.Context, value any) error {
 		}
 		args[index] = recordProperty(record, binding.Property)
 	}
-	return s.execute(ctx, args)
+	return args, nil
 }
 
 func (s *DMLSink) WriteBatch(ctx context.Context, values ...any) error {
@@ -198,6 +253,15 @@ func (s *DMLSink) WriteBatch(ctx context.Context, values ...any) error {
 		}
 	}
 	return nil
+}
+
+func (s *DMLSink) executeWithLifecycle(ctx context.Context, args []any) error {
+	s.lifecycleMu.RLock()
+	defer s.lifecycleMu.RUnlock()
+	if err := s.manager.RequireStarted(); err != nil {
+		return err
+	}
+	return s.execute(ctx, args)
 }
 
 func (s *DMLSink) execute(ctx context.Context, args []any) error {
@@ -265,14 +329,17 @@ type Column struct {
 // UpsertSpec describes update-then-insert semantics for a table. Identifiers
 // are validated before SQL is generated; values always remain parameters.
 type UpsertSpec struct {
-	Executor      Executor
-	Table         string
-	Keys          []Column
-	Values        []Column
-	Prepare       bool
-	Retry         int
-	RetryInterval time.Duration
-	Placeholder   func(index int) string
+	Executor         Executor
+	Table            string
+	Keys             []Column
+	Values           []Column
+	Prepare          bool
+	Retry            int
+	RetryInterval    time.Duration
+	Placeholder      func(index int) string
+	WorkExecutor     WorkExecutor
+	ExecutorName     string
+	ExecutorServices *ExecutorServices
 }
 
 // UpsertSink implements the same key/value behavior as EsperIO's
@@ -283,17 +350,23 @@ type UpsertSink struct {
 	insert  string
 	update  string
 
-	mu         sync.Mutex
-	insertStmt *sql.Stmt
-	updateStmt *sql.Stmt
+	mu          sync.Mutex
+	lifecycleMu sync.RWMutex
+	insertStmt  *sql.Stmt
+	updateStmt  *sql.Stmt
 }
 
 func NewUpsertSink(spec UpsertSpec) (*UpsertSink, error) {
 	if err := validateUpsertSpec(spec); err != nil {
 		return nil, err
 	}
+	workExecutor, err := resolveWorkExecutor(spec.WorkExecutor, spec.ExecutorName, spec.ExecutorServices)
+	if err != nil {
+		return nil, err
+	}
 	spec.Keys = append([]Column(nil), spec.Keys...)
 	spec.Values = append([]Column(nil), spec.Values...)
+	spec.WorkExecutor = workExecutor
 	placeholder := spec.Placeholder
 	if placeholder == nil {
 		placeholder = func(int) string { return "?" }
@@ -357,6 +430,12 @@ func validateUpsertSpec(spec UpsertSpec) error {
 	if spec.Retry < 0 || spec.RetryInterval < 0 {
 		return fmt.Errorf("db: upsert retry settings cannot be negative")
 	}
+	if spec.WorkExecutor != nil && strings.TrimSpace(spec.ExecutorName) != "" {
+		return fmt.Errorf("db: upsert WorkExecutor and ExecutorName are mutually exclusive")
+	}
+	if strings.TrimSpace(spec.ExecutorName) != "" && spec.ExecutorServices == nil {
+		return fmt.Errorf("db: upsert ExecutorServices is required for ExecutorName %q", spec.ExecutorName)
+	}
 	if spec.Prepare {
 		if _, ok := spec.Executor.(preparer); !ok {
 			return fmt.Errorf("db: upsert executor does not support prepared statements")
@@ -379,6 +458,8 @@ func (s *UpsertSink) Start() error {
 	if err := s.manager.Start(); err != nil {
 		return err
 	}
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
 	if s.spec.Prepare {
 		preparer := s.spec.Executor.(preparer)
 		insertStmt, err := preparer.PrepareContext(context.Background(), s.insert)
@@ -408,6 +489,8 @@ func (s *UpsertSink) Stop() error {
 	if err := s.manager.Stop(); err != nil {
 		return err
 	}
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
 	return s.closeStatements()
 }
 
@@ -432,6 +515,8 @@ func (s *UpsertSink) Destroy() error {
 	if err := s.manager.Destroy(); err != nil {
 		return err
 	}
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
 	return s.closeStatements()
 }
 
@@ -448,9 +533,41 @@ func (s *UpsertSink) Write(ctx context.Context, value any) error {
 	if err := s.manager.RequireStarted(); err != nil {
 		return err
 	}
-	record, err := valueRecord(value)
+	keys, values, err := s.upsertArgs(value)
 	if err != nil {
 		return err
+	}
+	return s.executeWithLifecycle(ctx, keys, values)
+}
+
+// WriteAsync submits one update-then-insert action to the configured work
+// executor. SQL and retry errors are available from Task.Wait.
+func (s *UpsertSink) WriteAsync(ctx context.Context, value any) (*Task, error) {
+	if s == nil {
+		return nil, connectors.ErrDestroyed
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err := s.manager.RequireStarted(); err != nil {
+		return nil, err
+	}
+	keys, values, err := s.upsertArgs(value)
+	if err != nil {
+		return nil, err
+	}
+	return s.spec.WorkExecutor.Submit(ctx, func(workCtx context.Context) error {
+		return s.executeWithLifecycle(workCtx, keys, values)
+	})
+}
+
+func (s *UpsertSink) upsertArgs(value any) ([]any, []any, error) {
+	record, err := valueRecord(value)
+	if err != nil {
+		return nil, nil, err
 	}
 	keys := make([]any, len(s.spec.Keys))
 	values := make([]any, len(s.spec.Values))
@@ -460,8 +577,7 @@ func (s *UpsertSink) Write(ctx context.Context, value any) error {
 	for index, column := range s.spec.Values {
 		values[index] = recordProperty(record, column.Property)
 	}
-	args := append(append([]any(nil), values...), keys...)
-	return s.execute(ctx, args, keys, values)
+	return keys, values, nil
 }
 
 func (s *UpsertSink) WriteBatch(ctx context.Context, values ...any) error {
@@ -471,6 +587,16 @@ func (s *UpsertSink) WriteBatch(ctx context.Context, values ...any) error {
 		}
 	}
 	return nil
+}
+
+func (s *UpsertSink) executeWithLifecycle(ctx context.Context, keys, values []any) error {
+	s.lifecycleMu.RLock()
+	defer s.lifecycleMu.RUnlock()
+	if err := s.manager.RequireStarted(); err != nil {
+		return err
+	}
+	args := append(append([]any(nil), values...), keys...)
+	return s.execute(ctx, args, keys, values)
 }
 
 func (s *UpsertSink) execute(ctx context.Context, updateArgs, keys, values []any) error {

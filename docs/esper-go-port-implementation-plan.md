@@ -1,12 +1,14 @@
 # Esper 9.0.0 Go 全量移植规划实施文档
 
+> 最新补充：Draft 2.79（2026-08-08），完成 EsperIO DB 命名 executor、same-thread fallback、异步 DML/Upsert work queue、Task 错误观察、关闭 drain 与生命周期复核；数据库/方法源 runtime 覆盖审计、MySQL/Maven 固定门禁与当前实测 disposition 仍见第 17.5 节。
+
 ## 1. 文档信息
 
 当前切片（Draft 2.77，2026-08-08）继续补齐 Context Table 物理分区和子查询索引共享语义：相同 primary key 可在不同 Context partition 独立存在，live `InsertIntoTable`/`UpsertIntoTable`/merge、分区内 select/update/delete、Context FAF snapshot 与 aggregate `IntoTable` scoped replacement 均已覆盖；temporal/initiated partition 释放时回收 Table scoped state 与 row ownership。Context-scoped Table 现支持相关子查询的当前分区 primary/secondary hash 与 equality-prefix + B-tree candidate；Named Window equality/hash 与 equality-prefix + range B-tree 子集支持自动 shared index、显式 index、consumer disable/no-index、multiple-index hint、确定性 index choice、multikey/array key 和更新删除后的索引重建；普通 FAF/Join 在没有当前分区变量时遍历 root/scoped index states，根状态有潜在 legacy rows 时相关子查询回退 ownership-aware snapshot。另补齐 Variant 流静态函数返回 concrete member 后写入 Variant-typed Named Window 的单列转换路径，以及相关子查询实时 listener/late-start 对照。完整跨 statement transaction、跨目标 routed side effect、listener/external resource rollback 和 transaction/concurrency trace 仍是后续项。
 
 | 项目 | 内容 |
 |---|---|
-| 文档状态 | Draft 2.77，补充 Context-scoped Table 的 scope-aware hash/primary/B-tree candidate、Named Window equality/hash 与 equality-prefix + range B-tree subquery shared-index 子集，以及 Variant 单列 method/UDF member conversion：相关 FAF 子查询在当前 partition 直接查对应物理 state；普通 Context FAF/Join 在无当前 partition 变量时合并 root/scoped candidate，根状态存在 legacy rows 时保留 ownership-aware snapshot fallback。此前已完成的 live `InsertIntoTable`/`UpsertIntoTable`/merge ownership、duplicate primary-key isolation、aggregate scoped replacement、生命周期回收、单源 Table/Named Window equality/range candidate、普通内连接及两流 outer optional side、Context candidate 与 B-tree ordered candidate，以及 `InfraUpdate` 全量更新/re-key 对照继续有效。Go 用 `NamedWindowSubqueryIndexSharing`、`SubqueryUseIndex`、`SubqueryNoIndex`、`SubqueryDisableIndexSharing` 和 `InsertEventIntoNamedWindow` 表达规则，不复制 Java `@Hint`/JVM query-plan hook 或静态反射 method 的 API 外形；已新增 multiple-index hint、结构化 index choice、显式/自动 multikey-array shared-index、live listener/late-start 和单列 concrete member materialization 对照；Context right/full-preserving/non-adjacent chain、JVM query-plan hook、Esper 完整成本/选择性模型和性能阈值仍列为后续项 |
+| 文档状态 | Draft 2.79，补充 EsperIO DB 的命名 fixed-worker executor、same-thread fallback、FIFO queue、graceful drain、context cancellation、panic/error observation、DML/Upsert async retry 和 Destroy 前执行复核；同时保留 Context-scoped Table 的 scope-aware hash/primary/B-tree candidate、Named Window equality/hash 与 equality-prefix + range B-tree subquery shared-index 子集，以及 Variant 单列 method/UDF member conversion。Go 用 `NamedWindowSubqueryIndexSharing`、`SubqueryUseIndex`、`SubqueryNoIndex`、`SubqueryDisableIndexSharing`、`InsertEventIntoNamedWindow` 和 `ExecutorServices` 表达规则/执行配置，不复制 Java `@Hint`/JVM query-plan hook、JNDI 或 EPL/XML 配置外形；XML/config parser、connection factory、SQL type binding、duplicate/error handler 与完整 Java trace 仍列为后续项 |
 | 历史增量状态 | Draft 2.22：在 sorted aggregate access 的不可变导航快照基础上补充 Fire-and-Forget named-window 快照、重复 key 桶、边界事件、`EventsBetween`、descending/navigable map 访问和对照测试登记；新增 Table 按主键 selector 的 target-row 绑定、缺失分组 Null 投影和 grouped sorted table Java 对照；声明表达式已补充 Context initiating/pattern Event、多行 `SubqueryEvents` 参数和 Map keep-all/where/`NullOnMultiple` cardinality 对照；Java `TestSuiteExprDefine` 5/5 通过。 |
 | 前序复核状态 | Draft 2.33（2026-08-07）：补充非分组聚合子查询 `SubqueryHaving` 的完整 inner-group 评估、outer-field 相关阈值、`SubqueryExistsValue` 以及带 options 的 IN/ANY/SOME/ALL；补充多列子查询结果的递归 fragment Schema、Row/Event 的标量 `GetFragment` 与 indexed `GetFragments` 运行时物化，并以 scalar/history/rows 三层对照测试固定 map/slice 结果不变。补充 TableColumn nested schema metadata 与 Table/Named Window representation 保留对照；本轮再补齐 `InfraOnMergeMatchNoMatch` 的 Go-native `CopyMatchingFields` wildcard 赋值、`InfraOnMergeInsertStream` 的 `ThenInsertInto`/`ThenInsertIntoWhen`/`ThenInsertIntoTarget` 有序 action-chain，以及 matched side-stream 读取 target-row 后继续 update 的边界，覆盖 Table/Named Window、source-only/target-only 字段、side-stream projection、条件 side-stream、目标字段作用域以及 new/old/target snapshot 语义；相关 case 已登记到 `compat/capability-manifest.json`。Java `TestSuiteInfraNWTable` 在 JDK 17/Maven 3.9.16 下 26/26 通过；Go 核心与本轮验证不依赖 MySQL，DB/SQL/connector 测试继续按需使用本机 `esper-java-mysql`。此前补充 `ClientExtendAggregationMultiFunction` 的 typed fluent provider、共享 `StateKey`、分组/窗口 Enter-Leave replay、过滤作用域、IntoTable/trigger 读取和 inline/invalid Build 对照；补充 `SortedMultiKey` 两级字典序及 alias/string/numeric 比较边界；补充 `InfraNWTableOnMerge` 的单侧 merge 分支、无条件 `WhenMatchedAny`/`WhenNotMatchedAny`/`WhenMatchedDeleteAny`、Table/Named Window new/old 对照及 Java runtime 映射。JDK 17（`C:\Program Files\Microsoft\jdk-17.0.20.8-hotspot`）、Maven 3.9.16（`C:\Users\baicai\AppData\Local\UniGetUI\Chocolatey\lib\maven\apache-maven-3.9.16`）可用；SQL/DB 相关测试按需使用本机 `esper-java-mysql`（MySQL 8.0，`127.0.0.1:3306`），核心/本轮测试不依赖 MySQL。 |
 | 历史修订（Draft 2.70，已由 Draft 2.72 取代） | 继续对照 Context `ContextKeyedSegmentedTable`（`java-runtime-f9d69a7108debefc522e`），为 live Table trigger 的 `InsertIntoTable`、`UpsertIntoTable`、merge not-matched insert 增加首次 ownership 注册，并在 live delete 后清理 row identity；`TestContextTableLiveInsertOwnershipMatchesEsper` 覆盖 A/B 分区、三种插入入口、更新分区字段后按原分区 selector FAF 删除以及归属清理。此前的 FAF mutation 失败恢复仍覆盖 Table/Named Window 根、Context 分区状态、ownership 和 pending queues；完整跨 statement transaction、跨目标 routed side effect、listener/external resource rollback、更广 Context Table live mutation 组合和 transaction/concurrency trace 仍列后续项。Java `@Hint`/`SupportQueryPlanIndexHook` 不作为 Go 契约；Java `TestSuiteContext` 17/17 通过，本轮不需要 MySQL Docker。 |
@@ -19,8 +21,9 @@
 | 本轮增量（继续 5） | Draft 2.68（2026-08-08）：继续审计 Context Table mutation。为每个 Table 行增加稳定内部 identity，并由 Engine 保存 table/context/row 到 partition 的 ownership 与首次代表 context properties；Context FAF 首次扫描绑定归属，后续更新 category/hash/key 字段或 primary key re-key 不重新分区。删除行和 DestroyContext 清理归属，回归测试强化了 negative category update 后仍由原 selector delete-all 的 Table 结果。普通 FAF mutation 的整体 rollback、live context insert 的首次 ownership 注册、跨 context row ownership 与 transaction/concurrency trace 仍开放；本轮不启动 MySQL Docker。 |
 | 本轮增量（继续 6） | Draft 2.69（2026-08-08）：为 FAF mutation 增加失败恢复边界。执行前快照目标 Table 或 Named Window（含 Context partition runtime）、Engine 的 Context Table ownership/partition IDs/next IDs；action 或 `processPendingRoutedEventsLocked` 返回错误时恢复这些状态并清空 pending dispatch/routed queues。新增 `TestOnDemandTableMutationRollsBackAfterMidBatchFailure`、`TestOnDemandNamedWindowMutationRollsBackAfterAssignmentFailure`、`TestOnDemandMutationRollsBackAfterRoutedProcessingFailure` 与 `TestOnDemandContextTableMutationRollsBackAcrossPartitions`，验证第一行/第一 partition 已成功后第二行/第二 partition assignment/type、route cycle limit 或 primary-key collision 不会留下半成品状态。该实现覆盖当前 FAF 目标存储，不宣称跨 statement、跨目标 routed side effect、listener/external resource 的完整事务回滚；live context insert ownership、并发 transaction 与完整 Java trace 仍开放；本轮不启动 MySQL Docker。 |
 | 本轮增量（继续 7） | Draft 2.70（2026-08-08）：对照 Java `ContextKeySegmentedInfra.ContextKeyedSegmentedTable`，新增 `context_table_live_test.go` 的 Go 链式测试，分别使用 `InsertIntoTable`、`UpsertIntoTable` 和 `MergeInsertIntoTable` 在 A/B Context 分区写入 Table；Engine 在 live action 成功后按稳定 row identity 保存首次 partition key、代表事件和 selector properties，后续 live update 改变分区字段不重新归属，Context FAF 用旧 A selector 仍可删除；live delete 同步回收 ownership。Java `TestSuiteContext` 17/17 通过；跨 context 相同主键隔离、完整 aggregate-into-table/Context Table transaction、listener/external resource 与更广 Java trace 仍保持后续项；本轮不启动 MySQL Docker。 |
- | 当前修订（最新） | Draft 2.77（2026-08-08）：继续对照 Java `ContextKeyedSegmentedTable`、`InfraNWTableFAFSubquery/FAFIndex`、`InfraNWTableSubqCorrelIndex` 与 `EventVariantSingleColumnConversion`，新增 Context-scoped Table 的 equality/range 子查询 candidate、单源 FAF all-state candidate、Named Window equality/hash 与 equality-prefix + range B-tree subquery shared-index 子集，以及 `InsertEventIntoNamedWindow` 的 concrete member 单列物化。`TestInfraFAFSubqueryContextScopedTableIndexCandidateParity` 验证相同 primary key 在 A/B partition 命中不同值并在 root legacy row 出现时回退 snapshot；`TestInfraFAFSubqueryContextScopedTableRangeIndexCandidateParity` 验证分区内 equality-prefix + B-tree range；`TestInfraFAFContextScopedTableIndexCandidateParity` 验证普通 Context FAF 合并 root/A/B 三组物理 state；`TestInfraNWTableSubqCorrelIndexSharingParity`/`TestInfraNWTableSubqCorrelIndexSharingContextPartitionParity` 验证自动/显式 hash index、consumer disable/no-index、Context partition inheritance 和 update/delete rebuild；新增 `TestInfraNWTableSubqCorrelIndexSharingBTreeParity` 验证全局与 Context partition 的自动 B-tree shared index、equality prefix + range、插入顺序与 update/delete rebuild；`TestInfraNWTableSubqCorrelIndexOptionValidationParity` 固定 missing-index、不可分析 predicate 与 no-index/explicit-index 冲突诊断；`TestInfraNWTableSubqCorrelIndexMultipleIndexHintsParity`、`TestInfraNWTableSubqCorrelIndexChoiceParity`、`TestInfraNWTableSubqIndexShareMultikeyArrayParity` 和 `TestInfraNWTableSubqCorrelIndexLiveListenerParity` 补齐 multiple-hint、结构化 index choice、显式/自动 multikey-array key、实时 listener/late-start。20 个 Java execution 已关闭上述可观察 fluent 子集，Variant 单列转换的 1 个 Java execution 也已有 Java/Go 对照证据；但不宣称 JVM query-plan hook、Esper 完整 cost/selectivity 模型或 10k/1M 性能 parity；跨 statement transaction、跨目标 routed side effect、listener/external resource rollback、更广 Context Table mutation、Context right/full chain candidate 和 transaction/concurrency trace 仍列后续项，本轮不需要 MySQL Docker。 |
+| 当前修订（最新） | Draft 2.79（2026-08-08）：继续对照 Java `ContextKeyedSegmentedTable`、`InfraNWTableFAFSubquery/FAFIndex`、`InfraNWTableSubqCorrelIndex` 与 `EventVariantSingleColumnConversion`，并完成 Java `ExecutorServices`/`ExecutorSameThread`/`RunnableDML`/`RunnableUpsert` 对应的 Go `ExecutorServices`、`SameThreadExecutor`、`AsyncExecutor`、`Task`、`DMLSink.WriteAsync` 与 `UpsertSink.WriteAsync`。固定 worker queue 支持命名解析、unknown/closed 错误、FIFO drain、取消、panic 转错误；sink 在排队任务真正执行时复核 `STARTED`，`Stop`/`Destroy` 通过读写锁避免关闭 prepared statement 与 SQL 执行并发，Go 最终失败经 `Task.Wait` 返回而不是静默吞掉。新增 `connectors/db/executor_test.go` 的 same-thread、并发、shutdown、retry、upsert、Destroy、命名 executor 和 race 对照；Java esperio-db 4 个测试仍为 2 通过、2 环境/fixture 差异。XML/config parser、connection factory/JNDI、SQL type binding、duplicate/error handler、Java 日志文本和完整 trace 仍保持开放；本轮 Go 定向切片不需要额外 MySQL，但全量门禁继续使用 `esper-java-mysql`。 |
 | 本轮增量（继续 8） | Draft 2.72（2026-08-08）：关闭 Context-scoped Table 的 FAF/index candidate 遗漏。`lookupManyAllScopes`、`lookupPrimaryManyAllScopes`、`lookupRangeManyAllScopes` 让普通 FAF/Join 的 Table candidate 合并 root 与所有已物化 scoped state；相关子查询根据保留 Context 变量查当前 scope，root state 有行时回退 ownership-aware snapshot。新增 `TestInfraFAFSubqueryContextScopedTableIndexCandidateParity`、`TestInfraFAFSubqueryContextScopedTableRangeIndexCandidateParity`、`TestInfraFAFContextScopedTableIndexCandidateParity`，覆盖 duplicate primary key partition isolation、hash/range lookup、legacy root fallback、full selector 和 index-hit count。Java `TestSuiteContext` 17/17 与既有 `TestSuiteInfraNWTable` 26/26 对照保持通过；本轮不启动 MySQL Docker。 |
+| 本轮实施（EsperIO DB executor） | Draft 2.79：Java `ExecutorServices`/`ExecutorSameThread`/`RunnableDML`/`RunnableUpsert` 已对应 Go `ExecutorServices`/`SameThreadExecutor`/`AsyncExecutor`/`Task` 与 DML/Upsert `WriteAsync`；覆盖 named queue、same-thread、FIFO drain、cancel、panic/error、retry、Destroy lifecycle re-check 和 `go test -race ./connectors/db`。Java XML/JNDI/config、connection factory、SQL type binding、duplicate/error handler、日志文本与完整 trace 仍开放。 |
 | Java 基线 | Esper 9.0.0，tag release_9.0.0，commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c |
 | Java 要求 | Java 17 |
 | Go 目标项目 | D:/Code/soc/bigsoc-esper |
@@ -154,7 +157,7 @@
 - regression-run 静态扫描到约 860 个 public test 入口方法。
 - examples 下有 17 个示例项目、34 个 Java 测试源文件和 181 个 Java 主源码文件，需要按用例价值转换为 Go 示例或端到端测试。
 - 回归标签包含多线程、性能、无效输入、即席查询、序列化、数据流、运行时操作、编译器操作和事件发送器等维度。
-- 当前 capability manifest 已建立 1,364 条关联、覆盖 1,338/4,136 个唯一 Java runtime（约 32.35% 的 Java runtime 对账/处置进度）；190 个 case 中 184 个 mapped、2 个 partial、4 个 approved-difference。该比例不是 Java/Go 行为 parity 通过率，也不是全量移植完成度。
+- 当前 capability manifest 已建立 1,364 条关联、覆盖 1,338/4,136 个唯一 Java runtime（约 32.35% 的 Java runtime 对账/处置进度）；191 个 case 中 185 个 mapped、2 个 partial、4 个 approved-difference。该比例不是 Java/Go 行为 parity 通过率，也不是全量移植完成度。
 - 除 regression-lib 外，common/compiler/runtime/common-avro/common-xmlxsd 共 371 个 Java 单元测试文件、regression-run 有 82 个入口源文件、EsperIO 共 58 个测试文件，也必须逐项分类；不能只迁移 RegressionExecution。
 - 17 个示例为 autoid、benchmark、cycledetect、marketdatafeed、matchmaker、namedwinquery、ohlcpluginview、qos_sla、rfidassetzone、runtimeconfig、servershell、stockticker、terminalsvc、terminalsvc-jse、transaction、trivia、virtualdw。
 
@@ -1284,6 +1287,7 @@ API 语义决策：Go 不提供 `select "*"` 字符串入口，而使用显式�
 
 - Java：`mvn -pl regression-run -Dtest=TestSuiteInfraNWTable -DfailIfNoTests=false -Dgpg.skip=true test`；PowerShell 调用 `mvn.cmd` 时将每个 `-D...` 参数整体加引号，JDK 17.0.20、Maven 3.9.16，`26/26` 通过。
 - Go：定向 `go test -run '^TestTriggerMultipleInsertBranchesMatchInfraMultipleInsert$' .`、全量 `go test ./...`、`go vet ./...`、`go test ./compat` 和 `go test -race -run 'TestTrigger|TestSubquery' .` 均通过；本轮已完成 trigger/subquery 竞态分片和 manifest 校验，完整 `go test -race ./...` 仍需按 CI 分片资源单独执行。
+
 - 外部依赖：本轮没有新增 MySQL 语义；DB/SQL/EsperIO 测试才按测试标签启用已有 `esper-java-mysql`（MySQL 8.0，`127.0.0.1:3306`），不把“容器可用”当作 core parity 证据。
 
 本机已发现 Java 17（`C:\Program Files\Microsoft\jdk-17.0.20.8-hotspot`），Maven 3.9.16 可执行文件位于 `C:\Users\baicai\AppData\Local\UniGetUI\Chocolatey\lib\maven\apache-maven-3.9.16\bin\mvn.cmd`。Chocolatey 因当前会话非管理员无法完成最后的环境变量写入，但不影响显式设置 `JAVA_HOME`/Maven 路径运行构建。随后在官方 `common/etc/regression/create_testdb.sql` 夹具和 MySQL 8.0.46 Docker 环境下，按 UTF-8、UTC、Java 17、Maven 3.9.16 执行 `regression-run` 全量基线：78 个 suite、860 个 JUnit 入口，857 个无失败/错误；`testEPLDatabaseJoin` 只出现 MySQL 诊断文本差异，`testEPLDatabaseJoinPerfNoCache` 触发容器/JDBC 性能阈值，均已记录为 approved difference；`TestSuiteMultithread` 首轮另有 `testMultithreadContextCountSimple` 波动，隔离重跑 41/41 通过，不能把它归入 Esper 语义失败。首轮计数和 disposition 固化在 `compat/java-regression-baseline.json`；Surefire 目录保留最近的全量分片/隔离报告，重现首轮结果以 JSON 基线中的命令和差异记录为准。
@@ -1970,6 +1974,82 @@ output-when 另外补了一条表达式矩阵：`TestOutputWhenExpressionLikeAnd
 
 本轮门禁结果：Java `mvn -pl regression-run '-Dtest=TestSuiteInfraNWTable' '-DfailIfNoTests=false' '-Dgpg.skip=true' test` 为 26/26、0 failures、0 errors；Go `go test ./... -count=1`、`go test ./compat -count=1`、`go vet ./...` 和 `go test -race . -count=1` 均通过。该切片只使用内存 Named Window/Table 与 Go fluent plan，不需要启动 MySQL Docker。
 
-本轮 Variant 单列转换补充（Draft 2.76，2026-08-08）：对照 Java `EventVariantSingleColumnConversion`，新增 Go `InsertEventIntoNamedWindow`，允许 `Func1`/方法表达式返回已注册 Variant member 的 concrete underlying 或 `Event`，在目标 PREDEFINED Variant Named Window 插入前完成 member schema materialization，保留 concrete `Schema`、Named Window `TypeName` 和窗口 retention。`TestVariantSingleColumnConversionMatchesEsper` 固定 `SupportBean(E1,1)` → `preProcessEvent` → `SupportBean(E2,0)`、`theString='E'` 无匹配及 snapshot identity；Java `TestSuiteEventVariant` 17/17、Go 定向测试和 `go test ./compat -count=1` 均通过。当前 manifest 为 190 个 case，其中 184 个 mapped、2 个 partial、4 个 approved-difference，1,364 条 Java runtime 关联覆盖 1,338/4,136 个唯一可执行 runtime；本轮不需要 MySQL Docker。
+本轮 Variant 单列转换补充（Draft 2.76，2026-08-08）：对照 Java `EventVariantSingleColumnConversion`，新增 Go `InsertEventIntoNamedWindow`，允许 `Func1`/方法表达式返回已注册 Variant member 的 concrete underlying 或 `Event`，在目标 PREDEFINED Variant Named Window 插入前完成 member schema materialization，保留 concrete `Schema`、Named Window `TypeName` 和窗口 retention。`TestVariantSingleColumnConversionMatchesEsper` 固定 `SupportBean(E1,1)` → `preProcessEvent` → `SupportBean(E2,0)`、`theString='E'` 无匹配及 snapshot identity；Java `TestSuiteEventVariant` 17/17、Go 定向测试和 `go test ./compat -count=1` 均通过。当前 manifest 为 191 个 case，其中 185 个 mapped、2 个 partial、4 个 approved-difference，1,364 条 Java runtime 关联覆盖 1,338/4,136 个唯一可执行 runtime；本轮不需要 MySQL Docker。
 
 本轮子查询实时 listener 补充（Draft 2.77，2026-08-08）：新增 `TestInfraNWTableSubqCorrelIndexLiveListenerParity`、`TestInfraNWTableSubqCorrelIndexChoiceLiveListenerParity` 和 `TestInfraNWTableSubqIndexShareMultikeyArrayLiveListenerParity`，用 `From`/`FromAny`/`FromNamedWindow`/`FromTable`、`SubqueryValueWithOptions` 和 `Statement.Subscribe` 对照 Java `InfraNWTableSubqCorrelIndexAssertion`、`ShareIndexChoice`/`NoIndexShareIndexChoice` 及 single/two-array execution。覆盖自动 shared index、无共享、显式 index、consumer disable、no-index、复合 equality/range 选择、数组 key、late-start 重部署、new-only listener batch、结果顺序与 physical lookup counter；multiple-index-hint 仍只有 Java JVM plan-hook 证据。没有 SQL/connector 依赖，本轮不启动 MySQL Docker。该 case 目前只剩 JVM query-plan hook、Esper 完整 cost/selectivity 模型及 10k/1M 性能阈值差异。
+
+### 17.5 数据库、方法源与全量覆盖复核（Draft 2.78，2026-08-08）
+
+本次复核将现有 MySQL Docker 纳入可复现实验前提，并重新按运行态 inventory 检查“已有关联”与“已完成”的差距。环境已具备，数据库基础 Go 测试可以执行，但数据库、方法源和全量回归仍远未完成；`case.historical-sql`/`case.esperio-db` 的存在不能关闭整个功能域。
+
+#### 17.5.1 运行态清单硬事实
+
+`compat/java-execution-inventory.jsonl` 有 4,136 个 `status=ok` 的唯一可执行 runtime；`compat/capability-manifest.json` 有 191 个 case，其中 185 `mapped`、2 `partial`、4 `approved-difference`。这些状态只代表映射/处置登记，不代表 Java/Go trace 已相等。
+
+| Java 运行域 | inventory runtime | 当前 case 直接关联 | 尚未登记 |
+|---|---:|---:|---:|
+| `EPLDatabase` | 70 | 9 | 61 |
+| `EPLFromClauseMethod` | 57 | 0 | 57 |
+| 合计 | 127 | 9 | 118 |
+
+现有 `case.historical-sql` 虽有较多 Go provider/method/FAF/MySQL 测试，但只列出 9 个 Java runtime；测试数量不能替代逐 runtime 映射，`query.historical-sql` 仍应保持 `partial`。
+
+全量域级盘点也显示明显遗漏：
+
+| 域 | 总数/已登记/未登记 | 域 | 总数/已登记/未登记 |
+|---|---:|---|---:|
+| `epl` | 1,018 / 286 / 732 | `expr` | 657 / 293 / 364 |
+| `infra` | 590 / 171 / 419 | `resultset` | 576 / 263 / 313 |
+| `client` | 281 / 37 / 244 | `context` | 224 / 40 / 184 |
+| `view` | 227 / 51 / 176 | `event` | 294 / 124 / 170 |
+| `pattern` | 145 / 39 / 106 | `rowrecog` | 68 / 34 / 34 |
+| `multithread` | 56 / 0 / 56 | 合计 | 4,136 / 1,338 / 2,798 |
+
+因此除了 SQL，还必须优先防止遗漏 `client` 管理面、`multithread` 原子性/可见性、Context 生命周期、Infra on-trigger 组合和 resultset 高级访问聚合。
+
+#### 17.5.2 具体遗漏与下一批 planned case
+
+- `EPLDatabaseFAF` 共 10 个 runtime，9 个未直接映射：需要 distinct/where/变量/prepared query、SQL 文本参数子查询、结果缓存、invalid join/Context 约束及 Null/cardinality。
+- `EPLDatabaseJoin`、`EPLDatabase2StreamOuterJoin`、`EPLDatabase3StreamOuterJoin`、`EPLDatabaseJoinOptions`、`EPLDatabaseHintHook`、cache/performance 和 datasource factory 仍需逐项核对 outer preserved side、time-batch、property resolution、insert-into、缓存生命周期和性能 disposition。
+- `EPLFromClauseMethod`、`NStream`、`OuterNStream`、`Variable`、`MultikeyWArray`、`JoinPerformance`、`CacheLRU`、`CacheExpiry` 合计 57 个 runtime 全未直接映射；必须覆盖 single/sequence return、参数/变量、dependent 拓扑、N-stream outer、array key、LRU/expiry、异常和副本隔离。
+- `case.esperio-db` 代表 DML/Upsert 基础证据，`case.esperio-db-executor` 已补齐 `ExecutorServices`/`ExecutorSameThread`、`RunnableDML`/`RunnableUpsert` 对应的 same-thread/命名 fixed-worker、close/drain、取消、panic/error、异步 retry 和 sink lifecycle re-check；XML/config、连接工厂/JNDI、SQL 类型绑定、duplicate/error handler、listener 结果和完整 Java trace 仍开放。
+
+先登记以下规划 case，再进入实现；名称暂不代表已写入 manifest：
+
+| planned case | 范围 |
+|---|---|
+| `case.query-database-faf` | SQL FAF、参数/变量、distinct/where、prepared、invalid/context |
+| `case.query-database-join-outer` | 2/3 stream inner/outer、time-batch、property、insert-into |
+| `case.query-database-cache-options` | query/join cache、options、datasource factory、hint/performance |
+| `case.query-method-source` | 57 个 FromClauseMethod runtime 的返回形状、依赖、outer、cache、invalid |
+| `case.esperio-db-executor` | EsperIO DB executor、DML/Upsert action、配置、错误恢复和关闭（Draft 2.79 已完成 Go executor/work-queue 子集，Java XML/JNDI/config 仍开放） |
+
+每个 planned case 必须先由运行态 inventory 生成 runtime ID，再登记 Go test、Java source、fixture、状态和差异；不能用同一个 broad Go test 重复制造覆盖率。
+
+#### 17.5.3 环境与固定门禁
+
+| 项目 | 当前值/约束 |
+|---|---|
+| Java/Maven/Go | OpenJDK 17.0.20、Maven 3.9.16（已安装）、Go 1.25.5 |
+| MySQL | `esper-java-mysql`，8.0.46，`127.0.0.1:3306`，image digest `sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b` |
+| fixture | `test` 数据库和 `D:\Code\soc\esper\common\etc\regression\create_testdb.sql`；变更型 Java/Go 测试串行或先恢复 fixture |
+| 编码/时区 | 当前 Maven 默认编码显示 GBK；oracle 要求显式 UTF-8/UTC，不能依赖 Windows 默认值 |
+
+容器停止时复用现有实例：
+
+```powershell
+docker start esper-java-mysql
+mvn -pl regression-run '-Dtest=TestSuiteEPLDatabase' '-DfailIfNoTests=false' '-Dgpg.skip=true' '-Dfile.encoding=UTF-8' '-Duser.timezone=UTC' test
+$env:ESPER_MYSQL_DSN = 'root:password@tcp(127.0.0.1:3306)/test?parseTime=true&charset=utf8mb4'
+go test ./... -run 'Test(SQLHistoricalProviderMySQLDocker|SQLSinkMySQLDocker)$' -count=1
+```
+
+#### 17.5.4 本次实测 disposition
+
+- Java `TestSuiteEPLDatabase`：15 个入口，13 通过、2 失败、0 error。`testEPLDatabaseJoin` 仅 MySQL vendor error location 文本不同（`near ', from ...'` vs `near ' from ...'`）；`testEPLDatabaseJoinPerfNoCache` 当前 `delta=1203`，属于 Docker/JDBC 性能阈值抖动，不能算语义 pass。
+- Java `esperio-db`：4 个测试，2 通过、2 失败、0 error；`TestConfig` 为 `Properties.toString` 键顺序差异，`TestDBAdapterDML` 为期望/实际值数量差异，`TestDBAdapterUpsert` 通过。两项需保留原始证据并分别决定 approved-difference 或修复。
+- Go MySQL Docker：`TestSQLHistoricalProviderMySQLDocker`、`TestSQLSinkMySQLDocker` 通过；这只证明基础 `database/sql` adapter/sink 真实连接路径可运行，不覆盖上述 118 个未登记 runtime。`connectors/db` 的 executor/work-queue 定向测试和 `go test -race ./connectors/db` 也通过；Go 最终异步错误经 `Task.Wait` 暴露，属于相对 Java 日志吞错的明确 API 差异。
+
+后续顺序固定为：先完成 DB/Method/EsperIO DB runtime-to-case 拆分和 fixture/编码/时区门禁，再做 SQL FAF/outer join、method dependent/outer/cache，随后补 EsperIO DB XML/config、connection factory、SQL type binding 和跨语言 trace。只有 runtime 全部处置为 `mapped`、`approved-difference` 或有评审的 N disposition，并具备正向/无效/边界/关闭/并发证据，才允许提升 capability；当前仍不能宣称 Esper 已完成全量 Go 移植。
+
+Draft 2.79 对前文 EsperIO 汇总表中的“异步 executor”未完成项作修订：Go `connectors/db` 已完成 same-thread/命名 fixed-worker、queue drain、取消、panic/error、异步 retry 和 sink lifecycle re-check 子集；前文所列 DB XML/config、connection factory、完整 Java trace 等未完成项仍然有效。

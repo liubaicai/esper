@@ -374,10 +374,10 @@
       "level": "G",
       "summary": "EsperIO connectors and transport-specific source/sink behavior",
       "javaRefs": ["source-test-manifest:esperio-unit=58"],
-      "goRefs": ["connectors/state.go", "connectors/csv/csv.go", "connectors/csv/line.go", "connectors/csv/sink.go", "connectors/db/db.go", "connectors/http/http.go", "connectors/socket/socket.go", "connectors/kafka/kafka.go", "connectors/amqp/amqp.go", "connectors/jms/jms.go", "connectors/state_test.go", "connectors/csv/csv_test.go", "connectors/csv/line_test.go", "connectors/csv/sink_test.go", "connectors/db/db_test.go", "connectors/http/http_test.go", "connectors/socket/socket_test.go", "connectors/kafka/kafka_test.go", "connectors/amqp/amqp_test.go", "connectors/jms/jms_test.go"],
+      "goRefs": ["connectors/state.go", "connectors/csv/csv.go", "connectors/csv/line.go", "connectors/csv/sink.go", "connectors/db/db.go", "connectors/db/executor.go", "connectors/http/http.go", "connectors/socket/socket.go", "connectors/kafka/kafka.go", "connectors/amqp/amqp.go", "connectors/jms/jms.go", "connectors/state_test.go", "connectors/csv/csv_test.go", "connectors/csv/line_test.go", "connectors/csv/sink_test.go", "connectors/db/db_test.go", "connectors/db/executor_test.go", "connectors/http/http_test.go", "connectors/socket/socket_test.go", "connectors/kafka/kafka_test.go", "connectors/amqp/amqp_test.go", "connectors/jms/jms_test.go"],
       "phase": 9,
       "status": "partial",
-      "remaining": ["JVM JMS provider/session/transaction bridge and Spring XML context", "AMQP Java serialization/advanced reconnect and Dataflow graph parity", "DB XML/config parser, asynchronous executor and complete connection-factory parity", "Kafka plugin/custom serializer and advanced group recovery parity", "dataflow operator registration and signal/marker parity", "delivery/ack/retry semantics", "per-connector fixtures and complete Java trace parity"]
+      "remaining": ["JVM JMS provider/session/transaction bridge and Spring XML context", "AMQP Java serialization/advanced reconnect and Dataflow graph parity", "DB XML/config parser, connection-factory parity and complete Java trace", "Kafka plugin/custom serializer and advanced group recovery parity", "dataflow operator registration and signal/marker parity", "delivery/ack/retry semantics", "per-connector fixtures and complete Java trace parity"]
     },
     {
       "id": "serde.full",
@@ -2508,7 +2508,29 @@
       "tags": ["esperio", "db", "dml", "upsert", "mysql"],
       "status": "mapped",
       "evidence": ["java-module-test-partial", "go-unit", "mysql-docker"],
-      "difference": "Go covers caller-owned database/sql executors, DML 1-based bindings, nested properties, cancellation, retry, lifecycle, update-then-insert upsert and a real MySQL Docker round trip. The Java esperio-db module ran 4 tests: TestDBAdapterUpsert passed; TestConfig has a platform/JDK-dependent Properties.toString ordering difference and TestDBAdapterDML has a database assertion mismatch in the current environment. Java asynchronous ExecutorServices, XML/config parser, connection-factory settings, SQL type binding, duplicate-row/error handlers and full shared trace remain open."
+      "difference": "Go covers caller-owned database/sql executors, DML 1-based bindings, nested properties, cancellation, retry, lifecycle, update-then-insert upsert and a real MySQL Docker round trip. The Java esperio-db module ran 4 tests: TestDBAdapterUpsert passed; TestConfig has a platform/JDK-dependent Properties.toString ordering difference and TestDBAdapterDML has a database assertion mismatch in the current environment. Named executor/work-queue behavior is tracked in case.esperio-db-executor; XML/config parser, connection-factory settings, SQL type binding, duplicate-row/error handlers and full shared trace remain open."
+    },
+    {
+      "id": "case.esperio-db-executor",
+      "javaSourceFiles": [
+        "esperio/esperio-db/src/main/java/com/espertech/esperio/db/config/Executor.java",
+        "esperio/esperio-db/src/main/java/com/espertech/esperio/db/core/ExecutorServices.java",
+        "esperio/esperio-db/src/main/java/com/espertech/esperio/db/core/ExecutorSameThread.java",
+        "esperio/esperio-db/src/main/java/com/espertech/esperio/db/core/RunnableDML.java",
+        "esperio/esperio-db/src/main/java/com/espertech/esperio/db/core/RunnableDMLContext.java",
+        "esperio/esperio-db/src/main/java/com/espertech/esperio/db/core/RunnableDMLFactory.java",
+        "esperio/esperio-db/src/main/java/com/espertech/esperio/db/core/RunnableUpsert.java",
+        "esperio/esperio-db/src/main/java/com/espertech/esperio/db/core/RunnableUpsertContext.java",
+        "esperio/esperio-db/src/main/java/com/espertech/esperio/db/core/RunnableUpsertFactory.java",
+        "esperio/esperio-db/src/test/java/com/espertech/esperio/db/TestDBAdapterDML.java",
+        "esperio/esperio-db/src/test/java/com/espertech/esperio/db/TestDBAdapterUpsert.java"
+      ],
+      "javaNames": ["ExecutorServices", "ExecutorSameThread", "RunnableDML", "RunnableUpsert", "TestDBAdapterDML", "TestDBAdapterUpsert"],
+      "goTests": ["TestSameThreadExecutorRunsInlineAndPublishesTaskResult", "TestExecutorServicesResolvesNamedQueueAndUnknownNames", "TestAsyncExecutorRunsFixedWorkersAndDrainsOnShutdown", "TestAsyncExecutorShutdownDrainsQueuedWork", "TestAsyncExecutorQueuedContextCancellationAndPanicAreObservable", "TestDMLSinkAsyncRetryAndFinalErrorAreObservable", "TestDMLSinkWriteAsyncDefaultsToSameThread", "TestUpsertSinkAsyncUpdatesThenInserts", "TestAsyncSinkDestroyRejectsQueuedWorkBeforeSQLExecution", "TestExecutorNameResolvesForDMLAndUpsert"],
+      "tags": ["esperio", "db", "executor", "same-thread", "async", "queue", "retry", "shutdown", "concurrency"],
+      "status": "mapped",
+      "evidence": ["java-source", "java-module-test-partial", "go-unit", "go-race"],
+      "difference": "Go provides a fixed-worker FIFO queue, same-thread fallback, named ExecutorServices registry, structured unknown/closed errors, graceful drain, context cancellation, panic conversion, observable Task.Wait errors, async DML/Upsert retry and lifecycle re-check before SQL execution. Java's RunnableDML/RunnableUpsert log and swallow final failures, while Go deliberately exposes them through Task.Wait; Java JNDI binding, XML configuration population, per-event connection factory acquisition and exact logging/diagnostic text remain open."
     },
     {
       "id": "case.esperio-http",
@@ -2863,6 +2885,7 @@
     {"capabilityId": "rowrecog.match-recognize", "caseId": "case.rowrecog-unlimited-partition"},
     {"capabilityId": "integration.esperio", "caseId": "case.esperio-csv-file"},
     {"capabilityId": "integration.esperio", "caseId": "case.esperio-db"},
+    {"capabilityId": "integration.esperio", "caseId": "case.esperio-db-executor"},
     {"capabilityId": "integration.esperio", "caseId": "case.esperio-http"},
     {"capabilityId": "integration.esperio", "caseId": "case.esperio-socket"},
     {"capabilityId": "integration.esperio", "caseId": "case.esperio-springjms"},
