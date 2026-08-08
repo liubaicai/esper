@@ -5289,6 +5289,18 @@ func (r *statementRuntime) currentStreamEvents(node *streamNode, now time.Time) 
 			}
 		}
 		return filtered
+	case streamMethod:
+		// A triggerless method source is re-polled for the iterator with the
+		// current variables, mirroring Esper's lazy historical evaluation of
+		// variable-driven method streams.
+		if r.engine == nil {
+			return nil
+		}
+		events, err := r.engine.snapshotFireAndForgetSourceLocked(r.context(), node, now, r.variables)
+		if err != nil {
+			return nil
+		}
+		return events
 	default:
 		return nil
 	}
@@ -5957,6 +5969,38 @@ func isEvaluateOnceSource(node *streamNode) bool {
 	return err == nil && base != nil && base.kind == streamMethod && base.method != nil && base.method.evaluateOnce
 }
 
+// joinCycleOrder returns the per-trigger evaluation order with event-driven
+// sides ahead of lookup sides (historical/method), preserving the dependency
+// order within each group. Dependency-free method sides re-poll against the
+// retained rows of the side that accepted the trigger, so the trigger insert
+// must happen first.
+func joinCycleOrder(sources []*streamNode, evaluationOrder []int) []int {
+	eventDriven := make([]int, 0, len(evaluationOrder))
+	lookup := make([]int, 0, len(evaluationOrder))
+	for _, index := range evaluationOrder {
+		base, err := sourceNode(sources[index])
+		if err == nil && base != nil && joinSourceIsEventDriven(base) {
+			eventDriven = append(eventDriven, index)
+			continue
+		}
+		lookup = append(lookup, index)
+	}
+	return append(eventDriven, lookup...)
+}
+
+// joinSourceIsEventDriven reports whether the base source produces events of
+// its own (event stream, pattern, contained or derived sources), as opposed
+// to a current-state or lookup source (named window, table, historical or
+// method source).
+func joinSourceIsEventDriven(base *streamNode) bool {
+	switch base.kind {
+	case streamSource, streamPattern, streamContained, streamDerived:
+		return true
+	default:
+		return false
+	}
+}
+
 func (r *statementRuntime) insertJoin(definition *joinDefinition, event Event, now time.Time) (joinDelta, error) {
 	return r.updateJoin(definition, now, []Event{event}, nil)
 }
@@ -5989,7 +6033,11 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 				r.joinState.sides[index] = nil
 			}
 		}
-		for _, index := range evaluationOrder {
+		// Event-driven sides insert the arriving event ahead of lookup sides
+		// so a dependency-free method side re-polls against the current
+		// retained rows of the side that accepted this trigger.
+		triggerSides := make([]int, 0, len(sources))
+		for _, index := range joinCycleOrder(sources, evaluationOrder) {
 			source := sources[index]
 			base, baseErr := sourceNode(source)
 			if baseErr != nil {
@@ -6035,9 +6083,45 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 				}
 				continue
 			}
+			if base.kind == streamMethod && base.method != nil && len(triggerSides) > 0 {
+				// A dependency-free method side is re-evaluated per retained
+				// row of each side that accepted this trigger. The rows carry
+				// the accepting row's lineage so they join strictly inside
+				// that row's tuple and vanish when it expires, mirroring
+				// Esper's per-event method poll retained by the join windows.
+				if base.method.trigger != "" && base.method.trigger != event.TypeName() {
+					continue
+				}
+				for _, triggerIndex := range triggerSides {
+					for _, triggerRow := range r.joinState.sides[triggerIndex] {
+						events, pollErr := base.method.provider.Poll(r.context(), MethodRequest{
+							Trigger:      triggerRow.event,
+							Now:          now,
+							Variables:    visibleVariableValues(r.variables),
+							Parameters:   parameterValuesFromVariables(r.variables),
+							Dependencies: cloneMethodDependencies(r.methodDependencies),
+							Invocation:   r.methodInvocationContext(base.sourceName),
+						})
+						if pollErr != nil {
+							return joinDelta{}, pollErr
+						}
+						for _, newEvent := range events {
+							r.joinState.sides[index] = append(r.joinState.sides[index], storedEvent{
+								event: newEvent, receivedAt: now,
+								lineageID: r.nextJoinLineageID(),
+								lineage:   map[int]uint64{triggerIndex: triggerRow.lineageID},
+							})
+						}
+					}
+				}
+				continue
+			}
 			delta, err := r.insert(source, event, now)
 			if err != nil {
 				return joinDelta{}, err
+			}
+			if len(delta.newEvents) > 0 && joinSourceIsEventDriven(base) {
+				triggerSides = append(triggerSides, index)
 			}
 			removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
 			for _, newEvent := range delta.newEvents {

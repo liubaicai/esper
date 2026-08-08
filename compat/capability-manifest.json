@@ -1256,7 +1256,11 @@
         "EPLFromClauseMethod2JoinHistoricalSubordinateOuterMultiField",
         "EPLFromClauseMethod2JoinHistoricalSubordinateOuter",
         "EPLFromClauseMethod2JoinHistoricalOnlyDependent",
-        "EPLFromClauseMethod2JoinHistoricalOnlyIndependent"
+        "EPLFromClauseMethod2JoinHistoricalOnlyIndependent",
+        "EPLFromClauseMethodArrayWithArg",
+        "EPLFromClauseMethodObjectWithArg",
+        "EPLFromClauseMethod2StreamMaxAggregation",
+        "EPLFromClauseMethodNoJoinIterateVariables"
       ],
       "id": "epl.fromclausemethod",
       "summary": "Method-backed historical streams (method source) with array/object/single return, overloaded resolution, multiple representations and join/FAF usage",
@@ -1267,7 +1271,8 @@
         "method_source_join_test.go",
         "fromclausemethod_parity_test.go",
         "fromclausemethod_outer_parity_test.go",
-        "fromclausemethod_historical_join_parity_test.go"
+        "fromclausemethod_historical_join_parity_test.go",
+        "fromclausemethod_witharg_parity_test.go"
       ],
       "phase": 2,
       "remaining": [
@@ -1308,7 +1313,11 @@
         "TestFromClauseMethod2JoinHistoricalSubordinateOuterMultiFieldParity",
         "TestFromClauseMethod2JoinHistoricalSubordinateOuterParity",
         "TestFromClauseMethod2JoinHistoricalOnlyDependentParity",
-        "TestFromClauseMethod2JoinHistoricalOnlyIndependentParity"
+        "TestFromClauseMethod2JoinHistoricalOnlyIndependentParity",
+        "TestFromClauseMethodArrayWithArgParity",
+        "TestFromClauseMethodObjectWithArgParity",
+        "TestFromClauseMethod2StreamMaxAggregationParity",
+        "TestFromClauseMethodNoJoinIterateVariablesParity"
       ],
       "javaRuntimeIds": [
         "java-runtime-46f715ed2a74ce455f5e",
@@ -1335,7 +1344,11 @@
         "java-runtime-e60fa876a0a24d3df1ed",
         "java-runtime-ec8f38e0c7a4571d5fe2",
         "java-runtime-b5dbc9fc403804d2ec4b",
-        "java-runtime-8f12d418e3800f70fd80"
+        "java-runtime-8f12d418e3800f70fd80",
+        "java-runtime-cfde81aa634ebedcc0b5",
+        "java-runtime-54ad4ad0b6bc90c10c01",
+        "java-runtime-ac44abecab3831a90772",
+        "java-runtime-85ea9a7b33a60b5e9851"
       ]
     }
   ],
@@ -11086,11 +11099,15 @@
         "EPLFromClauseMethod2JoinHistoricalSubordinateOuterMultiField",
         "EPLFromClauseMethod2JoinHistoricalSubordinateOuter",
         "EPLFromClauseMethod2JoinHistoricalOnlyDependent",
-        "EPLFromClauseMethod2JoinHistoricalOnlyIndependent"
+        "EPLFromClauseMethod2JoinHistoricalOnlyIndependent",
+        "EPLFromClauseMethodArrayWithArg",
+        "EPLFromClauseMethodObjectWithArg",
+        "EPLFromClauseMethod2StreamMaxAggregation",
+        "EPLFromClauseMethodNoJoinIterateVariables"
       ],
       "id": "case.epl-fromclausemethod-basic",
       "status": "partial",
-      "difference": "Go provides typed MethodProvider/MethodProviderFunc and FromMethodOn/FromMethod builders instead of Java reflection-based static method invocation. The mapped slice covers no-argument array/object returns, method result returned as Map/POJO/ObjectArray, overloaded parameter dispatch by the provider, basic invalid-build checks for unknown trigger stream and nil provider, N-stream method-historical joins with star-subordinate CartesianLast, forward/chain subordinate and joined-keepall semantics, 2-stream/3-stream alias-driven subordinate lookups, variable-driven 3-historical pure/no-subordinate, 1-subordinate and chained-subordinate snapshots, named-window-twice aliased method joins (Stream.As logical source aliases), and outer N-stream joins: inner/left/right/full chained variants of the 1-stream-2-hist and 2-stream-1-hist subordinate matrices, evaluate-once constant-argument method streams (Stream.EvaluateOnce) seeded once at deployment with outer placeholders visible to the iterator, unsatisfiable outer-dependency build diagnostics, and the outer forward matrices: 1-stream-2-hist/1-stream-3-hist #lastevent forward subordinate left-outer chains, the mixed right/left/full 3-hist variant run as declared, and the chained-prefix 3-hist variant (fetchVal(s0.id||-H0)/fetchVal(h0.val||-H1)/fetchVal(h1.val||-H2)). Esper anchors every outer-join tuple on the dependency-owning stream: dependency-bound method rows never anchor placeholder tuples (joinStoredTupleHasAnchor), and a partial tuple whose accumulated streams are not referenced by a later outer edge passes through unchanged (joinChainedEdgeAnchored). Java NoSubordinate second textual variant (h1 left outer join s0 right outer join h0) asserts the identical tryAssertionSeven matrix in Java and is modeled through the observably equivalent s0-anchored right-outer chain. The 2JoinHistorical slice adds the constant-argument independent outer matrices (left/right/full/full-reversed iterator states), the subordinate outer matrices whose dependency-bound method rows never anchor placeholder tuples, the two-field equi-condition keep-all left outer join against the 100-row grid (asserting both lastNew and the iterator), and the variable-driven dependent/independent historical-only joins: null-initialized variables (RegisterVariable(name, nil)) re-poll the method sources on each on-set event and stay iterator-only, so triggerless method-only statements never post listener or route output (queryIteratorOnlyMethodSources) while SQL-historical sources keep the Go-native poll-on-any-event delivery. Deployment seeding now cascades from EvaluateOnce sides to triggerless subordinate method sources in topological dependency order (seedEvaluateOnceJoinSidesLocked), retaining the subordinate rows with their dependency lineage. Cache LRU/expiry, context-variable bindings, multikey/array-key joins, join performance, UDF/script/@type EventBean paths and full Java method footprint/return-type diagnostics remain open.",
+      "difference": "Go provides typed MethodProvider/MethodProviderFunc and FromMethodOn/FromMethod builders instead of Java reflection-based static method invocation. The mapped slice covers no-argument array/object returns, method result returned as Map/POJO/ObjectArray, overloaded parameter dispatch by the provider, basic invalid-build checks for unknown trigger stream and nil provider, N-stream method-historical joins with star-subordinate CartesianLast, forward/chain subordinate and joined-keepall semantics, 2-stream/3-stream alias-driven subordinate lookups, variable-driven 3-historical pure/no-subordinate, 1-subordinate and chained-subordinate snapshots, named-window-twice aliased method joins (Stream.As logical source aliases), and outer N-stream joins: inner/left/right/full chained variants of the 1-stream-2-hist and 2-stream-1-hist subordinate matrices, evaluate-once constant-argument method streams (Stream.EvaluateOnce) seeded once at deployment with outer placeholders visible to the iterator, unsatisfiable outer-dependency build diagnostics, and the outer forward matrices: 1-stream-2-hist/1-stream-3-hist #lastevent forward subordinate left-outer chains, the mixed right/left/full 3-hist variant run as declared, and the chained-prefix 3-hist variant (fetchVal(s0.id||-H0)/fetchVal(h0.val||-H1)/fetchVal(h1.val||-H2)). Esper anchors every outer-join tuple on the dependency-owning stream: dependency-bound method rows never anchor placeholder tuples (joinStoredTupleHasAnchor), and a partial tuple whose accumulated streams are not referenced by a later outer edge passes through unchanged (joinChainedEdgeAnchored). Java NoSubordinate second textual variant (h1 left outer join s0 right outer join h0) asserts the identical tryAssertionSeven matrix in Java and is modeled through the observably equivalent s0-anchored right-outer chain. The 2JoinHistorical slice adds the constant-argument independent outer matrices (left/right/full/full-reversed iterator states), the subordinate outer matrices whose dependency-bound method rows never anchor placeholder tuples, the two-field equi-condition keep-all left outer join against the 100-row grid (asserting both lastNew and the iterator), and the variable-driven dependent/independent historical-only joins: null-initialized variables (RegisterVariable(name, nil)) re-poll the method sources on each on-set event and stay iterator-only, so triggerless method-only statements never post listener or route output (queryIteratorOnlyMethodSources) while SQL-historical sources keep the Go-native poll-on-any-event delivery. Deployment seeding now cascades from EvaluateOnce sides to triggerless subordinate method sources in topological dependency order (seedEvaluateOnceJoinSidesLocked), retaining the subordinate rows with their dependency lineage. The with-arg slice adds fetchArrayGen(intPrimitive)/fetchObject(theString) trigger-argument method joins in both textual orders with exact irstream pairs as events expire from the length(3) window (Java null theString is modeled by the empty string; the SODA model variant is equivalent text and skipped), max(col1) over the unique(theString) x 100-row-grid join, and the single variable-driven method source NoJoinIterateVariables matrix whose snapshot re-polls with current variables while the listener stays silent. Dependency-free method sides in an event-driven join are now re-evaluated per retained row of the accepting trigger side (joinCycleOrder/updateJoin), carrying the trigger row lineage so polled rows join strictly inside their trigger tuple and vanish when it expires; a triggerless single-source method statement snapshot re-polls with the current variables (currentStreamEvents). Cache LRU/expiry, context-variable bindings, multikey/array-key joins, join performance, UDF/script/@type EventBean paths, unidirectional-historical joins, multi-event-stream dependency-free method binds and full Java method footprint/return-type diagnostics remain open.",
       "javaRuntimeIds": [
         "java-runtime-46f715ed2a74ce455f5e",
         "java-runtime-2c46a2d3cde0e7a5cac3",
@@ -11121,7 +11138,11 @@
         "java-runtime-e60fa876a0a24d3df1ed",
         "java-runtime-ec8f38e0c7a4571d5fe2",
         "java-runtime-b5dbc9fc403804d2ec4b",
-        "java-runtime-8f12d418e3800f70fd80"
+        "java-runtime-8f12d418e3800f70fd80",
+        "java-runtime-cfde81aa634ebedcc0b5",
+        "java-runtime-54ad4ad0b6bc90c10c01",
+        "java-runtime-ac44abecab3831a90772",
+        "java-runtime-85ea9a7b33a60b5e9851"
       ],
       "evidence": [
         "java-runtime-inventory",
@@ -11176,7 +11197,11 @@
         "TestFromClauseMethod2JoinHistoricalSubordinateOuterMultiFieldParity",
         "TestFromClauseMethod2JoinHistoricalSubordinateOuterParity",
         "TestFromClauseMethod2JoinHistoricalOnlyDependentParity",
-        "TestFromClauseMethod2JoinHistoricalOnlyIndependentParity"
+        "TestFromClauseMethod2JoinHistoricalOnlyIndependentParity",
+        "TestFromClauseMethodArrayWithArgParity",
+        "TestFromClauseMethodObjectWithArgParity",
+        "TestFromClauseMethod2StreamMaxAggregationParity",
+        "TestFromClauseMethodNoJoinIterateVariablesParity"
       ]
     }
   ],
