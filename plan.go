@@ -1363,6 +1363,11 @@ func (e *Environment) validateNode(node *streamNode) error {
 	switch node.kind {
 	case streamSource:
 		schema, ok := e.Schema(node.sourceName)
+		if !ok && node.isAlias {
+			if aliasSchema, aliasOk := e.schemaForGoType(node.sourceType); aliasOk {
+				schema, ok = aliasSchema, true
+			}
+		}
 		if !ok {
 			return fmt.Errorf("esper: source %q has no registered schema", node.sourceName)
 		}
@@ -2301,6 +2306,11 @@ func (e *Environment) sourceSchema(source *streamNode) (Schema, error) {
 	}
 	schema, ok := e.Schema(source.sourceName)
 	if !ok {
+		if source.kind == streamSource && source.isAlias {
+			if aliasSchema, aliasOk := e.schemaForGoType(source.sourceType); aliasOk {
+				return aliasSchema, nil
+			}
+		}
 		return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("source %q has no registered schema", source.sourceName))
 	}
 	return schema, nil

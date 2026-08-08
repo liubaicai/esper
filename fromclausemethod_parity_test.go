@@ -597,7 +597,7 @@ func lastNewRows(batch ResultBatch) []Row {
 
 func fcmRowKey(row Row) string {
 	var parts []string
-	for _, field := range []string{"id", "valh0", "valh1", "valh2"} {
+	for _, field := range []string{"id", "ids0", "ids1", "ids2", "valh0", "valh1", "valh2"} {
 		v := row.Get(field)
 		if v.Any() == nil {
 			continue
@@ -906,4 +906,189 @@ func TestFromClauseMethodOneStreamThreeHistChainSubordinateParity(t *testing.T) 
 	if len(rows) != 0 {
 		t.Fatalf("E2(0) expected no rows, got %#v", rows)
 	}
+}
+
+// makeFCMAliasedHistProvider returns a method provider that ignores the trigger
+// event and instead reads its driving stream event from request.Dependencies.
+// The dependency event's id is concatenated with suffix to form the val prefix;
+// its p00 field drives the emitted row count. This mirrors Esper's method source
+// bound to a specific stream alias.
+func makeFCMAliasedHistProvider(histSchema Schema, depSource, suffix string) MethodProvider {
+	return MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		depEvent, ok := request.Dependency(depSource)
+		if !ok {
+			return nil, nil
+		}
+		id := depEvent.Get("id").Any().(string)
+		count := depEvent.Get("p00").Any().(int)
+		if count == 0 {
+			return nil, nil
+		}
+		rows := make([]map[string]any, 0, count)
+		for i := 1; i <= count; i++ {
+			rows = append(rows, map[string]any{"val": id + suffix + fmt.Sprintf("%d", i), "index": i})
+		}
+		return newEventsFrom(histSchema, rows, request.Now)
+	})
+}
+
+// fcmMakeSenderMatchFields returns a helper that sends an event and returns the
+// new rows produced for that event. Rows are retained only if one of the named
+// fields matches the event's id. This compensates for keep-all joins that emit
+// the full window state on each new event.
+func fcmMakeSenderMatchFields(t *testing.T, engine *Engine, stmt *Statement, fields []string) func(event any) []Row {
+	var lastNew []Row
+	var sawNew bool
+	if _, err := stmt.Subscribe(func(_ context.Context, batch ResultBatch) error {
+		lastNew = lastNewRows(batch)
+		sawNew = true
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return func(event any) []Row {
+		sawNew = false
+		lastNew = nil
+		eventID := fcmEventID(event)
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+		if !sawNew {
+			lastNew = nil
+		}
+		if eventID != "" {
+			filtered := make([]Row, 0, len(lastNew))
+			for _, row := range lastNew {
+				for _, field := range fields {
+					if row.Get(field).Any() == eventID {
+						filtered = append(filtered, row)
+						break
+					}
+				}
+			}
+			lastNew = filtered
+		}
+		return lastNew
+	}
+}
+
+func TestFromClauseMethodTwoStreamTwoHistStarSubordinateParity(t *testing.T) {
+	env := newFCMEnvironmentWithInt(t)
+	histSchema := fcmHistSchema(t, env)
+
+	idField := Field[fcmBeanInt, string]("id")
+	s0 := FromAs[fcmBeanInt](env, "s0").Filter(StartsWith(idField, Literal("S0"))).Window(KeepAll())
+	s1 := FromAs[fcmBeanInt](env, "s1").Filter(StartsWith(idField, Literal("S1"))).Window(LastEvent())
+
+	h0 := FromMethodOn[map[string]any](env, "h0", "SupportBeanInt", histSchema, makeFCMAliasedHistProvider(histSchema, "s0", "H1")).DependingOn("s0")
+	h1 := FromMethodOn[map[string]any](env, "h1", "SupportBeanInt", histSchema, makeFCMAliasedHistProvider(histSchema, "s1", "H2")).DependingOn("s1")
+
+	query := JoinMany(JoinSource(s0), JoinSource(s1), JoinSource(h0), JoinSource(h1)).Select(
+		SelectFrom(0, "ids0", Field[fcmBeanInt, string]("id")),
+		SelectFrom(1, "ids1", Field[fcmBeanInt, string]("id")),
+		SelectFrom(2, "valh0", Field[map[string]any, string]("val")),
+		SelectFrom(3, "valh1", Field[map[string]any, string]("val")),
+	).Query(StatementName("fcm-2s2h-star"))
+
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatalf("deploy failed: %v", err)
+	}
+	t.Cleanup(func() { _ = engine.Close(context.Background()) })
+
+	send := fcmMakeSenderMatchFields(t, engine, deployment.Statements()[0], []string{"ids0", "ids1"})
+
+	rows := send(fcmBeanInt{ID: "S00", P00: 1})
+	if len(rows) != 0 {
+		t.Fatalf("S00 expected no rows, got %#v", rows)
+	}
+
+	rows = send(fcmBeanInt{ID: "S10", P00: 1})
+	fcmAssertRows(t, rows, [][]string{{"S00", "S10", "S00H11", "S10H21"}}, "S10")
+
+	rows = send(fcmBeanInt{ID: "S01", P00: 1})
+	fcmAssertRows(t, rows, [][]string{{"S01", "S10", "S01H11", "S10H21"}}, "S01")
+
+	rows = send(fcmBeanInt{ID: "S11", P00: 1})
+	fcmAssertRows(t, rows, [][]string{
+		{"S00", "S11", "S00H11", "S11H21"},
+		{"S01", "S11", "S01H11", "S11H21"},
+	}, "S11")
+}
+
+func makeFCMThreeStreamHistProvider(histSchema Schema) MethodProvider {
+	return MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		s0, ok0 := request.Dependency("s0")
+		s1, ok1 := request.Dependency("s1")
+		s2, ok2 := request.Dependency("s2")
+		if !ok0 || !ok1 || !ok2 {
+			return nil, nil
+		}
+		prefix := s1.Get("id").Any().(string) + s2.Get("id").Any().(string) + "H1"
+		count := s0.Get("p00").Any().(int)
+		if count == 0 {
+			return nil, nil
+		}
+		rows := make([]map[string]any, 0, count)
+		for i := 1; i <= count; i++ {
+			rows = append(rows, map[string]any{"val": prefix + fmt.Sprintf("%d", i), "index": i})
+		}
+		return newEventsFrom(histSchema, rows, request.Now)
+	})
+}
+
+func TestFromClauseMethodThreeStreamOneHistSubordinateParity(t *testing.T) {
+	env := newFCMEnvironmentWithInt(t)
+	histSchema := fcmHistSchema(t, env)
+
+	idField := Field[fcmBeanInt, string]("id")
+	s0 := FromAs[fcmBeanInt](env, "s0").Filter(StartsWith(idField, Literal("S0"))).Window(KeepAll())
+	s1 := FromAs[fcmBeanInt](env, "s1").Filter(StartsWith(idField, Literal("S1"))).Window(LastEvent())
+	s2 := FromAs[fcmBeanInt](env, "s2").Filter(StartsWith(idField, Literal("S2"))).Window(LastEvent())
+
+	h0 := FromMethodOn[map[string]any](env, "h0", "SupportBeanInt", histSchema, makeFCMThreeStreamHistProvider(histSchema)).DependingOn("s0", "s1", "s2")
+
+	query := JoinMany(JoinSource(s0), JoinSource(s1), JoinSource(s2), JoinSource(h0)).Select(
+		SelectFrom(0, "ids0", Field[fcmBeanInt, string]("id")),
+		SelectFrom(1, "ids1", Field[fcmBeanInt, string]("id")),
+		SelectFrom(2, "ids2", Field[fcmBeanInt, string]("id")),
+		SelectFrom(3, "valh0", Field[map[string]any, string]("val")),
+	).Query(StatementName("fcm-3s1h"))
+
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatalf("deploy failed: %v", err)
+	}
+	t.Cleanup(func() { _ = engine.Close(context.Background()) })
+
+	send := fcmMakeSenderMatchFields(t, engine, deployment.Statements()[0], []string{"ids0", "ids1", "ids2"})
+
+	_ = send(fcmBeanInt{ID: "S00", P00: 2})
+	_ = send(fcmBeanInt{ID: "S10", P00: 1})
+
+	rows := send(fcmBeanInt{ID: "S20", P00: 1})
+	fcmAssertRows(t, rows, [][]string{
+		{"S00", "S10", "S20", "S10S20H11"},
+		{"S00", "S10", "S20", "S10S20H12"},
+	}, "S20")
+
+	rows = send(fcmBeanInt{ID: "S01", P00: 1})
+	fcmAssertRows(t, rows, [][]string{{"S01", "S10", "S20", "S10S20H11"}}, "S01")
+
+	rows = send(fcmBeanInt{ID: "S21", P00: 1})
+	fcmAssertRows(t, rows, [][]string{
+		{"S00", "S10", "S21", "S10S21H11"},
+		{"S00", "S10", "S21", "S10S21H12"},
+		{"S01", "S10", "S21", "S10S21H11"},
+	}, "S21")
 }

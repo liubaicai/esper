@@ -29,6 +29,9 @@ type streamNode struct {
 	sourceName         string
 	moduleName         string
 	sourceType         reflect.Type
+	// isAlias marks a streamSource whose sourceName is an alias distinct from
+	// the registered event type name. Aliases are resolved through sourceType.
+	isAlias            bool
 	configurationError string
 	historical         *historicalDefinition
 	method             *methodDefinition
@@ -753,6 +756,21 @@ func From[T any](env *Environment, sourceName string) Stream[T] {
 	return Stream[T]{
 		env:  env,
 		node: &streamNode{kind: streamSource, sourceName: sourceName, sourceType: typeOf[T]()},
+	}
+}
+
+// FromAs creates a typed source with an explicit alias name that may differ
+// from the registered event type name. The event type is still derived from
+// the generic type T; the source name is used only for joins, method-source
+// dependencies and statement metadata. This is the Go counterpart of Esper's
+// "from EventType as alias" clause.
+func FromAs[T any](env *Environment, sourceName string) Stream[T] {
+	if strings.TrimSpace(sourceName) == "" {
+		sourceName = typeOf[T]().Name()
+	}
+	return Stream[T]{
+		env: env,
+		node: &streamNode{kind: streamSource, sourceName: sourceName, sourceType: typeOf[T](), isAlias: true},
 	}
 }
 
