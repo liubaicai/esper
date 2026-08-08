@@ -502,6 +502,30 @@ func JoinEventValue[T any](source int) Expression[T] {
 	}}
 }
 
+// NestedField reads a property of an Event-typed expression result. It is the
+// chainable counterpart of Esper's fragment property navigation ("a.id") on
+// streams whose events carry joined or inserted event fragments.
+func NestedField[V any](host Expression[Event], name string) Expression[V] {
+	if host == nil || strings.TrimSpace(name) == "" {
+		return makeExpr[V]("nested-field", "<invalid-nested-field>", nil, func(EvalContext) Value { return Missing() })
+	}
+	node := &exprNode{kind: "nested-field", typ: typeOf[V](), description: host.Description() + "." + name, fieldName: name, children: []*exprNode{host.node()}}
+	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
+		value := host.eval(ctx)
+		if !value.IsPresent() {
+			return Null()
+		}
+		event, ok := value.Any().(Event)
+		if !ok {
+			return Missing()
+		}
+		if !event.Schema().valid() {
+			return Null()
+		}
+		return event.Get(name)
+	}}
+}
+
 // EventValue exposes the current event as a typed expression. It is useful for
 // Go callers that need access aggregates to return the selected event itself,
 // for example MinBy[Trade, float64](EventValue[Trade](), price).

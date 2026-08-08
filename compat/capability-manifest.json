@@ -1431,23 +1431,19 @@
       "id": "epl.subselect.filtered",
       "domain": "epl",
       "level": "G",
-      "summary": "Filtered scalar subselects in select/where clauses: correlated predicates on outer fields, constant/range filters, non-aggregated per-row having, wildcard event payloads, prev projections, irstream outer windows and multi-subquery where composition",
+      "summary": "Filtered scalar subselects in select/where clauses: correlated predicates on outer fields and multi-stream outer joins with numeric coercion, constant/range filters, non-aggregated per-row having, wildcard event payloads, prev/prior projections, sort windows, int-array correlation keys, insert-into chains with coalesced last-row subselects and irstream outer windows",
       "javaRefs": [
         "EPLSubselectFiltered"
       ],
       "goRefs": [
         "subquery.go",
         "plan.go",
+        "expr.go",
         "epl_subselect_filtered_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
       "remaining": [
-        "EPLSubselectSelectWhereJoined2Streams/3Streams/3SceneTwo/4Coercion/4BackCoercion: subqueries correlated to multi-stream outer joins with numeric coercion",
-        "EPLSubselectJoinFilteredOne/Two: join where clause with scalar/prior/prev subqueries and concat projection",
-        "EPLSubselectSubselectMixMax: sort-window wildcard subselect",
-        "EPLSubselectSubselectPrior: insert-into chain with coalesced lastevent subselect",
-        "EPLSubselectWhereClauseMultikeyWArrayPrimitive/2Field/Composite: int-array equality correlation keys",
         "EPLSubselectSelectWildcardNoName: auto-generated subselect_1 column name is EPL syntax sugar; Go requires explicit aliases (approved difference)"
       ]
     }
@@ -11452,7 +11448,19 @@
         "java-runtime-b1c2169572264f9fd646",
         "java-runtime-87fd9e194fcd61e0aba5",
         "java-runtime-6034a5785b901739431e",
-        "java-runtime-1fcd5cdcc62015389f98"
+        "java-runtime-1fcd5cdcc62015389f98",
+        "java-runtime-b3ce74a1b603f1dfa644",
+        "java-runtime-21f4b30723f3e5256823",
+        "java-runtime-71f4714a3f10241083e9",
+        "java-runtime-fd19463d0ce39b10f445",
+        "java-runtime-66c3d4d4100cb3f923a0",
+        "java-runtime-7474133de58ff180f8fa",
+        "java-runtime-0a6686ce79af715278f7",
+        "java-runtime-9161a695d692feb6902d",
+        "java-runtime-1072ab9fc42579eed1e5",
+        "java-runtime-643236df4a8946ab3c24",
+        "java-runtime-9255e3470adb866211bf",
+        "java-runtime-7fbee5b6cef2f287ee41"
       ],
       "javaNames": [
         "EPLSubselectHavingNoAggNoFilterNoWhere",
@@ -11468,7 +11476,19 @@
         "EPLSubselectWherePreviousOM",
         "EPLSubselectWherePreviousCompile",
         "EPLSubselectSelectWithWhereJoined",
-        "EPLSubselectSelectWithWhere2Subqery"
+        "EPLSubselectSelectWithWhere2Subqery",
+        "EPLSubselectSelectWhereJoined2Streams",
+        "EPLSubselectSelectWhereJoined3Streams",
+        "EPLSubselectSelectWhereJoined3SceneTwo",
+        "EPLSubselectSelectWhereJoined4Coercion",
+        "EPLSubselectSelectWhereJoined4BackCoercion",
+        "EPLSubselectJoinFilteredOne",
+        "EPLSubselectJoinFilteredTwo",
+        "EPLSubselectSubselectMixMax",
+        "EPLSubselectSubselectPrior",
+        "EPLSubselectWhereClauseMultikeyWArrayPrimitive",
+        "EPLSubselectWhereClauseMultikeyWArray2Field",
+        "EPLSubselectWhereClauseMultikeyWArrayComposite"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectFiltered.java"
@@ -11483,7 +11503,19 @@
         "TestSubselectFilteredSameEventParity",
         "TestSubselectFilteredSelectWildcardParity",
         "TestSubselectFilteredSelectWithWhere2SubqueryParity",
-        "TestSubselectFilteredSceneOneParity"
+        "TestSubselectFilteredSceneOneParity",
+        "TestSubselectFilteredSelectWhereJoined2StreamsParity",
+        "TestSubselectFilteredSelectWhereJoined3StreamsParity",
+        "TestSubselectFilteredSelectWhereJoined3SceneTwoParity",
+        "TestSubselectFilteredSelectWhereJoined4CoercionParity",
+        "TestSubselectFilteredSelectWhereJoined4BackCoercionParity",
+        "TestSubselectFilteredJoinFilteredOneParity",
+        "TestSubselectFilteredJoinFilteredTwoParity",
+        "TestSubselectFilteredSubselectMixMaxParity",
+        "TestSubselectFilteredSubselectPriorParity",
+        "TestSubselectFilteredMultikeyWArrayPrimitiveParity",
+        "TestSubselectFilteredMultikeyWArray2FieldParity",
+        "TestSubselectFilteredMultikeyWArrayCompositeParity"
       ],
       "tags": [
         "correctness",
@@ -11494,7 +11526,15 @@
         "having",
         "wildcard",
         "prev",
-        "irstream"
+        "irstream",
+        "join",
+        "coercion",
+        "multikey",
+        "array",
+        "sort",
+        "insert-into",
+        "coalesce",
+        "nested-field"
       ],
       "status": "partial",
       "evidence": [
@@ -11502,7 +11542,7 @@
         "go-unit",
         "java-suite-EPLSubselectFiltered"
       ],
-      "difference": "Non-aggregated subselect having filters rows one by one after the where clause (Esper semantics); the SameEvent/WherePrevious object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity tests. Scalar subselects use explicit SubqueryNullOnMultiple where Esper returns null on multiple rows."
+      "difference": "Non-aggregated subselect having filters rows one by one after the where clause (Esper semantics); the SameEvent/WherePrevious object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity tests. Scalar subselects use explicit SubqueryNullOnMultiple where Esper returns null on multiple rows. Multi-stream outer-join correlation uses JoinField(source, name); int-array correlation keys use null-safe Is deep equality; Esper prior(1, x) maps to Go Prior(0, x); wildcard join fragments (a.id) map to inserted Event values navigated with NestedField."
     }
   ],
   "mappings": [
