@@ -2788,7 +2788,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 	}
 	if insertEvent {
 		switch state.def.retention.(type) {
-		case KeepAllWindowSpec, LengthWindowSpec, LastEventWindowSpec, TimeWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec:
+		case KeepAllWindowSpec, LengthWindowSpec, LastEventWindowSpec, FirstEventWindowSpec, TimeWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec:
 		default:
 			return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", state.def.retention))
 		}
@@ -2842,6 +2842,11 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 			}
 			entries = []storedEvent{{event: preparedInsert, receivedAt: now}}
 			delta.New = append(delta.New, preparedInsert)
+		case FirstEventWindowSpec:
+			if len(entries) == 0 {
+				entries = append(entries, storedEvent{event: preparedInsert, receivedAt: now})
+				delta.New = append(delta.New, preparedInsert)
+			}
 		case UniqueWindowSpec:
 			entry := storedEvent{event: preparedInsert, receivedAt: now}
 			duplicate := -1
@@ -2966,6 +2971,13 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 			delta.Old = append(delta.Old, state.entries[len(state.entries)-1].event)
 		}
 		state.entries = []storedEvent{entry}
+	case FirstEventWindowSpec:
+		// A first-event window drops every insert once occupied; the dropped
+		// event produces no listener callback at all (Esper firstevent).
+		if len(state.entries) > 0 {
+			return NamedWindowDelta{Time: now}, nil
+		}
+		state.entries = append(state.entries, entry)
 	case TimeWindowSpec, TimeToLiveWindowSpec:
 		state.entries = append(state.entries, entry)
 	case TimeToLiveAtWindowSpec:

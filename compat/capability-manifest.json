@@ -1466,6 +1466,25 @@
       "remaining": [
         "EPLSubselectInvalidSubselect group-by/order-by subselect rejection is not yet implemented in the Go builder (subselects nested inside GroupBy keys or OrderBy expressions should be rejected at Build time)"
       ]
+    },
+    {
+      "id": "infra.namedwindow.views",
+      "domain": "infra",
+      "level": "S",
+      "summary": "Named Window data-window retention views: keep-all, length, last-event, first-event, unique/first-unique replacement and drop, and sort windows with sorted iteration, tie recency ordering and self-expel IR pairs, all with insert-into triggers, on-delete triggers, irstream consumer statements and snapshot iterator assertions",
+      "javaRefs": [
+        "InfraNamedWindowViews"
+      ],
+      "goRefs": [
+        "state.go",
+        "trigger.go",
+        "infra_namedwindow_views_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "partial",
+      "remaining": [
+        "InfraNamedWindowViews time-based views (timewindow/firsttime/exttime/timeorder/timeaccum/timebatch/timelengthbatch/external-timed), length/first-length batch, per-group views, bean-backed/contained/deep-supertype, intersection, filtering consumer, late consumer/join, pattern, double-insert, delete-use-as variants, prior stats, select-stream-dot-star, grouped late-start/variable-iterate, on-insert preemptive two-window, TTL delete and invalid matrices remain"
+      ]
     }
   ],
   "cases": [
@@ -11653,6 +11672,77 @@
         "java-suite-EPLSubselectUnfiltered"
       ],
       "difference": "Multi-row scalar subselects return null via explicit SubqueryNullOnMultiple where Esper coerces silently; the StreamPrior object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity test. Esper prior(0, x) is the candidate row itself and prior(N, x) maps to Go Prior(N-1, x). InvalidSubselect: nested-subquery rejection covers the scalar-projection shape Esper rejects, while Go keeps documented extensions for subqueries inside filter predicates (SubqueryExists scopes) and multi-column SubqueryRow fragments; the unqualified-correlation-property and IN-wildcard-type-mismatch scenarios are compile-time impossible in Go typed builders (approved differences); group-by/order-by subselect rejection remains."
+    },
+    {
+      "id": "case.infra-namedwindow-views",
+      "javaRuntimeIds": [
+        "java-runtime-26c44410c8018a34d696",
+        "java-runtime-14f3c7199cf587fea29a",
+        "java-runtime-d931bfbbbaa3ea632c2b",
+        "java-runtime-793f6ec7608e25556803",
+        "java-runtime-b85cc831b5c23a570cf7",
+        "java-runtime-59100403b3c6affd0729",
+        "java-runtime-c2f54d9eb104d061950c",
+        "java-runtime-63daa6cfa27a786c0480",
+        "java-runtime-1ee31df7428f7c8e85eb",
+        "java-runtime-bb670bc21e9d4333cefd",
+        "java-runtime-7edfd8382e4eee6892dc",
+        "java-runtime-5fb3e9a4d20bc3964f5f"
+      ],
+      "javaNames": [
+        "InfraKeepAllSimple",
+        "InfraKeepAllSceneTwo",
+        "InfraLengthWindow",
+        "InfraLengthWindowSceneTwo",
+        "InfraLastEvent",
+        "InfraLastEventSceneTwo",
+        "InfraFirstEvent",
+        "InfraUnique",
+        "InfraUniqueSceneTwo",
+        "InfraFirstUnique",
+        "InfraSortWindow",
+        "InfraSortWindowSceneTwo"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+      ],
+      "goTests": [
+        "TestInfraNWViewsKeepAllSimpleParity",
+        "TestInfraNWViewsKeepAllSceneTwoParity",
+        "TestInfraNWViewsLengthWindowParity",
+        "TestInfraNWViewsLengthWindowSceneTwoParity",
+        "TestInfraNWViewsLastEventParity",
+        "TestInfraNWViewsLastEventSceneTwoParity",
+        "TestInfraNWViewsFirstEventParity",
+        "TestInfraNWViewsUniqueParity",
+        "TestInfraNWViewsUniqueSceneTwoParity",
+        "TestInfraNWViewsFirstUniqueParity",
+        "TestInfraNWViewsSortWindowParity",
+        "TestInfraNWViewsSortWindowSceneTwoParity"
+      ],
+      "tags": [
+        "correctness",
+        "infra",
+        "named-window",
+        "data-window",
+        "retention",
+        "keep-all",
+        "length",
+        "last-event",
+        "first-event",
+        "unique",
+        "first-unique",
+        "sort",
+        "on-delete",
+        "irstream"
+      ],
+      "status": "partial",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit",
+        "java-suite-InfraNamedWindowViews"
+      ],
+      "difference": "Go inserts through OnEvent(...).InsertIntoNamedWindow trigger plans as the established equivalent of EPL insert-into select statements, and reads iterator state with NamedWindow.Snapshot in retention order. FirstEventWindowSpec retention is newly honored by named windows: a dropped firstevent insert produces no listener callback at all. Sort windows iterate in sort order with newer equal-key events before older ones (reverseSortedEqualRuns), and an event sorting beyond the retained size of a full window is inserted and removed in the same delta (IR pair with itself). Unique snapshot order follows first-seen key order where Esper asserts any-order."
     }
   ],
   "mappings": [
@@ -12435,6 +12525,10 @@
     {
       "capabilityId": "epl.subselect.unfiltered",
       "caseId": "case.epl-subselect-unfiltered"
+    },
+    {
+      "capabilityId": "infra.namedwindow.views",
+      "caseId": "case.infra-namedwindow-views"
     }
   ]
 }
