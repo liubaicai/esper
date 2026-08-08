@@ -1,6 +1,6 @@
 # Esper 9.0.0 Go 全量移植规划实施文档
 
-> 最新补充：Draft 2.82（2026-08-08），补齐 `EPLDatabase2StreamOuterJoin` 9 个 runtime（left/right/full outer join matched/unmatched、ON-filter 与 historical-preserved no-output）和 `EPLDatabaseNoJoinIterate` 5 个 runtime（NullSelect、ExpressionPoll、VariablesPoll、SubstitutionParameter、SQLTextParamSubquery）的 Go 链式 API 对照；使用 `LengthWindow(1)` 表达 Esper 历史连接的 stream-driven lookup 语义，避免全量 join state 产生额外 delta。上一轮 Draft 2.80 的 SQL FAF 多行快照、整行 SQLROW 转换、显式 SQL 参数声明与 `EPLDatabaseFAF` 10 个 runtime 仍保留；数据库/方法源 runtime 覆盖审计、MySQL/Maven 固定门禁与当前实测 disposition 仍见第 17.5 节。
+> 最新补充：Draft 2.83（2026-08-08），继续补齐数据库域剩余可映射 runtime：`EPLDatabase2StreamOuterJoin` 9 个 runtime（left/right/full outer join matched/unmatched、ON-filter 与 historical-preserved no-output）和 `EPLDatabaseNoJoinIterate` 5 个 runtime（NullSelect、ExpressionPoll、VariablesPoll、SubstitutionParameter、SQLTextParamSubquery）的 Go 链式 API 对照；使用 `LengthWindow(1)` 表达 Esper 历史连接的 stream-driven lookup 语义，避免全量 join state 产生额外 delta。上一轮 Draft 2.80 的 SQL FAF 多行快照、整行 SQLROW 转换、显式 SQL 参数声明与 `EPLDatabaseFAF` 10 个 runtime 仍保留；数据库/方法源 runtime 覆盖审计、MySQL/Maven 固定门禁与当前实测 disposition 仍见第 17.5 节。
 
 ## 1. 文档信息
 
@@ -158,7 +158,7 @@
 - regression-run 静态扫描到约 860 个 public test 入口方法。
 - examples 下有 17 个示例项目、34 个 Java 测试源文件和 181 个 Java 主源码文件，需要按用例价值转换为 Go 示例或端到端测试。
 - 回归标签包含多线程、性能、无效输入、即席查询、序列化、数据流、运行时操作、编译器操作和事件发送器等维度。
-- 当前 capability manifest 已建立 1,387 条 runtime 关联、覆盖 1,377/4,136 个唯一 Java runtime（约 33.29% 的 Java runtime 对账/处置进度）；191 个 case 中 185 个 mapped、2 个 partial、4 个 approved-difference。该比例不是 Java/Go 行为 parity 通过率，也不是全量移植完成度。
+- 当前 capability manifest 已建立 1,387 条 runtime 关联、覆盖 1,391/4,136 个唯一 Java runtime（约 33.63% 的 Java runtime 对账/处置进度）；191 个 case 中 185 个 mapped、2 个 partial、4 个 approved-difference。该比例不是 Java/Go 行为 parity 通过率，也不是全量移植完成度。
 - 除 regression-lib 外，common/compiler/runtime/common-avro/common-xmlxsd 共 371 个 Java 单元测试文件、regression-run 有 82 个入口源文件、EsperIO 共 58 个测试文件，也必须逐项分类；不能只迁移 RegressionExecution。
 - 17 个示例为 autoid、benchmark、cycledetect、marketdatafeed、matchmaker、namedwinquery、ohlcpluginview、qos_sla、rfidassetzone、runtimeconfig、servershell、stockticker、terminalsvc、terminalsvc-jse、transaction、trivia、virtualdw。
 
@@ -2057,3 +2057,19 @@ go test ./... -run 'Test(SQLHistoricalProvider|SQLSink|SQLHistoricalFireAndForge
 后续顺序固定为：先完成 DB/Method/EsperIO DB runtime-to-case 拆分和 fixture/编码/时区门禁，再做 SQL FAF/outer join、method dependent/outer/cache，随后补 EsperIO DB XML/config、connection factory、SQL type binding 和跨语言 trace。只有 runtime 全部处置为 `mapped`、`approved-difference` 或有评审的 N disposition，并具备正向/无效/边界/关闭/并发证据，才允许提升 capability；当前仍不能宣称 Esper 已完成全量 Go 移植。
 
 Draft 2.79 对前文 EsperIO 汇总表中的“异步 executor”未完成项作修订：Go `connectors/db` 已完成 same-thread/命名 fixed-worker、queue drain、取消、panic/error、异步 retry 和 sink lifecycle re-check 子集；前文所列 DB XML/config、connection factory、完整 Java trace 等未完成项仍然有效。
+
+### 17.5.5 数据库选项、性能与缓存对照（Draft 2.83，2026-08-08）
+
+本轮补齐数据库域剩余可映射 runtime 的 Go 链式 API 对照测试，全部纳入 `case.historical-sql`：
+
+- `EPLDatabaseJoinOptionLowercase` / `EPLDatabaseJoinOptionUppercase`：验证 `SQLColumnCaseLower` / `SQLColumnCaseUpper` 与显式 schema 类型声明如何共同决定结果列名与类型（字符串/整数）。
+- `EPLDatabaseNoJoinIteratePerf`：变量驱动的 FAF 查询，`PrepareFireAndForget` + `Execute` 重复执行，验证 `between` + 变量快照结果 `{4, true}`；Java 的 10000 次迭代性能断言不适用于 fake driver，作为 approved-difference 丢弃。
+- `EPLDatabaseQueryResultCache`：LRU 缓存的 SQL 历史流与 `SupportBean_S0` 触发 join，验证顺序与重复查询结果。
+- `EPLDatabaseJoinPerfNoCache`：100 事件 retained join 正确性对照。
+- `EPLDatabaseJoinPerfWithCache` 的 9 个内部 execution（Constants、RangeIndex、KeyAndRangeIndex、SelectLargeResultSet、SelectLargeResultSetCoercion、2StreamOuterJoin、OuterJoinPlusWhere、InKeywordSingleIndex、InKeywordMultiIndex）：全部以功能正确性覆盖，丢弃 Java 的时间阈值；使用 `Join(...).Select(...).Where(...)`、`Between`、`In`、`RightOuter` 和 `KeepAll` 等 Go builder 表达等价语义。
+
+新增 Go 测试文件：
+
+- `database_join_perf_parity_test.go`：包含上述 14 个对照函数及 `mytesttable_large` 1000 行 fixture、`dbJoinPerfS0` / `dbJoinPerfRange` / `dbJoinPerfSupportBean` 辅助类型和若干 fake SQL handler。
+
+本轮新增 14 个 Java runtime 对账/处置证据，manifest 更新后数据库域直接映射明显增加；`EPLDatabaseJoinInsertInto`（pattern+SQL+insert into+time batch+aggregation）仍依赖 pattern timer + SQL 历史流组合，留作后续切片。`go vet .`、`go test ./... -count=1 -timeout 180s`、`go test ./compat/... -count=1` 均通过；`go test -race .` 已按子集通过（小 fixture 约 1.7s，大 fixture 约 69s）。本轮未使用 MySQL Docker，所有测试基于 fake `database/sql` driver。
