@@ -1092,3 +1092,235 @@ func TestFromClauseMethodThreeStreamOneHistSubordinateParity(t *testing.T) {
 		{"S01", "S10", "S21", "S10S21H11"},
 	}, "S21")
 }
+
+// makeFCMVariableHistProvider returns a method provider whose row count is read
+// from a registered variable, mirroring Java's SupportJoinMethods.fetchVal over
+// variable arguments set by an on-trigger statement.
+func makeFCMVariableHistProvider(histSchema Schema, prefix, varName string) MethodProvider {
+	return MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		value, ok := request.Variables[varName]
+		if !ok || value.Any() == nil {
+			return nil, nil
+		}
+		count := value.Any().(int)
+		if count == 0 {
+			return nil, nil
+		}
+		rows := make([]map[string]any, 0, count)
+		for i := 1; i <= count; i++ {
+			rows = append(rows, map[string]any{"val": prefix + fmt.Sprintf("%d", i), "index": i})
+		}
+		return newEventsFrom(histSchema, rows, request.Now)
+	})
+}
+
+// makeFCMVariableDependentHistProvider is the variable-count counterpart of
+// makeFCMDependentHistProvider: the dependency event supplies the val prefix.
+func makeFCMVariableDependentHistProvider(histSchema Schema, depSource, suffix, varName string) MethodProvider {
+	return MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		value, ok := request.Variables[varName]
+		if !ok || value.Any() == nil {
+			return nil, nil
+		}
+		count := value.Any().(int)
+		if count == 0 {
+			return nil, nil
+		}
+		depEvent, ok := request.Dependency(depSource)
+		if !ok {
+			return nil, fmt.Errorf("missing dependency %s", depSource)
+		}
+		prefix := depEvent.Get("val").Any().(string) + suffix
+		rows := make([]map[string]any, 0, count)
+		for i := 1; i <= count; i++ {
+			rows = append(rows, map[string]any{"val": prefix + fmt.Sprintf("%d", i), "index": i})
+		}
+		return newEventsFrom(histSchema, rows, request.Now)
+	})
+}
+
+// fcmDeployVariableSetter registers var1..var4 and deploys an on-trigger that
+// mirrors Java's "on SupportBeanInt set var1=p00, var2=p01, var3=p02, var4=p03".
+func fcmDeployVariableSetter(t *testing.T, env *Environment, engine *Engine) {
+	t.Helper()
+	for _, name := range []string{"var1", "var2", "var3", "var4"} {
+		if err := env.RegisterVariable(name, 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setterPlan, err := env.Build(OnEvent(From[fcmBeanInt](env, "SupportBeanInt")).SetVariables(
+		SetVariableExpr("var1", Field[fcmBeanInt, int]("p00")),
+		SetVariableExpr("var2", Field[fcmBeanInt, int]("p01")),
+		SetVariableExpr("var3", Field[fcmBeanInt, int]("p02")),
+		SetVariableExpr("var4", Field[fcmBeanInt, int]("p03")),
+	).Query(StatementName("fcm-set-vars")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), setterPlan); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// fcmMakeMethodOnlySender sends one event and returns the current snapshot rows,
+// mirroring Java's assertPropsPerRowIteratorAnyOrder for method-only joins.
+func fcmMakeMethodOnlySender(t *testing.T, engine *Engine, stmt *Statement) func(event any) []Row {
+	t.Helper()
+	return func(event any) []Row {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+		snapshot, err := stmt.Snapshot(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows := make([]Row, 0, len(snapshot.Results()))
+		for _, result := range snapshot.Results() {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return rows
+	}
+}
+
+func TestFromClauseMethodThreeHistPureNoSubordinateParity(t *testing.T) {
+	env := newFCMEnvironmentWithInt(t)
+	histSchema := fcmHistSchema(t, env)
+	engine := NewEngine(env)
+	t.Cleanup(func() { _ = engine.Close(context.Background()) })
+	fcmDeployVariableSetter(t, env, engine)
+
+	h0 := FromMethod[map[string]any](env, "h0", histSchema, makeFCMVariableHistProvider(histSchema, "H0", "var1"))
+	h1 := FromMethod[map[string]any](env, "h1", histSchema, makeFCMVariableHistProvider(histSchema, "H1", "var2"))
+	h2 := FromMethod[map[string]any](env, "h2", histSchema, makeFCMVariableHistProvider(histSchema, "H2", "var3"))
+
+	query := JoinMany(JoinSource(h0), JoinSource(h1), JoinSource(h2)).Select(
+		SelectFrom(0, "valh0", Field[map[string]any, string]("val")),
+		SelectFrom(1, "valh1", Field[map[string]any, string]("val")),
+		SelectFrom(2, "valh2", Field[map[string]any, string]("val")),
+	).Query(StatementName("fcm-3h-pure"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	send := fcmMakeMethodOnlySender(t, engine, deployment.Statements()[0])
+
+	rows := send(fcmBeanInt{ID: "S00", P00: 1, P01: 1, P02: 1})
+	fcmAssertRows(t, rows, [][]string{{"H01", "H11", "H21"}}, "S00")
+
+	rows = send(fcmBeanInt{ID: "S01", P00: 0, P01: 1, P02: 1})
+	fcmAssertRows(t, rows, nil, "S01")
+
+	rows = send(fcmBeanInt{ID: "S02", P00: 1, P01: 1, P02: 0})
+	fcmAssertRows(t, rows, nil, "S02")
+
+	rows = send(fcmBeanInt{ID: "S03", P00: 1, P01: 1, P02: 2})
+	fcmAssertRows(t, rows, [][]string{{"H01", "H11", "H21"}, {"H01", "H11", "H22"}}, "S03")
+
+	rows = send(fcmBeanInt{ID: "S04", P00: 2, P01: 2, P02: 1})
+	fcmAssertRows(t, rows, [][]string{
+		{"H01", "H11", "H21"},
+		{"H02", "H11", "H21"},
+		{"H01", "H12", "H21"},
+		{"H02", "H12", "H21"},
+	}, "S04")
+}
+
+func TestFromClauseMethodThreeHistOneSubordinateParity(t *testing.T) {
+	env := newFCMEnvironmentWithInt(t)
+	histSchema := fcmHistSchema(t, env)
+	engine := NewEngine(env)
+	t.Cleanup(func() { _ = engine.Close(context.Background()) })
+	fcmDeployVariableSetter(t, env, engine)
+
+	h0 := FromMethod[map[string]any](env, "h0", histSchema, makeFCMVariableHistProvider(histSchema, "H0", "var1"))
+	h1 := FromMethod[map[string]any](env, "h1", histSchema, makeFCMVariableHistProvider(histSchema, "H1", "var2"))
+	h2 := FromMethod[map[string]any](env, "h2", histSchema, makeFCMVariableDependentHistProvider(histSchema, "h0", "-H2", "var3")).DependingOn("h0")
+
+	query := JoinMany(JoinSource(h0), JoinSource(h1), JoinSource(h2)).Select(
+		SelectFrom(0, "valh0", Field[map[string]any, string]("val")),
+		SelectFrom(1, "valh1", Field[map[string]any, string]("val")),
+		SelectFrom(2, "valh2", Field[map[string]any, string]("val")),
+	).Query(StatementName("fcm-3h-1sub"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	send := fcmMakeMethodOnlySender(t, engine, deployment.Statements()[0])
+
+	rows := send(fcmBeanInt{ID: "S00", P00: 1, P01: 1, P02: 1})
+	fcmAssertRows(t, rows, [][]string{{"H01", "H11", "H01-H21"}}, "S00")
+
+	rows = send(fcmBeanInt{ID: "S01", P00: 0, P01: 1, P02: 1})
+	fcmAssertRows(t, rows, nil, "S01")
+
+	rows = send(fcmBeanInt{ID: "S02", P00: 1, P01: 1, P02: 0})
+	fcmAssertRows(t, rows, nil, "S02")
+
+	rows = send(fcmBeanInt{ID: "S03", P00: 1, P01: 1, P02: 2})
+	fcmAssertRows(t, rows, [][]string{{"H01", "H11", "H01-H21"}, {"H01", "H11", "H01-H22"}}, "S03")
+
+	rows = send(fcmBeanInt{ID: "S04", P00: 2, P01: 2, P02: 1})
+	fcmAssertRows(t, rows, [][]string{
+		{"H01", "H11", "H01-H21"},
+		{"H02", "H11", "H02-H21"},
+		{"H01", "H12", "H01-H21"},
+		{"H02", "H12", "H02-H21"},
+	}, "S04")
+}
+
+func TestFromClauseMethodThreeHistTwoSubordinateChainParity(t *testing.T) {
+	env := newFCMEnvironmentWithInt(t)
+	histSchema := fcmHistSchema(t, env)
+	engine := NewEngine(env)
+	t.Cleanup(func() { _ = engine.Close(context.Background()) })
+	fcmDeployVariableSetter(t, env, engine)
+
+	h0 := FromMethod[map[string]any](env, "h0", histSchema, makeFCMVariableHistProvider(histSchema, "H0", "var1"))
+	h1 := FromMethod[map[string]any](env, "h1", histSchema, makeFCMVariableDependentHistProvider(histSchema, "h0", "-H1", "var2")).DependingOn("h0")
+	h2 := FromMethod[map[string]any](env, "h2", histSchema, makeFCMVariableDependentHistProvider(histSchema, "h1", "-H2", "var3")).DependingOn("h1")
+
+	query := JoinMany(JoinSource(h0), JoinSource(h1), JoinSource(h2)).Select(
+		SelectFrom(0, "valh0", Field[map[string]any, string]("val")),
+		SelectFrom(1, "valh1", Field[map[string]any, string]("val")),
+		SelectFrom(2, "valh2", Field[map[string]any, string]("val")),
+	).Query(StatementName("fcm-3h-chain"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	send := fcmMakeMethodOnlySender(t, engine, deployment.Statements()[0])
+
+	rows := send(fcmBeanInt{ID: "S00", P00: 1, P01: 1, P02: 1})
+	fcmAssertRows(t, rows, [][]string{{"H01", "H01-H11", "H01-H11-H21"}}, "S00")
+
+	rows = send(fcmBeanInt{ID: "S01", P00: 0, P01: 1, P02: 1})
+	fcmAssertRows(t, rows, nil, "S01")
+
+	rows = send(fcmBeanInt{ID: "S02", P00: 1, P01: 1, P02: 0})
+	fcmAssertRows(t, rows, nil, "S02")
+
+	rows = send(fcmBeanInt{ID: "S03", P00: 1, P01: 1, P02: 2})
+	fcmAssertRows(t, rows, [][]string{{"H01", "H01-H11", "H01-H11-H21"}, {"H01", "H01-H11", "H01-H11-H22"}}, "S03")
+
+	rows = send(fcmBeanInt{ID: "S04", P00: 2, P01: 2, P02: 1})
+	fcmAssertRows(t, rows, [][]string{
+		{"H01", "H01-H11", "H01-H11-H21"},
+		{"H02", "H02-H11", "H02-H11-H21"},
+		{"H01", "H01-H12", "H01-H12-H21"},
+		{"H02", "H02-H12", "H02-H12-H21"},
+	}, "S04")
+}

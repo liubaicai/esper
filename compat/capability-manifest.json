@@ -1243,7 +1243,10 @@
         "EPLFromClauseMethod1Stream3HistForwardSubordinate",
         "EPLFromClauseMethod1Stream3HistChainSubordinate",
         "EPLFromClauseMethod2Stream2HistStarSubordinate",
-       "EPLFromClauseMethod3Stream1HistSubordinate"
+        "EPLFromClauseMethod3Stream1HistSubordinate",
+        "EPLFromClauseMethod3HistPureNoSubordinate",
+        "EPLFromClauseMethod3Hist1Subordinate",
+        "EPLFromClauseMethod3Hist2SubordinateChain"
       ],
       "id": "epl.fromclausemethod",
       "summary": "Method-backed historical streams (method source) with array/object/single return, overloaded resolution, multiple representations and join/FAF usage",
@@ -1256,7 +1259,7 @@
       ],
       "phase": 2,
       "remaining": [
-        "pure-no-subordinate and NW-twice method-historical variants",
+        "NW-twice method-historical variants",
         "method cache LRU/expiry and join performance variants",
         "variable-driven method sources and context-variable bindings",
         "multikey/array-key method joins",
@@ -1278,7 +1281,10 @@
         "TestFromClauseMethodOneStreamThreeHistForwardSubordinateParity",
         "TestFromClauseMethodOneStreamThreeHistChainSubordinateParity",
         "TestFromClauseMethodTwoStreamTwoHistStarSubordinateParity",
-        "TestFromClauseMethodThreeStreamOneHistSubordinateParity"
+        "TestFromClauseMethodThreeStreamOneHistSubordinateParity",
+        "TestFromClauseMethodThreeHistPureNoSubordinateParity",
+        "TestFromClauseMethodThreeHistOneSubordinateParity",
+        "TestFromClauseMethodThreeHistTwoSubordinateChainParity"
       ],
       "javaRuntimeIds": [
         "java-runtime-46f715ed2a74ce455f5e",
@@ -11033,11 +11039,14 @@
         "EPLFromClauseMethod1Stream3HistForwardSubordinate",
         "EPLFromClauseMethod1Stream3HistChainSubordinate",
         "EPLFromClauseMethod2Stream2HistStarSubordinate",
-        "EPLFromClauseMethod3Stream1HistSubordinate"
+        "EPLFromClauseMethod3Stream1HistSubordinate",
+        "EPLFromClauseMethod3HistPureNoSubordinate",
+        "EPLFromClauseMethod3Hist1Subordinate",
+        "EPLFromClauseMethod3Hist2SubordinateChain"
       ],
       "id": "case.epl-fromclausemethod-basic",
       "status": "partial",
-      "difference": "Go provides typed MethodProvider/MethodProviderFunc and FromMethodOn/FromMethod builders instead of Java reflection-based static method invocation. The mapped slice covers no-argument array/object returns, method result returned as Map/POJO/ObjectArray, overloaded parameter dispatch by the provider, basic invalid-build checks for unknown trigger stream and nil provider, and N-stream method-historical joins with star-subordinate CartesianLast, forward/chain subordinate and joined-keepall semantics, including 2-stream/3-stream alias-driven subordinate lookups. Cache LRU/expiry, variable/context bindings, multikey/array-key joins, NW-twice method joins, pure-no-subordinate combinations, outer joins, join performance and full Java method footprint/return-type diagnostics remain open.",
+      "difference": "Go provides typed MethodProvider/MethodProviderFunc and FromMethodOn/FromMethod builders instead of Java reflection-based static method invocation. The mapped slice covers no-argument array/object returns, method result returned as Map/POJO/ObjectArray, overloaded parameter dispatch by the provider, basic invalid-build checks for unknown trigger stream and nil provider, N-stream method-historical joins with star-subordinate CartesianLast, forward/chain subordinate and joined-keepall semantics, 2-stream/3-stream alias-driven subordinate lookups, and variable-driven 3-historical pure/no-subordinate, 1-subordinate and chained-subordinate snapshots. Cache LRU/expiry, context bindings, multikey/array-key joins, NW-twice method joins, outer joins, join performance and full Java method footprint/return-type diagnostics remain open.",
       "javaRuntimeIds": [
         "java-runtime-46f715ed2a74ce455f5e",
         "java-runtime-2c46a2d3cde0e7a5cac3",
@@ -11055,7 +11064,10 @@
         "java-runtime-9cc6163d0e611f7d3020",
         "java-runtime-93978f529b48869200a6",
         "java-runtime-70ff0c7b491131d96598",
-        "java-runtime-8767976387656ddb4ced"
+        "java-runtime-8767976387656ddb4ced",
+        "java-runtime-ef932b432431cc12b207",
+        "java-runtime-a518167e14ddf5f3870b",
+        "java-runtime-ad1d2f4d0edc546eb20e"
       ],
       "evidence": [
         "java-runtime-inventory",
@@ -11093,7 +11105,10 @@
         "TestFromClauseMethodOneStreamThreeHistForwardSubordinateParity",
         "TestFromClauseMethodOneStreamThreeHistChainSubordinateParity",
         "TestFromClauseMethodTwoStreamTwoHistStarSubordinateParity",
-        "TestFromClauseMethodThreeStreamOneHistSubordinateParity"
+        "TestFromClauseMethodThreeStreamOneHistSubordinateParity",
+        "TestFromClauseMethodThreeHistPureNoSubordinateParity",
+        "TestFromClauseMethodThreeHistOneSubordinateParity",
+        "TestFromClauseMethodThreeHistTwoSubordinateChainParity"
       ]
     }
   ],
