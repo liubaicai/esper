@@ -9595,7 +9595,10 @@
         "java-2e526eb966c9789ed147",
         "java-4ebaa14e1d07ad8ffc3d",
         "java-9acbcd1ac59f3fad4643",
-        "java-19766db498cff3de133b"
+        "java-19766db498cff3de133b",
+        "java-d0819273763fae148efd",
+        "java-93f38d9dd89049587cde",
+        "java-f5b73d6f1ac40a3989d1"
       ],
       "javaRuntimeIds": [
         "java-runtime-67745eb75f864ea17fed",
@@ -9673,7 +9676,10 @@
         "EPLDatabaseOutputRowConversion",
         "EPLDatabaseSimpleJoinRight",
         "EPLDatabasePropertyResolution",
-        "EPLDatabase2HistoricalStar"
+        "EPLDatabase2HistoricalStar",
+        "EPLDatabase3Stream",
+        "EPLDatabaseVariables",
+        "EPLDatabaseRestartStatement"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java",
@@ -9759,7 +9765,10 @@
         "TestDatabaseJoinSimpleJoinRightMatchesJava",
         "TestDatabaseJoinStreamNamesAndRenameMatchesJava",
         "TestDatabaseJoinPropertyResolutionMatchesJava",
-        "TestDatabaseJoin2HistoricalStarMatchesJava"
+        "TestDatabaseJoin2HistoricalStarMatchesJava",
+        "TestDatabase3StreamMatchesJava",
+        "TestDatabaseVariablesMatchesJava",
+        "TestDatabaseRestartStatementMatchesJava"
       ],
       "tags": [
         "correctness",
