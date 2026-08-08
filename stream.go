@@ -28,6 +28,10 @@ type streamNode struct {
 	input              *streamNode
 	sourceName         string
 	moduleName         string
+	// sourceAlias is the join-visible logical name assigned through As. It is
+	// distinct from sourceName, which keeps addressing the registered event
+	// type, named window or table for catalog lookup and event matching.
+	sourceAlias        string
 	sourceType         reflect.Type
 	// isAlias marks a streamSource whose sourceName is an alias distinct from
 	// the registered event type name. Aliases are resolved through sourceType.
@@ -52,21 +56,38 @@ type containedDefinition struct {
 	wrap             func(reflect.Value) (any, error)
 }
 
+// logicalName returns the join-visible source name: the alias assigned via As
+// when present, otherwise the registered source name. Method/historical
+// dependency resolution matches DependingOn arguments against this name.
+func (n *streamNode) logicalName() string {
+	if n == nil {
+		return ""
+	}
+	if alias := strings.TrimSpace(n.sourceAlias); alias != "" {
+		return alias
+	}
+	return strings.TrimSpace(n.sourceName)
+}
+
 func (n *streamNode) describe() string {
 	if n == nil {
 		return "<nil-stream>"
 	}
+	alias := ""
+	if n.sourceAlias != "" {
+		alias = " as " + n.sourceAlias
+	}
 	switch n.kind {
 	case streamSource:
-		return "from(" + n.sourceName + ")"
+		return "from(" + n.sourceName + alias + ")"
 	case streamFilter:
 		return n.input.describe() + ".filter(" + n.predicate.Description() + ")"
 	case streamWindow:
 		return n.input.describe() + ".window(" + n.window.description() + ")"
 	case streamNamedWindow:
-		return "named-window(" + catalogKey(n.moduleName, n.sourceName) + ")"
+		return "named-window(" + catalogKey(n.moduleName, n.sourceName) + alias + ")"
 	case streamTable:
-		return "table-source(" + catalogKey(n.moduleName, n.sourceName) + ")"
+		return "table-source(" + catalogKey(n.moduleName, n.sourceName) + alias + ")"
 	case streamHistorical:
 		schemaName := "<nil>"
 		triggerName := ""
@@ -981,6 +1002,28 @@ func UnnestValues[T, V any](input Stream[T], property Expression[[]V]) Stream[Co
 			},
 		},
 	}
+}
+
+// As assigns a logical join alias to the base source, mirroring EPL's
+// "from AllTrades as us". Method sources reference the alias through
+// DependingOn and providers read matching events through
+// MethodRequest.Dependency. Aliasing a named window or table lets the same
+// registered object appear multiple times in one join under distinct logical
+// names; catalog lookup and event matching still use the registered source
+// name. The alias resolves through filter/window wrappers onto the base
+// source node. The stream value is cloned, preserving fluent API
+// immutability.
+func (s Stream[T]) As(alias string) Stream[T] {
+	node := cloneStreamNode(s.node)
+	base, err := sourceNode(node)
+	if err != nil || base == nil {
+		if node != nil {
+			node.configurationError = "As requires a stream source"
+		}
+		return Stream[T]{env: s.env, node: node}
+	}
+	base.sourceAlias = strings.TrimSpace(alias)
+	return Stream[T]{env: s.env, node: node}
 }
 
 // DependingOn declares lateral/subordinate method inputs by join source
@@ -2702,7 +2745,7 @@ func methodJoinEvaluationOrder(definition *joinDefinition) ([]int, error) {
 			return nil, err
 		}
 		bases[index] = base
-		name := strings.TrimSpace(base.sourceName)
+		name := base.logicalName()
 		byName[name] = append(byName[name], index)
 	}
 

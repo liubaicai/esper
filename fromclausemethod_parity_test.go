@@ -1324,3 +1324,126 @@ func TestFromClauseMethodThreeHistTwoSubordinateChainParity(t *testing.T) {
 		{"H02", "H02-H12", "H02-H12-H21"},
 	}, "S04")
 }
+
+type fcmTradeEventWithSide struct {
+	TradeID string `esper:"tradeId"`
+	Side    string `esper:"side"`
+}
+
+// makeFCMCorrelationProvider mirrors Java's
+// EPLFromClauseMethodNStream.computeCorrelation(us, them): one row whose
+// correlation is 1 when both dependency events are present and 0 otherwise.
+func makeFCMCorrelationProvider(corrSchema Schema) MethodProvider {
+	return MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+		_, hasUS := request.Dependency("us")
+		_, hasThem := request.Dependency("them")
+		correlation := 0
+		if hasUS && hasThem {
+			correlation = 1
+		}
+		return newEventsFrom(corrSchema, []map[string]any{{"correlation": correlation}}, request.Now)
+	})
+}
+
+// TestFromClauseMethodThreeStreamOneHistStreamNWTwiceParity mirrors Java's
+// EPLFromClauseMethod3Stream1HistStreamNWTwice: the same keepall named window
+// appears twice in one join under distinct aliases (us/them) and a method
+// source joins over both aliased sides. Java fills the window through an
+// insert-into statement; the Go port inserts through InsertNamedWindow, which
+// is the fluent equivalent of "insert into AllTrades select *".
+func TestFromClauseMethodThreeStreamOneHistStreamNWTwiceParity(t *testing.T) {
+	env := NewEnvironment()
+	tradeSchema, err := RegisterStruct[fcmTradeEventWithSide](env, "SupportTradeEventWithSide")
+	if err != nil {
+		t.Fatal(err)
+	}
+	corrSchema, err := NewMapSchema("FCMCorrelationRow", []FieldSpec{
+		FieldDef("correlation", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.RegisterSchema(corrSchema); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "AllTrades", tradeSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+
+	us := FromNamedWindowAs[fcmTradeEventWithSide](env, "AllTrades").As("us")
+	them := FromNamedWindowAs[fcmTradeEventWithSide](env, "AllTrades").As("them")
+	corr := FromMethod[map[string]any](env, "corr", corrSchema, makeFCMCorrelationProvider(corrSchema)).DependingOn("us", "them")
+
+	query := JoinMany(JoinSource(us), JoinSource(them), JoinSource(corr)).On(
+		OnSourcesCompare(0, Field[fcmTradeEventWithSide, string]("side"), 1, Field[fcmTradeEventWithSide, string]("side"), JoinNotEqual),
+	).Select(
+		SelectSourceEvent(0, "us"),
+		SelectSourceEvent(1, "them"),
+		SelectFrom(2, "crl", Field[map[string]any, int]("correlation")),
+	).Where(
+		Greater[int](JoinField[int](2, "correlation"), Literal(0)),
+	).Query(StatementName("fcm-nw-twice"))
+
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatalf("deploy failed: %v", err)
+	}
+	t.Cleanup(func() { _ = engine.Close(context.Background()) })
+
+	var lastNew []Row
+	sawNew := false
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		lastNew = lastNewRows(batch)
+		sawNew = true
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	insert := func(trade fcmTradeEventWithSide) []Row {
+		t.Helper()
+		sawNew = false
+		lastNew = nil
+		if err := engine.InsertNamedWindow(context.Background(), "AllTrades", trade); err != nil {
+			t.Fatal(err)
+		}
+		if !sawNew {
+			return nil
+		}
+		return lastNew
+	}
+
+	if rows := insert(fcmTradeEventWithSide{TradeID: "T1", Side: "B"}); len(rows) != 0 {
+		t.Fatalf("T1/B expected no rows, got %#v", rows)
+	}
+
+	rows := insert(fcmTradeEventWithSide{TradeID: "T2", Side: "S"})
+	if len(rows) != 2 {
+		t.Fatalf("T2/S expected 2 rows, got %d: %#v", len(rows), rows)
+	}
+	actual := make([]string, 0, len(rows))
+	for _, row := range rows {
+		usEvent, ok := row.Get("us").Any().(Event)
+		if !ok {
+			t.Fatalf("us projection is not an Event: %#v", row.Get("us").Any())
+		}
+		themEvent, ok := row.Get("them").Any().(Event)
+		if !ok {
+			t.Fatalf("them projection is not an Event: %#v", row.Get("them").Any())
+		}
+		actual = append(actual, fmt.Sprintf("%v|%v|%v",
+			usEvent.Get("tradeId").Any(), themEvent.Get("tradeId").Any(), row.Get("crl").Any()))
+	}
+	sort.Strings(actual)
+	want := []string{"T1|T2|1", "T2|T1|1"}
+	for index := range want {
+		if actual[index] != want[index] {
+			t.Fatalf("got %v, want %v", actual, want)
+		}
+	}
+}

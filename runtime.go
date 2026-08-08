@@ -6050,7 +6050,7 @@ func methodDependencyInvocations(dependencies []string, sources []*streamNode, s
 		if err != nil {
 			return nil, err
 		}
-		byName[strings.TrimSpace(base.sourceName)] = index
+		byName[base.logicalName()] = index
 	}
 	invocations := []methodDependencyInvocation{{events: make(map[string]Event), lineage: make(map[int]uint64)}}
 	for _, rawName := range dependencies {
