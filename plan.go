@@ -1421,6 +1421,14 @@ func (e *Environment) validateNode(node *streamNode) error {
 		if node.method == nil || node.method.provider == nil {
 			return NewError(ErrorDependency, fmt.Sprintf("method source %q has no provider", node.sourceName))
 		}
+		if node.method.evaluateOnce {
+			if len(node.method.dependencies) > 0 {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("method source %q EvaluateOnce cannot be combined with dependencies", node.sourceName))
+			}
+			if node.method.trigger != "" {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("method source %q EvaluateOnce cannot be combined with a trigger type", node.sourceName))
+			}
+		}
 		if !node.method.schema.valid() {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("method source %q has no schema", node.sourceName))
 		}

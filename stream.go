@@ -109,7 +109,11 @@ func (n *streamNode) describe() string {
 			triggerName = n.method.trigger
 			dependencies = strings.Join(n.method.dependencies, ",")
 		}
-		return "method(" + n.sourceName + ":" + schemaName + ":trigger=" + triggerName + ":depends=" + dependencies + ")"
+		once := ""
+		if n.method != nil && n.method.evaluateOnce {
+			once = ":once"
+		}
+		return "method(" + n.sourceName + ":" + schemaName + ":trigger=" + triggerName + ":depends=" + dependencies + once + ")"
 	case streamPattern:
 		description := "pattern-source(" + n.sourceName
 		if n.pattern != nil {
@@ -1023,6 +1027,29 @@ func (s Stream[T]) As(alias string) Stream[T] {
 		return Stream[T]{env: s.env, node: node}
 	}
 	base.sourceAlias = strings.TrimSpace(alias)
+	return Stream[T]{env: s.env, node: node}
+}
+
+// EvaluateOnce marks a dependency-free method source for a single provider
+// poll at statement deployment. Esper evaluates method/historical streams
+// whose arguments do not reference other streams exactly once when the
+// statement starts and retains the rows like a read-only data window, so an
+// outer join iterator sees unmatched placeholder rows immediately after
+// Deploy returns. The fluent port opts in explicitly rather than
+// introspecting provider arguments. Build rejects EvaluateOnce combined with
+// a trigger type or DependingOn. The marked source must stay bare: Filter or
+// Window wrappers would be bypassed by the deployment-time seed.
+// The stream value is cloned, preserving fluent API immutability.
+func (s Stream[T]) EvaluateOnce() Stream[T] {
+	node := cloneStreamNode(s.node)
+	base, err := sourceNode(node)
+	if err != nil || base.kind != streamMethod || base.method == nil {
+		if node != nil {
+			node.configurationError = "EvaluateOnce requires a method source"
+		}
+		return Stream[T]{env: s.env, node: node}
+	}
+	base.method.evaluateOnce = true
 	return Stream[T]{env: s.env, node: node}
 }
 

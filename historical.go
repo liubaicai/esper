@@ -383,6 +383,11 @@ type methodDefinition struct {
 	schema       Schema
 	provider     MethodProvider
 	dependencies []string
+	// evaluateOnce marks a dependency-free method source that Esper would
+	// evaluate exactly once at statement start, retaining the rows like a
+	// read-only data window. The fluent port opts in explicitly rather than
+	// introspecting provider arguments.
+	evaluateOnce bool
 }
 
 // SQLHistoricalProvider adapts a prepared database/sql query to a historical

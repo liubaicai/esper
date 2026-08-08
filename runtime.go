@@ -1681,6 +1681,11 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 		e.mu.Unlock()
 		return nil, err
 	}
+	if err := e.seedEvaluateOnceJoinSidesLocked(ctx, statement); err != nil {
+		e.matchRecognizeStatePool.removeOwner(statement.id)
+		e.mu.Unlock()
+		return nil, err
+	}
 	deployment := &Deployment{engine: e, id: deploymentID, statements: []*Statement{statement}}
 	statement.deployment = deployment
 	e.statements[name] = statement
@@ -1728,6 +1733,67 @@ func (e *Engine) seedNamedWindowRowRecogLocked(ctx context.Context, statement *S
 	for _, event := range events {
 		if _, _, err := statement.runtime.process(statement.plan, event, e.clock.Now(), statement.runtime.variables); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// seedEvaluateOnceJoinSidesLocked polls join method sources marked
+// EvaluateOnce exactly once at deployment, mirroring Esper's statement-start
+// evaluation of method/historical streams whose arguments reference no other
+// stream. The rows are retained in the join state like a read-only data
+// window, so a full/right outer join iterator sees unmatched placeholder rows
+// immediately after Deploy returns. Seeding deliberately does not emit a
+// listener batch; deployment must not announce historical rows as new output.
+func (e *Engine) seedEvaluateOnceJoinSidesLocked(ctx context.Context, statement *Statement) error {
+	if e == nil || statement == nil {
+		return nil
+	}
+	var definitions []*joinDefinition
+	if statement.plan.query.join != nil {
+		definitions = append(definitions, statement.plan.query.join)
+	}
+	if statement.plan.query.aggregate != nil && statement.plan.query.aggregate.join != nil {
+		definitions = append(definitions, statement.plan.query.aggregate.join)
+	}
+	if len(definitions) == 0 {
+		return nil
+	}
+	now := e.clock.Now()
+	for _, definition := range definitions {
+		sources := joinDefinitionSources(definition)
+		initialized := false
+		for index, source := range sources {
+			base, err := sourceNode(source)
+			if err != nil {
+				return err
+			}
+			if base == nil || base.kind != streamMethod || base.method == nil || !base.method.evaluateOnce {
+				continue
+			}
+			if !initialized {
+				if statement.runtime.joinState == nil {
+					statement.runtime.joinState = &joinRuntimeState{}
+				}
+				if len(statement.runtime.joinState.sides) != len(sources) {
+					statement.runtime.joinState.sides = make([][]storedEvent, len(sources))
+				}
+				initialized = true
+			}
+			events, err := base.method.provider.Poll(ctx, MethodRequest{
+				Now:        now,
+				Variables:  visibleVariableValues(statement.runtime.variables),
+				Parameters: parameterValuesFromVariables(statement.runtime.variables),
+				Invocation: statement.runtime.methodInvocationContext(base.sourceName),
+			})
+			if err != nil {
+				return err
+			}
+			side := make([]storedEvent, 0, len(events))
+			for _, event := range events {
+				side = append(side, storedEvent{event: event, receivedAt: now, lineageID: statement.runtime.nextJoinLineageID()})
+			}
+			statement.runtime.joinState.sides[index] = side
 		}
 	}
 	return nil
@@ -5746,6 +5812,15 @@ func containsHistoricalSource(node *streamNode) bool {
 	return false
 }
 
+// isEvaluateOnceSource reports whether the source chain bottoms out in a
+// method source marked EvaluateOnce. Such sides are seeded once at deployment
+// and retained like a read-only data window: trigger cycles neither clear nor
+// re-poll them.
+func isEvaluateOnceSource(node *streamNode) bool {
+	base, err := sourceNode(node)
+	return err == nil && base != nil && base.kind == streamMethod && base.method != nil && base.method.evaluateOnce
+}
+
 func (r *statementRuntime) insertJoin(definition *joinDefinition, event Event, now time.Time) (joinDelta, error) {
 	return r.updateJoin(definition, now, []Event{event}, nil)
 }
@@ -5774,7 +5849,7 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 		// Clear all such sides before evaluating the dependency graph so a
 		// subordinate source can never observe a previous trigger's rows.
 		for index, source := range sources {
-			if containsHistoricalSource(source) {
+			if containsHistoricalSource(source) && !isEvaluateOnceSource(source) {
 				r.joinState.sides[index] = nil
 			}
 		}
@@ -5783,6 +5858,12 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 			base, baseErr := sourceNode(source)
 			if baseErr != nil {
 				return joinDelta{}, baseErr
+			}
+			if base.kind == streamMethod && base.method != nil && base.method.evaluateOnce {
+				// Evaluate-once rows were seeded at deployment and are retained
+				// across triggers; Esper does not re-poll dependency-free method
+				// streams once the statement is running.
+				continue
 			}
 			if base.kind == streamTable {
 				// A table is a current-state source rather than an event stream.
@@ -5905,7 +5986,7 @@ func (r *statementRuntime) updateUnidirectionalJoin(definition *joinDefinition, 
 	for _, event := range newEvents {
 		working := cloneJoinRuntimeState(r.joinState)
 		for index, source := range sources {
-			if containsHistoricalSource(source) && !flags[index] {
+			if containsHistoricalSource(source) && !flags[index] && !isEvaluateOnceSource(source) {
 				r.joinState.sides[index] = nil
 				working.sides[index] = nil
 			}
@@ -5916,6 +5997,9 @@ func (r *statementRuntime) updateUnidirectionalJoin(definition *joinDefinition, 
 			base, err := sourceNode(source)
 			if err != nil {
 				return joinDelta{}, err
+			}
+			if base.kind == streamMethod && base.method != nil && base.method.evaluateOnce {
+				continue
 			}
 			if base.kind == streamTable {
 				side, snapshotErr := r.snapshotTableJoinSide(source, base, now)
@@ -6393,6 +6477,17 @@ func joinChainedTuples(definition *joinDefinition, state *joinRuntimeState, now 
 		matchedRight := make([]bool, len(rightSide))
 		next := make([]chainedJoinTuple, 0)
 		for _, left := range rows {
+			if edge.kind != JoinInner && !joinChainedEdgeAnchored(edge, edgeIndex, left.events) {
+				// The edge cannot be evaluated against this partial tuple: none
+				// of the accumulated streams referenced by the edge conditions
+				// carries an actual event. Esper's N-way outer assembly does not
+				// eliminate such partial results at a later outer edge, so the
+				// tuple passes through unchanged with a placeholder appended.
+				events := append(append([]Event(nil), left.events...), Event{})
+				stored := append(append([]storedEvent(nil), left.stored...), storedEvent{})
+				next = append(next, chainedJoinTuple{events: events, stored: stored})
+				continue
+			}
 			matchedLeft := false
 			for rightIndex, right := range rightSide {
 				events := append(append([]Event(nil), left.events...), right.event)
@@ -6404,7 +6499,7 @@ func joinChainedTuples(definition *joinDefinition, state *joinRuntimeState, now 
 				matchedRight[rightIndex] = true
 				next = append(next, chainedJoinTuple{events: events, stored: stored})
 			}
-			if !matchedLeft && (edge.kind == JoinLeftOuter || edge.kind == JoinFullOuter) {
+			if !matchedLeft && (edge.kind == JoinLeftOuter || edge.kind == JoinFullOuter) && joinStoredTupleHasAnchor(left.stored) {
 				events := append(append([]Event(nil), left.events...), Event{})
 				stored := append(append([]storedEvent(nil), left.stored...), storedEvent{})
 				next = append(next, chainedJoinTuple{events: events, stored: stored})
@@ -6412,7 +6507,7 @@ func joinChainedTuples(definition *joinDefinition, state *joinRuntimeState, now 
 		}
 		if edge.kind == JoinRightOuter || edge.kind == JoinFullOuter {
 			for rightIndex, right := range rightSide {
-				if matchedRight[rightIndex] {
+				if matchedRight[rightIndex] || len(right.lineage) > 0 {
 					continue
 				}
 				events := make([]Event, edgeIndex+2)
@@ -6478,7 +6573,7 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 
 	if definition.kind == JoinLeftOuter {
 		for index, stored := range state.sides[0] {
-			if matched[0][index] {
+			if matched[0][index] || len(stored.lineage) > 0 {
 				continue
 			}
 			tuple := make([]Event, len(sources))
@@ -6489,7 +6584,7 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 	if definition.kind == JoinRightOuter {
 		last := len(sources) - 1
 		for index, stored := range state.sides[last] {
-			if matched[last][index] {
+			if matched[last][index] || len(stored.lineage) > 0 {
 				continue
 			}
 			tuple := make([]Event, len(sources))
@@ -6500,7 +6595,7 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 	if definition.kind == JoinFullOuter {
 		for sourceIndex, side := range state.sides {
 			for index, stored := range side {
-				if matched[sourceIndex][index] {
+				if matched[sourceIndex][index] || len(stored.lineage) > 0 {
 					continue
 				}
 				tuple := make([]Event, len(sources))
@@ -6521,6 +6616,44 @@ func joinStoredTupleMatchesLineage(tuple []storedEvent) bool {
 		}
 	}
 	return true
+}
+
+// joinChainedEdgeAnchored reports whether an outer edge can be evaluated
+// against the accumulated partial tuple: at least one accumulated stream
+// referenced by the edge's conditions must carry an actual (non-placeholder)
+// event. Edges without conditions always apply (cross product semantics).
+func joinChainedEdgeAnchored(edge joinEdgeDefinition, edgeIndex int, events []Event) bool {
+	if len(edge.conditions) == 0 {
+		return true
+	}
+	for source := 0; source <= edgeIndex && source < len(events); source++ {
+		if events[source].underlying == nil {
+			continue
+		}
+		for _, condition := range edge.conditions {
+			if joinConditionReferencesSource(condition, source) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// joinStoredTupleHasAnchor reports whether the tuple holds at least one
+// event that is not bound to a method dependency. Esper generates
+// subordinate method/historical rows strictly inside their dependency
+// tuple's context, so an outer-join placeholder tuple composed solely of
+// dependency-bound rows can never occur; such rows simply vanish when their
+// owning tuple does not join. Real stream events, table rows and
+// evaluate-once seeded rows carry no dependency lineage and anchor
+// placeholders normally.
+func joinStoredTupleHasAnchor(tuple []storedEvent) bool {
+	for _, stored := range tuple {
+		if len(stored.lineage) == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func joinStoredTupleMatchesLineageWithMissing(tuple []storedEvent) bool {

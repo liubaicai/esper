@@ -21,6 +21,8 @@ type fcmBeanInt struct {
 	P01 int    `esper:"p01"`
 	P02 int    `esper:"p02"`
 	P03 int    `esper:"p03"`
+	P04 int    `esper:"p04"`
+	P05 int    `esper:"p05"`
 }
 
 type fcmMethodRow struct {
