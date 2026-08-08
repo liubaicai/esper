@@ -13,6 +13,13 @@
  	IntPrimitive int    `esper:"intPrimitive"`
  }
  
+ type fcmBeanInt struct {
+ 	ID  string `esper:"id"`
+ 	P00 int    `esper:"p00"`
+ 	P01 int    `esper:"p01"`
+ 	P02 int    `esper:"p02"`
+ }
+ 
  type fcmMethodRow struct {
  	Symbol string `esper:"symbol"`
  	Value  int    `esper:"value"`
@@ -28,10 +35,24 @@
  	MapInt    int    `esper:"mapint"`
  }
  
+ type fcmHistRow struct {
+ 	Val   string `esper:"val"`
+ 	Index int    `esper:"index"`
+ }
+ 
  func newFCMEnvironment(t *testing.T) *Environment {
  	t.Helper()
  	env := NewEnvironment()
  	if _, err := RegisterStruct[fcmSupportBean](env, "SupportBean"); err != nil {
+ 		t.Fatal(err)
+ 	}
+ 	return env
+ }
+ 
+ func newFCMEnvironmentWithInt(t *testing.T) *Environment {
+ 	t.Helper()
+ 	env := NewEnvironment()
+ 	if _, err := RegisterStruct[fcmBeanInt](env, "SupportBeanInt"); err != nil {
  		t.Fatal(err)
  	}
  	return env
@@ -47,39 +68,6 @@
  		events = append(events, event)
  	}
  	return events, nil
- }
- 
- func runFromClauseMethodJoinCase[T any](t *testing.T, env *Environment, name string, methodStream Stream[T], stream Stream[fcmSupportBean]) []Row {
- 	t.Helper()
- 	query := Join(stream, methodStream).Select(
- 		SelectLeft("theString", Field[fcmSupportBean, string]("theString")),
- 		SelectRight("mapstring", Field[map[string]any, string]("mapstring")),
- 		SelectRight("mapint", Field[map[string]any, int]("mapint")),
- 	).Query(StatementName(name))
- 	plan, err := env.Build(query)
- 	if err != nil {
- 		t.Fatalf("build %s failed: %v", name, err)
- 	}
- 	engine := NewEngine(env)
- 	deployment, err := engine.Deploy(context.Background(), plan)
- 	if err != nil {
- 		t.Fatalf("deploy %s failed: %v", name, err)
- 	}
- 	var rows []Row
- 	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
- 		for _, result := range batch.New {
- 			if row, ok := result.Row(); ok {
- 				rows = append(rows, row)
- 			}
- 		}
- 		return nil
- 	}); err != nil {
- 		t.Fatal(err)
- 	}
- 	if err := engine.SendEvent(context.Background(), fcmSupportBean{TheString: "E1", IntPrimitive: 10}); err != nil {
- 		t.Fatal(err)
- 	}
- 	return rows
  }
  
  func TestFromClauseMethodArrayNoArgParity(t *testing.T) {
@@ -196,7 +184,34 @@
  	})
  	method := FromMethodOn[map[string]any](env, "method-map", "SupportBean", mapSchema, provider)
  	stream := From[fcmSupportBean](env, "SupportBean")
- 	rows := runFromClauseMethodJoinCase(t, env, "fcm-diff-return-map", method, stream)
+ 	query := Join(stream, method).Select(
+ 		SelectLeft("theString", Field[fcmSupportBean, string]("theString")),
+ 		SelectRight("mapstring", Field[map[string]any, string]("mapstring")),
+ 		SelectRight("mapint", Field[map[string]any, int]("mapint")),
+ 	).Query(StatementName("fcm-diff-return-map"))
+ 	plan, err := env.Build(query)
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+ 	engine := NewEngine(env)
+ 	deployment, err := engine.Deploy(context.Background(), plan)
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+ 	var rows []Row
+ 	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+ 		for _, result := range batch.New {
+ 			if row, ok := result.Row(); ok {
+ 				rows = append(rows, row)
+ 			}
+ 		}
+ 		return nil
+ 	}); err != nil {
+ 		t.Fatal(err)
+ 	}
+ 	if err := engine.SendEvent(context.Background(), fcmSupportBean{TheString: "E1", IntPrimitive: 10}); err != nil {
+ 		t.Fatal(err)
+ 	}
  	if len(rows) != 1 || rows[0].Get("mapstring").Any() != "|E1|" || rows[0].Get("mapint").Any() != 11 {
  		t.Fatalf("map rows = %#v", rows)
  	}
@@ -392,6 +407,117 @@
  		t.Fatal("expected error for nil provider")
  	}
  }
+ 
+func TestFromClauseMethodOneStreamTwoHistJoinedKeepallParity(t *testing.T) {
+	// Mirrors Java EPLFromClauseMethod1Stream2HistStarSubordinateJoinedKeepall:
+	// the same assertion runs twice with different from-clause source orderings.
+	t.Run("stream-first-order", func(t *testing.T) {
+		runFCMOneStreamTwoHistJoinedKeepall(t, []int{0, 1, 2})
+	})
+	t.Run("hist-first-order", func(t *testing.T) {
+		runFCMOneStreamTwoHistJoinedKeepall(t, []int{2, 1, 0})
+	})
+}
+
+// runFCMOneStreamTwoHistJoinedKeepall deploys the joined keepall query with
+// sources ordered by permutation (indices into [stream, h0, h1]) and asserts
+// the Java event sequence: E1 matches, E2 produces no new rows, E3 matches.
+func runFCMOneStreamTwoHistJoinedKeepall(t *testing.T, permutation []int) {
+	t.Helper()
+	env := newFCMEnvironmentWithInt(t)
+	histSchema, err := NewMapSchema("FCMHistRow", []FieldSpec{
+		FieldDef("val", reflect.TypeOf("")),
+ 		FieldDef("index", reflect.TypeOf(0)),
+ 	})
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+ 	if err := env.RegisterSchema(histSchema); err != nil {
+ 		t.Fatal(err)
+ 	}
+ 	makeProvider := func(prefix string, field string) MethodProvider {
+ 		return MethodProviderFunc(func(_ context.Context, request MethodRequest) ([]Event, error) {
+ 			trigger := request.Trigger
+ 			count := trigger.Get(field).Any().(int)
+ 			if count == 0 {
+ 				return nil, nil
+ 			}
+ 			rows := make([]map[string]any, 0, count)
+ 			for i := 1; i <= count; i++ {
+ 				rows = append(rows, map[string]any{"val": prefix + fmt.Sprintf("%d", i), "index": i})
+ 			}
+ 			return newEventsFrom(histSchema, rows, request.Now)
+ 		})
+ 	}
+	h0 := FromMethodOn[map[string]any](env, "h0", "SupportBeanInt", histSchema, makeProvider("H0", "p00"))
+	h1 := FromMethodOn[map[string]any](env, "h1", "SupportBeanInt", histSchema, makeProvider("H1", "p01"))
+	stream := From[fcmBeanInt](env, "SupportBeanInt").Window(KeepAll())
+	sources := make([]JoinInput, 3)
+	sources[0] = JoinSource(stream)
+	sources[1] = JoinSource(h0)
+	sources[2] = JoinSource(h1)
+	ordered := make([]JoinInput, 0, 3)
+	for _, pos := range permutation {
+		ordered = append(ordered, sources[pos])
+	}
+	indexOf := func(logical int) int {
+		for i, pos := range permutation {
+			if pos == logical {
+				return i
+			}
+		}
+		t.Fatalf("logical source %d missing from permutation %v", logical, permutation)
+		return -1
+	}
+	query := JoinMany(ordered...).On(
+		OnSourcesEqual(indexOf(1), Field[map[string]any, int]("index"), indexOf(2), Field[map[string]any, int]("index")),
+		OnSourcesEqual(indexOf(1), Field[map[string]any, int]("index"), indexOf(0), Field[fcmBeanInt, int]("p02")),
+	).Select(
+		SelectFrom(indexOf(0), "id", Field[fcmBeanInt, string]("id")),
+		SelectFrom(indexOf(1), "valh0", Field[map[string]any, string]("val")),
+		SelectFrom(indexOf(2), "valh1", Field[map[string]any, string]("val")),
+	).Query(StatementName("fcm-1s2h-joined-keepall"))
+ 	plan, err := env.Build(query)
+ 	if err != nil {
+ 		t.Fatalf("build failed: %v", err)
+ 	}
+ 	engine := NewEngine(env)
+ 	deployment, err := engine.Deploy(context.Background(), plan)
+ 	if err != nil {
+ 		t.Fatalf("deploy failed: %v", err)
+ 	}
+ 	var rows []Row
+ 	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+ 		for _, result := range batch.New {
+ 			if row, ok := result.Row(); ok {
+ 				rows = append(rows, row)
+ 			}
+ 		}
+ 		return nil
+ 	}); err != nil {
+ 		t.Fatal(err)
+ 	}
+	if err := engine.SendEvent(context.Background(), fcmBeanInt{ID: "E1", P00: 20, P01: 20, P02: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("id").Any() != "E1" || rows[0].Get("valh0").Any() != "H03" || rows[0].Get("valh1").Any() != "H13" {
+		t.Fatalf("1s2h joined rows = %#v", rows)
+	}
+	// Java: E2 has p02=21 which matches no h0/h1 index, so no new rows.
+	if err := engine.SendEvent(context.Background(), fcmBeanInt{ID: "E2", P00: 20, P01: 20, P02: 21}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("1s2h joined rows after E2 = %#v", rows)
+	}
+	// Java: E3 matches index 2 and the keepall window still retains E1.
+	if err := engine.SendEvent(context.Background(), fcmBeanInt{ID: "E3", P00: 4, P01: 4, P02: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[1].Get("id").Any() != "E3" || rows[1].Get("valh0").Any() != "H02" || rows[1].Get("valh1").Any() != "H12" {
+		t.Fatalf("1s2h joined rows after E3 = %#v", rows)
+	}
+}
  
  func paramString(v any) string {
  	switch x := v.(type) {

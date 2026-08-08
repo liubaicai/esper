@@ -1235,7 +1235,8 @@
         "EPLFromClauseMethodObjectNoArg",
         "EPLFromClauseMethodDifferentReturnTypes",
         "EPLFromClauseMethodOverloaded",
-        "EPLFromClauseMethodInvalid"
+        "EPLFromClauseMethodInvalid",
+        "EPLFromClauseMethod1Stream2HistStarSubordinateJoinedKeepall"
       ],
       "id": "epl.fromclausemethod",
       "summary": "Method-backed historical streams (method source) with array/object/single return, overloaded resolution, multiple representations and join/FAF usage",
@@ -1270,7 +1271,8 @@
         "java-runtime-53a87b41fbc5aa05f781",
         "java-runtime-b10d858855e19e7ee556",
         "java-runtime-67fc960beba42e68707d",
-        "java-runtime-fcf85edd19810058de22"
+        "java-runtime-fcf85edd19810058de22",
+        "java-runtime-8f8296005b6297feb52d"
       ]
     }
   ],
@@ -11000,7 +11002,8 @@
         "EPLFromClauseMethodDifferentReturnTypes",
         "EPLFromClauseMethodArrayNoArg",
         "EPLFromClauseMethodObjectNoArg",
-        "EPLFromClauseMethodInvalid"
+        "EPLFromClauseMethodInvalid",
+        "EPLFromClauseMethod1Stream2HistStarSubordinateJoinedKeepall"
       ],
       "id": "case.epl-fromclausemethod-basic",
       "status": "partial",
@@ -11011,7 +11014,8 @@
         "java-runtime-53a87b41fbc5aa05f781",
         "java-runtime-b10d858855e19e7ee556",
         "java-runtime-67fc960beba42e68707d",
-        "java-runtime-fcf85edd19810058de22"
+        "java-runtime-fcf85edd19810058de22",
+        "java-runtime-8f8296005b6297feb52d"
       ],
       "evidence": [
         "java-runtime-inventory",
@@ -11040,7 +11044,8 @@
         "TestFromClauseMethodDifferentReturnTypesPOJOParity",
         "TestFromClauseMethodDifferentReturnTypesObjectArrayParity",
         "TestFromClauseMethodOverloadedParity",
-        "TestFromClauseMethodInvalidParity"
+        "TestFromClauseMethodInvalidParity",
+        "TestFromClauseMethodOneStreamTwoHistJoinedKeepallParity"
       ]
     }
   ],

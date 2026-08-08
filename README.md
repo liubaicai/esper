@@ -68,7 +68,9 @@ SQL FAF 的 `EPLDatabaseFAF` 10 个 Java execution 已有 `database_faf_parity_t
 
 Java 基线的静态回归候选清单在 `compat/static-manifest.json`，运行态 execution 清单在 `compat/java-execution-inventory.jsonl`，非 Regression 的源资产盘点在 `compat/source-test-manifest.json`，首批 capability/case 映射在 `compat/capability-manifest.json`；这些清单都不是全量 Go 映射完成或 Java/Go 行为差分通过的证明。
 
-当前 capability 对账进度为：Java inventory 的 4,136 个可执行 runtime 中，manifest 已建立 1,407 条 runtime 关联、覆盖 1,397 个唯一 runtime，约 33.78%；191 个 capability case 中 185 个标为 mapped、2 个 partial、4 个 approved-difference。33.68% 是“已建立 Java runtime 对账/处置证据”的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
+当前 capability 对账进度为：Java inventory 的 4,136 个可执行 runtime 中，manifest 已建立 1,408 条 runtime 关联、覆盖 1,398 个唯一 runtime，约 33.80%；192 个 capability case 中 185 个标为 mapped、3 个 partial、4 个 approved-difference。33.80% 是“已建立 Java runtime 对账/处置证据”的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
+
+本轮开始补齐方法源 N-stream 域：对照 Java `EPLFromClauseMethod1Stream2HistStarSubordinateJoinedKeepall`，新增 `TestFromClauseMethodOneStreamTwoHistJoinedKeepallParity`，用 `JoinMany` + `OnSourcesEqual` + `KeepAll` 窗口表达 1 stream + 2 method-historical 的 joined-keepall 语义，并按 Java execution 复现两种 from-clause 源顺序与三事件序列（E1 命中、E2 无匹配、E3 命中且 keepall 保留 E1）；Java `TestSuiteEPLFromClauseMethod` 3/3 通过。`EPLFromClauseMethodNStream` 其余 11 个 execution、OuterNStream、Variable、MultikeyWArray、JoinPerformance 与 CacheLRU/CacheExpiry 仍为后续切片；本轮不需要 MySQL Docker。
 
 本轮继续对照 Java `InfraUpdate`/`InfraNWTableFAF` 的失败路径：`ExecuteFireAndForget` 在 Table 或 Named Window mutation 中途失败，以及 pending routed event processing 返回错误时，恢复目标存储、Context 分区状态、Context Table row ownership 和待派发队列；新增 `TestOnDemandTableMutationRollsBackAfterMidBatchFailure`、`TestOnDemandNamedWindowMutationRollsBackAfterAssignmentFailure`、`TestOnDemandMutationRollsBackAfterRoutedProcessingFailure` 与 `TestOnDemandContextTableMutationRollsBackAcrossPartitions`，覆盖 Table/Named Window 的跨行赋值失败、route cycle limit 失败及跨 category partition 的 primary-key collision。该回滚边界只保证当前 FAF 目标 mutation 的状态恢复，不等同于跨 statement、跨目标路由副作用、listener dispatch 或外部资源的完整事务；本轮不需要 MySQL Docker。
 

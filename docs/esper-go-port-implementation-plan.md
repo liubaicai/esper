@@ -1,6 +1,6 @@
 # Esper 9.0.0 Go 全量移植规划实施文档
 
-> 最新补充：Draft 2.83（2026-08-08），继续补齐数据库域剩余可映射 runtime：`EPLDatabase2StreamOuterJoin` 9 个 runtime（left/right/full outer join matched/unmatched、ON-filter 与 historical-preserved no-output）和 `EPLDatabaseNoJoinIterate` 5 个 runtime（NullSelect、ExpressionPoll、VariablesPoll、SubstitutionParameter、SQLTextParamSubquery）的 Go 链式 API 对照；使用 `LengthWindow(1)` 表达 Esper 历史连接的 stream-driven lookup 语义，避免全量 join state 产生额外 delta。上一轮 Draft 2.80 的 SQL FAF 多行快照、整行 SQLROW 转换、显式 SQL 参数声明与 `EPLDatabaseFAF` 10 个 runtime 仍保留；数据库/方法源 runtime 覆盖审计、MySQL/Maven 固定门禁与当前实测 disposition 仍见第 17.5 节。
+> 最新补充：Draft 2.84（2026-08-08），开始补齐方法源 N-stream 域：对照 Java `EPLFromClauseMethod1Stream2HistStarSubordinateJoinedKeepall`，Go 以 `JoinMany` + `OnSourcesEqual` + `KeepAll` 窗口表达 1 stream + 2 method-historical 的 star-subordinate joined-keepall 语义，并复现 Java 的两种 from-clause 源顺序（stream-first 与 hist-first）和三事件序列（E1 命中、E2 无匹配无新增、E3 命中且 keepall 保留 E1）；`TestFromClauseMethodOneStreamTwoHistJoinedKeepallParity` 以子测试固定两种顺序。Java `TestSuiteEPLFromClauseMethod` 3/3 通过；`EPLFromClauseMethodNStream` 其余 11 个 execution（cartesian、forward subordinate、3-hist chain、2stream2hist、3stream1hist、pure-hist、NW-twice 等）与 OuterNStream、Variable、MultikeyWArray、JoinPerformance、CacheLRU/CacheExpiry 仍为后续切片。上一轮 Draft 2.83 的数据库域剩余 runtime 对照仍保留；数据库/方法源 runtime 覆盖审计、MySQL/Maven 固定门禁与当前实测 disposition 仍见第 17.5 节。
 
 ## 1. 文档信息
 
