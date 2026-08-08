@@ -264,20 +264,27 @@ func subqueryIndexSelection(e *Environment, base *streamNode, definition *subque
 		if !ok || !window.SubqueryIndexSharing() || definition.disableIndexSharing || definition.indexName != "" {
 			return IndexSelection{}, false
 		}
-		columns := subquerySharedEqualityColumns(predicates)
+		columns, kind := subquerySharedIndexColumns(predicates)
 		if len(columns) == 0 {
 			return IndexSelection{}, false
 		}
-		name := subquerySharedIndexName(columns)
+		name := subquerySharedIndexName(columns, kind)
+		access := IndexAccessEquality
+		backing := IndexBackingHash
+		matched := append([]string(nil), columns...)
+		if kind == IndexBTree {
+			access = IndexAccessRange
+			backing = IndexBackingBTree
+		}
 		return IndexSelection{
 			Source:         0,
 			Module:         base.moduleName,
 			Object:         base.sourceName,
 			IndexName:      name,
 			Columns:        columns,
-			MatchedColumns: append([]string(nil), columns...),
-			Access:         subquerySharedIndexAccess(predicates, columns),
-			Backing:        IndexBackingHash,
+			MatchedColumns: matched,
+			Access:         access,
+			Backing:        backing,
 		}, true
 	}
 	if selection.IndexName == "" {
@@ -348,42 +355,68 @@ func subqueryNamedWindowDeclaredIndexSelection(e *Environment, base *streamNode,
 	}, true
 }
 
-func subquerySharedEqualityColumns(predicates []indexPredicate) []string {
-	columns := make([]string, 0, len(predicates))
-	seen := make(map[string]struct{}, len(predicates))
+// subquerySharedIndexColumns produces a deterministic shared-index shape.
+// Equality columns form the prefix (sorted for canonical identity); when a
+// range predicate is available, one non-equality range column follows that
+// prefix. A B-tree can then satisfy the complete correlated probe without
+// making an ordering assumption about the expression's written operand order.
+// IN remains on the hash path because the current range probe accepts one
+// fixed value per equality-prefix component.
+func subquerySharedIndexColumns(predicates []indexPredicate) ([]string, IndexKind) {
+	equality := make([]string, 0, len(predicates))
+	equalitySeen := make(map[string]struct{}, len(predicates))
+	ranges := make([]string, 0, len(predicates))
+	rangeSeen := make(map[string]struct{}, len(predicates))
+	hasIn := false
 	for _, predicate := range predicates {
-		if predicate.access != IndexAccessEquality && predicate.access != IndexAccessIn {
-			continue
-		}
 		for _, column := range predicate.columns {
 			column = strings.TrimSpace(column)
 			if column == "" {
 				continue
 			}
-			if _, exists := seen[column]; exists {
-				continue
-			}
-			seen[column] = struct{}{}
-			columns = append(columns, column)
-		}
-	}
-	sort.Strings(columns)
-	return columns
-}
-
-func subquerySharedIndexName(columns []string) string {
-	return subquerySharedIndexPrefix + strings.Join(columns, ",") + ">"
-}
-
-func subquerySharedIndexAccess(predicates []indexPredicate, columns []string) IndexAccessKind {
-	for _, column := range columns {
-		for _, predicate := range predicates {
-			if len(predicate.columns) == 1 && predicate.columns[0] == column && predicate.access == IndexAccessIn {
-				return IndexAccessIn
+			switch predicate.access {
+			case IndexAccessEquality, IndexAccessIn:
+				if predicate.access == IndexAccessIn {
+					hasIn = true
+				}
+				if _, exists := equalitySeen[column]; !exists {
+					equalitySeen[column] = struct{}{}
+					equality = append(equality, column)
+				}
+			case IndexAccessRange:
+				if _, exists := rangeSeen[column]; !exists {
+					rangeSeen[column] = struct{}{}
+					ranges = append(ranges, column)
+				}
 			}
 		}
 	}
-	return IndexAccessEquality
+	sort.Strings(equality)
+	sort.Strings(ranges)
+	if len(equality) == 0 && len(ranges) == 0 {
+		return nil, IndexHash
+	}
+	for _, column := range ranges {
+		// The current correlated range probe accepts one fixed value per
+		// equality-prefix component. Keep IN + range on the hash candidate
+		// path until the B-tree probe can expand one range query per IN value.
+		if hasIn {
+			break
+		}
+		if _, exact := equalitySeen[column]; exact {
+			continue
+		}
+		return append(append([]string(nil), equality...), column), IndexBTree
+	}
+	return equality, IndexHash
+}
+
+func subquerySharedIndexName(columns []string, kind IndexKind) string {
+	prefix := subquerySharedHashIndexPrefix
+	if kind == IndexBTree {
+		prefix = subquerySharedBTreeIndexPrefix
+	}
+	return prefix + strings.Join(columns, ",") + ">"
 }
 
 func subqueryIndexOperandValue(node *exprNode, outer EvalContext) (Value, bool) {
@@ -1828,6 +1861,7 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 	}
 	var events []Event
 	usingRuntimeSnapshot := false
+	usingIndexedSnapshot := false
 	if registry := subqueryRuntimeFromVariables(outer.Variables); registry != nil {
 		if snapshot, ok := registry.snapshot(definition); ok {
 			events = snapshot
@@ -1849,9 +1883,10 @@ func evaluateSubqueryValues(definition *subqueryDefinition, outer EvalContext) [
 				return nil
 			}
 			events = indexed
+			usingIndexedSnapshot = true
 		}
 	}
-	if !usingRuntimeSnapshot {
+	if !usingRuntimeSnapshot && !usingIndexedSnapshot {
 		contextName, contextPartition := subqueryContextScope(outer.Variables)
 		if base.kind == streamNamedWindow && contextName != "" && contextPartition != "" {
 			var window *NamedWindow

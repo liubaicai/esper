@@ -1037,6 +1037,186 @@ func TestInfraNWTableSubqCorrelIndexSharingContextPartitionParity(t *testing.T) 
 	}
 }
 
+// TestInfraNWTableSubqCorrelIndexSharingBTreeParity covers the ordered
+// shared-index slice of Java InfraNWTableSubqCorrelIndex.  The generated
+// access path is canonicalized as equality prefix + range column, while the
+// final subquery evaluator still owns predicate and collection semantics.
+func TestInfraNWTableSubqCorrelIndexSharingBTreeParity(t *testing.T) {
+	for _, scoped := range []bool{false, true} {
+		name := "global"
+		if scoped {
+			name = "context"
+		}
+		t.Run(name, func(t *testing.T) {
+			env := NewEnvironment()
+			schema := newFAFSubqueryIndexSchema(t, env, "NWSubqSharingBTreeSchema"+name)
+			const contextName = "nw-subq-sharing-btree-context"
+			if scoped {
+				if _, err := CreateKeyContext(env, contextName, Field[any, string]("key")); err != nil {
+					t.Fatal(err)
+				}
+			}
+			outerOptions := []NamedWindowOption{NamedWindowRetention(KeepAll())}
+			innerOptions := []NamedWindowOption{NamedWindowRetention(KeepAll()), NamedWindowSubqueryIndexSharing()}
+			if scoped {
+				outerOptions = append(outerOptions, NamedWindowContext(contextName))
+				innerOptions = append(innerOptions, NamedWindowContext(contextName))
+			}
+			outerName := "NWSubqSharingBTreeOuter" + name
+			innerName := "NWSubqSharingBTreeInner" + name
+			if _, err := CreateNamedWindow(env, outerName, schema, outerOptions...); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := CreateNamedWindow(env, innerName, schema, innerOptions...); err != nil {
+				t.Fatal(err)
+			}
+			engine := NewEngine(env)
+			ctx := context.Background()
+			for _, row := range []map[string]any{
+				{"id": int64(12), "key": "A", "lookup": "A", "value": "A-12"},
+				{"id": int64(11), "key": "A", "lookup": "A", "value": "A-11"},
+				{"id": int64(20), "key": "B", "lookup": "B", "value": "B-20"},
+				{"id": int64(21), "key": "B", "lookup": "B", "value": "B-21"},
+			} {
+				if err := engine.InsertNamedWindow(ctx, innerName, row); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, row := range []map[string]any{
+				{"id": int64(11), "key": "A"},
+				{"id": int64(20), "key": "B"},
+			} {
+				if err := engine.InsertNamedWindow(ctx, outerName, row); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			inner := FromNamedWindow(env, innerName)
+			predicate := And(
+				Equal[string](Field[any, string]("lookup"), OuterField[string]("key")),
+				GreaterOrEqual[int64](Field[any, int64]("id"), OuterField[int64]("id")),
+			)
+			values := SubqueryValues[string](inner, Field[any, string]("value"), SubqueryWhere(predicate))
+			queryBuilder := FromNamedWindow(env, outerName).Select(
+				Alias("id", Field[any, int64]("id")),
+				Alias("values", values),
+			)
+			var query Query
+			if scoped {
+				query = queryBuilder.Query(WithContext(contextName))
+			} else {
+				query = queryBuilder.Query()
+			}
+			var plan Plan
+			var err error
+			plan, err = env.Build(query)
+			if err != nil {
+				t.Fatal(err)
+			}
+			window, ok := engine.NamedWindow(innerName)
+			if !ok {
+				t.Fatal("B-tree shared-index named window is missing")
+			}
+			indexLookups := func() uint64 {
+				if !scoped {
+					return window.state.indexLookups.Load()
+				}
+				var total uint64
+				for _, partition := range window.contextPartitionStates() {
+					total += partition.indexLookups.Load()
+				}
+				return total
+			}
+			execute := func() QueryResult {
+				t.Helper()
+				if scoped {
+					result, executeErr := engine.ExecuteFireAndForgetWithSelector(ctx, plan, ContextPartitionSelectorAll{})
+					if executeErr != nil {
+						t.Fatal(executeErr)
+					}
+					return result
+				}
+				result, executeErr := engine.ExecuteFireAndForget(ctx, plan)
+				if executeErr != nil {
+					t.Fatal(executeErr)
+				}
+				return result
+			}
+			assertValues := func(result QueryResult, want map[int64][]string) {
+				t.Helper()
+				if len(result.Results()) != len(want) {
+					t.Fatalf("B-tree shared-index result count = %d, want %d: %#v", len(result.Results()), len(want), result.Results())
+				}
+				for _, row := range result.Results() {
+					id, ok := row.Get("id").Any().(int64)
+					if !ok {
+						t.Fatalf("B-tree shared-index row id = %#v", row)
+					}
+					values, ok := row.Get("values").Any().([]string)
+					if !ok || !reflect.DeepEqual(values, want[id]) {
+						t.Fatalf("B-tree shared-index row = %#v, want id=%d values=%#v", row, id, want[id])
+					}
+				}
+			}
+
+			before := indexLookups()
+			result := execute()
+			assertValues(result, map[int64][]string{
+				11: {"A-12", "A-11"},
+				20: {"B-20", "B-21"},
+			})
+			if after := indexLookups(); after != before+2 {
+				t.Fatalf("B-tree shared-index expected one lookup per outer row: before=%d after=%d", before, after)
+			}
+
+			for _, partition := range window.contextPartitionStates() {
+				found := 0
+				for _, index := range partition.def.indexes {
+					if isSubquerySharedIndex(index.Name) && index.Kind == IndexBTree && reflect.DeepEqual(index.Columns, []string{"lookup", "id"}) {
+						found++
+					}
+				}
+				if found != 1 {
+					t.Fatalf("B-tree shared-index definitions in partition %q = %d, want 1", partition.contextKey, found)
+				}
+			}
+
+			if _, err := window.UpdateWhere(ctx, func(event Event) bool {
+				return event.Get("value").Any() == "A-12"
+			}, func(event Event) (any, error) {
+				return map[string]any{
+					"id":     event.Get("id").Any(),
+					"key":    event.Get("key").Any(),
+					"lookup": "moved",
+					"value":  "A-moved",
+				}, nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			before = indexLookups()
+			updated := execute()
+			assertValues(updated, map[int64][]string{
+				11: {"A-11"},
+				20: {"B-20", "B-21"},
+			})
+			if after := indexLookups(); after != before+2 {
+				t.Fatalf("B-tree shared-index update expected one lookup per outer row: before=%d after=%d", before, after)
+			}
+
+			if _, err := window.DeleteWhere(ctx, func(event Event) bool {
+				return event.Get("key").Any() == "B"
+			}); err != nil {
+				t.Fatal(err)
+			}
+			deleted := execute()
+			assertValues(deleted, map[int64][]string{
+				11: {"A-11"},
+				20: {},
+			})
+		})
+	}
+}
+
 // TestInfraNWTableSubqCorrelIndexOptionValidationParity keeps the invalid
 // option boundary explicit. Esper rejects a subquery index hint when the
 // named index is missing, when the predicate cannot expose a probe key, or

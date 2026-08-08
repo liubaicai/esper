@@ -2053,15 +2053,31 @@ func (w *NamedWindow) partitionState(key string, create bool) (*namedWindowRunti
 	return partition, nil
 }
 
-const subquerySharedIndexPrefix = "<subquery-shared-hash:"
+const (
+	subquerySharedHashIndexPrefix  = "<subquery-shared-hash:"
+	subquerySharedBTreeIndexPrefix = "<subquery-shared-btree:"
+)
 
 func isSubquerySharedIndex(name string) bool {
-	return strings.HasPrefix(strings.TrimSpace(name), subquerySharedIndexPrefix)
+	name = strings.TrimSpace(name)
+	return strings.HasPrefix(name, subquerySharedHashIndexPrefix) || strings.HasPrefix(name, subquerySharedBTreeIndexPrefix)
 }
 
-// ensureSubquerySharedIndex installs one internal hash index on the root
-// Named Window runtime and propagates it to every already-materialized Context
-// partition. Future partitions inherit the root definition through
+func subquerySharedIndexKind(name string) (IndexKind, bool) {
+	name = strings.TrimSpace(name)
+	switch {
+	case strings.HasPrefix(name, subquerySharedHashIndexPrefix):
+		return IndexHash, true
+	case strings.HasPrefix(name, subquerySharedBTreeIndexPrefix):
+		return IndexBTree, true
+	default:
+		return IndexHash, false
+	}
+}
+
+// ensureSubquerySharedIndex installs one internal hash or B-tree index on the
+// root Named Window runtime and propagates it to every already-materialized
+// Context partition. Future partitions inherit the root definition through
 // partitionState. The environment definition remains unchanged: shared
 // indexes are runtime access paths, not user-declared infrastructure indexes.
 func (w *NamedWindow) ensureSubquerySharedIndex(name string, columns []string) error {
@@ -2069,7 +2085,8 @@ func (w *NamedWindow) ensureSubquerySharedIndex(name string, columns []string) e
 		return NewError(ErrorState, "nil named window")
 	}
 	name = strings.TrimSpace(name)
-	if !isSubquerySharedIndex(name) || len(columns) == 0 {
+	kind, kindOK := subquerySharedIndexKind(name)
+	if !kindOK || len(columns) == 0 {
 		return NewError(ErrorInvalidRule, "invalid subquery shared index definition")
 	}
 	if !w.state.def.subqueryIndexSharing {
@@ -2078,7 +2095,7 @@ func (w *NamedWindow) ensureSubquerySharedIndex(name string, columns []string) e
 	definition := NamedWindowIndexDefinition{
 		Name:    name,
 		Columns: append([]string(nil), columns...),
-		Kind:    IndexHash,
+		Kind:    kind,
 	}
 	for _, column := range definition.Columns {
 		if _, ok := w.state.def.schema.Field(column); !ok {
