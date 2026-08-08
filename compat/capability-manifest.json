@@ -1406,6 +1406,30 @@
         "java-runtime-2989d0cd737e30ae5633",
         "java-runtime-4448f4d53e5bf0e7688d"
       ]
+    },
+    {
+      "id": "epl.other.distinct",
+      "domain": "epl",
+      "level": "G",
+      "summary": "SELECT DISTINCT projection with single/multi/array keys across keepall, length-batch, output-rate-limit, snapshot/iterator, fire-and-forget and insert-into streams",
+      "javaRefs": [
+        "EPLOtherDistinct"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "epl_other_distinct_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "partial",
+      "remaining": [
+        "EPLOtherBatchWindowJoin: distinct over a length-batch join delta",
+        "EPLOtherOnDemandAndOnSelect: named-window FAF + on-select distinct",
+        "EPLOtherSubquery: distinct inside an IN subquery",
+        "EPLOtherDistinctOnSelectMultikeyWArray: on-select distinct with array keys",
+        "EPLOtherDistinctVariantStream: distinct over a variant stream",
+        "EPLOtherDistinctWildcardJoinPatternOne/Two: every-distinct pattern + unidirectional join",
+        "EPLOtherBeanEventWildcardSODA: Go has no SODA model parser (approved difference)"
+      ]
     }
   ],
   "cases": [
@@ -11309,6 +11333,71 @@
         "TestFromClauseMethodContextVariableParity",
         "TestFromClauseMethodVariableMapAndOAParity"
       ]
+    },
+    {
+      "id": "case.epl-other-distinct",
+      "javaRuntimeIds": [
+        "java-runtime-4b62c52a89cf86a3843a",
+        "java-runtime-0318c1bce4d5e806aa11",
+        "java-runtime-e21f5d942d6c4869bf1b",
+        "java-runtime-c1d232f82f0a154d6241",
+        "java-runtime-550dd87b54717508c0b9",
+        "java-runtime-7b13ab2779d557eba691",
+        "java-runtime-2e0f0a1356ea1b8e3299",
+        "java-runtime-17e049a70e6c5ca2a376",
+        "java-runtime-fe86653eacb81851d04f",
+        "java-runtime-f9a1dafb621a6605ef47",
+        "java-runtime-4fab4842341b8021b1a2",
+        "java-runtime-c752f36ef07cc6280306"
+      ],
+      "javaNames": [
+        "EPLOtherOutputSimpleColumn",
+        "EPLOtherBatchWindow",
+        "EPLOtherBatchWindowInsertInto",
+        "EPLOtherBeanEventWildcardThisProperty",
+        "EPLOtherBeanEventWildcardPlusCols",
+        "EPLOtherMapEventWildcard",
+        "EPLOtherOutputLimitEveryColumn",
+        "EPLOtherOutputRateSnapshotColumn",
+        "EPLOtherDistinctOutputLimitMultikeyWArraySingleArray",
+        "EPLOtherDistinctOutputLimitMultikeyWArrayTwoArray",
+        "EPLOtherDistinctIterateMultikeyWArray",
+        "EPLOtherDistinctFireAndForgetMultikeyWArray"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherDistinct.java"
+      ],
+      "goTests": [
+        "TestDistinctSimpleColumnParity",
+        "TestDistinctBatchWindowParity",
+        "TestDistinctBatchWindowInsertIntoParity",
+        "TestDistinctWildcardParity",
+        "TestDistinctWildcardPlusColsParity",
+        "TestDistinctMapEventWildcardParity",
+        "TestDistinctOutputLimitEveryParity",
+        "TestDistinctOutputSnapshotParity",
+        "TestDistinctOutputLimitMultikeyWArrayParity",
+        "TestDistinctIterateMultikeyWArrayParity",
+        "TestDistinctFAFMultikeyWArrayParity"
+      ],
+      "tags": [
+        "correctness",
+        "epl",
+        "distinct",
+        "multikey",
+        "array",
+        "output-limit",
+        "snapshot",
+        "fire-and-forget",
+        "insert-into"
+      ],
+      "status": "partial",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit",
+        "java-suite-EPLOtherDistinct"
+      ],
+      "difference": "Distinct fires the first occurrence of each key within a single window update and tracks a global reference count so the old stream fires only when the last sharing event leaves; continuous views (keepall) re-emit per event while batching views (length_batch) dedup the batch. Snapshot/iterator and fire-and-forget dedup the projected set, and output-rate-limit (every-events, every-time, snapshot) dedup the flushed batch. Wildcard (select *) results are event-backed and read through Result.Get; SODA round-trip (EPLOtherBeanEventWildcardSODA) is an approved difference because Go uses an immutable fluent Plan instead of a text/model parser. Join-driven batch distinct, on-select, subquery and variant-stream variants remain open."
     }
   ],
   "mappings": [
@@ -12079,6 +12168,10 @@
     {
       "caseId": "case.epl-fromclausemethod-basic",
       "capabilityId": "epl.fromclausemethod"
+    },
+    {
+      "capabilityId": "epl.other.distinct",
+      "caseId": "case.epl-other-distinct"
     }
   ]
 }

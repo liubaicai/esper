@@ -14,6 +14,7 @@ type fcmEventWithManyArray struct {
 	ID        string    `esper:"id"`
 	DoubleOne []float64 `esper:"doubleOne"`
 	IntOne    []int     `esper:"intOne"`
+	IntTwo    []int     `esper:"intTwo"`
 	Value     int       `esper:"value"`
 }
 

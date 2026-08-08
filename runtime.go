@@ -4768,6 +4768,10 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		result := r.outputState.pending.clone()
 		r.outputState.pending = nil
 		r.outputState.pendingCount = 0
+		if len(plans) > 0 && plans[0].query.distinct {
+			result.New = distinctSnapshotResults(result.New)
+			result.Old = distinctSnapshotResults(result.Old)
+		}
 		return r.finishOutput(policy, result, now, plans...)
 	case OutputEveryTimePolicy:
 		if policy.Snapshot {
@@ -4794,6 +4798,10 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			return ResultBatch{}
 		}
 		result := r.outputState.pending.clone()
+		if len(plans) > 0 && plans[0].query.distinct {
+			result.New = distinctSnapshotResults(result.New)
+			result.Old = distinctSnapshotResults(result.Old)
+		}
 		result.Time = now
 		r.outputState.pending = nil
 		r.outputState.pendingCount = 0
@@ -5100,6 +5108,9 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 	previousByEvent := r.currentPreviousAccess(plan.query.input)
 	priorByEvent := r.currentPriorAccess(plan.query.input)
 	result.New = projectResults(events, plan.query, plan.resultSchema, now, r.variables, history, nil, previousByEvent, priorByEvent, false, r.evaluationContext())
+	if plan.query.distinct {
+		result.New = distinctSnapshotResults(result.New)
+	}
 	result.New = applyResultWindow(result.New, plan.query)
 	if !result.empty() {
 		result.Sequence = r.seq.Add(1)
@@ -11100,6 +11111,12 @@ func (r *statementRuntime) applyDistinct(query Query, newResults, oldResults []R
 	if r.distinctCounts == nil {
 		r.distinctCounts = make(map[string]int)
 	}
+		// New results fire on the first occurrence of each distinct key within the
+		// current update (a window event batch). For a continuous view such as
+		// keepall each update carries a single event so every event re-emits; for a
+		// batching view (length_batch) the whole batch is one update and the key is
+		// emitted once. The global reference count still tracks every sharing event
+		// so the old stream fires only when the last event with a key leaves.
 	oldOutput := make([]Result, 0, len(oldResults))
 	for _, result := range oldResults {
 		key := resultKey(result)
@@ -11114,12 +11131,14 @@ func (r *statementRuntime) applyDistinct(query Query, newResults, oldResults []R
 		}
 	}
 	newOutput := make([]Result, 0, len(newResults))
+	seen := make(map[string]struct{}, len(newResults))
 	for _, result := range newResults {
 		key := resultKey(result)
-		if r.distinctCounts[key] == 0 {
+		r.distinctCounts[key]++
+		if _, ok := seen[key]; !ok {
+			seen[key] = struct{}{}
 			newOutput = append(newOutput, result)
 		}
-		r.distinctCounts[key]++
 	}
 	return newOutput, oldOutput
 }

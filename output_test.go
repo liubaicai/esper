@@ -84,7 +84,7 @@ func TestDistinctOrderLimitAndOffsetModifiers(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if len(distinctBatches) != 2 {
+	if len(distinctBatches) != 3 {
 		t.Fatalf("distinct batches = %#v", distinctBatches)
 	}
 
