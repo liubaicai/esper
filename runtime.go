@@ -3465,9 +3465,22 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		}
 		allocationKey := "initiated:pattern"
 		if definition.initiatedOverlapping {
-			allocationKey = s.engine.allocateOverlappingContextPartitionKeyLocked(s.plan.query.contextName, allocationKey)
-		}
-		if _, exists := s.runtime.partitions[allocationKey]; exists {
+			// Key the overlapping partition by the initiating event
+			// identity plus a per-statement ordinal rather than a global
+			// sequence: every statement that observes the same start
+			// event resolves the same context partition (context
+			// variables are shared across statements), while repeated
+			// identical start events within one statement still allocate
+			// distinct overlapping partitions.
+			baseKey := "initiated:pattern" + overlappingContextPartitionSeparator + encodeKey([]any{event.Underlying()})
+			allocationKey = baseKey
+			for ordinal := 1; ; ordinal++ {
+				if _, exists := s.runtime.partitions[allocationKey]; !exists {
+					break
+				}
+				allocationKey = fmt.Sprintf("%s#%d", baseKey, ordinal)
+			}
+		} else if _, exists := s.runtime.partitions[allocationKey]; exists {
 			continue
 		}
 		query := s.runtime.query
@@ -6020,23 +6033,39 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	if err != nil {
 		return joinDelta{}, err
 	}
+	hasEventDrivenSource := false
+	for _, source := range sources {
+		if base, baseErr := sourceNode(source); baseErr == nil && base != nil && joinSourceIsEventDriven(base) {
+			hasEventDrivenSource = true
+			break
+		}
+	}
 	if joinDefinitionHasUnidirectional(definition) {
 		return r.updateUnidirectionalJoin(definition, sources, evaluationOrder, now, newEvents, oldEvents)
 	}
 	before := joinTuples(definition, r.joinState, now, r)
 	for _, event := range newEvents {
-		// Historical and method results belong to exactly one trigger cycle.
-		// Clear all such sides before evaluating the dependency graph so a
-		// subordinate source can never observe a previous trigger's rows.
+		// Historical (SQL) and subordinate method results belong to exactly
+		// one trigger cycle. Clear those sides before evaluating the
+		// dependency graph so a subordinate source can never observe a
+		// previous trigger's rows. Dependency-free method rows instead
+		// persist per trigger lineage: Esper polls a method stream once per
+		// triggering event and retains the result rows inside the join
+		// windows until the owning event expires.
 		for index, source := range sources {
 			if containsHistoricalSource(source) && !isEvaluateOnceSource(source) {
+				if base, baseErr := sourceNode(source); baseErr == nil && base != nil &&
+					base.kind == streamMethod && base.method != nil && len(base.method.dependencies) == 0 {
+					continue
+				}
 				r.joinState.sides[index] = nil
 			}
 		}
 		// Event-driven sides insert the arriving event ahead of lookup sides
-		// so a dependency-free method side re-polls against the current
-		// retained rows of the side that accepted this trigger.
+		// so a dependency-free method side polls the newly accepted rows of
+		// the side that accepted this trigger.
 		triggerSides := make([]int, 0, len(sources))
+		triggerNewRows := make(map[int][]storedEvent, len(sources))
 		for _, index := range joinCycleOrder(sources, evaluationOrder) {
 			source := sources[index]
 			base, baseErr := sourceNode(source)
@@ -6083,17 +6112,18 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 				}
 				continue
 			}
-			if base.kind == streamMethod && base.method != nil && len(triggerSides) > 0 {
-				// A dependency-free method side is re-evaluated per retained
-				// row of each side that accepted this trigger. The rows carry
-				// the accepting row's lineage so they join strictly inside
-				// that row's tuple and vanish when it expires, mirroring
-				// Esper's per-event method poll retained by the join windows.
+		if base.kind == streamMethod && base.method != nil {
+			if len(triggerSides) > 0 {
+				// A dependency-free method side polls once per newly
+				// accepted trigger row, mirroring Esper's per-event method
+				// poll. The result rows carry the accepting row's lineage
+				// so they join strictly inside that row's tuple, persist
+				// while it is retained, and vanish when it expires.
 				if base.method.trigger != "" && base.method.trigger != event.TypeName() {
 					continue
 				}
 				for _, triggerIndex := range triggerSides {
-					for _, triggerRow := range r.joinState.sides[triggerIndex] {
+					for _, triggerRow := range triggerNewRows[triggerIndex] {
 						events, pollErr := base.method.provider.Poll(r.context(), MethodRequest{
 							Trigger:      triggerRow.event,
 							Now:          now,
@@ -6116,17 +6146,35 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 				}
 				continue
 			}
-			delta, err := r.insert(source, event, now)
-			if err != nil {
-				return joinDelta{}, err
+			if hasEventDrivenSource {
+				// The statement subscribes to real event streams, so a
+				// cycle without an accepted trigger row carries no driver
+				// for the method side: Esper never polls a method stream
+				// for an event its sibling streams did not accept.
+				continue
 			}
-			if len(delta.newEvents) > 0 && joinSourceIsEventDriven(base) {
-				triggerSides = append(triggerSides, index)
+			// A triggerless method-only statement instead re-polls a
+			// dependency-free method side wholesale through the generic
+			// insert below and replaces its previous rows, mirroring
+			// Esper's iterator-only refresh of variable-driven method
+			// statements.
+			r.joinState.sides[index] = nil
+		}
+		delta, err := r.insert(source, event, now)
+		if err != nil {
+			return joinDelta{}, err
+		}
+		removeStoredEventsCascade(r.joinState, index, delta.oldEvents)
+		for _, newEvent := range delta.newEvents {
+			stored := storedEvent{event: newEvent, receivedAt: now, lineageID: r.nextJoinLineageID()}
+			r.joinState.sides[index] = append(r.joinState.sides[index], stored)
+			if joinSourceIsEventDriven(base) {
+				if len(triggerNewRows[index]) == 0 {
+					triggerSides = append(triggerSides, index)
+				}
+				triggerNewRows[index] = append(triggerNewRows[index], stored)
 			}
-			removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
-			for _, newEvent := range delta.newEvents {
-				r.joinState.sides[index] = append(r.joinState.sides[index], storedEvent{event: newEvent, receivedAt: now, lineageID: r.nextJoinLineageID()})
-			}
+		}
 		}
 	}
 	for _, event := range oldEvents {
@@ -6135,7 +6183,7 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 			if err != nil {
 				return joinDelta{}, err
 			}
-			removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
+			removeStoredEventsCascade(r.joinState, index, delta.oldEvents)
 		}
 	}
 	after := joinTuples(definition, r.joinState, now, r)
@@ -6557,6 +6605,45 @@ func removeStoredEvents(active *[]storedEvent, removed []Event) {
 	}
 }
 
+// removeStoredEventsCascade removes the matching rows of side index and then
+// every row on any other side whose lineage binds one of the removed rows.
+// Dependency-free method rows persist across trigger cycles bound to the
+// trigger row that produced them, so they must disappear together with that
+// row to mirror Esper's per-event method result retention.
+func removeStoredEventsCascade(state *joinRuntimeState, index int, removed []Event) {
+	if state == nil || index < 0 || index >= len(state.sides) || len(removed) == 0 {
+		return
+	}
+	removedIDs := make(map[uint64]struct{}, len(removed))
+	for _, event := range removed {
+		for position, stored := range state.sides[index] {
+			if reflect.DeepEqual(stored.event.Underlying(), event.Underlying()) && stored.event.TypeName() == event.TypeName() {
+				removedIDs[stored.lineageID] = struct{}{}
+				state.sides[index] = append(state.sides[index][:position], state.sides[index][position+1:]...)
+				break
+			}
+		}
+	}
+	if len(removedIDs) == 0 {
+		return
+	}
+	for side := range state.sides {
+		if side == index {
+			continue
+		}
+		kept := state.sides[side][:0]
+		for _, stored := range state.sides[side] {
+			if bound, ok := stored.lineage[index]; ok {
+				if _, gone := removedIDs[bound]; gone {
+					continue
+				}
+			}
+			kept = append(kept, stored)
+		}
+		state.sides[side] = kept
+	}
+}
+
 func (r *statementRuntime) expireJoin(now time.Time) (joinDelta, error) {
 	if r.joinState == nil {
 		return joinDelta{}, nil
@@ -6568,7 +6655,7 @@ func (r *statementRuntime) expireJoin(now time.Time) (joinDelta, error) {
 	before := joinTuples(definition, r.joinState, now, r)
 	delta := r.expire(now)
 	for index := range r.joinState.sides {
-		removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
+		removeStoredEventsCascade(r.joinState, index, delta.oldEvents)
 	}
 	timedEvents, err := r.advancePatternJoinSources(definition, now)
 	if err != nil {
