@@ -9591,6 +9591,12 @@
     },
     {
       "id": "case.historical-sql",
+      "javaStaticIds": [
+        "java-2e526eb966c9789ed147",
+        "java-4ebaa14e1d07ad8ffc3d",
+        "java-9acbcd1ac59f3fad4643",
+        "java-19766db498cff3de133b"
+      ],
       "javaRuntimeIds": [
         "java-runtime-67745eb75f864ea17fed",
         "java-runtime-0c3ee0784692fb1ee1d8",
@@ -9664,7 +9670,10 @@
         "EPLDatabaseSQLTextParamSubquery",
         "EPLDatabaseOutputColumnConversion",
         "EPLDatabaseInputParameterConversion",
-        "EPLDatabaseOutputRowConversion"
+        "EPLDatabaseOutputRowConversion",
+        "EPLDatabaseSimpleJoinRight",
+        "EPLDatabasePropertyResolution",
+        "EPLDatabase2HistoricalStar"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java",
@@ -9746,7 +9755,11 @@
         "TestDatabaseNoJoinSQLTextParamSubqueryMatchesJava",
         "TestDatabaseHintOutputColumnConversionMatchesJava",
         "TestDatabaseHintInputParameterConversionMatchesJava",
-        "TestDatabaseHintOutputRowConversionMatchesJava"
+        "TestDatabaseHintOutputRowConversionMatchesJava",
+        "TestDatabaseJoinSimpleJoinRightMatchesJava",
+        "TestDatabaseJoinStreamNamesAndRenameMatchesJava",
+        "TestDatabaseJoinPropertyResolutionMatchesJava",
+        "TestDatabaseJoin2HistoricalStarMatchesJava"
       ],
       "tags": [
         "correctness",

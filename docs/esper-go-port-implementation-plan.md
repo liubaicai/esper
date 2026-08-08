@@ -158,7 +158,7 @@
 - regression-run 静态扫描到约 860 个 public test 入口方法。
 - examples 下有 17 个示例项目、34 个 Java 测试源文件和 181 个 Java 主源码文件，需要按用例价值转换为 Go 示例或端到端测试。
 - 回归标签包含多线程、性能、无效输入、即席查询、序列化、数据流、运行时操作、编译器操作和事件发送器等维度。
-- 当前 capability manifest 已建立 1,373 条 runtime 关联、覆盖 1,363/4,136 个唯一 Java runtime（约 32.95% 的 Java runtime 对账/处置进度）；191 个 case 中 185 个 mapped、2 个 partial、4 个 approved-difference。该比例不是 Java/Go 行为 parity 通过率，也不是全量移植完成度。
+- 当前 capability manifest 已建立 1,377 条 runtime 关联、覆盖 1,367/4,136 个唯一 Java runtime（约 33.05% 的 Java runtime 对账/处置进度）；191 个 case 中 185 个 mapped、2 个 partial、4 个 approved-difference。该比例不是 Java/Go 行为 parity 通过率，也不是全量移植完成度。
 - 除 regression-lib 外，common/compiler/runtime/common-avro/common-xmlxsd 共 371 个 Java 单元测试文件、regression-run 有 82 个入口源文件、EsperIO 共 58 个测试文件，也必须逐项分类；不能只迁移 RegressionExecution。
 - 17 个示例为 autoid、benchmark、cycledetect、marketdatafeed、matchmaker、namedwinquery、ohlcpluginview、qos_sla、rfidassetzone、runtimeconfig、servershell、stockticker、terminalsvc、terminalsvc-jse、transaction、trivia、virtualdw。
 
@@ -1977,7 +1977,7 @@ output-when 另外补了一条表达式矩阵：`TestOutputWhenExpressionLikeAnd
 
 本轮门禁结果：Java `mvn -pl regression-run '-Dtest=TestSuiteInfraNWTable' '-DfailIfNoTests=false' '-Dgpg.skip=true' test` 为 26/26、0 failures、0 errors；Go `go test ./... -count=1`、`go test ./compat -count=1`、`go vet ./...` 和 `go test -race . -count=1` 均通过。该切片只使用内存 Named Window/Table 与 Go fluent plan，不需要启动 MySQL Docker。
 
-本轮 Variant 单列转换补充（Draft 2.76，2026-08-08）：对照 Java `EventVariantSingleColumnConversion`，新增 Go `InsertEventIntoNamedWindow`，允许 `Func1`/方法表达式返回已注册 Variant member 的 concrete underlying 或 `Event`，在目标 PREDEFINED Variant Named Window 插入前完成 member schema materialization，保留 concrete `Schema`、Named Window `TypeName` 和窗口 retention。`TestVariantSingleColumnConversionMatchesEsper` 固定 `SupportBean(E1,1)` → `preProcessEvent` → `SupportBean(E2,0)`、`theString='E'` 无匹配及 snapshot identity；Java `TestSuiteEventVariant` 17/17、Go 定向测试和 `go test ./compat -count=1` 均通过。当前 manifest 为 191 个 case，其中 185 个 mapped、2 个 partial、4 个 approved-difference，1,373 条 Java runtime 关联覆盖 1,363/4,136 个唯一可执行 runtime；本轮不需要 MySQL Docker。
+本轮 Variant 单列转换补充（Draft 2.76，2026-08-08）：对照 Java `EventVariantSingleColumnConversion`，新增 Go `InsertEventIntoNamedWindow`，允许 `Func1`/方法表达式返回已注册 Variant member 的 concrete underlying 或 `Event`，在目标 PREDEFINED Variant Named Window 插入前完成 member schema materialization，保留 concrete `Schema`、Named Window `TypeName` 和窗口 retention。`TestVariantSingleColumnConversionMatchesEsper` 固定 `SupportBean(E1,1)` → `preProcessEvent` → `SupportBean(E2,0)`、`theString='E'` 无匹配及 snapshot identity；Java `TestSuiteEventVariant` 17/17、Go 定向测试和 `go test ./compat -count=1` 均通过。当前 manifest 为 191 个 case，其中 185 个 mapped、2 个 partial、4 个 approved-difference，1,377 Java runtime associations covering 1,367/4,136 个唯一可执行 runtime；本轮不需要 MySQL Docker。
 
 本轮子查询实时 listener 补充（Draft 2.77，2026-08-08）：新增 `TestInfraNWTableSubqCorrelIndexLiveListenerParity`、`TestInfraNWTableSubqCorrelIndexChoiceLiveListenerParity` 和 `TestInfraNWTableSubqIndexShareMultikeyArrayLiveListenerParity`，用 `From`/`FromAny`/`FromNamedWindow`/`FromTable`、`SubqueryValueWithOptions` 和 `Statement.Subscribe` 对照 Java `InfraNWTableSubqCorrelIndexAssertion`、`ShareIndexChoice`/`NoIndexShareIndexChoice` 及 single/two-array execution。覆盖自动 shared index、无共享、显式 index、consumer disable、no-index、复合 equality/range 选择、数组 key、late-start 重部署、new-only listener batch、结果顺序与 physical lookup counter；multiple-index-hint 仍只有 Java JVM plan-hook 证据。没有 SQL/connector 依赖，本轮不启动 MySQL Docker。该 case 目前只剩 JVM query-plan hook、Esper 完整 cost/selectivity 模型及 10k/1M 性能阈值差异。
 
@@ -2006,7 +2006,7 @@ output-when 另外补了一条表达式矩阵：`TestOutputWhenExpressionLikeAnd
 | `client` | 281 / 37 / 244 | `context` | 224 / 40 / 184 |
 | `view` | 227 / 51 / 176 | `event` | 294 / 124 / 170 |
 | `pattern` | 145 / 39 / 106 | `rowrecog` | 68 / 34 / 34 |
-| `multithread` | 56 / 0 / 56 | 合计 | 4,136 / 1,363 / 2,773 |
+| `multithread` | 56 / 0 / 56 | 合计 | 4,136 / 1,367 / 2,769 |
 
 因此除了 SQL，还必须优先防止遗漏 `client` 管理面、`multithread` 原子性/可见性、Context 生命周期、Infra on-trigger 组合和 resultset 高级访问聚合。
 
