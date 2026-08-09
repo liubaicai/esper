@@ -4146,7 +4146,8 @@ func (e *Environment) validateIntoTable(query Query) error {
 	if query.aggregate == nil {
 		return NewError(ErrorInvalidRule, "into-table requires an aggregate query")
 	}
-	definition, ok := e.Table(query.tableTarget)
+	moduleName, tableName := splitCatalogKey(query.tableTarget)
+	definition, ok := e.TableInModule(moduleName, tableName)
 	if !ok {
 		return NewError(ErrorUnknownName, fmt.Sprintf("into-table target %q is not registered", query.tableTarget))
 	}

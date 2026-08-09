@@ -2020,6 +2020,32 @@
       ]
     },
     {
+      "id": "client.compile.engine-runtime-path",
+      "domain": "client",
+      "level": "G",
+      "summary": "Immutable compiler-path snapshots exported from active public-module deployments with typed catalog resolution and deployment identity",
+      "javaRefs": [
+        "ClientCompileEnginePath",
+        "CompilerPath",
+        "EPCompilerPathable",
+        "EPCompiled"
+      ],
+      "goRefs": [
+        "runtime_path.go",
+        "module.go",
+        "runtime.go",
+        "client_compile_engine_path_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "RuntimePath snapshots active public typed modules and deployment IDs instead of retaining Java EPCompiled bytecode artifacts",
+        "preconfigured global catalog entries remain visible while inactive, private and protected module exports are excluded",
+        "Go module Table and Named Window definitions carry immutable index metadata instead of deploying separate create-index statements",
+        "path cache, compiler SPI callbacks, portable binary artifacts and exact Java compiler diagnostics remain separate future slices"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -13929,6 +13955,55 @@
       "difference": "OrderModules snapshots generic ModuleOrderItem[T] values and reproduces Esper's dependency-first ordering for zero/one/two/three/five-item graphs, two independent trees, arbitrary input orders, anonymous modules and duplicate names. Missing dependencies are satisfied by proposed or already-deployed names and otherwise return ErrorDependency; self-use is allowed; multi-node cycles report a stable dependency path, while AllowUnresolvedModuleUses and AllowCircularModuleUses provide deterministic opt-outs. ModulePath.UsesNames records unknown external names in Query.ModuleUses and Plan canonical while ignoring them as local catalog candidates, so a global variable can resolve through a path declaring uses dummy. Go does not parse textual module/uses declarations or return Java ModuleOrder objects."
     },
     {
+      "id": "case.client-compile-engine-path",
+      "javaRuntimeIds": [
+        "java-runtime-b8bac588e58faea82ad2",
+        "java-runtime-13a41e1a4b6511a06c57",
+        "java-runtime-7ff7148ed5af22e26b5b",
+        "java-runtime-a7d67d9d647d052f7a60"
+      ],
+      "javaNames": [
+        "ClientCompileEnginePathObjectTypes",
+        "ClientCompileEnginePathInfraWithIndex",
+        "ClientCompileEnginePathPreconfiguredEventTypeFromPath",
+        "ClientCompilerEnginePathNamedWindowUse"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileEnginePath.java"
+      ],
+      "goTests": [
+        "TestClientCompileEnginePathObjectTypesMatchEsper",
+        "TestClientCompileEnginePathInfraWithIndexMatchesEsper",
+        "TestClientCompileEnginePathPreconfiguredEventTypeFromPathMatchesEsper",
+        "TestClientCompileEnginePathNamedWindowUseMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "engine-path",
+        "runtime-path",
+        "module",
+        "deployment",
+        "immutable-snapshot",
+        "table",
+        "named-window",
+        "index",
+        "variable",
+        "context",
+        "declared-expression",
+        "script",
+        "event-bus"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Engine.RuntimePath returns an immutable snapshot of active public module exports and observed deployment IDs. It resolves event types, variables, contexts, Named Windows, Tables, declared expressions and registered Go scripts through the same typed ModulePath rules, keeps preconfigured global objects visible, records sorted uses in Plan identity and excludes inactive/private/protected module catalogs. Old snapshots retain their selected module identities after undeploy, while a fresh snapshot reflects the current runtime. Public Table and Named Window state registered after Engine construction is materialized lazily on first runtime use. The index execution uses immutable UniqueIndex/NamedWindowUniqueIndex definition options rather than separate create-index deployments, and the preconfigured SupportBean aggregate and Event bus Named Window executions preserve the Java count/window and sum/last/window results without EPL or bytecode artifacts."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -14986,6 +15061,10 @@
     {
       "capabilityId": "client.compile.module-ordering",
       "caseId": "case.client-compile-module-uses"
+    },
+    {
+      "capabilityId": "client.compile.engine-runtime-path",
+      "caseId": "case.client-compile-engine-path"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",

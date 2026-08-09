@@ -1335,13 +1335,32 @@ func (e *Engine) TableInModule(moduleName, name string) (*Table, bool) {
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	return e.ensureTableLockedInModule(moduleName, name)
+}
+
+// ensureTableLockedInModule keeps runtime Table state synchronized with
+// definitions registered after Engine construction. The caller must hold the
+// engine mutex, matching ensureNamedWindowLockedInModule.
+func (e *Engine) ensureTableLockedInModule(moduleName, name string) (*Table, bool) {
+	if e == nil || e.env == nil {
+		return nil, false
+	}
 	if definition, ok := e.env.moduleDefinition(moduleName); ok && definition.visibility == ModuleProtected {
 		if _, active := e.activeProtectedModules[normalizeModuleName(moduleName)]; !active {
 			return nil, false
 		}
 	}
-	table, ok := e.tables[catalogKey(moduleName, name)]
-	return table, ok
+	key := catalogKey(moduleName, name)
+	if table, ok := e.tables[key]; ok {
+		return table, true
+	}
+	definition, ok := e.env.TableInModule(moduleName, name)
+	if !ok {
+		return nil, false
+	}
+	table := newTable(definition)
+	e.tables[key] = table
+	return table, true
 }
 
 func (e *Engine) NamedWindow(name string) (*NamedWindow, bool) {
@@ -2394,7 +2413,8 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 	tableSnapshots := make(map[string]tableMutationSnapshot)
 	for _, request := range requests {
 		if target := request.plan.query.tableTarget; target != "" {
-			if table := e.tables[target]; table != nil {
+			moduleName, tableName := splitCatalogKey(target)
+			if table, ok := e.ensureTableLockedInModule(moduleName, tableName); ok && table != nil {
 				if _, exists := tableSnapshots[target]; !exists {
 					tableSnapshots[target] = table.snapshotMutationState()
 				}
@@ -12768,7 +12788,8 @@ func (r *statementRuntime) persistAggregateTable(plan Plan, now time.Time) error
 	if r == nil || r.engine == nil {
 		return NewError(ErrorDependency, "into-table aggregate has no engine")
 	}
-	table, ok := r.engine.tables[plan.query.tableTarget]
+	moduleName, tableName := splitCatalogKey(plan.query.tableTarget)
+	table, ok := r.engine.ensureTableLockedInModule(moduleName, tableName)
 	if !ok || table == nil {
 		return NewError(ErrorUnknownName, fmt.Sprintf("into-table target %q is not registered", plan.query.tableTarget))
 	}

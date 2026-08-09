@@ -2003,7 +2003,7 @@ func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source
 		var window *NamedWindow
 		var ok bool
 		if engineLocked {
-			window, ok = e.namedWindows[catalogKey(source.moduleName, source.sourceName)]
+			window, ok = e.ensureNamedWindowLockedInModule(source.moduleName, source.sourceName)
 		} else {
 			window, ok = e.NamedWindowInModule(source.moduleName, source.sourceName)
 		}
@@ -2015,7 +2015,7 @@ func (e *Engine) snapshotFireAndForgetSourceInternal(ctx context.Context, source
 		var table *Table
 		var ok bool
 		if engineLocked {
-			table, ok = e.tables[catalogKey(source.moduleName, source.sourceName)]
+			table, ok = e.ensureTableLockedInModule(source.moduleName, source.sourceName)
 		} else {
 			table, ok = e.TableInModule(source.moduleName, source.sourceName)
 		}

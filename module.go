@@ -208,6 +208,7 @@ type ModulePath struct {
 	env        *Environment
 	moduleName string
 	uses       []string
+	selected   bool
 	err        error
 }
 
@@ -240,6 +241,7 @@ func (p ModulePath) Uses(modules ...Module) ModulePath {
 		p.err = NewError(ErrorDependency, "module path has no environment")
 		return p
 	}
+	p.selected = true
 	seen := make(map[string]struct{}, len(p.uses)+len(modules))
 	for _, name := range p.uses {
 		seen[name] = struct{}{}
@@ -276,6 +278,7 @@ func (p ModulePath) UsesNames(names ...string) ModulePath {
 		p.err = NewError(ErrorDependency, "module path has no environment")
 		return p
 	}
+	p.selected = true
 	seen := make(map[string]struct{}, len(p.uses)+len(names))
 	for _, name := range p.uses {
 		seen[name] = struct{}{}
@@ -390,7 +393,7 @@ func (p ModulePath) resolve(kind moduleObjectKind, logicalName string) (string, 
 		}
 	}
 
-	if len(p.uses) > 0 {
+	if p.selected || len(p.uses) > 0 {
 		candidates := make([]string, 0, len(p.uses))
 		for _, moduleName := range p.uses {
 			definition, exists := p.env.modules[moduleName]
