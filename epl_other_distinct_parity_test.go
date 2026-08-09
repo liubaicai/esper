@@ -398,6 +398,67 @@ func TestDistinctBatchWindowParity(t *testing.T) {
 	assertDistinctRowsAnyOrder(t, distinctRowsToStrings(listener.lastNew), [][]string{{"E2", "3"}}, "batch3")
 }
 
+// TestDistinctBatchWindowJoinParity mirrors EPLOtherBatchWindowJoin: select
+// distinct theString, intPrimitive from SupportBean#length_batch(3) a,
+// SupportBean_A#keepall b where a.theString = b.id. The keepall window
+// preloads E1/E2; each completed three-event batch flushes the joined rows
+// deduplicated by distinct in first-seen batch order.
+func TestDistinctBatchWindowJoinParity(t *testing.T) {
+	env, _ := newDistinctEnvironment(t)
+	beans := From[distinctSupportBean](env, "SupportBean").Window(LengthBatch(3))
+	beanA := From[distinctSupportBeanA](env, "SupportBean_A").Window(KeepAll())
+	query := Join(beans, beanA, OnEqual(
+		Field[distinctSupportBean, string]("theString"),
+		Field[distinctSupportBeanA, string]("id"),
+	)).Select(
+		SelectLeft("theString", Field[distinctSupportBean, string]("theString")),
+		SelectLeft("intPrimitive", Field[distinctSupportBean, int]("intPrimitive")),
+	).Query(StatementName("s0"), WithDistinct())
+	engine, _, listener := deployDistinct(t, env, query)
+
+	sb := func(theString string, intPrimitive int) distinctSupportBean {
+		return distinctSupportBean{TheString: theString, IntPrimitive: intPrimitive}
+	}
+	assertOrdered := func(got [][]string, want [][]string, label string) {
+		t.Helper()
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("%s: got %v, want ordered %v", label, got, want)
+		}
+	}
+
+	if err := engine.SendEvent(context.Background(), distinctSupportBeanA{ID: "E1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), distinctSupportBeanA{ID: "E2"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Batch 1: E1/1, E1/1 (silent, batch not full), E2/2 completes it; the
+	// joined duplicates collapse to {E1,1}, {E2,2} in batch order.
+	listener.reset()
+	_ = engine.SendEvent(context.Background(), sb("E1", 1))
+	_ = engine.SendEvent(context.Background(), sb("E1", 1))
+	if listener.invoked {
+		t.Fatal("listener invoked before batch complete")
+	}
+	_ = engine.SendEvent(context.Background(), sb("E2", 2))
+	assertOrdered(distinctRowsToStrings(listener.lastNew), [][]string{{"E1", "1"}, {"E2", "2"}}, "batch1")
+
+	// Batch 2: E2/2, E1/1, E2/2 — first-seen batch order is E2 then E1.
+	listener.reset()
+	_ = engine.SendEvent(context.Background(), sb("E2", 2))
+	_ = engine.SendEvent(context.Background(), sb("E1", 1))
+	_ = engine.SendEvent(context.Background(), sb("E2", 2))
+	assertOrdered(distinctRowsToStrings(listener.lastNew), [][]string{{"E2", "2"}, {"E1", "1"}}, "batch2")
+
+	// Batch 3: all E2/3.
+	listener.reset()
+	_ = engine.SendEvent(context.Background(), sb("E2", 3))
+	_ = engine.SendEvent(context.Background(), sb("E2", 3))
+	_ = engine.SendEvent(context.Background(), sb("E2", 3))
+	assertOrdered(distinctRowsToStrings(listener.lastNew), [][]string{{"E2", "3"}}, "batch3")
+}
+
 // TestDistinctWildcardParity mirrors EPLOtherBeanEventWildcardThisProperty:
 // distinct on wildcard (*) deduplicates identical events.
 func TestDistinctWildcardParity(t *testing.T) {

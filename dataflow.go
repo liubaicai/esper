@@ -5595,6 +5595,50 @@ func dataflowJoinCurrentTuples(join DataflowJoinOptions, sides [][]Event, now ti
 	return result
 }
 
+// diffJoinTuples computes the content-multiset delta between two composed join
+// tuple sets for the dataflow select operator. Dataflow join state does not
+// track join lineage, so a same-content replacement inside one cycle nets out
+// here. The statement join path uses lineage-keyed diffJoinKeyedTuples
+// instead, so that batch window rollovers which replace same-content rows
+// still emit the full old+new pair (Esper composes join results per
+// arriving/departing event rather than by net content diff).
+func diffJoinTuples(before, after [][]Event) joinDelta {
+	result := joinDelta{}
+	used := make([]bool, len(after))
+	for _, oldTuple := range before {
+		found := -1
+		for index, newTuple := range after {
+			if !used[index] && equalEventTuple(oldTuple, newTuple) {
+				found = index
+				break
+			}
+		}
+		if found >= 0 {
+			used[found] = true
+		} else {
+			result.oldTuples = append(result.oldTuples, oldTuple)
+		}
+	}
+	for index, newTuple := range after {
+		if !used[index] {
+			result.newTuples = append(result.newTuples, newTuple)
+		}
+	}
+	return result
+}
+
+func equalEventTuple(left, right []Event) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if !sameEvent(left[index], right[index]) {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *dataflowSelectState) currentEvents() []Event {
 	result := make([]Event, 0, len(s.events))
 	for _, item := range s.events {

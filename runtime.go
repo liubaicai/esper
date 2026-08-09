@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -6185,7 +6186,7 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	if joinDefinitionHasUnidirectional(definition) {
 		return r.updateUnidirectionalJoin(definition, sources, evaluationOrder, now, newEvents, oldEvents)
 	}
-	before := joinTuples(definition, r.joinState, now, r)
+	before := joinKeyedTuples(definition, r.joinState, now, r)
 	for _, event := range newEvents {
 		// Historical (SQL) and subordinate method results belong to exactly
 		// one trigger cycle. Clear those sides before evaluating the
@@ -6194,12 +6195,14 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 		// persist per trigger lineage: Esper polls a method stream once per
 		// triggering event and retains the result rows inside the join
 		// windows until the owning event expires.
+		rebuiltSides := make(map[int][]storedEvent)
 		for index, source := range sources {
 			if containsHistoricalSource(source) && !isEvaluateOnceSource(source) {
 				if base, baseErr := sourceNode(source); baseErr == nil && base != nil &&
 					base.kind == streamMethod && base.method != nil && len(base.method.dependencies) == 0 {
 					continue
 				}
+				rebuiltSides[index] = r.joinState.sides[index]
 				r.joinState.sides[index] = nil
 			}
 		}
@@ -6252,6 +6255,12 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 						})
 					}
 				}
+				// Rebuilt subordinate rows keep their previous join lineage
+				// when the re-poll returns equal content, so a trigger that
+				// changes nothing nets out of the lineage-keyed tuple diff
+				// exactly the way Esper's per-event composition produces no
+				// rows for it.
+				r.joinState.sides[index] = r.assignJoinLineageIDs(r.joinState.sides[index], rebuiltSides[index])
 				continue
 			}
 		if base.kind == streamMethod && base.method != nil {
@@ -6300,6 +6309,7 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 			// insert below and replaces its previous rows, mirroring
 			// Esper's iterator-only refresh of variable-driven method
 			// statements.
+			rebuiltSides[index] = r.joinState.sides[index]
 			r.joinState.sides[index] = nil
 		}
 		delta, err := r.insert(source, event, now)
@@ -6317,6 +6327,9 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 				triggerNewRows[index] = append(triggerNewRows[index], stored)
 			}
 		}
+		if previous, rebuilt := rebuiltSides[index]; rebuilt {
+			r.joinState.sides[index] = r.assignJoinLineageIDs(r.joinState.sides[index], previous)
+		}
 		}
 	}
 	for _, event := range oldEvents {
@@ -6328,8 +6341,8 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 			removeStoredEventsCascade(r.joinState, index, delta.oldEvents)
 		}
 	}
-	after := joinTuples(definition, r.joinState, now, r)
-	delta := diffJoinTuples(before, after)
+	after := joinKeyedTuples(definition, r.joinState, now, r)
+	delta := diffJoinKeyedTuples(before, after)
 	return joinDeltaWithPairs(delta), nil
 }
 
@@ -6395,8 +6408,10 @@ func (r *statementRuntime) updateUnidirectionalJoin(definition *joinDefinition, 
 	}
 	for _, event := range newEvents {
 		working := cloneJoinRuntimeState(r.joinState)
+		rebuiltSides := make(map[int][]storedEvent)
 		for index, source := range sources {
 			if containsHistoricalSource(source) && !flags[index] && !isEvaluateOnceSource(source) {
+				rebuiltSides[index] = r.joinState.sides[index]
 				r.joinState.sides[index] = nil
 				working.sides[index] = nil
 			}
@@ -6452,6 +6467,10 @@ func (r *statementRuntime) updateUnidirectionalJoin(definition *joinDefinition, 
 				if flags[index] {
 					working.sides[index] = driverRows[index]
 				} else {
+					// Same-content re-poll rows keep their previous join
+					// lineage so unchanged subordinate results net out of
+					// the lineage-keyed tuple diff (see updateJoin).
+					r.joinState.sides[index] = r.assignJoinLineageIDs(r.joinState.sides[index], rebuiltSides[index])
 					working.sides[index] = r.joinState.sides[index]
 				}
 				continue
@@ -6480,6 +6499,9 @@ func (r *statementRuntime) updateUnidirectionalJoin(definition *joinDefinition, 
 			}
 			removeStoredEvents(&r.joinState.sides[index], delta.oldEvents)
 			r.joinState.sides[index] = append(r.joinState.sides[index], stored...)
+			if previous, rebuilt := rebuiltSides[index]; rebuilt {
+				r.joinState.sides[index] = r.assignJoinLineageIDs(r.joinState.sides[index], previous)
+			}
 			working.sides[index] = r.joinState.sides[index]
 		}
 
@@ -6794,7 +6816,7 @@ func (r *statementRuntime) expireJoin(now time.Time) (joinDelta, error) {
 	if definition == nil {
 		return joinDelta{}, nil
 	}
-	before := joinTuples(definition, r.joinState, now, r)
+	before := joinKeyedTuples(definition, r.joinState, now, r)
 	delta := r.expire(now)
 	for index := range r.joinState.sides {
 		removeStoredEventsCascade(r.joinState, index, delta.oldEvents)
@@ -6810,8 +6832,8 @@ func (r *statementRuntime) expireJoin(now time.Time) (joinDelta, error) {
 	if joinDefinitionHasUnidirectional(definition) {
 		return timedDelta, nil
 	}
-	after := joinTuples(definition, r.joinState, now, r)
-	return joinDeltaWithPairs(diffJoinTuples(before, after)), nil
+	after := joinKeyedTuples(definition, r.joinState, now, r)
+	return joinDeltaWithPairs(diffJoinKeyedTuples(before, after)), nil
 }
 
 func joinPairs(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) []eventPair {
@@ -6828,7 +6850,39 @@ func joinPairs(definition *joinDefinition, state *joinRuntimeState, now time.Tim
 	return pairs
 }
 
+// joinKeyedTuple pairs a composed join tuple with its lineage identity, the
+// composite of the per-side join lineage IDs. Esper composes join insert and
+// remove rows per arriving or departing event, so a batch rollover that
+// replaces a row with equal content still produces the full old/new pair:
+// the lineage key keeps those rows distinct where a content multiset diff
+// would net them out, while refreshed current-state rows keep their lineage
+// (assignJoinLineageIDs) and still match.
+type joinKeyedTuple struct {
+	events []Event
+	key    string
+}
+
+func joinStoredTupleLineageKey(stored []storedEvent) string {
+	parts := make([]string, len(stored))
+	for index, entry := range stored {
+		parts[index] = strconv.FormatUint(entry.lineageID, 10)
+	}
+	return strings.Join(parts, "|")
+}
+
 func joinTuples(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) [][]Event {
+	keyed := joinKeyedTuples(definition, state, now, runtime)
+	if len(keyed) == 0 {
+		return nil
+	}
+	result := make([][]Event, len(keyed))
+	for index, tuple := range keyed {
+		result[index] = tuple.events
+	}
+	return result
+}
+
+func joinKeyedTuples(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) []joinKeyedTuple {
 	if definition == nil || state == nil {
 		return nil
 	}
@@ -6837,11 +6891,11 @@ func joinTuples(definition *joinDefinition, state *joinRuntimeState, now time.Ti
 		return nil
 	}
 	if len(definition.edges) > 0 {
-		return joinChainedTuples(definition, state, now, runtime)
+		return joinChainedKeyedTuples(definition, state, now, runtime)
 	}
 	conditions := joinDefinitionConditions(definition)
 	if len(sources) == 2 && definition.kind != JoinInner {
-		result := make([][]Event, 0)
+		result := make([]joinKeyedTuple, 0)
 		matchedRight := make(map[int]bool)
 		for _, left := range state.sides[0] {
 			matched := false
@@ -6854,31 +6908,33 @@ func joinTuples(definition *joinDefinition, state *joinRuntimeState, now time.Ti
 				if joinConditionsMatch(conditions, tuple, now, runtime) {
 					matched = true
 					matchedRight[rightIndex] = true
-					result = append(result, tuple)
+					result = append(result, joinKeyedTuple{events: tuple, key: joinStoredTupleLineageKey(storedTuple)})
 				}
 			}
 			if !matched && (definition.kind == JoinLeftOuter || definition.kind == JoinFullOuter) {
-				result = append(result, []Event{left.event, Event{}})
+				storedTuple := []storedEvent{left, {}}
+				result = append(result, joinKeyedTuple{events: []Event{left.event, Event{}}, key: joinStoredTupleLineageKey(storedTuple)})
 			}
 		}
 		if definition.kind == JoinRightOuter || definition.kind == JoinFullOuter {
 			for rightIndex, right := range state.sides[1] {
 				if !matchedRight[rightIndex] {
-					result = append(result, []Event{Event{}, right.event})
+					storedTuple := []storedEvent{{}, right}
+					result = append(result, joinKeyedTuple{events: []Event{Event{}, right.event}, key: joinStoredTupleLineageKey(storedTuple)})
 				}
 			}
 		}
 		return result
 	}
 	if len(sources) > 2 && definition.kind != JoinInner {
-		return joinOuterTuples(definition, state, now, runtime)
+		return joinOuterKeyedTuples(definition, state, now, runtime)
 	}
 	for _, side := range state.sides {
 		if len(side) == 0 {
 			return nil
 		}
 	}
-	result := make([][]Event, 0)
+	result := make([]joinKeyedTuple, 0)
 	current := make([]Event, 0, len(sources))
 	currentStored := make([]storedEvent, 0, len(sources))
 	var visit func(int)
@@ -6889,7 +6945,7 @@ func joinTuples(definition *joinDefinition, state *joinRuntimeState, now time.Ti
 			}
 			candidate := append([]Event(nil), current...)
 			if joinConditionsMatch(conditions, candidate, now, runtime) {
-				result = append(result, candidate)
+				result = append(result, joinKeyedTuple{events: candidate, key: joinStoredTupleLineageKey(currentStored)})
 			}
 			return
 		}
@@ -6913,7 +6969,7 @@ type chainedJoinTuple struct {
 // joinChainedTuples evaluates the explicit left-deep join tree edge by edge.
 // This preserves intermediate unmatched rows, which cannot be represented by
 // the legacy JoinMany single-kind N-way Cartesian implementation.
-func joinChainedTuples(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) [][]Event {
+func joinChainedKeyedTuples(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) []joinKeyedTuple {
 	if definition == nil || state == nil || len(definition.edges) != len(state.sides)-1 || len(state.sides) < 2 {
 		return nil
 	}
@@ -6968,9 +7024,9 @@ func joinChainedTuples(definition *joinDefinition, state *joinRuntimeState, now 
 		}
 		rows = next
 	}
-	result := make([][]Event, len(rows))
+	result := make([]joinKeyedTuple, len(rows))
 	for index, row := range rows {
-		result[index] = row.events
+		result[index] = joinKeyedTuple{events: row.events, key: joinStoredTupleLineageKey(row.stored)}
 	}
 	return result
 }
@@ -6981,10 +7037,10 @@ func joinChainedTuples(definition *joinDefinition, state *joinRuntimeState, now 
 // sources between the first and last positions. This is intentionally a
 // semantic reference implementation; optimized indexed joins can replace it
 // without changing the public contract.
-func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) [][]Event {
+func joinOuterKeyedTuples(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) []joinKeyedTuple {
 	sources := joinDefinitionSources(definition)
 	conditions := joinDefinitionConditions(definition)
-	result := make([][]Event, 0)
+	result := make([]joinKeyedTuple, 0)
 	matched := make([][]bool, len(state.sides))
 	for index := range state.sides {
 		matched[index] = make([]bool, len(state.sides[index]))
@@ -7002,7 +7058,7 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 			if !joinConditionsMatch(conditions, candidate, now, runtime) {
 				return
 			}
-			result = append(result, candidate)
+			result = append(result, joinKeyedTuple{events: candidate, key: joinStoredTupleLineageKey(currentStored)})
 			for sourceIndex, sideIndex := range currentIndexes {
 				matched[sourceIndex][sideIndex] = true
 			}
@@ -7027,7 +7083,9 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 			}
 			tuple := make([]Event, len(sources))
 			tuple[0] = stored.event
-			result = append(result, tuple)
+			storedTuple := make([]storedEvent, len(sources))
+			storedTuple[0] = stored
+			result = append(result, joinKeyedTuple{events: tuple, key: joinStoredTupleLineageKey(storedTuple)})
 		}
 	}
 	if definition.kind == JoinRightOuter {
@@ -7038,7 +7096,9 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 			}
 			tuple := make([]Event, len(sources))
 			tuple[last] = stored.event
-			result = append(result, tuple)
+			storedTuple := make([]storedEvent, len(sources))
+			storedTuple[last] = stored
+			result = append(result, joinKeyedTuple{events: tuple, key: joinStoredTupleLineageKey(storedTuple)})
 		}
 	}
 	if definition.kind == JoinFullOuter {
@@ -7049,7 +7109,9 @@ func joinOuterTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 				}
 				tuple := make([]Event, len(sources))
 				tuple[sourceIndex] = stored.event
-				result = append(result, tuple)
+				storedTuple := make([]storedEvent, len(sources))
+				storedTuple[sourceIndex] = stored
+				result = append(result, joinKeyedTuple{events: tuple, key: joinStoredTupleLineageKey(storedTuple)})
 			}
 		}
 	}
@@ -7175,13 +7237,18 @@ func diffJoinPairs(before, after []eventPair) joinDelta {
 	return result
 }
 
-func diffJoinTuples(before, after [][]Event) joinDelta {
+// diffJoinKeyedTuples matches before/after tuples by lineage identity as a
+// multiset. Rows that keep their lineage (unchanged or refreshed
+// current-state rows) cancel out; rows that left or arrived — including
+// same-content replacements from a batch rollover — surface as old and new
+// join rows, matching Esper's per-event join composition.
+func diffJoinKeyedTuples(before, after []joinKeyedTuple) joinDelta {
 	result := joinDelta{}
 	used := make([]bool, len(after))
 	for _, oldTuple := range before {
 		found := -1
 		for index, newTuple := range after {
-			if !used[index] && equalEventTuple(oldTuple, newTuple) {
+			if !used[index] && oldTuple.key == newTuple.key {
 				found = index
 				break
 			}
@@ -7189,27 +7256,15 @@ func diffJoinTuples(before, after [][]Event) joinDelta {
 		if found >= 0 {
 			used[found] = true
 		} else {
-			result.oldTuples = append(result.oldTuples, oldTuple)
+			result.oldTuples = append(result.oldTuples, oldTuple.events)
 		}
 	}
 	for index, newTuple := range after {
 		if !used[index] {
-			result.newTuples = append(result.newTuples, newTuple)
+			result.newTuples = append(result.newTuples, newTuple.events)
 		}
 	}
 	return result
-}
-
-func equalEventTuple(left, right []Event) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for index := range left {
-		if !sameEvent(left[index], right[index]) {
-			return false
-		}
-	}
-	return true
 }
 
 func equalEventPair(left, right eventPair) bool {
