@@ -12,6 +12,12 @@ import (
 
 const planSchemaVersion = "esper-go-plan/v2"
 
+// CompilerVersion identifies the public fluent-plan compiler contract. It is
+// intentionally independent from the serialized Plan schema version.
+const CompilerVersion = "esper-go-compiler/v1"
+
+const compilerProvider = "github.com/liubaicai/esper.Environment.Build"
+
 // Environment is the compile-time catalog for schemas and future extension
 // registrations. It is safe to share for concurrent Plan construction.
 type Environment struct {
@@ -387,9 +393,26 @@ type Plan struct {
 	indexPlan     IndexPlan
 }
 
+// PlanManifest identifies the compiler contract and Go provider that produced
+// one immutable Plan. It is the Go counterpart of Esper's EPCompiledManifest;
+// generated JVM module-provider class names are represented by the stable
+// fluent builder provider instead.
+type PlanManifest struct {
+	CompilerVersion string
+	Provider        string
+}
+
 func (p Plan) SchemaVersion() string { return p.schemaVersion }
 func (p Plan) Hash() string          { return p.hash }
 func (p Plan) Canonical() []byte     { return append([]byte(nil), p.canonical...) }
+
+// Manifest returns compiler provenance for a valid Plan.
+func (p Plan) Manifest() PlanManifest {
+	if p.schemaVersion == "" || len(p.canonical) == 0 || p.hash == "" {
+		return PlanManifest{}
+	}
+	return PlanManifest{CompilerVersion: CompilerVersion, Provider: compilerProvider}
+}
 
 // IndexPlan returns a detached, deterministic access-path summary. It is a
 // Go-native replacement for Java's query-plan hook assertions and does not
@@ -400,18 +423,99 @@ func (p Plan) ResultSchema() (Schema, bool) {
 	return p.resultSchema, p.resultSchema.valid()
 }
 
-func (e *Environment) Build(query Query) (Plan, error) {
+// StatementCompileContext describes one typed statement before Build validates
+// and canonicalizes it. TypedDescription replaces Java's raw EPL supplier;
+// Query and Metadata expose the analyzable fluent source without parsing text.
+type StatementCompileContext struct {
+	StatementNumber  int
+	Query            Query
+	TypedDescription string
+	StatementName    string
+	ModuleName       string
+	Metadata         StatementMetadata
+}
+
+// StatementNameResolver selects a compile-time statement name. Returning an
+// error aborts Build before a Plan is produced.
+type StatementNameResolver func(StatementCompileContext) (string, error)
+
+// StatementUserObjectResolver attaches one opaque Go value to the compiled
+// statement. The value is application metadata and does not enter Plan
+// canonical identity.
+type StatementUserObjectResolver func(StatementCompileContext) (any, error)
+
+type compileConfig struct {
+	nameResolver       StatementNameResolver
+	userObjectResolver StatementUserObjectResolver
+}
+
+// CompileOption configures one Environment.Build operation.
+type CompileOption func(*compileConfig)
+
+// WithStatementNameResolver resolves the compile-time statement name from a
+// typed fluent query context.
+func WithStatementNameResolver(resolver StatementNameResolver) CompileOption {
+	return func(config *compileConfig) { config.nameResolver = resolver }
+}
+
+// WithStatementUserObjectResolver resolves application-owned compile-time
+// metadata after any statement-name resolver has run.
+func WithStatementUserObjectResolver(resolver StatementUserObjectResolver) CompileOption {
+	return func(config *compileConfig) { config.userObjectResolver = resolver }
+}
+
+func applyCompileOptions(query Query, options []CompileOption) (Query, error) {
+	config := compileConfig{}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	context := StatementCompileContext{
+		StatementNumber:  0,
+		Query:            query,
+		TypedDescription: query.description(),
+		StatementName:    query.name,
+		ModuleName:       query.moduleName,
+		Metadata:         query.Metadata(),
+	}
+	if config.nameResolver != nil {
+		resolved, err := config.nameResolver(context)
+		if err != nil {
+			return Query{}, WrapError(ErrorInvalidRule, "resolve statement name", err)
+		}
+		query.name = resolved
+		context.Query = query
+		context.StatementName = resolved
+		context.Metadata = query.Metadata()
+	}
+	if config.userObjectResolver != nil {
+		resolved, err := config.userObjectResolver(context)
+		if err != nil {
+			return Query{}, WrapError(ErrorInvalidRule, "resolve statement user object", err)
+		}
+		query.statementUserObject = resolved
+	}
+	return query, nil
+}
+
+func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error) {
 	if e == nil {
 		return Plan{}, NewError(ErrorInvalidRule, "nil environment")
 	}
-	e.buildMu.Lock()
-	defer e.buildMu.Unlock()
 	if query.env == nil || query.env != e {
 		return Plan{}, NewError(ErrorDependency, "query belongs to a different or nil environment")
 	}
 	if query.input == nil && query.join == nil && !query.sourceLess {
 		return Plan{}, NewError(ErrorInvalidRule, "query has no source")
 	}
+	var err error
+	query, err = applyCompileOptions(query, options)
+	if err != nil {
+		return Plan{}, err
+	}
+	e.buildMu.Lock()
+	defer e.buildMu.Unlock()
 	if query.discardPartialsOnMatch || query.suppressOverlappingMatches {
 		if query.pattern == nil {
 			return Plan{}, NewError(ErrorInvalidRule, "pattern consumption policies require a pattern query")

@@ -1551,6 +1551,15 @@ func (s *Statement) Plan() Plan {
 	return s.plan
 }
 
+// UserObject returns the opaque compile-time metadata attached through
+// WithStatementUserObject or WithStatementUserObjectResolver.
+func (s *Statement) UserObject() any {
+	if s == nil {
+		return nil
+	}
+	return s.plan.query.statementUserObject
+}
+
 // Metadata returns a detached snapshot of the deployed statement's built-in
 // and custom metadata.
 func (s *Statement) Metadata() StatementMetadata {
