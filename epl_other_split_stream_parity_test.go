@@ -12,6 +12,18 @@ type splitStreamSupportBean struct {
 	IntPrimitive int    `esper:"intPrimitive"`
 }
 
+type splitStreamSupportBeanS0 struct {
+	ID  int    `esper:"id"`
+	P00 string `esper:"p00"`
+	P01 string `esper:"p01"`
+}
+
+type splitStreamIntArrayEvent struct {
+	ID    string `esper:"id"`
+	Array []int  `esper:"array"`
+	Value int    `esper:"value"`
+}
+
 type splitStreamRecorder struct {
 	events []Event
 }
@@ -343,5 +355,126 @@ func TestSplitStreamInvalidParity(t *testing.T) {
 		SplitInto("AStream", Alias("value", Sum[int](intPrimitive))),
 	).Query()); err == nil || !errors.Is(err, ErrorInvalidRule) {
 		t.Fatalf("aggregate split projection error = %v", err)
+	}
+}
+
+func TestSplitStreamSubqueryParity(t *testing.T) {
+	env := newSplitStreamEnvironment(t)
+	if _, err := RegisterStruct[splitStreamSupportBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	for _, target := range []string{"AStreamSub", "BStreamSub"} {
+		if _, err := RegisterMap(env, target, []FieldSpec{FieldDef("string", reflect.TypeOf((*any)(nil)).Elem())}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	source := From[splitStreamSupportBean](env, "SupportBean")
+	last := From[splitStreamSupportBeanS0](env, "SupportBean_S0").Window(LastEvent()).AsRecord()
+	intPrimitive := Field[splitStreamSupportBean, int]("intPrimitive")
+	lastID := SubqueryValue[int](last, Field[splitStreamSupportBeanS0, int]("id"))
+	plan, err := env.Build(OnEvent(source).SplitFirst(
+		SplitIntoWhen(
+			Equal[int](intPrimitive, lastID),
+			"AStreamSub",
+			Alias("string", SubqueryValue[string](last, Field[splitStreamSupportBeanS0, string]("p00"))),
+		),
+		SplitIntoWhen(
+			Or(Not(Equal[int](intPrimitive, lastID)), IsNull[int](lastID)),
+			"BStreamSub",
+			Alias("string", SubqueryValue[string](last, Field[splitStreamSupportBeanS0, string]("p01"))),
+		),
+	).Query(StatementName("split")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	a := deploySplitConsumer(t, env, engine, "AStreamSub")
+	b := deploySplitConsumer(t, env, engine, "BStreamSub")
+	_, fallback := deploySplitPlan(t, engine, plan)
+	if err := engine.SendEvent(context.Background(), splitStreamSupportBean{"E1", 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), splitStreamSupportBeanS0{ID: 10, P00: "x", P01: "y"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), splitStreamSupportBean{"E2", 10}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), splitStreamSupportBean{"E3", 9}); err != nil {
+		t.Fatal(err)
+	}
+	if len(a.events) != 1 || a.events[0].Get("string").Any() != "x" {
+		t.Fatalf("AStreamSub = %#v", a.events)
+	}
+	if len(b.events) != 2 || b.events[0].Get("string").Any() != nil || b.events[1].Get("string").Any() != "y" {
+		t.Fatalf("BStreamSub = %#v", b.events)
+	}
+	if len(fallback.events) != 0 {
+		t.Fatalf("split fallback = %#v", fallback.events)
+	}
+}
+
+func TestSplitStreamSubqueryMultikeyWArrayParity(t *testing.T) {
+	env := newSplitStreamEnvironment(t)
+	if _, err := RegisterStruct[splitStreamIntArrayEvent](env, "SupportEventWithIntArray"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "AValue", []FieldSpec{FieldDef("value", reflect.TypeOf((*any)(nil)).Elem())}); err != nil {
+		t.Fatal(err)
+	}
+
+	history := From[splitStreamIntArrayEvent](env, "SupportEventWithIntArray").Window(KeepAll()).AsRecord()
+	groupedSum := SubqueryGroupScalar[[]int, int](
+		history,
+		Field[splitStreamIntArrayEvent, []int]("array"),
+		Sum[int](Field[splitStreamIntArrayEvent, int]("value")),
+	)
+	intPrimitive := Field[splitStreamSupportBean, int]("intPrimitive")
+	plan, err := env.Build(OnEvent(From[splitStreamSupportBean](env, "SupportBean")).SplitFirst(
+		SplitIntoWhen(Greater[int](intPrimitive, Literal(0)), "AValue", Alias("value", groupedSum)),
+		SplitIntoWhen(LessOrEqual[int](intPrimitive, Literal(0)), "AValue", Alias("value", Literal(0))),
+	).Query(StatementName("split")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	values := deploySplitConsumer(t, env, engine, "AValue")
+	_, fallback := deploySplitPlan(t, engine, plan)
+	sendArray := func(id string, array []int, value int) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), splitStreamIntArrayEvent{ID: id, Array: array, Value: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendTrigger := func(id string, value int) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), splitStreamSupportBean{TheString: id, IntPrimitive: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	sendArray("E1", []int{1, 2}, 10)
+	sendArray("E2", []int{1, 2}, 11)
+	sendTrigger("X", 0)
+	sendTrigger("Y", 1)
+	sendArray("E3", []int{1, 2}, 12)
+	sendTrigger("Y", 1)
+	sendArray("E4", []int{1}, 13)
+	sendTrigger("Y", 1)
+
+	want := []any{0, 21, 33, nil}
+	if len(values.events) != len(want) {
+		t.Fatalf("AValue events = %#v", values.events)
+	}
+	for index, expected := range want {
+		if got := values.events[index].Get("value").Any(); got != expected {
+			t.Fatalf("AValue[%d] = %#v, want %#v", index, got, expected)
+		}
+	}
+	if len(fallback.events) != 0 {
+		t.Fatalf("split fallback = %#v", fallback.events)
 	}
 }

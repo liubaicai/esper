@@ -1528,7 +1528,6 @@
       "status": "partial",
       "remaining": [
         "contained-event from-clause branches",
-        "scalar and grouped multikey-array subqueries",
         "context property/event projection",
         "preemptive named-window target insertion",
         "complete representation and Java trace parity"
@@ -12181,7 +12180,9 @@
         "java-runtime-a082f468bd39b74815f5",
         "java-runtime-2183f1fc82d180cd0d38",
         "java-runtime-69bb6ae4851637eb1455",
-        "java-runtime-9df01211ef2240a5163a"
+        "java-runtime-9df01211ef2240a5163a",
+        "java-runtime-d4c2173556aad17967ac",
+        "java-runtime-165ebb18d797a49d9d9e"
       ],
       "javaNames": [
         "EPLOtherSplitStream2SplitNoDefaultOutputFirst",
@@ -12190,7 +12191,9 @@
         "EPLOtherSplitStream2SplitNoDefaultOutputAll",
         "EPLOtherSplitStream3SplitOutputAll",
         "EPLOtherSplitStream3SplitDefaultOutputFirst",
-        "EPLOtherSplitStream4Split"
+        "EPLOtherSplitStream4Split",
+        "EPLOtherSplitStreamSubquery",
+        "EPLOtherSplitStreamSubqueryMultikeyWArray"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSplitStream.java"
@@ -12202,7 +12205,9 @@
         "TestSplitStream2SplitNoDefaultOutputAllParity",
         "TestSplitStream3SplitOutputAllParity",
         "TestSplitStream3SplitDefaultOutputFirstParity",
-        "TestSplitStream4SplitParity"
+        "TestSplitStream4SplitParity",
+        "TestSplitStreamSubqueryParity",
+        "TestSplitStreamSubqueryMultikeyWArrayParity"
       ],
       "tags": [
         "correctness",
@@ -12214,7 +12219,10 @@
         "output-all",
         "wildcard",
         "projection",
-        "invalid"
+        "invalid",
+        "subquery",
+        "multikey",
+        "array"
       ],
       "status": "partial",
       "evidence": [
@@ -12222,7 +12230,7 @@
         "go-unit",
         "java-suite-TestSuiteEPLOther"
       ],
-      "difference": "Go exposes SplitFirst and SplitAll on a typed TriggerStream, with explicit SplitInto/SplitIntoWhen branches and pre-registered target schemas instead of EPL/SODA split clauses. SplitFirst stops after the first true branch, SplitAll emits every true branch, an unconditional final branch is the default, and when no branch matches the split statement emits the original source event. Wildcard branches preserve source fields through target-schema projection; named projections evaluate against the source event. The builder rejects missing branches, unknown targets, non-bool conditions and aggregate projections. SODA/model round-trips are intentionally absent. Contained-event from clauses, subqueries, context projection and preemptive named-window insertion remain open in this partial case."
+      "difference": "Go exposes SplitFirst and SplitAll on a typed TriggerStream, with explicit SplitInto/SplitIntoWhen branches and pre-registered target schemas instead of EPL/SODA split clauses. SplitFirst stops after the first true branch, SplitAll emits every true branch, an unconditional final branch is the default, and when no branch matches the split statement emits the original source event. Wildcard branches preserve source fields through target-schema projection; named projections evaluate against the source event. Branch predicates and projections share the statement subquery registry: the scalar lastevent case preserves Null before SupportBean_S0 arrives and selects p00/p01 after it, while SubqueryGroupScalar over []int keys returns one-group sums and Null for multiple groups without requiring Go-comparable array keys. The builder rejects missing branches, unknown targets, non-bool conditions and direct aggregate projections; aggregate expressions remain valid inside a subquery boundary. SODA/model round-trips are intentionally absent. Contained-event from clauses, context projection and preemptive named-window insertion remain open in this partial case."
     }
   ],
   "mappings": [
