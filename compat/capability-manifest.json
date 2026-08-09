@@ -1885,6 +1885,25 @@
         "continuous Table joins currently preload the Table snapshot at deployment instead of probing the secondary index for every driver event",
         "module name, uses/import visibility and ambiguity diagnostics remain in the compile/deploy capability backlog"
       ]
+    },
+    {
+      "id": "client.instrument.instrumentation-disabled",
+      "domain": "client",
+      "level": "N",
+      "summary": "Disposition for the Java regression execution that runs while internal compile-time instrumentation is hard-disabled and exposes no instrumentation contract",
+      "javaRefs": [
+        "ClientInstrumentInstrumentation",
+        "InstrumentationHelper"
+      ],
+      "goRefs": [
+        "client_instrument_instrumentation_parity_test.go"
+      ],
+      "phase": 0,
+      "status": "approved-difference",
+      "remaining": [
+        "structured Audit callbacks and runtime/statement Metrics are separate observable capabilities and remain in scope",
+        "a future Go diagnostic tracer may instrument logical operators without copying Java q/a callback pairs or bytecode hooks"
+      ]
     }
   ],
   "cases": [
@@ -13338,6 +13357,38 @@
         "go-unit"
       ],
       "difference": "Go expresses one Java compiled module as an ordered DeployPlans call and two Java compiler-path modules as separate immutable Plan deployments over an explicitly registered public derived-stream schema. The same-deployment producer/filtered consumer preserves E1/E4 delivery and E2/E3 suppression; the late consumer does not replay E1 and receives E2-E4. The Table case declares the composite primary key plus BasketIndex in the typed Environment, verifies the selected equality IndexPlan, and joins A/B VWAPrice events to weights 1/2. Java module text, compiler-path access-modifier callbacks and JVM query-plan hooks are not copied. The current continuous Table join preloads its passive Table side at deployment, so this case proves plan selection and observable results rather than a per-event physical index lookup. Deployment-local protected definitions tested by ClientMultitenancyProtected remain unmapped."
+    },
+    {
+      "id": "case.client-instrument-instrumentation-disabled",
+      "javaRuntimeIds": [
+        "java-runtime-caaad1238dc1fc1d2afe"
+      ],
+      "javaNames": [
+        "ClientInstrumentInstrumentation"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/instrument/ClientInstrumentInstrumentation.java"
+      ],
+      "goTests": [
+        "TestClientInstrumentInstrumentationDisabledParity"
+      ],
+      "tags": [
+        "client",
+        "instrument",
+        "instrumentation",
+        "disabled",
+        "build",
+        "deploy",
+        "lifecycle",
+        "approved-difference"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "The fixed Esper 9.0.0 source declares InstrumentationHelper.ENABLED=false and ASSERTIONENABLED=false. RegressionRunner therefore does not call startTest/endTest, all internal instrumentation branches are compile-time false, and this execution only builds, deploys and undeploys select 1=2 without sending an event or asserting a callback. Go verifies the same observable typed Plan lifecycle and does not copy the dormant JVM-wide static helper, hundreds of q/a callback pairs, bytecode hooks or provider system properties. This disposition does not cover ClientInstrumentAudit or any MetricsReporting execution; those remain product capabilities to implement."
     }
   ],
   "mappings": [
@@ -14204,6 +14255,10 @@
     {
       "capabilityId": "client.multitenancy.module-routing-index",
       "caseId": "case.client-multitenancy-insert-index"
+    },
+    {
+      "capabilityId": "client.instrument.instrumentation-disabled",
+      "caseId": "case.client-instrument-instrumentation-disabled"
     }
   ]
 }
