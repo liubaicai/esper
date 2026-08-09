@@ -1351,3 +1351,289 @@ func TestUpdateIStreamArrayElementInvalidParity(t *testing.T) {
 		t.Fatalf("null-rhs send must succeed: %v", err)
 	}
 }
+
+// updateIStreamCopyMethodBean mirrors SupportBeanCopyMethod (valOne, valTwo).
+// Esper needs a user copy method or serializer for bean copy-on-write; Go
+// structs always copy field-wise so no hook is required.
+type updateIStreamCopyMethodBean struct {
+	ValOne string `esper:"valOne"`
+	ValTwo string `esper:"valTwo"`
+}
+
+// TestUpdateIStreamSODAParity covers the runtime shape of EPLOtherUpdateSODA:
+// update istream on a map type with a where clause. The SODA object-model
+// surface (EPStatementObjectModel, toEPL, eplToModel round-trip) and the
+// update's optional stream alias (as mytype) have no Go counterpart in the
+// immutable typed chain plans (approved difference).
+func TestUpdateIStreamSODAParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "MyMapTypeSODA", []FieldSpec{
+		FieldDef("p0", reflect.TypeOf("")),
+		FieldDef("p1", reflect.TypeOf("")),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(FromAny(env, "MyMapTypeSODA").UpdateStream(
+		SetColumn("p1", Literal("newvalue")),
+	).Where(Equal[string](Field[Event, string]("p0"), Literal("E1"))).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromAny(env, "MyMapTypeSODA").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, updatePlan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+
+	if err := engine.Send(context.Background(), "MyMapTypeSODA", map[string]any{"p0": "E1", "p1": "E1"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(s0.newResults) != 1 {
+		t.Fatalf("s0 deliveries = %d", len(s0.newResults))
+	}
+	if got := s0.newResults[0].Get("p0").Any(); got != "E1" {
+		t.Fatalf("s0 p0 = %#v, want E1", got)
+	}
+	if got := s0.newResults[0].Get("p1").Any(); got != "newvalue" {
+		t.Fatalf("s0 p1 = %#v, want newvalue", got)
+	}
+}
+
+// TestUpdateIStreamXMLEventParity mirrors EPLOtherUpdateXMLEvent on the map
+// representation: insert-into adds two literal columns alongside the source
+// property, and the update rewrites both literal columns where the source
+// property matches. The XML DOM event representation itself has no Go
+// counterpart (approved difference).
+func TestUpdateIStreamXMLEventParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "MyXMLEvent", []FieldSpec{
+		FieldDef("prop1", reflect.TypeOf("")),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "ABCStreamXML", []FieldSpec{
+		FieldDef("valOne", reflect.TypeOf(int(0))),
+		FieldDef("valTwo", reflect.TypeOf(int(0))),
+		FieldDef("prop1", reflect.TypeOf("")),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(FromAny(env, "MyXMLEvent").Select(
+		Alias("valOne", Literal(1)),
+		Alias("valTwo", Literal(2)),
+		Alias("prop1", Field[Event, string]("prop1")),
+	).InsertInto("ABCStreamXML", StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(FromAny(env, "ABCStreamXML").UpdateStream(
+		SetColumn("valOne", Literal(987)),
+		SetColumn("valTwo", Literal(123)),
+	).Where(Equal[string](Field[Event, string]("prop1"), Literal("SAMPLE_V1"))).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromAny(env, "ABCStreamXML").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, insertPlan)
+	updateIStreamDeployOne(t, engine, updatePlan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+
+	if err := engine.Send(context.Background(), "MyXMLEvent", map[string]any{"prop1": "SAMPLE_V1"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(s0.newResults) != 1 {
+		t.Fatalf("s0 deliveries = %d", len(s0.newResults))
+	}
+	if got := s0.newResults[0].Get("valOne").Any(); got != 987 {
+		t.Fatalf("s0 valOne = %#v, want 987", got)
+	}
+	if got := s0.newResults[0].Get("valTwo").Any(); got != 123 {
+		t.Fatalf("s0 valTwo = %#v, want 123", got)
+	}
+	if got := s0.newResults[0].Get("prop1").Any(); got != "SAMPLE_V1" {
+		t.Fatalf("s0 prop1 = %#v, want SAMPLE_V1", got)
+	}
+}
+
+// TestUpdateIStreamWrappedObjectParity mirrors EPLOtherUpdateWrappedObject on
+// the flat map representation: insert-into projects two literal columns plus
+// the source property; three update shapes (extra columns only, source
+// property only, mixed) apply across undeploy/redeploy boundaries. Esper's
+// wrapped-object representation (the bean as a fragment next to extra
+// columns) is represented by the equivalent flat implicit stream in Go
+// (approved difference).
+func TestUpdateIStreamWrappedObjectParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[updateIStreamBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "ABCStreamWO", []FieldSpec{
+		FieldDef("valOne", reflect.TypeOf(int(0))),
+		FieldDef("valTwo", reflect.TypeOf(int(0))),
+		FieldDef("theString", reflect.TypeOf("")),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(Select(
+		From[updateIStreamBean](env, "SupportBean"),
+		Alias("valOne", Literal(1)),
+		Alias("valTwo", Literal(2)),
+		Alias("theString", Field[updateIStreamBean, string]("theString")),
+	).InsertInto("ABCStreamWO", StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromAny(env, "ABCStreamWO").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	update := func(name string, assignments ...TableAssignment) Plan {
+		t.Helper()
+		plan, err := env.Build(FromAny(env, "ABCStreamWO").UpdateStream(assignments...).Query(StatementName(name)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return plan
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, insertPlan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+
+	send := func(theString string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), updateIStreamBean{TheString: theString}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertRow := func(label string, result Result, valOne, valTwo int, theString string) {
+		t.Helper()
+		if got := result.Get("valOne").Any(); got != valOne {
+			t.Fatalf("%s valOne = %#v, want %d", label, got, valOne)
+		}
+		if got := result.Get("valTwo").Any(); got != valTwo {
+			t.Fatalf("%s valTwo = %#v, want %d", label, got, valTwo)
+		}
+		if got := result.Get("theString").Any(); got != theString {
+			t.Fatalf("%s theString = %#v, want %#v", label, got, theString)
+		}
+	}
+
+	oneDeployment, _ := updateIStreamDeployOne(t, engine, update("update1", SetColumn("valOne", Literal(987)), SetColumn("valTwo", Literal(123))))
+	send("E1")
+	assertRow("E1", s0.newResults[0], 987, 123, "E1")
+
+	if err := oneDeployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	twoDeployment, _ := updateIStreamDeployOne(t, engine, update("update2", SetColumn("theString", Literal("A"))))
+	send("E2")
+	assertRow("E2", s0.newResults[1], 1, 2, "A")
+
+	if err := twoDeployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	updateIStreamDeployOne(t, engine, update("update3", SetColumn("theString", Literal("B")), SetColumn("valOne", Literal(555))))
+	send("E3")
+	assertRow("E3", s0.newResults[2], 555, 2, "B")
+}
+
+// TestUpdateIStreamCopyMethodParity covers the runtime shape of
+// EPLOtherUpdateCopyMethod: insert-into wildcard route plus an update writing
+// both properties. Esper requires a user copy method on the bean for the
+// copy-on-write; Go structs always copy field-wise so no hook is needed
+// (approved difference).
+func TestUpdateIStreamCopyMethodParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[updateIStreamCopyMethodBean](env, "SupportBeanCopyMethod"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[updateIStreamCopyMethodBean](env, "ABCStreamCM"); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(FromAny(env, "SupportBeanCopyMethod").InsertInto("ABCStreamCM", StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(FromAny(env, "ABCStreamCM").UpdateStream(
+		SetColumn("valOne", Literal("x")),
+		SetColumn("valTwo", Literal("y")),
+	).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromAny(env, "ABCStreamCM").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, insertPlan)
+	updateIStreamDeployOne(t, engine, updatePlan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+
+	if err := engine.SendEvent(context.Background(), updateIStreamCopyMethodBean{ValOne: "1", ValTwo: "2"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(s0.newResults) != 1 {
+		t.Fatalf("s0 deliveries = %d", len(s0.newResults))
+	}
+	if got := s0.newResults[0].Get("valOne").Any(); got != "x" {
+		t.Fatalf("s0 valOne = %#v, want x", got)
+	}
+	if got := s0.newResults[0].Get("valTwo").Any(); got != "y" {
+		t.Fatalf("s0 valTwo = %#v, want y", got)
+	}
+}
+
+// TestUpdateIStreamExpressionParity documents the Go-native equivalent of
+// EPLOtherUpdateExpression: Esper uses an inlined_class Helper.swap(me) that
+// mutates the map event in place; in Go the same observable swap falls out of
+// the all-set-expressions-evaluate-pre-update rule with two plain column
+// assignments. The inlined_class mechanism and set-with-method-call form have
+// no Go counterpart (approved difference).
+func TestUpdateIStreamExpressionParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "MyEventSwap", []FieldSpec{
+		FieldDef("a", reflect.TypeOf(int(0))),
+		FieldDef("b", reflect.TypeOf(int(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(FromAny(env, "MyEventSwap").UpdateStream(
+		SetColumn("a", Field[Event, int]("b")),
+		SetColumn("b", Field[Event, int]("a")),
+	).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromAny(env, "MyEventSwap").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, updatePlan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+
+	if err := engine.Send(context.Background(), "MyEventSwap", map[string]any{"a": 1, "b": 10}); err != nil {
+		t.Fatal(err)
+	}
+	if len(s0.newResults) != 1 {
+		t.Fatalf("s0 deliveries = %d", len(s0.newResults))
+	}
+	if got := s0.newResults[0].Get("a").Any(); got != 10 {
+		t.Fatalf("s0 a = %#v, want 10 (swapped)", got)
+	}
+	if got := s0.newResults[0].Get("b").Any(); got != 1 {
+		t.Fatalf("s0 b = %#v, want 1 (swapped)", got)
+	}
+}
