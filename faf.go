@@ -511,6 +511,7 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 	nestedNamedWindowDispatches := append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...)
 	variableChanges := e.takeVariableChangesLocked()
 	contextEvents := e.takeContextEventsLocked()
+	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	e.pendingStatementDispatches = nil
 	e.pendingNamedWindowDispatches = nil
 	e.pendingRoutedEvents = nil
@@ -518,6 +519,9 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 	e.pendingVariableChanges = nil
 	e.mu.Unlock()
 
+	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
+		return QueryResult{}, err
+	}
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
 	e.dispatchMatchRecognizeStateLimitEvents()
@@ -797,6 +801,7 @@ func (e *Engine) clearFireAndForgetPendingMutationLocked() {
 	e.pendingVariableChanges = nil
 	e.pendingMatchRecognizeStateLimits = nil
 	e.pendingPatternSubexpressionLimits = nil
+	e.pendingAuditRecords = nil
 }
 
 type contextMutationPartition struct {

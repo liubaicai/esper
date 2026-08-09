@@ -273,6 +273,9 @@ type Engine struct {
 	pendingMatchRecognizeStateLimits   []MatchRecognizeStateLimitEvent
 	patternSubexpressionLimitListeners []PatternSubexpressionLimitListener
 	pendingPatternSubexpressionLimits  []PatternSubexpressionLimitEvent
+	auditListeners                     map[uint64]AuditListener
+	nextAuditListenerID                uint64
+	pendingAuditRecords                []AuditRecord
 	unmatchedListener                  UnmatchedListener
 	variables                          map[string]Value
 	contextVariables                   map[string]map[string]map[string]Value
@@ -347,6 +350,7 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		contextPartitionInstanceNextIDs: make(map[string]uint64),
 		contextPartitionDescriptors:     make(map[string]map[string]ContextPartitionDescriptor),
 		contextPartitionListeners:       make(map[string][]ContextPartitionStateListener),
+		auditListeners:                  make(map[uint64]AuditListener),
 		contextTableOwnership:           make(map[string]map[string]map[uint64]tableContextRowOwnership),
 		contextTemporalOrigins:          make(map[string]time.Time),
 		contextCreated:                  make(map[string]bool),
@@ -634,6 +638,7 @@ func (e *Engine) retainContextPartitionLocked(contextName, partitionKey string, 
 				Allocated:   true,
 			},
 		})
+		e.auditContextPartitionLocked(contextName, descriptor.ID, true, e.clock.Now())
 	}
 	byContext[partitionKey]++
 }
@@ -713,6 +718,7 @@ func (e *Engine) releaseContextPartitionLocked(contextName, partitionKey string,
 			Allocated:   false,
 		},
 	})
+	e.auditContextPartitionLocked(contextName, descriptor.ID, false, e.clock.Now())
 }
 
 // AddContextPartitionStateListener registers a context partition lifecycle
@@ -1278,6 +1284,7 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 	e.pendingVariableChanges = nil
 	e.pendingMatchRecognizeStateLimits = nil
 	e.pendingPatternSubexpressionLimits = nil
+	e.pendingAuditRecords = nil
 	delta, err := window.insertWithVariables(ctx, now, underlying, variables)
 	if err != nil {
 		e.mu.Unlock()
@@ -1315,10 +1322,14 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 	nestedNamedWindowDispatches := append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...)
 	variableChanges := e.takeVariableChangesLocked()
 	contextEvents := e.takeContextEventsLocked()
+	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	e.pendingStatementDispatches = nil
 	e.pendingNamedWindowDispatches = nil
 	e.pendingRoutedEvents = nil
 	e.mu.Unlock()
+	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
+		return err
+	}
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
 	e.dispatchMatchRecognizeStateLimitEvents()
@@ -2092,7 +2103,11 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		}
 	}
 	contextEvents := e.takeContextEventsLocked()
+	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	e.mu.Unlock()
+	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
+		return nil, err
+	}
 	e.dispatchContextEvents(contextEvents)
 	for _, statement := range deployment.statements {
 		e.notifyDataflowStatementDeployed(statement)
@@ -2450,7 +2465,11 @@ func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
 	deployment.closed = true
 	deployment.mu.Unlock()
 	contextEvents := e.takeContextEventsLocked()
+	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	e.mu.Unlock()
+	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
+		return err
+	}
 	e.dispatchContextEvents(contextEvents)
 	for _, statement := range removedStatements {
 		e.notifyDataflowStatementUndeployed(statement)
@@ -2620,6 +2639,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	e.pendingVariableChanges = nil
 	e.pendingMatchRecognizeStateLimits = nil
 	e.pendingPatternSubexpressionLimits = nil
+	e.pendingAuditRecords = nil
 	dispatches := make([]statementDispatch, 0)
 	routedQueue := []Event{event}
 	processedEvents := make([]Event, 0, 1)
@@ -2686,11 +2706,15 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	nestedNamedWindowDispatches := append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...)
 	variableChanges := e.takeVariableChangesLocked()
 	contextEvents := e.takeContextEventsLocked()
+	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	unmatchedListener := e.unmatchedListener
 	e.pendingStatementDispatches = nil
 	e.pendingNamedWindowDispatches = nil
 	e.pendingRoutedEvents = nil
 	e.mu.Unlock()
+	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
+		return err
+	}
 	if unmatchedListener != nil {
 		for _, unmatched := range unmatchedEvents {
 			if err := unmatchedListener(ctx, unmatched); err != nil {
@@ -3028,6 +3052,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	e.pendingVariableChanges = nil
 	e.pendingMatchRecognizeStateLimits = nil
 	e.pendingPatternSubexpressionLimits = nil
+	e.pendingAuditRecords = nil
 	dispatches := make([]statementDispatch, 0, len(statements))
 	namedWindowDispatches := make([]namedWindowDispatch, 0, len(e.namedWindows))
 	for _, name := range sortedNamedWindowNames(e.namedWindows) {
@@ -3083,6 +3108,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	namedWindowDispatches = append(namedWindowDispatches, e.pendingNamedWindowDispatches...)
 	variableChanges := e.takeVariableChangesLocked()
 	contextEvents := e.takeContextEventsLocked()
+	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	e.pendingStatementDispatches = nil
 	e.pendingNamedWindowDispatches = nil
 	e.pendingRoutedEvents = nil
@@ -3093,6 +3119,9 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	runtimeMetric, runtimeMetricListeners, runtimeMetricDue := e.runtimeMetricDueLocked(at)
 	statementMetrics, statementMetricListeners := e.statementMetricsDueLocked(at)
 	e.mu.Unlock()
+	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
+		return err
+	}
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
 	e.dispatchMatchRecognizeStateLimitEvents()
@@ -3347,7 +3376,8 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		routedQueue = routedQueue[1:]
 		e.recordRuntimeInputLocked()
 		for _, statement := range orderUpdateStatementsFirst(e.dispatchStatementsLocked()) {
-			accepted := e.statementMetrics != nil && statement.matchesEventFilter(current, now, variables)
+			needsAccepted := e.statementMetrics != nil || len(statement.plan.query.statementMetadata.auditCategories) > 0
+			accepted := needsAccepted && statement.matchesEventFilter(current, now, variables)
 			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted)
 			if err != nil {
 				return err

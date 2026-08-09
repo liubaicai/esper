@@ -625,6 +625,9 @@ func (e *Engine) processStatementWithMetricsLocked(ctx context.Context, statemen
 		sample = e.startStatementMetricSampleLocked(statement)
 	}
 	batch, changed, err := statement.process(ctx, now, event, variables)
+	if err == nil {
+		e.auditStatementProcessLocked(statement, event, now, accepted, batch, changed)
+	}
 	if err == nil && accepted {
 		e.finishStatementMetricSampleLocked(statement, sample, 1)
 	}
@@ -651,6 +654,9 @@ func (e *Engine) processNamedWindowWithMetricsLocked(ctx context.Context, statem
 		sample = e.startStatementMetricSampleLocked(statement)
 	}
 	batch, changed, err := statement.processNamedWindow(ctx, now, delta, variables)
+	if err == nil && matchedWindow {
+		e.auditNamedWindowProcessLocked(statement, window, delta, now, changed, batch)
+	}
 	if err == nil && matchedWindow {
 		e.finishStatementMetricSampleLocked(statement, sample, input)
 		if changed {
@@ -698,6 +704,7 @@ func statementConsumesNamedWindow(query Query, window *NamedWindow) bool {
 func (e *Engine) expireStatementWithMetricsLocked(statement *Statement, now time.Time, variables map[string]Value) (ResultBatch, bool) {
 	sample := e.startStatementMetricSampleLocked(statement)
 	batch, changed := statement.expire(now, variables)
+	e.auditStatementScheduleFireLocked(statement, now, batch, changed)
 	if changed {
 		e.finishStatementMetricSampleLocked(statement, sample, 1)
 		e.recordStatementMetricOutputLocked(statement, batch)

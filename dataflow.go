@@ -1188,9 +1188,10 @@ type DataflowEdge struct {
 }
 
 type DataflowDefinition struct {
-	name      string
-	operators []DataflowOperator
-	edges     []DataflowEdge
+	name            string
+	operators       []DataflowOperator
+	edges           []DataflowEdge
+	auditCategories []AuditCategory
 }
 
 func (d DataflowDefinition) Name() string { return d.name }
@@ -1217,16 +1218,28 @@ func (d DataflowDefinition) Edges() []DataflowEdge {
 	return append([]DataflowEdge(nil), d.edges...)
 }
 
+func (d DataflowDefinition) AuditCategories() []AuditCategory {
+	return append([]AuditCategory(nil), d.auditCategories...)
+}
+
 type DataflowBuilder struct {
-	env       *Environment
-	name      string
-	operators []DataflowOperator
-	edges     []DataflowEdge
-	signals   map[string]DataflowSignalHandler
+	env             *Environment
+	name            string
+	operators       []DataflowOperator
+	edges           []DataflowEdge
+	signals         map[string]DataflowSignalHandler
+	auditCategories []AuditCategory
 }
 
 func DefineDataflow(env *Environment, name string) DataflowBuilder {
 	return DataflowBuilder{env: env, name: name}
+}
+
+// Audit enables typed audit categories for this dataflow definition. With no
+// categories it enables all paths, matching a bare Esper @Audit annotation.
+func (b DataflowBuilder) Audit(categories ...AuditCategory) DataflowBuilder {
+	b.auditCategories = normalizeAuditCategories(categories)
+	return b
 }
 
 func (b DataflowBuilder) add(operator DataflowOperator) DataflowBuilder {
@@ -1901,6 +1914,9 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 	if len(b.operators) == 0 {
 		return DataflowDefinition{}, NewError(ErrorInvalidRule, "dataflow requires an operator")
 	}
+	if err := validateAuditCategories(b.auditCategories); err != nil {
+		return DataflowDefinition{}, NewError(ErrorInvalidRule, err.Error())
+	}
 	seen := make(map[string]struct{}, len(b.operators))
 	operatorsByName := make(map[string]DataflowOperator, len(b.operators))
 	operators := make([]DataflowOperator, 0, len(b.operators))
@@ -2213,9 +2229,10 @@ func (b DataflowBuilder) Build() (DataflowDefinition, error) {
 		}
 	}
 	definition := DataflowDefinition{
-		name:      b.name,
-		operators: operators,
-		edges:     append([]DataflowEdge(nil), b.edges...),
+		name:            b.name,
+		operators:       operators,
+		edges:           append([]DataflowEdge(nil), b.edges...),
+		auditCategories: append([]AuditCategory(nil), b.auditCategories...),
 	}
 	b.env.mu.Lock()
 	defer b.env.mu.Unlock()
@@ -2338,6 +2355,7 @@ func cloneDataflowDefinition(definition DataflowDefinition) DataflowDefinition {
 	result := definition
 	result.operators = append([]DataflowOperator(nil), definition.operators...)
 	result.edges = append([]DataflowEdge(nil), definition.edges...)
+	result.auditCategories = append([]AuditCategory(nil), definition.auditCategories...)
 	for index := range result.operators {
 		result.operators[index].Events = append([]any(nil), result.operators[index].Events...)
 		result.operators[index].Selections = append([]Selection(nil), result.operators[index].Selections...)
@@ -3447,6 +3465,12 @@ func (e *Engine) InstantiateDataflowWithOptions(ctx context.Context, definition 
 	}
 	e.dataflows[instance] = struct{}{}
 	e.mu.Unlock()
+	if err := instance.auditDataflowTransition(ctx, DataflowInstantiated, DataflowInstantiated, false); err != nil {
+		e.mu.Lock()
+		delete(e.dataflows, instance)
+		e.mu.Unlock()
+		return nil, err
+	}
 	return instance, nil
 }
 
@@ -4130,6 +4154,7 @@ func (d *DataflowInstance) complete(err error) {
 		d.mu.Unlock()
 		return
 	}
+	oldState := d.state
 	d.state = DataflowComplete
 	if err != nil {
 		d.runErr = err
@@ -4137,6 +4162,7 @@ func (d *DataflowInstance) complete(err error) {
 	cancel := d.runCancel
 	subscriptions := d.takeStatementSubscriptionsLocked()
 	d.mu.Unlock()
+	_ = d.auditDataflowTransition(context.Background(), oldState, DataflowComplete, true)
 	if cancel != nil {
 		cancel()
 	}
@@ -4319,6 +4345,10 @@ func (d *DataflowInstance) runBeaconSource(runCtx context.Context, operator Data
 			}
 			return
 		}
+		if err := d.auditDataflowSource(runCtx, operator); err != nil {
+			d.complete(err)
+			return
+		}
 		value, err := d.beaconValue(runCtx, operator, iteration)
 		if err != nil {
 			if runCtx.Err() == nil {
@@ -4344,6 +4374,10 @@ func (d *DataflowInstance) runBeaconSource(runCtx context.Context, operator Data
 func (d *DataflowInstance) runSource(runCtx context.Context, operator DataflowOperator, source DataflowSourceRuntime) {
 	defer d.sourceWG.Done()
 	emitter := &DataflowEmitter{instance: d, name: operator.Name, allowRaw: true}
+	if err := d.auditDataflowSource(runCtx, operator); err != nil {
+		d.complete(err)
+		return
+	}
 	started := time.Now()
 	err := source.Run(runCtx, emitter)
 	d.recordOperatorElapsed(operator.Name, time.Since(started))
@@ -4602,6 +4636,19 @@ func (d *DataflowInstance) beginExecution(ctx context.Context) (context.Context,
 	d.state = DataflowRunning
 	d.runCancel = runCancel
 	d.mu.Unlock()
+	if err := d.auditDataflowTransition(ctx, DataflowInstantiated, DataflowRunning, true); err != nil {
+		runCancel()
+		d.mu.Lock()
+		d.state = DataflowCanceled
+		d.mu.Unlock()
+		d.closeDone()
+		if d.engine != nil {
+			d.engine.mu.Lock()
+			delete(d.engine.dataflows, d)
+			d.engine.mu.Unlock()
+		}
+		return nil, err
+	}
 	d.watchRunContext(runCtx)
 	d.startDataflowSelectStates(d.engine.Now())
 	if err := d.openRuntimes(ctx); err != nil {
@@ -4658,6 +4705,10 @@ func (d *DataflowInstance) Start(ctx context.Context) error {
 		}
 		for _, event := range operator.Events {
 			if err := contextErr(ctx); err != nil {
+				_ = d.Cancel(context.Background())
+				return err
+			}
+			if err := d.auditDataflowSource(ctx, operator); err != nil {
 				_ = d.Cancel(context.Background())
 				return err
 			}
@@ -4774,6 +4825,9 @@ func (d *DataflowInstance) runCaptiveBeaconSource(ctx context.Context, operator 
 			if err := contextErr(ctx); err != nil {
 				return err
 			}
+			if err := d.auditDataflowSource(ctx, operator); err != nil {
+				return err
+			}
 			var err error
 			if d.graph {
 				if _, signal := event.(DataflowSignal); !signal {
@@ -4803,6 +4857,9 @@ func (d *DataflowInstance) runCaptiveBeaconSource(ctx context.Context, operator 
 				return d.handleCaptiveSourceFailure(operator.Name, err)
 			}
 			return nil
+		}
+		if err := d.auditDataflowSource(ctx, operator); err != nil {
+			return err
 		}
 		value, err := d.beaconValue(ctx, operator, iteration)
 		if err != nil {
@@ -4835,6 +4892,9 @@ func (d *DataflowInstance) runCaptiveCustomSource(ctx context.Context, operator 
 		return NewError(ErrorState, "dataflow is not running")
 	}
 	emitter := &DataflowEmitter{instance: d, name: operator.Name, allowRaw: true}
+	if err := d.auditDataflowSource(ctx, operator); err != nil {
+		return err
+	}
 	started := time.Now()
 	err := source.Run(ctx, emitter)
 	d.recordOperatorElapsed(operator.Name, time.Since(started))
@@ -4930,11 +4990,13 @@ func (d *DataflowInstance) Cancel(ctx context.Context) error {
 		d.mu.Unlock()
 		return nil
 	}
+	oldState := d.state
 	d.state = DataflowCanceled
 	cancel := d.runCancel
 	engine := d.engine
 	subscriptions := d.takeStatementSubscriptionsLocked()
 	d.mu.Unlock()
+	auditErr := d.auditDataflowTransition(ctx, oldState, DataflowCanceled, true)
 	if cancel != nil {
 		cancel()
 	}
@@ -4950,7 +5012,7 @@ func (d *DataflowInstance) Cancel(ctx context.Context) error {
 		delete(engine.dataflows, d)
 		engine.mu.Unlock()
 	}
-	return nil
+	return auditErr
 }
 
 func (d *DataflowInstance) process(ctx context.Context, event any) error {
@@ -5858,6 +5920,11 @@ func (d *DataflowInstance) processLinearValues(ctx context.Context, current []an
 	}
 	for index := start; index < len(d.definition.operators); index++ {
 		operator := d.definition.operators[index]
+		if operator.Kind != BeaconSourceKind && operator.Kind != EPStatementSourceKind {
+			if err := d.auditDataflowOperator(ctx, operator, append([]any(nil), current...)...); err != nil {
+				return err
+			}
+		}
 		started := time.Now()
 		switch operator.Kind {
 		case BeaconSourceKind, EPStatementSourceKind:
@@ -6112,6 +6179,9 @@ func (d *DataflowInstance) processGraphQueueLocked(ctx context.Context, queue []
 			if expected := dataflowPortType(operator, false, item.port); expected != nil && !dataflowValueAssignable(item.value, expected) {
 				return NewError(ErrorTypeMismatch, fmt.Sprintf("dataflow operator %q input port %q received %T, want %s", operator.Name, item.port, item.value, expected))
 			}
+		}
+		if err := d.auditDataflowOperator(ctx, operator, item.value); err != nil {
+			return err
 		}
 		started := time.Now()
 		emissions, err := d.applyGraphOperator(ctx, operator, item.port, item.value)

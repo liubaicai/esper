@@ -2565,6 +2565,16 @@ func WithStatementHints(hints ...StatementHint) QueryOption {
 	}
 }
 
+// StatementAudit enables typed runtime audit categories for the statement.
+// With no arguments it enables every category, matching Esper's bare @Audit
+// annotation without exposing the comma-separated EPL representation.
+func StatementAudit(categories ...AuditCategory) QueryOption {
+	selected := normalizeAuditCategories(categories)
+	return func(spec *querySpec) {
+		spec.statementMetadata.auditCategories = append([]AuditCategory(nil), selected...)
+	}
+}
+
 // StatementNoLock records the built-in NoLock instruction. The Go runtime's
 // engine-wide serialization remains in force; the metadata is available for
 // applications that provide their own concurrency policy around a rule.

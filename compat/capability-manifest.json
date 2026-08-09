@@ -1901,7 +1901,7 @@
       "phase": 0,
       "status": "approved-difference",
       "remaining": [
-        "structured Audit callbacks and runtime/statement Metrics are separate observable capabilities and remain in scope",
+        "structured Audit callbacks and runtime/statement Metrics are covered by separate mapped capabilities",
         "a future Go diagnostic tracer may instrument logical operators without copying Java q/a callback pairs or bytecode hooks"
       ]
     },
@@ -1955,6 +1955,33 @@
         "Linux reports process CPU time because goroutines can migrate between OS threads; other platforms return zero when no portable process CPU clock is available",
         "Named Window declarations are environment-owned metric entries with deploymentId environment instead of Java create-window deployment statements",
         "full instrumentation accounting for every internal schedule/filter callback beyond the mapped executions remains part of broader runtime observability work"
+      ]
+    },
+    {
+      "id": "client.instrument.audit",
+      "domain": "client",
+      "level": "G",
+      "summary": "Typed statement and dataflow audit categories with immutable virtual-time records, Engine-local removable subscriptions, Java-compatible formatting and lock-safe delivery",
+      "javaRefs": [
+        "ClientInstrumentAuditDocSample",
+        "ClientInstrumentAuditAudit",
+        "AuditPath",
+        "AuditContext",
+        "AuditEnum"
+      ],
+      "goRefs": [
+        "audit.go",
+        "statement_metadata.go",
+        "runtime.go",
+        "dataflow.go",
+        "client_instrument_audit_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "fine-grained callback multiplicity and message text for every internal expression node, view factory, schedule handle and pattern node remain broader observability work beyond the two mapped executions",
+        "Go dataflow definitions are environment-owned and therefore use deploymentId environment instead of a Java create-dataflow statement deployment",
+        "audit delivery is an Engine-local typed management surface rather than process-global logging state or an ordinary event stream"
       ]
     }
   ],
@@ -13440,7 +13467,7 @@
         "java-source",
         "go-unit"
       ],
-      "difference": "The fixed Esper 9.0.0 source declares InstrumentationHelper.ENABLED=false and ASSERTIONENABLED=false. RegressionRunner therefore does not call startTest/endTest, all internal instrumentation branches are compile-time false, and this execution only builds, deploys and undeploys select 1=2 without sending an event or asserting a callback. Go verifies the same observable typed Plan lifecycle and does not copy the dormant JVM-wide static helper, hundreds of q/a callback pairs, bytecode hooks or provider system properties. This disposition does not cover ClientInstrumentAudit or any MetricsReporting execution; those remain product capabilities to implement."
+      "difference": "The fixed Esper 9.0.0 source declares InstrumentationHelper.ENABLED=false and ASSERTIONENABLED=false. RegressionRunner therefore does not call startTest/endTest, all internal instrumentation branches are compile-time false, and this execution only builds, deploys and undeploys select 1=2 without sending an event or asserting a callback. Go verifies the same observable typed Plan lifecycle and does not copy the dormant JVM-wide static helper, hundreds of q/a callback pairs, bytecode hooks or provider system properties. ClientInstrumentAudit and all MetricsReporting executions are covered by their own mapped capabilities and tests."
     },
     {
       "id": "case.client-instrument-runtime-metrics",
@@ -13529,6 +13556,51 @@
         "go-unit"
       ],
       "difference": "Go configures statement metrics with typed StatementMetricsGroup options and delivers immutable StatementMetric values through removable management listeners plus CurrentStatementMetricGroups snapshots. Ordered SQL-LIKE/regexp include-exclude rules, first-match grouping, reportInactive, 6s/7s/8s and dynamically changed intervals, per-statement enable-disable, global schedule pause/resume, reset-on-report, undeploy removal and Named Window input accounting reproduce the five Java executions. Metric listeners are not ordinary statements, so they do not recursively report themselves after application undeploy. Named Window declarations are environment-owned metrics using deploymentId environment; this represents Java create-window statement A/W accounting without introducing EPL declarations. Linux CPUTime uses process CPU time because goroutines may migrate OS threads; non-Linux builds expose zero when no portable sampler exists. WallTime, input, insert-stream and remove-stream counters retain the Java reporting-period contract."
+    },
+    {
+      "id": "case.client-instrument-audit",
+      "javaRuntimeIds": [
+        "java-runtime-664276ef5b76026debd7",
+        "java-runtime-b836e76e45c52c47b969"
+      ],
+      "javaNames": [
+        "ClientInstrumentAuditDocSample",
+        "ClientInstrumentAuditAudit"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/instrument/ClientInstrumentAudit.java"
+      ],
+      "goTests": [
+        "TestClientInstrumentAuditDocSampleParity",
+        "TestClientInstrumentAuditCallbackParity",
+        "TestClientInstrumentAuditAllCategoriesParity",
+        "TestAuditConfigurationAndSubscriptionLifecycle"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "instrument",
+        "audit",
+        "stream",
+        "property",
+        "expression",
+        "view",
+        "pattern",
+        "schedule",
+        "insert-into",
+        "context-partition",
+        "dataflow",
+        "virtual-time",
+        "subscription",
+        "lifecycle"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "StatementAudit uses typed AuditCategory values and enters immutable Plan identity instead of parsing @Audit text. Bare StatementAudit/Audit enables all 14 Java categories. AuditRecord preserves runtime URI, deployment ID, statement name, context partition ID, category, virtual clock and message; the strict Java STREAM callback is reproduced at runtimeTime=1 with the expected filter/event summary. SubscribeAudit is removable and Engine-local, and callbacks are queued under the transaction lock then delivered outside it so they may safely re-enter Engine APIs. AuditFormatter supports %u/%d/%s/%i/%c/%m/%tutc/%tzone. Dataflow audit is configured on the fluent definition and uses deploymentId environment because Go does not model create-dataflow as an EPL statement; no JVM-global AuditPath logger/callback state is copied."
     }
   ],
   "mappings": [
@@ -14407,6 +14479,10 @@
     {
       "capabilityId": "client.instrument.statement-metrics",
       "caseId": "case.client-instrument-statement-metrics"
+    },
+    {
+      "capabilityId": "client.instrument.audit",
+      "caseId": "case.client-instrument-audit"
     }
   ]
 }

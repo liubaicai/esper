@@ -470,12 +470,13 @@ func ParseAnnotationStringEnum[T ~string](text string, values ...T) (T, error) {
 }
 
 type statementMetadata struct {
-	description    string
-	descriptionSet bool
-	tags           []StatementTagMetadata
-	hints          []StatementHint
-	noLock         bool
-	annotations    []StatementAnnotation
+	description     string
+	descriptionSet  bool
+	tags            []StatementTagMetadata
+	hints           []StatementHint
+	auditCategories []AuditCategory
+	noLock          bool
+	annotations     []StatementAnnotation
 }
 
 func cloneStatementMetadata(metadata statementMetadata) statementMetadata {
@@ -485,6 +486,7 @@ func cloneStatementMetadata(metadata statementMetadata) statementMetadata {
 	for index, hint := range metadata.hints {
 		clone.hints[index] = cloneStatementHint(hint)
 	}
+	clone.auditCategories = append([]AuditCategory(nil), metadata.auditCategories...)
 	clone.annotations = cloneStatementAnnotations(metadata.annotations)
 	return clone
 }
@@ -500,6 +502,9 @@ func validateStatementMetadata(metadata statementMetadata) error {
 		if !hint.valid() {
 			return fmt.Errorf("esper: statement hint %d is invalid", index)
 		}
+	}
+	if err := validateAuditCategories(metadata.auditCategories); err != nil {
+		return err
 	}
 	for index, annotation := range metadata.annotations {
 		if annotation.definition == nil || annotation.Name() == "" {
@@ -541,6 +546,13 @@ func statementMetadataCanonical(metadata statementMetadata) string {
 			parameters[index] = fmt.Sprintf("%q", parameter)
 		}
 		parts = append(parts, fmt.Sprintf("hint(%s:%s)", hint.kind, strings.Join(parameters, ",")))
+	}
+	if len(metadata.auditCategories) > 0 {
+		categories := make([]string, len(metadata.auditCategories))
+		for index, category := range metadata.auditCategories {
+			categories[index] = string(category)
+		}
+		parts = append(parts, "audit("+strings.Join(categories, ",")+")")
 	}
 	if metadata.noLock {
 		parts = append(parts, "no-lock")
@@ -622,20 +634,22 @@ func annotationReflectValueCanonical(value reflect.Value) string {
 // application-defined metadata. Returned slices and annotation values are
 // detached from the deployed plan.
 type StatementMetadata struct {
-	Name           string
-	Description    string
-	HasDescription bool
-	Tags           []StatementTagMetadata
-	Hints          []StatementHint
-	NoLock         bool
-	Annotations    []StatementAnnotation
+	Name            string
+	Description     string
+	HasDescription  bool
+	Tags            []StatementTagMetadata
+	Hints           []StatementHint
+	AuditCategories []AuditCategory
+	NoLock          bool
+	Annotations     []StatementAnnotation
 }
 
 func statementMetadataSnapshot(name string, metadata statementMetadata) StatementMetadata {
 	clone := cloneStatementMetadata(metadata)
 	return StatementMetadata{
 		Name: name, Description: clone.description, HasDescription: clone.descriptionSet,
-		Tags: clone.tags, Hints: clone.hints, NoLock: clone.noLock, Annotations: clone.annotations,
+		Tags: clone.tags, Hints: clone.hints, AuditCategories: clone.auditCategories,
+		NoLock: clone.noLock, Annotations: clone.annotations,
 	}
 }
 
