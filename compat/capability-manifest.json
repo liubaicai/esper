@@ -2121,6 +2121,30 @@
       ]
     },
     {
+      "id": "client.compile.tool-provider",
+      "domain": "client",
+      "level": "G",
+      "summary": "Typed pluggable Plan compiler provider boundary with immutable request context and a native Environment.Build implementation",
+      "javaRefs": [
+        "ClientCompileToolCompiler",
+        "CompilerAbstractionToolProvider",
+        "CompilerHook"
+      ],
+      "goRefs": [
+        "compiler_provider.go",
+        "plan.go",
+        "client_compile_tool_compiler_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Go providers compile typed Query values and never receive EPL text",
+        "NativeCompilerProvider delegates to Environment.Build instead of generating Java source or invoking javax.tools.JavaCompiler",
+        "providers may wrap, observe, route or cache compilation but returned Plans must belong to the requested Environment",
+        "external Go source compilation, JVM bytecode abstraction and exact EPCompileException diagnostics are intentionally not copied"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -14206,6 +14230,40 @@
       "difference": "EventTypeAutoNameRegistry is a zero-value-safe, application-owned and concurrency-safe registry for named Go struct types. RegisterAutoNameType derives reflect.Type.Name and PkgPath by default, permits explicit short-name/namespace overrides, treats an identical registration as idempotent and preserves the first candidate when a same-namespace conflict is rejected. Resolve returns ErrorUnknownName or a deterministic ErrorAmbiguous containing sorted namespaces. RegisterAutoNamedStruct[T] verifies the resolved type exactly matches T, then registers the fluent event alias through RegisterStruct; the MANE statement receives MyAutoNameEvent{P0: test} and projects p0=test. Go does not scan packages or classpaths, load JVM classes, compile EPL create-schema text or reproduce the misspelled Java diagnostic verbatim."
     },
     {
+      "id": "case.client-compile-tool-compiler",
+      "javaRuntimeIds": [
+        "java-runtime-61e5f33af45f825adf29"
+      ],
+      "javaNames": [
+        "ClientCompileToolCompilerBasic"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileToolCompiler.java"
+      ],
+      "goTests": [
+        "TestClientCompileToolCompilerBasicMatchesEsper",
+        "TestCompileWithProviderRejectsInvalidProviderResults"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "compiler-provider",
+        "native-compiler",
+        "typed-query",
+        "plan",
+        "hook",
+        "validation"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "CompileWithProvider supplies an immutable CompilerRequest containing the Environment, typed fluent Query, stable description and detached CompileOption slice. A custom CompilerProvider is invoked exactly once and may delegate through CompileDefault; NativeCompilerProvider produces the same stable Plan hash and compiler manifest as direct Environment.Build. Nil providers, provider errors, empty Plans and Plans compiled for a different Environment are rejected at the provider boundary. Java injects CompilerAbstractionToolProvider backed by javax.tools.JavaCompiler to compile generated JVM source; Go compiles the typed Plan natively inside the linked program and deliberately neither generates source nor shells out to the Go toolchain."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15279,6 +15337,10 @@
     {
       "capabilityId": "client.compile.event-type-auto-name",
       "caseId": "case.client-compile-event-type-auto-name"
+    },
+    {
+      "capabilityId": "client.compile.tool-provider",
+      "caseId": "case.client-compile-tool-compiler"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",
