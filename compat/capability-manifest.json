@@ -1420,11 +1420,10 @@
         "epl_other_distinct_parity_test.go"
       ],
       "phase": 1,
-      "status": "partial",
+      "status": "mapped",
       "remaining": [
-        "EPLOtherBatchWindowJoin: distinct over a length-batch join delta",
-        "EPLOtherDistinctWildcardJoinPatternOne/Two: every-distinct pattern + unidirectional join",
-        "EPLOtherBeanEventWildcardSODA: Go has no SODA model parser (approved difference)"
+        "SupportSubscriberMRD Object[][] subscriber SPI (OBSERVEROPS): asserted via listener ResultBatch, no Go subscriber API surface",
+        "env.milestone HA checkpoint semantics: no Go persistence/failover counterpart"
       ]
     },
     {
@@ -11402,6 +11401,8 @@
         "java-runtime-7b13ab2779d557eba691",
         "java-runtime-2e0f0a1356ea1b8e3299",
         "java-runtime-17e049a70e6c5ca2a376",
+        "java-runtime-6905746f98b2a3b39f8b",
+        "java-runtime-5deb9547c58344716a93",
         "java-runtime-fe86653eacb81851d04f",
         "java-runtime-f9a1dafb621a6605ef47",
         "java-runtime-4fab4842341b8021b1a2",
@@ -11422,6 +11423,8 @@
         "EPLOtherMapEventWildcard",
         "EPLOtherOutputLimitEveryColumn",
         "EPLOtherOutputRateSnapshotColumn",
+        "EPLOtherDistinctWildcardJoinPatternOne",
+        "EPLOtherDistinctWildcardJoinPatternTwo",
         "EPLOtherDistinctOutputLimitMultikeyWArraySingleArray",
         "EPLOtherDistinctOutputLimitMultikeyWArrayTwoArray",
         "EPLOtherDistinctIterateMultikeyWArray",
@@ -11444,6 +11447,8 @@
         "TestDistinctMapEventWildcardParity",
         "TestDistinctOutputLimitEveryParity",
         "TestDistinctOutputSnapshotParity",
+        "TestDistinctWildcardJoinPatternOneParity",
+        "TestDistinctWildcardJoinPatternTwoParity",
         "TestDistinctOutputLimitMultikeyWArrayParity",
         "TestDistinctIterateMultikeyWArrayParity",
         "TestDistinctFAFMultikeyWArrayParity",
@@ -11463,17 +11468,22 @@
         "fire-and-forget",
         "insert-into",
         "join",
-        "batch-window-join"
+        "batch-window-join",
+        "pattern",
+        "every-distinct",
+        "unidirectional",
+        "order-by"
       ],
-      "status": "partial",
+      "status": "mapped",
       "evidence": [
         "java-runtime-inventory",
         "go-unit",
         "java-suite-EPLOtherDistinct"
       ],
-      "difference": "Distinct fires the first occurrence of each key within a single window update and tracks a global reference count so the old stream fires only when the last sharing event leaves; continuous views (keepall) re-emit per event while batching views (length_batch) dedup the batch. Snapshot/iterator, fire-and-forget, on-trigger select, subquery IN, and output-rate-limit (every-events, every-time, snapshot) all dedup. Variant-stream distinct works through the variant member schema. Wildcard (select *) results are event-backed and read through Result.Get. EPLOtherBeanEventWildcardSODA shares its runtime semantics with TestDistinctWildcardParity (same E1/E2/duplicate-E1 iterator sequence); its SODA EPStatementObjectModel parse-and-toEPL round-trip is an approved difference because Go uses an immutable fluent Plan instead of a text/model parser. Batch-window join distinct (BatchWindowJoin) works: join tuple identity is lineage-keyed, so a batch rollover that replaces same-content rows still emits the full old/new pair the way Esper composes join results per arriving or departing event, while rebuilt historical and method sides keep their previous lineage on equal content and net out; distinct then collapses each batch to first-seen key order. Every-distinct pattern joins (JoinPatternOne/Two) remain open.",
+      "difference": "Distinct fires the first occurrence of each key within a single window update and tracks a global reference count so the old stream fires only when the last sharing event leaves; continuous views (keepall) re-emit per event while batching views (length_batch) dedup the batch. Snapshot/iterator, fire-and-forget, on-trigger select, subquery IN, and output-rate-limit (every-events, every-time, snapshot) all dedup. Variant-stream distinct works through the variant member schema. Wildcard (select *) results are event-backed and read through Result.Get. EPLOtherBeanEventWildcardSODA shares its runtime semantics with TestDistinctWildcardParity (same E1/E2/duplicate-E1 iterator sequence); its SODA EPStatementObjectModel parse-and-toEPL round-trip is an approved difference because Go uses an immutable fluent Plan instead of a text/model parser. Batch-window join distinct (BatchWindowJoin) works: join tuple identity is lineage-keyed, so a batch rollover that replaces same-content rows still emits the full old/new pair the way Esper composes join results per arriving or departing event, while rebuilt historical and method sides keep their previous lineage on equal content and net out; distinct then collapses each batch to first-seen key order. Every-distinct pattern joins (JoinPatternOne/Two) work: each every-distinct leg inside the followed-by stays resident, so a captured fooA branch pairs with every later distinct wooA and each new distinct fooA starts another branch (Java probe: JoinPatternOne fires exactly one batch of six rows {E1,E1},{E1,E2},{E2,E2},{E1,E3},{E2,E3},{E3,E3}; JoinPatternTwo delivers the ordered {E1,E2},{E1,E3} pair). The Go pattern engine fans out a new sequence branch per left-leg firing, re-arms a repeating right leg with its fired flag reset while keeping its distinct keyspace, gates sequence advancement on fresh every-leg completions (the retained done flag alone no longer re-advances), and treats such completions as non-permanent so the pattern keeps producing until the within deadline. The SupportSubscriberMRD multi-row Object[][] subscriber surface (OBSERVEROPS) is asserted through the listener ResultBatch model; Go has no separate subscriber SPI.",
       "remaining": [
-        "EPLOtherDistinctWildcardJoinPatternOne/Two: every-distinct pattern + unidirectional join"
+        "SupportSubscriberMRD Object[][] subscriber SPI (OBSERVEROPS): asserted via listener ResultBatch, no Go subscriber API surface",
+        "env.milestone HA checkpoint semantics: no Go persistence/failover counterpart"
       ]
     },
     {

@@ -459,6 +459,158 @@ func TestDistinctBatchWindowJoinParity(t *testing.T) {
 	assertOrdered(distinctRowsToStrings(listener.lastNew), [][]string{{"E2", "3"}}, "batch3")
 }
 
+// distinctJoinPatternWildcardQuery builds the shared shape of
+// EPLOtherDistinctWildcardJoinPatternOne/Two: a unidirectional SupportBean
+// (intPrimitive=0) driver inner-joined to a retained every-distinct pattern
+// pair (fooA intPrimitive=1 -> wooA intPrimitive=2 within 1 hour, kept in a
+// 1-hour pattern window) on fooB.longPrimitive = fooA.longPrimitive, with a
+// distinct wildcard projection of both source events.
+func distinctJoinPatternWildcardQuery(env *Environment, orderByWooA bool) Query {
+	base := From[distinctSupportBean](env, "SupportBean")
+	intIs := func(want int) Expression[bool] {
+		return Equal[int](Field[distinctSupportBean, int]("intPrimitive"), Literal(want))
+	}
+	key := Field[distinctSupportBean, string]("theString")
+	pattern := PatternFrom(base, "fooA", intIs(1)).EveryDistinct(key).
+		Then(PatternFrom(base, "wooA", intIs(2)).EveryDistinct(key)).
+		Within(time.Hour)
+	options := []QueryOption{StatementName("s0"), WithDistinct()}
+	if orderByWooA {
+		options = append(options, OrderBy(Ascending(JoinPatternField[string](1, "wooA", "theString"))))
+	}
+	return JoinMany(
+		JoinSource(base.Filter(intIs(0))).Unidirectional(),
+		JoinPatternSource(pattern).Window(TimeWindow(time.Hour)),
+	).On(OnSourcesEqual(
+		0, Field[distinctSupportBean, int64]("longPrimitive"),
+		1, JoinPatternField[int64](1, "fooA", "longPrimitive"),
+	)).Select(
+		SelectSourceEvent(0, "fooB"),
+		SelectSourceEvent(1, "fooWooPair"),
+	).Query(options...)
+}
+
+// distinctJoinPatternWildcardRow reads one wildcard join row as the Java
+// subscriber does: fooB's theString plus the fooWooPair map's fooA/wooA
+// fragment theString values.
+func distinctJoinPatternWildcardRow(t *testing.T, row Row) (fooB, fooA, wooA string) {
+	t.Helper()
+	fooBEvent, ok := row.Get("fooB").Any().(Event)
+	if !ok {
+		t.Fatalf("fooB is not an event: %#v", row.Get("fooB").Any())
+	}
+	pairEvent, ok := row.Get("fooWooPair").Any().(Event)
+	if !ok {
+		t.Fatalf("fooWooPair is not an event: %#v", row.Get("fooWooPair").Any())
+	}
+	fooAEvent, ok := pairEvent.Get("fooA").Any().(Event)
+	if !ok {
+		t.Fatalf("fooWooPair.fooA is not an event: %#v", pairEvent.Get("fooA").Any())
+	}
+	wooAEvent, ok := pairEvent.Get("wooA").Any().(Event)
+	if !ok {
+		t.Fatalf("fooWooPair.wooA is not an event: %#v", pairEvent.Get("wooA").Any())
+	}
+	return fooBEvent.Get("theString").Any().(string),
+		fooAEvent.Get("theString").Any().(string),
+		wooAEvent.Get("theString").Any().(string)
+}
+
+// TestDistinctWildcardJoinPatternOneParity mirrors
+// EPLOtherDistinctWildcardJoinPatternOne: the every-distinct pattern pair
+// accumulates matches silently (unidirectional join), and the driver event
+// fires the listener once with the joined distinct wildcard rows. Java
+// asserts invocation only; the Go test additionally records the Esper
+// every-distinct sequence semantics (each captured fooA pairs with every
+// later distinct wooA) as the expected row multiset.
+func TestDistinctWildcardJoinPatternOneParity(t *testing.T) {
+	env, _ := newDistinctEnvironment(t)
+	engine, _, listener := deployDistinct(t, env, distinctJoinPatternWildcardQuery(env, false))
+
+	send := func(theString string, intPrimitive int) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), distinctSupportBean{
+			TheString: theString, IntPrimitive: intPrimitive, LongPrimitive: 10,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send("E1", 1)
+	send("E1", 2)
+	send("E2", 1)
+	send("E2", 2)
+	send("E3", 1)
+	send("E3", 2)
+	if listener.invoked {
+		t.Fatalf("unidirectional join fired without a driver event: %d rows", len(listener.lastNew))
+	}
+
+	listener.reset()
+	send("Query", 0)
+	if !listener.invoked {
+		t.Fatal("listener not invoked by the driver event")
+	}
+	got := make([][]string, 0, len(listener.lastNew))
+	for _, row := range listener.lastNew {
+		fooB, fooA, wooA := distinctJoinPatternWildcardRow(t, row)
+		got = append(got, []string{fooB, fooA, wooA})
+	}
+	want := [][]string{
+		{"Query", "E1", "E1"},
+		{"Query", "E1", "E2"},
+		{"Query", "E2", "E2"},
+		{"Query", "E1", "E3"},
+		{"Query", "E2", "E3"},
+		{"Query", "E3", "E3"},
+	}
+	sort.Slice(got, func(i, j int) bool { return strings.Join(got[i], "|") < strings.Join(got[j], "|") })
+	sort.Slice(want, func(i, j int) bool { return strings.Join(want[i], "|") < strings.Join(want[j], "|") })
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("join pattern one rows: got %v, want %v", got, want)
+	}
+}
+
+// TestDistinctWildcardJoinPatternTwoParity mirrors
+// EPLOtherDistinctWildcardJoinPatternTwo: same statement plus
+// order by fooWooPair.wooA.theString asc, delivered to a multi-row
+// subscriber as one insert batch of two rows.
+func TestDistinctWildcardJoinPatternTwoParity(t *testing.T) {
+	env, _ := newDistinctEnvironment(t)
+	engine, _, listener := deployDistinct(t, env, distinctJoinPatternWildcardQuery(env, true))
+
+	send := func(theString string, intPrimitive int) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), distinctSupportBean{
+			TheString: theString, IntPrimitive: intPrimitive, LongPrimitive: 10,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send("E1", 1)
+	send("E2", 2)
+	send("E3", 2)
+	if listener.invoked {
+		t.Fatalf("unidirectional join fired without a driver event: %d rows", len(listener.lastNew))
+	}
+
+	listener.reset()
+	send("Query", 0)
+	if !listener.invoked {
+		t.Fatal("listener not invoked by the driver event")
+	}
+	if len(listener.lastNew) != 2 {
+		t.Fatalf("driver batch row count = %d, want 2", len(listener.lastNew))
+	}
+	firstFooB, firstFooA, firstWooA := distinctJoinPatternWildcardRow(t, listener.lastNew[0])
+	secondFooB, secondFooA, secondWooA := distinctJoinPatternWildcardRow(t, listener.lastNew[1])
+	if firstFooB != "Query" || firstFooA != "E1" || firstWooA != "E2" {
+		t.Fatalf("first ordered row = (%s,%s,%s), want (Query,E1,E2)", firstFooB, firstFooA, firstWooA)
+	}
+	if secondFooB != "Query" || secondFooA != "E1" || secondWooA != "E3" {
+		t.Fatalf("second ordered row = (%s,%s,%s), want (Query,E1,E3)", secondFooB, secondFooA, secondWooA)
+	}
+}
+
 // TestDistinctWildcardParity mirrors EPLOtherBeanEventWildcardThisProperty:
 // distinct on wildcard (*) deduplicates identical events.
 func TestDistinctWildcardParity(t *testing.T) {

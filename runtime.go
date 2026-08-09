@@ -9399,6 +9399,31 @@ func patternCanContinueAfterMatch(progress *patternProgress) bool {
 	return patternWithinCanContinue(progress) || patternEveryCanContinue(progress)
 }
 
+// patternRepeatingLegAlive reports whether a progress tree still holds a
+// repeating leg (an Every node, which restarts its child after each firing)
+// whose branch can produce further matches. Esper reports such completions
+// with isQuitted=false: a followed-by with every-distinct legs keeps pairing
+// later distinct events with the tags it already captured.
+func patternRepeatingLegAlive(progress *patternProgress) bool {
+	if progress == nil || progress.expired || progress.quit {
+		return false
+	}
+	switch progress.node.kind {
+	case patternEveryNode:
+		return true
+	case patternWithinNode:
+		if progress.done || progress.expired {
+			return false
+		}
+		return patternRepeatingLegAlive(progress.child)
+	case patternSequenceNode, patternAndNode:
+		return patternRepeatingLegAlive(progress.left) || patternRepeatingLegAlive(progress.right)
+	case patternOrNode:
+		return patternRepeatingLegAlive(progress.left) || patternRepeatingLegAlive(progress.right)
+	}
+	return false
+}
+
 // patternCompletionPermanent reports whether a completed progress tree cannot
 // produce further matches, mirroring the isQuitted flag Esper propagates from
 // a completed EvalNode: plain filters, sequences and and-expressions quit
@@ -9419,7 +9444,15 @@ func patternCompletionPermanent(progress *patternProgress) bool {
 	case patternEveryNode:
 		return false
 	case patternWithinNode:
-		return !patternWithinCanContinue(progress)
+		if patternWithinCanContinue(progress) {
+			return false
+		}
+		return !patternRepeatingLegAlive(progress.child)
+	case patternSequenceNode, patternAndNode:
+		// A completed followed-by/and branch with a repeating leg reports
+		// isQuitted=false in Esper: every-distinct legs keep pairing later
+		// distinct events with the tags the branch already captured.
+		return !patternRepeatingLegAlive(progress.left) && !patternRepeatingLegAlive(progress.right)
 	case patternOrNode:
 		return (patternSatisfied(progress.left) && patternCompletionPermanent(progress.left)) ||
 			(patternSatisfied(progress.right) && patternCompletionPermanent(progress.right))
@@ -9710,22 +9743,43 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				if patternProgressTerminal(leftTransition.state) && !patternSatisfied(leftTransition.state) {
 					next.expired = true
 				}
-				if patternSatisfied(leftTransition.state) {
+				leftSatisfied := patternSatisfied(leftTransition.state)
+				if progress.node.left != nil && progress.node.left.kind == patternEveryNode {
+					// A repeating leg reports done=true from its previous firing;
+					// only a fresh completion on this event may advance the
+					// followed-by. Treating the retained flag as satisfied would
+					// re-advance with stale tags and drop the listening branch.
+					leftSatisfied = leftTransition.complete
+				}
+				if leftSatisfied {
 					if next.node.sequenceMaxExpr != nil && !resolvePatternSequenceMaximum(next, trigger, variables) {
 						next.expired = true
 						result = append(result, patternTransitionFrom(next, false, leftTransition))
 						continue
 					}
-					next.phase = 1
-					next.right = newPatternProgress(progress.node.right)
-					inheritPatternProgressTags(next, next.right)
-					armPatternProgressTimers(next.right, trigger.now, variables)
-					next.started = true
-				}
-				result = append(result, patternTransitionFrom(next, patternSatisfied(next), leftTransition))
+				next.phase = 1
+				next.right = newPatternProgress(progress.node.right)
+				inheritPatternProgressTags(next, next.right)
+				armPatternProgressTimers(next.right, trigger.now, variables)
+				next.started = true
 			}
-			return result
+			result = append(result, patternTransitionFrom(next, patternSatisfied(next), leftTransition))
+			if leftTransition.complete && progress.node.left != nil && progress.node.left.kind == patternEveryNode {
+				// An every/every-distinct left leg keeps spawning followed-by
+				// branches: Esper's followed-by state holds one waiting branch
+				// per left firing while the every node itself stays armed.
+				// Keep a phase-0 continuation alongside the advanced branch so
+				// later distinct keys start further sequences.
+				continuation := clonePatternProgress(progress)
+				continuation.left = leftTransition.state
+				continuation.tags = clonePatternTags(progress.tags)
+				continuation.tagValues = clonePatternTagValues(progress.tagValues)
+				continuation.started = true
+				result = append(result, patternTransitionFrom(continuation, false, leftTransition))
+			}
 		}
+		return result
+	}
 
 		rightTransitions := advancePatternNodeTrigger(progress.right, trigger, variables)
 		result := make([]patternTransition, 0, len(rightTransitions))
@@ -9738,13 +9792,36 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 			if patternProgressTerminal(rightTransition.state) && !patternSatisfied(rightTransition.state) {
 				next.expired = true
 			}
-			if patternSatisfied(rightTransition.state) {
+			rightSatisfied := patternSatisfied(rightTransition.state)
+			if progress.node.right != nil && progress.node.right.kind == patternEveryNode {
+				// Same retained-done guard as the phase-0 path above: a
+				// repeating right leg completes the followed-by only on a
+				// fresh firing, not on its previously reported done flag.
+				rightSatisfied = rightTransition.complete
+			}
+			if rightSatisfied {
 				next.phase = 2
 				next.done = true
 			}
-			result = append(result, patternTransitionFrom(next, patternSatisfied(next), rightTransition))
+		result = append(result, patternTransitionFrom(next, patternSatisfied(next), rightTransition))
+		if rightTransition.complete && progress.node.right != nil && progress.node.right.kind == patternEveryNode {
+			// A repeating right leg (every/every-distinct) keeps the
+			// followed-by branch resident after each match: Esper pairs the
+			// captured left tags with every later distinct right firing.
+			// Reset the fired flag on the retained every node so the
+			// continuation waits for the next completion instead of
+			// re-reporting the consumed one.
+			continuation := clonePatternProgress(progress)
+			continuation.right = clonePatternProgress(rightTransition.state)
+			continuation.right.done = false
+			continuation.right.started = true
+			continuation.tags = clonePatternTags(progress.tags)
+			continuation.tagValues = clonePatternTagValues(progress.tagValues)
+			continuation.started = true
+			result = append(result, patternTransitionFrom(continuation, false, rightTransition))
 		}
-		return result
+	}
+	return result
 
 	case patternAndNode:
 		leftTransitions := advancePatternNodeTrigger(progress.left, trigger, variables)
