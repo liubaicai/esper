@@ -2096,6 +2096,31 @@
       ]
     },
     {
+      "id": "client.compile.event-type-auto-name",
+      "domain": "client",
+      "level": "G",
+      "summary": "Application-owned typed Go event-name registry with deterministic short-name resolution, alias schema registration and ambiguity diagnostics",
+      "javaRefs": [
+        "ClientCompileEventTypeAutoName",
+        "ClassProvidedImportClassLoader",
+        "ClassForNameProvider"
+      ],
+      "goRefs": [
+        "event_type_auto_name.go",
+        "schema.go",
+        "plan.go",
+        "client_compile_event_type_auto_name_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Go requires explicit application registration and does not scan packages or process-global classpaths",
+        "RegisterAutoNamedStruct currently targets named Go struct event types and delegates field/schema behavior to RegisterStruct",
+        "explicit short-name and namespace overrides model cross-package ambiguity without inventing duplicate Go identifiers",
+        "JVM class loading, import resolution and exact Java compiler diagnostic text are intentionally not copied"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -14141,6 +14166,46 @@
       "difference": "CompileExpression[T] validates an analyzable typed Expr through the ordinary source-less Plan compiler and returns immutable CompiledExpression[T] metadata plus Evaluate/EvaluateWith. The Java samples map as 1*1 to Multiply[int], string concatenation to Concat, Arrays.asList to ArrayOf[string], firstOf to EnumFirstOf and 5 seconds to time.Duration; results are 1, ay, []string{a}, a and five seconds. A detached CompiledExpressionContext can supply variables, Event, Engine and logical time. Source-less validation now also expands declared expressions and validates method/script/subquery nodes before canonicalization. Go deliberately exposes neither EPL expression text parsing nor compiler-internal ExprNode forge/evaluator classes; native typed slices replace Java Collection and invalid/nil/field-dependent AST values return structured Go errors."
     },
     {
+      "id": "case.client-compile-event-type-auto-name",
+      "javaRuntimeIds": [
+        "java-runtime-137bce5520dfafc60108",
+        "java-runtime-faa5b11fdf5305b35c4b"
+      ],
+      "javaNames": [
+        "ClientCompileAutoNameResolve",
+        "ClientCompileAutoNameAmbiguous"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileEventTypeAutoName.java"
+      ],
+      "goTests": [
+        "TestClientCompileEventTypeAutoNameResolveMatchesEsper",
+        "TestClientCompileEventTypeAutoNameAmbiguousMatchesEsper",
+        "TestEventTypeAutoNameRegistryRejectsInvalidAndConflictingRegistrations"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "event-type",
+        "auto-name",
+        "typed-registry",
+        "short-name",
+        "namespace",
+        "alias",
+        "ambiguity",
+        "concurrency",
+        "validation"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "EventTypeAutoNameRegistry is a zero-value-safe, application-owned and concurrency-safe registry for named Go struct types. RegisterAutoNameType derives reflect.Type.Name and PkgPath by default, permits explicit short-name/namespace overrides, treats an identical registration as idempotent and preserves the first candidate when a same-namespace conflict is rejected. Resolve returns ErrorUnknownName or a deterministic ErrorAmbiguous containing sorted namespaces. RegisterAutoNamedStruct[T] verifies the resolved type exactly matches T, then registers the fluent event alias through RegisterStruct; the MANE statement receives MyAutoNameEvent{P0: test} and projects p0=test. Go does not scan packages or classpaths, load JVM classes, compile EPL create-schema text or reproduce the misspelled Java diagnostic verbatim."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15210,6 +15275,10 @@
     {
       "capabilityId": "client.compile.expression-spi",
       "caseId": "case.client-compile-spi-expression"
+    },
+    {
+      "capabilityId": "client.compile.event-type-auto-name",
+      "caseId": "case.client-compile-event-type-auto-name"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",
