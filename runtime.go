@@ -3071,6 +3071,14 @@ type patternProgress struct {
 	phase                   uint8
 	count                   int
 	done                    bool
+	// quit marks a permanently completed expression, mirroring Esper's
+	// EvalNode isQuitted propagation: a plain filter/sequence/and completion
+	// cannot produce further matches, and an or-expression one of whose
+	// branches completed permanently quits its sibling branches as well.
+	// Every-nodes never quit (they restart their child), and the statement
+	// root uses the flag to quiesce the whole pattern instead of starting a
+	// fresh match for the next event.
+	quit                    bool
 	blocked                 bool
 	started                 bool
 	expired                 bool
@@ -9205,6 +9213,9 @@ func patternProgressActive(progress *patternProgress) bool {
 	if progress == nil || progress.expired {
 		return false
 	}
+	if progress.quit {
+		return false
+	}
 	switch progress.node.kind {
 	case patternEventNode:
 		return progress.started
@@ -9331,6 +9342,37 @@ func recordPatternProgressDistinct(progress *patternProgress, key string, now ti
 
 func patternCanContinueAfterMatch(progress *patternProgress) bool {
 	return patternWithinCanContinue(progress) || patternEveryCanContinue(progress)
+}
+
+// patternCompletionPermanent reports whether a completed progress tree cannot
+// produce further matches, mirroring the isQuitted flag Esper propagates from
+// a completed EvalNode: plain filters, sequences and and-expressions quit
+// permanently when done, while every-expressions report their matches with
+// isQuitted=false because they restart their child. An or-expression quits
+// permanently exactly when one of its satisfied branches did, which is what
+// kills the sibling branches (including an every-branch) of the or. Timer
+// observers are excluded: their lifecycle is driven by the virtual-clock
+// paths, not by event completions.
+func patternCompletionPermanent(progress *patternProgress) bool {
+	if progress == nil || progress.expired || !patternSatisfied(progress) {
+		return false
+	}
+	if progress.quit {
+		return true
+	}
+	switch progress.node.kind {
+	case patternEveryNode:
+		return false
+	case patternWithinNode:
+		return !patternWithinCanContinue(progress)
+	case patternOrNode:
+		return (patternSatisfied(progress.left) && patternCompletionPermanent(progress.left)) ||
+			(patternSatisfied(progress.right) && patternCompletionPermanent(progress.right))
+	case patternTimerIntervalNode, patternTimerAtNode, patternTimerScheduleNode, patternTimerCronNode:
+		return false
+	default:
+		return true
+	}
 }
 
 // patternMatchWithinLimits applies both the legacy whole-pattern MaxStates
@@ -9671,6 +9713,15 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 		return result
 
 	case patternOrNode:
+		if progress.quit {
+			// A permanently completed or-expression is inert: Esper quits all
+			// child listeners when one branch completes with isQuitted=true, so
+			// the surviving siblings (including an every-branch) can no longer
+			// match. The quit state may still sit inside a kept parent match
+			// (and/sequence), where it must report its captured truth without
+			// producing new completions.
+			return []patternTransition{{state: clonePatternProgress(progress)}}
+		}
 		leftTransitions := advancePatternNodeTrigger(progress.left, trigger, variables)
 		rightTransitions := advancePatternNodeTrigger(progress.right, trigger, variables)
 		result := make([]patternTransition, 0, len(leftTransitions)+len(rightTransitions))
@@ -9699,6 +9750,9 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				next.tagValues = mergePatternTagValues(leftTransition.state.tagValues, next.right.tagValues)
 				next.started = patternProgressActive(next.left) || patternProgressActive(next.right)
 				next.done = patternSatisfied(next.left) || patternSatisfied(next.right)
+				if next.done && patternCompletionPermanent(next) {
+					next.quit = true
+				}
 				if !next.done && patternProgressTerminal(leftTransition.state) && patternProgressTerminal(next.right) {
 					next.expired = true
 				}
@@ -9715,6 +9769,9 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				next.tagValues = mergePatternTagValues(next.left.tagValues, rightTransition.state.tagValues)
 				next.started = patternProgressActive(next.left) || patternProgressActive(next.right)
 				next.done = patternSatisfied(next.left) || patternSatisfied(next.right)
+				if next.done && patternCompletionPermanent(next) {
+					next.quit = true
+				}
 				if !next.done && patternProgressTerminal(next.left) && patternProgressTerminal(rightTransition.state) {
 					next.expired = true
 				}
@@ -9734,6 +9791,9 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				next.tagValues = mergePatternTagValues(leftTransition.state.tagValues, rightTransition.state.tagValues)
 				next.started = patternProgressActive(next.left) || patternProgressActive(next.right)
 				next.done = patternSatisfied(next.left) || patternSatisfied(next.right)
+				if next.done && patternCompletionPermanent(next) {
+					next.quit = true
+				}
 				if !next.done && patternProgressTerminal(leftTransition.state) && patternProgressTerminal(rightTransition.state) {
 					next.expired = true
 				}
@@ -10119,13 +10179,13 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 						batch.New = append(batch.New, resultRow(row))
 					}
-					if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
-						nextActive = append(nextActive, candidate)
-					}
-					if patternWithinTerminal(transition.state) {
-						terminal = true
-					}
-					continue
+				if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
+					nextActive = append(nextActive, candidate)
+				}
+				if patternWithinTerminal(transition.state) || patternCompletionPermanent(transition.state) {
+					terminal = true
+				}
+				continue
 				}
 				if patternProgressTerminal(transition.state) {
 					terminal = true
@@ -10170,7 +10230,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, started, definition) {
 						nextActive = append(nextActive, started)
 					}
-					if patternWithinTerminal(transition.state) {
+					if patternWithinTerminal(transition.state) || patternCompletionPermanent(transition.state) {
 						terminal = true
 					}
 				} else if r.admitPatternMatch(nextActive, started, definition) {

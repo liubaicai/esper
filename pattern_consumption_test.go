@@ -84,7 +84,10 @@ func TestPatternFilterConsumeAndPreservesSuppressedBranch(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	want := []string{"E2|E1|<nil>", "E3|E5|<nil>"}
+	// Esper's and-expression quits permanently once it has completed (the
+	// pattern has no every), so the {E3, E5} pair stays silent; the Java
+	// oracle for the same EPL fires exactly one row [E2, E1].
+	want := []string{"E2|E1|<nil>"}
 	if len(*rows) != len(want) {
 		t.Fatalf("and @consume rows = %#v, want %v", *rows, want)
 	}

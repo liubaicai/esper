@@ -3188,3 +3188,49 @@ func TestInfraNWViewsSelectGroupedViewLateStartVariableIterateParity(t *testing.
 		{"c1", 2, 2.0, int64(1)},
 	})
 }
+
+// TestInfraNWViewsPatternParity mirrors InfraPattern: a pattern consuming the
+// named window's insert stream, every a=MyWindowPAT(key='S1') or
+// a=MyWindowPAT(key='S2'). Esper parses the every onto the first branch only,
+// so S1 matches fire repeatedly with isQuitted=false while the single S2
+// match completes the or-expression permanently (EvalOrStateNode quits all
+// child listeners), after which a later S1 stays silent.
+func TestInfraNWViewsPatternParity(t *testing.T) {
+	env, engine, _, _, send := nwViewsLateConsumerWindow(t, "MyWindowPAT")
+
+	key := Field[any, string]("key")
+	s1 := PatternFromRecord(FromNamedWindow(env, "MyWindowPAT"), "a",
+		Equal[string](key, Literal[string]("S1")))
+	s2 := PatternFromRecord(FromNamedWindow(env, "MyWindowPAT"), "a",
+		Equal[string](key, Literal[string]("S2")))
+	s0Plan, err := env.Build(s1.Every().Or(s2).Select(
+		Alias("key", TagField[string]("a", "key")),
+		Alias("value", TagField[int64]("a", "value")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Deployment, err := engine.Deploy(context.Background(), s0Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s0Deployment.Statements()[0], []string{"key", "value"}, s0)
+
+	send("E1", 1)
+	nwViewsAssertNotInvoked(t, s0, "s0 E1")
+
+	send("S1", 2)
+	nwViewsAssertNew(t, s0, "s0 S1(2)", []any{"S1", int64(2)})
+
+	send("S1", 3)
+	nwViewsAssertNew(t, s0, "s0 S1(3)", []any{"S1", int64(3)})
+
+	send("S2", 4)
+	nwViewsAssertNew(t, s0, "s0 S2(4)", []any{"S2", int64(4)})
+
+	// The S2 completion quitted the whole or-expression, including the every
+	// branch; this S1 must stay silent (Java assertListenerNotInvoked).
+	send("S1", 1)
+	nwViewsAssertNotInvoked(t, s0, "s0 S1(1) after S2 quit")
+}

@@ -2084,7 +2084,10 @@ func TestPatternWithinExpressionUsesCapturedTagDeadline(t *testing.T) {
 		PatternFrom(base, "b", Literal[bool](true)).WithinExpr(
 			DurationSeconds[float64](TagField[float64]("a", "price")),
 		),
-	)
+	).Every()
+	// The root every mirrors Esper's every-restart: each completed attempt
+	// re-arms the sequence so later A/B pairs can complete again. Without
+	// every the pattern would quiesce permanently after the first row.
 	plan, err := env.Build(pattern.Select(
 		Alias("first", TagField[string]("a", "symbol")),
 		Alias("second", TagField[string]("b", "symbol")),
