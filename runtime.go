@@ -4743,6 +4743,32 @@ func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.
 	}
 	updates := make(map[string]any, len(definition.assignments))
 	for _, assignment := range definition.assignments {
+		if assignment.Index != nil {
+			indexValue := assignment.Index.eval(evalContext)
+			if indexValue.IsMissing() || indexValue.IsNull() {
+				// Esper skips an indexed write whose index expression
+				// returns null without failing the statement.
+				continue
+			}
+			value := assignment.Expr.eval(evalContext)
+			if err := applyIndexedUpdateSetValue(accepted.Schema(), accepted.Underlying(), updates, assignment.Column, indexValue, value); err != nil {
+				return ResultBatch{}, nil, false, err
+			}
+			continue
+		}
+		if assignment.Key != nil {
+			keyValue := assignment.Key.eval(evalContext)
+			if keyValue.IsMissing() || keyValue.IsNull() {
+				// Esper skips a map-entry write whose key expression
+				// returns null without failing the statement.
+				continue
+			}
+			value := assignment.Expr.eval(evalContext)
+			if err := applyKeyedUpdateSetValue(accepted.Schema(), accepted.Underlying(), updates, assignment.Column, keyValue, value); err != nil {
+				return ResultBatch{}, nil, false, err
+			}
+			continue
+		}
 		value := assignment.Expr.eval(evalContext).Any()
 		if field, _, lookupErr := accepted.Schema().lookupField(assignment.Column); lookupErr == nil && field.Type != nil {
 			// Coercion normalizes typed-nil pointers to untyped nil before
@@ -4828,6 +4854,165 @@ func coerceUpdateSetValue(target reflect.Type, value any) (any, error) {
 		return converted.Interface(), nil
 	}
 	return value, nil
+}
+
+// applyIndexedUpdateSetValue applies one update-istream array-element write
+// (column[index] = value) to the accumulated updates. The target container is
+// cloned before the write so the original event value is never mutated,
+// matching Esper's copy-on-write preprocessing; repeated writes to one column
+// build on the previous clone. A null container skips the write silently. An
+// out-of-range index fails the statement with Esper's update-istream
+// diagnostic. A null value writes the zero value into nilable element types
+// and is skipped otherwise (Esper skips a null rhs for an array of
+// primitives).
+func applyIndexedUpdateSetValue(schema Schema, original any, updates map[string]any, column string, indexValue, value Value) error {
+	workingUnderlying, err := mergeSchemaUnderlying(schema, original, updates)
+	if err != nil {
+		return err
+	}
+	current := schema.get(workingUnderlying, column)
+	if !current.IsPresent() || current.IsNull() {
+		return nil
+	}
+	index, ok := triggerIndexValue(indexValue.Any())
+	if !ok {
+		return fmt.Errorf("array index for %q is not an integer", column)
+	}
+	array := reflect.ValueOf(current.Any())
+	if !array.IsValid() {
+		return nil
+	}
+	for array.Kind() == reflect.Interface {
+		if array.IsNil() {
+			return nil
+		}
+		array = array.Elem()
+	}
+	pointer := array.Kind() == reflect.Pointer
+	if pointer {
+		if array.IsNil() {
+			return nil
+		}
+		array = array.Elem()
+	}
+	if array.Kind() != reflect.Array && array.Kind() != reflect.Slice {
+		return fmt.Errorf("target column %q is not an array or slice", column)
+	}
+	if index < 0 || index >= array.Len() {
+		return fmt.Errorf("Array length %d less than index %d for property '%s'", array.Len(), index, column)
+	}
+	elementType := array.Type().Elem()
+	if value.IsMissing() {
+		return nil
+	}
+	if value.IsNull() || value.Any() == nil {
+		if !isTriggerNilableType(elementType) {
+			return nil
+		}
+	}
+	var copyValue reflect.Value
+	if array.Kind() == reflect.Slice {
+		copyValue = reflect.MakeSlice(array.Type(), array.Len(), array.Len())
+		reflect.Copy(copyValue, array)
+	} else {
+		copyValue = reflect.New(array.Type()).Elem()
+		copyValue.Set(array)
+	}
+	element := copyValue.Index(index)
+	if value.IsNull() || value.Any() == nil {
+		element.Set(reflect.Zero(element.Type()))
+	} else {
+		converted, convertErr := assignReflectValue(element.Type(), value.Any())
+		if convertErr != nil {
+			return fmt.Errorf("array column %q element %d: %w", column, index, convertErr)
+		}
+		element.Set(converted)
+	}
+	if pointer {
+		result := reflect.New(copyValue.Type())
+		result.Elem().Set(copyValue)
+		updates[column] = result.Interface()
+	} else {
+		updates[column] = copyValue.Interface()
+	}
+	return nil
+}
+
+// applyKeyedUpdateSetValue applies one update-istream map-entry write
+// (column('key') = value) to the accumulated updates. The target map is
+// cloned before the write so the original event value is never mutated,
+// matching Esper's copy-on-write preprocessing; repeated writes to one column
+// build on the previous clone. A null map or null key skips the write
+// silently. A null value writes the zero value into nilable element types and
+// is skipped otherwise.
+func applyKeyedUpdateSetValue(schema Schema, original any, updates map[string]any, column string, keyValue, value Value) error {
+	workingUnderlying, err := mergeSchemaUnderlying(schema, original, updates)
+	if err != nil {
+		return err
+	}
+	current := schema.get(workingUnderlying, column)
+	if !current.IsPresent() || current.IsNull() {
+		return nil
+	}
+	key, ok := keyValue.Any().(string)
+	if !ok {
+		return fmt.Errorf("map key for %q is not a string", column)
+	}
+	container := reflect.ValueOf(current.Any())
+	if !container.IsValid() {
+		return nil
+	}
+	for container.Kind() == reflect.Interface {
+		if container.IsNil() {
+			return nil
+		}
+		container = container.Elem()
+	}
+	pointer := container.Kind() == reflect.Pointer
+	if pointer {
+		if container.IsNil() {
+			return nil
+		}
+		container = container.Elem()
+	}
+	if container.Kind() != reflect.Map {
+		return fmt.Errorf("target column %q is not a map", column)
+	}
+	elementType := container.Type().Elem()
+	if value.IsMissing() {
+		return nil
+	}
+	if value.IsNull() || value.Any() == nil {
+		if !isTriggerNilableType(elementType) {
+			return nil
+		}
+	}
+	clone := reflect.MakeMapWithSize(container.Type(), container.Len()+1)
+	iterator := container.MapRange()
+	for iterator.Next() {
+		clone.SetMapIndex(iterator.Key(), iterator.Value())
+	}
+	keyReflected := reflect.ValueOf(key)
+	if keyReflected.Type() != container.Type().Key() {
+		keyReflected = keyReflected.Convert(container.Type().Key())
+	}
+	if value.IsNull() || value.Any() == nil {
+		clone.SetMapIndex(keyReflected, reflect.Zero(elementType))
+	} else {
+		converted, convertErr := assignReflectValue(elementType, value.Any())
+		if convertErr != nil {
+			return fmt.Errorf("map column %q entry %q: %w", column, key, convertErr)
+		}
+		clone.SetMapIndex(keyReflected, converted)
+	}
+	if pointer {
+		result := reflect.New(clone.Type())
+		result.Elem().Set(clone)
+		updates[column] = result.Interface()
+	} else {
+		updates[column] = clone.Interface()
+	}
+	return nil
 }
 
 func (r *statementRuntime) evaluationContext() ExpressionEvaluationContext {

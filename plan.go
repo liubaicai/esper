@@ -3568,22 +3568,33 @@ func (e *Environment) validateUpdateStream(query Query) error {
 		if assignment.Wildcard {
 			return NewError(ErrorInvalidRule, "update assignments do not support wildcard field copies")
 		}
-		if assignment.Index != nil {
-			return NewError(ErrorInvalidRule, "update array-element assignments are not yet supported")
-		}
 		if strings.TrimSpace(assignment.Column) == "" {
 			return NewError(ErrorInvalidRule, "update assignment column is required")
 		}
 		if assignment.Expr == nil {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("update assignment %q requires an expression", assignment.Column))
 		}
-		if _, canonicalName, lookupErr := schema.lookupField(assignment.Column); lookupErr != nil {
-			return WrapError(ErrorUnknownName, "update assignment", lookupErr)
-		} else if _, exists := seen[canonicalName]; exists {
-			return NewError(ErrorInvalidRule, fmt.Sprintf("update assignment duplicates property %q", canonicalName))
-		} else {
-			seen[canonicalName] = struct{}{}
+		if assignment.Index != nil && assignment.Key != nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("update assignment %q cannot combine an array index and a map key", assignment.Column))
 		}
+		field, canonicalName, lookupErr := schema.lookupField(assignment.Column)
+		if lookupErr != nil {
+			return WrapError(ErrorUnknownName, "update assignment", lookupErr)
+		}
+		// The duplicate rule keys on the full assignment target so distinct
+		// array indexes or map keys on one property are allowed, matching
+		// Esper's property-level write identities (arr[0] vs arr[1]).
+		dupKey := canonicalName
+		if assignment.Index != nil {
+			dupKey = canonicalName + "[" + assignment.Index.Description() + "]"
+		}
+		if assignment.Key != nil {
+			dupKey = canonicalName + "(" + assignment.Key.Description() + ")"
+		}
+		if _, exists := seen[dupKey]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("update assignment duplicates property %q", dupKey))
+		}
+		seen[dupKey] = struct{}{}
 		if expressionNodeContainsAggregate(assignment.Expr.node()) {
 			return NewError(ErrorInvalidRule, "aggregation functions are not supported within update-set expressions")
 		}
@@ -3595,6 +3606,16 @@ func (e *Environment) validateUpdateStream(query Query) error {
 		}
 		if err := e.validateExprFields(query.input, assignment.Expr); err != nil {
 			return WrapError(ErrorInvalidRule, fmt.Sprintf("update assignment %q", assignment.Column), err)
+		}
+		if assignment.Index != nil {
+			if err := e.validateUpdateStreamArrayElement(query.input, assignment, field); err != nil {
+				return err
+			}
+		}
+		if assignment.Key != nil {
+			if err := e.validateUpdateStreamMapEntry(query.input, assignment, field); err != nil {
+				return err
+			}
 		}
 	}
 	if definition.where != nil {
@@ -3613,6 +3634,79 @@ func (e *Environment) validateUpdateStream(query Query) error {
 		if err := e.validateExprFields(query.input, definition.where); err != nil {
 			return WrapError(ErrorInvalidRule, "update where", err)
 		}
+	}
+	return nil
+}
+
+// validateUpdateStreamArrayElement validates an update-istream array-element
+// assignment (column[index] = value): the index expression must reference
+// valid stream fields and return an integer, the target property must be an
+// array or slice, and the value expression must be assignable to the element
+// type. Mirrors Esper's write-access checks for indexed update targets.
+func (e *Environment) validateUpdateStreamArrayElement(input *streamNode, assignment TableAssignment, field FieldSpec) error {
+	if expressionNodeContainsAggregate(assignment.Index.node()) {
+		return NewError(ErrorInvalidRule, "aggregation functions are not supported within update array index expressions")
+	}
+	if expressionNodeContainsSubquery(assignment.Index.node()) {
+		return NewError(ErrorInvalidRule, "subqueries within update array index expressions are not yet supported")
+	}
+	if expressionContainsPreviousAccess(assignment.Index.node()) {
+		return NewError(ErrorInvalidRule, "update array index expressions cannot use previous or prior access")
+	}
+	if err := e.validateExprFields(input, assignment.Index); err != nil {
+		return WrapError(ErrorInvalidRule, fmt.Sprintf("update array index for %q", assignment.Column), err)
+	}
+	indexType := assignment.Index.Type()
+	if indexType == nil || !isTriggerIntegerType(indexType) {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("update array index expression for property '%s' must return an integer", assignment.Column))
+	}
+	arrayType := field.Type
+	for arrayType != nil && arrayType.Kind() == reflect.Pointer {
+		arrayType = arrayType.Elem()
+	}
+	if arrayType == nil || (arrayType.Kind() != reflect.Array && arrayType.Kind() != reflect.Slice) {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("update assignment target property '%s' is not an array", assignment.Column))
+	}
+	if err := validateTriggerAssignmentType(arrayType.Elem(), assignment.Expr); err != nil {
+		return WrapError(ErrorTypeMismatch, fmt.Sprintf("update array assignment %q", assignment.Column), err)
+	}
+	return nil
+}
+
+// validateUpdateStreamMapEntry validates an update-istream map-entry
+// assignment (column('key') = value): the key expression must reference valid
+// stream fields and return a string, the target property must be a map with
+// string keys, and the value expression must be assignable to the map element
+// type. Mirrors Esper's write-access checks for mapped update targets.
+func (e *Environment) validateUpdateStreamMapEntry(input *streamNode, assignment TableAssignment, field FieldSpec) error {
+	if expressionNodeContainsAggregate(assignment.Key.node()) {
+		return NewError(ErrorInvalidRule, "aggregation functions are not supported within update map key expressions")
+	}
+	if expressionNodeContainsSubquery(assignment.Key.node()) {
+		return NewError(ErrorInvalidRule, "subqueries within update map key expressions are not yet supported")
+	}
+	if expressionContainsPreviousAccess(assignment.Key.node()) {
+		return NewError(ErrorInvalidRule, "update map key expressions cannot use previous or prior access")
+	}
+	if err := e.validateExprFields(input, assignment.Key); err != nil {
+		return WrapError(ErrorInvalidRule, fmt.Sprintf("update map key for %q", assignment.Column), err)
+	}
+	keyType := assignment.Key.Type()
+	if keyType == nil || keyType.Kind() != reflect.String {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("update map key expression for property '%s' must return a string", assignment.Column))
+	}
+	mapType := field.Type
+	for mapType != nil && mapType.Kind() == reflect.Pointer {
+		mapType = mapType.Elem()
+	}
+	if mapType == nil || mapType.Kind() != reflect.Map {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("update assignment target property '%s' is not a map", assignment.Column))
+	}
+	if mapType.Key().Kind() != reflect.String {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("update assignment target property '%s' map keys are not strings", assignment.Column))
+	}
+	if err := validateTriggerAssignmentType(mapType.Elem(), assignment.Expr); err != nil {
+		return WrapError(ErrorTypeMismatch, fmt.Sprintf("update map assignment %q", assignment.Column), err)
 	}
 	return nil
 }

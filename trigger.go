@@ -40,6 +40,10 @@ type TableAssignment struct {
 	// The index is evaluated against the same working target row as the value
 	// expression, so ordered assignments can feed later indexes.
 	Index Expr
+	// Key is non-nil for a map-entry assignment such as themap('key'). The
+	// key is evaluated against the same working target row as the value
+	// expression.
+	Key  Expr
 	Expr  Expr
 	// Wildcard copies every source field whose name is also declared by the
 	// target schema. It is the Go-native equivalent of a merge insert/update
@@ -58,6 +62,14 @@ func SetColumn(column string, expression Expr) TableAssignment {
 // expressions instead of being embedded in a string rule.
 func SetArrayElement(column string, index, expression Expr) TableAssignment {
 	return TableAssignment{Column: strings.TrimSpace(column), Index: index, Expr: expression}
+}
+
+// SetMapEntry updates one keyed entry of a map-valued target column. It is
+// the Go-native fluent equivalent of an update assignment such as
+// target.props('abc') = value. The key and value remain analyzable
+// expressions instead of being embedded in a string rule.
+func SetMapEntry(column string, key, expression Expr) TableAssignment {
+	return TableAssignment{Column: strings.TrimSpace(column), Key: key, Expr: expression}
 }
 
 // CopyMatchingFields copies source-event fields into target columns with the
@@ -711,6 +723,9 @@ func describeTableAssignments(assignments []TableAssignment) string {
 		if assignment.Index != nil {
 			column += "[" + assignment.Index.Description() + "]"
 		}
+		if assignment.Key != nil {
+			column += "(" + assignment.Key.Description() + ")"
+		}
 		parts = append(parts, column+"="+expression)
 	}
 	return strings.Join(parts, ",")
@@ -994,6 +1009,9 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 			}
 			if assignment.Index != nil {
 				return NewError(ErrorInvalidRule, "named-window insert-from does not support indexed assignments")
+			}
+			if assignment.Key != nil {
+				return NewError(ErrorInvalidRule, "named-window insert-from does not support map-entry assignments")
 			}
 			field, exists := targetSchema.Field(assignment.Column)
 			if !exists {
@@ -2532,13 +2550,16 @@ func validateTriggerAssignmentsWithTarget(e *Environment, input *streamNode, tab
 
 func validateTriggerAssignment(e *Environment, input *streamNode, targetSchema Schema, assignment TableAssignment, targetKind string) error {
 	if assignment.Wildcard {
-		if assignment.Column != "" || assignment.Index != nil || assignment.Expr != nil {
-			return NewError(ErrorInvalidRule, "wildcard assignment cannot declare a column, index or expression")
+		if assignment.Column != "" || assignment.Index != nil || assignment.Key != nil || assignment.Expr != nil {
+			return NewError(ErrorInvalidRule, "wildcard assignment cannot declare a column, index, key or expression")
 		}
 		return nil
 	}
 	if assignment.Column == "" || assignment.Expr == nil {
 		return NewError(ErrorInvalidRule, "assignment is invalid")
+	}
+	if assignment.Key != nil {
+		return NewError(ErrorInvalidRule, "map-entry assignments are not yet supported for on-trigger actions")
 	}
 	field, exists := targetSchema.Field(assignment.Column)
 	if !exists {

@@ -1503,7 +1503,7 @@
       "phase": 1,
       "status": "partial",
       "remaining": [
-        "named-window/table/map-property/array-element targets and type wideners",
+        "named-window/table targets incl. NW map/array nested writes and the array-element invalid runtime matrix",
         "subquery set expressions, copy-method/SODA/XML/wrapped-object representations",
         "full Java invalid-rule and trace parity"
       ]
@@ -11992,7 +11992,9 @@
         "java-runtime-040e9ecd94778eabb1c3",
         "java-runtime-755c502f8176a8fd4cd8",
         "java-runtime-d06d22f66d9584746397",
-        "java-runtime-9772cca0c891f026e078"
+        "java-runtime-9772cca0c891f026e078",
+        "java-runtime-623efb75477ae09ebb67",
+        "java-runtime-c2028ba966171d2c681f"
       ],
       "javaNames": [
         "EPLOtherUpdateBean",
@@ -12003,7 +12005,9 @@
         "EPLOtherUpdateFieldsWithPriority",
         "EPLOtherUpdateUnprioritizedOrder",
         "EPLOtherUpdateListenerDeliveryMultiupdate",
-        "EPLOtherUpdateListenerDeliveryMultiupdateMixed"
+        "EPLOtherUpdateListenerDeliveryMultiupdateMixed",
+        "EPLOtherUpdateMapSetMapPropsBean",
+        "EPLOtherUpdateMapSetMapPropsRep"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherUpdateIStream.java"
@@ -12022,7 +12026,9 @@
         "multi-update",
         "undeploy-redeploy",
         "priority",
-        "drop"
+        "drop",
+        "map-entry",
+        "array-element"
       ],
       "status": "partial",
       "evidence": [
@@ -12031,11 +12037,11 @@
         "java-suite-EPLOtherUpdateIStream",
         "java-probe"
       ],
-      "difference": "Go update-istream mirrors Esper's InternalEventRouter copy-on-write preprocessing (Java-probed: the source statement's listeners observe the original event, the update listener receives new=updated-copy/old=original, downstream consumers observe the copy and the original underlying is never mutated). Every set expression evaluates against the pre-update event, so intBoxed=intPrimitive reads the original value even when intPrimitive is assigned earlier. Listener batches follow Go deployment order (Insert, Update, Select) while Esper's router preprocessing invokes the update callback before the insert statement's own listeners; per-statement batch contents are identical. A non-boolean where clause is compile-time impossible in the typed Go builder (Where takes Expression[bool]). Update statements preprocess the event ahead of every consumer in the dispatch cycle regardless of deployment order (orderUpdateStatementsFirst), matching the router-time application probed in Java when update_2 deploys after s0; chained updates observe the prior copy. Null writes to non-nullable properties are skipped after boxed-nil normalization while the insert/remove pair still fires, and boxed values widen numerically towards pointer targets (int to long). The update statement iterator surface (Esper: empty) and subscriber SPI are not asserted (no Go counterparts). Priority annotation parity: update entries on one stream apply in ascending @Priority order so the highest priority assignment wins, ties fall back to the drop entry first then deployment order, and each update's where clause and insert/remove pair observe the running copy left by the previous update; unprioritized updates apply in deployment order with the last assignment winning. @Drop removes the event from the dispatch cycle entirely (the drop statement itself delivers no batch); if a drop follows an earlier matching update, the earlier update's already-queued listener batch is still delivered (Esper suppresses it, an edge unobservable in this suite). The Go parity tests exercise the map representation of MyStream where Esper loops every EventRepresentationChoice; the routed copy-on-write semantics are representation-independent.",
+      "difference": "Go update-istream mirrors Esper's InternalEventRouter copy-on-write preprocessing (Java-probed: the source statement's listeners observe the original event, the update listener receives new=updated-copy/old=original, downstream consumers observe the copy and the original underlying is never mutated). Every set expression evaluates against the pre-update event, so intBoxed=intPrimitive reads the original value even when intPrimitive is assigned earlier. Listener batches follow Go deployment order (Insert, Update, Select) while Esper's router preprocessing invokes the update callback before the insert statement's own listeners; per-statement batch contents are identical. A non-boolean where clause is compile-time impossible in the typed Go builder (Where takes Expression[bool]). Update statements preprocess the event ahead of every consumer in the dispatch cycle regardless of deployment order (orderUpdateStatementsFirst), matching the router-time application probed in Java when update_2 deploys after s0; chained updates observe the prior copy. Null writes to non-nullable properties are skipped after boxed-nil normalization while the insert/remove pair still fires, and boxed values widen numerically towards pointer targets (int to long). The update statement iterator surface (Esper: empty) and subscriber SPI are not asserted (no Go counterparts). Priority annotation parity: update entries on one stream apply in ascending @Priority order so the highest priority assignment wins, ties fall back to the drop entry first then deployment order, and each update's where clause and insert/remove pair observe the running copy left by the previous update; unprioritized updates apply in deployment order with the last assignment winning. @Drop removes the event from the dispatch cycle entirely (the drop statement itself delivers no batch); if a drop follows an earlier matching update, the earlier update's already-queued listener batch is still delivered (Esper suppresses it, an edge unobservable in this suite). The Go parity tests exercise the map representation of MyStream where Esper loops every EventRepresentationChoice; the routed copy-on-write semantics are representation-independent. Nested map-entry and array-element writes (props('abc')=1, myarray[2]=10) clone the target container before writing so the original event's nested map/slice is never mutated; the old IR pair keeps referencing the original containers. A null container, null index or null key skips the write silently; an out-of-range index fails the statement with Esper's update-istream diagnostic text ('Array length 3 less than index 10 for property 'doublearray''); a null rhs writes the zero value into nilable element types and is skipped otherwise. The duplicate-assignment rule keys on the full target identity (column plus index/key description) so distinct indexes or keys on one property are allowed. The Go parity tests exercise the bean and map representations once where Esper loops every EventRepresentationChoice; on-trigger map-entry assignments are Build-rejected pending the named-window slice.",
       "remaining": [
         "EPLOtherUpdateInvalid full matrix (read-only/inherited/stream-type rules)",
-        "named-window/table/map-property/array-element update targets",
-        "copy-method/SODA/XML/wrapped-object representations, subquery set expressions, enum anyOf and send-route-sender preprocess"
+        "copy-method/SODA/XML/wrapped-object representations, subquery set expressions, enum anyOf and send-route-sender preprocess",
+        "named-window/table update targets incl. named-window map/array nested writes (NWSetMapProps null/too-small silent-skip semantics) and the array-element invalid runtime matrix"
       ],
       "goTests": [
         "TestUpdateIStreamBeanParity",
@@ -12047,7 +12053,10 @@
         "TestUpdateIStreamFieldsWithPriorityParity",
         "TestUpdateIStreamUnprioritizedOrderParity",
         "TestUpdateIStreamListenerDeliveryMultiupdateParity",
-        "TestUpdateIStreamListenerDeliveryMultiupdateMixedParity"
+        "TestUpdateIStreamListenerDeliveryMultiupdateMixedParity",
+        "TestUpdateIStreamMapSetMapPropsBeanParity",
+        "TestUpdateIStreamMapSetMapPropsRepParity",
+        "TestUpdateIStreamNestedSetInvalidParity"
       ]
     }
   ],

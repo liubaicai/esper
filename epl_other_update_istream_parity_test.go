@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -884,4 +885,184 @@ func TestUpdateIStreamTypeWidenerParity(t *testing.T) {
 	if boxed, ok := original.Get("intBoxed").Any().(*int); !ok || boxed == nil || *boxed != 999 {
 		t.Fatalf("original intBoxed = %#v, want 999", original.Get("intBoxed").Any())
 	}
+}
+
+// updateIStreamMapPropBean mirrors MyMapPropEvent (props Map, array Object[10])
+// for the nested map/array write parity tests.
+type updateIStreamMapPropBean struct {
+	Props map[string]any `esper:"props"`
+	Array []any          `esper:"array"`
+}
+
+// TestUpdateIStreamMapSetMapPropsBeanParity mirrors EPLOtherUpdateMapSetMapPropsBean:
+// an update-istream statement writes a map entry (props('abc')=1) and an array
+// element (array[2]=10) into a bean event routed through insert-into; the IR
+// pair observes the new values on the copy and nulls on the original, and the
+// sent bean's nested containers are never mutated (copy-on-write clones the
+// containers before writing).
+func TestUpdateIStreamMapSetMapPropsBeanParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[updateIStreamMapPropBean](env, "MyMapPropEvent"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[updateIStreamMapPropBean](env, "MyStream"); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(FromAny(env, "MyMapPropEvent").InsertInto("MyStream", StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(FromAny(env, "MyStream").UpdateStream(
+		SetMapEntry("props", Literal("abc"), Literal(1)),
+		SetArrayElement("array", Literal(2), Literal(10)),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, insertPlan)
+	_, s0 := updateIStreamDeployOne(t, engine, updatePlan)
+
+	sent := updateIStreamMapPropBean{Props: map[string]any{}, Array: make([]any, 10)}
+	if err := engine.Send(context.Background(), "MyMapPropEvent", sent); err != nil {
+		t.Fatal(err)
+	}
+	if len(s0.newResults) != 1 || len(s0.oldResults) != 1 {
+		t.Fatalf("s0 deliveries: new=%d old=%d", len(s0.newResults), len(s0.oldResults))
+	}
+	newProps, ok := s0.newResults[0].Get("props").Any().(map[string]any)
+	if !ok || newProps["abc"] != 1 {
+		t.Fatalf("s0 new props = %#v, want entry abc=1", s0.newResults[0].Get("props").Any())
+	}
+	newArray, ok := s0.newResults[0].Get("array").Any().([]any)
+	if !ok || len(newArray) != 10 || newArray[2] != 10 {
+		t.Fatalf("s0 new array = %#v, want element [2]=10", s0.newResults[0].Get("array").Any())
+	}
+	oldProps, ok := s0.oldResults[0].Get("props").Any().(map[string]any)
+	if !ok {
+		t.Fatalf("s0 old props = %#v, want map", s0.oldResults[0].Get("props").Any())
+	}
+	if _, exists := oldProps["abc"]; exists {
+		t.Fatalf("s0 old props must not contain abc: %#v", oldProps)
+	}
+	oldArray, ok := s0.oldResults[0].Get("array").Any().([]any)
+	if !ok || len(oldArray) != 10 || oldArray[2] != nil {
+		t.Fatalf("s0 old array = %#v, want element [2]=nil", s0.oldResults[0].Get("array").Any())
+	}
+	// Copy-on-write: the sent bean's nested containers are never mutated.
+	if _, exists := sent.Props["abc"]; exists || sent.Array[2] != nil {
+		t.Fatalf("sent bean mutated: props=%#v array[2]=%#v", sent.Props, sent.Array[2])
+	}
+}
+
+// TestUpdateIStreamMapSetMapPropsRepParity mirrors EPLOtherUpdateMapSetMapPropsRep
+// (map representation): an update-istream statement directly on a map event
+// type writes a plain column (simple='A'), a map entry (mymap('abc')=1) and an
+// array element (myarray[2]=10); the IR pair observes {A, 1, 10} on the copy
+// and {null, null, 0} on the original, and the sent map's nested containers
+// are never mutated.
+func TestUpdateIStreamMapSetMapPropsRepParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "MyInfraTypeWithMapProp", []FieldSpec{
+		FieldDef("simple", reflect.TypeOf("")),
+		FieldDef("myarray", reflect.TypeOf([]int{})),
+		FieldDef("mymap", reflect.TypeOf(map[string]any{})),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(FromAny(env, "MyInfraTypeWithMapProp").UpdateStream(
+		SetColumn("simple", Literal("A")),
+		SetMapEntry("mymap", Literal("abc"), Literal(1)),
+		SetArrayElement("myarray", Literal(2), Literal(10)),
+	).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	_, update := updateIStreamDeployOne(t, engine, updatePlan)
+
+	sentMap := map[string]any{}
+	sentArray := make([]int, 10)
+	if err := engine.Send(context.Background(), "MyInfraTypeWithMapProp", map[string]any{"mymap": sentMap, "myarray": sentArray}); err != nil {
+		t.Fatal(err)
+	}
+	if len(update.newResults) != 1 || len(update.oldResults) != 1 {
+		t.Fatalf("update deliveries: new=%d old=%d", len(update.newResults), len(update.oldResults))
+	}
+	if got := update.newResults[0].Get("simple").Any(); got != "A" {
+		t.Fatalf("update new simple = %#v, want A", got)
+	}
+	newMap, ok := update.newResults[0].Get("mymap").Any().(map[string]any)
+	if !ok || newMap["abc"] != 1 {
+		t.Fatalf("update new mymap = %#v, want entry abc=1", update.newResults[0].Get("mymap").Any())
+	}
+	newArray, ok := update.newResults[0].Get("myarray").Any().([]int)
+	if !ok || len(newArray) != 10 || newArray[2] != 10 {
+		t.Fatalf("update new myarray = %#v, want element [2]=10", update.newResults[0].Get("myarray").Any())
+	}
+	if got := update.oldResults[0].Get("simple").Any(); got != nil {
+		t.Fatalf("update old simple = %#v, want nil", got)
+	}
+	oldMap, ok := update.oldResults[0].Get("mymap").Any().(map[string]any)
+	if !ok {
+		t.Fatalf("update old mymap = %#v, want map", update.oldResults[0].Get("mymap").Any())
+	}
+	if _, exists := oldMap["abc"]; exists {
+		t.Fatalf("update old mymap must not contain abc: %#v", oldMap)
+	}
+	oldArray, ok := update.oldResults[0].Get("myarray").Any().([]int)
+	if !ok || len(oldArray) != 10 || oldArray[2] != 0 {
+		t.Fatalf("update old myarray = %#v, want element [2]=0", update.oldResults[0].Get("myarray").Any())
+	}
+	// Copy-on-write: the sent map's nested containers are never mutated.
+	if _, exists := sentMap["abc"]; exists || sentArray[2] != 0 {
+		t.Fatalf("sent containers mutated: mymap=%#v myarray[2]=%d", sentMap, sentArray[2])
+	}
+}
+
+// TestUpdateIStreamNestedSetInvalidParity covers the Go-enforceable subset of
+// EPLOtherUpdateArrayElementInvalid for nested write targets: non-array index
+// targets, non-integer index expressions, non-map entry targets and
+// non-string key expressions are all rejected at Build time. The remaining
+// invalid matrix (including runtime index-overflow behavior) is tracked with
+// the array-element executions.
+func TestUpdateIStreamNestedSetInvalidParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "MyInfraTypeWithMapProp", []FieldSpec{
+		FieldDef("simple", reflect.TypeOf("")),
+		FieldDef("myarray", reflect.TypeOf([]int{})),
+		FieldDef("mymap", reflect.TypeOf(map[string]any{})),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	assertInvalid := func(label, want string, build func() (Plan, error)) {
+		t.Helper()
+		if _, err := build(); err == nil {
+			t.Fatalf("%s must be rejected", label)
+		} else if !strings.Contains(err.Error(), want) {
+			t.Fatalf("%s error = %v, want substring %q", label, err, want)
+		}
+	}
+	assertInvalid("index-on-non-array", "is not an array", func() (Plan, error) {
+		return env.Build(FromAny(env, "MyInfraTypeWithMapProp").UpdateStream(
+			SetArrayElement("simple", Literal(0), Literal(1)),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("non-integer-index", "must return an integer", func() (Plan, error) {
+		return env.Build(FromAny(env, "MyInfraTypeWithMapProp").UpdateStream(
+			SetArrayElement("myarray", Literal("k"), Literal(1)),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("entry-on-non-map", "is not a map", func() (Plan, error) {
+		return env.Build(FromAny(env, "MyInfraTypeWithMapProp").UpdateStream(
+			SetMapEntry("myarray", Literal("k"), Literal(1)),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("non-string-key", "must return a string", func() (Plan, error) {
+		return env.Build(FromAny(env, "MyInfraTypeWithMapProp").UpdateStream(
+			SetMapEntry("mymap", Literal(1), Literal(1)),
+		).Query(StatementName("s0")))
+	})
 }
