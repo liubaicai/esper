@@ -3604,6 +3604,11 @@ func (e *Environment) validateUpdateStream(query Query) error {
 		if err := e.validateExprFields(query.input, assignment.Expr); err != nil {
 			return WrapError(ErrorInvalidRule, fmt.Sprintf("update assignment %q", assignment.Column), err)
 		}
+		if assignment.Index == nil && assignment.Key == nil {
+			if err := validateUpdateSetAssignable(assignment.Column, field, assignment.Expr); err != nil {
+				return err
+			}
+		}
 		if assignment.Index != nil {
 			if err := e.validateUpdateStreamArrayElement(query.input, assignment, field); err != nil {
 				return err
@@ -3630,6 +3635,80 @@ func (e *Environment) validateUpdateStream(query Query) error {
 		}
 	}
 	return nil
+}
+
+// validateUpdateSetAssignable checks a plain update-set assignment for type
+// compatibility, mirroring Esper's write-access rules: the expression type
+// must be assignable to the property type or widen numerically towards it
+// (Esper rejects narrowing assignments such as Long to int), and a null
+// literal cannot be assigned to a non-nullable property (Esper rejects the
+// statement at compile time; expression-produced nulls still skip at
+// runtime). Untyped (any) expressions and targets pass through, as do nested
+// index/key assignments which have their own element checks.
+func validateUpdateSetAssignable(column string, field FieldSpec, expression Expr) error {
+	if node := expression.node(); node != nil && node.kind == "null" {
+		if field.Type != nil && !nullableUpdateFieldKind(field.Type) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("update assignment of null to property %q typed as %s has a nullable type mismatch", column, field.Type))
+		}
+		return nil
+	}
+	actual := expression.Type()
+	target := field.Type
+	if actual == nil || target == nil || actual == typeOf[any]() || target == typeOf[any]() {
+		return nil
+	}
+	if actual.AssignableTo(target) {
+		return nil
+	}
+	base := target
+	for base.Kind() == reflect.Pointer {
+		base = base.Elem()
+	}
+	actualBase := actual
+	for actualBase.Kind() == reflect.Pointer {
+		actualBase = actualBase.Elem()
+	}
+	if actualBase.AssignableTo(base) {
+		return nil
+	}
+	if numericTypes(actualBase, base) && updateSetWidensTo(actualBase, base) {
+		return nil
+	}
+	return NewError(ErrorTypeMismatch, fmt.Sprintf("update assignment expression type %s is incompatible with property %q typed as %s, column and parameter types mismatch", actual, column, target))
+}
+
+// updateSetWidensTo reports whether a numeric value of type from widens to
+// type to without narrowing, mirroring Esper's update-set assignment widener:
+// int to long and int to double are accepted while long to int is rejected.
+// Go's int maps to Esper's 32-bit int rank so int64 to int is a narrowing
+// rejection even though both are 64-bit wide on this platform.
+func updateSetWidensTo(from, to reflect.Type) bool {
+	rank := func(typ reflect.Type) (int, bool) {
+		switch typ.Kind() {
+		case reflect.Int8, reflect.Uint8:
+			return 1, true
+		case reflect.Int16, reflect.Uint16:
+			return 2, true
+		case reflect.Int32, reflect.Uint32, reflect.Int:
+			return 3, true
+		case reflect.Int64, reflect.Uint, reflect.Uint64:
+			return 4, true
+		case reflect.Float32:
+			return 5, true
+		case reflect.Float64:
+			return 6, true
+		}
+		return 0, false
+	}
+	fromRank, ok := rank(from)
+	if !ok {
+		return false
+	}
+	toRank, ok := rank(to)
+	if !ok {
+		return false
+	}
+	return fromRank <= toRank
 }
 
 // validateUpdateStreamArrayElement validates an update-istream array-element

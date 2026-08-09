@@ -1851,3 +1851,141 @@ func TestUpdateIStreamSubqueryMultikeyWArrayParity(t *testing.T) {
 	sendSWIA("E4", []int{1}, 13)
 	trigger("two groups assign null", nil)
 }
+
+// updateIStreamInvalidBean mirrors SupportBean for the invalid full matrix
+// (intPrimitive int, longPrimitive long, longBoxed Long).
+type updateIStreamInvalidBean struct {
+	TheString     string `esper:"theString"`
+	IntPrimitive  int    `esper:"intPrimitive"`
+	LongPrimitive int64  `esper:"longPrimitive"`
+	LongBoxed     *int64 `esper:"longBoxed"`
+}
+
+// TestUpdateIStreamInvalidFullParity extends the invalid matrix of
+// EPLOtherUpdateInvalid: narrowing numeric assignment (Long to int), unknown
+// property, null literal to a non-nullable property, dotted tagged property,
+// aggregate in set/where, previous access in set and an unknown event type
+// are all Build-rejected, while the widening direction (int to long) and a
+// null literal to a nullable property remain accepted. Esper-only rejection
+// classes have no Go counterpart (approved differences): read-only bean
+// properties (Go struct schema fields are always writable), non-copyable bean
+// rejection (all Go structs copy field-wise), XML event write access (no XML
+// representation) and unprefixed outer references in correlated subqueries
+// (Go correlation is always explicit through OuterField).
+func TestUpdateIStreamInvalidFullParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[updateIStreamInvalidBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	assertInvalid := func(label, want string, build func() (Plan, error)) {
+		t.Helper()
+		if _, err := build(); err == nil {
+			t.Fatalf("%s must be rejected", label)
+		} else if want != "" && !strings.Contains(err.Error(), want) {
+			t.Fatalf("%s error = %v, want substring %q", label, err, want)
+		}
+	}
+	assertValid := func(label string, build func() (Plan, error)) {
+		t.Helper()
+		if _, err := build(); err != nil {
+			t.Fatalf("%s must be accepted: %v", label, err)
+		}
+	}
+
+	assertInvalid("narrowing-long-to-int", "types mismatch", func() (Plan, error) {
+		return env.Build(From[updateIStreamInvalidBean](env, "SupportBean").UpdateStream(
+			SetColumn("intPrimitive", Field[updateIStreamInvalidBean, int64]("longPrimitive")),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("unknown-property", "", func() (Plan, error) {
+		return env.Build(From[updateIStreamInvalidBean](env, "SupportBean").UpdateStream(
+			SetColumn("xxx", Literal("abc")),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("null-literal-non-nullable", "nullable type mismatch", func() (Plan, error) {
+		return env.Build(From[updateIStreamInvalidBean](env, "SupportBean").UpdateStream(
+			SetColumn("intPrimitive", NullLiteral[any]()),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("dotted-tagged-property", "", func() (Plan, error) {
+		return env.Build(From[updateIStreamInvalidBean](env, "SupportBean").UpdateStream(
+			SetColumn("a.intPrimitive", Literal(10)),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("aggregate-set", "not supported within update-set", func() (Plan, error) {
+		return env.Build(From[updateIStreamInvalidBean](env, "SupportBean").UpdateStream(
+			SetColumn("longPrimitive", Sum[int](Field[updateIStreamInvalidBean, int]("intPrimitive"))),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("aggregate-where", "not supported within update where", func() (Plan, error) {
+		return env.Build(From[updateIStreamInvalidBean](env, "SupportBean").UpdateStream(
+			SetColumn("longPrimitive", Field[updateIStreamInvalidBean, int64]("longPrimitive")),
+		).Where(Equal[int](Sum[int](Field[updateIStreamInvalidBean, int]("intPrimitive")), Literal(1))).Query(StatementName("s0")))
+	})
+	assertInvalid("previous-set", "previous or prior", func() (Plan, error) {
+		return env.Build(From[updateIStreamInvalidBean](env, "SupportBean").UpdateStream(
+			SetColumn("longPrimitive", Prev[int64](1, Field[updateIStreamInvalidBean, int64]("longPrimitive"))),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("unknown-event-type", "", func() (Plan, error) {
+		return env.Build(FromAny(env, "XYZ.GYH").UpdateStream(
+			SetColumn("a", Literal(1)),
+		).Query(StatementName("s0")))
+	})
+
+	// Widening direction and null-to-nullable stay accepted.
+	assertValid("widening-int-to-long", func() (Plan, error) {
+		return env.Build(From[updateIStreamInvalidBean](env, "SupportBean").UpdateStream(
+			SetColumn("longPrimitive", Field[updateIStreamInvalidBean, int]("intPrimitive")),
+		).Query(StatementName("s0")))
+	})
+	assertValid("null-literal-nullable", func() (Plan, error) {
+		return env.Build(From[updateIStreamInvalidBean](env, "SupportBean").UpdateStream(
+			SetColumn("longBoxed", NullLiteral[any]()),
+		).Query(StatementName("s0")))
+	})
+}
+
+// updateIStreamEnumBean mirrors SupportEventWithListOfObject (mylist,
+// updated) for the enumeration-method update parity test.
+type updateIStreamEnumBean struct {
+	MyList  []any `esper:"mylist"`
+	Updated bool  `esper:"updated"`
+}
+
+// TestUpdateIStreamEnumAnyOfParity mirrors EPLOtherUpdateIStreamEnumAnyOf: an
+// enumeration lambda (mylist.anyOf(e -> e is not null)) gates the update
+// where clause and the consumer observes updated=true.
+func TestUpdateIStreamEnumAnyOfParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[updateIStreamEnumBean](env, "MyEvent"); err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(From[updateIStreamEnumBean](env, "MyEvent").UpdateStream(
+		SetColumn("updated", Literal(true)),
+	).Where(EnumAnyOf[any](
+		Field[updateIStreamEnumBean, []any]("mylist"),
+		Not(IsNull[any](EnumElement[any]())),
+	)).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromAny(env, "MyEvent").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, updatePlan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+
+	if err := engine.SendEvent(context.Background(), updateIStreamEnumBean{MyList: []any{"first", "second"}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(s0.newResults) != 1 {
+		t.Fatalf("s0 deliveries = %d", len(s0.newResults))
+	}
+	if got := s0.newResults[0].Get("updated").Any(); got != true {
+		t.Fatalf("s0 updated = %#v, want true", got)
+	}
+}
