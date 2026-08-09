@@ -3193,6 +3193,15 @@ type aggregatePluginState interface {
 
 type aggregatePluginFactory func(AggregatePluginFactoryContext) aggregatePluginState
 
+// aggregatePluginRuntimePanic marks a panic raised while invoking user-owned
+// aggregate extension code. The statement runtime converts only this typed
+// boundary into an error; unrelated internal panics remain visible to tests
+// and the process instead of being silently swallowed.
+type aggregatePluginRuntimePanic struct {
+	plugin string
+	cause  any
+}
+
 type aggregatePluginStateAdapter[T any] struct {
 	state       AggregatePluginState[T]
 	inputs      []Value
@@ -3543,10 +3552,18 @@ func pluginAggregateFactoryRef[T any](env *Environment, name string, input Expr,
 	}}
 }
 
-func evaluateAggregatePluginFactory(ctx EvalContext, node *exprNode, input Expr, factory aggregatePluginFactory) Value {
+func evaluateAggregatePluginFactory(ctx EvalContext, node *exprNode, input Expr, factory aggregatePluginFactory) (result Value) {
 	if node == nil || factory == nil {
 		return Missing()
 	}
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			if _, alreadyMarked := recovered.(aggregatePluginRuntimePanic); alreadyMarked {
+				panic(recovered)
+			}
+			panic(aggregatePluginRuntimePanic{plugin: node.pluginName, cause: recovered})
+		}
+	}()
 	state := aggregatePluginState(nil)
 	if ctx.aggregatePluginStates != nil {
 		state = ctx.aggregatePluginStates[node]

@@ -5232,13 +5232,13 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 					// trigger events. Passive events do not reach aggregateBatch.
 					r.aggregateState = nil
 				}
-				batch, err = r.aggregateBatch(joinDeltaEvents(joinDelta, now), plan, now)
+				batch, err = r.aggregateBatchSafely(joinDeltaEvents(joinDelta, now), plan, now)
 			}
 		} else {
 			delta, insertErr := r.insert(plan.query.aggregate.input, event, now)
 			err = insertErr
 			if err == nil {
-				batch, err = r.aggregateBatch(delta, plan, now)
+				batch, err = r.aggregateBatchSafely(delta, plan, now)
 			}
 		}
 	} else if plan.query.join != nil {
@@ -11918,6 +11918,26 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		}
 	}
 	return batch, nil
+}
+
+func (r *statementRuntime) aggregateBatchSafely(delta eventDelta, plan Plan, now time.Time) (batch ResultBatch, err error) {
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			return
+		}
+		failure, ok := recovered.(aggregatePluginRuntimePanic)
+		if !ok {
+			panic(recovered)
+		}
+		plugin := failure.plugin
+		if strings.TrimSpace(plugin) == "" {
+			plugin = "<unnamed>"
+		}
+		batch = ResultBatch{}
+		err = NewError(ErrorState, fmt.Sprintf("aggregate plugin %q for statement %q: %v", plugin, plan.query.name, failure.cause))
+	}()
+	return r.aggregateBatch(delta, plan, now)
 }
 
 // filterAggregateEvents applies a pre-aggregate WHERE to the incoming delta.

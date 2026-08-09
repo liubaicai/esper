@@ -1631,6 +1631,26 @@
         "shared schedule traces for cron, output-rate, window expiry and context-partition timers",
         "concurrent deploy/undeploy and time-control calls"
       ]
+    },
+    {
+      "id": "client.runtime.exception-boundary",
+      "domain": "client",
+      "level": "G",
+      "summary": "Structured runtime error propagation for panics raised by user-owned aggregate extension code",
+      "javaRefs": [
+        "ClientRuntimeExceptionHandler"
+      ],
+      "goRefs": [
+        "expr.go",
+        "runtime.go",
+        "client_runtime_exception_handler_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "engine-wide configurable exception-handler factories and handler context callbacks",
+        "shared exception traces for listener, sink, UDF, view and connector extension boundaries"
+      ]
     }
   ],
   "cases": [
@@ -12554,6 +12574,37 @@
         "go-unit"
       ],
       "difference": "Go exposes AdvanceTimeSpan(ctx, target, optionalResolution), NextScheduledTime and StatementNearestSchedules as typed time.Time APIs. Exact span advancement visits each due instant and therefore preserves one listener batch at 1500/3000/4500/6000/7500/9000/10500 milliseconds. Resolution-based advancement samples in fixed steps; overdue recurring timers fire at the sampled clock and re-anchor there, producing 12100 and 13700 milliseconds for Java's 200-millisecond case. Java timer:interval without every is one-shot, while Go TimerInterval is deliberately recurring, so nearest-schedule parity uses equivalent TimerAt nodes, including TimerAt(3s).And(TimerAt(4s)). Deployment IDs remain explicit in the returned per-statement schedule records."
+    },
+    {
+      "id": "case.client-runtime-exception-handler",
+      "javaRuntimeIds": [
+        "java-runtime-556c83af3dfa13c70453"
+      ],
+      "javaNames": [
+        "ClientRuntimeExHandlerInvalidAgg"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeExceptionHandler.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeExceptionHandlerInvalidAggregateParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "exception",
+        "aggregate-plugin",
+        "panic-boundary",
+        "error-propagation",
+        "statement-context"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java's invalid aggregation function throws RuntimeException from enter and the no-handler regression expects sendEventBean to throw EPException. Go registers the equivalent stateful aggregate by stable name and treats a panic from user-owned factory/state evaluation as an extension-boundary failure: Engine.SendEvent returns ErrorState containing plugin myinvalidagg, statement ABCName and Sample exception. Only the typed aggregate-plugin panic marker is recovered; unrelated runtime panics are rethrown. Java's separately invoked configuration scenarios for duplicated exception-handler factories and ExceptionHandlerContext callbacks are not runtime inventory executions and remain an explicit follow-up rather than being claimed by this case."
     }
   ],
   "mappings": [
@@ -13372,6 +13423,10 @@
     {
       "capabilityId": "client.runtime.time-control",
       "caseId": "case.client-runtime-time-control"
+    },
+    {
+      "capabilityId": "client.runtime.exception-boundary",
+      "caseId": "case.client-runtime-exception-handler"
     }
   ]
 }
