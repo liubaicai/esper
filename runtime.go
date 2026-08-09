@@ -282,6 +282,8 @@ type Engine struct {
 	contextStatementRefs               map[string]int
 	pendingContextEvents               []contextNotification
 	variableChangeListeners            map[string][]VariableChangeListener
+	subscriberErrorMu                  sync.RWMutex
+	subscriberErrorHandler             SubscriberErrorHandler
 	pendingVariableChanges             []VariableChangeEvent
 	tables                             map[string]*Table
 	namedWindows                       map[string]*NamedWindow
@@ -1332,6 +1334,7 @@ type Statement struct {
 	name                     string
 	runtime                  statementRuntime
 	listeners                map[uint64]Listener
+	subscriber               Subscriber
 	nextSubID                uint64
 	state                    StatementState
 	closed                   bool
@@ -1706,6 +1709,34 @@ func (s *Statement) Subscribe(listener Listener) (Subscription, error) {
 	id := s.nextSubID
 	s.listeners[id] = listener
 	return Subscription{statement: s, id: id}, nil
+}
+
+// SetSubscriber replaces the statement's single subscriber. Passing nil
+// removes it. Subscribers coexist with any number of listeners and receive
+// the same logical batches through the typed SubscriberUpdate contract.
+func (s *Statement) SetSubscriber(subscriber Subscriber) error {
+	if s == nil {
+		return NewError(ErrorState, "nil statement")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed || s.state == StatementDestroyed {
+		return NewError(ErrorState, "statement is destroyed")
+	}
+	if subscriber != nil && s.plan.query.subscriberDisallowed {
+		return NewError(ErrorInvalidRule, "setting a subscriber is not allowed for this statement")
+	}
+	s.subscriber = subscriber
+	return nil
+}
+
+func (s *Statement) HasSubscriber() bool {
+	if s == nil {
+		return false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.subscriber != nil
 }
 
 // SubscribeWithReplay registers a listener and synchronously delivers the
@@ -2460,8 +2491,37 @@ func (s *Statement) markClosedLocked() {
 		s.closed = true
 		s.state = StatementDestroyed
 		s.listeners = make(map[uint64]Listener)
+		s.subscriber = nil
 		s.mu.Unlock()
 	})
+}
+
+// SetSubscriberErrorHandler replaces the engine-wide subscriber failure
+// observer. Subscriber callback errors and panics never fail Send/Route or
+// prevent listeners and sinks from receiving the same batch.
+func (e *Engine) SetSubscriberErrorHandler(handler SubscriberErrorHandler) {
+	if e == nil {
+		return
+	}
+	e.subscriberErrorMu.Lock()
+	e.subscriberErrorHandler = handler
+	e.subscriberErrorMu.Unlock()
+}
+
+func (e *Engine) reportSubscriberError(ctx context.Context, failure SubscriberError) {
+	if e == nil {
+		return
+	}
+	e.subscriberErrorMu.RLock()
+	handler := e.subscriberErrorHandler
+	e.subscriberErrorMu.RUnlock()
+	if handler == nil {
+		return
+	}
+	func() {
+		defer func() { _ = recover() }()
+		handler(ctx, failure)
+	}()
 }
 
 func (e *Engine) Send(ctx context.Context, eventType string, underlying any) error {
@@ -3436,8 +3496,16 @@ func (s *Statement) dispatch(ctx context.Context, batch ResultBatch) error {
 	for _, id := range listenerIDs {
 		listeners = append(listeners, s.listeners[id])
 	}
+	subscriber := s.subscriber
 	sink := s.plan.query.sink
 	s.mu.RUnlock()
+	if subscriber != nil {
+		if failure, failed := invokeSubscriber(ctx, subscriber, newSubscriberUpdate(s, batch.clone())); failed {
+			if s.engine != nil {
+				s.engine.reportSubscriberError(ctx, failure)
+			}
+		}
+	}
 	for _, listener := range listeners {
 		if err := listener(ctx, batch.clone()); err != nil {
 			return fmt.Errorf("esper: listener for %q: %w", s.name, err)

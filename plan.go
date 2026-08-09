@@ -3233,6 +3233,22 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 		}
 		return window.schema, nil
 	}
+	if query.trigger != nil && query.trigger.action == triggerSetVariables {
+		fields := make([]FieldSpec, 0, len(query.trigger.variableAssignments))
+		seen := make(map[string]struct{}, len(query.trigger.variableAssignments))
+		for _, assignment := range query.trigger.variableAssignments {
+			if _, exists := seen[assignment.Name]; exists {
+				continue
+			}
+			seen[assignment.Name] = struct{}{}
+			definition, ok := e.Variable(assignment.Name)
+			if !ok {
+				return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("variable %q is not registered", assignment.Name))
+			}
+			fields = append(fields, FieldSpec{Name: assignment.Name, Type: definition.Type()})
+		}
+		return NewSchema("result:"+query.name, fields...)
+	}
 	if query.trigger != nil && query.trigger.action == triggerSelectTable {
 		if len(query.selections) == 0 {
 			return Schema{}, NewError(ErrorInvalidRule, "table select requires at least one projection")

@@ -1810,6 +1810,31 @@
         "atomic rollback for future deployment-time side effects outside current statement state and Table snapshots",
         "explicit ambiguity diagnostics for name-only Dataflow statement sources when multiple deployments reuse a name"
       ]
+    },
+    {
+      "id": "client.runtime.subscriber",
+      "domain": "client",
+      "level": "G",
+      "summary": "Single replaceable typed statement subscriber with ordered values, maps, wildcard underlying payloads, new/old batches, listener coexistence, lifecycle policy and isolated callback failures",
+      "javaRefs": [
+        "ClientRuntimeSubscriber",
+        "ClientRuntimeSubscriberDisallowed"
+      ],
+      "goRefs": [
+        "subscriber.go",
+        "runtime.go",
+        "stream.go",
+        "plan.go",
+        "trigger.go",
+        "client_runtime_subscriber_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Java reflection-based method-name, overload and static-method discovery is intentionally replaced by a compile-time Go callback",
+        "listener callback errors continue to use the existing fail-fast Go Listener contract instead of Java logging-and-continue behavior",
+        "strict wall-clock performance thresholds remain environment-specific and are represented by deterministic delivery-count coverage"
+      ]
     }
   ],
   "cases": [
@@ -13090,6 +13115,79 @@
         "go-unit"
       ],
       "difference": "Go represents a Java compiled module as an ordered []Plan passed to Engine.DeployPlans. Explicit names retain declaration order; unnamed plans receive stmt-0, stmt-1 and so on. WithDeploymentStatementNameResolver receives the immutable Plan, original name and index before the Engine lock, and duplicate or blank resolved names abort before any statement becomes visible. Statement names are unique only inside one Deployment: Engine now indexes active statements by stable statement ID, so separate deployments may both contain name 'a', both dispatch, and undeploying one leaves the other active. Deployment.Statement resolves names without global ambiguity. Java EPCompiled module bytecode and its exact EPDeployException wording are not reproduced; typed plans, structured errors and callback errors are the Go replacement."
+    },
+    {
+      "id": "case.client-runtime-subscriber",
+      "javaRuntimeIds": [
+        "java-runtime-e5b0faf36b35b1448d74",
+        "java-runtime-e225ce56aa030a062863",
+        "java-runtime-84f094b761c5323e55fa",
+        "java-runtime-07a176dec247962c25f4",
+        "java-runtime-bd12c46b7912f491d4b7",
+        "java-runtime-0fd320c0131129d7e63a",
+        "java-runtime-469c9e178a1b147d3bb7",
+        "java-runtime-ccb9c723271849524830",
+        "java-runtime-ae2a9175c9e35fa7b3ba",
+        "java-runtime-f2da7c753eef59f43ecc",
+        "java-runtime-317606452a0f67768d3e",
+        "java-runtime-36da6ff369b77221f4c7"
+      ],
+      "javaNames": [
+        "ClientRuntimeSubscriberBindings",
+        "ClientRuntimeSubscriberSubscriberAndListener",
+        "ClientRuntimeSubscriberBindWildcardJoin",
+        "ClientRuntimeSubscriberInvocationTargetEx",
+        "ClientRuntimeSubscriberNamedWindow",
+        "ClientRuntimeSubscriberStartStopStatement",
+        "ClientRuntimeSubscriberVariables",
+        "ClientRuntimeSubscriberSimpleSelectUpdateOnly",
+        "ClientRuntimeSubscriberPerformanceSyntheticUndelivered",
+        "ClientRuntimeSubscriberPerformanceSynthetic",
+        "ClientRuntimeSubscriberAddRemove",
+        "ClientRuntimeSubscriberDisallowed"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeSubscriber.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeSubscriberDisallowed.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeSubscriberBindingsParity",
+        "TestClientRuntimeSubscriberSubscriberAndListenerParity",
+        "TestClientRuntimeSubscriberBindWildcardJoinParity",
+        "TestClientRuntimeSubscriberInvocationTargetExceptionParity",
+        "TestClientRuntimeSubscriberNamedWindowParity",
+        "TestClientRuntimeSubscriberStartStopStatementParity",
+        "TestClientRuntimeSubscriberVariablesParity",
+        "TestClientRuntimeSubscriberSimpleSelectUpdateOnlyParity",
+        "TestClientRuntimeSubscriberPerformanceSyntheticUndeliveredParity",
+        "TestClientRuntimeSubscriberPerformanceSyntheticParity",
+        "TestClientRuntimeSubscriberAddRemoveParity",
+        "TestClientRuntimeSubscriberDisallowedParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "subscriber",
+        "typed-callback",
+        "new-old-stream",
+        "wildcard",
+        "join",
+        "named-window",
+        "variable",
+        "listener-coexistence",
+        "lifecycle",
+        "error-isolation",
+        "invalid",
+        "performance"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go replaces reflective subscriber objects, named methods, overload selection, static update methods and update/updateRStream footprint matching with one explicit Subscriber callback receiving immutable SubscriberUpdate and SubscriberRow values. Rows expose ordered projection Values, Map, Get and wildcard Underlying; join source Event values bind to their underlying Go values. SetSubscriber replaces or removes the single observer, subscribers coexist with listeners, undeploy clears them, and DisallowSubscriber enters canonical Plan identity. Returned errors and panics are isolated from Send/Route, surfaced through SetSubscriberErrorHandler and do not block listeners or sinks. Go listeners retain their existing fail-fast error contract. Variable-set triggers now emit one assignment row; named-window delete remains an old-stream row under the common ResultBatch model. Registered named windows are catalog objects rather than Java create-window EPStatement instances. Performance executions assert deterministic 1,000-event delivery/no-observer behavior without copying machine-specific one-second thresholds."
     }
   ],
   "mappings": [
@@ -13944,6 +14042,10 @@
     {
       "capabilityId": "client.runtime.statement-name",
       "caseId": "case.client-runtime-statement-name"
+    },
+    {
+      "capabilityId": "client.runtime.subscriber",
+      "caseId": "case.client-runtime-subscriber"
     }
   ]
 }

@@ -585,6 +585,7 @@ func (q TriggerQuery) Query(options ...QueryOption) Query {
 		statementPriority:          spec.statementPriority,
 		statementPrioritySet:       spec.statementPrioritySet,
 		statementDrop:              spec.statementDrop,
+		subscriberDisallowed:       spec.subscriberDisallowed,
 	}
 }
 
@@ -1453,6 +1454,23 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 		mutation, err := executeTriggerAction(ctx, s.engine, definition, candidate, now, variables, s, runtime)
 		if err != nil {
 			return err
+		}
+		if definition.action == triggerSetVariables {
+			values := make([]Value, 0, len(definition.variableAssignments))
+			seen := make(map[string]struct{}, len(definition.variableAssignments))
+			for _, assignment := range definition.variableAssignments {
+				if _, exists := seen[assignment.Name]; exists {
+					continue
+				}
+				seen[assignment.Name] = struct{}{}
+				value, exists := variables[assignment.Name]
+				if !exists {
+					value = Missing()
+				}
+				values = append(values, value)
+			}
+			result.New = append(result.New, resultRow(newRow(s.plan.resultSchema, values)))
+			return nil
 		}
 		result.Old = append(result.Old, eventsToResults(mutation.oldEvents)...)
 		result.New = append(result.New, eventsToResults(mutation.newEvents)...)

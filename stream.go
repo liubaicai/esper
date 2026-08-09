@@ -756,6 +756,7 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		statementPriority:          spec.statementPriority,
 		statementPrioritySet:       spec.statementPrioritySet,
 		statementDrop:              spec.statementDrop,
+		subscriberDisallowed:       spec.subscriberDisallowed,
 	}
 }
 
@@ -1250,6 +1251,7 @@ func (u UpdateStreamQuery) Query(options ...QueryOption) Query {
 	query.statementPriority = spec.statementPriority
 	query.statementPrioritySet = spec.statementPrioritySet
 	query.statementDrop = spec.statementDrop
+	query.subscriberDisallowed = spec.subscriberDisallowed
 	if spec.updatePrioritySet {
 		query.updateStream.priority = spec.updatePriority
 	}
@@ -1339,6 +1341,7 @@ func (s OnDemandStream) query(action onDemandAction, predicate Expr, assignments
 		statementPriority:    spec.statementPriority,
 		statementPrioritySet: spec.statementPrioritySet,
 		statementDrop:        spec.statementDrop,
+		subscriberDisallowed: spec.subscriberDisallowed,
 	}
 }
 
@@ -1541,6 +1544,7 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 		statementPriority:          spec.statementPriority,
 		statementPrioritySet:       spec.statementPrioritySet,
 		statementDrop:              spec.statementDrop,
+		subscriberDisallowed:       spec.subscriberDisallowed,
 	}
 }
 
@@ -2519,6 +2523,7 @@ type querySpec struct {
 	statementPriority          int
 	statementPrioritySet       bool
 	statementDrop              bool
+	subscriberDisallowed       bool
 	updatePriority             int
 	updatePrioritySet          bool
 	updateDrop                 bool
@@ -2594,6 +2599,12 @@ func StatementPriority(priority int) QueryOption {
 // its result. Use UpdateDrop for update-istream preprocessing.
 func StatementDrop() QueryOption {
 	return func(spec *querySpec) { spec.statementDrop = true }
+}
+
+// DisallowSubscriber compiles a statement without the single-subscriber
+// observer surface. Listeners and sinks remain available.
+func DisallowSubscriber() QueryOption {
+	return func(spec *querySpec) { spec.subscriberDisallowed = true }
 }
 
 // UpdatePriority sets the update-istream priority, the Go chain equivalent
@@ -2696,7 +2707,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -2749,6 +2760,7 @@ type Query struct {
 	statementPriority          int
 	statementPrioritySet       bool
 	statementDrop              bool
+	subscriberDisallowed       bool
 }
 
 func (q Query) Name() string { return q.name }
@@ -2940,6 +2952,9 @@ func appendQueryModifiers(parts []string, query Query) []string {
 	}
 	if query.statementDrop {
 		parts = append(parts, "statement-drop")
+	}
+	if query.subscriberDisallowed {
+		parts = append(parts, "subscriber-disallowed")
 	}
 	if len(query.indexHints) > 0 {
 		hints := make([]string, 0, len(query.indexHints))

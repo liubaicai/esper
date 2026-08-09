@@ -1050,6 +1050,7 @@ func (p PatternQuery) Query(options ...QueryOption) Query {
 		statementPriority:          spec.statementPriority,
 		statementPrioritySet:       spec.statementPrioritySet,
 		statementDrop:              spec.statementDrop,
+		subscriberDisallowed:       spec.subscriberDisallowed,
 	}
 }
 
