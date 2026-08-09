@@ -3625,3 +3625,144 @@ func TestInfraNWViewsSelectStreamDotStarInsertParity(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestInfraNWViewsBeanBackedParity mirrors InfraBeanBacked: a bean-backed
+// window (create window MyWindowBB#keepall as SupportBean) delivers events
+// whose event type carries the window name through the create listener, a
+// plain consumer statement and an on-update trigger. Esper runs the
+// execution under the object-array/map/default/Avro representation
+// annotations, but the representation is inert for create-window-as-bean-type
+// (every rep asserts BeanEventType with the SupportBean underlying), so one
+// Go pass covers the matrix. Esper's BeanEventType/NAMED_WINDOW type-class
+// metadata and the isStatelessSelect SPI flag have no Go public-API
+// counterparts; the observable proxies asserted here are the window-named
+// event type and the bean underlying on every delivered event.
+func TestInfraNWViewsBeanBackedParity(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterStruct[nwViewsBean](env, "SupportBean")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[nwViewsBeanA](env, "SupportBean_A"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowBB", schema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	source := From[nwViewsBean](env, "SupportBean")
+	insertPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"MyWindowBB",
+		SetColumn("theString", Field[nwViewsBean, string]("theString")),
+		SetColumn("intBoxed", Field[nwViewsBean, int]("intBoxed")),
+		SetColumn("longBoxed", Field[nwViewsBean, int64]("longBoxed")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromNamedWindow(env, "MyWindowBB").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(OnEvent(From[nwViewsBeanA](env, "SupportBean_A")).UpdateNamedWindow(
+		"MyWindowBB",
+		Literal(true),
+		SetColumn("theString", Literal("s")),
+	).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	insertDeployment, err := engine.Deploy(context.Background(), insertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updateDeployment, err := engine.Deploy(context.Background(), updatePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	window, ok := engine.NamedWindow("MyWindowBB")
+	if !ok {
+		t.Fatal("bean-backed window is missing")
+	}
+
+	// assertEvent(event, "MyWindowBB"): window-named event type with the
+	// bean underlying.
+	assertWindowEvent := func(label string, event Event) {
+		t.Helper()
+		if got := event.TypeName(); got != "MyWindowBB" {
+			t.Fatalf("%s event type = %q, want %q", label, got, "MyWindowBB")
+		}
+		if _, isBean := event.Underlying().(nwViewsBean); !isBean {
+			t.Fatalf("%s underlying = %T, want nwViewsBean", label, event.Underlying())
+		}
+	}
+	var createNew []Event
+	if _, err := window.Subscribe(func(_ context.Context, delta NamedWindowDelta) error {
+		createNew = append(createNew, delta.New...)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var consumerNew []Event
+	if _, err := consumerDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			event, ok := result.Event()
+			if !ok {
+				t.Fatalf("consumer result is not an event: %#v", result)
+			}
+			consumerNew = append(consumerNew, event)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := engine.SendEvent(context.Background(), nwViewsBean{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(createNew) != 1 {
+		t.Fatalf("create listener new count = %d, want 1", len(createNew))
+	}
+	assertWindowEvent("create", createNew[0])
+	if len(consumerNew) != 1 {
+		t.Fatalf("s0 listener new count = %d, want 1", len(consumerNew))
+	}
+	assertWindowEvent("s0", consumerNew[0])
+
+	// on SupportBean_A update MyWindowBB set theString='s': the update
+	// trigger statement delivers the updated row typed with the window name.
+	var updateNew []Event
+	if _, err := updateDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			event, ok := result.Event()
+			if !ok {
+				t.Fatalf("update result is not an event: %#v", result)
+			}
+			updateNew = append(updateNew, event)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), nwViewsBeanA{ID: "A1"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(updateNew) != 1 {
+		t.Fatalf("update listener new count = %d, want 1", len(updateNew))
+	}
+	assertWindowEvent("update", updateNew[0])
+	if got := updateNew[0].Get("theString").Any(); got != "s" {
+		t.Fatalf("update theString = %#v, want %q", got, "s")
+	}
+
+	for _, deployment := range []*Deployment{insertDeployment, consumerDeployment, updateDeployment} {
+		if err := deployment.Undeploy(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
