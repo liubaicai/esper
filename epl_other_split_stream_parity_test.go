@@ -563,6 +563,84 @@ func TestSplitStreamPreemptiveNamedWindowParity(t *testing.T) {
 	}
 }
 
+func TestSplitStreamSingleInsertContextParity(t *testing.T) {
+	env := newSplitStreamEnvironment(t)
+	if _, err := RegisterStruct[splitStreamSupportBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	registerSplitMapTarget(t, env, "SomeOtherStream",
+		FieldDef("cid", reflect.TypeOf(int(0))),
+		FieldDef("criteria", reflect.TypeOf((*splitStreamSupportBean)(nil))),
+		FieldDef("event", reflect.TypeOf((*splitStreamSupportBeanS0)(nil))),
+	)
+	if _, err := CreateInitiatedContext(
+		env,
+		"mycontext",
+		Literal("global"),
+		Equal[string](TypeName(EventValue[Event]()), Literal("SupportBean")),
+	); err != nil {
+		t.Fatal(err)
+	}
+	criteriaUnderlying := Func1[Event, *splitStreamSupportBean](
+		"split-context-criteria-underlying",
+		func(event Event) *splitStreamSupportBean {
+			value, _ := event.Underlying().(*splitStreamSupportBean)
+			return value
+		},
+		ContextInitiatingEvent(),
+	)
+	triggerUnderlying := Func1[Event, *splitStreamSupportBeanS0](
+		"split-context-trigger-underlying",
+		func(event Event) *splitStreamSupportBeanS0 {
+			value, _ := event.Underlying().(*splitStreamSupportBeanS0)
+			return value
+		},
+		EventValue[Event](),
+	)
+	plan, err := env.Build(OnEvent(From[splitStreamSupportBeanS0](env, "SupportBean_S0")).SplitFirst(
+		SplitInto("SomeOtherStream",
+			Alias("cid", ContextID()),
+			Alias("criteria", criteriaUnderlying),
+			Alias("event", triggerUnderlying),
+		),
+	).Query(StatementName("split-single-insert-context"), WithContext("mycontext")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	consumer := deploySplitConsumer(t, env, engine, "SomeOtherStream")
+	if _, err := engine.Deploy(context.Background(), plan); err != nil {
+		t.Fatal(err)
+	}
+	criteria := &splitStreamSupportBean{TheString: "E1"}
+	trigger := &splitStreamSupportBeanS0{ID: 1}
+	if err := engine.SendEvent(context.Background(), criteria); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), trigger); err != nil {
+		t.Fatal(err)
+	}
+	if len(consumer.events) != 1 {
+		t.Fatalf("single-insert context events = %#v", consumer.events)
+	}
+	result := consumer.events[0]
+	cid, ok := result.Get("cid").Any().(int)
+	if !ok || cid < 0 {
+		t.Fatalf("context id = %#v", result.Get("cid"))
+	}
+	if got := result.Get("criteria").Any(); got != criteria {
+		t.Fatalf("criteria identity = %#v, want %p", got, criteria)
+	}
+	if got := result.Get("event").Any(); got != trigger {
+		t.Fatalf("trigger identity = %#v, want %p", got, trigger)
+	}
+	descriptors, err := engine.ContextPartitionDescriptors("mycontext", ContextPartitionSelectorAll{})
+	if err != nil || len(descriptors) != 1 || descriptors[0].ID != cid {
+		t.Fatalf("context descriptor = %#v, err=%v, projected id=%d", descriptors, err, cid)
+	}
+}
+
 func TestSplitStream2SplitNoDefaultOutputFirstParity(t *testing.T) {
 	env := newSplitStreamEnvironment(t)
 	registerSplitBeanTarget(t, env, "AStream2SP")
