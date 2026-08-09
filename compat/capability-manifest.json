@@ -12183,7 +12183,8 @@
         "java-runtime-9df01211ef2240a5163a",
         "java-runtime-d4c2173556aad17967ac",
         "java-runtime-165ebb18d797a49d9d9e",
-        "java-runtime-d887456a166d0ac07777"
+        "java-runtime-d887456a166d0ac07777",
+        "java-runtime-3924935c21e61187d9e3"
       ],
       "javaNames": [
         "EPLOtherSplitStream2SplitNoDefaultOutputFirst",
@@ -12195,7 +12196,8 @@
         "EPLOtherSplitStream4Split",
         "EPLOtherSplitStreamSubquery",
         "EPLOtherSplitStreamSubqueryMultikeyWArray",
-        "EPLOtherSplitStreamFromClause"
+        "EPLOtherSplitStreamFromClause",
+        "EPLOtherSplitStreamSplitPremptiveNamedWindow"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSplitStream.java"
@@ -12210,7 +12212,8 @@
         "TestSplitStream4SplitParity",
         "TestSplitStreamSubqueryParity",
         "TestSplitStreamSubqueryMultikeyWArrayParity",
-        "TestSplitStreamFromClauseParity"
+        "TestSplitStreamFromClauseParity",
+        "TestSplitStreamPreemptiveNamedWindowParity"
       ],
       "tags": [
         "correctness",
@@ -12228,7 +12231,10 @@
         "array",
         "contained-event",
         "context",
-        "output-when-terminated"
+        "output-when-terminated",
+        "named-window",
+        "preemptive",
+        "representation"
       ],
       "status": "partial",
       "evidence": [
@@ -12236,7 +12242,7 @@
         "go-unit",
         "java-suite-TestSuiteEPLOther"
       ],
-      "difference": "Go exposes SplitFirst and SplitAll on a typed TriggerStream, with explicit SplitInto/SplitIntoWhen branches and pre-registered target schemas instead of EPL/SODA split clauses. SplitFrom(source).Into/IntoWhen adds a branch-local fluent source derived from the on-event root; source/filter/contained-event chains are evaluated branch-first so output-all preserves Begin/body/End route ordering, output-first selects the first branch producing rows, and one selected contained branch may emit multiple rows. SplitFirst stops after the first true branch, SplitAll emits every true branch, an unconditional final branch is the default, and when no branch matches the split statement emits the original source event. Wildcard branches preserve source fields through target-schema projection; named projections evaluate against the source event and may read ContainedParentField/ContainedParentEvent. Branch predicates and projections share the statement subquery registry: the scalar lastevent case preserves Null before SupportBean_S0 arrives and selects p00/p01 after it, while SubqueryGroupScalar over []int keys returns one-group sums and Null for multiple groups without requiring Go-comparable array keys. The FromClause documentation flow routes Begin, Item and End events through one queue, allowing an initiated-terminated context to emit the item count at termination. The builder rejects missing branches, unknown targets, unrelated/stateful branch sources, non-bool conditions and direct aggregate projections; aggregate expressions remain valid inside a subquery boundary. SODA/model round-trips are intentionally absent. Context single-insert projection and preemptive named-window insertion remain open in this partial case."
+      "difference": "Go exposes SplitFirst and SplitAll on a typed TriggerStream, with explicit SplitInto/SplitIntoWhen branches and pre-registered target schemas instead of EPL/SODA split clauses. SplitFrom(source).Into/IntoWhen adds a branch-local fluent source derived from the on-event root; source/filter/contained-event chains are evaluated branch-first so output-all preserves Begin/body/End route ordering, output-first selects the first branch producing rows, and one selected contained branch may emit multiple rows. SplitFirst stops after the first true branch, SplitAll emits every true branch, an unconditional final branch is the default, and when no branch matches the split statement emits the original source event. Wildcard branches preserve source fields through target-schema projection; named projections evaluate against the source event and may read ContainedParentField/ContainedParentEvent. A SplitInto target may name either a registered event type or a Named Window. Named Window targets are inserted immediately while ordinary stream routes remain queued, so a later-declared window branch is visible to an earlier-declared ordinary route's on-select cascade; map, ObjectArray, Avro, JSON and typed JSON target representations preserve their schema kind. Branch predicates and projections share the statement subquery registry: the scalar lastevent case preserves Null before SupportBean_S0 arrives and selects p00/p01 after it, while SubqueryGroupScalar over []int keys returns one-group sums and Null for multiple groups without requiring Go-comparable array keys. The FromClause documentation flow routes Begin, Item and End events through one queue, allowing an initiated-terminated context to emit the item count at termination. The builder rejects missing branches, unknown targets, unrelated/stateful branch sources, non-bool conditions and direct aggregate projections; aggregate expressions remain valid inside a subquery boundary. SODA/model round-trips are intentionally absent. Context single-insert projection remains open in this partial case."
     }
   ],
   "mappings": [

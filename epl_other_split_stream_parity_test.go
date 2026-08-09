@@ -40,6 +40,14 @@ type splitStreamOrder struct {
 	OrderDetail splitStreamOrderDetail `esper:"orderdetail"`
 }
 
+type splitStreamJSONTrigger struct {
+	Trigger int `json:"trigger" esper:"trigger"`
+}
+
+type splitStreamJSONTypeTwo struct {
+	Col2 int `json:"col2" esper:"col2"`
+}
+
 type splitStreamRecorder struct {
 	events []Event
 	after  func(Event)
@@ -400,6 +408,159 @@ func TestSplitStreamFromClauseParity(t *testing.T) {
 			t.Fatalf("terminated context counts = %#v, want [1]", counts)
 		}
 	})
+}
+
+func TestSplitStreamPreemptiveNamedWindowParity(t *testing.T) {
+	type representationCase struct {
+		name     string
+		register func(*Environment, string, []FieldSpec) (Schema, error)
+		send     func(*testing.T, *Engine, Schema)
+	}
+	intType := reflect.TypeOf(int(0))
+	tests := []representationCase{
+		{
+			name: "map",
+			register: func(env *Environment, name string, fields []FieldSpec) (Schema, error) {
+				return RegisterMap(env, name, fields)
+			},
+			send: func(t *testing.T, engine *Engine, _ Schema) {
+				t.Helper()
+				if err := engine.Send(context.Background(), "TypeTrigger", map[string]any{"trigger": 0}); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "object-array",
+			register: func(env *Environment, name string, fields []FieldSpec) (Schema, error) {
+				return RegisterObjectArray(env, name, fields)
+			},
+			send: func(t *testing.T, engine *Engine, _ Schema) {
+				t.Helper()
+				if err := engine.SendObjectArray(context.Background(), "TypeTrigger", []any{0}); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "avro",
+			register: func(env *Environment, name string, fields []FieldSpec) (Schema, error) {
+				return RegisterAvro(env, name, fields)
+			},
+			send: func(t *testing.T, engine *Engine, schema Schema) {
+				t.Helper()
+				record, err := NewAvroRecord(schema)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := record.Set("trigger", 0); err != nil {
+					t.Fatal(err)
+				}
+				if err := engine.SendAvro(context.Background(), "TypeTrigger", record); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "json",
+			register: func(env *Environment, name string, fields []FieldSpec) (Schema, error) {
+				return RegisterJSON(env, name, fields)
+			},
+			send: func(t *testing.T, engine *Engine, _ Schema) {
+				t.Helper()
+				if err := engine.SendJSON(context.Background(), "TypeTrigger", []byte(`{"trigger":0}`)); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "json-provided",
+			register: func(env *Environment, name string, fields []FieldSpec) (Schema, error) {
+				if name == "TypeTrigger" {
+					return RegisterJSONFor[splitStreamJSONTrigger](env, name, nil)
+				}
+				return RegisterJSONFor[splitStreamJSONTypeTwo](env, name, nil)
+			},
+			send: func(t *testing.T, engine *Engine, _ Schema) {
+				t.Helper()
+				if err := engine.SendJSON(context.Background(), "TypeTrigger", []byte(`{"trigger":0}`)); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			env := NewEnvironment()
+			triggerSchema, err := testCase.register(env, "TypeTrigger", []FieldSpec{FieldDef("trigger", intType)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			typeTwoSchema, err := testCase.register(env, "TypeTwo", []FieldSpec{FieldDef("col2", intType)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := RegisterMap(env, "OtherStream", []FieldSpec{FieldDef("value", intType)}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := CreateNamedWindow(env, "WinTwo", typeTwoSchema, NamedWindowRetention(KeepAll())); err != nil {
+				t.Fatal(err)
+			}
+
+			splitPlan, err := env.Build(OnRecord(FromAny(env, "TypeTrigger")).SplitAll(
+				SplitInto("OtherStream", Alias("value", Literal(1))),
+				SplitInto("WinTwo", Alias("col2", Literal(2))),
+			).Query(StatementName("split-preemptive-named-window")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			selectPlan, err := env.Build(OnRecord(FromAny(env, "OtherStream")).SelectFromNamedWindow(
+				"WinTwo", nil, Alias("col2", NamedWindowField[int]("col2")),
+			).Query(StatementName("split-preemptive-select")))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			engine := NewEngine(env)
+			selectDeployment, err := engine.Deploy(context.Background(), selectPlan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var observed []int
+			if _, err := selectDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+				for _, result := range batch.New {
+					row, ok := result.Row()
+					if !ok {
+						return NewError(ErrorTypeMismatch, "preemptive named-window result is not a row")
+					}
+					observed = append(observed, row.Get("col2").Any().(int))
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := engine.Deploy(context.Background(), splitPlan); err != nil {
+				t.Fatal(err)
+			}
+
+			testCase.send(t, engine, triggerSchema)
+			if !reflect.DeepEqual(observed, []int{2}) {
+				t.Fatalf("on-select observed = %#v, want [2]", observed)
+			}
+			window, ok := engine.NamedWindow("WinTwo")
+			if !ok {
+				t.Fatal("WinTwo is missing")
+			}
+			events, err := window.Snapshot(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(events) != 1 || events[0].Get("col2").Any() != 2 || events[0].Schema().Kind() != typeTwoSchema.Kind() {
+				t.Fatalf("WinTwo snapshot = %#v, want one %v row with col2=2", events, typeTwoSchema.Kind())
+			}
+		})
+	}
 }
 
 func TestSplitStream2SplitNoDefaultOutputFirstParity(t *testing.T) {

@@ -126,7 +126,8 @@ func (e *Environment) validateSplitStream(definition *triggerDefinition) error {
 		if branch.Target == "" {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("split-stream branch %d requires an insert target", index))
 		}
-		if _, ok := e.Schema(branch.Target); !ok {
+		targetSchema, targetOK := splitStreamTargetSchema(e, branch.Target)
+		if !targetOK {
 			return NewError(ErrorUnknownName, fmt.Sprintf("split-stream branch %d references unknown event type %q", index, branch.Target))
 		}
 		if branch.Condition != nil {
@@ -148,11 +149,21 @@ func (e *Environment) validateSplitStream(definition *triggerDefinition) error {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("split-stream branch %d projection %d cannot contain aggregation", index, selectionIndex))
 			}
 		}
-		if err := validateMergeInsertSelections(e, input, branch.Target, branch.Selections); err != nil {
+		if err := validateMergeInsertSelectionsAgainstSchema(e, input, branch.Target, targetSchema, branch.Selections, "", Schema{}); err != nil {
 			return fmt.Errorf("split-stream branch %d: %w", index, err)
 		}
 	}
 	return nil
+}
+
+func splitStreamTargetSchema(env *Environment, target string) (Schema, bool) {
+	if env == nil {
+		return Schema{}, false
+	}
+	if window, ok := env.NamedWindow(target); ok {
+		return window.schema, window.schema.valid()
+	}
+	return env.Schema(target)
 }
 
 func splitStreamSharesRoot(trigger, branch *streamNode) bool {
@@ -205,7 +216,9 @@ func (s *Statement) processSplitStreamRuntime(ctx context.Context, runtime *stat
 			if err != nil {
 				return err
 			}
-			s.engine.pendingRoutedEvents = append(s.engine.pendingRoutedEvents, routed)
+			if err := s.deliverSplitStreamEvent(ctx, branch, routed, now, variables); err != nil {
+				return err
+			}
 			matched = true
 			if !definition.splitAll {
 				break
@@ -273,7 +286,9 @@ func (s *Statement) processSplitStreamBranchSources(ctx context.Context, runtime
 			if err != nil {
 				return err
 			}
-			s.engine.pendingRoutedEvents = append(s.engine.pendingRoutedEvents, routed)
+			if err := s.deliverSplitStreamEvent(ctx, branch, routed, now, variables); err != nil {
+				return err
+			}
 			branchMatched = true
 			return nil
 		}
@@ -309,11 +324,42 @@ func (s *Statement) processSplitStreamBranchSources(ctx context.Context, runtime
 	return result, nil
 }
 
+// deliverSplitStreamEvent keeps ordinary stream routes queued until the
+// trigger statement has completed, while applying Named Window targets
+// immediately. Esper gives data-window inserts preemptive visibility: an
+// earlier ordinary route may cascade only after every split branch has run,
+// so it observes a later-declared window insert from the same trigger.
+func (s *Statement) deliverSplitStreamEvent(ctx context.Context, branch SplitStreamBranch, routed Event, now time.Time, variables map[string]Value) error {
+	if s == nil || s.engine == nil {
+		return NewError(ErrorDependency, "split-stream requires an engine")
+	}
+	if _, ok := s.engine.env.NamedWindow(branch.Target); !ok {
+		s.engine.pendingRoutedEvents = append(s.engine.pendingRoutedEvents, routed)
+		return nil
+	}
+	window, ok := s.engine.ensureNamedWindowLocked(branch.Target)
+	if !ok {
+		return NewError(ErrorUnknownName, fmt.Sprintf("split-stream named window %q is not available", branch.Target))
+	}
+	target, exists, err := window.scopedForVariables(variables, true)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	delta, err := target.insertWithVariables(ctx, now, routed.Underlying(), variables)
+	if err != nil {
+		return err
+	}
+	return s.engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, variables, s)
+}
+
 func (s *Statement) splitStreamEvent(branch SplitStreamBranch, source Event, evaluation EvalContext, now time.Time) (Event, error) {
 	if s == nil || s.engine == nil || s.engine.env == nil {
 		return Event{}, NewError(ErrorDependency, "split-stream requires an engine")
 	}
-	target, ok := s.engine.env.Schema(branch.Target)
+	target, ok := splitStreamTargetSchema(s.engine.env, branch.Target)
 	if !ok {
 		return Event{}, NewError(ErrorUnknownName, fmt.Sprintf("split-stream target %q is not registered", branch.Target))
 	}

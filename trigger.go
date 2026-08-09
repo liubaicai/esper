@@ -1243,6 +1243,16 @@ func validateMergeInsertSelectionsForTarget(e *Environment, input *streamNode, t
 	if !ok {
 		return NewError(ErrorUnknownName, fmt.Sprintf("merge insert references unknown event type %q", target))
 	}
+	return validateMergeInsertSelectionsAgainstSchema(e, input, target, targetSchema, selections, targetKind, targetScope)
+}
+
+func validateMergeInsertSelectionsAgainstSchema(e *Environment, input *streamNode, target string, targetSchema Schema, selections []Selection, targetKind string, targetScope Schema) error {
+	if e == nil {
+		return NewError(ErrorDependency, "merge insert requires an environment")
+	}
+	if !targetSchema.valid() {
+		return NewError(ErrorUnknownName, fmt.Sprintf("merge insert references unknown event type %q", target))
+	}
 	if len(selections) == 0 {
 		return NewError(ErrorInvalidRule, "merge insert requires at least one projection")
 	}
