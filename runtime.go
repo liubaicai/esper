@@ -210,6 +210,7 @@ type engineConfig struct {
 	matchRecognize MatchRecognizeRuntimeConfig
 	runtimeURI     string
 	services       map[string]any
+	lockActivity   bool
 }
 
 type EngineOption func(*engineConfig)
@@ -245,13 +246,21 @@ func WithRuntimeService(name string, service any) EngineOption {
 	}
 }
 
+// WithLockActivityTracing enables an in-memory trace of exact Engine mutex
+// attempt/acquire/release activity. Tracing is disabled by default and does
+// not write to process-global logs; callers inspect it through LockActivity.
+func WithLockActivityTracing() EngineOption {
+	return func(cfg *engineConfig) { cfg.lockActivity = true }
+}
+
 // Engine owns deployed statements and the explicit processing clock.
 type Engine struct {
-	mu                                 sync.Mutex
+	mu                                 runtimeMutex
 	env                                *Environment
 	clock                              *VirtualClock
 	runtimeURI                         string
 	services                           map[string]any
+	lockActivity                       *lockActivityRecorder
 	matchRecognizeStatePool            *rowRecogStatePool
 	matchRecognizeStateLimitListeners  []MatchRecognizeStateLimitListener
 	pendingMatchRecognizeStateLimits   []MatchRecognizeStateLimitEvent
@@ -332,6 +341,10 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		deployments:                     make(map[string]*Deployment),
 		dataflows:                       make(map[*DataflowInstance]struct{}),
 		savedDataflowInstances:          make(map[string]*DataflowInstance),
+	}
+	if cfg.lockActivity {
+		engine.lockActivity = newLockActivityRecorder()
+		engine.mu.recorder = engine.lockActivity
 	}
 	for name, service := range cfg.services {
 		engine.services[name] = service

@@ -1674,6 +1674,26 @@
         "broader deployment/module catalog queries and concurrent traversal mutation traces",
         "EPL reflective compiler, parser and SODA model services remain outside the typed Go public API"
       ]
+    },
+    {
+      "id": "client.runtime.lock-activity",
+      "domain": "client",
+      "level": "S",
+      "summary": "Optional in-memory Engine mutex activity tracing with exact attempt, acquired and released transitions",
+      "javaRefs": [
+        "ClientRuntimeLockLogging"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "runtime_lock_activity.go",
+        "client_runtime_lock_logging_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "shared concurrent contention traces that compare Java lock-log ordering with Go diagnostic snapshots",
+        "lock diagnostics for storage-local and connector-owned mutexes outside the Engine transaction boundary"
+      ]
     }
   ],
   "cases": [
@@ -12700,6 +12720,38 @@
         "go-unit"
       ],
       "difference": "Java produces distinct EPCompiled artifact kinds for module EPL and fire-and-forget queries and rejects using one through the other's runtime service. Go deliberately has one immutable typed logical Plan with no text compiler mode bit; the same read-only named-window Plan is valid for ExecuteFireAndForget and Deploy, and both return the same E1 snapshot. This removes an artifact-category misuse rather than weakening query validation, so the Java exception shape is not reproduced."
+    },
+    {
+      "id": "case.client-runtime-lock-logging",
+      "javaRuntimeIds": [
+        "java-runtime-4c8fb1da65a0efa3833d"
+      ],
+      "javaNames": [
+        "ClientRuntimeLockLogging"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeLockLogging.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeLockLoggingParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "lock-activity",
+        "mutex",
+        "diagnostics",
+        "aggregate",
+        "safe-iterator",
+        "lifecycle"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java disables its internal timer thread, enables runtime lock-activity logging, sends one SupportBean to a count(*) statement and only asserts that the safe iterator returns c0=1; it does not assert logger text. Go already uses an explicit virtual clock with no internal timer thread by default. WithLockActivityTracing therefore enables an opt-in, bounded in-memory trace of the Engine transaction mutex instead of writing process-global logs. The detached trace records monotonic attempt/acquired/released transitions, supports clear without resetting sequence, and the parity test verifies balanced activity around deploy, send, snapshot and undeploy together with c0=1."
     }
   ],
   "mappings": [
@@ -13530,6 +13582,10 @@
     {
       "capabilityId": "client.runtime.self-management",
       "caseId": "case.client-runtime-wrong-compile-method"
+    },
+    {
+      "capabilityId": "client.runtime.lock-activity",
+      "caseId": "case.client-runtime-lock-logging"
     }
   ]
 }
