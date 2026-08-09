@@ -1787,6 +1787,29 @@
         "metadata on declaration kinds beyond statements and event schemas, including tables, named windows, contexts and dataflows",
         "Java annotation proxy equality, hash and rendering are replaced by Go value snapshots rather than reproduced"
       ]
+    },
+    {
+      "id": "client.runtime.statement-name",
+      "domain": "client",
+      "level": "G",
+      "summary": "Deployment-local statement naming with multi-plan deployment, deterministic unassigned names, runtime name resolution and cross-deployment name reuse",
+      "javaRefs": [
+        "ClientRuntimeStatementName"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "dataflow.go",
+        "runtime_test.go",
+        "client_runtime_statement_name_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "multi-plan deployment with independently bound substitution-parameter snapshots",
+        "versioned module metadata, dependencies and deployment ordering beyond an explicit Plan slice",
+        "atomic rollback for future deployment-time side effects outside current statement state and Table snapshots",
+        "explicit ambiguity diagnostics for name-only Dataflow statement sources when multiple deployments reuse a name"
+      ]
     }
   ],
   "cases": [
@@ -13022,6 +13045,51 @@
         "go-unit"
       ],
       "difference": "Go replaces EPL @-annotation text, Java imports/class loading and reflection proxies with typed fluent options and immutable value contracts. StatementDescription, StatementTag, WithStatementHints and StatementNoLock expose built-ins; custom definitions validate required/defaulted attributes, exact Go types, duplicate/unknown fields, nil arrays/elements, nested definition identity, annotation arrays, named string enums and reflect.Type class values. Statement and Query return detached metadata snapshots, schema annotations survive registration and enter Plan identity, and a schema-annotated map event still flows through the normal runtime. Case-insensitive ParseAnnotationStringEnum replaces annotation-specific enum imports. Java EPL/SODA formatting, parser syntax categories, annotation proxy equals/hashCode/toString and raw class names are intentionally not reproduced. NoLock is exposed as an instruction while Go retains its Engine-wide serialized transaction boundary; rule-specific semantic controls remain explicit fluent methods rather than being inferred from metadata."
+    },
+    {
+      "id": "case.client-runtime-statement-name",
+      "javaRuntimeIds": [
+        "java-runtime-4cbea3f4a666e1fd22d8",
+        "java-runtime-8dc95d87075b8889e155",
+        "java-runtime-7935382ff09dde98aad7",
+        "java-runtime-17304d53df8964468b61"
+      ],
+      "javaNames": [
+        "ClientRuntimeStatementAllowNameDuplicate",
+        "ClientRuntimeSingleModuleTwoStatementsNoDep",
+        "ClientRuntimeStatementNameUnassigned",
+        "ClientRuntimeStatementNameRuntimeResolverDuplicate"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeStatementName.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeStatementAllowNameDuplicateParity",
+        "TestClientRuntimeSingleModuleTwoStatementsNoDependencyParity",
+        "TestClientRuntimeStatementNameUnassignedParity",
+        "TestClientRuntimeStatementNameRuntimeResolverDuplicateParity",
+        "TestBuildRejectsUnknownFieldAndLifecycleIsIdempotent"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "statement-name",
+        "deployment",
+        "multi-plan",
+        "runtime-resolver",
+        "duplicate",
+        "unassigned",
+        "lifecycle",
+        "invalid"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go represents a Java compiled module as an ordered []Plan passed to Engine.DeployPlans. Explicit names retain declaration order; unnamed plans receive stmt-0, stmt-1 and so on. WithDeploymentStatementNameResolver receives the immutable Plan, original name and index before the Engine lock, and duplicate or blank resolved names abort before any statement becomes visible. Statement names are unique only inside one Deployment: Engine now indexes active statements by stable statement ID, so separate deployments may both contain name 'a', both dispatch, and undeploying one leaves the other active. Deployment.Statement resolves names without global ambiguity. Java EPCompiled module bytecode and its exact EPDeployException wording are not reproduced; typed plans, structured errors and callback errors are the Go replacement."
     }
   ],
   "mappings": [
@@ -13872,6 +13940,10 @@
     {
       "capabilityId": "client.runtime.statement-metadata",
       "caseId": "case.client-runtime-statement-annotation"
+    },
+    {
+      "capabilityId": "client.runtime.statement-name",
+      "caseId": "case.client-runtime-statement-name"
     }
   ]
 }

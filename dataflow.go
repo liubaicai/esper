@@ -3183,7 +3183,12 @@ func (e *Engine) dataflowFindStatement(name string) *Statement {
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	return e.statements[name]
+	for _, statement := range e.sortedStatementsLocked() {
+		if statement != nil && statement.Name() == name {
+			return statement
+		}
+	}
+	return nil
 }
 
 func (e *Engine) dataflowFindStatementInDeployment(deploymentID, name string) *Statement {

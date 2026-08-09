@@ -1832,6 +1832,23 @@ func (d *Deployment) Statements() []*Statement {
 	return append([]*Statement(nil), d.statements...)
 }
 
+// Statement returns the statement with the given name within this deployment.
+// Statement names are unique inside one deployment but may be reused by a
+// different deployment.
+func (d *Deployment) Statement(name string) (*Statement, bool) {
+	if d == nil {
+		return nil, false
+	}
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	for _, statement := range d.statements {
+		if statement != nil && statement.name == name {
+			return statement, true
+		}
+	}
+	return nil, false
+}
+
 func (d *Deployment) Undeploy(ctx context.Context) error {
 	if d == nil || d.engine == nil {
 		return nil
@@ -1839,75 +1856,204 @@ func (d *Deployment) Undeploy(ctx context.Context) error {
 	return d.engine.Undeploy(ctx, d.id)
 }
 
+// DeploymentStatementNameContext describes one plan while a multi-plan
+// deployment resolves its runtime statement names.
+type DeploymentStatementNameContext struct {
+	Index        int
+	Plan         Plan
+	OriginalName string
+}
+
+// DeploymentStatementNameResolver selects the runtime name for one plan.
+// Returning an error aborts the deployment before any statement is visible.
+type DeploymentStatementNameResolver func(DeploymentStatementNameContext) (string, error)
+
+type deploymentConfig struct {
+	nameResolver DeploymentStatementNameResolver
+}
+
+// DeploymentOption configures a DeployPlans operation.
+type DeploymentOption func(*deploymentConfig)
+
+// WithDeploymentStatementNameResolver overrides plan names at deployment
+// time. Resolved names must be non-blank and unique within the deployment.
+func WithDeploymentStatementNameResolver(resolver DeploymentStatementNameResolver) DeploymentOption {
+	return func(config *deploymentConfig) { config.nameResolver = resolver }
+}
+
+type deploymentRequest struct {
+	plan          Plan
+	parameters    ParameterValues
+	parameterized bool
+	name          string
+}
+
 func (e *Engine) Deploy(ctx context.Context, plan Plan) (*Deployment, error) {
-	return e.deploy(ctx, plan, nil, false)
+	return e.deployRequests(ctx, []deploymentRequest{{plan: plan}}, nil)
 }
 
 // DeployWithParameters deploys a live statement with one immutable binding
 // snapshot for its substitution parameters. The values are copied at deploy
 // time and are not retained through the caller's map after this call returns.
 func (e *Engine) DeployWithParameters(ctx context.Context, plan Plan, parameters ParameterValues) (*Deployment, error) {
-	return e.deploy(ctx, plan, parameters, true)
+	return e.deployRequests(ctx, []deploymentRequest{{plan: plan, parameters: parameters, parameterized: true}}, nil)
 }
 
-func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValues, parameterized bool) (*Deployment, error) {
+// DeployPlans deploys multiple immutable plans as one deployment. Plans keep
+// declaration order for dispatch and management traversal. Unnamed plans use
+// stmt-0, stmt-1 and so on, matching Esper module deployment names.
+func (e *Engine) DeployPlans(ctx context.Context, plans []Plan, options ...DeploymentOption) (*Deployment, error) {
+	config := deploymentConfig{}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	requests := make([]deploymentRequest, len(plans))
+	for index, plan := range plans {
+		requests[index] = deploymentRequest{plan: plan}
+	}
+	return e.deployRequests(ctx, requests, config.nameResolver)
+}
+
+func (e *Engine) deployRequests(ctx context.Context, requests []deploymentRequest, resolver DeploymentStatementNameResolver) (*Deployment, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
 	if e == nil || e.env == nil {
 		return nil, NewError(ErrorDependency, "engine has no environment")
 	}
-	if plan.query.env != e.env || plan.schemaVersion == "" {
-		return nil, NewError(ErrorDependency, "plan does not belong to this engine")
+	if len(requests) == 0 {
+		return nil, NewError(ErrorInvalidRule, "deployment requires at least one plan")
 	}
-	parameterTypes, parameterErr := queryParameterTypes(e.env, plan.query)
-	if parameterErr != nil {
-		return nil, WrapError(ErrorInvalidRule, "parameters", parameterErr)
-	}
-	if len(parameterTypes) > 0 && !parameterized {
-		return nil, NewError(ErrorInvalidRule, "statement plan contains substitution parameters; use DeployWithParameters")
-	}
-	if parameterized {
-		if err := validateParameterBindings(parameterTypes, parameters); err != nil {
-			return nil, err
+	seenNames := make(map[string]struct{}, len(requests))
+	for index := range requests {
+		request := &requests[index]
+		if request.plan.query.env != e.env || request.plan.schemaVersion == "" {
+			return nil, NewError(ErrorDependency, fmt.Sprintf("plan %d does not belong to this engine", index))
 		}
+		parameterTypes, parameterErr := queryParameterTypes(e.env, request.plan.query)
+		if parameterErr != nil {
+			return nil, WrapError(ErrorInvalidRule, fmt.Sprintf("plan %d parameters", index), parameterErr)
+		}
+		if len(parameterTypes) > 0 && !request.parameterized {
+			return nil, NewError(ErrorInvalidRule, fmt.Sprintf("plan %d contains substitution parameters; use DeployWithParameters", index))
+		}
+		if request.parameterized {
+			if err := validateParameterBindings(parameterTypes, request.parameters); err != nil {
+				return nil, err
+			}
+		}
+		name := request.plan.query.name
+		if resolver != nil {
+			resolved, err := resolver(DeploymentStatementNameContext{Index: index, Plan: request.plan, OriginalName: name})
+			if err != nil {
+				return nil, WrapError(ErrorDeployment, fmt.Sprintf("resolve statement name for plan %d", index), err)
+			}
+			name = resolved
+		}
+		if name == "" && resolver == nil {
+			name = fmt.Sprintf("stmt-%d", index)
+		}
+		if strings.TrimSpace(name) == "" {
+			return nil, NewError(ErrorDeployment, fmt.Sprintf("statement name resolver returned a blank name for plan %d", index))
+		}
+		if _, exists := seenNames[name]; exists {
+			return nil, NewError(ErrorDeployment, fmt.Sprintf("duplicate statement name %q within deployment", name))
+		}
+		seenNames[name] = struct{}{}
+		request.name = name
+		if request.plan.query.contextName != "" {
+			if _, ok := e.env.Context(request.plan.query.contextName); !ok {
+				return nil, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", request.plan.query.contextName))
+			}
+		}
+	}
+	if err := contextErr(ctx); err != nil {
+		return nil, err
 	}
 	e.mu.Lock()
 	if e.closed {
 		e.mu.Unlock()
 		return nil, NewError(ErrorState, "engine is closed")
 	}
-	if plan.query.contextName != "" {
-		definition, ok := e.env.Context(plan.query.contextName)
-		if !ok {
-			e.mu.Unlock()
-			return nil, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", plan.query.contextName))
-		}
-		if definition.isTemporal() {
-			if _, exists := e.contextTemporalOrigins[plan.query.contextName]; !exists {
-				e.contextTemporalOrigins[plan.query.contextName] = e.clock.Now()
+	e.nextID++
+	deploymentID := fmt.Sprintf("deployment-%d", e.nextID)
+	deployment := &Deployment{engine: e, id: deploymentID, statements: make([]*Statement, 0, len(requests))}
+	tableSnapshots := make(map[string]tableMutationSnapshot)
+	for _, request := range requests {
+		if target := request.plan.query.tableTarget; target != "" {
+			if table := e.tables[target]; table != nil {
+				if _, exists := tableSnapshots[target]; !exists {
+					tableSnapshots[target] = table.snapshotMutationState()
+				}
 			}
 		}
 	}
-	e.nextID++
-	deploymentID := fmt.Sprintf("deployment-%d", e.nextID)
-	name := plan.query.name
-	if name == "" {
-		name = "statement-" + plan.hash[:12]
+	for index, request := range requests {
+		if index > 0 {
+			e.nextID++
+		}
+		statement, err := e.prepareStatementLocked(ctx, deployment, request, e.nextID)
+		if err != nil {
+			for name, snapshot := range tableSnapshots {
+				if table := e.tables[name]; table != nil {
+					table.restoreMutationState(snapshot)
+				}
+			}
+			for _, prepared := range deployment.statements {
+				e.cleanupPreparedStatementLocked(prepared)
+			}
+			e.mu.Unlock()
+			return nil, err
+		}
+		deployment.statements = append(deployment.statements, statement)
 	}
-	if _, exists := e.statements[name]; exists {
-		e.mu.Unlock()
-		return nil, NewError(ErrorDeployment, fmt.Sprintf("statement name %q is already deployed", name))
+	for _, statement := range deployment.statements {
+		e.statements[statement.id] = statement
 	}
+	e.deployments[deploymentID] = deployment
+	for _, statement := range deployment.statements {
+		contextName := statement.plan.query.contextName
+		if contextName == "" {
+			continue
+		}
+		if definition, ok := e.env.Context(contextName); ok && definition.isTemporal() {
+			if _, exists := e.contextTemporalOrigins[contextName]; !exists {
+				e.contextTemporalOrigins[contextName] = e.clock.Now()
+			}
+		}
+		e.ensureContextCreatedLocked(contextName)
+		e.queueContextStatementAddedLocked(statement)
+		if definition, ok := e.env.Context(contextName); ok && definition.isTemporal() {
+			_, _ = statement.syncTemporalContextLocked(e.clock.Now())
+		}
+	}
+	contextEvents := e.takeContextEventsLocked()
+	e.mu.Unlock()
+	e.dispatchContextEvents(contextEvents)
+	for _, statement := range deployment.statements {
+		e.notifyDataflowStatementDeployed(statement)
+	}
+	return deployment, nil
+}
+
+func (e *Engine) prepareStatementLocked(ctx context.Context, deployment *Deployment, request deploymentRequest, deploymentOrder uint64) (*Statement, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	plan := request.plan
+	name := request.name
 	runtimeQuery := plan.query
 	runtimeQuery.name = name
 	statement := &Statement{
 		engine:          e,
-		deploymentOrder: e.nextID,
-		id:              deploymentID + ":" + name,
+		deployment:      deployment,
+		deploymentOrder: deploymentOrder,
+		id:              deployment.id + ":" + name,
 		name:            name,
 		plan:            plan,
-		parameters:      cloneParameterValues(parameters),
+		parameters:      cloneParameterValues(request.parameters),
 		listeners:       make(map[uint64]Listener),
 		state:           StatementStarted,
 		runtime:         newStatementRuntime(runtimeQuery),
@@ -1924,8 +2070,7 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 	statement.runtime.initializeAt(e.clock.Now())
 	if plan.query.tableTarget != "" {
 		if err := statement.runtime.persistAggregateTable(plan, e.clock.Now()); err != nil {
-			e.matchRecognizeStatePool.removeOwner(statement.id)
-			e.mu.Unlock()
+			e.cleanupPreparedStatementLocked(statement)
 			return nil, err
 		}
 	}
@@ -1939,36 +2084,29 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 		}
 	}
 	if err := e.seedNamedWindowRowRecogLocked(ctx, statement); err != nil {
-		e.matchRecognizeStatePool.removeOwner(statement.id)
-		e.mu.Unlock()
+		e.cleanupPreparedStatementLocked(statement)
 		return nil, err
 	}
 	if err := e.seedNamedWindowConsumerLocked(ctx, statement); err != nil {
-		e.matchRecognizeStatePool.removeOwner(statement.id)
-		e.mu.Unlock()
+		e.cleanupPreparedStatementLocked(statement)
 		return nil, err
 	}
 	if err := e.seedEvaluateOnceJoinSidesLocked(ctx, statement); err != nil {
-		e.matchRecognizeStatePool.removeOwner(statement.id)
-		e.mu.Unlock()
+		e.cleanupPreparedStatementLocked(statement)
 		return nil, err
 	}
-	deployment := &Deployment{engine: e, id: deploymentID, statements: []*Statement{statement}}
-	statement.deployment = deployment
-	e.statements[name] = statement
-	e.deployments[deploymentID] = deployment
-	if plan.query.contextName != "" {
-		e.ensureContextCreatedLocked(plan.query.contextName)
-		e.queueContextStatementAddedLocked(statement)
-		if definition, ok := e.env.Context(plan.query.contextName); ok && definition.isTemporal() {
-			_, _ = statement.syncTemporalContextLocked(e.clock.Now())
-		}
+	return statement, nil
+}
+
+func (e *Engine) cleanupPreparedStatementLocked(statement *Statement) {
+	if statement == nil {
+		return
 	}
-	contextEvents := e.takeContextEventsLocked()
-	e.mu.Unlock()
-	e.dispatchContextEvents(contextEvents)
-	e.notifyDataflowStatementDeployed(statement)
-	return deployment, nil
+	e.releaseRowRecogRuntimeLocked(&statement.runtime)
+	e.matchRecognizeStatePool.removeOwner(statement.id)
+	statement.closed = true
+	statement.state = StatementDestroyed
+	statement.listeners = make(map[uint64]Listener)
 }
 
 // seedNamedWindowRowRecogLocked replays the retained contents of a named
@@ -2242,7 +2380,7 @@ func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
 	delete(e.deployments, deploymentID)
 	removedStatements := append([]*Statement(nil), deployment.statements...)
 	for _, statement := range deployment.statements {
-		delete(e.statements, statement.name)
+		delete(e.statements, statement.id)
 		statement.markClosedLocked()
 	}
 	deployment.mu.Lock()

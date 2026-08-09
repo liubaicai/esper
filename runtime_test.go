@@ -180,8 +180,13 @@ func TestBuildRejectsUnknownFieldAndLifecycleIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := engine.Deploy(context.Background(), plan); err == nil {
-		t.Fatal("duplicate statement name must fail")
+	duplicate, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatalf("same statement name in another deployment: %v", err)
+	}
+	t.Cleanup(func() { _ = duplicate.Undeploy(context.Background()) })
+	if duplicate.ID() == deployment.ID() || duplicate.Statements()[0].ID() == deployment.Statements()[0].ID() {
+		t.Fatal("duplicate-name deployments did not receive distinct identities")
 	}
 	if err := deployment.Undeploy(context.Background()); err != nil {
 		t.Fatal(err)
