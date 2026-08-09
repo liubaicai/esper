@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"iter"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 )
@@ -2739,6 +2740,7 @@ type updateStreamDefinition struct {
 type Query struct {
 	env                        *Environment
 	moduleName                 string
+	moduleUses                 []string
 	input                      *streamNode
 	aggregate                  *aggregateDefinition
 	join                       *joinDefinition
@@ -2776,6 +2778,10 @@ type Query struct {
 
 func (q Query) Name() string   { return q.name }
 func (q Query) Module() string { return q.moduleName }
+
+// ModuleUses returns the detached public-module dependency selection applied
+// by ModulePath.Build.
+func (q Query) ModuleUses() []string { return append([]string(nil), q.moduleUses...) }
 
 // Metadata returns a detached snapshot of query metadata before deployment.
 // A runtime-generated default statement name is only available from
@@ -2958,6 +2964,11 @@ func (q Query) description() string {
 func appendQueryModifiers(parts []string, query Query) []string {
 	if query.moduleName != "" {
 		parts = append(parts, "module("+query.moduleName+")")
+	}
+	if len(query.moduleUses) > 0 {
+		uses := append([]string(nil), query.moduleUses...)
+		sort.Strings(uses)
+		parts = append(parts, "uses("+strings.Join(uses, ",")+")")
 	}
 	if canonical := statementMetadataCanonical(query.statementMetadata); canonical != "" {
 		parts = append(parts, canonical)

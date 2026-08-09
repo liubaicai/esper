@@ -165,6 +165,7 @@ type schemaConfig struct {
 	resolution   PropertyResolutionStyle
 	accessor     AccessorStyle
 	allowDynamic bool
+	busVisible   bool
 	parents      []Schema
 	getters      []schemaGetterSpec
 	setters      []schemaSetterSpec
@@ -172,6 +173,12 @@ type schemaConfig struct {
 	defaults     map[string]any
 	jsonAdapters []jsonFieldAdapterSpec
 	annotations  []StatementAnnotation
+}
+
+// BusEventType marks a module-created schema as eligible for external event
+// ingress. Module.RegisterMap requires the owning module to be public.
+func BusEventType() SchemaOption {
+	return func(cfg *schemaConfig) { cfg.busVisible = true }
 }
 
 func WithPropertyResolution(style PropertyResolutionStyle) SchemaOption {
@@ -360,6 +367,7 @@ type Schema struct {
 	resolution     PropertyResolutionStyle
 	accessor       AccessorStyle
 	allowDynamic   bool
+	busVisible     bool
 	defaults       map[string]any
 	jsonAdapters   map[string]JSONFieldAdapter
 	variantMode    VariantMode
@@ -1008,6 +1016,7 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		resolution:   cfg.resolution,
 		accessor:     cfg.accessor,
 		allowDynamic: cfg.allowDynamic,
+		busVisible:   cfg.busVisible,
 		defaults:     cloneAnyMap(cfg.defaults),
 		jsonAdapters: jsonAdapters,
 		parents:      append([]Schema(nil), cfg.parents...),
@@ -1331,6 +1340,10 @@ func (s Schema) VariantMembers() []string { return append([]string(nil), s.varia
 func (s Schema) ParentNames() []string { return append([]string(nil), s.parentNames...) }
 
 func (s Schema) AllowsDynamicProperties() bool { return s.allowDynamic }
+
+// BusVisible reports whether a module-created event type is explicitly
+// exported through the runtime event bus.
+func (s Schema) BusVisible() bool { return s.busVisible }
 
 // Annotations returns detached application-defined schema metadata.
 func (s Schema) Annotations() []StatementAnnotation {

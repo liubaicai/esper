@@ -10,6 +10,7 @@ const (
 	ErrorInvalidRule  ErrorCode = "InvalidRule"
 	ErrorTypeMismatch ErrorCode = "TypeMismatch"
 	ErrorUnknownName  ErrorCode = "UnknownName"
+	ErrorAmbiguous    ErrorCode = "Ambiguous"
 	ErrorDependency   ErrorCode = "Dependency"
 	ErrorDeployment   ErrorCode = "Deployment"
 	ErrorState        ErrorCode = "State"

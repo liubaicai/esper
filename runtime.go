@@ -2982,6 +2982,28 @@ func (e *Engine) SendRecord(ctx context.Context, eventType string, record map[st
 	return e.Send(ctx, eventType, underlying)
 }
 
+// SendBusRecord is the external-ingress form for module-created map event
+// types. Preconfigured global schemas are bus-visible by definition; a schema
+// owned by a module must opt in with BusEventType and the module must be
+// public. Internal routes continue to use Send/SendRecord with explicit
+// qualified identities.
+func (e *Engine) SendBusRecord(ctx context.Context, eventType string, record map[string]any) error {
+	if e == nil || e.env == nil {
+		return NewError(ErrorDependency, "engine has no environment")
+	}
+	e.env.mu.RLock()
+	schema, exists := e.env.schemas[eventType]
+	_, moduleOwned := e.env.moduleObjects[eventType]
+	e.env.mu.RUnlock()
+	if !exists {
+		return NewError(ErrorUnknownName, fmt.Sprintf("event type %q is not registered", eventType))
+	}
+	if moduleOwned && !schema.BusVisible() {
+		return NewError(ErrorUnknownName, fmt.Sprintf("event type %q is not visible on the event bus", eventType))
+	}
+	return e.SendRecord(ctx, eventType, record)
+}
+
 func (e *Engine) SendEvent(ctx context.Context, underlying any) error {
 	if e == nil || e.env == nil {
 		return NewError(ErrorDependency, "engine has no environment")

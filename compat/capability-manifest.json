@@ -1881,9 +1881,9 @@
       "status": "mapped",
       "remaining": [
         "deployment-local protected namespaces are covered by client.multitenancy.protected-deployment-namespace",
-        "Java compiler paths and access-modifier callbacks are replaced by explicitly registered typed schemas and immutable Plans",
+        "typed module paths, access modifiers, uses dependencies and ambiguity diagnostics are covered by client.compile.module-visibility",
         "continuous Table joins currently preload the Table snapshot at deployment instead of probing the secondary index for every driver event",
-        "module name, uses/import visibility and ambiguity diagnostics remain in the compile/deploy capability backlog"
+        "Java binary/compiler path caches and bytecode callback internals are not portable contracts"
       ]
     },
     {
@@ -1908,10 +1908,37 @@
       "phase": 1,
       "status": "mapped",
       "remaining": [
-        "public/protected cross-deployment uses/import dependency graphs and ambiguity diagnostics remain a later module-visibility slice",
+        "public/private/protected compile-path visibility, uses dependencies and ambiguity diagnostics are covered by client.compile.module-visibility",
         "module-local struct, JSON, XML, Avro, ObjectArray and Variant convenience constructors can be added over the same qualified schema identity",
         "the Environment retains immutable compile-time module artifacts after undeploy while Engine runtime definitions and state disappear",
         "Java compiler-path access-modifier callbacks, EPL module text and JVM classloader caches are intentionally not copied"
+      ]
+    },
+    {
+      "id": "client.compile.module-visibility",
+      "domain": "client",
+      "level": "G",
+      "summary": "Typed private/protected/public module catalogs with immutable Uses paths, deterministic ambiguity diagnostics, bus-visible public event types and module-bound Plan identity",
+      "javaRefs": [
+        "ClientCompileVisibility",
+        "NameAccessModifier",
+        "CompilerPath",
+        "EventTypeBusModifier"
+      ],
+      "goRefs": [
+        "module.go",
+        "schema.go",
+        "plan.go",
+        "runtime.go",
+        "client_compile_visibility_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "visibility currently applies to a typed Module namespace as a whole; mixed per-definition access modifiers inside one module remain a future refinement",
+        "application-inlined JVM classes are migrated to analyzable module-local declared expressions or typed Go UDFs instead of classloading Java source",
+        "module-local struct, JSON, XML, Avro, ObjectArray and Variant registration convenience forms remain to be layered over the same catalog resolver",
+        "binary compiler paths, path caches, bytecode callbacks and exact Java compiler diagnostic text are intentionally not copied"
       ]
     },
     {
@@ -13523,6 +13550,74 @@
       "difference": "Go uses RegisterModule(name, ProtectedModule()) and Module.Build rather than EPL module text or compiler-path access-modifier callbacks. Module-qualified handles bind Table/Named Window targets, variables, contexts, map event types and declared expressions into immutable Plan identity. Engine deployment atomically materializes the protected runtime catalog, rejects a second active deployment of the same protected module, preserves same logical names in different modules, and removes runtime state on undeploy while another module continues processing. The tests reproduce Java's A/B infra rows, 10/20 timer variables, initiated-context counts, same-name count/sum event schemas and expression values 1/2. Immutable Environment compile artifacts intentionally remain reusable for redeployment."
     },
     {
+      "id": "case.client-compile-visibility",
+      "javaRuntimeIds": [
+        "java-runtime-d3bd302bd50fbfe4b15b",
+        "java-runtime-4093e13cf92809216400",
+        "java-runtime-e5721600cfaffebebc2e",
+        "java-runtime-2ea0648a00a67d0c456e",
+        "java-runtime-00551932fe527ad470b5",
+        "java-runtime-ce4fef303d9a6772912a",
+        "java-runtime-9c4e95d36e87012e268e",
+        "java-runtime-95efce69c1acb9d4bf7b",
+        "java-runtime-c0200b7c9d8c4c2c554c",
+        "java-runtime-03b6db418224399f50c0",
+        "java-runtime-3082e12421b17ac378d5",
+        "java-runtime-26fe9737d93d9954203a"
+      ],
+      "javaNames": [
+        "ClientVisibilityNamedWindowSimple",
+        "ClientVisibilityAmbiguousPathWithPreconfigured",
+        "ClientVisibilityDefaultPrivate",
+        "ClientVisibilityAnnotationPrivate",
+        "ClientVisibilityAnnotationProtected",
+        "ClientVisibilityAnnotationPublic",
+        "ClientVisibilityModuleNameOption",
+        "ClientVisibilityAnnotationBusEventType",
+        "ClientVisibilityAnnotationInvalid",
+        "ClientVisibilityAmbiguousTwoPath",
+        "ClientVisibilityDisambiguateWithUses",
+        "ClientVisibilityBusRequiresPublic"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileVisibility.java"
+      ],
+      "goTests": [
+        "TestClientCompileVisibilityDefaultAndExplicitPrivateMatchEsper",
+        "TestClientCompileVisibilityProtectedAndPublicMatchEsper",
+        "TestClientCompileVisibilityAmbiguousPathAndUsesDisambiguationMatchEsper",
+        "TestClientCompileVisibilityAmbiguousWithPreconfiguredCatalogMatchesEsper",
+        "TestClientCompileVisibilityModuleNameOptionOverridesRuleIdentityMatchEsper",
+        "TestClientCompileVisibilityAnnotationsAndBusEventTypeMatchEsper",
+        "TestClientCompileVisibilityPublicNamedWindowAcrossDeploymentsMatchEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "module",
+        "private",
+        "protected",
+        "public",
+        "uses",
+        "ambiguity",
+        "event-bus",
+        "named-window",
+        "variable",
+        "context",
+        "table",
+        "declared-expression",
+        "script"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go replaces EPL annotations and CompilerPath with RegisterModule plus PrivateModule/PublicModule/ProtectedModule and immutable ModulePath values created by module.Uses(...) or env.Uses(...). Resolution covers event types, variables, contexts, Named Windows, Tables, declared expressions and registered Go scripts; an explicit Uses dependency selects one exporter, while unqualified duplicate public exports and preconfigured/module collisions return ErrorAmbiguous. ModulePath.Build records sorted uses dependencies in Plan canonical identity, Module.Build overrides prior module identity, public Named Window create/insert/select deployments reproduce the Java E1..E4 sums 10/30/45/51, and SendBusRecord admits only public module schemas marked BusEventType. Conflicting visibility options and bus visibility on private/protected modules fail before registration. Java application-inlined classes are migrated to module-local declared expressions or typed Go UDFs; JVM source compilation, classloading, binary paths and exact compiler text are not copied."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -14556,6 +14651,10 @@
     {
       "capabilityId": "client.multitenancy.protected-deployment-namespace",
       "caseId": "case.client-multitenancy-protected"
+    },
+    {
+      "capabilityId": "client.compile.module-visibility",
+      "caseId": "case.client-compile-visibility"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",
