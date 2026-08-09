@@ -714,6 +714,12 @@ func (s *Source) consume(ctx context.Context, consumer Consumer) {
 				}
 				return
 			}
+			// Pause can race after the pre-select state check while this
+			// goroutine is blocked waiting for a delivery. Hold the received
+			// delivery until Resume instead of processing it while paused.
+			if err := s.waitStarted(ctx); err != nil {
+				return
+			}
 			if !s.handleDelivery(ctx, consumer, delivery) {
 				return
 			}

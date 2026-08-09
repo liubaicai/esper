@@ -77,6 +77,9 @@ func TestChannelSourceDecodesJSONAcknowledgesAndRespectsPause(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for JMS bridge message")
 	}
+	if err := waitJMS(func() bool { return len(consumer.Acknowledged()) == 1 }); err != nil {
+		t.Fatal(err)
+	}
 	acked := consumer.Acknowledged()
 	if len(acked) != 1 || acked[0].Kind != TextMessage {
 		t.Fatalf("acked = %#v", acked)

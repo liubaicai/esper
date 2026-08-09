@@ -1719,6 +1719,26 @@
         "wider drop traces for context partitions, joins, output suppression and complex pattern consumption",
         "Java annotation-array reflection beyond typed Statement priority/drop metadata"
       ]
+    },
+    {
+      "id": "client.runtime.instance-lock",
+      "domain": "client",
+      "level": "S",
+      "summary": "Administrative callback execution under the Engine-wide transaction write lock",
+      "javaRefs": [
+        "ClientRuntimeRuntimeProvider"
+      ],
+      "goRefs": [
+        "runtime_management.go",
+        "client_runtime_runtime_provider_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "a separately exposed read-lock mode when a Java execution requires shared rather than exclusive access",
+        "interruptible or deadline-aware mutex acquisition beyond pre-acquisition context validation",
+        "shared Java/Go contention traces with multiple administrative lock holders"
+      ]
     }
   ],
   "cases": [
@@ -12827,6 +12847,37 @@
         "go-unit"
       ],
       "difference": "Go exposes StatementPriority and StatementDrop as typed QueryOptions instead of Java annotations. Ordinary continuous dispatch is sorted by descending priority; at equal priority drop statements run first and otherwise deployment order is stable. A drop statement preempts only after it produces a result, and its own listener batch and routes remain visible. The same ordering applies to external and internal routed events, virtual-clock timers, direct and statement-fed named-window deltas, with undeploy/redeploy recomputing the active order. Management traversal deliberately remains deployment ordered. Update-istream retains its separate ascending UpdatePriority/UpdateDrop preprocessing contract, and Build rejects mixing the two option families. Named-window parity uses the same last-event window, typed insert trigger and on-window select shape as Java; Go sends the source by explicit registered name when the same struct also represents ABCStream."
+    },
+    {
+      "id": "case.client-runtime-runtime-provider-lock",
+      "javaRuntimeIds": [
+        "java-runtime-5ea0cc5e98867233bbcf"
+      ],
+      "javaNames": [
+        "ClientRuntimeObtainEngineWideRWLock"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeRuntimeProvider.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeObtainEngineWideWriteLockParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "instance-lock",
+        "write-lock",
+        "exclusive-access",
+        "concurrency",
+        "administration"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java exposes the runtime instance ReentrantReadWriteLock and this execution only obtains and releases its writeLock around an administrative action. Go exposes WithRuntimeWriteLock(ctx, action) instead of the raw mutex: the callback runs under the same Engine transaction boundary used by send, deploy, time and state mutation, the lock is always released with defer, nil actions and destroyed engines return structured errors, and callers cannot accidentally retain the lock handle. The parity test proves a concurrent SendEvent cannot complete until the callback releases the lock, then observes c0=1. Go's mutex is intentionally non-reentrant and the callback contract forbids calling another lock-taking Engine method."
     }
   ],
   "mappings": [
@@ -13665,6 +13716,10 @@
     {
       "capabilityId": "client.runtime.priority-drop",
       "caseId": "case.client-runtime-priority-drop"
+    },
+    {
+      "capabilityId": "client.runtime.instance-lock",
+      "caseId": "case.client-runtime-runtime-provider-lock"
     }
   ]
 }

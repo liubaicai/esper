@@ -23,6 +23,32 @@ func (e *Engine) RuntimeService(name string) (any, bool) {
 	return service, ok
 }
 
+// WithRuntimeWriteLock runs action while holding the Engine-wide transaction
+// mutex. It is the Go-style counterpart to obtaining Esper's runtime instance
+// write lock directly: event send, deployment, time advancement and state
+// mutation remain excluded until action returns.
+//
+// The callback must not call an Engine method that takes the same lock. Go's
+// mutex is deliberately non-reentrant, matching the low-level nature of this
+// administrative escape hatch.
+func (e *Engine) WithRuntimeWriteLock(ctx context.Context, action func() error) error {
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if e == nil {
+		return NewError(ErrorDependency, "nil engine")
+	}
+	if action == nil {
+		return NewError(ErrorInvalidRule, "runtime write-lock action is nil")
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed {
+		return NewError(ErrorState, "engine is closed")
+	}
+	return action()
+}
+
 // StatementPredicate is a typed statement-management filter. Predicates run
 // against a detached ordered snapshot, so they may inspect Plan metadata
 // without holding the Engine transaction lock.
