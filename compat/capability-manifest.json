@@ -2145,6 +2145,32 @@
       ]
     },
     {
+      "id": "client.compile.syntax-validation",
+      "domain": "client",
+      "level": "G",
+      "summary": "Catalog-independent structural validation for typed fluent queries with deterministic builder diagnostics",
+      "javaRefs": [
+        "ClientCompileSyntaxValidate",
+        "EPCompiler.syntaxValidate",
+        "ModuleItem",
+        "EPStatementObjectModel"
+      ],
+      "goRefs": [
+        "syntax_validation.go",
+        "plan.go",
+        "stream.go",
+        "client_compile_syntax_validate_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "ValidateSyntax accepts typed Query values and performs no EPL lexing or parsing",
+        "unknown event types and other unresolved catalog names are intentionally deferred to Environment.Build",
+        "typed builders make reserved-word, quote, token and incomplete-pattern text syntax errors unrepresentable",
+        "exact Java line/column parser diagnostics and textual Module/SODA parsing are intentionally not copied"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -14264,6 +14290,43 @@
       "difference": "CompileWithProvider supplies an immutable CompilerRequest containing the Environment, typed fluent Query, stable description and detached CompileOption slice. A custom CompilerProvider is invoked exactly once and may delegate through CompileDefault; NativeCompilerProvider produces the same stable Plan hash and compiler manifest as direct Environment.Build. Nil providers, provider errors, empty Plans and Plans compiled for a different Environment are rejected at the provider boundary. Java injects CompilerAbstractionToolProvider backed by javax.tools.JavaCompiler to compile generated JVM source; Go compiles the typed Plan natively inside the linked program and deliberately neither generates source nor shells out to the Go toolchain."
     },
     {
+      "id": "case.client-compile-syntax-validation",
+      "javaRuntimeIds": [
+        "java-runtime-844b2ead0045efd291c1",
+        "java-runtime-ce0f8bf4f868a7139a31"
+      ],
+      "javaNames": [
+        "ClientCompileOptionsValidateOnly",
+        "ClientCompileSyntaxMgs"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileSyntaxValidate.java"
+      ],
+      "goTests": [
+        "TestClientCompileOptionsValidateOnlyMatchesEsper",
+        "TestClientCompileSyntaxMessagesTypedBoundaryMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "syntax-validation",
+        "typed-ast",
+        "catalog-independent",
+        "unknown-event",
+        "object-model",
+        "invalid",
+        "diagnostics"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Environment.ValidateSyntax validates zero or more typed fluent Query values without resolving event types, variables, contexts or other catalog objects. A structurally valid From[clientCompileSyntaxUnknownEvent](env, NoSuchEvent) passes syntax-only validation and then fails ordinary Build semantic resolution, matching Java syntaxValidate. An empty query list is valid, while a zero Query and a source-less query with no select expression reproduce the invalid raw text and empty statement-object-model boundaries. Additional tests reject blank sources/aliases/names, nil filters/windows/select expressions, invalid expression constructors, negative limits and invalid output policies. Java's reserved-word, token, quote, incomplete pattern, CASE and outer-join parser messages have no Go runtime equivalent because the fluent API constructs grammar directly; Go reports stable structural errors and deliberately does not accept EPL strings or reproduce lexer line/column text."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15341,6 +15404,10 @@
     {
       "capabilityId": "client.compile.tool-provider",
       "caseId": "case.client-compile-tool-compiler"
+    },
+    {
+      "capabilityId": "client.compile.syntax-validation",
+      "caseId": "case.client-compile-syntax-validation"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",
