@@ -1942,6 +1942,32 @@
       ]
     },
     {
+      "id": "client.compile.substitution-parameters",
+      "domain": "client",
+      "level": "G",
+      "summary": "Typed named and positional substitution parameters across live streams, Pattern, Subquery and multi-plan deployments with statement-local resolver metadata",
+      "javaRefs": [
+        "ClientCompileSubstitutionParams",
+        "StatementSubstitutionParameterContext",
+        "StatementSubstitutionParameterOption",
+        "EPDeploySubstitutionParameterException"
+      ],
+      "goRefs": [
+        "expr.go",
+        "plan.go",
+        "runtime.go",
+        "client_compile_substitution_params_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Go uses generic Parameter/ParameterAt expressions and immutable binding values instead of mutable setObject calls",
+        "an untyped Java parameter is represented by Parameter[any] followed by an explicit typed Cast expression",
+        "SODA and EPL compilation variants collapse into one immutable fluent Plan representation",
+        "raw EPL text, parser-reserved parameter names, exact Java cast diagnostics and JVM portable-deployment serialization are intentionally not copied"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -13618,6 +13644,127 @@
       "difference": "Go replaces EPL annotations and CompilerPath with RegisterModule plus PrivateModule/PublicModule/ProtectedModule and immutable ModulePath values created by module.Uses(...) or env.Uses(...). Resolution covers event types, variables, contexts, Named Windows, Tables, declared expressions and registered Go scripts; an explicit Uses dependency selects one exporter, while unqualified duplicate public exports and preconfigured/module collisions return ErrorAmbiguous. ModulePath.Build records sorted uses dependencies in Plan canonical identity, Module.Build overrides prior module identity, public Named Window create/insert/select deployments reproduce the Java E1..E4 sums 10/30/45/51, and SendBusRecord admits only public module schemas marked BusEventType. Conflicting visibility options and bus visibility on private/protected modules fail before registration. Java application-inlined classes are migrated to module-local declared expressions or typed Go UDFs; JVM source compilation, classloading, binary paths and exact compiler text are not copied."
     },
     {
+      "id": "case.client-compile-substitution-parameters",
+      "javaRuntimeIds": [
+        "java-runtime-44682f651b9c9d83477b",
+        "java-runtime-4e49f4ddab1eed925f0d",
+        "java-runtime-3dec9cc5567080461ed3",
+        "java-runtime-fe0646be8a9f9a198823",
+        "java-runtime-7085de5e955e1b366801",
+        "java-runtime-d1aa94bcf9ffec80841b",
+        "java-runtime-4a982e430cdd64e4ee46",
+        "java-runtime-3ed5bba860d38f51df33",
+        "java-runtime-4c4fb3cd6693d7a091db",
+        "java-runtime-2c23c4ad7becf65122d4",
+        "java-runtime-60d579a7b6ad18d8721d",
+        "java-runtime-53f5d3b40ed6fb3f33b1",
+        "java-runtime-641904988c30f33b18b0",
+        "java-runtime-c00725155af70885be5f",
+        "java-runtime-0453dd7c6063838f9b5d",
+        "java-runtime-7d8e89fb2bfec5082a16",
+        "java-runtime-296289f6190435dfb328",
+        "java-runtime-3b03e0d7014cb57ce4c7",
+        "java-runtime-9c4757700a311eef4009",
+        "java-runtime-8826e3e9da0e5a4f2a85",
+        "java-runtime-c9a5afc75aa819dcecb1",
+        "java-runtime-88c5b2aa79bcc8b4269a",
+        "java-runtime-326b731a2a010915c8ed",
+        "java-runtime-4ff5ed1c18047178da98"
+      ],
+      "javaNames": [
+        "ClientCompileSubstParamNamedParametersoda_false",
+        "ClientCompileSubstParamNamedParametersoda_true",
+        "ClientCompileSubstParamMethodInvocation",
+        "ClientCompileSubstParamUnnamedParameterWType{soda=false}",
+        "ClientCompileSubstParamUnnamedParameterWType{soda=true}",
+        "ClientCompileSubstParamPattern",
+        "ClientCompileSubstParamSimpleOneParameterWCast",
+        "ClientCompileSubstParamWInheritance",
+        "ClientCompileSubstParamSimpleTwoParameterFilter",
+        "ClientCompileSubstParamSimpleTwoParameterWhere",
+        "ClientCompileSubstParamSimpleNoParameter",
+        "ClientCompileSubstParamPrimitiveVsBoxed",
+        "ClientCompileSubstParamSubselect",
+        "ClientCompileSubstParamInvalidUse",
+        "ClientCompileSubstParamInvalidNoCallback",
+        "ClientCompileSubstParamInvalidInsufficientValues",
+        "ClientCompileSubstParamInvalidParametersUntyped",
+        "ClientCompileSubstParamInvalidParametersTyped",
+        "ClientCompileSubstParamResolverContext",
+        "ClientCompileSubstParamMultiStmt",
+        "ClientCompileSubstParamArray{soda=false}",
+        "ClientCompileSubstParamArray{soda=true}",
+        "ClientCompileSubstParamGenericType{soda=false}",
+        "ClientCompileSubstParamGenericType{soda=true}"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileSubstitutionParams.java"
+      ],
+      "goTests": [
+        "TestClientCompileSubstitutionNamedPositionalMethodAndCastMatchEsper",
+        "TestClientCompileSubstitutionTwoParameterFilterWhereAndNoParameterMatchEsper",
+        "TestClientCompileSubstitutionPatternAndInheritanceMatchEsper",
+        "TestClientCompileSubstitutionSubqueryDeploymentIsolationMatchEsper",
+        "TestClientCompileSubstitutionArrayAndGenericTypeMetadataMatchEsper",
+        "TestClientCompileSubstitutionInvalidBindingsMatchEsperBoundary",
+        "TestClientCompileSubstitutionResolverContextAndMultiStatementMatchEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "substitution-parameter",
+        "named",
+        "positional",
+        "typed",
+        "array",
+        "generic",
+        "pattern",
+        "subquery",
+        "inheritance",
+        "multi-statement",
+        "deployment-resolver",
+        "invalid"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go uses Parameter[T](name) and 1-based ParameterAt[T](position) in analyzable fluent expressions. DeployWithParameters and the new DeployWithPositionalParameters bind one live Plan, while DeployPlans plus WithDeploymentParameterResolver resolves each statement independently and exposes immutable Plan, custom deployment/statement identity, statement metadata, ordered reflect.Type declarations and named ordinals. Named and positional modes cannot mix; positions are contiguous; repeated names require compatible types; missing, extra, wrong-mode and wrong-type values fail before deployment visibility. Parameters are covered in filters, post-window where-equivalents, projections, property access, explicit Cast, Pattern, interface/concrete key inheritance and per-deployment stream Subquery state. Array/slice, nested array and map generic result metadata remains exact reflect.Type. Java primitive/boxed pairs collapse to Go's one int type, untyped parameters use Parameter[any]+Cast, and SODA/text variants share the same immutable Plan."
+    },
+    {
+      "id": "case.client-compile-substitution-native-literal",
+      "javaRuntimeIds": [
+        "java-runtime-7c5f4ec1132f0986557e"
+      ],
+      "javaNames": [
+        "ClientCompileSODAInvalidConstantUseSubsParamsInstead"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileSubstitutionParams.java"
+      ],
+      "goTests": [
+        "TestClientCompileSubstitutionGoNativeLiteralApprovedDifference"
+      ],
+      "tags": [
+        "client",
+        "compile",
+        "substitution-parameter",
+        "literal",
+        "soda",
+        "approved-difference"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java SODA rejects an arbitrary Object constant because the JVM compiler cannot give it a portable bytecode representation and directs callers to substitution parameters. Go does not have that bytecode boundary: Literal(nativeStruct) now contributes deterministic type-and-value identity to the immutable Plan, while Parameter[nativeStruct] remains available for deployment-time binding, and the two plans have distinct hashes. Rejecting a valid native Go literal solely to copy the Java compiler limitation would make the fluent API less Go-like without preserving a runtime semantic property."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -14655,6 +14802,14 @@
     {
       "capabilityId": "client.compile.module-visibility",
       "caseId": "case.client-compile-visibility"
+    },
+    {
+      "capabilityId": "client.compile.substitution-parameters",
+      "caseId": "case.client-compile-substitution-parameters"
+    },
+    {
+      "capabilityId": "client.compile.substitution-parameters",
+      "caseId": "case.client-compile-substitution-native-literal"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",

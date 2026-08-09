@@ -2090,8 +2090,53 @@ type DeploymentStatementNameContext struct {
 // Returning an error aborts the deployment before any statement is visible.
 type DeploymentStatementNameResolver func(DeploymentStatementNameContext) (string, error)
 
+// StatementParameterBindings is the immutable result of resolving one
+// statement's deployment-time substitution parameters. Exactly one of Named
+// or Positional may be supplied. A zero value means no bindings.
+type StatementParameterBindings struct {
+	Named      ParameterValues
+	Positional []any
+}
+
+// BindNamedParameters constructs detached named bindings for a deployment
+// parameter resolver.
+func BindNamedParameters(values ParameterValues) StatementParameterBindings {
+	return StatementParameterBindings{Named: cloneParameterValues(values)}
+}
+
+// BindPositionalParameters constructs detached 1-based positional bindings
+// in declaration order.
+func BindPositionalParameters(values ...any) StatementParameterBindings {
+	return StatementParameterBindings{Positional: append([]any(nil), values...)}
+}
+
+// StatementParameterContext describes one immutable Plan while a multi-plan
+// deployment resolves statement-local parameter values. ParameterTypes is in
+// stable declaration order. Named parameters additionally appear in
+// ParameterNames with 1-based ordinals. Plan canonical bytes replace Java's
+// raw EPL text and Metadata replaces annotation reflection.
+type StatementParameterContext struct {
+	Index          int
+	Plan           Plan
+	DeploymentID   string
+	StatementID    string
+	StatementName  string
+	Metadata       StatementMetadata
+	ParameterTypes []reflect.Type
+	ParameterNames map[string]int
+	Positional     bool
+}
+
+// StatementParameterResolver returns one statement's named or positional
+// binding snapshot. Returning an error aborts the complete deployment before
+// any statement becomes visible.
+type StatementParameterResolver func(StatementParameterContext) (StatementParameterBindings, error)
+
 type deploymentConfig struct {
-	nameResolver DeploymentStatementNameResolver
+	nameResolver      DeploymentStatementNameResolver
+	parameterResolver StatementParameterResolver
+	deploymentID      string
+	deploymentIDSet   bool
 }
 
 // DeploymentOption configures a DeployPlans operation.
@@ -2103,6 +2148,75 @@ func WithDeploymentStatementNameResolver(resolver DeploymentStatementNameResolve
 	return func(config *deploymentConfig) { config.nameResolver = resolver }
 }
 
+// WithDeploymentParameterResolver binds parameters independently for each
+// plan in DeployPlans. This is the typed Go counterpart of Esper's statement
+// substitution-parameter callback.
+func WithDeploymentParameterResolver(resolver StatementParameterResolver) DeploymentOption {
+	return func(config *deploymentConfig) { config.parameterResolver = resolver }
+}
+
+// WithDeploymentID selects an explicit deployment identity. The value must
+// be non-blank and unique among active deployments.
+func WithDeploymentID(id string) DeploymentOption {
+	return func(config *deploymentConfig) {
+		config.deploymentID = strings.TrimSpace(id)
+		config.deploymentIDSet = true
+	}
+}
+
+func newStatementParameterContext(index int, plan Plan, deploymentID, statementName string, parameterTypes map[string]reflect.Type) StatementParameterContext {
+	context := StatementParameterContext{
+		Index:          index,
+		Plan:           plan,
+		DeploymentID:   deploymentID,
+		StatementName:  statementName,
+		Metadata:       plan.query.Metadata(),
+		ParameterNames: make(map[string]int),
+	}
+	if deploymentID != "" {
+		context.StatementID = deploymentID + ":" + statementName
+	} else {
+		context.StatementID = statementName
+	}
+	positions := make(map[int]reflect.Type)
+	names := make([]string, 0, len(parameterTypes))
+	for name, typ := range parameterTypes {
+		if position, positional := positionalParameterPosition(name); positional {
+			positions[position] = typ
+			continue
+		}
+		names = append(names, name)
+	}
+	if len(positions) > 0 {
+		context.Positional = true
+		context.ParameterNames = nil
+		context.ParameterTypes = make([]reflect.Type, len(positions))
+		for position, typ := range positions {
+			if position >= 1 && position <= len(context.ParameterTypes) {
+				context.ParameterTypes[position-1] = typ
+			}
+		}
+		return context
+	}
+	sort.Strings(names)
+	context.ParameterTypes = make([]reflect.Type, len(names))
+	for index, name := range names {
+		context.ParameterTypes[index] = parameterTypes[name]
+		context.ParameterNames[name] = index + 1
+	}
+	return context
+}
+
+func statementParameterBindings(plan Plan, bindings StatementParameterBindings) (ParameterValues, error) {
+	if bindings.Named != nil && bindings.Positional != nil {
+		return nil, NewError(ErrorInvalidRule, "statement parameter resolver returned both named and positional bindings")
+	}
+	if bindings.Positional != nil {
+		return positionalParameterBindings(plan, bindings.Positional)
+	}
+	return cloneParameterValues(bindings.Named), nil
+}
+
 type deploymentRequest struct {
 	plan          Plan
 	parameters    ParameterValues
@@ -2111,14 +2225,24 @@ type deploymentRequest struct {
 }
 
 func (e *Engine) Deploy(ctx context.Context, plan Plan) (*Deployment, error) {
-	return e.deployRequests(ctx, []deploymentRequest{{plan: plan}}, nil)
+	return e.deployRequests(ctx, []deploymentRequest{{plan: plan}}, deploymentConfig{})
 }
 
 // DeployWithParameters deploys a live statement with one immutable binding
 // snapshot for its substitution parameters. The values are copied at deploy
 // time and are not retained through the caller's map after this call returns.
 func (e *Engine) DeployWithParameters(ctx context.Context, plan Plan, parameters ParameterValues) (*Deployment, error) {
-	return e.deployRequests(ctx, []deploymentRequest{{plan: plan, parameters: parameters, parameterized: true}}, nil)
+	return e.deployRequests(ctx, []deploymentRequest{{plan: plan, parameters: parameters, parameterized: true}}, deploymentConfig{})
+}
+
+// DeployWithPositionalParameters deploys one live statement with 1-based
+// positional substitution values in declaration order.
+func (e *Engine) DeployWithPositionalParameters(ctx context.Context, plan Plan, values ...any) (*Deployment, error) {
+	parameters, err := positionalParameterBindings(plan, values)
+	if err != nil {
+		return nil, err
+	}
+	return e.deployRequests(ctx, []deploymentRequest{{plan: plan, parameters: parameters, parameterized: true}}, deploymentConfig{})
 }
 
 // DeployPlans deploys multiple immutable plans as one deployment. Plans keep
@@ -2135,10 +2259,10 @@ func (e *Engine) DeployPlans(ctx context.Context, plans []Plan, options ...Deplo
 	for index, plan := range plans {
 		requests[index] = deploymentRequest{plan: plan}
 	}
-	return e.deployRequests(ctx, requests, config.nameResolver)
+	return e.deployRequests(ctx, requests, config)
 }
 
-func (e *Engine) deployRequests(ctx context.Context, requests []deploymentRequest, resolver DeploymentStatementNameResolver) (*Deployment, error) {
+func (e *Engine) deployRequests(ctx context.Context, requests []deploymentRequest, config deploymentConfig) (*Deployment, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
@@ -2147,6 +2271,9 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 	}
 	if len(requests) == 0 {
 		return nil, NewError(ErrorInvalidRule, "deployment requires at least one plan")
+	}
+	if config.deploymentIDSet && config.deploymentID == "" {
+		return nil, NewError(ErrorDeployment, "deployment id cannot be blank")
 	}
 	seenNames := make(map[string]struct{}, len(requests))
 	deploymentModule := ""
@@ -2170,23 +2297,15 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		if parameterErr != nil {
 			return nil, WrapError(ErrorInvalidRule, fmt.Sprintf("plan %d parameters", index), parameterErr)
 		}
-		if len(parameterTypes) > 0 && !request.parameterized {
-			return nil, NewError(ErrorInvalidRule, fmt.Sprintf("plan %d contains substitution parameters; use DeployWithParameters", index))
-		}
-		if request.parameterized {
-			if err := validateParameterBindings(parameterTypes, request.parameters); err != nil {
-				return nil, err
-			}
-		}
 		name := request.plan.query.name
-		if resolver != nil {
-			resolved, err := resolver(DeploymentStatementNameContext{Index: index, Plan: request.plan, OriginalName: name})
+		if config.nameResolver != nil {
+			resolved, err := config.nameResolver(DeploymentStatementNameContext{Index: index, Plan: request.plan, OriginalName: name})
 			if err != nil {
 				return nil, WrapError(ErrorDeployment, fmt.Sprintf("resolve statement name for plan %d", index), err)
 			}
 			name = resolved
 		}
-		if name == "" && resolver == nil {
+		if name == "" && config.nameResolver == nil {
 			name = fmt.Sprintf("stmt-%d", index)
 		}
 		if strings.TrimSpace(name) == "" {
@@ -2197,6 +2316,30 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		}
 		seenNames[name] = struct{}{}
 		request.name = name
+		if config.parameterResolver != nil {
+			if request.parameterized {
+				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("plan %d already has direct parameter bindings", index))
+			}
+			parameterContext := newStatementParameterContext(index, request.plan, config.deploymentID, name, parameterTypes)
+			bindings, err := config.parameterResolver(parameterContext)
+			if err != nil {
+				return nil, WrapError(ErrorDeployment, fmt.Sprintf("resolve statement parameters for plan %d", index), err)
+			}
+			parameters, err := statementParameterBindings(request.plan, bindings)
+			if err != nil {
+				return nil, WrapError(ErrorInvalidRule, fmt.Sprintf("plan %d parameters", index), err)
+			}
+			request.parameters = parameters
+			request.parameterized = true
+		}
+		if len(parameterTypes) > 0 && !request.parameterized {
+			return nil, NewError(ErrorInvalidRule, fmt.Sprintf("plan %d contains substitution parameters; use DeployWithParameters, DeployWithPositionalParameters or a deployment parameter resolver", index))
+		}
+		if request.parameterized {
+			if err := validateParameterBindings(parameterTypes, request.parameters); err != nil {
+				return nil, err
+			}
+		}
 		if request.plan.query.contextName != "" {
 			if _, ok := e.env.Context(request.plan.query.contextName); !ok {
 				return nil, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", request.plan.query.contextName))
@@ -2211,8 +2354,22 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		e.mu.Unlock()
 		return nil, NewError(ErrorState, "engine is closed")
 	}
-	e.nextID++
-	deploymentID := fmt.Sprintf("deployment-%d", e.nextID)
+	deploymentID := config.deploymentID
+	if deploymentID != "" {
+		if _, exists := e.deployments[deploymentID]; exists {
+			e.mu.Unlock()
+			return nil, NewError(ErrorDeployment, fmt.Sprintf("deployment id %q is already active", deploymentID))
+		}
+		e.nextID++
+	} else {
+		for {
+			e.nextID++
+			deploymentID = fmt.Sprintf("deployment-%d", e.nextID)
+			if _, exists := e.deployments[deploymentID]; !exists {
+				break
+			}
+		}
+	}
 	deployment := &Deployment{engine: e, id: deploymentID, moduleName: deploymentModule, statements: make([]*Statement, 0, len(requests))}
 	protectedModule := false
 	activationContextEventStart := len(e.pendingContextEvents)

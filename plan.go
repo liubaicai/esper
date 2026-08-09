@@ -3059,6 +3059,14 @@ func collectExpressionParameterTypes(expression Expr, parameterTypes map[string]
 			}
 		}
 		if node.subquery != nil {
+			if err := visitStreamNodeExpressions(node.subquery.source, func(expression Expr) error {
+				return collectExpressionParameterTypes(expression, parameterTypes)
+			}); err != nil {
+				return err
+			}
+			if err := collectSQLHistoricalParameterTypes(node.subquery.source, parameterTypes); err != nil {
+				return err
+			}
 			if err := collectExpressionParameterTypes(node.subquery.predicate, parameterTypes); err != nil {
 				return err
 			}
