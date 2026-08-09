@@ -23,6 +23,11 @@ const (
 	// named-window event into the target named window, mirroring Esper's
 	// "on T insert into Target(cols) select ... from Source" trigger form.
 	triggerInsertFromNamedWindow
+	// triggerSplitStream evaluates ordered insert-into branches for one
+	// incoming event. Split-first stops at the first matching branch while
+	// split-all emits every matching branch; an unmatched event is returned by
+	// the trigger statement itself.
+	triggerSplitStream
 )
 
 type triggerTargetKind uint8
@@ -44,7 +49,7 @@ type TableAssignment struct {
 	// key is evaluated against the same working target row as the value
 	// expression.
 	Key  Expr
-	Expr  Expr
+	Expr Expr
 	// Wildcard copies every source field whose name is also declared by the
 	// target schema. It is the Go-native equivalent of a merge insert/update
 	// wildcard projection while keeping the field matching explicit in the
@@ -238,6 +243,8 @@ type triggerDefinition struct {
 	merge               []TableMergeClause
 	variableAssignments []VariableAssignmentExpr
 	selections          []Selection
+	splitBranches       []SplitStreamBranch
+	splitAll            bool
 	// eventExpression is the single-event projection form used when a
 	// trigger inserts the result of a method/UDF into a Variant-typed named
 	// window.  It is deliberately separate from column assignments: a
@@ -597,7 +604,31 @@ func (d *triggerDefinition) description() string {
 		triggerSetVariables:   "set-variables",
 		triggerSelectTable:    "select",
 		triggerDeleteAllTable: "delete-all",
+		triggerSplitStream:    "split-stream",
 	}[d.action]
+	if d.action == triggerSplitStream {
+		mode := "first"
+		if d.splitAll {
+			mode = "all"
+		}
+		branches := make([]string, 0, len(d.splitBranches))
+		for _, branch := range d.splitBranches {
+			condition := "true"
+			if branch.Condition != nil {
+				condition = branch.Condition.Description()
+			}
+			selections := make([]string, 0, len(branch.Selections))
+			for _, selection := range branch.Selections {
+				selections = append(selections, selection.description())
+			}
+			projection := "*"
+			if len(selections) > 0 {
+				projection = strings.Join(selections, ",")
+			}
+			branches = append(branches, branch.Target+"["+condition+"]{"+projection+"}")
+		}
+		return fmt.Sprintf("on(%s)->split-%s(%s)", d.input.describe(), mode, strings.Join(branches, "|"))
+	}
 	if d.action == triggerMergeTable {
 		keys := make([]string, 0, len(d.keys))
 		for _, key := range d.keys {
@@ -737,6 +768,9 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 	}
 	if err := e.validateNode(definition.input); err != nil {
 		return err
+	}
+	if definition.action == triggerSplitStream {
+		return e.validateSplitStream(definition)
 	}
 	if definition.action == triggerSetVariables {
 		return e.validateVariableTriggerAssignments(definition)
@@ -1087,13 +1121,13 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 						for _, assignment := range action.Assignments {
 							if !assignment.Wildcard {
 								targetFields = nil
-							assignment.Expr.node().referencedTargetFields("named-window-field", &targetFields)
-							if assignment.Index != nil {
-								assignment.Index.node().referencedTargetFields("named-window-field", &targetFields)
-							}
-							if assignment.Key != nil {
-								assignment.Key.node().referencedTargetFields("named-window-field", &targetFields)
-							}
+								assignment.Expr.node().referencedTargetFields("named-window-field", &targetFields)
+								if assignment.Index != nil {
+									assignment.Index.node().referencedTargetFields("named-window-field", &targetFields)
+								}
+								if assignment.Key != nil {
+									assignment.Key.node().referencedTargetFields("named-window-field", &targetFields)
+								}
 								if len(targetFields) > 0 {
 									return fmt.Errorf("named-window merge clause %d not-matched assignment cannot reference named-window fields", index)
 								}
@@ -1378,6 +1412,9 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 	runtime.variables = runtime.withContextVariables(variablesWithEngine(variables, runtime.engine))
 	runtime.variables = runtime.withContextProperties(runtime.variables)
 	variables = runtime.variables
+	if definition.action == triggerSplitStream {
+		return s.processSplitStreamRuntime(ctx, runtime, definition, now, event, variables)
+	}
 	result := ResultBatch{Time: now}
 	processCandidate := func(candidate Event) error {
 		if definition.action == triggerSelectTable {

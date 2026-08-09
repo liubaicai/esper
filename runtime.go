@@ -2724,10 +2724,17 @@ func (e *Engine) applyStatementOutputAssignmentsLocked(ctx context.Context, stat
 }
 
 func (e *Engine) routeResultLocked(statement *Statement, result Result, now time.Time) (Event, error) {
+	if statement == nil {
+		return Event{}, NewError(ErrorDependency, "route requires a statement")
+	}
+	return e.routeResultToTargetLocked(statement, result, statement.plan.query.routeTarget, now)
+}
+
+func (e *Engine) routeResultToTargetLocked(statement *Statement, result Result, targetName string, now time.Time) (Event, error) {
 	if e == nil || e.env == nil || statement == nil {
 		return Event{}, NewError(ErrorDependency, "route requires an engine, environment and statement")
 	}
-	targetName := statement.plan.query.routeTarget
+	targetName = strings.TrimSpace(targetName)
 	target, ok := e.env.Schema(targetName)
 	if !ok {
 		return Event{}, NewError(ErrorUnknownName, fmt.Sprintf("route target %q is not registered", targetName))
@@ -2965,7 +2972,7 @@ type statementRuntime struct {
 	rowRecogState            *rowRecogRuntimeState
 	outputState              *outputRuntimeState
 	distinctCounts           map[string]int
-	namedWindowArrival      []Event
+	namedWindowArrival       []Event
 	partitions               map[string]*statementRuntime
 	partitionContextName     string
 	partitionKey             string
@@ -3159,10 +3166,10 @@ type rowRecogPartitionState struct {
 // deliberately separate from the public builder AST: the same pattern tree
 // can have many independent in-flight matches when Every is enabled.
 type patternProgress struct {
-	node                    *patternNode
-	phase                   uint8
-	count                   int
-	done                    bool
+	node  *patternNode
+	phase uint8
+	count int
+	done  bool
 	// quit marks a permanently completed expression, mirroring Esper's
 	// EvalNode isQuitted propagation: a plain filter/sequence/and completion
 	// cannot produce further matches, and an or-expression one of whose
@@ -6781,73 +6788,73 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 				r.joinState.sides[index] = r.assignJoinLineageIDs(r.joinState.sides[index], rebuiltSides[index])
 				continue
 			}
-		if base.kind == streamMethod && base.method != nil {
-			if len(triggerSides) > 0 {
-				// A dependency-free method side polls once per newly
-				// accepted trigger row, mirroring Esper's per-event method
-				// poll. The result rows carry the accepting row's lineage
-				// so they join strictly inside that row's tuple, persist
-				// while it is retained, and vanish when it expires.
-				if base.method.trigger != "" && base.method.trigger != event.TypeName() {
-					continue
-				}
-				for _, triggerIndex := range triggerSides {
-					for _, triggerRow := range triggerNewRows[triggerIndex] {
-						events, pollErr := base.method.provider.Poll(r.context(), MethodRequest{
-							Trigger:      triggerRow.event,
-							Now:          now,
-							Variables:    visibleVariableValues(r.variables),
-							Parameters:   parameterValuesFromVariables(r.variables),
-							Dependencies: cloneMethodDependencies(r.methodDependencies),
-							Invocation:   r.methodInvocationContext(base.sourceName),
-						})
-						if pollErr != nil {
-							return joinDelta{}, pollErr
-						}
-						for _, newEvent := range events {
-							r.joinState.sides[index] = append(r.joinState.sides[index], storedEvent{
-								event: newEvent, receivedAt: now,
-								lineageID: r.nextJoinLineageID(),
-								lineage:   map[int]uint64{triggerIndex: triggerRow.lineageID},
+			if base.kind == streamMethod && base.method != nil {
+				if len(triggerSides) > 0 {
+					// A dependency-free method side polls once per newly
+					// accepted trigger row, mirroring Esper's per-event method
+					// poll. The result rows carry the accepting row's lineage
+					// so they join strictly inside that row's tuple, persist
+					// while it is retained, and vanish when it expires.
+					if base.method.trigger != "" && base.method.trigger != event.TypeName() {
+						continue
+					}
+					for _, triggerIndex := range triggerSides {
+						for _, triggerRow := range triggerNewRows[triggerIndex] {
+							events, pollErr := base.method.provider.Poll(r.context(), MethodRequest{
+								Trigger:      triggerRow.event,
+								Now:          now,
+								Variables:    visibleVariableValues(r.variables),
+								Parameters:   parameterValuesFromVariables(r.variables),
+								Dependencies: cloneMethodDependencies(r.methodDependencies),
+								Invocation:   r.methodInvocationContext(base.sourceName),
 							})
+							if pollErr != nil {
+								return joinDelta{}, pollErr
+							}
+							for _, newEvent := range events {
+								r.joinState.sides[index] = append(r.joinState.sides[index], storedEvent{
+									event: newEvent, receivedAt: now,
+									lineageID: r.nextJoinLineageID(),
+									lineage:   map[int]uint64{triggerIndex: triggerRow.lineageID},
+								})
+							}
 						}
 					}
+					continue
 				}
-				continue
-			}
-			if hasEventDrivenSource {
-				// The statement subscribes to real event streams, so a
-				// cycle without an accepted trigger row carries no driver
-				// for the method side: Esper never polls a method stream
-				// for an event its sibling streams did not accept.
-				continue
-			}
-			// A triggerless method-only statement instead re-polls a
-			// dependency-free method side wholesale through the generic
-			// insert below and replaces its previous rows, mirroring
-			// Esper's iterator-only refresh of variable-driven method
-			// statements.
-			rebuiltSides[index] = r.joinState.sides[index]
-			r.joinState.sides[index] = nil
-		}
-		delta, err := r.insert(source, event, now)
-		if err != nil {
-			return joinDelta{}, err
-		}
-		removeStoredEventsCascade(r.joinState, index, delta.oldEvents)
-		for _, newEvent := range delta.newEvents {
-			stored := storedEvent{event: newEvent, receivedAt: now, lineageID: r.nextJoinLineageID()}
-			r.joinState.sides[index] = append(r.joinState.sides[index], stored)
-			if joinSourceIsEventDriven(base) {
-				if len(triggerNewRows[index]) == 0 {
-					triggerSides = append(triggerSides, index)
+				if hasEventDrivenSource {
+					// The statement subscribes to real event streams, so a
+					// cycle without an accepted trigger row carries no driver
+					// for the method side: Esper never polls a method stream
+					// for an event its sibling streams did not accept.
+					continue
 				}
-				triggerNewRows[index] = append(triggerNewRows[index], stored)
+				// A triggerless method-only statement instead re-polls a
+				// dependency-free method side wholesale through the generic
+				// insert below and replaces its previous rows, mirroring
+				// Esper's iterator-only refresh of variable-driven method
+				// statements.
+				rebuiltSides[index] = r.joinState.sides[index]
+				r.joinState.sides[index] = nil
 			}
-		}
-		if previous, rebuilt := rebuiltSides[index]; rebuilt {
-			r.joinState.sides[index] = r.assignJoinLineageIDs(r.joinState.sides[index], previous)
-		}
+			delta, err := r.insert(source, event, now)
+			if err != nil {
+				return joinDelta{}, err
+			}
+			removeStoredEventsCascade(r.joinState, index, delta.oldEvents)
+			for _, newEvent := range delta.newEvents {
+				stored := storedEvent{event: newEvent, receivedAt: now, lineageID: r.nextJoinLineageID()}
+				r.joinState.sides[index] = append(r.joinState.sides[index], stored)
+				if joinSourceIsEventDriven(base) {
+					if len(triggerNewRows[index]) == 0 {
+						triggerSides = append(triggerSides, index)
+					}
+					triggerNewRows[index] = append(triggerNewRows[index], stored)
+				}
+			}
+			if previous, rebuilt := rebuiltSides[index]; rebuilt {
+				r.joinState.sides[index] = r.assignJoinLineageIDs(r.joinState.sides[index], previous)
+			}
 		}
 	}
 	for _, event := range oldEvents {
@@ -10275,29 +10282,29 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 						result = append(result, patternTransitionFrom(next, false, leftTransition))
 						continue
 					}
-				next.phase = 1
-				next.right = newPatternProgress(progress.node.right)
-				inheritPatternProgressTags(next, next.right)
-				armPatternProgressTimers(next.right, trigger.now, variables)
-				next.started = true
+					next.phase = 1
+					next.right = newPatternProgress(progress.node.right)
+					inheritPatternProgressTags(next, next.right)
+					armPatternProgressTimers(next.right, trigger.now, variables)
+					next.started = true
+				}
+				result = append(result, patternTransitionFrom(next, patternSatisfied(next), leftTransition))
+				if leftTransition.complete && progress.node.left != nil && progress.node.left.kind == patternEveryNode {
+					// An every/every-distinct left leg keeps spawning followed-by
+					// branches: Esper's followed-by state holds one waiting branch
+					// per left firing while the every node itself stays armed.
+					// Keep a phase-0 continuation alongside the advanced branch so
+					// later distinct keys start further sequences.
+					continuation := clonePatternProgress(progress)
+					continuation.left = leftTransition.state
+					continuation.tags = clonePatternTags(progress.tags)
+					continuation.tagValues = clonePatternTagValues(progress.tagValues)
+					continuation.started = true
+					result = append(result, patternTransitionFrom(continuation, false, leftTransition))
+				}
 			}
-			result = append(result, patternTransitionFrom(next, patternSatisfied(next), leftTransition))
-			if leftTransition.complete && progress.node.left != nil && progress.node.left.kind == patternEveryNode {
-				// An every/every-distinct left leg keeps spawning followed-by
-				// branches: Esper's followed-by state holds one waiting branch
-				// per left firing while the every node itself stays armed.
-				// Keep a phase-0 continuation alongside the advanced branch so
-				// later distinct keys start further sequences.
-				continuation := clonePatternProgress(progress)
-				continuation.left = leftTransition.state
-				continuation.tags = clonePatternTags(progress.tags)
-				continuation.tagValues = clonePatternTagValues(progress.tagValues)
-				continuation.started = true
-				result = append(result, patternTransitionFrom(continuation, false, leftTransition))
-			}
+			return result
 		}
-		return result
-	}
 
 		rightTransitions := advancePatternNodeTrigger(progress.right, trigger, variables)
 		result := make([]patternTransition, 0, len(rightTransitions))
@@ -10321,25 +10328,25 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				next.phase = 2
 				next.done = true
 			}
-		result = append(result, patternTransitionFrom(next, patternSatisfied(next), rightTransition))
-		if rightTransition.complete && progress.node.right != nil && progress.node.right.kind == patternEveryNode {
-			// A repeating right leg (every/every-distinct) keeps the
-			// followed-by branch resident after each match: Esper pairs the
-			// captured left tags with every later distinct right firing.
-			// Reset the fired flag on the retained every node so the
-			// continuation waits for the next completion instead of
-			// re-reporting the consumed one.
-			continuation := clonePatternProgress(progress)
-			continuation.right = clonePatternProgress(rightTransition.state)
-			continuation.right.done = false
-			continuation.right.started = true
-			continuation.tags = clonePatternTags(progress.tags)
-			continuation.tagValues = clonePatternTagValues(progress.tagValues)
-			continuation.started = true
-			result = append(result, patternTransitionFrom(continuation, false, rightTransition))
+			result = append(result, patternTransitionFrom(next, patternSatisfied(next), rightTransition))
+			if rightTransition.complete && progress.node.right != nil && progress.node.right.kind == patternEveryNode {
+				// A repeating right leg (every/every-distinct) keeps the
+				// followed-by branch resident after each match: Esper pairs the
+				// captured left tags with every later distinct right firing.
+				// Reset the fired flag on the retained every node so the
+				// continuation waits for the next completion instead of
+				// re-reporting the consumed one.
+				continuation := clonePatternProgress(progress)
+				continuation.right = clonePatternProgress(rightTransition.state)
+				continuation.right.done = false
+				continuation.right.started = true
+				continuation.tags = clonePatternTags(progress.tags)
+				continuation.tagValues = clonePatternTagValues(progress.tagValues)
+				continuation.started = true
+				result = append(result, patternTransitionFrom(continuation, false, rightTransition))
+			}
 		}
-	}
-	return result
+		return result
 
 	case patternAndNode:
 		leftTransitions := advancePatternNodeTrigger(progress.left, trigger, variables)
@@ -10829,13 +10836,13 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 						batch.New = append(batch.New, resultRow(row))
 					}
-				if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
-					nextActive = append(nextActive, candidate)
-				}
-				if patternWithinTerminal(transition.state) || patternCompletionPermanent(transition.state) {
-					terminal = true
-				}
-				continue
+					if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
+						nextActive = append(nextActive, candidate)
+					}
+					if patternWithinTerminal(transition.state) || patternCompletionPermanent(transition.state) {
+						terminal = true
+					}
+					continue
 				}
 				if patternProgressTerminal(transition.state) {
 					terminal = true
@@ -11977,12 +11984,12 @@ func (r *statementRuntime) applyDistinct(query Query, newResults, oldResults []R
 	if r.distinctCounts == nil {
 		r.distinctCounts = make(map[string]int)
 	}
-		// New results fire on the first occurrence of each distinct key within the
-		// current update (a window event batch). For a continuous view such as
-		// keepall each update carries a single event so every event re-emits; for a
-		// batching view (length_batch) the whole batch is one update and the key is
-		// emitted once. The global reference count still tracks every sharing event
-		// so the old stream fires only when the last event with a key leaves.
+	// New results fire on the first occurrence of each distinct key within the
+	// current update (a window event batch). For a continuous view such as
+	// keepall each update carries a single event so every event re-emits; for a
+	// batching view (length_batch) the whole batch is one update and the key is
+	// emitted once. The global reference count still tracks every sharing event
+	// so the old stream fires only when the last event with a key leaves.
 	oldOutput := make([]Result, 0, len(oldResults))
 	for _, result := range oldResults {
 		key := resultKey(result)

@@ -1508,6 +1508,31 @@
         "named-window/bean-inheritance update-istream targets, send-route-sender preprocess",
         "full Java invalid-rule and trace parity"
       ]
+    },
+    {
+      "id": "epl.other.split-stream",
+      "domain": "epl",
+      "level": "S",
+      "summary": "Typed on-event split-stream routing with ordered output-first or output-all branches, wildcard and projected events, unmatched fallback delivery and build-time branch validation",
+      "javaRefs": [
+        "EPLOtherSplitStream"
+      ],
+      "goRefs": [
+        "split_stream.go",
+        "trigger.go",
+        "runtime.go",
+        "plan.go",
+        "epl_other_split_stream_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "partial",
+      "remaining": [
+        "contained-event from-clause branches",
+        "scalar and grouped multikey-array subqueries",
+        "context property/event projection",
+        "preemptive named-window target insertion",
+        "complete representation and Java trace parity"
+      ]
     }
   ],
   "cases": [
@@ -12146,6 +12171,58 @@
         "java-suite-TestSuiteEPLOther"
       ],
       "difference": "Go expresses unary minus with the typed analyzable Negate constructor rather than EPL prefix syntax. The parity test covers both an int event property and a float64 runtime variable, verifies the projected -10/-1.0 values, and confirms expression evaluation does not mutate the variable."
+    },
+    {
+      "id": "case.epl-other-split-stream",
+      "javaRuntimeIds": [
+        "java-runtime-546853309c39c95a777b",
+        "java-runtime-be9b41c9e25bd3e8cb76",
+        "java-runtime-cb9ec88c20415d0e2527",
+        "java-runtime-a082f468bd39b74815f5",
+        "java-runtime-2183f1fc82d180cd0d38",
+        "java-runtime-69bb6ae4851637eb1455",
+        "java-runtime-9df01211ef2240a5163a"
+      ],
+      "javaNames": [
+        "EPLOtherSplitStream2SplitNoDefaultOutputFirst",
+        "EPLOtherSplitStreamInvalid",
+        "EPLOtherSplitStream1SplitDefault",
+        "EPLOtherSplitStream2SplitNoDefaultOutputAll",
+        "EPLOtherSplitStream3SplitOutputAll",
+        "EPLOtherSplitStream3SplitDefaultOutputFirst",
+        "EPLOtherSplitStream4Split"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSplitStream.java"
+      ],
+      "goTests": [
+        "TestSplitStream2SplitNoDefaultOutputFirstParity",
+        "TestSplitStreamInvalidParity",
+        "TestSplitStream1SplitDefaultParity",
+        "TestSplitStream2SplitNoDefaultOutputAllParity",
+        "TestSplitStream3SplitOutputAllParity",
+        "TestSplitStream3SplitDefaultOutputFirstParity",
+        "TestSplitStream4SplitParity"
+      ],
+      "tags": [
+        "correctness",
+        "epl",
+        "split-stream",
+        "on-trigger",
+        "insert-into",
+        "output-first",
+        "output-all",
+        "wildcard",
+        "projection",
+        "invalid"
+      ],
+      "status": "partial",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit",
+        "java-suite-TestSuiteEPLOther"
+      ],
+      "difference": "Go exposes SplitFirst and SplitAll on a typed TriggerStream, with explicit SplitInto/SplitIntoWhen branches and pre-registered target schemas instead of EPL/SODA split clauses. SplitFirst stops after the first true branch, SplitAll emits every true branch, an unconditional final branch is the default, and when no branch matches the split statement emits the original source event. Wildcard branches preserve source fields through target-schema projection; named projections evaluate against the source event. The builder rejects missing branches, unknown targets, non-bool conditions and aggregate projections. SODA/model round-trips are intentionally absent. Contained-event from clauses, subqueries, context projection and preemptive named-window insertion remain open in this partial case."
     }
   ],
   "mappings": [
@@ -12940,6 +13017,10 @@
     {
       "capabilityId": "expr.core",
       "caseId": "case.epl-other-unary-minus"
+    },
+    {
+      "capabilityId": "epl.other.split-stream",
+      "caseId": "case.epl-other-split-stream"
     }
   ]
 }

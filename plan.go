@@ -2821,6 +2821,14 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 		if err := visitSelectionsExpressions(query.trigger.selections, visit); err != nil {
 			return err
 		}
+		for _, branch := range query.trigger.splitBranches {
+			if err := visit(branch.Condition); err != nil {
+				return err
+			}
+			if err := visitSelectionsExpressions(branch.Selections, visit); err != nil {
+				return err
+			}
+		}
 	}
 	if environment != nil && query.contextName != "" {
 		if definition, ok := environment.Context(query.contextName); ok {
@@ -3154,6 +3162,16 @@ func sourceNode(node *streamNode) (*streamNode, error) {
 }
 
 func (e *Environment) resultSchema(query Query) (Schema, error) {
+	if query.trigger != nil && query.trigger.action == triggerSplitStream {
+		if query.input == nil {
+			return Schema{}, NewError(ErrorInvalidRule, "split-stream source is required")
+		}
+		source, err := sourceNode(query.input)
+		if err != nil {
+			return Schema{}, err
+		}
+		return e.sourceSchema(source)
+	}
 	if query.updateStream != nil {
 		if query.input == nil {
 			return Schema{}, NewError(ErrorInvalidRule, "update target stream is required")
