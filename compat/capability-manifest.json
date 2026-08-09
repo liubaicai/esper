@@ -1651,6 +1651,29 @@
         "engine-wide configurable exception-handler factories and handler context callbacks",
         "shared exception traces for listener, sink, UDF, view and connector extension boundaries"
       ]
+    },
+    {
+      "id": "client.runtime.self-management",
+      "domain": "client",
+      "level": "G",
+      "summary": "Named runtime services, ordered typed statement traversal and selection, anonymous struct metadata and reusable immutable Plan execution",
+      "javaRefs": [
+        "ClientRuntimeItself"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "runtime_management.go",
+        "schema.go",
+        "plan.go",
+        "faf.go",
+        "client_runtime_itself_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "broader deployment/module catalog queries and concurrent traversal mutation traces",
+        "EPL reflective compiler, parser and SODA model services remain outside the typed Go public API"
+      ]
     }
   ],
   "cases": [
@@ -12605,6 +12628,78 @@
         "go-unit"
       ],
       "difference": "Java's invalid aggregation function throws RuntimeException from enter and the no-handler regression expects sendEventBean to throw EPException. Go registers the equivalent stateful aggregate by stable name and treats a panic from user-owned factory/state evaluation as an extension-boundary failure: Engine.SendEvent returns ErrorState containing plugin myinvalidagg, statement ABCName and Sample exception. Only the typed aggregate-plugin panic marker is recovered; unrelated runtime panics are rethrown. Java's separately invoked configuration scenarios for duplicated exception-handler factories and ExceptionHandlerContext callbacks are not runtime inventory executions and remain an explicit follow-up rather than being claimed by this case."
+    },
+    {
+      "id": "case.client-runtime-itself",
+      "javaRuntimeIds": [
+        "java-runtime-193d3c27f0771b142eb3",
+        "java-runtime-bd2d1afca921785abfb6",
+        "java-runtime-9289bd1007647feb6f9d",
+        "java-runtime-265f14acbae1d84e74ee"
+      ],
+      "javaNames": [
+        "ClientRuntimeItselfTransientConfiguration",
+        "ClientRuntimeSPICompileReflective",
+        "ClientRuntimeSPIStatementSelection",
+        "ClientRuntimeSPIBeanAnonymousType"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeItself.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeItselfTransientConfigurationParity",
+        "TestClientRuntimeSPICompileReflectiveTypedParity",
+        "TestClientRuntimeSPIStatementSelectionParity",
+        "TestClientRuntimeSPIBeanAnonymousTypeParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "runtime-service",
+        "statement-traversal",
+        "statement-selection",
+        "anonymous-schema",
+        "typed-plan",
+        "fire-and-forget",
+        "snapshot"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java configurationTransient is represented by immutable named Engine services installed with WithRuntimeService and read from a listener closure. Java statement-selection filter strings are replaced by typed StatementPredicate builders over name, deployment id and canonical Plan, with ordered snapshot traversal outside the engine lock. Java's anonymous BeanEventType service maps to StructSchema without catalog registration. Reflective EPL/module/expression parsing maps to ordinary typed Environment.Build, ExecuteFireAndForget, Deploy, Statement.Snapshot and expression constructors; Plan.Canonical supplies the inspectable model instead of EPL-to-SODA or module text parsing."
+    },
+    {
+      "id": "case.client-runtime-wrong-compile-method",
+      "javaRuntimeIds": [
+        "java-runtime-4bb4bb34dc00a49e99a3"
+      ],
+      "javaNames": [
+        "ClientRuntimeWrongCompileMethod"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeItself.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeWrongCompileMethodApprovedDifference"
+      ],
+      "tags": [
+        "client",
+        "runtime",
+        "approved-difference",
+        "compiled-artifact",
+        "typed-plan",
+        "fire-and-forget",
+        "deploy"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java produces distinct EPCompiled artifact kinds for module EPL and fire-and-forget queries and rejects using one through the other's runtime service. Go deliberately has one immutable typed logical Plan with no text compiler mode bit; the same read-only named-window Plan is valid for ExecuteFireAndForget and Deploy, and both return the same E1 snapshot. This removes an artifact-category misuse rather than weakening query validation, so the Java exception shape is not reproduced."
     }
   ],
   "mappings": [
@@ -13427,6 +13522,14 @@
     {
       "capabilityId": "client.runtime.exception-boundary",
       "caseId": "case.client-runtime-exception-handler"
+    },
+    {
+      "capabilityId": "client.runtime.self-management",
+      "caseId": "case.client-runtime-itself"
+    },
+    {
+      "capabilityId": "client.runtime.self-management",
+      "caseId": "case.client-runtime-wrong-compile-method"
     }
   ]
 }

@@ -209,6 +209,7 @@ type engineConfig struct {
 	clock          *VirtualClock
 	matchRecognize MatchRecognizeRuntimeConfig
 	runtimeURI     string
+	services       map[string]any
 }
 
 type EngineOption func(*engineConfig)
@@ -227,12 +228,30 @@ func WithRuntimeURI(uri string) EngineOption {
 	return func(cfg *engineConfig) { cfg.runtimeURI = strings.TrimSpace(uri) }
 }
 
+// WithRuntimeService installs one immutable process-local dependency in the
+// Engine. Listeners and extensions retrieve it by stable name through
+// RuntimeService instead of relying on Java-style transient configuration or
+// a global service locator.
+func WithRuntimeService(name string, service any) EngineOption {
+	name = strings.TrimSpace(name)
+	return func(cfg *engineConfig) {
+		if name == "" {
+			return
+		}
+		if cfg.services == nil {
+			cfg.services = make(map[string]any)
+		}
+		cfg.services[name] = service
+	}
+}
+
 // Engine owns deployed statements and the explicit processing clock.
 type Engine struct {
 	mu                                 sync.Mutex
 	env                                *Environment
 	clock                              *VirtualClock
 	runtimeURI                         string
+	services                           map[string]any
 	matchRecognizeStatePool            *rowRecogStatePool
 	matchRecognizeStateLimitListeners  []MatchRecognizeStateLimitListener
 	pendingMatchRecognizeStateLimits   []MatchRecognizeStateLimitEvent
@@ -292,6 +311,7 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		env:                             env,
 		clock:                           cfg.clock,
 		runtimeURI:                      cfg.runtimeURI,
+		services:                        make(map[string]any, len(cfg.services)),
 		matchRecognizeStatePool:         newRowRecogStatePool(cfg.matchRecognize),
 		variables:                       make(map[string]Value),
 		contextVariables:                make(map[string]map[string]map[string]Value),
@@ -312,6 +332,9 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		deployments:                     make(map[string]*Deployment),
 		dataflows:                       make(map[*DataflowInstance]struct{}),
 		savedDataflowInstances:          make(map[string]*DataflowInstance),
+	}
+	for name, service := range cfg.services {
+		engine.services[name] = service
 	}
 	if env != nil {
 		env.mu.RLock()
@@ -1325,6 +1348,14 @@ func (s *Statement) Plan() Plan {
 		return Plan{}
 	}
 	return s.plan
+}
+
+// DeploymentID returns the stable deployment that owns this statement.
+func (s *Statement) DeploymentID() string {
+	if s == nil || s.deployment == nil {
+		return ""
+	}
+	return s.deployment.id
 }
 
 // takeReplacedEvent returns and clears the copy-on-write event an
