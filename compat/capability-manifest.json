@@ -1593,6 +1593,25 @@
       "remaining": [
         "wider shared traces for context/subquery filter-service registrations and multi-route callback ordering"
       ]
+    },
+    {
+      "id": "client.runtime.listener-route",
+      "domain": "client",
+      "level": "G",
+      "summary": "Reentrant event routing from a statement listener across struct, map, ObjectArray, XML, Avro and JSON representations",
+      "javaRefs": [
+        "ClientRuntimeListener"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "schema.go",
+        "client_runtime_listener_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "shared callback-order traces with multiple trigger listeners and asynchronous connector ingress"
+      ]
     }
   ],
   "cases": [
@@ -12445,6 +12464,41 @@
         "go-unit"
       ],
       "difference": "Go exposes Engine.SetUnmatchedListener(UnmatchedListener); nil disables delivery. The callback runs after the engine transaction lock is released, so it can deploy a fluent Plan and affect the next event. Matching is based on active input stream filters and deliberately ignores post-input having/output suppression. Unconsumed insert-into routes are reported as their derived Event while an undeployed source statement makes the original external event unmatched with underlying pointer identity preserved. The Java source labels its final insert-into step as a restart without an explicit deploy call; Go expresses that lifecycle transition explicitly by redeploying the immutable plan."
+    },
+    {
+      "id": "case.client-runtime-listener-route",
+      "javaRuntimeIds": [
+        "java-runtime-d70cfcd190350be837e6"
+      ],
+      "javaNames": [
+        "ClientRuntimeListenerRoute"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeListener.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeListenerRouteParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "listener",
+        "reentrant-route",
+        "bean",
+        "map",
+        "object-array",
+        "xml",
+        "avro",
+        "json",
+        "representation"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go statement listeners run after the engine transaction lock is released, so the trigger callback can synchronously inject six representation-specific events with Engine.Route, SendXML and JSONSender.Route; each consumer receives exactly one ident=xy event. Java deploys the seven statements as one EPL module while Go deploys one immutable fluent Plan per statement. Java's preconfigured XML type maps an ident attribute; the Go XML schema test uses its declared ident child element, preserving the same public property value without an EPL/XML configuration layer."
     }
   ],
   "mappings": [
@@ -13255,6 +13309,10 @@
     {
       "capabilityId": "client.runtime.unmatched-listener",
       "caseId": "case.client-runtime-unmatched-listener"
+    },
+    {
+      "capabilityId": "client.runtime.listener-route",
+      "caseId": "case.client-runtime-listener-route"
     }
   ]
 }
