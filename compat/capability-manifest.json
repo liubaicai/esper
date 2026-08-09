@@ -1441,9 +1441,9 @@
         "epl_subselect_filtered_parity_test.go"
       ],
       "phase": 1,
-      "status": "partial",
+      "status": "mapped",
       "remaining": [
-        "EPLSubselectSelectWildcardNoName: auto-generated subselect_1 column name is EPL syntax sugar; Go requires explicit aliases (approved difference)"
+        "EPL subselect_1-style auto-generated column names: Go typed builder requires explicit aliases (approved difference)"
       ]
     },
     {
@@ -11497,6 +11497,7 @@
         "java-runtime-4ec1d23f545746f81f20",
         "java-runtime-b2be42620bdc328d006e",
         "java-runtime-7e0f728f635710446f39",
+        "java-runtime-a1db086132e38b79cc29",
         "java-runtime-57e3956886ac655d387d",
         "java-runtime-78f47a5bcdf6b87c9e68",
         "java-runtime-b1c2169572264f9fd646",
@@ -11525,6 +11526,7 @@
         "EPLSubselectSameEvent",
         "EPLSubselectSelectSceneOne",
         "EPLSubselectSelectWildcard",
+        "EPLSubselectSelectWildcardNoName",
         "EPLSubselectWhereConstant",
         "EPLSubselectWherePrevious",
         "EPLSubselectWherePreviousOM",
@@ -11556,6 +11558,7 @@
         "TestSubselectFilteredWherePreviousParity",
         "TestSubselectFilteredSameEventParity",
         "TestSubselectFilteredSelectWildcardParity",
+        "TestSubselectFilteredSelectWildcardNoNameParity",
         "TestSubselectFilteredSelectWithWhere2SubqueryParity",
         "TestSubselectFilteredSceneOneParity",
         "TestSubselectFilteredSelectWhereJoined2StreamsParity",
@@ -11588,15 +11591,20 @@
         "sort",
         "insert-into",
         "coalesce",
-        "nested-field"
+        "nested-field",
+        "auto-name",
+        "approved-difference"
       ],
-      "status": "partial",
+      "status": "mapped",
       "evidence": [
         "java-runtime-inventory",
         "go-unit",
         "java-suite-EPLSubselectFiltered"
       ],
-      "difference": "Non-aggregated subselect having filters rows one by one after the where clause (Esper semantics); the SameEvent/WherePrevious object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity tests. Scalar subselects use explicit SubqueryNullOnMultiple where Esper returns null on multiple rows. Multi-stream outer-join correlation uses JoinField(source, name); int-array correlation keys use null-safe Is deep equality; Esper prior(1, x) maps to Go Prior(0, x); wildcard join fragments (a.id) map to inserted Event values navigated with NestedField."
+      "difference": "Non-aggregated subselect having filters rows one by one after the where clause (Esper semantics); the SameEvent/WherePrevious object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity tests. Scalar subselects use explicit SubqueryNullOnMultiple where Esper returns null on multiple rows. Multi-stream outer-join correlation uses JoinField(source, name); int-array correlation keys use null-safe Is deep equality; Esper prior(1, x) maps to Go Prior(0, x); wildcard join fragments (a.id) map to inserted Event values navigated with NestedField. EPLSubselectSelectWildcardNoName shares its runtime semantics with TestSubselectFilteredSelectWildcardParity (identical statement modulo alias); Esper auto-names the unaliased subselect column subselect_1 while the Go typed builder requires an explicit alias and rejects a blank one at Build time (approved difference).",
+      "remaining": [
+        "EPL subselect_1-style auto-generated column names: Go typed builder requires explicit aliases (approved difference)"
+      ]
     },
     {
       "id": "case.epl-subselect-unfiltered",

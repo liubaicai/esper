@@ -450,6 +450,49 @@ func TestSubselectFilteredSelectWildcardParity(t *testing.T) {
 	assertSubselectFilteredField(t, listener, "events1", subselectFilteredS1{ID: -1, P10: "Y"})
 }
 
+// TestSubselectFilteredSelectWildcardNoNameParity mirrors
+// EPLSubselectSelectWildcardNoName: the unaliased wildcard subselect column,
+// which Esper auto-names subselect_1, has no Go chain-API form — Select
+// requires an explicit alias and rejects a blank one at Build time (approved
+// difference). The runtime semantics are covered by
+// TestSubselectFilteredSelectWildcardParity; this test pins the
+// explicit-alias boundary plus the bean-typed column (Java asserts property
+// type SupportBean_S1) under the Esper auto-name.
+func TestSubselectFilteredSelectWildcardNoNameParity(t *testing.T) {
+	env := newSubselectFilteredEnvironment(t)
+	inner := From[subselectFilteredS1](env, "SupportBean_S1").Window(LengthWindow(1000)).AsRecord()
+	blank := Select(
+		From[subselectFilteredS0](env, "SupportBean_S0"),
+		Alias("", SubqueryValue[subselectFilteredS1](inner, EventValue[subselectFilteredS1]())),
+	).Query(StatementName("s0"))
+	if _, err := env.Build(blank); err == nil {
+		t.Fatal("blank projection alias accepted; Esper auto-names it subselect_1 while Go requires an explicit alias (approved difference)")
+	}
+
+	named := Select(
+		From[subselectFilteredS0](env, "SupportBean_S0"),
+		Alias("subselect_1", SubqueryValue[subselectFilteredS1](inner, EventValue[subselectFilteredS1]())),
+	).Query(StatementName("s0"))
+	plan, err := env.Build(named)
+	if err != nil {
+		t.Fatal(err)
+	}
+	schema, ok := plan.ResultSchema()
+	if !ok {
+		t.Fatal("named wildcard subselect plan has no result schema")
+	}
+	field, found := schema.Field("subselect_1")
+	if !found || field.Type != reflect.TypeOf(subselectFilteredS1{}) {
+		t.Fatalf("subselect_1 column type = %v (found=%v), want %v", field.Type, found, reflect.TypeOf(subselectFilteredS1{}))
+	}
+
+	engine, listener := deploySubselectFiltered(t, env, named)
+	sendSubselectFiltered(t, engine, subselectFilteredS1{ID: -1, P10: "Y"})
+	listener.reset()
+	sendSubselectFiltered(t, engine, subselectFilteredS0{ID: 0})
+	assertSubselectFilteredField(t, listener, "subselect_1", subselectFilteredS1{ID: -1, P10: "Y"})
+}
+
 // TestSubselectFilteredSelectWithWhere2SubqueryParity mirrors
 // EPLSubselectSelectWithWhere2Subqery: two scalar subqueries compare against
 // the outer id inside the outer where clause.
