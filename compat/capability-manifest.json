@@ -1861,6 +1861,30 @@
         "per-category worker resizing and queue-policy changes after Engine construction",
         "machine-specific latency thresholds and Java threading-service implementation-class inspection are not portable contracts"
       ]
+    },
+    {
+      "id": "client.multitenancy.module-routing-index",
+      "domain": "client",
+      "level": "G",
+      "summary": "Typed derived-stream routing across one or multiple deployments plus indexed Table/event joins with stable deployment isolation",
+      "javaRefs": [
+        "ClientMultitenancyInsertInto",
+        "ClientMultitenancyIndex"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "stream.go",
+        "index_plan.go",
+        "client_multitenancy_insert_index_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "deployment-local protected namespaces for infra, variables, contexts, event types and declared expressions are a separate capability slice",
+        "Java compiler paths and access-modifier callbacks are replaced by explicitly registered typed schemas and immutable Plans",
+        "continuous Table joins currently preload the Table snapshot at deployment instead of probing the secondary index for every driver event",
+        "module name, uses/import visibility and ambiguity diagnostics remain in the compile/deploy capability backlog"
+      ]
     }
   ],
   "cases": [
@@ -13270,6 +13294,50 @@
         "go-unit"
       ],
       "difference": "Go keeps synchronous Send, Route and AdvanceTime semantics stable and enables concurrency explicitly with WithInboundWorkers, WithOutboundWorkers, WithRouteWorkers and WithTimerWorkers. SendAsync/representation variants, RouteAsync and AdvanceTimeAsync return reusable AsyncTask handles; WaitAsync provides a transitive idle barrier and ThreadingStats exposes workers, queue, in-flight, accepted, completed and dropped counts. Inbound coverage includes map, struct, XML, ObjectArray and JSON plus asynchronous structured-error reporting. Outbound delivery queues the complete subscriber/listener/sink batch and reports asynchronous callback errors through SetThreadingErrorHandler. Engine.Close stops admission, cancels queued work, resolves every task and waits for workers before undeploying. The Engine transaction lock still serializes statement state, so route/timer workers move a complete runtime cycle off the caller instead of mutating 100 statements concurrently. Explicit virtual time replaces Java's optional internal timer thread; tests use blocking gates and exact delivery counts instead of machine-specific sub-100ms thresholds or internal executor-class inspection."
+    },
+    {
+      "id": "case.client-multitenancy-insert-index",
+      "javaRuntimeIds": [
+        "java-runtime-be2e0bec062bb2b0331f",
+        "java-runtime-eb11289453761b79e882",
+        "java-runtime-5e03b8708a314113a28d"
+      ],
+      "javaNames": [
+        "ClientMultitenancyInsertIntoSingleModuleTwoStatements",
+        "ClientMultitenancyInsertIntoTwoModule",
+        "ClientMultitenancyIndexTable"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/multitenancy/ClientMultitenancyInsertInto.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/multitenancy/ClientMultitenancyInsertInto.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/multitenancy/ClientMultitenancyIndex.java"
+      ],
+      "goTests": [
+        "TestClientMultitenancyInsertIntoSingleModuleTwoStatementsParity",
+        "TestClientMultitenancyInsertIntoTwoModuleParity",
+        "TestClientMultitenancyIndexTableParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "multitenancy",
+        "deployment",
+        "module",
+        "insert-into",
+        "derived-stream",
+        "late-deploy",
+        "table",
+        "secondary-index",
+        "join",
+        "lifecycle"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go expresses one Java compiled module as an ordered DeployPlans call and two Java compiler-path modules as separate immutable Plan deployments over an explicitly registered public derived-stream schema. The same-deployment producer/filtered consumer preserves E1/E4 delivery and E2/E3 suppression; the late consumer does not replay E1 and receives E2-E4. The Table case declares the composite primary key plus BasketIndex in the typed Environment, verifies the selected equality IndexPlan, and joins A/B VWAPrice events to weights 1/2. Java module text, compiler-path access-modifier callbacks and JVM query-plan hooks are not copied. The current continuous Table join preloads its passive Table side at deployment, so this case proves plan selection and observable results rather than a per-event physical index lookup. Deployment-local protected definitions tested by ClientMultitenancyProtected remain unmapped."
     }
   ],
   "mappings": [
@@ -14132,6 +14200,10 @@
     {
       "capabilityId": "client.runtime.threading",
       "caseId": "case.client-runtime-threading"
+    },
+    {
+      "capabilityId": "client.multitenancy.module-routing-index",
+      "caseId": "case.client-multitenancy-insert-index"
     }
   ]
 }
