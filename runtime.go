@@ -17,6 +17,65 @@ const maxRoutedEventsPerSend = 1024
 // Listener receives one deterministic new/old-stream batch.
 type Listener func(context.Context, ResultBatch) error
 
+// replayListener keeps the initial snapshot ahead of any live batches that
+// arrive while SubscribeWithReplay is invoking the caller. Live dispatches
+// buffer instead of blocking, which also permits a replay callback to send an
+// event back into the same engine without deadlocking.
+type replayListener struct {
+	mu        sync.Mutex
+	listener  Listener
+	buffering bool
+	queued    []replayDelivery
+}
+
+type replayDelivery struct {
+	ctx   context.Context
+	batch ResultBatch
+}
+
+func newReplayListener(listener Listener) *replayListener {
+	return &replayListener{listener: listener, buffering: true}
+}
+
+func (l *replayListener) deliver(ctx context.Context, batch ResultBatch) error {
+	if l == nil || l.listener == nil {
+		return nil
+	}
+	l.mu.Lock()
+	if l.buffering {
+		l.queued = append(l.queued, replayDelivery{ctx: ctx, batch: batch.clone()})
+		l.mu.Unlock()
+		return nil
+	}
+	l.mu.Unlock()
+	return l.listener(ctx, batch)
+}
+
+func (l *replayListener) finish(ctx context.Context, replay ResultBatch) error {
+	if l == nil || l.listener == nil {
+		return nil
+	}
+	if err := l.listener(ctx, replay.clone()); err != nil {
+		return err
+	}
+	for {
+		l.mu.Lock()
+		if len(l.queued) == 0 {
+			l.buffering = false
+			l.mu.Unlock()
+			return nil
+		}
+		queued := append([]replayDelivery(nil), l.queued...)
+		l.queued = nil
+		l.mu.Unlock()
+		for _, delivery := range queued {
+			if err := l.listener(delivery.ctx, delivery.batch); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 // Sink is the chain endpoint for asynchronous integration adapters. The
 // default Engine path still invokes it synchronously for Esper-like ordering.
 type Sink interface {
@@ -1310,6 +1369,15 @@ func (s *Statement) SnapshotWithSelector(ctx context.Context, selector ContextPa
 	if s == nil {
 		return QueryResult{}, NewError(ErrorState, "nil statement")
 	}
+	if s.engine != nil {
+		s.engine.mu.Lock()
+		defer s.engine.mu.Unlock()
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed || s.state == StatementDestroyed {
+		return QueryResult{}, NewError(ErrorState, "statement is destroyed")
+	}
 	if joinDefinitionHasUnidirectional(s.plan.query.join) || (s.plan.query.aggregate != nil && joinDefinitionHasUnidirectional(s.plan.query.aggregate.join)) {
 		return QueryResult{}, fmt.Errorf("esper: iteration over a unidirectional join is not supported")
 	}
@@ -1325,15 +1393,6 @@ func (s *Statement) SnapshotWithSelector(ctx context.Context, selector ContextPa
 			return QueryResult{}, err
 		}
 	}
-	if s.engine != nil {
-		s.engine.mu.Lock()
-		defer s.engine.mu.Unlock()
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.closed || s.state == StatementDestroyed {
-		return QueryResult{}, NewError(ErrorState, "statement is destroyed")
-	}
 	var now time.Time
 	var variables map[string]Value
 	if s.engine != nil {
@@ -1344,6 +1403,14 @@ func (s *Statement) SnapshotWithSelector(ctx context.Context, selector ContextPa
 		now = time.Now()
 		variables = variablesWithEngineLockState(statementVariables(cloneValues(s.runtime.variables), s.parameters), s.engine, true)
 	}
+	return QueryResult{Batch: s.snapshotLocked(now, variables, selector)}, nil
+}
+
+// snapshotLocked evaluates the statement iterator while the caller owns the
+// statement lock and, for live statements, the engine lock. Keeping this
+// small boundary shared by Snapshot and SubscribeWithReplay makes listener
+// registration and replay one consistent statement-state transition.
+func (s *Statement) snapshotLocked(now time.Time, variables map[string]Value, selector ContextPartitionSelector) ResultBatch {
 	if s.plan.query.contextName == "" && s.runtime.subqueryRegistry != nil {
 		// Snapshot rebuilds the evaluation variables instead of reusing the
 		// variables attached during event processing. Keep the statement-owned
@@ -1379,7 +1446,7 @@ func (s *Statement) SnapshotWithSelector(ctx context.Context, selector ContextPa
 	} else {
 		result = s.runtime.snapshotQuery(s.plan, now, variables)
 	}
-	return QueryResult{Batch: result}, nil
+	return result
 }
 
 func (s *Statement) collectOutputAssignmentsLocked() {
@@ -1532,19 +1599,86 @@ func (s *Statement) Destroy(ctx context.Context) error {
 
 func (s *Statement) Subscribe(listener Listener) (Subscription, error) {
 	if s == nil {
-		return Subscription{}, fmt.Errorf("esper: nil statement")
+		return Subscription{}, NewError(ErrorState, "nil statement")
 	}
 	if listener == nil {
-		return Subscription{}, fmt.Errorf("esper: listener is nil")
+		return Subscription{}, NewError(ErrorInvalidRule, "listener is nil")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.closed {
-		return Subscription{}, fmt.Errorf("esper: statement %q is closed", s.name)
+	if s.closed || s.state == StatementDestroyed {
+		return Subscription{}, NewError(ErrorState, "statement is destroyed")
 	}
 	s.nextSubID++
 	id := s.nextSubID
 	s.listeners[id] = listener
+	return Subscription{statement: s, id: id}, nil
+}
+
+// SubscribeWithReplay registers a listener and synchronously delivers the
+// statement's current iterator snapshot as its first batch. An empty
+// statement still produces one empty replay batch. Events processed while the
+// replay callback runs are queued and delivered afterwards in separate live
+// batches, so no update is lost or folded into the snapshot.
+//
+// Like Esper's addListenerWithReplay, this operation is unavailable for
+// context statements; use SnapshotWithSelector followed by Subscribe when a
+// caller needs an explicitly selected context view.
+func (s *Statement) SubscribeWithReplay(ctx context.Context, listener Listener) (Subscription, error) {
+	if err := contextErr(ctx); err != nil {
+		return Subscription{}, err
+	}
+	if s == nil {
+		return Subscription{}, NewError(ErrorState, "nil statement")
+	}
+	if listener == nil {
+		return Subscription{}, NewError(ErrorInvalidRule, "listener is nil")
+	}
+	engineLocked := s.engine != nil
+	if engineLocked {
+		s.engine.mu.Lock()
+	}
+	s.mu.Lock()
+	if s.closed || s.state == StatementDestroyed {
+		s.mu.Unlock()
+		if engineLocked {
+			s.engine.mu.Unlock()
+		}
+		return Subscription{}, NewError(ErrorState, "statement is destroyed")
+	}
+	if s.plan.query.contextName != "" {
+		s.mu.Unlock()
+		if engineLocked {
+			s.engine.mu.Unlock()
+		}
+		return Subscription{}, NewError(ErrorInvalidRule, "subscribe with replay is not available for context statements")
+	}
+	var now time.Time
+	var variables map[string]Value
+	if s.engine != nil {
+		s.engine.refreshVariablesLocked()
+		now = s.engine.clock.Now()
+		variables = variablesWithEngineLockState(statementVariables(cloneValues(s.engine.variables), s.parameters), s.engine, true)
+	} else {
+		now = time.Now()
+		variables = variablesWithEngineLockState(statementVariables(cloneValues(s.runtime.variables), s.parameters), s.engine, true)
+	}
+	replay := s.snapshotLocked(now, variables, nil)
+	buffer := newReplayListener(listener)
+	s.nextSubID++
+	id := s.nextSubID
+	s.listeners[id] = buffer.deliver
+	s.mu.Unlock()
+
+	// Release the engine lock before entering application code. The buffering
+	// wrapper preserves replay-first ordering and allows reentrant sends.
+	if engineLocked {
+		s.engine.mu.Unlock()
+	}
+	if err := buffer.finish(ctx, replay); err != nil {
+		_ = s.removeSubscription(id)
+		return Subscription{}, fmt.Errorf("esper: replay listener for %q: %w", s.name, err)
+	}
 	return Subscription{statement: s, id: id}, nil
 }
 

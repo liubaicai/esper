@@ -1556,6 +1556,25 @@
         "Java annotation arrays beyond the statement name use explicit Go query options or domain-specific builders",
         "shared client API trace beyond these seven basic executions"
       ]
+    },
+    {
+      "id": "client.runtime.epstatement",
+      "domain": "client",
+      "level": "S",
+      "summary": "Statement runtime lifecycle, iterator snapshots and listener registration with synchronous replay of the current retained view",
+      "javaRefs": [
+        "ClientRuntimeEPStatement"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "client_runtime_epstatement_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Java subscriber reflection is represented by the typed Listener callback rather than a second subscriber SPI",
+        "shared concurrent lifecycle trace beyond replay ordering and destroyed-state operations"
+      ]
     }
   ],
   "cases": [
@@ -12331,6 +12350,44 @@
         "go-unit"
       ],
       "difference": "Go constructs all seven basic statements with typed fluent builders rather than EPL text. StatementName is stable deployment metadata and covers the only annotation value asserted by the Java execution; Java Tag/Priority/Drop annotation-array reflection is not copied onto ordinary select statements. Wildcard select and length-window IR results preserve underlying pointer identity, CountAll emits 1/2/3, the field filter and named projection match Java, and the one-shot timer example uses TimerAt at the equivalent virtual-clock deadline because Go's TimerInterval builder is intentionally recurring."
+    },
+    {
+      "id": "case.client-runtime-epstatement",
+      "javaRuntimeIds": [
+        "java-runtime-6c00bf2c9e2365da003b",
+        "java-runtime-f0ae4acf017e79ec4c61"
+      ],
+      "javaNames": [
+        "ClientRuntimeEPStatementListenerWReplay",
+        "ClientRuntimeEPStatementAlreadyDestroyed"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeEPStatement.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeEPStatementListenerWithReplayParity",
+        "TestClientRuntimeEPStatementAlreadyDestroyedParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "statement",
+        "listener",
+        "replay",
+        "iterator",
+        "length-window",
+        "lifecycle",
+        "undeploy",
+        "destroyed-state",
+        "reentrant-send"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go exposes SubscribeWithReplay(ctx, Listener) instead of addListenerWithReplay(UpdateListener). The first synchronous callback always carries the current Snapshot view, including one empty ResultBatch for an empty statement; live events arriving or sent reentrantly during replay are buffered and delivered afterwards as separate batches. Undeploy leaves retained Statement metadata readable while State reports StatementDestroyed and Snapshot, selector Snapshot, Subscribe, SubscribeWithReplay, Stop and Start all return ErrorState. Java iterator and safeIterator share Go's immutable Snapshot boundary; Java setSubscriber overloads are intentionally represented by the typed Listener API rather than duplicated as a reflective subscriber SPI."
     }
   ],
   "mappings": [
@@ -13133,6 +13190,10 @@
     {
       "capabilityId": "client.basic",
       "caseId": "case.client-basic"
+    },
+    {
+      "capabilityId": "client.runtime.epstatement",
+      "caseId": "case.client-runtime-epstatement"
     }
   ]
 }
