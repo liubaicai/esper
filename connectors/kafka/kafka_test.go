@@ -139,9 +139,7 @@ func TestSourceJSONProcessorRoutesAndCommitsAfterProcessing(t *testing.T) {
 	if !engine.Now().Equal(time.Unix(123, 0).UTC()) {
 		t.Fatalf("engine time = %s", engine.Now())
 	}
-	reader.mu.Lock()
-	commits := append([]Message(nil), reader.commits...)
-	reader.mu.Unlock()
+	commits := waitForKafkaCommits(t, reader, 1)
 	if len(commits) != 1 || string(commits[0].Key) != "k1" {
 		t.Fatalf("commits = %#v", commits)
 	}
@@ -153,6 +151,23 @@ func TestSourceJSONProcessorRoutesAndCommitsAfterProcessing(t *testing.T) {
 	}
 	if err := source.Destroy(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func waitForKafkaCommits(t *testing.T, reader *fakeReader, count int) []Message {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		reader.mu.Lock()
+		commits := append([]Message(nil), reader.commits...)
+		reader.mu.Unlock()
+		if len(commits) >= count {
+			return commits
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for %d Kafka commits, got %#v", count, commits)
+		}
+		time.Sleep(time.Millisecond)
 	}
 }
 

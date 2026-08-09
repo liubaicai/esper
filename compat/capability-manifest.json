@@ -2046,6 +2046,31 @@
       ]
     },
     {
+      "id": "client.compile.path-cache",
+      "domain": "client",
+      "level": "G",
+      "summary": "Thread-safe immutable typed compiler-path snapshot cache with catalog-change invalidation, protected same-module visibility and deterministic duplicate-export validation",
+      "javaRefs": [
+        "ClientCompilePathCache",
+        "CompilerPathCache",
+        "ClassLoaderProvider",
+        "ModuleProvider"
+      ],
+      "goRefs": [
+        "compile_path_cache.go",
+        "module.go",
+        "client_compile_path_cache_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Go caches typed catalog-resolution snapshots rather than generated ModuleProvider classes or class-loader lookups",
+        "application-owned NewCompilePathCache values replace the Java process-global singleton and expose detached hit/miss/entry statistics",
+        "selected catalog changes create a new fingerprint while unrelated private-module additions leave an explicit public path reusable",
+        "persistent cross-process caches, portable compiled artifacts and bytecode classloading are intentionally not copied"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -14004,6 +14029,55 @@
       "difference": "Engine.RuntimePath returns an immutable snapshot of active public module exports and observed deployment IDs. It resolves event types, variables, contexts, Named Windows, Tables, declared expressions and registered Go scripts through the same typed ModulePath rules, keeps preconfigured global objects visible, records sorted uses in Plan identity and excludes inactive/private/protected module catalogs. Old snapshots retain their selected module identities after undeploy, while a fresh snapshot reflects the current runtime. Public Table and Named Window state registered after Engine construction is materialized lazily on first runtime use. The index execution uses immutable UniqueIndex/NamedWindowUniqueIndex definition options rather than separate create-index deployments, and the preconfigured SupportBean aggregate and Event bus Named Window executions preserve the Java count/window and sum/last/window results without EPL or bytecode artifacts."
     },
     {
+      "id": "case.client-compile-path-cache",
+      "javaRuntimeIds": [
+        "java-runtime-98dcc7b7759357927785",
+        "java-runtime-bcbe0d354793f9cf87d6",
+        "java-runtime-6dbbeec8d503cfd8bfed",
+        "java-runtime-aeaf2809c2f9bd736a01",
+        "java-runtime-a7a8a886438f5224ffeb"
+      ],
+      "javaNames": [
+        "ClientCompilePathCacheObjectTypes",
+        "ClientCompilePathCacheProtected",
+        "ClientCompilePathCacheFillByCompile",
+        "ClientCompilePathCacheEventTypeChain",
+        "ClientCompilePathCacheInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompilePathCache.java"
+      ],
+      "goTests": [
+        "TestClientCompilePathCacheObjectTypesMatchesEsper",
+        "TestClientCompilePathCacheProtectedMatchesEsper",
+        "TestClientCompilePathCacheFillByCompileMatchesEsper",
+        "TestClientCompilePathCacheEventTypeChainMatchesEsper",
+        "TestClientCompilePathCacheInvalidMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "path-cache",
+        "module",
+        "protected",
+        "public",
+        "catalog-fingerprint",
+        "cache-hit",
+        "cache-miss",
+        "event-type-chain",
+        "duplicate-export",
+        "concurrency"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "CompilePathCache.Prepare atomically snapshots every object visible through an immutable ModulePath and caches the typed logical-name-to-catalog-identity matrix by an in-process SHA-256 fingerprint. Repeated unchanged paths reuse one immutable entry; additions to a selected module invalidate the fingerprint, while unrelated private-module additions do not alter an explicitly selected public path. CachedModulePath resolves event types, variables, contexts, Named Windows, Tables, declared expressions and scripts and binds module uses into Plan identity. Same-module protected variables remain visible, ten successively extended public event-type paths preserve nested schema links, and duplicate public event type A exports return ErrorAmbiguous with and without cache. Go has no generated ModuleProvider class or transient ClassLoaderProvider, so cache reuse is asserted through deterministic stats and fingerprints instead of observing JVM class loading; the cache is application-owned instead of process-global."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15065,6 +15139,10 @@
     {
       "capabilityId": "client.compile.engine-runtime-path",
       "caseId": "case.client-compile-engine-path"
+    },
+    {
+      "capabilityId": "client.compile.path-cache",
+      "caseId": "case.client-compile-path-cache"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",
