@@ -577,7 +577,7 @@ func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, p
 			}
 			assignments = append(assignments, SetColumn(schema.fields[columnIndex].Name, expression))
 		}
-		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, assignments, evaluation, now)
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, assignments, evaluation, now, false)
 		if assignmentErr != nil {
 			return tableMutationResult{}, fmt.Errorf("failed to evaluate multi-row insert row %d of %d: %w", rowIndex+1, len(rows), assignmentErr)
 		}

@@ -4922,7 +4922,11 @@ func applyIndexedUpdateSetValue(schema Schema, original any, updates map[string]
 	if value.IsNull() || value.Any() == nil {
 		element.Set(reflect.Zero(element.Type()))
 	} else {
-		converted, convertErr := assignReflectValue(element.Type(), value.Any())
+		coerced, coerceErr := coerceUpdateSetValue(element.Type(), value.Any())
+		if coerceErr != nil {
+			return fmt.Errorf("array column %q element %d: %w", column, index, coerceErr)
+		}
+		converted, convertErr := assignReflectValue(element.Type(), coerced)
 		if convertErr != nil {
 			return fmt.Errorf("array column %q element %d: %w", column, index, convertErr)
 		}
@@ -4999,7 +5003,11 @@ func applyKeyedUpdateSetValue(schema Schema, original any, updates map[string]an
 	if value.IsNull() || value.Any() == nil {
 		clone.SetMapIndex(keyReflected, reflect.Zero(elementType))
 	} else {
-		converted, convertErr := assignReflectValue(elementType, value.Any())
+		coerced, coerceErr := coerceUpdateSetValue(elementType, value.Any())
+		if coerceErr != nil {
+			return fmt.Errorf("map column %q entry %q: %w", column, key, coerceErr)
+		}
+		converted, convertErr := assignReflectValue(elementType, coerced)
 		if convertErr != nil {
 			return fmt.Errorf("map column %q entry %q: %w", column, key, convertErr)
 		}

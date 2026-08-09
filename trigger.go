@@ -1087,10 +1087,13 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 						for _, assignment := range action.Assignments {
 							if !assignment.Wildcard {
 								targetFields = nil
-								assignment.Expr.node().referencedTargetFields("named-window-field", &targetFields)
-								if assignment.Index != nil {
-									assignment.Index.node().referencedTargetFields("named-window-field", &targetFields)
-								}
+							assignment.Expr.node().referencedTargetFields("named-window-field", &targetFields)
+							if assignment.Index != nil {
+								assignment.Index.node().referencedTargetFields("named-window-field", &targetFields)
+							}
+							if assignment.Key != nil {
+								assignment.Key.node().referencedTargetFields("named-window-field", &targetFields)
+							}
 								if len(targetFields) > 0 {
 									return fmt.Errorf("named-window merge clause %d not-matched assignment cannot reference named-window fields", index)
 								}
@@ -1138,6 +1141,9 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 						assignment.Expr.node().referencedTargetFields("named-window-field", &targetFields)
 						if assignment.Index != nil {
 							assignment.Index.node().referencedTargetFields("named-window-field", &targetFields)
+						}
+						if assignment.Key != nil {
+							assignment.Key.node().referencedTargetFields("named-window-field", &targetFields)
 						}
 						if len(targetFields) > 0 {
 							return fmt.Errorf("named-window merge clause %d not-matched assignment cannot reference named-window fields", index)
@@ -1668,7 +1674,7 @@ func evaluateTableMergeActions(engine *Engine, schema Schema, original any, eval
 			}
 			continue
 		}
-		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, workingUnderlying, action.Assignments, step, now)
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, workingUnderlying, action.Assignments, step, now, false)
 		if assignmentErr != nil {
 			return nil, false, false, false, assignmentErr
 		}
@@ -1759,7 +1765,7 @@ func executeTableMergeNotMatchedActions(ctx context.Context, engine *Engine, tab
 		if !action.InsertIntoTarget {
 			return tableMutationResult{}, false, NewError(ErrorInvalidRule, "not-matched merge action must insert into an event type or the merge target")
 		}
-		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, nil, action.Assignments, evaluation, now)
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, nil, action.Assignments, evaluation, now, false)
 		if assignmentErr != nil {
 			return tableMutationResult{}, false, assignmentErr
 		}
@@ -1791,7 +1797,7 @@ func evaluateNamedWindowMergeNotMatchedActions(engine *Engine, schema Schema, ev
 		if !action.InsertIntoTarget {
 			return nil, false, false, NewError(ErrorInvalidRule, "not-matched merge action must insert into an event type or the merge target")
 		}
-		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, action.Assignments, evaluation, now)
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, action.Assignments, evaluation, now, false)
 		if assignmentErr != nil {
 			return nil, false, false, assignmentErr
 		}
@@ -1879,7 +1885,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 				return tableMutationResult{}, err
 			}
 		} else {
-			values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, definition.assignments, EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}, now)
+			values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, definition.assignments, EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}, now, false)
 			if assignmentErr != nil {
 				return tableMutationResult{}, assignmentErr
 			}
@@ -1959,7 +1965,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 				if !ok || !condition {
 					continue
 				}
-				values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, clause.Assignments, evaluation, now)
+				values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, nil, clause.Assignments, evaluation, now, false)
 				if assignmentErr != nil {
 					return nil, false, assignmentErr
 				}
@@ -2031,7 +2037,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 			if definition.onDemand {
 				evaluation.OuterEvent = candidate
 			}
-			values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, candidate.Underlying(), definition.assignments, evaluation, now)
+			values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, candidate.Underlying(), definition.assignments, evaluation, now, true)
 			if assignmentErr != nil {
 				return nil, assignmentErr
 			}
@@ -2144,7 +2150,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 	mutation = tableMutationResult{}
 	switch definition.action {
 	case triggerInsertTable:
-		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, nil, definition.assignments, evaluation, now)
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, nil, definition.assignments, evaluation, now, false)
 		if assignmentErr != nil {
 			return tableMutationResult{}, assignmentErr
 		}
@@ -2155,7 +2161,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		mutation.newRows = append(mutation.newRows, row)
 		return mutation, nil
 	case triggerUpsertTable:
-		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, nil, definition.assignments, evaluation, now)
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, nil, definition.assignments, evaluation, now, false)
 		if assignmentErr != nil {
 			return tableMutationResult{}, assignmentErr
 		}
@@ -2189,7 +2195,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 			return tableMutationResult{}, eventErr
 		}
 		evaluation.Group = []Event{targetEvent}
-		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, targetEvent.Underlying(), definition.assignments, evaluation, now)
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, targetEvent.Underlying(), definition.assignments, evaluation, now, false)
 		if assignmentErr != nil {
 			return tableMutationResult{}, assignmentErr
 		}
@@ -2303,7 +2309,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 				return mutation, nil
 			}
 			var assignmentErr error
-			values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, targetUnderlying, clause.Assignments, evaluation, now)
+			values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, targetUnderlying, clause.Assignments, evaluation, now, false)
 			if assignmentErr != nil {
 				return tableMutationResult{}, assignmentErr
 			}
@@ -2387,7 +2393,7 @@ func executeTableWhereAction(ctx context.Context, engine *Engine, table *Table, 
 				}
 			}
 		case triggerUpdateTable:
-			values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, targetEvent.Underlying(), definition.assignments, evaluation, now)
+			values, assignmentErr := evaluateTriggerAssignmentsForTarget(table.Definition().schema, targetEvent.Underlying(), definition.assignments, evaluation, now, false)
 			if assignmentErr != nil {
 				return tableMutationResult{}, assignmentErr
 			}
@@ -2558,8 +2564,8 @@ func validateTriggerAssignment(e *Environment, input *streamNode, targetSchema S
 	if assignment.Column == "" || assignment.Expr == nil {
 		return NewError(ErrorInvalidRule, "assignment is invalid")
 	}
-	if assignment.Key != nil {
-		return NewError(ErrorInvalidRule, "map-entry assignments are not yet supported for on-trigger actions")
+	if assignment.Index != nil && assignment.Key != nil {
+		return NewError(ErrorInvalidRule, "assignment cannot combine an array index and a map key")
 	}
 	field, exists := targetSchema.Field(assignment.Column)
 	if !exists {
@@ -2577,9 +2583,32 @@ func validateTriggerAssignment(e *Environment, input *streamNode, targetSchema S
 	if err := validateExpression(assignment.Expr); err != nil {
 		return err
 	}
-	if assignment.Index == nil {
+	if assignment.Index == nil && assignment.Key == nil {
 		if err := validateTriggerAssignmentType(field.Type, assignment.Expr); err != nil {
 			return err
+		}
+		return nil
+	}
+	if assignment.Key != nil {
+		if err := validateExpression(assignment.Key); err != nil {
+			return fmt.Errorf("map key: %w", err)
+		}
+		keyType := assignment.Key.Type()
+		if keyType == nil || keyType.Kind() != reflect.String {
+			return fmt.Errorf("map key expression must return a string, got %s", triggerTypeDescription(assignment.Key.Type()))
+		}
+		mapType := field.Type
+		for mapType != nil && mapType.Kind() == reflect.Pointer {
+			mapType = mapType.Elem()
+		}
+		if mapType == nil || mapType.Kind() != reflect.Map {
+			return fmt.Errorf("target column %q is not a map", assignment.Column)
+		}
+		if mapType.Key().Kind() != reflect.String {
+			return fmt.Errorf("target column %q map keys are not strings", assignment.Column)
+		}
+		if err := validateTriggerAssignmentType(mapType.Elem(), assignment.Expr); err != nil {
+			return fmt.Errorf("map column %q: %w", assignment.Column, err)
 		}
 		return nil
 	}
@@ -2620,6 +2649,11 @@ func validateTriggerAssignmentType(target reflect.Type, expression Expr) error {
 	if target.Kind() == reflect.Pointer && actual.AssignableTo(target.Elem()) {
 		return nil
 	}
+	if target.Kind() == reflect.Pointer && numericTypes(actual, target.Elem()) {
+		// Numeric values widen into boxed numeric targets; the runtime
+		// widener (coerceUpdateSetValue) performs the same conversion.
+		return nil
+	}
 	return fmt.Errorf("assignment expression type %s is incompatible with target type %s", actual, target)
 }
 
@@ -2646,7 +2680,7 @@ func triggerTypeDescription(typ reflect.Type) string {
 	return typ.String()
 }
 
-func evaluateTriggerAssignmentsForTarget(schema Schema, original any, assignments []TableAssignment, evaluation EvalContext, now time.Time) (map[string]any, error) {
+func evaluateTriggerAssignmentsForTarget(schema Schema, original any, assignments []TableAssignment, evaluation EvalContext, now time.Time, lenientIndexBounds bool) (map[string]any, error) {
 	values := make(map[string]any, len(assignments))
 	initialGroup := append([]Event(nil), evaluation.InitialGroup...)
 	if len(initialGroup) == 0 {
@@ -2693,7 +2727,23 @@ func evaluateTriggerAssignmentsForTarget(schema Schema, original any, assignment
 			if value.IsMissing() {
 				continue
 			}
-			if err := applyIndexedTriggerAssignment(schema, original, values, assignment.Column, indexValue, value); err != nil {
+			if err := applyIndexedTriggerAssignment(schema, original, values, assignment.Column, indexValue, value, lenientIndexBounds); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		if assignment.Key != nil {
+			keyValue := assignment.Key.eval(step)
+			if keyValue.IsMissing() || keyValue.IsNull() {
+				continue
+			}
+			value := assignment.Expr.eval(step)
+			if value.IsMissing() {
+				continue
+			}
+			// Map-entry writes share the update-istream nested-write
+			// semantics: clone-on-write, silent skip on null containers.
+			if err := applyKeyedUpdateSetValue(schema, original, values, assignment.Column, keyValue, value); err != nil {
 				return nil, err
 			}
 			continue
@@ -2707,7 +2757,7 @@ func evaluateTriggerAssignmentsForTarget(schema Schema, original any, assignment
 	return values, nil
 }
 
-func applyIndexedTriggerAssignment(schema Schema, original any, updates map[string]any, column string, indexValue, value Value) error {
+func applyIndexedTriggerAssignment(schema Schema, original any, updates map[string]any, column string, indexValue, value Value, lenientIndexBounds bool) error {
 	workingUnderlying, err := mergeSchemaUnderlying(schema, original, updates)
 	if err != nil {
 		return err
@@ -2742,7 +2792,14 @@ func applyIndexedTriggerAssignment(schema Schema, original any, updates map[stri
 		return fmt.Errorf("target column %q is not an array or slice", column)
 	}
 	if index < 0 || index >= array.Len() {
-		return fmt.Errorf("array index %d out of range for target column %q (length %d)", index, column, array.Len())
+		if lenientIndexBounds {
+			// Esper's plain named-window on-trigger update skips an
+			// indexed write whose index is out of range for the target
+			// row's array instead of failing the statement (Esper
+			// NWSetMapProps regression); table and merge updates throw.
+			return nil
+		}
+		return fmt.Errorf("Array length %d less than index %d for property '%s'", array.Len(), index, column)
 	}
 	var copyValue reflect.Value
 	if array.Kind() == reflect.Slice {
@@ -2758,7 +2815,11 @@ func applyIndexedTriggerAssignment(schema Schema, original any, updates map[stri
 			element.Set(reflect.Zero(element.Type()))
 		}
 	} else {
-		converted, convertErr := assignReflectValue(element.Type(), value.Any())
+		coerced, coerceErr := coerceUpdateSetValue(element.Type(), value.Any())
+		if coerceErr != nil {
+			return fmt.Errorf("array column %q element %d: %w", column, index, coerceErr)
+		}
+		converted, convertErr := assignReflectValue(element.Type(), coerced)
 		if convertErr != nil {
 			return fmt.Errorf("array column %q element %d: %w", column, index, convertErr)
 		}

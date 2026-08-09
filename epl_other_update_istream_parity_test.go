@@ -1066,3 +1066,288 @@ func TestUpdateIStreamNestedSetInvalidParity(t *testing.T) {
 		).Query(StatementName("s0")))
 	})
 }
+
+// TestUpdateIStreamNWSetMapPropsParity mirrors EPLOtherUpdateNWSetMapProps (map
+// representation): an on-trigger update on a named window writes a plain
+// column, a map entry and an array element per row; a null map or a too-small
+// array skips that nested write silently while the plain assignment still
+// applies. SERDEREQUIRED (HA serde round-trip) has no Go counterpart.
+func TestUpdateIStreamNWSetMapPropsParity(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterMap(env, "MyNWInfraTypeWithMapProp", []FieldSpec{
+		FieldDef("simple", reflect.TypeOf("")),
+		FieldDef("myarray", reflect.TypeOf([]int{})),
+		FieldDef("mymap", reflect.TypeOf(map[string]any{})),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowWithMapProp", schema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[updateIStreamBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(OnRecord(FromAny(env, "MyNWInfraTypeWithMapProp")).InsertIntoNamedWindow("MyWindowWithMapProp",
+		SetColumn("simple", Field[Event, any]("simple")),
+		SetColumn("myarray", Field[Event, []int]("myarray")),
+		SetColumn("mymap", Field[Event, map[string]any]("mymap")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromNamedWindow(env, "MyWindowWithMapProp").Query(
+		StatementName("s0"),
+		WithOldStream(),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(OnEvent(From[updateIStreamBean](env, "SupportBean")).UpdateNamedWindow("MyWindowWithMapProp", Literal(true),
+		SetColumn("simple", Literal("A")),
+		SetMapEntry("mymap", Literal("abc"), Field[updateIStreamBean, int]("intPrimitive")),
+		SetArrayElement("myarray", Literal(2), Field[updateIStreamBean, int]("intPrimitive")),
+	).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, insertPlan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+	updateIStreamDeployOne(t, engine, updatePlan)
+
+	assertRow := func(label string, result Result, simple any, arrayElement2 any, mapEntry any) {
+		t.Helper()
+		if got := result.Get("simple").Any(); got != simple {
+			t.Fatalf("%s simple = %#v, want %#v", label, got, simple)
+		}
+		array, ok := result.Get("myarray").Any().([]int)
+		if !ok {
+			t.Fatalf("%s myarray = %#v, want []int", label, result.Get("myarray").Any())
+		}
+		if arrayElement2 == nil {
+			for index, value := range array {
+				if value != 0 {
+					t.Fatalf("%s myarray[%d] = %d, want untouched zeros", label, index, value)
+				}
+			}
+		} else if len(array) <= 2 || array[2] != arrayElement2 {
+			t.Fatalf("%s myarray = %#v, want element [2]=%#v", label, array, arrayElement2)
+		}
+		if mapEntry == nil {
+			if got := result.Get("mymap").Any(); got != nil {
+				t.Fatalf("%s mymap = %#v, want nil", label, got)
+			}
+		} else {
+			container, ok := result.Get("mymap").Any().(map[string]any)
+			if !ok || container["abc"] != mapEntry {
+				t.Fatalf("%s mymap = %#v, want entry abc=%#v", label, result.Get("mymap").Any(), mapEntry)
+			}
+		}
+	}
+
+	// Row 1: full nested writes apply.
+	if err := engine.Send(context.Background(), "MyNWInfraTypeWithMapProp", map[string]any{"myarray": make([]int, 10), "mymap": map[string]any{}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), updateIStreamBean{TheString: "E1", IntPrimitive: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if len(s0.newResults) != 2 || len(s0.oldResults) != 1 {
+		t.Fatalf("E1 deliveries: new=%d old=%d", len(s0.newResults), len(s0.oldResults))
+	}
+	assertRow("row1 after E1", s0.newResults[1], "A", 10, 10)
+
+	// Row 2 has a too-small array and a null map; row 1 is re-updated with 20.
+	if err := engine.Send(context.Background(), "MyNWInfraTypeWithMapProp", map[string]any{"myarray": make([]int, 2)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), updateIStreamBean{TheString: "E2", IntPrimitive: 20}); err != nil {
+		t.Fatal(err)
+	}
+	if len(s0.newResults) != 5 || len(s0.oldResults) != 3 {
+		t.Fatalf("E2 deliveries: new=%d old=%d", len(s0.newResults), len(s0.oldResults))
+	}
+	assertRow("row1 after E2", s0.newResults[3], "A", 20, 20)
+	assertRow("row2 after E2", s0.newResults[4], "A", nil, nil)
+}
+
+// TestUpdateIStreamArrayElementParity mirrors EPLOtherUpdateArrayElement: the
+// array index expression reads an event property (position), one statement
+// writes two array properties, and downstream consumers observe the mutated
+// arrays on the updated copy.
+func TestUpdateIStreamArrayElementParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "Arriving", []FieldSpec{
+		FieldDef("position", reflect.TypeOf(int(0))),
+		FieldDef("intarray", reflect.TypeOf([]int{})),
+		FieldDef("objectarray", reflect.TypeOf([]any{})),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(FromAny(env, "Arriving").UpdateStream(
+		SetArrayElement("intarray", Field[Event, int]("position"), Literal(1)),
+		SetArrayElement("objectarray", Field[Event, int]("position"), Literal(1)),
+	).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromAny(env, "Arriving").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, updatePlan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+
+	send := func(position int) {
+		t.Helper()
+		if err := engine.Send(context.Background(), "Arriving", map[string]any{
+			"position":    position,
+			"intarray":    make([]int, 3),
+			"objectarray": make([]any, 3),
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send(1)
+	send(0)
+	send(2)
+	wantInts := [][]int{{0, 1, 0}, {1, 0, 0}, {0, 0, 1}}
+	wantObjects := [][]any{{nil, 1, nil}, {1, nil, nil}, {nil, nil, 1}}
+	if len(s0.newResults) != 3 {
+		t.Fatalf("s0 deliveries = %d", len(s0.newResults))
+	}
+	for index, result := range s0.newResults {
+		if got := result.Get("position").Any(); got != []int{1, 0, 2}[index] {
+			t.Fatalf("event %d position = %#v", index, got)
+		}
+		if got := result.Get("intarray").Any(); !reflect.DeepEqual(got, wantInts[index]) {
+			t.Fatalf("event %d intarray = %#v, want %#v", index, got, wantInts[index])
+		}
+		if got := result.Get("objectarray").Any(); !reflect.DeepEqual(got, wantObjects[index]) {
+			t.Fatalf("event %d objectarray = %#v, want %#v", index, got, wantObjects[index])
+		}
+	}
+}
+
+// TestUpdateIStreamArrayElementBoxedParity mirrors EPLOtherUpdateArrayElementBoxed:
+// the index is an arithmetic expression (3-2) and the value widens and reboxes
+// into a boxed double array element ([]*float64).
+func TestUpdateIStreamArrayElementBoxedParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "MyEventBoxed", []FieldSpec{
+		FieldDef("dbls", reflect.TypeOf([]*float64{})),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(FromAny(env, "MyEventBoxed").UpdateStream(
+		SetArrayElement("dbls", Subtract[int](Literal(3), Literal(2)), Literal(1)),
+	).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromAny(env, "MyEventBoxed").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, updatePlan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+
+	if err := engine.Send(context.Background(), "MyEventBoxed", map[string]any{"dbls": make([]*float64, 3)}); err != nil {
+		t.Fatal(err)
+	}
+	if len(s0.newResults) != 1 {
+		t.Fatalf("s0 deliveries = %d", len(s0.newResults))
+	}
+	dbls, ok := s0.newResults[0].Get("dbls").Any().([]*float64)
+	if !ok || len(dbls) != 3 {
+		t.Fatalf("dbls = %#v, want []*float64 length 3", s0.newResults[0].Get("dbls").Any())
+	}
+	if dbls[0] != nil || dbls[2] != nil || dbls[1] == nil || *dbls[1] != 1.0 {
+		t.Fatalf("dbls = %#v, want {nil, 1, nil}", dbls)
+	}
+}
+
+// TestUpdateIStreamArrayElementInvalidParity mirrors EPLOtherUpdateArrayElementInvalid:
+// the build-time invalid matrix (unknown property, null/non-integer index
+// expression, incompatible value type, not-an-array target, unknown index
+// field) plus the runtime behaviors (index overflow fails the send with
+// Esper's diagnostic text, null index and null rhs for a primitive array skip
+// the write silently). Esper's exact compile-time message texts differ from
+// Go's typed-builder diagnostics; both reject the same statement shapes.
+func TestUpdateIStreamArrayElementInvalidParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "MySchemaArr", []FieldSpec{
+		FieldDef("doublearray", reflect.TypeOf([]float64{})),
+		FieldDef("intarray", reflect.TypeOf([]int{})),
+		FieldDef("notAnArray", reflect.TypeOf(int(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	assertInvalid := func(label, want string, build func() (Plan, error)) {
+		t.Helper()
+		if _, err := build(); err == nil {
+			t.Fatalf("%s must be rejected", label)
+		} else if want != "" && !strings.Contains(err.Error(), want) {
+			t.Fatalf("%s error = %v, want substring %q", label, err, want)
+		}
+	}
+	assertInvalid("unknown-property", "", func() (Plan, error) {
+		return env.Build(FromAny(env, "MySchemaArr").UpdateStream(
+			SetArrayElement("c1", Literal(0), Literal(1)),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("null-index", "must return an integer", func() (Plan, error) {
+		return env.Build(FromAny(env, "MySchemaArr").UpdateStream(
+			SetArrayElement("doublearray", NullLiteral[any](), Literal(1)),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("incompatible-value", "incompatible", func() (Plan, error) {
+		return env.Build(FromAny(env, "MySchemaArr").UpdateStream(
+			SetArrayElement("intarray", Field[Event, int]("notAnArray"), Literal("x")),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("not-an-array", "is not an array", func() (Plan, error) {
+		return env.Build(FromAny(env, "MySchemaArr").UpdateStream(
+			SetArrayElement("notAnArray", Field[Event, int]("notAnArray"), Literal(1)),
+		).Query(StatementName("s0")))
+	})
+	assertInvalid("unknown-index-field", "", func() (Plan, error) {
+		return env.Build(FromAny(env, "MySchemaArr").UpdateStream(
+			SetArrayElement("doublearray", Field[Event, int]("intPrimitive"), Literal(1)),
+		).Query(StatementName("s0")))
+	})
+
+	// Runtime behaviors: overflow errors; null index and null rhs skip.
+	if _, err := RegisterMap(env, "MySchemaRt", []FieldSpec{
+		FieldDef("doublearray", reflect.TypeOf([]float64{})),
+		FieldDef("indexvalue", reflect.TypeOf(int(0))),
+		FieldDef("rhsvalue", reflect.TypeOf(int(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(FromAny(env, "MySchemaRt").UpdateStream(
+		SetArrayElement("doublearray", Field[Event, int]("indexvalue"), Field[Event, int]("rhsvalue")),
+	).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, updatePlan)
+
+	err = engine.Send(context.Background(), "MySchemaRt", map[string]any{"doublearray": make([]float64, 3), "indexvalue": 10, "rhsvalue": 1})
+	if err == nil || !strings.Contains(err.Error(), "Array length 3 less than index 10 for property 'doublearray'") {
+		t.Fatalf("index-overflow error = %v, want Esper diagnostic", err)
+	}
+	if err := engine.Send(context.Background(), "MySchemaRt", map[string]any{"doublearray": make([]float64, 3), "indexvalue": nil, "rhsvalue": 1}); err != nil {
+		t.Fatalf("null-index send must succeed: %v", err)
+	}
+	if err := engine.Send(context.Background(), "MySchemaRt", map[string]any{"doublearray": make([]float64, 3), "indexvalue": 1, "rhsvalue": nil}); err != nil {
+		t.Fatalf("null-rhs send must succeed: %v", err)
+	}
+}
