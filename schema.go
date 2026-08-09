@@ -3135,6 +3135,17 @@ func assignReflectValue(target reflect.Type, update any) (reflect.Value, error) 
 
 func (e Event) TypeName() string { return e.typeName }
 
+// withUnderlying returns an envelope copy that keeps the event identity,
+// schema and reception time while replacing the underlying value. Update
+// statements use it to publish the copy-on-write updated event: the original
+// envelope already delivered to upstream listeners stays untouched.
+func (e Event) withUnderlying(underlying any) Event {
+	clone := e
+	clone.underlying = underlying
+	clone.jsonRaw = nil
+	return clone
+}
+
 // StreamType is the logical source/bus type that delivered the event. Direct
 // events use TypeName; insert-into routes can keep the concrete member in
 // TypeName while using the target stream as StreamType.

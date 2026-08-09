@@ -1484,6 +1484,30 @@
       "remaining": [
         "full Java/Go shared parity trace beyond per-execution probes, wider created-composite representation matrix and event-type metadata surfaces (BeanEventType/type-class/stateless-select) remain open"
       ]
+    },
+    {
+      "id": "epl.other.update-istream",
+      "domain": "epl",
+      "level": "G",
+      "summary": "update-istream copy-on-write event mutation across insert-into chains, variables and build-time invalid rules",
+      "javaRefs": [
+        "EPLOtherUpdateIStream"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "plan.go",
+        "stream.go",
+        "schema.go",
+        "epl_other_update_istream_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "partial",
+      "remaining": [
+        "priority/multi-update ordering and listener delivery matrix",
+        "named-window/table/map-property/array-element targets and type wideners",
+        "subquery set expressions, copy-method/SODA/XML/wrapped-object representations",
+        "full Java invalid-rule and trace parity"
+      ]
     }
   ],
   "cases": [
@@ -11957,6 +11981,48 @@
         "java-suite-InfraNamedWindowViews"
       ],
       "difference": "Go inserts through OnEvent(...).InsertIntoNamedWindow trigger plans as the established equivalent of EPL insert-into select statements, and reads iterator state with NamedWindow.Snapshot in retention order. FirstEventWindowSpec retention is newly honored by named windows: a dropped firstevent insert produces no listener callback at all. Sort windows iterate in sort order with newer equal-key events before older ones (reverseSortedEqualRuns), and an event sorting beyond the retained size of a full window is inserted and removed in the same delta (IR pair with itself). Unique snapshot order follows first-seen key order where Esper asserts any-order. Time views run on a virtual clock via Engine.AdvanceTime: #time expires exactly at insert-time plus the period; firsttime admits only while the oldest retained event is younger than the period and never timer-expires; time_batch accumulates silently, delivers the completed batch as new data at the anchored boundary and as old data at the following boundary (one callback carries both when both exist), with silent deletes of unflushed events and a boundary schedule that slides by the period even across empty batches. length_batch shares the time_batch completed-batch state machine with a size trigger: accumulation and unflushed deletes are silent, each completed batch is one new-data delivery and leaves as old data when the next batch completes; firstlength drops inserts beyond the size silently until deletes free a slot; time_accum delivers inserts immediately and expires all retained events together at the newest retained event plus the period, re-anchoring when the newest event is deleted. ext_timed(value, period) slides with arriving event timestamps: each event expires when the newest timestamp seen reaches its timestamp plus the period, expiries ride in the same delta as the triggering insert and both the window listener and the irstream consumer observe the IR pair. ext_timed_batch anchors boundaries at the epoch reference, accumulates silently, fires old data for deletes of accumulated events, and an arriving event whose timestamp crosses the next boundary flushes the accumulated batch as new data and the previously completed batch as old data. time_order keeps events sorted by their external timestamp, expires them under the engine clock at timestamp plus the period, and an arrival whose external timestamp is already expired passes straight through as an IR pair with itself. time_length_batch shares the time_batch anchored rollover with an additional size trigger, silent accumulation and silent unflushed deletes, and an all-empty rollover disarms the schedule until the next insert re-anchors it (Esper re-anchoring). #groupwin(key)#length(size) retains the newest size events per group with the flat iterator in insertion order, expelling the oldest events of an over-full group as old data in the triggering insert delta; #groupwin(key)#time_batch(duration) shares the anchored time_batch rollover and silent accumulation/deletes, delivering the completed batch with events grouped by key in first-seen group order. The four EPL on-delete alias variants (as on the trigger stream, on the window, both or neither) collapse into one Go chain construction because typed trigger/window fields make stream aliases unnecessary; the shared tryCreateWindow consumer matrix (doubling projection, per-key grouped sum with irstream null-prior IR pairs, value >= 10 filter) is asserted against one Go window. Go delete-trigger statements deliver deleted window events as the old data of the trigger batch while Esper delivers them as the new data of the on-delete statement; both fire exactly when rows matched (the Java no-op assertListenerInvoked is satisfied by the lingering first-delete invocation), so invocation counts are asserted instead of trigger payloads. Grouped irstream aggregates now emit the Esper null-prior old row on group creation (group-by columns populated, aggregate columns null). Two insert-into statements into the same window deliver one window delta each (two listener invocations per source event) and the consumer observes both rows flattened. A filtered irstream consumer applies its filter to new and old events, so a unique replacement whose incoming event fails the filter delivers only the old row. The timetolive retention expression is an epoch-millis Func2 over CurrentTime() plus the per-event longPrimitive field, and the whole-bean insert is an on-merge trigger whose never-matching condition (Literal(false)) with CopyMatchingFields mirrors 'on SupportBean merge MyWindow insert select *'. Invalid-matrix boundaries that Esper reports at compile/deploy time surface at Go register/build time: a groupwin child that is not a data window view fails NewNamedWindowDefinition (ErrorInvalidRule), deleting from an undeclared window fails Build (ErrorUnknownName), a duplicate window name fails registration (ErrorDependency, matching Esper's deploy-time precondition), and a data window declared onto a named-window consumer fails Build (ErrorInvalidRule, groupwin exempt as in Esper). EPL-text-only invalid cases (create window without any view, on-demand update EPL, istream FAF update, model-after unresolved property) are unconstructible in the Go API because CreateNamedWindow takes an explicit schema and defaults retention to keep-all, and update triggers are typed assignments rather than on-demand EPL text. Late-deployed consumers attach to the current named-window state at Go Deploy time (seedNamedWindowConsumerLocked replays retained rows without emitting listener batches), matching Esper's statement-start preload; Esper skips the preload for batching windows (time_batch/length_batch/time_length_batch/firsttime/ext_timed_batch/expression_batch) and so does Go (namedWindowRetentionIsBatch). Esper's #uni(value) on a named-window consumer is the univariate statistics derived view (not the #unique data window), selected in Go as UnivariateStatistics(field).Average() inside an ungrouped Aggregate projection. Esper prior(N, x) maps to Go Prior(N-1, x) with the consumer statement tracking the named-window arrival history per prior conventions. Esper derives a distinct event type for the create-window select columns; the Go port registers a distinct struct for that window schema because re-registering the SupportBean struct under the window schema name would re-point the Go-type to event-type index and misroute bean sends. Multi-key grouped retention is constructed with GroupWindowKeys([]Expr{...}, inner), generalizing GroupWindow(key, inner); per-key state pairs compose one group identity while single-key behavior is unchanged. Pattern statements consuming a named window observe its insert stream; Esper parses every a=W(k1) or a=W(k2) with the every on the first branch only, so a permanent completion of the second branch quits the whole or-expression including the every sibling (EvalOrStateNode isQuitted propagation). The Go pattern runtime mirrors this with patternCompletionPermanent and a quit marker on the or progress; the same fix makes root patterns without every single-fire (plain filter/sequence/and completions quiesce the statement instead of starting a fresh match per event), which rewrote two Go-native assertions to the Java-probed single-fire behavior (and consume refire expectation, within-expr deadline test re-armed with an explicit every). On-trigger inserts against named windows run preemptively in both engines: the Go dispatch loop queues routed insert-into-stream events until every statement has processed the current event, so a cascaded on-select observes window mutations from sibling triggers regardless of declaration order. The stream-target form is a select trigger with RouteTo (TriggerQuery.Query now carries routeTarget and validateRoute admits select triggers), the window-target form is InsertIntoNamedWindowFrom(target, source, assignments) evaluating NamedWindowField against each retained source row (the ordered-assignment helper is bypassed because it would shadow the source row with a target working row). Java creates the insert-into stream type implicitly from the select columns; Go registers the map schema explicitly, matching the established explicit-schema convention. Intersection view stacks (IntersectWindows(LengthWindow(2), Unique(intPrimitive))) now model Esper IntersectDefaultView/IntersectAsymetricView named-window semantics: each child view retains independently, the window contents are the intersection of the child contents, an event expelled by any child leaves as old data in the triggering insert delta, and an insert rejected by an asymmetric child (FirstUnique) produces no new data. On-delete removes the window contents from every child view; on-update delivers the original rows as old data and the replacements as new data, recomputing the intersection so child views stay consistent for later inserts (Java-probed Esper 9.0.0 sequences, including the post-update expiry trace). Composite children are validated at definition time (intersection-only, at least two children, keep-all/length/unique child views). InfraDeepSupertypeInsert bean-class hierarchy (SupportOverrideOneA extends One extends Base, every level overriding getVal() so the single Esper property val carries the most-derived valOneA value) is modeled with flat Go structs exposing only the Esper-visible val property; the valOne/valBase constructor state has no getter and is invisible to Esper. Go struct schemas cannot inherit parent fields through WithSchemaParent (duplicated struct fields are rejected; schema inheritance covers Map/JSON/ObjectArray), so the deep-supertype window insert is expressed with an explicit SetColumn assignment per the typed chain convention, matching the Java observable behavior (insert succeeds, window iterator val=1a). InfraSelectStreamDotStarInsert (insert into a one-column object-array window select intPrimitive as p0, sb.* as c0) compiles in Esper and silently drops the stream-star column at insert (Java-probed Esper 9.0.0: the object-array row holds p0 only). The Go typed chain deliberately validates insert columns against the window schema, so the undeclared c0 column is a Build-time ErrorUnknownName (approved difference); the expressible p0-only form retains exactly p0, matching the Java runtime observation. InfraBeanBacked runs under the object-array/map/default/Avro representation annotations, but @EventRepresentation is inert for create-window-as-bean-type (every rep asserts BeanEventType with the SupportBean underlying), so one Go pass covers the matrix; window-delivered events carry the window name as their event type through the create listener, a plain consumer statement and the on-update trigger batch, matching the Java assertEvent observations. Esper BeanEventType/EventTypeTypeClass.NAMED_WINDOW metadata and the isStatelessSelect SPI flag have no Go public-API counterparts (type-name plus bean underlying are the asserted proxies). InfraBeanContained (create window as (bean SupportBean_S0), insert select bean.* as bean) is modeled with a Go struct window schema whose single bean field carries the whole SupportBean_S0 underlying via EventValue[T](), and the bean.p00 fragment navigation works through the nested struct path; Esper runs the object-array/map/default representations for the composite type (Go keeps its single struct representation) and rejects the Avro form at compile time because a bean property has no Avro mapping, while Go Avro schemas are record-field declarations normalized at ingestion (both recorded as differences). InfraBeanSchemaBacked (create schema ABC as SupportBean.class) models the class-alias event type with a distinct Go struct carrying the same fields: one event type per Go struct matches Esper type identity (SupportBean sends never route to the ABC alias consumer), and the FAF row off the ABC-backed window carries the window-named event type; registering the same Go struct under a second schema name would re-point the Go-type index and misroute sends (the documented hazard), so the alias keeps its own struct."
+    },
+    {
+      "id": "case.epl-other-update-istream",
+      "javaRuntimeIds": [
+        "java-runtime-e7b07766933b9fbaace8",
+        "java-runtime-22f44e791b4e33eccab8"
+      ],
+      "javaNames": [
+        "EPLOtherUpdateBean",
+        "EPLOtherUpdateFieldUpdateOrder"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherUpdateIStream.java"
+      ],
+      "tags": [
+        "correctness",
+        "epl",
+        "update-istream",
+        "copy-on-write",
+        "insert-into",
+        "variable",
+        "build-validation"
+      ],
+      "status": "partial",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit",
+        "java-suite-EPLOtherUpdateIStream",
+        "java-probe"
+      ],
+      "difference": "Go update-istream mirrors Esper's InternalEventRouter copy-on-write preprocessing (Java-probed: the source statement's listeners observe the original event, the update listener receives new=updated-copy/old=original, downstream consumers observe the copy and the original underlying is never mutated). Every set expression evaluates against the pre-update event, so intBoxed=intPrimitive reads the original value even when intPrimitive is assigned earlier. Listener batches follow Go deployment order (Insert, Update, Select) while Esper's router preprocessing invokes the update callback before the insert statement's own listeners; per-statement batch contents are identical. A non-boolean where clause is compile-time impossible in the typed Go builder (Where takes Expression[bool]).",
+      "remaining": [
+        "EPLOtherUpdateInvalid full matrix (read-only/inherited/stream-type rules)",
+        "insert-into wildcard bean/map routes, fields-with-priority and unprioritized multi-update ordering, listener delivery multiupdate/mixed",
+        "named-window/table/map-property/array-element update targets and type wideners",
+        "copy-method/SODA/XML/wrapped-object representations, subquery set expressions, enum anyOf and send-route-sender preprocess"
+      ],
+      "goTests": [
+        "TestUpdateIStreamBeanParity",
+        "TestUpdateIStreamFieldUpdateOrderParity",
+        "TestUpdateIStreamInvalidParity"
+      ]
     }
   ],
   "mappings": [
@@ -12743,6 +12809,10 @@
     {
       "capabilityId": "infra.namedwindow.views",
       "caseId": "case.infra-namedwindow-views"
+    },
+    {
+      "capabilityId": "epl.other.update-istream",
+      "caseId": "case.epl-other-update-istream"
     }
   ]
 }

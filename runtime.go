@@ -1232,6 +1232,10 @@ type Statement struct {
 	closed                   bool
 	closeOnce                sync.Once
 	pendingOutputAssignments []VariableAssignment
+	// replacedEvent carries the copy-on-write event produced by an
+	// update-istream statement so the engine dispatch loop continues the
+	// current cycle with the updated event for statements deployed later.
+	replacedEvent *Event
 }
 
 func (s *Statement) ID() string {
@@ -1251,6 +1255,22 @@ func (s *Statement) Plan() Plan {
 		return Plan{}
 	}
 	return s.plan
+}
+
+// takeReplacedEvent returns and clears the copy-on-write event an
+// update-istream statement produced for the in-flight dispatch cycle. The
+// engine substitutes it for the remaining statements so downstream consumers
+// observe the updated event while earlier statements already saw the
+// original, mirroring Esper's InternalEventRouter preprocessing.
+func (s *Statement) takeReplacedEvent() (Event, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.replacedEvent == nil {
+		return Event{}, false
+	}
+	event := *s.replacedEvent
+	s.replacedEvent = nil
+	return event, true
 }
 
 // Snapshot returns the statement's current iterator view without dispatching
@@ -2140,6 +2160,9 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 				e.mu.Unlock()
 				return processErr
 			}
+			if replaced, replacedOK := statement.takeReplacedEvent(); replacedOK {
+				current = replaced
+			}
 			if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
 				e.mu.Unlock()
 				return err
@@ -2595,6 +2618,9 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 			batch, changed, err := statement.process(ctx, now, current, variables)
 			if err != nil {
 				return err
+			}
+			if replaced, replacedOK := statement.takeReplacedEvent(); replacedOK {
+				current = replaced
 			}
 			if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
 				return err
@@ -3348,6 +3374,16 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			batch.Sequence = s.runtime.seq.Add(1)
 		}
 		return batch, changed, err
+	}
+	if s.plan.query.updateStream != nil {
+		batch, replaced, err := s.runtime.processUpdateStream(s.plan, event, now, variables)
+		if err != nil {
+			return ResultBatch{}, false, err
+		}
+		if replaced != nil {
+			s.replacedEvent = replaced
+		}
+		return batch, !batch.empty(), nil
 	}
 	if s.plan.query.trigger != nil {
 		batch, err := s.processTriggerRuntime(ctx, &s.runtime, now, event, variables)
@@ -4603,6 +4639,54 @@ func (r *statementRuntime) context() context.Context {
 		return context.Background()
 	}
 	return r.ctx
+}
+
+// processUpdateStream applies an update-istream statement to one accepted
+// event. The where clause and every assignment expression evaluate against
+// the pre-update event; the assignments are then written into a copy of the
+// underlying so the original event value is never mutated. The batch mirrors
+// Esper's update delivery (new = updated copy, old = pre-update event), and
+// the returned replacement event lets the engine continue the current
+// dispatch cycle with the updated copy for statements deployed later.
+func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.Time, variables map[string]Value) (ResultBatch, *Event, error) {
+	r.variables = variablesWithEngine(variables, r.engine)
+	r.variables = r.withContextVariables(r.variables)
+	r.variables = r.withContextProperties(r.variables)
+	delta, err := r.insert(plan.query.input, event, now)
+	if err != nil {
+		return ResultBatch{}, nil, err
+	}
+	if len(delta.newEvents) == 0 {
+		return ResultBatch{}, nil, nil
+	}
+	definition := plan.query.updateStream
+	evalContext := EvalContext{Event: delta.newEvents[0], Now: now, Variables: r.variables}
+	if definition.where != nil {
+		value := definition.where.eval(evalContext)
+		if matched, ok := boolValue(value); !ok || !matched {
+			return ResultBatch{}, nil, nil
+		}
+	}
+	updates := make(map[string]any, len(definition.assignments))
+	for _, assignment := range definition.assignments {
+		updates[assignment.Column] = assignment.Expr.eval(evalContext).Any()
+	}
+	accepted := delta.newEvents[0]
+	updated, err := mergeSchemaUnderlying(accepted.Schema(), accepted.Underlying(), updates)
+	if err != nil {
+		return ResultBatch{}, nil, WrapError(ErrorTypeMismatch, "update-set", err)
+	}
+	replaced := accepted.withUnderlying(updated)
+	batch := ResultBatch{
+		Time:            now,
+		New:             []Result{resultEvent(replaced)},
+		Old:             []Result{resultEvent(accepted)},
+		outputCountsSet: true,
+		outputInserted:  1,
+		outputRemoved:   1,
+	}
+	batch.Sequence = r.seq.Add(1)
+	return batch, &replaced, nil
 }
 
 func (r *statementRuntime) evaluationContext() ExpressionEvaluationContext {

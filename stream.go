@@ -1193,6 +1193,49 @@ func (s Stream[T]) InsertInto(eventType string, options ...QueryOption) Query {
 	return s.Query(options...)
 }
 
+// UpdateStream starts an update-istream statement against this stream, the Go
+// chain equivalent of Esper's update-istream clause (update istream <stream>
+// set ... where ...). Assignments are evaluated against the pre-update event
+// and applied to a copy: the source statement's listeners keep observing the
+// original event while downstream consumers of the same stream observe the
+// updated copy, matching Esper's InternalEventRouter copy-on-write
+// preprocessing.
+func (s Stream[T]) UpdateStream(assignments ...TableAssignment) UpdateStreamQuery {
+	query := s.Query()
+	query.updateStream = &updateStreamDefinition{assignments: append([]TableAssignment(nil), assignments...)}
+	return UpdateStreamQuery{query: query}
+}
+
+// UpdateStreamQuery is the fluent builder for an update-istream statement.
+type UpdateStreamQuery struct {
+	query Query
+}
+
+// Where restricts the update to events matching the predicate, mirroring the
+// optional where clause of Esper's update-istream. Events that do not match
+// pass through the stream unchanged and do not deliver to update listeners.
+func (u UpdateStreamQuery) Where(predicate Expression[bool]) UpdateStreamQuery {
+	u.query.updateStream.where = predicate
+	return u
+}
+
+// Query finalizes the update-istream statement with the usual statement
+// options such as StatementName.
+func (u UpdateStreamQuery) Query(options ...QueryOption) Query {
+	query := u.query
+	for _, option := range options {
+		if option == nil {
+			continue
+		}
+		spec := &querySpec{selector: query.selector, output: query.output}
+		option(spec)
+		query.name = spec.name
+		query.statementUserObject = spec.statementUserObject
+		query.contextName = spec.contextName
+	}
+	return query
+}
+
 // Select is a type-changing top-level combinator. It yields an ordered Row
 // result and keeps the underlying stream graph analyzable.
 func Select[T any](s Stream[T], selections ...Selection) RecordStream {
@@ -2540,6 +2583,15 @@ func SelectOnce(env *Environment, selections ...Selection) Query {
 	return Query{env: env, selections: append([]Selection(nil), selections...), sourceLess: true}
 }
 
+// updateStreamDefinition is the logical plan node for an update-istream
+// statement. The runtime evaluates assignments against the pre-update event
+// and applies them to a copy of the underlying, so the original event value
+// is never mutated in place.
+type updateStreamDefinition struct {
+	assignments []TableAssignment
+	where       Expr
+}
+
 // Query is an immutable logical statement definition.
 type Query struct {
 	env                        *Environment
@@ -2550,6 +2602,7 @@ type Query struct {
 	rowRecog                   *rowRecogDefinition
 	trigger                    *triggerDefinition
 	onDemand                   *onDemandDefinition
+	updateStream               *updateStreamDefinition
 	selections                 []Selection
 	joinSelections             []JoinSelection
 	joinWhere                  Expr
@@ -2575,6 +2628,18 @@ type Query struct {
 func (q Query) Name() string { return q.name }
 
 func (q Query) description() string {
+	if q.updateStream != nil {
+		parts := []string{q.input.describe()}
+		columns := make([]string, 0, len(q.updateStream.assignments))
+		for _, assignment := range q.updateStream.assignments {
+			columns = append(columns, assignment.Column)
+		}
+		parts = append(parts, "update-set("+strings.Join(columns, ",")+")")
+		if q.updateStream.where != nil {
+			parts = append(parts, "where("+q.updateStream.where.Description()+")")
+		}
+		return strings.Join(parts, " -> ")
+	}
 	if q.onDemand != nil {
 		parts := []string{q.input.describe(), q.onDemand.description()}
 		if q.contextName != "" {

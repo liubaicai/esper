@@ -447,6 +447,10 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		if err := e.validateAggregate(query.aggregate); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "aggregate", err)
 		}
+	} else if query.updateStream != nil {
+		if err := e.validateUpdateStream(query); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "update", err)
+		}
 	} else if query.join != nil {
 		if err := e.validateJoin(query.join, query.joinSelections); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "join", err)
@@ -2643,6 +2647,19 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 	if err := visitStreamNodeExpressions(query.input, visit); err != nil {
 		return err
 	}
+	if query.updateStream != nil {
+		for _, assignment := range query.updateStream.assignments {
+			if err := visit(assignment.Expr); err != nil {
+				return err
+			}
+			if err := visit(assignment.Index); err != nil {
+				return err
+			}
+		}
+		if err := visit(query.updateStream.where); err != nil {
+			return err
+		}
+	}
 	if query.onDemand != nil {
 		if err := visit(query.onDemand.predicate); err != nil {
 			return err
@@ -3137,6 +3154,16 @@ func sourceNode(node *streamNode) (*streamNode, error) {
 }
 
 func (e *Environment) resultSchema(query Query) (Schema, error) {
+	if query.updateStream != nil {
+		if query.input == nil {
+			return Schema{}, NewError(ErrorInvalidRule, "update target stream is required")
+		}
+		source, err := sourceNode(query.input)
+		if err != nil {
+			return Schema{}, err
+		}
+		return e.sourceSchema(source)
+	}
 	if query.onDemand != nil {
 		if query.input == nil {
 			return Schema{}, NewError(ErrorInvalidRule, "on-demand target is required")
@@ -3487,6 +3514,102 @@ func (e *Environment) validateJoinCondition(condition JoinCondition, sources []*
 	}
 	if err := e.validateExprFields(sources[rightSource], condition.Right); err != nil {
 		return fmt.Errorf("right source %d: %w", rightSource, err)
+	}
+	return nil
+}
+
+// validateUpdateStream validates an update-istream statement: the target must
+// be a plain (optionally filtered) event stream without data windows, the set
+// assignments reference declared properties with non-aggregate expressions,
+// and the optional where clause is a boolean expression. Mirroring Esper's
+// InternalEventRouter preprocessing, update statements do not carry their own
+// projection, output policy or route target.
+func (e *Environment) validateUpdateStream(query Query) error {
+	definition := query.updateStream
+	if query.input == nil {
+		return NewError(ErrorInvalidRule, "update target stream is required")
+	}
+	for node := query.input; node != nil; node = node.input {
+		if node.kind == streamWindow {
+			return NewError(ErrorInvalidRule, "update target stream cannot declare a data window")
+		}
+		if node.kind != streamFilter {
+			break
+		}
+	}
+	source, err := sourceNode(query.input)
+	if err != nil {
+		return err
+	}
+	if source.kind != streamSource {
+		return NewError(ErrorInvalidRule, "update target must be a plain event stream (named window, table, method and historical targets are not yet supported)")
+	}
+	if err := e.validateNode(query.input); err != nil {
+		return err
+	}
+	if query.contextName != "" {
+		return NewError(ErrorInvalidRule, "update with a statement context is not yet supported")
+	}
+	if query.routeTarget != "" || query.tableTarget != "" {
+		return NewError(ErrorInvalidRule, "update statements cannot declare insert-into or into-table routes")
+	}
+	if len(definition.assignments) == 0 {
+		return NewError(ErrorInvalidRule, "update requires at least one assignment")
+	}
+	schema, err := e.sourceSchema(source)
+	if err != nil {
+		return err
+	}
+	seen := make(map[string]struct{}, len(definition.assignments))
+	for _, assignment := range definition.assignments {
+		if assignment.Wildcard {
+			return NewError(ErrorInvalidRule, "update assignments do not support wildcard field copies")
+		}
+		if assignment.Index != nil {
+			return NewError(ErrorInvalidRule, "update array-element assignments are not yet supported")
+		}
+		if strings.TrimSpace(assignment.Column) == "" {
+			return NewError(ErrorInvalidRule, "update assignment column is required")
+		}
+		if assignment.Expr == nil {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("update assignment %q requires an expression", assignment.Column))
+		}
+		if _, canonicalName, lookupErr := schema.lookupField(assignment.Column); lookupErr != nil {
+			return WrapError(ErrorUnknownName, "update assignment", lookupErr)
+		} else if _, exists := seen[canonicalName]; exists {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("update assignment duplicates property %q", canonicalName))
+		} else {
+			seen[canonicalName] = struct{}{}
+		}
+		if expressionNodeContainsAggregate(assignment.Expr.node()) {
+			return NewError(ErrorInvalidRule, "aggregation functions are not supported within update-set expressions")
+		}
+		if expressionNodeContainsSubquery(assignment.Expr.node()) {
+			return NewError(ErrorInvalidRule, "subqueries within update-set expressions are not yet supported")
+		}
+		if expressionContainsPreviousAccess(assignment.Expr.node()) {
+			return NewError(ErrorInvalidRule, "update-set expressions cannot use previous or prior access")
+		}
+		if err := e.validateExprFields(query.input, assignment.Expr); err != nil {
+			return WrapError(ErrorInvalidRule, fmt.Sprintf("update assignment %q", assignment.Column), err)
+		}
+	}
+	if definition.where != nil {
+		if definition.where.Type() != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "update where expression must return bool")
+		}
+		if expressionNodeContainsAggregate(definition.where.node()) {
+			return NewError(ErrorInvalidRule, "aggregation functions are not supported within update where clauses")
+		}
+		if expressionNodeContainsSubquery(definition.where.node()) {
+			return NewError(ErrorInvalidRule, "subqueries within update where clauses are not yet supported")
+		}
+		if expressionContainsPreviousAccess(definition.where.node()) {
+			return NewError(ErrorInvalidRule, "update where clauses cannot use previous or prior access")
+		}
+		if err := e.validateExprFields(query.input, definition.where); err != nil {
+			return WrapError(ErrorInvalidRule, "update where", err)
+		}
 	}
 	return nil
 }
