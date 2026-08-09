@@ -1232,15 +1232,21 @@ func (u UpdateStreamQuery) Where(predicate Expression[bool]) UpdateStreamQuery {
 // options such as StatementName.
 func (u UpdateStreamQuery) Query(options ...QueryOption) Query {
 	query := u.query
+	spec := &querySpec{selector: query.selector, output: query.output}
 	for _, option := range options {
 		if option == nil {
 			continue
 		}
-		spec := &querySpec{selector: query.selector, output: query.output}
 		option(spec)
-		query.name = spec.name
-		query.statementUserObject = spec.statementUserObject
-		query.contextName = spec.contextName
+	}
+	query.name = spec.name
+	query.statementUserObject = spec.statementUserObject
+	query.contextName = spec.contextName
+	if spec.updatePrioritySet {
+		query.updateStream.priority = spec.updatePriority
+	}
+	if spec.updateDrop {
+		query.updateStream.drop = true
 	}
 	return query
 }
@@ -2493,6 +2499,9 @@ type querySpec struct {
 	offset                     int
 	allowNoSink                bool
 	indexHints                 []indexHint
+	updatePriority             int
+	updatePrioritySet          bool
+	updateDrop                 bool
 }
 
 // QueryOption configures statement metadata and output policy. Options are
@@ -2501,6 +2510,24 @@ type QueryOption func(*querySpec)
 
 func StatementName(name string) QueryOption {
 	return func(spec *querySpec) { spec.name = name }
+}
+
+// UpdatePriority sets the update-istream priority, the Go chain equivalent
+// of Esper's @Priority annotation: lower priorities apply first and higher
+// priorities override earlier assignments on the same event, while equal
+// priorities keep deployment order with drop entries first.
+func UpdatePriority(priority int) QueryOption {
+	return func(spec *querySpec) {
+		spec.updatePriority = priority
+		spec.updatePrioritySet = true
+	}
+}
+
+// UpdateDrop drops matching events from the stream dispatch, the Go chain
+// equivalent of Esper's @Drop annotation on update-istream: consumers never
+// observe the event and the drop statement itself delivers no batch.
+func UpdateDrop() QueryOption {
+	return func(spec *querySpec) { spec.updateDrop = true }
 }
 
 // WithStatementUserObject attaches an opaque caller-owned value to the
@@ -2599,6 +2626,8 @@ func SelectOnce(env *Environment, selections ...Selection) Query {
 type updateStreamDefinition struct {
 	assignments []TableAssignment
 	where       Expr
+	priority    int
+	drop        bool
 }
 
 // Query is an immutable logical statement definition.

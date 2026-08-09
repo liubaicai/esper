@@ -1236,6 +1236,10 @@ type Statement struct {
 	// update-istream statement so the engine dispatch loop continues the
 	// current cycle with the updated event for statements deployed later.
 	replacedEvent *Event
+	// droppedEvent marks that an update-istream statement with UpdateDrop
+	// matched the in-flight event, so the engine drops the rest of the
+	// current dispatch cycle for that event.
+	droppedEvent bool
 }
 
 func (s *Statement) ID() string {
@@ -1271,6 +1275,16 @@ func (s *Statement) takeReplacedEvent() (Event, bool) {
 	event := *s.replacedEvent
 	s.replacedEvent = nil
 	return event, true
+}
+
+// takeDroppedEvent returns and clears the drop signal an update-istream
+// statement with UpdateDrop raised for the in-flight dispatch cycle.
+func (s *Statement) takeDroppedEvent() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	dropped := s.droppedEvent
+	s.droppedEvent = false
+	return dropped
 }
 
 // Snapshot returns the statement's current iterator view without dispatching
@@ -2163,6 +2177,9 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 			if replaced, replacedOK := statement.takeReplacedEvent(); replacedOK {
 				current = replaced
 			}
+			if statement.takeDroppedEvent() {
+				break
+			}
 			if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
 				e.mu.Unlock()
 				return err
@@ -2477,12 +2494,27 @@ func orderUpdateStatementsFirst(statements []*Statement) []*Statement {
 	if !hasUpdate {
 		return statements
 	}
-	ordered := make([]*Statement, 0, len(statements))
+	updates := make([]*Statement, 0, len(statements))
 	for _, statement := range statements {
 		if statement.plan.query.updateStream != nil {
-			ordered = append(ordered, statement)
+			updates = append(updates, statement)
 		}
 	}
+	// Esper sorts update-istream entries by ascending priority with drop
+	// entries first on ties; deployment order stays the stable fallback.
+	sort.SliceStable(updates, func(i, j int) bool {
+		left := updates[i].plan.query.updateStream
+		right := updates[j].plan.query.updateStream
+		if left.priority != right.priority {
+			return left.priority < right.priority
+		}
+		if left.drop != right.drop {
+			return left.drop
+		}
+		return false
+	})
+	ordered := make([]*Statement, 0, len(statements))
+	ordered = append(ordered, updates...)
 	for _, statement := range statements {
 		if statement.plan.query.updateStream == nil {
 			ordered = append(ordered, statement)
@@ -2651,6 +2683,9 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 			}
 			if replaced, replacedOK := statement.takeReplacedEvent(); replacedOK {
 				current = replaced
+			}
+			if statement.takeDroppedEvent() {
+				break
 			}
 			if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
 				return err
@@ -3406,12 +3441,15 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		return batch, changed, err
 	}
 	if s.plan.query.updateStream != nil {
-		batch, replaced, err := s.runtime.processUpdateStream(s.plan, event, now, variables)
+		batch, replaced, dropped, err := s.runtime.processUpdateStream(s.plan, event, now, variables)
 		if err != nil {
 			return ResultBatch{}, false, err
 		}
 		if replaced != nil {
 			s.replacedEvent = replaced
+		}
+		if dropped {
+			s.droppedEvent = true
 		}
 		return batch, !batch.empty(), nil
 	}
@@ -4678,16 +4716,16 @@ func (r *statementRuntime) context() context.Context {
 // Esper's update delivery (new = updated copy, old = pre-update event), and
 // the returned replacement event lets the engine continue the current
 // dispatch cycle with the updated copy for statements deployed later.
-func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.Time, variables map[string]Value) (ResultBatch, *Event, error) {
+func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.Time, variables map[string]Value) (ResultBatch, *Event, bool, error) {
 	r.variables = variablesWithEngine(variables, r.engine)
 	r.variables = r.withContextVariables(r.variables)
 	r.variables = r.withContextProperties(r.variables)
 	delta, err := r.insert(plan.query.input, event, now)
 	if err != nil {
-		return ResultBatch{}, nil, err
+		return ResultBatch{}, nil, false, err
 	}
 	if len(delta.newEvents) == 0 {
-		return ResultBatch{}, nil, nil
+		return ResultBatch{}, nil, false, nil
 	}
 	definition := plan.query.updateStream
 	accepted := delta.newEvents[0]
@@ -4695,8 +4733,13 @@ func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.
 	if definition.where != nil {
 		value := definition.where.eval(evalContext)
 		if matched, ok := boolValue(value); !ok || !matched {
-			return ResultBatch{}, nil, nil
+			return ResultBatch{}, nil, false, nil
 		}
+	}
+	if definition.drop {
+		// @Drop removes the matching event from the stream dispatch
+		// entirely and delivers no listener batch of its own.
+		return ResultBatch{}, nil, true, nil
 	}
 	updates := make(map[string]any, len(definition.assignments))
 	for _, assignment := range definition.assignments {
@@ -4706,7 +4749,7 @@ func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.
 			// the null check below, and widens numerics towards the target.
 			coerced, coerceErr := coerceUpdateSetValue(field.Type, value)
 			if coerceErr != nil {
-				return ResultBatch{}, nil, WrapError(ErrorTypeMismatch, fmt.Sprintf("update-set %q", assignment.Column), coerceErr)
+				return ResultBatch{}, nil, false, WrapError(ErrorTypeMismatch, fmt.Sprintf("update-set %q", assignment.Column), coerceErr)
 			}
 			value = coerced
 			if value == nil && !nullableUpdateFieldKind(field.Type) {
@@ -4720,7 +4763,7 @@ func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.
 	}
 	updated, err := mergeSchemaUnderlying(accepted.Schema(), accepted.Underlying(), updates)
 	if err != nil {
-		return ResultBatch{}, nil, WrapError(ErrorTypeMismatch, "update-set", err)
+		return ResultBatch{}, nil, false, WrapError(ErrorTypeMismatch, "update-set", err)
 	}
 	replaced := accepted.withUnderlying(updated)
 	batch := ResultBatch{
@@ -4732,7 +4775,7 @@ func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.
 		outputRemoved:   1,
 	}
 	batch.Sequence = r.seq.Add(1)
-	return batch, &replaced, nil
+	return batch, &replaced, false, nil
 }
 
 // nullableUpdateFieldKind reports whether a schema field type can hold a
