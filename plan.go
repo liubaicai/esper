@@ -1068,7 +1068,10 @@ func (e *Environment) validateRoute(query Query) error {
 	if !ok {
 		return NewError(ErrorUnknownName, fmt.Sprintf("route target %q is not registered", query.routeTarget))
 	}
-	if query.sourceLess || query.trigger != nil {
+	// On-trigger select statements (Esper's "on T insert into Target select ...
+	// from Source" stream form) may route their projection into a stream;
+	// mutation triggers and source-less queries cannot.
+	if query.sourceLess || (query.trigger != nil && query.trigger.action != triggerSelectTable) {
 		return fmt.Errorf("route target %q requires a stream or projection source", query.routeTarget)
 	}
 	if query.rowRecog != nil {

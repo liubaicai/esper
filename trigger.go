@@ -19,6 +19,10 @@ const (
 	triggerSetVariables
 	triggerSelectTable
 	triggerDeleteAllTable
+	// triggerInsertFromNamedWindow inserts one projected row per source
+	// named-window event into the target named window, mirroring Esper's
+	// "on T insert into Target(cols) select ... from Source" trigger form.
+	triggerInsertFromNamedWindow
 )
 
 type triggerTargetKind uint8
@@ -207,6 +211,10 @@ type triggerDefinition struct {
 	moduleName string
 	target     triggerTargetKind
 	action     triggerActionKind
+	// sourceTable names the source named window of a
+	// triggerInsertFromNamedWindow action; each retained source event produces
+	// one projected target insert.
+	sourceTable string
 	// onDemand distinguishes fire-and-forget target-row evaluation from a
 	// live on-trigger.  Live triggers keep the incoming event as the outer
 	// scope; FAF mutations use the candidate target row as OuterEvent so a
@@ -419,6 +427,28 @@ func (s TriggerStream[T]) SelectFromNamedWindow(window string, predicate Express
 	return s.namedWindowTrigger(window, triggerSelectTable, predicate, nil, selections)
 }
 
+// InsertIntoNamedWindowFrom inserts one projected row per retained source
+// named-window event into the target named window when the trigger event
+// arrives. The assignments are evaluated per source event with
+// NamedWindowField reading the source event and Field reading the trigger
+// event, mirroring Esper's "on T insert into Target(cols) select ... from
+// Source" trigger form. The target insert is visible to later cascaded
+// statements of the same triggering event (Esper's preemptive on-trigger
+// named-window processing).
+func (s TriggerStream[T]) InsertIntoNamedWindowFrom(target, source string, assignments ...TableAssignment) TriggerQuery {
+	return TriggerQuery{
+		env: s.env,
+		definition: &triggerDefinition{
+			input:       s.node,
+			table:       strings.TrimSpace(target),
+			sourceTable: strings.TrimSpace(source),
+			target:      triggerTargetNamedWindow,
+			action:      triggerInsertFromNamedWindow,
+			assignments: append([]TableAssignment(nil), assignments...),
+		},
+	}
+}
+
 // SetVariable updates one registered variable when the trigger event arrives.
 func (s TriggerStream[T]) SetVariable(name string, expression Expr) TriggerQuery {
 	return s.SetVariables(SetVariableExpr(name, expression))
@@ -520,6 +550,7 @@ func (q TriggerQuery) Query(options ...QueryOption) Query {
 		trigger:                    q.definition,
 		selections:                 append([]Selection(nil), q.definition.selections...),
 		name:                       spec.name,
+		routeTarget:                spec.routeTarget,
 		statementUserObject:        spec.statementUserObject,
 		selector:                   spec.selector,
 		sink:                       spec.sink,
@@ -654,6 +685,9 @@ func (d *triggerDefinition) description() string {
 	}
 	if d.action == triggerInsertTable && d.eventExpression != nil {
 		return fmt.Sprintf("on(%s)->%s.insert-event(%s)", d.input.describe(), target, d.eventExpression.Description())
+	}
+	if d.action == triggerInsertFromNamedWindow {
+		return fmt.Sprintf("on(%s)->named-window.insert-from(%s;%s)", d.input.describe(), d.sourceTable, describeTableAssignments(d.assignments))
 	}
 	where := ""
 	if d.where != nil {
@@ -942,6 +976,37 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 			return fmt.Errorf("named-window event expression: %w", err)
 		}
 	}
+	if definition.action == triggerInsertFromNamedWindow {
+		if len(definition.assignments) == 0 {
+			return NewError(ErrorInvalidRule, "named-window insert-from requires at least one assignment")
+		}
+		sourceWindow, ok := e.NamedWindowInModule(definition.moduleName, definition.sourceTable)
+		if !ok {
+			return NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown source named window %q", definition.sourceTable))
+		}
+		sourceSchema := sourceWindow.schema
+		for index, assignment := range definition.assignments {
+			if assignment.Wildcard {
+				return NewError(ErrorInvalidRule, "named-window insert-from does not support wildcard assignments")
+			}
+			if assignment.Column == "" || assignment.Expr == nil {
+				return NewError(ErrorInvalidRule, "named-window insert-from assignment is invalid")
+			}
+			if assignment.Index != nil {
+				return NewError(ErrorInvalidRule, "named-window insert-from does not support indexed assignments")
+			}
+			field, exists := targetSchema.Field(assignment.Column)
+			if !exists {
+				return NewError(ErrorUnknownName, fmt.Sprintf("assignment references unknown column %q", assignment.Column))
+			}
+			if err := e.validateTriggerTargetExpression(definition.input, sourceSchema, assignment.Expr, "named-window-field"); err != nil {
+				return fmt.Errorf("named-window insert-from assignment %d: %w", index, err)
+			}
+			if err := validateTriggerAssignmentType(field.Type, assignment.Expr); err != nil {
+				return fmt.Errorf("named-window insert-from assignment %q: %w", assignment.Column, err)
+			}
+		}
+	}
 	if definition.where != nil {
 		if definition.action != triggerUpdateTable && definition.action != triggerDeleteTable && definition.action != triggerSelectTable && definition.action != triggerMergeTable {
 			return NewError(ErrorInvalidRule, "named-window predicate is supported only for select, update, delete or merge")
@@ -1099,7 +1164,7 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 			}
 		}
 	}
-	if definition.action != triggerInsertTable && definition.action != triggerUpdateTable && definition.action != triggerDeleteTable && definition.action != triggerDeleteAllTable && definition.action != triggerSelectTable {
+	if definition.action != triggerInsertTable && definition.action != triggerUpdateTable && definition.action != triggerDeleteTable && definition.action != triggerDeleteAllTable && definition.action != triggerSelectTable && definition.action != triggerInsertFromNamedWindow {
 		return NewError(ErrorInvalidRule, "unknown named-window trigger action")
 	}
 	return nil
@@ -1770,6 +1835,9 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 	if engine == nil || definition == nil {
 		return tableMutationResult{}, NewError(ErrorDependency, "nil named-window trigger")
 	}
+	if definition.action == triggerInsertFromNamedWindow {
+		return executeInsertFromNamedWindowAction(ctx, engine, definition, event, now, variables, owner)
+	}
 	window, ok := engine.namedWindows[catalogKey(definition.moduleName, definition.table)]
 	if !ok {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger named window %q is not available", definition.table))
@@ -1961,6 +2029,70 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 	default:
 		return tableMutationResult{}, NewError(ErrorInvalidRule, "unknown named-window trigger action")
 	}
+}
+
+// executeInsertFromNamedWindowAction mirrors Esper's "on T insert into
+// Target(cols) select ... from Source" on-trigger: every retained source
+// named-window event produces one projected insert into the target window.
+// The inserts land in the same triggering-event cascade, so a later routed
+// statement observes them (preemptive named-window processing).
+func executeInsertFromNamedWindowAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, owner *Statement) (tableMutationResult, error) {
+	sourceWindow, ok := engine.namedWindows[catalogKey(definition.moduleName, definition.sourceTable)]
+	if !ok {
+		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger source named window %q is not available", definition.sourceTable))
+	}
+	source, sourceExists, err := sourceWindow.scopedForVariables(variables, false)
+	if err != nil {
+		return tableMutationResult{}, err
+	}
+	if !sourceExists {
+		return tableMutationResult{}, nil
+	}
+	window, ok := engine.namedWindows[catalogKey(definition.moduleName, definition.table)]
+	if !ok {
+		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger named window %q is not available", definition.table))
+	}
+	target, exists, err := window.scopedForVariables(variables, true)
+	if err != nil {
+		return tableMutationResult{}, err
+	}
+	if !exists {
+		return tableMutationResult{}, nil
+	}
+	schema := target.Definition().schema
+	combined := NamedWindowDelta{Time: now}
+	for _, candidate := range snapshotNamedWindowState(source.state) {
+		if err := contextErr(ctx); err != nil {
+			return tableMutationResult{}, err
+		}
+		evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+		// The assignments project the source row (NamedWindowField) with the
+		// trigger event as outer scope, mirroring the Esper select clause;
+		// there is no target working row, so the ordered-assignment helper
+		// (which would shadow the source row with one) does not apply here.
+		values := make(map[string]any, len(definition.assignments))
+		for _, assignment := range definition.assignments {
+			value := assignment.Expr.eval(evaluation)
+			if value.IsMissing() {
+				continue
+			}
+			values[assignment.Column] = value.Any()
+		}
+		underlying, mergeErr := mergeSchemaUnderlying(schema, nil, values)
+		if mergeErr != nil {
+			return tableMutationResult{}, mergeErr
+		}
+		rowDelta, insertErr := target.insertWithVariables(now, underlying, variables)
+		if insertErr != nil {
+			return tableMutationResult{}, insertErr
+		}
+		combined.New = append(combined.New, rowDelta.New...)
+		combined.Old = append(combined.Old, rowDelta.Old...)
+	}
+	if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, combined, variables, owner); err != nil {
+		return tableMutationResult{}, err
+	}
+	return tableMutationResult{oldEvents: append([]Event(nil), combined.Old...), newEvents: append([]Event(nil), combined.New...)}, nil
 }
 
 func executeTriggerAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, owner *Statement, runtime *statementRuntime) (mutation tableMutationResult, err error) {

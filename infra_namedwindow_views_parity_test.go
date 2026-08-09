@@ -3234,3 +3234,99 @@ func TestInfraNWViewsPatternParity(t *testing.T) {
 	send("S1", 1)
 	nwViewsAssertNotInvoked(t, s0, "s0 S1(1) after S2 quit")
 }
+
+// TestInfraNWViewsOnInsertPreemptiveTwoWindowParity mirrors
+// InfraOnInsertPremptiveTwoWindow: one TypeTrigger event fires both
+// on-trigger inserts preemptively. The routed OtherStream event is queued
+// until every statement has processed the trigger, so the cascaded s0 select
+// observes the WinTwo insert that a declaration-order cascade would have
+// missed. Java creates OtherStream implicitly from the insert-into select
+// columns; Go registers the map schema explicitly, matching the established
+// explicit-schema convention.
+func TestInfraNWViewsOnInsertPreemptiveTwoWindowParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[nwViewsBeanFull](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	intType := reflect.TypeOf(int(0))
+	typeOneSchema, err := RegisterMap(env, "TypeOne", []FieldSpec{FieldDef("col1", intType)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	typeTwoSchema, err := RegisterMap(env, "TypeTwo", []FieldSpec{FieldDef("col2", intType)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "TypeTrigger", []FieldSpec{FieldDef("trigger", intType)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "OtherStream", []FieldSpec{FieldDef("col1", intType)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "WinOne", typeOneSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "WinTwo", typeTwoSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+
+	// insert into WinOne(col1) select intPrimitive from SupportBean
+	insertOnePlan, err := env.Build(OnEvent(From[nwViewsBeanFull](env, "SupportBean")).InsertIntoNamedWindow(
+		"WinOne",
+		SetColumn("col1", Field[nwViewsBeanFull, int]("intPrimitive")),
+	).Query(StatementName("insert-window-one")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// on TypeTrigger insert into OtherStream select col1 from WinOne
+	insertOtherStreamPlan, err := env.Build(OnRecord(FromAny(env, "TypeTrigger")).SelectFromNamedWindow(
+		"WinOne", nil,
+		Alias("col1", NamedWindowField[int]("col1")),
+	).Query(RouteTo("OtherStream"), StatementName("insert-otherstream")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// on TypeTrigger insert into WinTwo(col2) select col1 from WinOne
+	insertTwoPlan, err := env.Build(OnRecord(FromAny(env, "TypeTrigger")).InsertIntoNamedWindowFrom(
+		"WinTwo", "WinOne",
+		SetColumn("col2", NamedWindowField[int]("col1")),
+	).Query(StatementName("insert-window-two")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// on OtherStream select col2 from WinTwo
+	s0Plan, err := env.Build(OnRecord(FromAny(env, "OtherStream")).SelectFromNamedWindow(
+		"WinTwo", nil,
+		Alias("col2", NamedWindowField[int]("col2")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	for _, plan := range []Plan{insertOnePlan, insertOtherStreamPlan, insertTwoPlan} {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s0Deployment, err := engine.Deploy(context.Background(), s0Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s0Deployment.Statements()[0], []string{"col2"}, s0)
+
+	// populate WinOne
+	if err := engine.SendEvent(context.Background(), nwViewsBeanFull{TheString: "E1", IntPrimitive: 9}); err != nil {
+		t.Fatal(err)
+	}
+	nwViewsAssertNotInvoked(t, s0, "s0 before trigger")
+
+	// fire trigger: insert-otherstream and insert-window-two both run
+	// preemptively, so s0 sees col2=9 even though insert-otherstream is
+	// declared (and named) before insert-window-two.
+	if err := engine.Send(context.Background(), "TypeTrigger", map[string]any{}); err != nil {
+		t.Fatal(err)
+	}
+	nwViewsAssertNew(t, s0, "s0 trigger", []any{9})
+}
