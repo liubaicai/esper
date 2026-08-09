@@ -1206,6 +1206,15 @@ func (s Stream[T]) UpdateStream(assignments ...TableAssignment) UpdateStreamQuer
 	return UpdateStreamQuery{query: query}
 }
 
+// UpdateStream starts an update-istream statement against an untyped record
+// source such as a Map or ObjectArray event stream. Build rejects the
+// statement when a projection was already applied to the chain.
+func (s RecordStream) UpdateStream(assignments ...TableAssignment) UpdateStreamQuery {
+	query := s.Query()
+	query.updateStream = &updateStreamDefinition{assignments: append([]TableAssignment(nil), assignments...)}
+	return UpdateStreamQuery{query: query}
+}
+
 // UpdateStreamQuery is the fluent builder for an update-istream statement.
 type UpdateStreamQuery struct {
 	query Query

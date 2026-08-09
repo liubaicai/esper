@@ -2154,7 +2154,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		}
 		processedRoutes++
 		statements := e.sortedStatementsLocked()
-		for _, statement := range statements {
+		for _, statement := range orderUpdateStatementsFirst(statements) {
 			batch, changed, processErr := statement.process(ctx, now, current, variables)
 			if processErr != nil {
 				e.mu.Unlock()
@@ -2461,6 +2461,36 @@ func (e *Engine) AdvanceTime(ctx context.Context, at time.Time) error {
 	return nil
 }
 
+// orderUpdateStatementsFirst moves update-istream statements ahead of all
+// other statements for one event dispatch cycle, keeping deployment order
+// within each group. Esper applies update-istream as InternalEventRouter
+// preprocessing when the event enters the stream, so consumers observe the
+// updated event even when the update statement was deployed after them.
+func orderUpdateStatementsFirst(statements []*Statement) []*Statement {
+	hasUpdate := false
+	for _, statement := range statements {
+		if statement.plan.query.updateStream != nil {
+			hasUpdate = true
+			break
+		}
+	}
+	if !hasUpdate {
+		return statements
+	}
+	ordered := make([]*Statement, 0, len(statements))
+	for _, statement := range statements {
+		if statement.plan.query.updateStream != nil {
+			ordered = append(ordered, statement)
+		}
+	}
+	for _, statement := range statements {
+		if statement.plan.query.updateStream == nil {
+			ordered = append(ordered, statement)
+		}
+	}
+	return ordered
+}
+
 func (e *Engine) sortedStatementsLocked() []*Statement {
 	statements := make([]*Statement, 0, len(e.statements))
 	for _, statement := range e.statements {
@@ -2614,7 +2644,7 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		processed++
 		current := routedQueue[0]
 		routedQueue = routedQueue[1:]
-		for _, statement := range e.sortedStatementsLocked() {
+		for _, statement := range orderUpdateStatementsFirst(e.sortedStatementsLocked()) {
 			batch, changed, err := statement.process(ctx, now, current, variables)
 			if err != nil {
 				return err
@@ -4660,7 +4690,8 @@ func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.
 		return ResultBatch{}, nil, nil
 	}
 	definition := plan.query.updateStream
-	evalContext := EvalContext{Event: delta.newEvents[0], Now: now, Variables: r.variables}
+	accepted := delta.newEvents[0]
+	evalContext := EvalContext{Event: accepted, Now: now, Variables: r.variables}
 	if definition.where != nil {
 		value := definition.where.eval(evalContext)
 		if matched, ok := boolValue(value); !ok || !matched {
@@ -4669,9 +4700,24 @@ func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.
 	}
 	updates := make(map[string]any, len(definition.assignments))
 	for _, assignment := range definition.assignments {
-		updates[assignment.Column] = assignment.Expr.eval(evalContext).Any()
+		value := assignment.Expr.eval(evalContext).Any()
+		if field, _, lookupErr := accepted.Schema().lookupField(assignment.Column); lookupErr == nil && field.Type != nil {
+			// Coercion normalizes typed-nil pointers to untyped nil before
+			// the null check below, and widens numerics towards the target.
+			coerced, coerceErr := coerceUpdateSetValue(field.Type, value)
+			if coerceErr != nil {
+				return ResultBatch{}, nil, WrapError(ErrorTypeMismatch, fmt.Sprintf("update-set %q", assignment.Column), coerceErr)
+			}
+			value = coerced
+			if value == nil && !nullableUpdateFieldKind(field.Type) {
+				// Esper skips null writes to non-nullable properties: the
+				// assignment is dropped and the property keeps its current
+				// value, while the update still fires the insert/remove pair.
+				continue
+			}
+		}
+		updates[assignment.Column] = value
 	}
-	accepted := delta.newEvents[0]
 	updated, err := mergeSchemaUnderlying(accepted.Schema(), accepted.Underlying(), updates)
 	if err != nil {
 		return ResultBatch{}, nil, WrapError(ErrorTypeMismatch, "update-set", err)
@@ -4687,6 +4733,58 @@ func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.
 	}
 	batch.Sequence = r.seq.Add(1)
 	return batch, &replaced, nil
+}
+
+// nullableUpdateFieldKind reports whether a schema field type can hold a
+// null value. Esper's update-istream skips null writes to properties whose
+// type cannot represent null (primitive ints and similar value kinds).
+func nullableUpdateFieldKind(typ reflect.Type) bool {
+	switch typ.Kind() {
+	case reflect.Pointer, reflect.Interface, reflect.Slice, reflect.Map, reflect.Func, reflect.Chan, reflect.UnsafePointer:
+		return true
+	}
+	return false
+}
+
+// coerceUpdateSetValue converts an evaluated update-set value towards the
+// target property type, mirroring Esper's update-istream type widener:
+// boxed values are unboxed, numeric values widen or narrow across Go numeric
+// kinds and the result is re-boxed when the property is a pointer. Values
+// that need no coercion pass through unchanged so mergeSchemaUnderlying's
+// own assignment validation still applies.
+func coerceUpdateSetValue(target reflect.Type, value any) (any, error) {
+	if value == nil {
+		return nil, nil
+	}
+	current := reflect.ValueOf(value)
+	for current.Kind() == reflect.Pointer {
+		if current.IsNil() {
+			return nil, nil
+		}
+		current = current.Elem()
+	}
+	base := target
+	for base.Kind() == reflect.Pointer {
+		base = base.Elem()
+	}
+	if current.Type().AssignableTo(base) {
+		if target.Kind() == reflect.Pointer {
+			boxed := reflect.New(base)
+			boxed.Elem().Set(current)
+			return boxed.Interface(), nil
+		}
+		return current.Interface(), nil
+	}
+	if numericTypes(current.Type(), base) && current.Type().ConvertibleTo(base) {
+		converted := current.Convert(base)
+		if target.Kind() == reflect.Pointer {
+			boxed := reflect.New(base)
+			boxed.Elem().Set(converted)
+			return boxed.Interface(), nil
+		}
+		return converted.Interface(), nil
+	}
+	return value, nil
 }
 
 func (r *statementRuntime) evaluationContext() ExpressionEvaluationContext {

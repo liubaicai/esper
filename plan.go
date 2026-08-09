@@ -3553,6 +3553,9 @@ func (e *Environment) validateUpdateStream(query Query) error {
 	if query.routeTarget != "" || query.tableTarget != "" {
 		return NewError(ErrorInvalidRule, "update statements cannot declare insert-into or into-table routes")
 	}
+	if len(query.selections) > 0 {
+		return NewError(ErrorInvalidRule, "update statements do not support projections")
+	}
 	if len(definition.assignments) == 0 {
 		return NewError(ErrorInvalidRule, "update requires at least one assignment")
 	}
