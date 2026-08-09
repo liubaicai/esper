@@ -1739,6 +1739,29 @@
         "interruptible or deadline-aware mutex acquisition beyond pre-acquisition context validation",
         "shared Java/Go contention traces with multiple administrative lock holders"
       ]
+    },
+    {
+      "id": "client.runtime.solution-port-scan",
+      "domain": "client",
+      "level": "G",
+      "summary": "Port-scan solution rules combining unique/time windows, grouped table state, active situations and minute-based detected/update/done/expired alerts",
+      "javaRefs": [
+        "ClientRuntimeSolutionPatternPortScan"
+      ],
+      "goRefs": [
+        "stream.go",
+        "state.go",
+        "pattern.go",
+        "runtime.go",
+        "client_runtime_port_scan_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "shared Java/Go neutral traces for multiple simultaneous source/destination situations",
+        "long-running 16-hour expiry and day-boundary cron traces beyond the implemented EXPIRED branch",
+        "atomic transaction semantics spanning table, situation window and alert route callbacks"
+      ]
     }
   ],
   "cases": [
@@ -12878,6 +12901,47 @@
         "go-unit"
       ],
       "difference": "Java exposes the runtime instance ReentrantReadWriteLock and this execution only obtains and releases its writeLock around an administrative action. Go exposes WithRuntimeWriteLock(ctx, action) instead of the raw mutex: the callback runs under the same Engine transaction boundary used by send, deploy, time and state mutation, the lock is always released with defer, nil actions and destroyed engines return structured errors, and callers cannot accidentally retain the lock handle. The parity test proves a concurrent SendEvent cannot complete until the callback releases the lock, then observes c0=1. Go's mutex is intentionally non-reentrant and the callback contract forbids calling another lock-taking Engine method."
+    },
+    {
+      "id": "case.client-runtime-solution-port-scan",
+      "javaRuntimeIds": [
+        "java-runtime-6634300e72ec48423490",
+        "java-runtime-25cfcce1c03d6a6238a9",
+        "java-runtime-10c776f0b3bb9aa9f597"
+      ],
+      "javaNames": [
+        "ClientRuntimePortScanPrimarySuccess",
+        "ClientRuntimePortScanKeepAlerting",
+        "ClientRuntimePortScanFallsUnderThreshold"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeSolutionPatternPortScan.java"
+      ],
+      "goTests": [
+        "TestClientRuntimePortScanPrimarySuccessParity",
+        "TestClientRuntimePortScanKeepAlertingParity",
+        "TestClientRuntimePortScanFallsUnderThresholdParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "solution-pattern",
+        "port-scan",
+        "object-array",
+        "unique-window",
+        "time-window",
+        "table",
+        "named-window",
+        "cron",
+        "alert-lifecycle"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go assembles the solution with typed UniqueBy, TimeWindow, GroupBy, IntoTable, KeepAll Named Window and TimerCron plans. Listener callbacks connect the materialized count statement and minute maintenance statement to situation-window mutations and typed OutputAlerts sends, replacing Java's multi-statement EPL module while retaining rule boundaries and reentrant Engine calls outside the transaction lock. ObjectArray PortScanEvent input, 20 unique ports, 30-second contributor retention, first-only DETECTED, minute UPDATE, UPDATE-before-DONE ordering below count 10 and the 16-hour EXPIRED branch are implemented. The three Java executions assert DETECTED=20, sustained UPDATE=20 after refreshes at 29/59 seconds, and final DONE=0 after expiry; the Go tests assert the same public sequence and contributor-derived detection count."
     }
   ],
   "mappings": [
@@ -13720,6 +13784,10 @@
     {
       "capabilityId": "client.runtime.instance-lock",
       "caseId": "case.client-runtime-runtime-provider-lock"
+    },
+    {
+      "capabilityId": "client.runtime.solution-port-scan",
+      "caseId": "case.client-runtime-solution-port-scan"
     }
   ]
 }
