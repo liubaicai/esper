@@ -1681,6 +1681,11 @@ func (e *Engine) deploy(ctx context.Context, plan Plan, parameters ParameterValu
 		e.mu.Unlock()
 		return nil, err
 	}
+	if err := e.seedNamedWindowConsumerLocked(ctx, statement); err != nil {
+		e.matchRecognizeStatePool.removeOwner(statement.id)
+		e.mu.Unlock()
+		return nil, err
+	}
 	if err := e.seedEvaluateOnceJoinSidesLocked(ctx, statement); err != nil {
 		e.matchRecognizeStatePool.removeOwner(statement.id)
 		e.mu.Unlock()
@@ -1736,6 +1741,91 @@ func (e *Engine) seedNamedWindowRowRecogLocked(ctx context.Context, statement *S
 		}
 	}
 	return nil
+}
+
+// seedNamedWindowConsumerLocked replays the retained contents of a named
+// window into a newly deployed consumer statement. Esper attaches plain,
+// aggregate and join consumers to the current named-window state, so a
+// late-deployed irstream aggregate reports its seeded value as the prior old
+// row and a left outer join iterator sees retained rows with null join
+// columns immediately. The replay deliberately discards every resulting
+// batch; deployment must not announce historical rows as new output.
+//
+// Like the row-recognition replay this is limited to non-context statements;
+// pattern, trigger and row-recognition plans keep their own lifecycles.
+func (e *Engine) seedNamedWindowConsumerLocked(ctx context.Context, statement *Statement) error {
+	if e == nil || statement == nil {
+		return nil
+	}
+	query := statement.plan.query
+	if query.trigger != nil || query.contextName != "" || query.pattern != nil || query.rowRecog != nil {
+		return nil
+	}
+	var sources []*streamNode
+	switch {
+	case query.aggregate != nil && query.aggregate.join != nil:
+		sources = joinDefinitionSources(query.aggregate.join)
+	case query.aggregate != nil:
+		sources = []*streamNode{query.aggregate.input}
+	case query.join != nil:
+		sources = joinDefinitionSources(query.join)
+	default:
+		sources = []*streamNode{query.input}
+	}
+	plain := query.aggregate == nil && query.join == nil
+	trackPrior := plain && queryUsesPreviousAccess(query)
+	now := e.clock.Now()
+	replayed := make(map[string]struct{})
+	for _, source := range sources {
+		base, err := sourceNode(source)
+		if err != nil || base == nil || base.kind != streamNamedWindow {
+			continue
+		}
+		if _, duplicate := replayed[base.sourceName]; duplicate {
+			continue
+		}
+		replayed[base.sourceName] = struct{}{}
+		if definition, ok := e.env.NamedWindowInModule(base.moduleName, base.sourceName); ok && namedWindowRetentionIsBatch(definition.retention) {
+			// Esper skips the named-window consumer preload when the parent
+			// window batches (time_batch, length_batch, time_length_batch,
+			// firsttime, ext_timed_batch, expression_batch): the late consumer
+			// first observes the completed batch as new data at the boundary.
+			continue
+		}
+		events, err := e.snapshotFireAndForgetSourceLocked(ctx, base, now, statement.runtime.variables)
+		if err != nil {
+			return err
+		}
+		statement.runtime.ctx = ctx
+		for _, event := range events {
+			if _, _, err := statement.runtime.process(statement.plan, event, now, statement.runtime.variables); err != nil {
+				return err
+			}
+			if trackPrior {
+				statement.runtime.namedWindowArrival = append(statement.runtime.namedWindowArrival, event)
+			}
+		}
+	}
+	return nil
+}
+
+// namedWindowRetentionIsBatch reports whether a named-window retention spec
+// batches deliveries. Esper marks windows whose view chain contains a batching
+// data window (time_batch, length_batch, time_length_batch, firsttime,
+// ext_timed_batch or expression_batch) and skips the consumer preload for
+// them; a grouped retention defers to its inner data window.
+func namedWindowRetentionIsBatch(spec WindowSpec) bool {
+	if grouped, ok := spec.(GroupWindowSpec); ok {
+		return namedWindowRetentionIsBatch(grouped.Inner)
+	}
+	switch window := spec.(type) {
+	case TimeBatchWindowSpec, LengthBatchWindowSpec, TimeLengthBatchWindowSpec, FirstTimeWindowSpec, ExpressionBatchWindowSpec:
+		return true
+	case ExternallyTimedWindowSpec:
+		return window.Batch
+	default:
+		return false
+	}
 }
 
 // seedEvaluateOnceJoinSidesLocked polls join method sources marked
@@ -2783,6 +2873,7 @@ type statementRuntime struct {
 	rowRecogState            *rowRecogRuntimeState
 	outputState              *outputRuntimeState
 	distinctCounts           map[string]int
+	namedWindowArrival      []Event
 	partitions               map[string]*statementRuntime
 	partitionContextName     string
 	partitionKey             string
@@ -5224,7 +5315,7 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 
 func (r *statementRuntime) snapshotJoinBatch(plan Plan, now time.Time) ResultBatch {
 	result := ResultBatch{Time: now}
-	if r == nil || plan.query.join == nil || r.joinState == nil {
+	if r == nil || plan.query.join == nil {
 		return result
 	}
 	state := cloneJoinRuntimeState(r.joinState)
@@ -5806,6 +5897,9 @@ func (r *statementRuntime) processNamedWindowDelta(plan Plan, now time.Time, del
 		}
 		result = mergeDelta(result, removed)
 	}
+	if queryUsesPreviousAccess(plan.query) {
+		r.trackNamedWindowPriorArrival(&result)
+	}
 	var batch ResultBatch
 	var err error
 	if plan.query.aggregate != nil {
@@ -5819,6 +5913,35 @@ func (r *statementRuntime) processNamedWindowDelta(plan Plan, now time.Time, del
 		return ResultBatch{}, err
 	}
 	return r.applyOutput(plan.query.output, batch, false, now, plan), nil
+}
+
+// queryUsesPreviousAccess reports whether any projection expression reads
+// previous or prior event access. Named-window consumers then maintain the
+// arrival history those expressions evaluate against.
+func queryUsesPreviousAccess(query Query) bool {
+	for _, selection := range query.selections {
+		if selection.Expr != nil && expressionContainsPreviousAccess(selection.Expr.node()) {
+			return true
+		}
+	}
+	return false
+}
+
+// trackNamedWindowPriorArrival maintains the per-statement arrival history
+// behind prior/prev expressions on named-window consumers. Esper evaluates
+// prior access against the consumer stream's retained arrival order: each new
+// event carries the arrival prefix ending with itself and each leaving event
+// carries the prefix ending with its own retained position.
+func (r *statementRuntime) trackNamedWindowPriorArrival(result *eventDelta) {
+	if result.priorByEvent == nil {
+		result.priorByEvent = make(map[string][]Event)
+	}
+	for _, event := range result.newEvents {
+		r.namedWindowArrival = append(r.namedWindowArrival, event)
+		result.priorByEvent[eventIdentity(event)] = append([]Event(nil), r.namedWindowArrival...)
+	}
+	addPriorHistories(result.priorByEvent, r.namedWindowArrival, result.oldEvents)
+	removeArrivalEvents(&r.namedWindowArrival, result.oldEvents)
 }
 
 func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now time.Time, delta NamedWindowDelta, variables map[string]Value) (ResultBatch, bool, error) {

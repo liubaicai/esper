@@ -2610,3 +2610,336 @@ func TestInfraNWViewsInvalidParity(t *testing.T) {
 		t.Fatalf("consumer data window error = %v, want %s", err, ErrorInvalidRule)
 	}
 }
+
+// nwViewsLateConsumerWindow wires the shared keep-all MySimpleKeyValueMap
+// window, insert trigger and window probe used by the late-consumer,
+// prior-stats and late-consumer-join executions.
+func nwViewsLateConsumerWindow(t *testing.T, windowName string) (*Environment, *Engine, *NamedWindow, *nwViewsProbe, func(string, int64)) {
+	t.Helper()
+	env := NewEnvironment()
+	if _, err := RegisterStruct[nwViewsBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	windowSchema, err := RegisterStruct[nwViewsKVLong](env, "MySimpleKeyValueMap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, windowName, windowSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(OnEvent(From[nwViewsBean](env, "SupportBean")).InsertIntoNamedWindow(
+		windowName,
+		SetColumn("key", Field[nwViewsBean, string]("theString")),
+		SetColumn("value", Field[nwViewsBean, int64]("longBoxed")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), insertPlan); err != nil {
+		t.Fatal(err)
+	}
+	window, ok := engine.NamedWindow(windowName)
+	if !ok {
+		t.Fatalf("named window %s is missing", windowName)
+	}
+	probe := &nwViewsProbe{rowOf: nwViewsKVRow}
+	nwViewsSubscribeWindow(t, window, probe)
+	send := func(theString string, longBoxed int64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsBean{TheString: theString, LongBoxed: longBoxed}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return env, engine, window, probe, send
+}
+
+// TestInfraNWViewsLateConsumerParity mirrors InfraLateConsumer: a univariate
+// statistics irstream consumer (Esper #uni(value) selecting the derived
+// average property) and a count(*) consumer deployed after the window already
+// holds rows replay the current window state into their iterators and track
+// subsequent inserts as IR pairs.
+func TestInfraNWViewsLateConsumerParity(t *testing.T) {
+	env, engine, _, create, send := nwViewsLateConsumerWindow(t, "MyWindowLCL")
+
+	send("E1", 1)
+	nwViewsAssertNew(t, create, "create E1", []any{"E1", int64(1)})
+	send("E2", 2)
+	nwViewsAssertNew(t, create, "create E2", []any{"E2", int64(2)})
+
+	// select irstream average from MyWindowLCL#uni(value)
+	s0Plan, err := env.Build(FromNamedWindow(env, "MyWindowLCL").Aggregate(
+		Alias("average", UnivariateStatistics[int64](Field[any, int64]("value")).Average()),
+	).Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Deployment, err := engine.Deploy(context.Background(), s0Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s0Deployment.Statements()[0], []string{"average"}, s0)
+	s0Snapshot := func() [][]any { return nwViewsStatementSnapshot(t, s0Deployment.Statements()[0], "average") }
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{1.5}})
+
+	send("E3", 2)
+	nwViewsAssertIRPair(t, s0, "s0 E3", []any{5.0 / 3}, []any{3.0 / 2})
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{5.0 / 3}})
+
+	send("E4", 2)
+	nwViewsAssertIRPair(t, s0, "s0 E4", []any{7.0 / 4}, []any{5.0 / 3})
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{7.0 / 4}})
+
+	// select count(*) as cnt from MyWindowLCL
+	s2Plan, err := env.Build(FromNamedWindow(env, "MyWindowLCL").Aggregate(
+		Alias("cnt", CountAll()),
+	).Query(StatementName("s2")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s2Deployment, err := engine.Deploy(context.Background(), s2Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s2Snapshot := func() [][]any { return nwViewsStatementSnapshot(t, s2Deployment.Statements()[0], "cnt") }
+	nwViewsAssertRows(t, "s2 iterator", s2Snapshot(), [][]any{{int64(4)}})
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{7.0 / 4}})
+
+	send("E5", 3)
+	nwViewsAssertIRPair(t, s0, "s0 E5", []any{10.0 / 5}, []any{7.0 / 4})
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{10.0 / 5}})
+	nwViewsAssertRows(t, "s2 iterator", s2Snapshot(), [][]any{{int64(5)}})
+}
+
+// TestInfraNWViewsFilteringConsumerLateStartParity mirrors
+// InfraFilteringConsumerLateStart: a filtered irstream sum consumer deployed
+// after rows already exist replays only matching rows into its initial
+// iterator, and on-delete removals move the sum only when the removed row
+// passes the consumer filter.
+func TestInfraNWViewsFilteringConsumerLateStartParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[nwViewsBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[nwViewsMarket](env, "SupportMarketDataBean"); err != nil {
+		t.Fatal(err)
+	}
+	windowSchema, err := RegisterStruct[nwViewsKVInt](env, "MyWindowFCLSSchema")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowFCLS", windowSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(OnEvent(From[nwViewsBean](env, "SupportBean")).InsertIntoNamedWindow(
+		"MyWindowFCLS",
+		SetColumn("key", Field[nwViewsBean, string]("theString")),
+		SetColumn("value", Field[nwViewsBean, int]("intBoxed")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), insertPlan); err != nil {
+		t.Fatal(err)
+	}
+	sendInt := func(theString string, value int) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsBean{TheString: theString, IntBoxed: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendInt("G1", 5)
+	sendInt("G2", 15)
+	sendInt("G3", 2)
+
+	// select irstream sum(value) as sumvalue from MyWindowFCLS(value > 0, value < 10)
+	s0Plan, err := env.Build(FromNamedWindow(env, "MyWindowFCLS").Filter(
+		And(
+			Greater[int](Field[any, int]("value"), Literal[int](0)),
+			Less[int](Field[any, int]("value"), Literal[int](10)),
+		),
+	).Aggregate(
+		Alias("sumvalue", Sum[int](Field[any, int]("value"))),
+	).Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Deployment, err := engine.Deploy(context.Background(), s0Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s0Deployment.Statements()[0], []string{"sumvalue"}, s0)
+	s0Snapshot := func() [][]any { return nwViewsStatementSnapshot(t, s0Deployment.Statements()[0], "sumvalue") }
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{7}})
+
+	sendInt("G4", 1)
+	nwViewsAssertIRPair(t, s0, "s0 G4", []any{8}, []any{7})
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{8}})
+
+	sendInt("G5", 20)
+	nwViewsAssertNotInvoked(t, s0, "s0")
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{8}})
+
+	sendInt("G6", 9)
+	nwViewsAssertIRPair(t, s0, "s0 G6", []any{17}, []any{8})
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{17}})
+
+	// on SupportMarketDataBean as s0 delete from MyWindowFCLS as s1 where s0.symbol = s1.key
+	deletePlan, err := env.Build(OnEvent(From[nwViewsMarket](env, "SupportMarketDataBean")).DeleteFromNamedWindow(
+		"MyWindowFCLS",
+		Equal[string](NamedWindowField[string]("key"), Field[nwViewsMarket, string]("symbol")),
+	).Query(StatementName("delete")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), deletePlan); err != nil {
+		t.Fatal(err)
+	}
+	sendMarket := func(symbol string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsMarket{Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	sendMarket("G4")
+	nwViewsAssertIRPair(t, s0, "s0 delete G4", []any{16}, []any{17})
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{16}})
+
+	sendMarket("G5")
+	nwViewsAssertNotInvoked(t, s0, "s0")
+	nwViewsAssertRows(t, "s0 iterator", s0Snapshot(), [][]any{{16}})
+}
+
+// TestInfraNWViewsPriorStatsParity mirrors InfraPriorStats: prior(1, key) and
+// prior(2, key) read the window stream history behind each inserted event
+// while a univariate statistics consumer (Esper #uni(value) selecting
+// average) tracks the running mean. Esper prior(N, x) maps to Go Prior(N-1, x).
+func TestInfraNWViewsPriorStatsParity(t *testing.T) {
+	env, engine, _, _, send := nwViewsLateConsumerWindow(t, "MyWindowPS")
+
+	// select prior(1, key) as priorKeyOne, prior(2, key) as priorKeyTwo from MyWindowPS
+	s0Plan, err := env.Build(FromNamedWindow(env, "MyWindowPS").Select(
+		Alias("priorKeyOne", Prior[string](0, Field[any, string]("key"))),
+		Alias("priorKeyTwo", Prior[string](1, Field[any, string]("key"))),
+	).Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// select average from MyWindowPS#uni(value)
+	s3Plan, err := env.Build(FromNamedWindow(env, "MyWindowPS").Aggregate(
+		Alias("average", UnivariateStatistics[int64](Field[any, int64]("value")).Average()),
+	).Query(StatementName("s3")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Deployment, err := engine.Deploy(context.Background(), s0Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s3Deployment, err := engine.Deploy(context.Background(), s3Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s0Deployment.Statements()[0], []string{"priorKeyOne", "priorKeyTwo"}, s0)
+	s3 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s3Deployment.Statements()[0], []string{"average"}, s3)
+	s3Snapshot := func() [][]any { return nwViewsStatementSnapshot(t, s3Deployment.Statements()[0], "average") }
+
+	send("E1", 1)
+	nwViewsAssertNew(t, s0, "s0 E1", []any{nil, nil})
+	nwViewsAssertNew(t, s3, "s3 E1", []any{1.0})
+	nwViewsAssertRows(t, "s3 iterator", s3Snapshot(), [][]any{{1.0}})
+
+	send("E2", 2)
+	nwViewsAssertNew(t, s0, "s0 E2", []any{"E1", nil})
+	nwViewsAssertNew(t, s3, "s3 E2", []any{1.5})
+	nwViewsAssertRows(t, "s3 iterator", s3Snapshot(), [][]any{{1.5}})
+
+	send("E3", 2)
+	nwViewsAssertNew(t, s0, "s0 E3", []any{"E2", "E1"})
+	nwViewsAssertNew(t, s3, "s3 E3", []any{5.0 / 3})
+	nwViewsAssertRows(t, "s3 iterator", s3Snapshot(), [][]any{{5.0 / 3}})
+
+	send("E4", 2)
+	nwViewsAssertNew(t, s0, "s0 E4", []any{"E3", "E2"})
+	nwViewsAssertNew(t, s3, "s3 E4", []any{1.75})
+	nwViewsAssertRows(t, "s3 iterator", s3Snapshot(), [][]any{{1.75}})
+}
+
+// nwViewsMarketVol mirrors SupportMarketDataBean (symbol, volume) for the
+// late-consumer join execution.
+type nwViewsMarketVol struct {
+	Symbol string `esper:"symbol"`
+	Volume int64  `esper:"volume"`
+}
+
+// TestInfraNWViewsLateConsumerJoinParity mirrors InfraLateConsumerJoin: a
+// named-window left outer join against a keep-all market stream deployed
+// after rows exist replays current window rows with null join columns, joins
+// later market arrivals against every retained window row, and joins later
+// window inserts against the retained market rows.
+func TestInfraNWViewsLateConsumerJoinParity(t *testing.T) {
+	env, engine, _, create, send := nwViewsLateConsumerWindow(t, "MyWindowLCJ")
+	if _, err := RegisterStruct[nwViewsMarketVol](env, "SupportMarketDataBean"); err != nil {
+		t.Fatal(err)
+	}
+
+	send("E1", 1)
+	nwViewsAssertNew(t, create, "create E1", []any{"E1", int64(1)})
+	send("E2", 1)
+	nwViewsAssertNew(t, create, "create E2", []any{"E2", int64(1)})
+
+	// select key, value, symbol from MyWindowLCJ as s0
+	//   left outer join SupportMarketDataBean#keepall as s1 on s0.value = s1.volume
+	s2Plan, err := env.Build(JoinMany(
+		JoinRecordSource(FromNamedWindow(env, "MyWindowLCJ")),
+		JoinRecordSource(From[nwViewsMarketVol](env, "SupportMarketDataBean").Window(KeepAll()).AsRecord()),
+	).On(
+		OnSourcesEqual(0, Field[any, int64]("value"), 1, Field[any, int64]("volume")),
+	).LeftOuter().Select(
+		SelectFrom(0, "key", Field[any, string]("key")),
+		SelectFrom(0, "value", Field[any, int64]("value")),
+		SelectFrom(1, "symbol", Field[any, string]("symbol")),
+	).Query(StatementName("s2"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s2Deployment, err := engine.Deploy(context.Background(), s2Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s2 := &nwViewsProbe{}
+	nwViewsSubscribeResults(t, s2Deployment.Statements()[0], []string{"key", "value", "symbol"}, s2)
+	s2Snapshot := func() [][]any { return nwViewsStatementSnapshot(t, s2Deployment.Statements()[0], "key", "value", "symbol") }
+	nwViewsAssertNotInvoked(t, s2, "s2")
+	nwViewsAssertRows(t, "s2 iterator", s2Snapshot(), [][]any{{"E1", int64(1), nil}, {"E2", int64(1), nil}})
+
+	sendMarket := func(symbol string, volume int64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsMarketVol{Symbol: symbol, Volume: volume}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	sendMarket("S1", 1)
+	if s2.count != 1 || len(s2.newRows) != 2 {
+		t.Fatalf("s2 S1 invocation = count %d new %#v", s2.count, s2.newRows)
+	}
+	nwViewsAssertRowsAnyOrder(t, "s2 S1 new", s2.newRows, [][]any{{"E1", int64(1), "S1"}, {"E2", int64(1), "S1"}})
+	s2.reset()
+	nwViewsAssertRowsAnyOrder(t, "s2 iterator", s2Snapshot(), [][]any{{"E1", int64(1), "S1"}, {"E2", int64(1), "S1"}})
+
+	sendMarket("S2", 2)
+	nwViewsAssertNotInvoked(t, s2, "s2")
+	nwViewsAssertRowsAnyOrder(t, "s2 iterator", s2Snapshot(), [][]any{{"E1", int64(1), "S1"}, {"E2", int64(1), "S1"}})
+
+	send("E3", 2)
+	nwViewsAssertNew(t, create, "create E3", []any{"E3", int64(2)})
+	nwViewsAssertNew(t, s2, "s2 E3", []any{"E3", int64(2), "S2"})
+	nwViewsAssertRowsAnyOrder(t, "s2 iterator", s2Snapshot(), [][]any{{"E1", int64(1), "S1"}, {"E2", int64(1), "S1"}, {"E3", int64(2), "S2"}})
+}
