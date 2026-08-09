@@ -17,6 +17,12 @@ const maxRoutedEventsPerSend = 1024
 // Listener receives one deterministic new/old-stream batch.
 type Listener func(context.Context, ResultBatch) error
 
+// UnmatchedListener receives an event that did not match any active
+// statement. Insert-into routes participate in the same boundary, so the
+// callback may receive either an externally sent event or an internally
+// routed Event while preserving its underlying representation.
+type UnmatchedListener func(context.Context, Event) error
+
 // replayListener keeps the initial snapshot ahead of any live batches that
 // arrive while SubscribeWithReplay is invoking the caller. Live dispatches
 // buffer instead of blocking, which also permits a replay callback to send an
@@ -232,6 +238,7 @@ type Engine struct {
 	pendingMatchRecognizeStateLimits   []MatchRecognizeStateLimitEvent
 	patternSubexpressionLimitListeners []PatternSubexpressionLimitListener
 	pendingPatternSubexpressionLimits  []PatternSubexpressionLimitEvent
+	unmatchedListener                  UnmatchedListener
 	variables                          map[string]Value
 	contextVariables                   map[string]map[string]map[string]Value
 	contextPartitionRefs               map[string]map[string]int
@@ -2237,6 +2244,19 @@ func (e *Engine) Send(ctx context.Context, eventType string, underlying any) err
 	return e.send(ctx, eventType, underlying, nil)
 }
 
+// SetUnmatchedListener replaces the engine-wide unmatched-event callback.
+// Passing nil disables delivery. Callbacks run after the engine transaction
+// lock is released, allowing a callback to deploy a statement that can match
+// the next event.
+func (e *Engine) SetUnmatchedListener(listener UnmatchedListener) {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	e.unmatchedListener = listener
+	e.mu.Unlock()
+}
+
 func (e *Engine) send(ctx context.Context, eventType string, underlying any, jsonRaw any) error {
 	if err := contextErr(ctx); err != nil {
 		return err
@@ -2287,6 +2307,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	dispatches := make([]statementDispatch, 0)
 	routedQueue := []Event{event}
 	processedEvents := make([]Event, 0, 1)
+	unmatchedEvents := make([]Event, 0, 1)
 	processedRoutes := 0
 	for len(routedQueue) > 0 {
 		if err := contextErr(ctx); err != nil {
@@ -2302,11 +2323,18 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		}
 		processedRoutes++
 		statements := e.sortedStatementsLocked()
+		matched := false
 		for _, statement := range orderUpdateStatementsFirst(statements) {
+			if statement.matchesEventFilter(current, now, variables) {
+				matched = true
+			}
 			batch, changed, processErr := statement.process(ctx, now, current, variables)
 			if processErr != nil {
 				e.mu.Unlock()
 				return processErr
+			}
+			if changed {
+				matched = true
 			}
 			if replaced, replacedOK := statement.takeReplacedEvent(); replacedOK {
 				current = replaced
@@ -2330,14 +2358,25 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		e.pendingStatementDispatches = nil
 		routedQueue = append(routedQueue, e.pendingRoutedEvents...)
 		e.pendingRoutedEvents = nil
+		if !matched {
+			unmatchedEvents = append(unmatchedEvents, current)
+		}
 	}
 	nestedNamedWindowDispatches := append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...)
 	variableChanges := e.takeVariableChangesLocked()
 	contextEvents := e.takeContextEventsLocked()
+	unmatchedListener := e.unmatchedListener
 	e.pendingStatementDispatches = nil
 	e.pendingNamedWindowDispatches = nil
 	e.pendingRoutedEvents = nil
 	e.mu.Unlock()
+	if unmatchedListener != nil {
+		for _, unmatched := range unmatchedEvents {
+			if err := unmatchedListener(ctx, unmatched); err != nil {
+				return fmt.Errorf("esper: unmatched listener for %q: %w", unmatched.TypeName(), err)
+			}
+		}
+	}
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
 	e.dispatchMatchRecognizeStateLimitEvents()
@@ -3730,6 +3769,85 @@ func statementAcceptsEvent(query Query, event Event) bool {
 		input = query.rowRecog.input
 	}
 	return sourceNodeAcceptsEvent(query.env, input, event)
+}
+
+// matchesEventFilter reports whether an active statement's input filter
+// service accepts the event. It deliberately ignores post-input where,
+// having and output policies: Esper's unmatched-listener contract is based on
+// event-stream filter criteria, not on whether a statement ultimately emits
+// a result batch.
+func (s *Statement) matchesEventFilter(event Event, now time.Time, variables map[string]Value) bool {
+	if s == nil {
+		return false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed || s.state != StatementStarted {
+		return false
+	}
+	variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
+	query := s.plan.query
+	if query.join != nil {
+		for _, source := range joinDefinitionSources(query.join) {
+			if sourceNodeMatchesEventFilter(query.env, source, event, now, variables, s.engine) {
+				return true
+			}
+		}
+		return false
+	}
+	if query.pattern != nil {
+		for _, source := range patternDefinitionInputs(query.pattern) {
+			if sourceNodeMatchesEventFilter(query.env, source, event, now, variables, s.engine) {
+				return true
+			}
+		}
+		return false
+	}
+	input := query.input
+	if query.aggregate != nil {
+		input = query.aggregate.input
+	}
+	if query.rowRecog != nil {
+		input = query.rowRecog.input
+	}
+	return sourceNodeMatchesEventFilter(query.env, input, event, now, variables, s.engine)
+}
+
+func sourceNodeMatchesEventFilter(env *Environment, node *streamNode, event Event, now time.Time, variables map[string]Value, engine *Engine) bool {
+	if node == nil {
+		return false
+	}
+	switch node.kind {
+	case streamFilter:
+		if !sourceNodeMatchesEventFilter(env, node.input, event, now, variables, engine) || node.predicate == nil {
+			return false
+		}
+		value := node.predicate.eval(EvalContext{
+			Event:      event,
+			OuterEvent: event,
+			Engine:     engine,
+			Now:        now,
+			Variables:  variables,
+		})
+		matched, ok := boolValue(value)
+		return ok && matched
+	case streamWindow, streamDerived:
+		return sourceNodeMatchesEventFilter(env, node.input, event, now, variables, engine)
+	case streamPattern:
+		for _, input := range patternDefinitionInputs(node.pattern) {
+			if sourceNodeMatchesEventFilter(env, input, event, now, variables, engine) {
+				return true
+			}
+		}
+		return false
+	case streamContained:
+		// Contained filters execute after parent expansion and therefore do not
+		// have a single child Event at the engine filter-service boundary. The
+		// parent event type match is the stable unmatched-listener criterion.
+		return sourceNodeAcceptsEvent(env, node, event)
+	default:
+		return sourceNodeAcceptsEvent(env, node, event)
+	}
 }
 
 func sourceNodeAcceptsEvent(env *Environment, node *streamNode, event Event) bool {

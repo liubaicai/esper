@@ -1575,6 +1575,24 @@
         "Java subscriber reflection is represented by the typed Listener callback rather than a second subscriber SPI",
         "shared concurrent lifecycle trace beyond replay ordering and destroyed-state operations"
       ]
+    },
+    {
+      "id": "client.runtime.unmatched-listener",
+      "domain": "client",
+      "level": "S",
+      "summary": "Engine-wide unmatched-event observation for external sends and insert-into routes, including listener disablement, deployment lifecycle and reentrant statement deployment",
+      "javaRefs": [
+        "ClientRuntimeUnmatchedListener"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "client_runtime_unmatched_listener_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "wider shared traces for context/subquery filter-service registrations and multi-route callback ordering"
+      ]
     }
   ],
   "cases": [
@@ -12388,6 +12406,45 @@
         "go-unit"
       ],
       "difference": "Go exposes SubscribeWithReplay(ctx, Listener) instead of addListenerWithReplay(UpdateListener). The first synchronous callback always carries the current Snapshot view, including one empty ResultBatch for an empty statement; live events arriving or sent reentrantly during replay are buffered and delivered afterwards as separate batches. Undeploy leaves retained Statement metadata readable while State reports StatementDestroyed and Snapshot, selector Snapshot, Subscribe, SubscribeWithReplay, Stop and Start all return ErrorState. Java iterator and safeIterator share Go's immutable Snapshot boundary; Java setSubscriber overloads are intentionally represented by the typed Listener API rather than duplicated as a reflective subscriber SPI."
+    },
+    {
+      "id": "case.client-runtime-unmatched-listener",
+      "javaRuntimeIds": [
+        "java-runtime-edddfe644ede4c41833a",
+        "java-runtime-f0c4705f2d64c576a1ea",
+        "java-runtime-89e1ca4e832f99150eb4"
+      ],
+      "javaNames": [
+        "ClientRuntimeUnmatchedSendEvent",
+        "ClientRuntimeUnmatchedCreateStatement",
+        "ClientRuntimeUnmatchedInsertInto"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeUnmatchedListener.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeUnmatchedSendEventParity",
+        "TestClientRuntimeUnmatchedCreateStatementParity",
+        "TestClientRuntimeUnmatchedInsertIntoParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "unmatched-listener",
+        "event-filter",
+        "insert-into",
+        "routed-event",
+        "lifecycle",
+        "reentrant-deploy",
+        "object-identity"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go exposes Engine.SetUnmatchedListener(UnmatchedListener); nil disables delivery. The callback runs after the engine transaction lock is released, so it can deploy a fluent Plan and affect the next event. Matching is based on active input stream filters and deliberately ignores post-input having/output suppression. Unconsumed insert-into routes are reported as their derived Event while an undeployed source statement makes the original external event unmatched with underlying pointer identity preserved. The Java source labels its final insert-into step as a restart without an explicit deploy call; Go expresses that lifecycle transition explicitly by redeploying the immutable plan."
     }
   ],
   "mappings": [
@@ -13194,6 +13251,10 @@
     {
       "capabilityId": "client.runtime.epstatement",
       "caseId": "case.client-runtime-epstatement"
+    },
+    {
+      "capabilityId": "client.runtime.unmatched-listener",
+      "caseId": "case.client-runtime-unmatched-listener"
     }
   ]
 }
