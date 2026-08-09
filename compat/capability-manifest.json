@@ -11397,6 +11397,7 @@
         "java-runtime-93ccd6033710a75f113a",
         "java-runtime-e21f5d942d6c4869bf1b",
         "java-runtime-c1d232f82f0a154d6241",
+        "java-runtime-eb3cba6e0ccf8c3c9c83",
         "java-runtime-550dd87b54717508c0b9",
         "java-runtime-7b13ab2779d557eba691",
         "java-runtime-2e0f0a1356ea1b8e3299",
@@ -11416,6 +11417,7 @@
         "EPLOtherBatchWindowJoin",
         "EPLOtherBatchWindowInsertInto",
         "EPLOtherBeanEventWildcardThisProperty",
+        "EPLOtherBeanEventWildcardSODA",
         "EPLOtherBeanEventWildcardPlusCols",
         "EPLOtherMapEventWildcard",
         "EPLOtherOutputLimitEveryColumn",
@@ -11469,10 +11471,9 @@
         "go-unit",
         "java-suite-EPLOtherDistinct"
       ],
-      "difference": "Distinct fires the first occurrence of each key within a single window update and tracks a global reference count so the old stream fires only when the last sharing event leaves; continuous views (keepall) re-emit per event while batching views (length_batch) dedup the batch. Snapshot/iterator, fire-and-forget, on-trigger select, subquery IN, and output-rate-limit (every-events, every-time, snapshot) all dedup. Variant-stream distinct works through the variant member schema. Wildcard (select *) results are event-backed and read through Result.Get; SODA round-trip (EPLOtherBeanEventWildcardSODA) is an approved difference because Go uses an immutable fluent Plan instead of a text/model parser. Batch-window join distinct (BatchWindowJoin) works: join tuple identity is lineage-keyed, so a batch rollover that replaces same-content rows still emits the full old/new pair the way Esper composes join results per arriving or departing event, while rebuilt historical and method sides keep their previous lineage on equal content and net out; distinct then collapses each batch to first-seen key order. Every-distinct pattern joins (JoinPatternOne/Two) remain open.",
+      "difference": "Distinct fires the first occurrence of each key within a single window update and tracks a global reference count so the old stream fires only when the last sharing event leaves; continuous views (keepall) re-emit per event while batching views (length_batch) dedup the batch. Snapshot/iterator, fire-and-forget, on-trigger select, subquery IN, and output-rate-limit (every-events, every-time, snapshot) all dedup. Variant-stream distinct works through the variant member schema. Wildcard (select *) results are event-backed and read through Result.Get. EPLOtherBeanEventWildcardSODA shares its runtime semantics with TestDistinctWildcardParity (same E1/E2/duplicate-E1 iterator sequence); its SODA EPStatementObjectModel parse-and-toEPL round-trip is an approved difference because Go uses an immutable fluent Plan instead of a text/model parser. Batch-window join distinct (BatchWindowJoin) works: join tuple identity is lineage-keyed, so a batch rollover that replaces same-content rows still emits the full old/new pair the way Esper composes join results per arriving or departing event, while rebuilt historical and method sides keep their previous lineage on equal content and net out; distinct then collapses each batch to first-seen key order. Every-distinct pattern joins (JoinPatternOne/Two) remain open.",
       "remaining": [
-        "EPLOtherDistinctWildcardJoinPatternOne/Two: every-distinct pattern + unidirectional join",
-        "EPLOtherBeanEventWildcardSODA: Go has no SODA model parser (approved difference)"
+        "EPLOtherDistinctWildcardJoinPatternOne/Two: every-distinct pattern + unidirectional join"
       ]
     },
     {
