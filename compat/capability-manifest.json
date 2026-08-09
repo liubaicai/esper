@@ -1612,6 +1612,25 @@
       "remaining": [
         "shared callback-order traces with multiple trigger listeners and asynchronous connector ingress"
       ]
+    },
+    {
+      "id": "client.runtime.time-control",
+      "domain": "client",
+      "level": "S",
+      "summary": "Virtual-clock span advancement with exact callback boundaries, sampled catch-up re-anchoring and per-statement nearest-schedule inspection",
+      "javaRefs": [
+        "ClientRuntimeTimeControl"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "client_runtime_time_control_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "shared schedule traces for cron, output-rate, window expiry and context-partition timers",
+        "concurrent deploy/undeploy and time-control calls"
+      ]
     }
   ],
   "cases": [
@@ -12499,6 +12518,42 @@
         "go-unit"
       ],
       "difference": "Go statement listeners run after the engine transaction lock is released, so the trigger callback can synchronously inject six representation-specific events with Engine.Route, SendXML and JSONSender.Route; each consumer receives exactly one ident=xy event. Java deploys the seven statements as one EPL module while Go deploys one immutable fluent Plan per statement. Java's preconfigured XML type maps an ident attribute; the Go XML schema test uses its declared ident child element, preserving the same public property value without an EPL/XML configuration layer."
+    },
+    {
+      "id": "case.client-runtime-time-control",
+      "javaRuntimeIds": [
+        "java-runtime-b9a311e0572d1c2d3940",
+        "java-runtime-320d6918d5817010afc2"
+      ],
+      "javaNames": [
+        "ClientRuntimeSendTimeSpan",
+        "ClientRuntimeNextScheduledTime"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeTimeControl.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeSendTimeSpanParity",
+        "TestClientRuntimeNextScheduledTimeParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "virtual-clock",
+        "advance-time-span",
+        "schedule",
+        "timer",
+        "callback-boundary",
+        "sampling-resolution",
+        "deployment-lifecycle"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go exposes AdvanceTimeSpan(ctx, target, optionalResolution), NextScheduledTime and StatementNearestSchedules as typed time.Time APIs. Exact span advancement visits each due instant and therefore preserves one listener batch at 1500/3000/4500/6000/7500/9000/10500 milliseconds. Resolution-based advancement samples in fixed steps; overdue recurring timers fire at the sampled clock and re-anchor there, producing 12100 and 13700 milliseconds for Java's 200-millisecond case. Java timer:interval without every is one-shot, while Go TimerInterval is deliberately recurring, so nearest-schedule parity uses equivalent TimerAt nodes, including TimerAt(3s).And(TimerAt(4s)). Deployment IDs remain explicit in the returned per-statement schedule records."
     }
   ],
   "mappings": [
@@ -13313,6 +13368,10 @@
     {
       "capabilityId": "client.runtime.listener-route",
       "caseId": "case.client-runtime-listener-route"
+    },
+    {
+      "capabilityId": "client.runtime.time-control",
+      "caseId": "case.client-runtime-time-control"
     }
   ]
 }

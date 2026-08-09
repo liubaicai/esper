@@ -2549,7 +2549,134 @@ func (e *Engine) Route(ctx context.Context, eventType string, underlying any) er
 	return e.Send(ctx, eventType, underlying)
 }
 
+// StatementSchedule identifies the nearest pending engine-clock callback for
+// one deployed statement. At is expressed in the same time domain as Now and
+// AdvanceTime; DeploymentID and StatementName form a stable lookup pair.
+type StatementSchedule struct {
+	DeploymentID  string
+	StatementName string
+	At            time.Time
+}
+
+// StatementNearestSchedules returns one nearest pending callback per active
+// statement, ordered by time, statement name and deployment id. Statements
+// without a pending engine-clock callback are omitted.
+func (e *Engine) StatementNearestSchedules(ctx context.Context) ([]StatementSchedule, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, err
+	}
+	if e == nil {
+		return nil, NewError(ErrorDependency, "nil engine")
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed {
+		return nil, NewError(ErrorState, "engine is closed")
+	}
+	statements := e.sortedStatementsLocked()
+	result := make([]StatementSchedule, 0, len(statements))
+	for _, statement := range statements {
+		statement.mu.RLock()
+		if !statement.closed && statement.state == StatementStarted {
+			if at, ok := statementRuntimeNearestSchedule(&statement.runtime, statement.plan.query); ok {
+				result = append(result, StatementSchedule{
+					DeploymentID:  statement.deployment.id,
+					StatementName: statement.name,
+					At:            at,
+				})
+			}
+		}
+		statement.mu.RUnlock()
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if !result[i].At.Equal(result[j].At) {
+			return result[i].At.Before(result[j].At)
+		}
+		if result[i].StatementName != result[j].StatementName {
+			return result[i].StatementName < result[j].StatementName
+		}
+		return result[i].DeploymentID < result[j].DeploymentID
+	})
+	return result, nil
+}
+
+// NextScheduledTime returns the earliest pending statement callback. The bool
+// result is false when no active statement has a pending engine-clock task.
+func (e *Engine) NextScheduledTime(ctx context.Context) (time.Time, bool, error) {
+	schedules, err := e.StatementNearestSchedules(ctx)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	if len(schedules) == 0 {
+		return time.Time{}, false, nil
+	}
+	return schedules[0].At, true, nil
+}
+
+// AdvanceTimeSpan advances to every due statement schedule up to target,
+// preserving one listener callback boundary per due time. When resolution is
+// supplied, the clock advances in fixed sampling steps instead: overdue
+// callbacks fire at the first sampled time at or after their deadline and
+// recurring timers re-anchor from that sampled time, matching Esper's
+// advanceTimeSpan(target, resolution) behavior.
+func (e *Engine) AdvanceTimeSpan(ctx context.Context, target time.Time, resolution ...time.Duration) error {
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if e == nil {
+		return NewError(ErrorDependency, "nil engine")
+	}
+	if len(resolution) > 1 {
+		return NewError(ErrorInvalidRule, "advance time span accepts at most one resolution")
+	}
+	current := e.Now()
+	if target.Before(current) {
+		return fmt.Errorf("esper: clock cannot move backwards from %s to %s", current, target)
+	}
+	if len(resolution) == 1 {
+		step := resolution[0]
+		if step <= 0 {
+			return NewError(ErrorInvalidRule, "advance time span resolution must be positive")
+		}
+		for current.Before(target) {
+			next := current.Add(step)
+			if next.After(target) {
+				next = target
+			}
+			if err := e.advanceTime(ctx, next, true); err != nil {
+				return err
+			}
+			current = next
+		}
+		return nil
+	}
+	for {
+		next, ok, err := e.NextScheduledTime(ctx)
+		if err != nil {
+			return err
+		}
+		if !ok || next.After(target) {
+			break
+		}
+		current := e.Now()
+		if next.Before(current) {
+			next = current
+		}
+		if err := e.advanceTime(ctx, next, false); err != nil {
+			return err
+		}
+	}
+	if e.Now().Before(target) {
+		return e.advanceTime(ctx, target, false)
+	}
+	return nil
+}
+
 func (e *Engine) AdvanceTime(ctx context.Context, at time.Time) error {
+	return e.advanceTime(ctx, at, false)
+}
+
+func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedules bool) error {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
@@ -2568,6 +2695,11 @@ func (e *Engine) AdvanceTime(ctx context.Context, at time.Time) error {
 	e.refreshVariablesLocked()
 	variables := cloneValues(e.variables)
 	statements := e.sortedStatementsLocked()
+	if coalesceSchedules {
+		for _, statement := range statements {
+			statement.coalesceSchedulesLocked(at)
+		}
+	}
 	e.pendingStatementDispatches = nil
 	e.pendingNamedWindowDispatches = nil
 	e.pendingRoutedEvents = nil
@@ -3432,6 +3564,178 @@ type outputRuntimeState struct {
 	insertTotal       int64
 	removeTotal       int64
 	lastOutputAt      time.Time
+}
+
+func earlierSchedule(current time.Time, found bool, candidate time.Time) (time.Time, bool) {
+	if candidate.IsZero() {
+		return current, found
+	}
+	if !found || candidate.Before(current) {
+		return candidate, true
+	}
+	return current, found
+}
+
+func statementRuntimeNearestSchedule(runtime *statementRuntime, query Query) (time.Time, bool) {
+	if runtime == nil {
+		return time.Time{}, false
+	}
+	var nearest time.Time
+	found := false
+	if query.pattern != nil && runtime.patternState != nil && !runtime.patternState.patternStopped {
+		root := query.pattern.root
+		if root != nil && isPatternTimerRoot(query.pattern) {
+			switch root.kind {
+			case patternTimerIntervalNode:
+				nearest, found = earlierSchedule(nearest, found, runtime.patternState.timerNext)
+			case patternTimerAtNode:
+				if !runtime.patternState.timerEmitted {
+					nearest, found = earlierSchedule(nearest, found, runtime.patternState.timerNext)
+				}
+			case patternTimerScheduleNode:
+				if schedule := runtime.patternState.schedulePeriod; schedule != nil && schedule.active {
+					nearest, found = earlierSchedule(nearest, found, schedule.next)
+				} else if runtime.patternState.scheduleIndex < len(root.schedule) {
+					nearest, found = earlierSchedule(nearest, found, root.schedule[runtime.patternState.scheduleIndex])
+				}
+			case patternTimerCronNode:
+				nearest, found = earlierSchedule(nearest, found, runtime.patternState.cronNext)
+			}
+		}
+		for _, match := range runtime.patternState.active {
+			if at, ok := patternProgressNearestSchedule(match.state); ok {
+				nearest, found = earlierSchedule(nearest, found, at)
+			}
+		}
+	}
+	if state := runtime.outputState; state != nil {
+		nearest, found = earlierSchedule(nearest, found, state.nextOutputAt)
+		nearest, found = earlierSchedule(nearest, found, state.cronNext)
+		for _, at := range state.firstEveryNext {
+			nearest, found = earlierSchedule(nearest, found, at)
+		}
+		if !state.afterActive && query.output.After == OutputAfterDuration && query.output.AfterDuration > 0 {
+			nearest, found = earlierSchedule(nearest, found, state.afterStarted.Add(query.output.AfterDuration))
+		}
+	}
+	for _, state := range runtime.windows {
+		if at, ok := windowRuntimeNearestSchedule(state); ok {
+			nearest, found = earlierSchedule(nearest, found, at)
+		}
+	}
+	for _, partition := range runtime.partitions {
+		if at, ok := statementRuntimeNearestSchedule(partition, query); ok {
+			nearest, found = earlierSchedule(nearest, found, at)
+		}
+	}
+	return nearest, found
+}
+
+func patternProgressNearestSchedule(progress *patternProgress) (time.Time, bool) {
+	if progress == nil || progress.expired || progress.quit {
+		return time.Time{}, false
+	}
+	var nearest time.Time
+	found := false
+	if progress.timerStarted && !progress.timerEmitted {
+		nearest, found = earlierSchedule(nearest, found, progress.timerNext)
+	}
+	if schedule := progress.schedulePeriod; schedule != nil && schedule.active {
+		nearest, found = earlierSchedule(nearest, found, schedule.next)
+	} else if progress.node != nil && progress.node.kind == patternTimerScheduleNode && progress.scheduleIndex < len(progress.node.schedule) {
+		nearest, found = earlierSchedule(nearest, found, progress.node.schedule[progress.scheduleIndex])
+	}
+	nearest, found = earlierSchedule(nearest, found, progress.cronNext)
+	for _, child := range []*patternProgress{progress.left, progress.right, progress.child} {
+		if at, ok := patternProgressNearestSchedule(child); ok {
+			nearest, found = earlierSchedule(nearest, found, at)
+		}
+	}
+	return nearest, found
+}
+
+func windowRuntimeNearestSchedule(state *windowRuntimeState) (time.Time, bool) {
+	if state == nil {
+		return time.Time{}, false
+	}
+	var nearest time.Time
+	found := false
+	for _, entry := range state.entries {
+		nearest, found = earlierSchedule(nearest, found, entry.expiresAt)
+	}
+	for _, entry := range state.pendingNew {
+		nearest, found = earlierSchedule(nearest, found, entry.expiresAt)
+	}
+	for _, child := range state.children {
+		if at, ok := windowRuntimeNearestSchedule(child); ok {
+			nearest, found = earlierSchedule(nearest, found, at)
+		}
+	}
+	for _, group := range state.groups {
+		if at, ok := windowRuntimeNearestSchedule(group); ok {
+			nearest, found = earlierSchedule(nearest, found, at)
+		}
+	}
+	return nearest, found
+}
+
+func coalesceTime(candidate *time.Time, at time.Time) {
+	if candidate != nil && !candidate.IsZero() && candidate.Before(at) {
+		*candidate = at
+	}
+}
+
+func (s *Statement) coalesceSchedulesLocked(at time.Time) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed || s.state != StatementStarted {
+		return
+	}
+	coalesceStatementRuntimeSchedules(&s.runtime, at)
+}
+
+func coalesceStatementRuntimeSchedules(runtime *statementRuntime, at time.Time) {
+	if runtime == nil {
+		return
+	}
+	if state := runtime.patternState; state != nil {
+		coalesceTime(&state.timerNext, at)
+		coalesceTime(&state.cronNext, at)
+		if state.schedulePeriod != nil {
+			coalesceTime(&state.schedulePeriod.next, at)
+		}
+		for index := range state.active {
+			coalescePatternProgressSchedules(state.active[index].state, at)
+		}
+	}
+	if state := runtime.outputState; state != nil {
+		coalesceTime(&state.nextOutputAt, at)
+		coalesceTime(&state.cronNext, at)
+		for key, candidate := range state.firstEveryNext {
+			coalesceTime(&candidate, at)
+			state.firstEveryNext[key] = candidate
+		}
+	}
+	for _, partition := range runtime.partitions {
+		coalesceStatementRuntimeSchedules(partition, at)
+	}
+}
+
+func coalescePatternProgressSchedules(progress *patternProgress, at time.Time) {
+	if progress == nil || progress.expired || progress.quit {
+		return
+	}
+	coalesceTime(&progress.timerNext, at)
+	coalesceTime(&progress.cronNext, at)
+	if progress.schedulePeriod != nil {
+		coalesceTime(&progress.schedulePeriod.next, at)
+	}
+	coalescePatternProgressSchedules(progress.left, at)
+	coalescePatternProgressSchedules(progress.right, at)
+	coalescePatternProgressSchedules(progress.child, at)
 }
 
 func newStatementRuntime(query Query) statementRuntime {
