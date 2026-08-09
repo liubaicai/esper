@@ -1835,6 +1835,32 @@
         "listener callback errors continue to use the existing fail-fast Go Listener contract instead of Java logging-and-continue behavior",
         "strict wall-clock performance thresholds remain environment-specific and are represented by deterministic delivery-count coverage"
       ]
+    },
+    {
+      "id": "client.runtime.threading",
+      "domain": "client",
+      "level": "G",
+      "summary": "Bounded typed inbound, outbound, route and timer worker pools with waitable tasks, idle barriers, stats, error reporting and fast cancellation on shutdown",
+      "javaRefs": [
+        "ClientRuntimeThreadedConfigInbound",
+        "ClientRuntimeThreadedConfigInboundFastShutdown",
+        "ClientRuntimeThreadedConfigOutbound",
+        "ClientRuntimeThreadedConfigRoute",
+        "ClientRuntimeThreadedConfigTimer"
+      ],
+      "goRefs": [
+        "threading.go",
+        "runtime.go",
+        "client_runtime_threading_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "parallel statement-state mutation inside one event cycle remains serialized by the Engine transaction lock",
+        "an autonomous wall-clock internal timer thread is intentionally replaced by explicit AdvanceTimeAsync",
+        "per-category worker resizing and queue-policy changes after Engine construction",
+        "machine-specific latency thresholds and Java threading-service implementation-class inspection are not portable contracts"
+      ]
     }
   ],
   "cases": [
@@ -13188,6 +13214,62 @@
         "go-unit"
       ],
       "difference": "Go replaces reflective subscriber objects, named methods, overload selection, static update methods and update/updateRStream footprint matching with one explicit Subscriber callback receiving immutable SubscriberUpdate and SubscriberRow values. Rows expose ordered projection Values, Map, Get and wildcard Underlying; join source Event values bind to their underlying Go values. SetSubscriber replaces or removes the single observer, subscribers coexist with listeners, undeploy clears them, and DisallowSubscriber enters canonical Plan identity. Returned errors and panics are isolated from Send/Route, surfaced through SetSubscriberErrorHandler and do not block listeners or sinks. Go listeners retain their existing fail-fast error contract. Variable-set triggers now emit one assignment row; named-window delete remains an old-stream row under the common ResultBatch model. Registered named windows are catalog objects rather than Java create-window EPStatement instances. Performance executions assert deterministic 1,000-event delivery/no-observer behavior without copying machine-specific one-second thresholds."
+    },
+    {
+      "id": "case.client-runtime-threading",
+      "javaRuntimeIds": [
+        "java-runtime-526ad5096ffbf8b96dad",
+        "java-runtime-331018a8f906e2eaedfb",
+        "java-runtime-9d7dceee65f0607e4eac",
+        "java-runtime-6d37c8c6d7a1db389af3",
+        "java-runtime-ddfef7c22617c03ca55c"
+      ],
+      "javaNames": [
+        "ClientRuntimeThreadedConfigInbound",
+        "ClientRuntimeThreadedConfigInboundFastShutdown",
+        "ClientRuntimeThreadedConfigOutbound",
+        "ClientRuntimeThreadedConfigRoute",
+        "ClientRuntimeThreadedConfigTimer"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeThreadedConfigInbound.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeThreadedConfigInboundFastShutdown.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeThreadedConfigOutbound.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeThreadedConfigRoute.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeThreadedConfigTimer.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeThreadedConfigInboundParity",
+        "TestClientRuntimeThreadedConfigInboundFastShutdownParity",
+        "TestClientRuntimeThreadedConfigOutboundParity",
+        "TestClientRuntimeThreadedConfigRouteParity",
+        "TestClientRuntimeThreadedConfigTimerParity",
+        "TestAsyncTaskDisabledAndWaitCancellation"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "threading",
+        "worker-pool",
+        "inbound",
+        "outbound",
+        "route",
+        "timer",
+        "bounded-queue",
+        "shutdown",
+        "error-handler",
+        "stats",
+        "lifecycle",
+        "performance"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go keeps synchronous Send, Route and AdvanceTime semantics stable and enables concurrency explicitly with WithInboundWorkers, WithOutboundWorkers, WithRouteWorkers and WithTimerWorkers. SendAsync/representation variants, RouteAsync and AdvanceTimeAsync return reusable AsyncTask handles; WaitAsync provides a transitive idle barrier and ThreadingStats exposes workers, queue, in-flight, accepted, completed and dropped counts. Inbound coverage includes map, struct, XML, ObjectArray and JSON plus asynchronous structured-error reporting. Outbound delivery queues the complete subscriber/listener/sink batch and reports asynchronous callback errors through SetThreadingErrorHandler. Engine.Close stops admission, cancels queued work, resolves every task and waits for workers before undeploying. The Engine transaction lock still serializes statement state, so route/timer workers move a complete runtime cycle off the caller instead of mutating 100 statements concurrently. Explicit virtual time replaces Java's optional internal timer thread; tests use blocking gates and exact delivery counts instead of machine-specific sub-100ms thresholds or internal executor-class inspection."
     }
   ],
   "mappings": [
@@ -14046,6 +14128,10 @@
     {
       "capabilityId": "client.runtime.subscriber",
       "caseId": "case.client-runtime-subscriber"
+    },
+    {
+      "capabilityId": "client.runtime.threading",
+      "caseId": "case.client-runtime-threading"
     }
   ]
 }

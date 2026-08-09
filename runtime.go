@@ -211,6 +211,10 @@ type engineConfig struct {
 	runtimeURI     string
 	services       map[string]any
 	lockActivity   bool
+	inboundPool    asyncPoolConfig
+	outboundPool   asyncPoolConfig
+	routePool      asyncPoolConfig
+	timerPool      asyncPoolConfig
 }
 
 type EngineOption func(*engineConfig)
@@ -284,6 +288,8 @@ type Engine struct {
 	variableChangeListeners            map[string][]VariableChangeListener
 	subscriberErrorMu                  sync.RWMutex
 	subscriberErrorHandler             SubscriberErrorHandler
+	threadingErrorMu                   sync.RWMutex
+	threadingErrorHandler              ThreadingErrorHandler
 	pendingVariableChanges             []VariableChangeEvent
 	tables                             map[string]*Table
 	namedWindows                       map[string]*NamedWindow
@@ -296,6 +302,10 @@ type Engine struct {
 	pendingRoutedEvents                []Event
 	closed                             bool
 	nextID                             uint64
+	inboundPool                        *asyncTaskPool
+	outboundPool                       *asyncTaskPool
+	routePool                          *asyncTaskPool
+	timerPool                          *asyncTaskPool
 }
 
 func NewEngine(env *Environment, options ...EngineOption) *Engine {
@@ -344,6 +354,10 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		dataflows:                       make(map[*DataflowInstance]struct{}),
 		savedDataflowInstances:          make(map[string]*DataflowInstance),
 	}
+	engine.inboundPool = newAsyncTaskPool(ThreadingInbound, cfg.inboundPool)
+	engine.outboundPool = newAsyncTaskPool(ThreadingOutbound, cfg.outboundPool)
+	engine.routePool = newAsyncTaskPool(ThreadingRoute, cfg.routePool)
+	engine.timerPool = newAsyncTaskPool(ThreadingTimer, cfg.timerPool)
 	if cfg.lockActivity {
 		engine.lockActivity = newLockActivityRecorder()
 		engine.mu.recorder = engine.lockActivity
@@ -3165,6 +3179,9 @@ func (e *Engine) Close(ctx context.Context) error {
 	if e == nil {
 		return nil
 	}
+	if err := e.shutdownThreading(ctx); err != nil {
+		return err
+	}
 	e.mu.Lock()
 	if e.closed {
 		e.mu.Unlock()
@@ -3486,6 +3503,20 @@ func dispatchAll(ctx context.Context, dispatches []statementDispatch) error {
 }
 
 func (s *Statement) dispatch(ctx context.Context, batch ResultBatch) error {
+	if s != nil && s.engine != nil && s.engine.outboundPool != nil {
+		outboundContext := context.WithoutCancel(ctx)
+		cloned := batch.clone()
+		_, err := s.engine.outboundPool.submit(outboundContext, func(taskContext context.Context) error {
+			return s.engine.runThreadingTask(taskContext, ThreadingOutbound, func(runContext context.Context) error {
+				return s.dispatchSync(runContext, cloned)
+			})
+		})
+		return err
+	}
+	return s.dispatchSync(ctx, batch)
+}
+
+func (s *Statement) dispatchSync(ctx context.Context, batch ResultBatch) error {
 	s.mu.RLock()
 	listenerIDs := make([]uint64, 0, len(s.listeners))
 	for id := range s.listeners {
