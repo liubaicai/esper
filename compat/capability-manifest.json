@@ -2171,6 +2171,30 @@
       ]
     },
     {
+      "id": "client.compile.batch-errors",
+      "domain": "client",
+      "level": "G",
+      "summary": "All-or-nothing typed batch compilation with ordered multi-error items, application line metadata and detached diagnostics",
+      "javaRefs": [
+        "ClientCompileExceptionItems",
+        "EPCompileException",
+        "EPCompileExceptionItem"
+      ],
+      "goRefs": [
+        "compile_batch.go",
+        "plan.go",
+        "client_compile_exception_items_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "CompileItem carries typed Query values and optional diagnostic metadata instead of parsed EPL statement text",
+        "application-provided diagnostic text is whitespace-normalized but never parsed or included in Plan identity",
+        "successful Plans are returned only when every item compiles; failed batches expose every item cause in input order",
+        "exact Java schema-type/parser wording and lexer-derived source locations are intentionally not copied"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -14327,6 +14351,48 @@
       "difference": "Environment.ValidateSyntax validates zero or more typed fluent Query values without resolving event types, variables, contexts or other catalog objects. A structurally valid From[clientCompileSyntaxUnknownEvent](env, NoSuchEvent) passes syntax-only validation and then fails ordinary Build semantic resolution, matching Java syntaxValidate. An empty query list is valid, while a zero Query and a source-less query with no select expression reproduce the invalid raw text and empty statement-object-model boundaries. Additional tests reject blank sources/aliases/names, nil filters/windows/select expressions, invalid expression constructors, negative limits and invalid output policies. Java's reserved-word, token, quote, incomplete pattern, CASE and outer-join parser messages have no Go runtime equivalent because the fluent API constructs grammar directly; Go reports stable structural errors and deliberately does not accept EPL strings or reproduce lexer line/column text."
     },
     {
+      "id": "case.client-compile-exception-items",
+      "javaRuntimeIds": [
+        "java-runtime-8298f021d1047b6eb789",
+        "java-runtime-dec1514b99b6806b0fb8",
+        "java-runtime-003a5714495ed69d09b7"
+      ],
+      "javaNames": [
+        "ClientCompileExceptionTwoItems",
+        "ClientCompileExceptionMultiLineMultiItem",
+        "ClientCompileExeptionEPLWNewline"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileExceptionItems.java"
+      ],
+      "goTests": [
+        "TestClientCompileExceptionTwoItemsMatchesEsper",
+        "TestClientCompileExceptionMultiLineMultiItemMatchesEsper",
+        "TestClientCompileExceptionEPLWithNewlineMatchesEsper",
+        "TestCompileBatchIsAllOrNothingAndValidatesItemMetadata"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "batch",
+        "multi-error",
+        "error-item",
+        "line-number",
+        "diagnostic-text",
+        "newline",
+        "all-or-nothing",
+        "invalid"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "CompileBatch accepts fluent NewCompileItem(query) values, compiles every item, and returns either all Plans in order or one CompileBatchError containing all CompileErrorItem values in input order. Each item preserves zero-based Index, an explicit or default one-based Line, whitespace-normalized diagnostic Expression and the structured Build Cause; Items returns a detached slice and Unwrap exposes the first cause. Two-item, multiline lines 1/6 and XX-newline-X cases reproduce the Java item counts, ordering, locations and single-line diagnostic shape. Invalid item metadata is aggregated without exposing successful sibling Plans. Java discovers statement text and lines by parsing EPL and reports unknown schema type/parser wording; Go requires real reflect.Type values, never parses the diagnostic text, and reports the corresponding typed builder/semantic cause."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15408,6 +15474,10 @@
     {
       "capabilityId": "client.compile.syntax-validation",
       "caseId": "case.client-compile-syntax-validation"
+    },
+    {
+      "capabilityId": "client.compile.batch-errors",
+      "caseId": "case.client-compile-exception-items"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",
