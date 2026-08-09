@@ -206,15 +206,16 @@ func (c *VirtualClock) Advance(at time.Time) error {
 }
 
 type engineConfig struct {
-	clock          *VirtualClock
-	matchRecognize MatchRecognizeRuntimeConfig
-	runtimeURI     string
-	services       map[string]any
-	lockActivity   bool
-	inboundPool    asyncPoolConfig
-	outboundPool   asyncPoolConfig
-	routePool      asyncPoolConfig
-	timerPool      asyncPoolConfig
+	clock                  *VirtualClock
+	matchRecognize         MatchRecognizeRuntimeConfig
+	runtimeURI             string
+	services               map[string]any
+	lockActivity           bool
+	runtimeMetricsInterval time.Duration
+	inboundPool            asyncPoolConfig
+	outboundPool           asyncPoolConfig
+	routePool              asyncPoolConfig
+	timerPool              asyncPoolConfig
 }
 
 type EngineOption func(*engineConfig)
@@ -290,6 +291,7 @@ type Engine struct {
 	subscriberErrorHandler             SubscriberErrorHandler
 	threadingErrorMu                   sync.RWMutex
 	threadingErrorHandler              ThreadingErrorHandler
+	runtimeMetrics                     *runtimeMetricsState
 	pendingVariableChanges             []VariableChangeEvent
 	tables                             map[string]*Table
 	namedWindows                       map[string]*NamedWindow
@@ -358,6 +360,7 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 	engine.outboundPool = newAsyncTaskPool(ThreadingOutbound, cfg.outboundPool)
 	engine.routePool = newAsyncTaskPool(ThreadingRoute, cfg.routePool)
 	engine.timerPool = newAsyncTaskPool(ThreadingTimer, cfg.timerPool)
+	engine.runtimeMetrics = newRuntimeMetricsState(cfg.runtimeMetricsInterval)
 	if cfg.lockActivity {
 		engine.lockActivity = newLockActivityRecorder()
 		engine.mu.recorder = engine.lockActivity
@@ -2614,6 +2617,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		}
 		current := routedQueue[0]
 		routedQueue = routedQueue[1:]
+		e.recordRuntimeInputLocked()
 		processedEvents = append(processedEvents, current)
 		if processedRoutes >= maxRoutedEventsPerSend {
 			e.mu.Unlock()
@@ -3069,6 +3073,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	for instance := range e.dataflows {
 		dataflows = append(dataflows, instance)
 	}
+	runtimeMetric, runtimeMetricListeners, runtimeMetricDue := e.runtimeMetricDueLocked(at)
 	e.mu.Unlock()
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
@@ -3084,6 +3089,11 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	}
 	for _, dataflow := range dataflows {
 		if err := dataflow.advanceDataflowTime(ctx, at); err != nil {
+			return err
+		}
+	}
+	if runtimeMetricDue {
+		if err := dispatchRuntimeMetric(ctx, runtimeMetric, runtimeMetricListeners); err != nil {
 			return err
 		}
 	}
@@ -3313,6 +3323,7 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		processed++
 		current := routedQueue[0]
 		routedQueue = routedQueue[1:]
+		e.recordRuntimeInputLocked()
 		for _, statement := range orderUpdateStatementsFirst(e.dispatchStatementsLocked()) {
 			batch, changed, err := statement.process(ctx, now, current, variables)
 			if err != nil {

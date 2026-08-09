@@ -295,7 +295,6 @@ func (p *asyncTaskPool) finish(task *asyncTask, err error, dropped bool) {
 		task.result.mu.Lock()
 		task.result.err = err
 		task.result.mu.Unlock()
-		close(task.result.done)
 		p.mu.Lock()
 		p.pending--
 		p.complete++
@@ -307,6 +306,10 @@ func (p *asyncTaskPool) finish(task *asyncTask, err error, dropped bool) {
 		}
 		p.mu.Unlock()
 		<-p.admit
+		// Publish task completion only after stats, idle state and admission
+		// capacity reflect the completed task. AsyncTask.Wait is therefore a
+		// stable observation barrier for ThreadingStats.
+		close(task.result.done)
 	})
 }
 

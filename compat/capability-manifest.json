@@ -1904,6 +1904,30 @@
         "structured Audit callbacks and runtime/statement Metrics are separate observable capabilities and remain in scope",
         "a future Go diagnostic tracer may instrument logical operators without copying Java q/a callback pairs or bytecode hooks"
       ]
+    },
+    {
+      "id": "client.instrument.runtime-metrics",
+      "domain": "client",
+      "level": "G",
+      "summary": "Virtual-time runtime metric reporting with cumulative/delta input counts, pending schedule depth, snapshots, enable/disable control and removable typed listeners",
+      "javaRefs": [
+        "ClientInstrumentMetricsReportingRuntimeMetrics",
+        "RuntimeMetric",
+        "MetricExecEngine"
+      ],
+      "goRefs": [
+        "metrics.go",
+        "runtime.go",
+        "client_instrument_runtime_metrics_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "statement metrics, statement groups, named-window accounting and per-statement enable/disable are separate client.instrument slices",
+        "schedule depth currently counts active statements with a pending callback rather than every internal schedule handle for multi-timer statements",
+        "metric delivery uses typed Engine listeners instead of registering RuntimeMetric as an ordinary event stream",
+        "JVM ThreadMXBean current-thread CPU-time availability is not a portable Go runtime contract"
+      ]
     }
   ],
   "cases": [
@@ -13389,6 +13413,42 @@
         "go-unit"
       ],
       "difference": "The fixed Esper 9.0.0 source declares InstrumentationHelper.ENABLED=false and ASSERTIONENABLED=false. RegressionRunner therefore does not call startTest/endTest, all internal instrumentation branches are compile-time false, and this execution only builds, deploys and undeploys select 1=2 without sending an event or asserting a callback. Go verifies the same observable typed Plan lifecycle and does not copy the dormant JVM-wide static helper, hundreds of q/a callback pairs, bytecode hooks or provider system properties. This disposition does not cover ClientInstrumentAudit or any MetricsReporting execution; those remain product capabilities to implement."
+    },
+    {
+      "id": "case.client-instrument-runtime-metrics",
+      "javaRuntimeIds": [
+        "java-runtime-f9c4d58a6f9b84ca3ac4"
+      ],
+      "javaNames": [
+        "ClientInstrumentMetricsReportingRuntimeMetrics"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/instrument/ClientInstrumentMetricsReportingRuntimeMetrics.java"
+      ],
+      "goTests": [
+        "TestClientInstrumentMetricsReportingRuntimeMetricsParity",
+        "TestRuntimeMetricsConfigurationAndSubscriptionLifecycle"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "instrument",
+        "metrics",
+        "runtime",
+        "virtual-time",
+        "input-count",
+        "schedule-depth",
+        "subscription",
+        "enable-disable",
+        "lifecycle"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go enables runtime reporting explicitly with WithRuntimeMetrics and publishes immutable RuntimeMetric values through removable typed listeners. The first AdvanceTime establishes the reporting epoch; 10-second periods reproduce Java's 11s and 21s boundaries, cumulative input 1 then 4, deltas 1 then 3, and schedule depth 1 then 0 around a one-shot timer. Like MetricExecEngine, Go captures counts before accounting the metric record itself, so that internal record enters the next period's delta. CurrentRuntimeMetric provides a management snapshot and SetRuntimeMetricsEnabled controls reporting. Go does not inject metrics into the ordinary event schema/catalog or copy JMX/ThreadMXBean per-thread CPU checks; listeners are a management surface. Current schedule depth counts active statements with pending callbacks, which is exact for this execution but not yet a full count of every handle in multi-timer statements. Statement-level metrics remain separate."
     }
   ],
   "mappings": [
@@ -14259,6 +14319,10 @@
     {
       "capabilityId": "client.instrument.instrumentation-disabled",
       "caseId": "case.client-instrument-instrumentation-disabled"
+    },
+    {
+      "capabilityId": "client.instrument.runtime-metrics",
+      "caseId": "case.client-instrument-runtime-metrics"
     }
   ]
 }
