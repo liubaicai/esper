@@ -3766,3 +3766,161 @@ func TestInfraNWViewsBeanBackedParity(t *testing.T) {
 		}
 	}
 }
+
+// nwViewsBeanContained mirrors the MyWindowBC window type of
+// InfraBeanContained: create window ... as (bean SupportBean_S0) declares a
+// single fragment property "bean" carrying the whole SupportBean_S0 event.
+type nwViewsBeanContained struct {
+	Bean nwViewsBeanS0 `esper:"bean"`
+}
+
+// TestInfraNWViewsBeanContainedParity mirrors InfraBeanContained: a window
+// whose schema is one contained bean fragment property (create window
+// MyWindowBC#keepall as (bean SupportBean_S0)), filled by insert into ...
+// select bean.* as bean from SupportBean_S0 as bean; the create listener
+// navigates the fragment as bean.p00 == "E1". Esper runs the object-array,
+// map and default representations (the annotation picks the composite
+// underlying; Go keeps its single struct representation) and rejects the
+// Avro form at compile time because a bean property has no Avro mapping;
+// Go Avro schemas are record-field declarations normalized at ingestion, so
+// that compile-time boundary has no Go construction-time counterpart (both
+// recorded as differences).
+func TestInfraNWViewsBeanContainedParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[nwViewsBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	windowSchema, err := RegisterStruct[nwViewsBeanContained](env, "MyWindowBC")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowBC", windowSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	source := From[nwViewsBeanS0](env, "SupportBean_S0")
+	insertPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"MyWindowBC",
+		SetColumn("bean", EventValue[nwViewsBeanS0]()),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	insertDeployment, err := engine.Deploy(context.Background(), insertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	window, ok := engine.NamedWindow("MyWindowBC")
+	if !ok {
+		t.Fatal("bean-contained window is missing")
+	}
+	probe := &nwViewsProbe{rowOf: func(event Event) []any { return []any{event.Get("bean.p00").Any()} }}
+	nwViewsSubscribeWindow(t, window, probe)
+
+	if err := engine.SendEvent(context.Background(), nwViewsBeanS0{ID: 1, P00: "E1"}); err != nil {
+		t.Fatal(err)
+	}
+	nwViewsAssertNew(t, probe, "create E1", []any{"E1"})
+
+	if err := insertDeployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// nwViewsBeanSchemaAlias mirrors the ABC alias event type of
+// InfraBeanSchemaBacked: create schema ABC as SupportBean.class declares a
+// distinct event type over the same bean class. Go models the alias with a
+// distinct struct carrying the same fields — one event type per Go struct
+// matches Esper type identity (SupportBean sends never route to the ABC
+// alias; registering the same Go struct under a second schema name would
+// re-point the Go-type index and misroute sends, the documented hazard).
+type nwViewsBeanSchemaAlias struct {
+	TheString string `esper:"theString"`
+	IntBoxed  int    `esper:"intBoxed"`
+	LongBoxed int64  `esper:"longBoxed"`
+}
+
+// TestInfraNWViewsBeanSchemaBackedParity mirrors InfraBeanSchemaBacked:
+// create schema ABC as SupportBean.class with create window
+// MyWindowBSB#keepall as ABC and insert into MyWindowBSB select * from
+// SupportBean; the FAF row off the window carries the window-named event
+// type, and a select * from ABC consumer stays silent when SupportBean
+// events are sent (Esper type identity: the alias is a distinct type even
+// over the shared bean class).
+func TestInfraNWViewsBeanSchemaBackedParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[nwViewsBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	aliasSchema, err := RegisterStruct[nwViewsBeanSchemaAlias](env, "ABC")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowBSB", aliasSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	source := From[nwViewsBean](env, "SupportBean")
+	insertPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"MyWindowBSB",
+		SetColumn("theString", Field[nwViewsBean, string]("theString")),
+		SetColumn("intBoxed", Field[nwViewsBean, int]("intBoxed")),
+		SetColumn("longBoxed", Field[nwViewsBean, int64]("longBoxed")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fafPlan, err := env.Build(FromNamedWindow(env, "MyWindowBSB").Query(StatementName("faf")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(From[nwViewsBeanSchemaAlias](env, "ABC").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	insertDeployment, err := engine.Deploy(context.Background(), insertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := engine.SendEvent(context.Background(), nwViewsBean{}); err != nil {
+		t.Fatal(err)
+	}
+	fafResult, err := engine.ExecuteFireAndForget(context.Background(), fafPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fafResult.Results()) != 1 {
+		t.Fatalf("FAF rows = %d, want 1", len(fafResult.Results()))
+	}
+	fafEvent, ok := fafResult.Results()[0].Event()
+	if !ok {
+		t.Fatalf("FAF row is not an event: %#v", fafResult.Results()[0])
+	}
+	if got := fafEvent.TypeName(); got != "MyWindowBSB" {
+		t.Fatalf("FAF event type = %q, want %q", got, "MyWindowBSB")
+	}
+	if _, isBean := fafEvent.Underlying().(nwViewsBeanSchemaAlias); !isBean {
+		t.Fatalf("FAF underlying = %T, want nwViewsBeanSchemaAlias", fafEvent.Underlying())
+	}
+
+	consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	probe := &nwViewsProbe{rowOf: func(event Event) []any { return []any{event.Get("theString").Any()} }}
+	nwViewsSubscribeStatement(t, consumerDeployment.Statements()[0], probe)
+
+	if err := engine.SendEvent(context.Background(), nwViewsBean{}); err != nil {
+		t.Fatal(err)
+	}
+	nwViewsAssertNotInvoked(t, probe, "s0")
+
+	for _, deployment := range []*Deployment{insertDeployment, consumerDeployment} {
+		if err := deployment.Undeploy(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
