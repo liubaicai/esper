@@ -1923,10 +1923,38 @@
       "phase": 1,
       "status": "mapped",
       "remaining": [
-        "statement metrics, statement groups, named-window accounting and per-statement enable/disable are separate client.instrument slices",
         "schedule depth currently counts active statements with a pending callback rather than every internal schedule handle for multi-timer statements",
         "metric delivery uses typed Engine listeners instead of registering RuntimeMetric as an ordinary event stream",
         "JVM ThreadMXBean current-thread CPU-time availability is not a portable Go runtime contract"
+      ]
+    },
+    {
+      "id": "client.instrument.statement-metrics",
+      "domain": "client",
+      "level": "G",
+      "summary": "Virtual-time statement metrics with ordered include/exclude groups, inactive reports, live interval changes, statement/global enable-disable, runtime snapshots and Named Window declaration accounting",
+      "javaRefs": [
+        "ClientInstrumentMetricsReportingStmtMetrics",
+        "ClientInstrumentMetricsReportingStmtGroups",
+        "ClientInstrumentMetricsReportingDisableStatement",
+        "ClientInstrumentMetricsReportingDisableRuntime",
+        "ClientInstrumentMetricsReportingNW",
+        "StatementMetricRepository",
+        "MetricExecStatement"
+      ],
+      "goRefs": [
+        "metrics.go",
+        "metrics_cpu_linux.go",
+        "runtime.go",
+        "client_instrument_statement_metrics_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "metric delivery uses typed Engine listeners and group snapshots instead of registering StatementMetric as an ordinary event stream",
+        "Linux reports process CPU time because goroutines can migrate between OS threads; other platforms return zero when no portable process CPU clock is available",
+        "Named Window declarations are environment-owned metric entries with deploymentId environment instead of Java create-window deployment statements",
+        "full instrumentation accounting for every internal schedule/filter callback beyond the mapped executions remains part of broader runtime observability work"
       ]
     }
   ],
@@ -13449,6 +13477,58 @@
         "go-unit"
       ],
       "difference": "Go enables runtime reporting explicitly with WithRuntimeMetrics and publishes immutable RuntimeMetric values through removable typed listeners. The first AdvanceTime establishes the reporting epoch; 10-second periods reproduce Java's 11s and 21s boundaries, cumulative input 1 then 4, deltas 1 then 3, and schedule depth 1 then 0 around a one-shot timer. Like MetricExecEngine, Go captures counts before accounting the metric record itself, so that internal record enters the next period's delta. CurrentRuntimeMetric provides a management snapshot and SetRuntimeMetricsEnabled controls reporting. Go does not inject metrics into the ordinary event schema/catalog or copy JMX/ThreadMXBean per-thread CPU checks; listeners are a management surface. Current schedule depth counts active statements with pending callbacks, which is exact for this execution but not yet a full count of every handle in multi-timer statements. Statement-level metrics remain separate."
+    },
+    {
+      "id": "case.client-instrument-statement-metrics",
+      "javaRuntimeIds": [
+        "java-runtime-3f418f01e41584dea593",
+        "java-runtime-1cf1f7e1b8b311a37c03",
+        "java-runtime-412ff920534d4e08efb8",
+        "java-runtime-bf22e0bc1cdec9c1d65c",
+        "java-runtime-3637b74320b061f28bae"
+      ],
+      "javaNames": [
+        "ClientInstrumentMetricsReportingDisableRuntime",
+        "ClientInstrumentMetricsReportingDisableStatement",
+        "ClientInstrumentMetricsReportingNW",
+        "ClientInstrumentMetricsReportingStmtGroups",
+        "ClientInstrumentMetricsReportingStmtMetrics"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/instrument/ClientInstrumentMetricsReportingDisableRuntime.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/instrument/ClientInstrumentMetricsReportingDisableStatement.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/instrument/ClientInstrumentMetricsReportingNW.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/instrument/ClientInstrumentMetricsReportingStmtGroups.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/instrument/ClientInstrumentMetricsReportingStmtMetrics.java"
+      ],
+      "goTests": [
+        "TestClientInstrumentMetricsReportingStmtMetricsParity",
+        "TestClientInstrumentMetricsReportingStmtGroupsParity",
+        "TestClientInstrumentMetricsReportingDisableStatementParity",
+        "TestClientInstrumentMetricsReportingDisableRuntimeParity",
+        "TestClientInstrumentMetricsReportingNamedWindowParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "instrument",
+        "metrics",
+        "statement",
+        "groups",
+        "virtual-time",
+        "named-window",
+        "input-output-count",
+        "cpu-wall-time",
+        "enable-disable",
+        "lifecycle"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go configures statement metrics with typed StatementMetricsGroup options and delivers immutable StatementMetric values through removable management listeners plus CurrentStatementMetricGroups snapshots. Ordered SQL-LIKE/regexp include-exclude rules, first-match grouping, reportInactive, 6s/7s/8s and dynamically changed intervals, per-statement enable-disable, global schedule pause/resume, reset-on-report, undeploy removal and Named Window input accounting reproduce the five Java executions. Metric listeners are not ordinary statements, so they do not recursively report themselves after application undeploy. Named Window declarations are environment-owned metrics using deploymentId environment; this represents Java create-window statement A/W accounting without introducing EPL declarations. Linux CPUTime uses process CPU time because goroutines may migrate OS threads; non-Linux builds expose zero when no portable sampler exists. WallTime, input, insert-stream and remove-stream counters retain the Java reporting-period contract."
     }
   ],
   "mappings": [
@@ -14323,6 +14403,10 @@
     {
       "capabilityId": "client.instrument.runtime-metrics",
       "caseId": "case.client-instrument-runtime-metrics"
+    },
+    {
+      "capabilityId": "client.instrument.statement-metrics",
+      "caseId": "case.client-instrument-statement-metrics"
     }
   ]
 }

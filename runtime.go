@@ -206,16 +206,18 @@ func (c *VirtualClock) Advance(at time.Time) error {
 }
 
 type engineConfig struct {
-	clock                  *VirtualClock
-	matchRecognize         MatchRecognizeRuntimeConfig
-	runtimeURI             string
-	services               map[string]any
-	lockActivity           bool
-	runtimeMetricsInterval time.Duration
-	inboundPool            asyncPoolConfig
-	outboundPool           asyncPoolConfig
-	routePool              asyncPoolConfig
-	timerPool              asyncPoolConfig
+	clock                    *VirtualClock
+	matchRecognize           MatchRecognizeRuntimeConfig
+	runtimeURI               string
+	services                 map[string]any
+	lockActivity             bool
+	runtimeMetricsConfigured bool
+	runtimeMetricsInterval   time.Duration
+	statementMetrics         *statementMetricsConfig
+	inboundPool              asyncPoolConfig
+	outboundPool             asyncPoolConfig
+	routePool                asyncPoolConfig
+	timerPool                asyncPoolConfig
 }
 
 type EngineOption func(*engineConfig)
@@ -292,6 +294,7 @@ type Engine struct {
 	threadingErrorMu                   sync.RWMutex
 	threadingErrorHandler              ThreadingErrorHandler
 	runtimeMetrics                     *runtimeMetricsState
+	statementMetrics                   *statementMetricsState
 	pendingVariableChanges             []VariableChangeEvent
 	tables                             map[string]*Table
 	namedWindows                       map[string]*NamedWindow
@@ -360,7 +363,8 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 	engine.outboundPool = newAsyncTaskPool(ThreadingOutbound, cfg.outboundPool)
 	engine.routePool = newAsyncTaskPool(ThreadingRoute, cfg.routePool)
 	engine.timerPool = newAsyncTaskPool(ThreadingTimer, cfg.timerPool)
-	engine.runtimeMetrics = newRuntimeMetricsState(cfg.runtimeMetricsInterval)
+	engine.runtimeMetrics = newRuntimeMetricsState(cfg.runtimeMetricsInterval, cfg.runtimeMetricsConfigured)
+	engine.statementMetrics = newStatementMetricsState(cfg.statementMetrics, engine.runtimeURI)
 	if cfg.lockActivity {
 		engine.lockActivity = newLockActivityRecorder()
 		engine.mu.recorder = engine.lockActivity
@@ -384,8 +388,15 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		for name, definition := range env.tables {
 			engine.tables[name] = newTable(definition)
 		}
-		for name, definition := range env.namedWindows {
+		namedWindowNames := make([]string, 0, len(env.namedWindows))
+		for name := range env.namedWindows {
+			namedWindowNames = append(namedWindowNames, name)
+		}
+		sort.Strings(namedWindowNames)
+		for index, name := range namedWindowNames {
+			definition := env.namedWindows[name]
 			engine.namedWindows[name] = newNamedWindow(definition, engine)
+			engine.registerNamedWindowMetricsLocked(definition.Name(), uint64(index+1))
 		}
 		env.mu.RUnlock()
 	}
@@ -1232,6 +1243,7 @@ func (e *Engine) ensureNamedWindowLockedInModule(moduleName, name string) (*Name
 	}
 	window := newNamedWindow(definition, e)
 	e.namedWindows[key] = window
+	e.registerNamedWindowMetricsLocked(definition.Name(), e.nextID+1)
 	return window, true
 }
 
@@ -1271,10 +1283,11 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 		e.mu.Unlock()
 		return err
 	}
+	e.recordNamedWindowMetricInputLocked(window, delta)
 	statements := e.dispatchStatementsLocked()
 	dispatches := make([]statementDispatch, 0, len(statements))
 	for _, statement := range statements {
-		batch, changed, processErr := statement.processNamedWindow(ctx, now, delta, variables)
+		batch, changed, processErr := e.processNamedWindowWithMetricsLocked(ctx, statement, now, window, delta, variables)
 		if processErr != nil {
 			e.mu.Unlock()
 			return processErr
@@ -2059,6 +2072,7 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 	}
 	for _, statement := range deployment.statements {
 		e.statements[statement.id] = statement
+		e.registerStatementMetricsLocked(statement)
 	}
 	e.deployments[deploymentID] = deployment
 	for _, statement := range deployment.statements {
@@ -2428,6 +2442,7 @@ func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
 	delete(e.deployments, deploymentID)
 	removedStatements := append([]*Statement(nil), deployment.statements...)
 	for _, statement := range deployment.statements {
+		e.removeStatementMetricsLocked(statement)
 		delete(e.statements, statement.id)
 		statement.markClosedLocked()
 	}
@@ -2627,13 +2642,14 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		statements := e.dispatchStatementsLocked()
 		matched := false
 		for _, statement := range orderUpdateStatementsFirst(statements) {
-			if statement.matchesEventFilter(current, now, variables) {
-				matched = true
-			}
-			batch, changed, processErr := statement.process(ctx, now, current, variables)
+			accepted := statement.matchesEventFilter(current, now, variables)
+			batch, changed, processErr := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted)
 			if processErr != nil {
 				e.mu.Unlock()
 				return processErr
+			}
+			if accepted {
+				matched = true
 			}
 			if changed {
 				matched = true
@@ -3017,9 +3033,10 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	for _, name := range sortedNamedWindowNames(e.namedWindows) {
 		window := e.namedWindows[name]
 		if delta := window.expire(at); !delta.empty() {
+			e.recordNamedWindowMetricInputLocked(window, delta)
 			namedWindowDispatches = append(namedWindowDispatches, namedWindowDispatch{window: window, delta: delta})
 			for _, statement := range statements {
-				batch, changed, processErr := statement.processNamedWindow(ctx, at, delta, variables)
+				batch, changed, processErr := e.processNamedWindowWithMetricsLocked(ctx, statement, at, window, delta, variables)
 				if processErr != nil {
 					e.mu.Unlock()
 					return processErr
@@ -3042,7 +3059,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 		}
 	}
 	for _, statement := range statements {
-		batch, changed := statement.expire(at, variables)
+		batch, changed := e.expireStatementWithMetricsLocked(statement, at, variables)
 		if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
 			e.mu.Unlock()
 			return err
@@ -3074,6 +3091,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 		dataflows = append(dataflows, instance)
 	}
 	runtimeMetric, runtimeMetricListeners, runtimeMetricDue := e.runtimeMetricDueLocked(at)
+	statementMetrics, statementMetricListeners := e.statementMetricsDueLocked(at)
 	e.mu.Unlock()
 	e.dispatchVariableChanges(variableChanges)
 	e.dispatchContextEvents(contextEvents)
@@ -3096,6 +3114,9 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 		if err := dispatchRuntimeMetric(ctx, runtimeMetric, runtimeMetricListeners); err != nil {
 			return err
 		}
+	}
+	if err := dispatchStatementMetrics(ctx, statementMetrics, statementMetricListeners); err != nil {
+		return err
 	}
 	return nil
 }
@@ -3265,12 +3286,13 @@ func (e *Engine) queueNamedWindowDeltaLocked(ctx context.Context, now time.Time,
 	if e == nil || window == nil || delta.empty() {
 		return nil
 	}
+	e.recordNamedWindowMetricInputLocked(window, delta)
 	statements := e.dispatchStatementsLocked()
 	for _, statement := range statements {
 		if statement == owner || !containsNamedWindow(statement.plan.query.input, statement.plan.query.join) {
 			continue
 		}
-		batch, changed, err := statement.processNamedWindow(ctx, now, delta, variables)
+		batch, changed, err := e.processNamedWindowWithMetricsLocked(ctx, statement, now, window, delta, variables)
 		if err != nil {
 			return err
 		}
@@ -3325,7 +3347,8 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		routedQueue = routedQueue[1:]
 		e.recordRuntimeInputLocked()
 		for _, statement := range orderUpdateStatementsFirst(e.dispatchStatementsLocked()) {
-			batch, changed, err := statement.process(ctx, now, current, variables)
+			accepted := e.statementMetrics != nil && statement.matchesEventFilter(current, now, variables)
+			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted)
 			if err != nil {
 				return err
 			}
