@@ -3473,3 +3473,80 @@ func TestInfraNWViewsIntersectionParity(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// nwViewsOverrideBase mirrors SupportOverrideBase: the only Esper-visible
+// property of the hierarchy is val (getVal).
+type nwViewsOverrideBase struct {
+	Val string `esper:"val"`
+}
+
+// nwViewsOverrideOneA mirrors SupportOverrideOneA: getVal() is overridden at
+// every level of the Java bean hierarchy (OneA extends One extends Base) and
+// the most-derived override returns valOneA, so the single Esper property
+// "val" carries the valOneA value. The valOne/valBase constructor state has
+// no getter and is invisible to Esper, so the Go struct keeps only the
+// Esper-visible surface. Go struct schemas cannot inherit parent fields
+// (WithSchemaParent rejects duplicated struct fields; schema inheritance
+// covers Map/JSON/ObjectArray), so the deep-supertype window insert is
+// expressed with an explicit SetColumn assignment per the typed chain
+// convention.
+type nwViewsOverrideOneA struct {
+	Val string `esper:"val"`
+}
+
+// TestInfraNWViewsDeepSupertypeInsertParity mirrors InfraDeepSupertypeInsert:
+// create window MyWindowDSI#keepall as select * from SupportOverrideBase
+// with insert into MyWindowDSI select * from SupportOverrideOneA; sending
+// SupportOverrideOneA("1a", "1", "base") iterates val="1a" because the
+// overridden getVal() returns valOneA through virtual dispatch.
+func TestInfraNWViewsDeepSupertypeInsertParity(t *testing.T) {
+	env := NewEnvironment()
+	baseSchema, err := RegisterStruct[nwViewsOverrideBase](env, "SupportOverrideBase")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[nwViewsOverrideOneA](env, "SupportOverrideOneA"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowDSI", baseSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	source := From[nwViewsOverrideOneA](env, "SupportOverrideOneA")
+	insertPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"MyWindowDSI",
+		SetColumn("val", Field[nwViewsOverrideOneA, string]("val")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	insertDeployment, err := engine.Deploy(context.Background(), insertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	window, ok := engine.NamedWindow("MyWindowDSI")
+	if !ok {
+		t.Fatal("deep-supertype window is missing")
+	}
+
+	// SupportOverrideOneA("1a", "1", "base"): the overridden getVal() returns
+	// valOneA ("1a"), the only Esper-visible property value.
+	if err := engine.SendEvent(context.Background(), nwViewsOverrideOneA{Val: "1a"}); err != nil {
+		t.Fatal(err)
+	}
+	events, err := window.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("window holds %d events, want 1", len(events))
+	}
+	if got := events[0].Get("val").Any(); got != "1a" {
+		t.Fatalf("window val = %#v, want %q", got, "1a")
+	}
+
+	if err := insertDeployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
