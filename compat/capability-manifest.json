@@ -2071,6 +2071,31 @@
       ]
     },
     {
+      "id": "client.compile.expression-spi",
+      "domain": "client",
+      "level": "G",
+      "summary": "Generic standalone typed-expression compilation with immutable Plan identity, validated AST metadata and detached evaluation context",
+      "javaRefs": [
+        "ClientCompileSPI",
+        "EPCompilerSPI",
+        "EPCompilerSPIExpression",
+        "ExprTimePeriod"
+      ],
+      "goRefs": [
+        "expression_compiler.go",
+        "plan.go",
+        "client_compile_spi_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Go accepts an analyzable typed Expr AST and does not parse standalone EPL expression strings",
+        "CompiledExpression exposes typed result metadata and a normal immutable Plan instead of internal ExprNode forge/evaluator classes",
+        "Java Collection values map to native typed Go slices and time-period expressions map to time.Duration",
+        "compiler-internal bytecode hooks, raw syntax parsing and exact EPCompileException diagnostics remain separate slices"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -14078,6 +14103,44 @@
       "difference": "CompilePathCache.Prepare atomically snapshots every object visible through an immutable ModulePath and caches the typed logical-name-to-catalog-identity matrix by an in-process SHA-256 fingerprint. Repeated unchanged paths reuse one immutable entry; additions to a selected module invalidate the fingerprint, while unrelated private-module additions do not alter an explicitly selected public path. CachedModulePath resolves event types, variables, contexts, Named Windows, Tables, declared expressions and scripts and binds module uses into Plan identity. Same-module protected variables remain visible, ten successively extended public event-type paths preserve nested schema links, and duplicate public event type A exports return ErrorAmbiguous with and without cache. Go has no generated ModuleProvider class or transient ClassLoaderProvider, so cache reuse is asserted through deterministic stats and fingerprints instead of observing JVM class loading; the cache is application-owned instead of process-global."
     },
     {
+      "id": "case.client-compile-spi-expression",
+      "javaRuntimeIds": [
+        "java-runtime-9babdca311c341f878a2"
+      ],
+      "javaNames": [
+        "ClientCompileSPIExpression"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileSPI.java"
+      ],
+      "goTests": [
+        "TestClientCompileSPIExpressionMatchesEsper",
+        "TestCompileExpressionUsesTypedEnvironmentAndRejectsInvalidAST"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "spi",
+        "expression",
+        "typed-ast",
+        "standalone",
+        "multiply",
+        "concat",
+        "array",
+        "enumeration",
+        "duration",
+        "validation"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "CompileExpression[T] validates an analyzable typed Expr through the ordinary source-less Plan compiler and returns immutable CompiledExpression[T] metadata plus Evaluate/EvaluateWith. The Java samples map as 1*1 to Multiply[int], string concatenation to Concat, Arrays.asList to ArrayOf[string], firstOf to EnumFirstOf and 5 seconds to time.Duration; results are 1, ay, []string{a}, a and five seconds. A detached CompiledExpressionContext can supply variables, Event, Engine and logical time. Source-less validation now also expands declared expressions and validates method/script/subquery nodes before canonicalization. Go deliberately exposes neither EPL expression text parsing nor compiler-internal ExprNode forge/evaluator classes; native typed slices replace Java Collection and invalid/nil/field-dependent AST values return structured Go errors."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15143,6 +15206,10 @@
     {
       "capabilityId": "client.compile.path-cache",
       "caseId": "case.client-compile-path-cache"
+    },
+    {
+      "capabilityId": "client.compile.expression-spi",
+      "caseId": "case.client-compile-spi-expression"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",

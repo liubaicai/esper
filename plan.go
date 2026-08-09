@@ -5227,6 +5227,9 @@ func (e *Environment) validateSourceLess(selections []Selection) error {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("source-less projection duplicates alias %q", selection.Name))
 		}
 		seen[selection.Name] = struct{}{}
+		if err := e.validateExpressionReferences(selection.Expr.node(), make(map[string]bool)); err != nil {
+			return err
+		}
 		if err := e.validateExprVariables(selection.Expr); err != nil {
 			return err
 		}
@@ -5236,10 +5239,19 @@ func (e *Environment) validateSourceLess(selections []Selection) error {
 		if err := validateCoalesceExpressionNodes(selection.Expr.node()); err != nil {
 			return err
 		}
+		if err := validateMethodNodes(selection.Expr.node()); err != nil {
+			return err
+		}
+		if err := e.validateScriptNodes(selection.Expr.node()); err != nil {
+			return err
+		}
 		var fields []string
 		selection.Expr.node().referencedFields(&fields)
 		if len(fields) > 0 {
 			return NewError(ErrorDependency, "source-less query cannot reference event fields")
+		}
+		if err := e.validateExpressionSubqueries(selection.Expr.node()); err != nil {
+			return err
 		}
 	}
 	return nil
