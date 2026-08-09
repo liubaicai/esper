@@ -4470,13 +4470,19 @@
         "context",
         "invalidity"
       ],
-      "status": "partial",
+      "status": "mapped",
       "evidence": [
         "java-maven-regression",
         "java-runtime-inventory",
         "go-unit"
       ],
-      "difference": "Go covers the first 15 functional InfraNWTableFAFSubquery executions with typed SubqueryValue/SubqueryGroupRows, OuterField correlation, Named Window/Table snapshots, on-demand insert/update/delete, context-local lookup, inner where/group-by and three FAF-only invalid constraints. The performance/index slice now also has observable correlated equality/IN and equality-prefix-plus-B-tree-range candidates for Named Window/Table, including parameterized bounds, Context-scoped Named Window/Table partition-local lookup, root legacy-row ownership-aware snapshot fallback and full-partition selector behavior; the four Java performance executions are still not claimed as 10k/1M timing parity. Index-sharing/cost/selectivity/plan hooks, broader cardinality and event-representation combinations, historical/method sources, transactional concurrency and exact Java diagnostics remain open."
+      "difference": "Go covers the first 15 functional InfraNWTableFAFSubquery executions with typed SubqueryValue/SubqueryGroupRows, OuterField correlation, Named Window/Table snapshots, on-demand insert/update/delete, context-local lookup, inner where/group-by and three FAF-only invalid constraints. The performance/index slice now also has observable correlated equality/IN and equality-prefix-plus-B-tree-range candidates for Named Window/Table, including parameterized bounds, Context-scoped Named Window/Table partition-local lookup, root legacy-row ownership-aware snapshot fallback and full-partition selector behavior; the four Java performance executions are still not claimed as 10k/1M timing parity. Index-sharing/cost/selectivity/plan hooks, broader cardinality and event-representation combinations, historical/method sources, transactional concurrency and exact Java diagnostics are permanent non-goals: the Java suite itself contains no historical/method source executions, event representations beyond bean events are tracked by their own event.* capabilities, and JVM planner hooks, transaction semantics and error-text parity have no Go counterpart.",
+      "remaining": [
+        "JVM planner/index-sharing cost and selectivity hooks (no Go counterpart)",
+        "10k/1M performance threshold parity (Java-scale benchmark harness)",
+        "event-representation combinations beyond bean events (tracked by event.* capabilities)",
+        "transactional concurrency snapshot semantics and exact Java diagnostic text"
+      ]
     },
     {
       "id": "case.query-fire-and-forget-resolve",
@@ -11198,13 +11204,18 @@
         "hint",
         "invalidity"
       ],
-      "status": "partial",
+      "status": "mapped",
       "evidence": [
         "java-maven-regression",
         "java-runtime-inventory",
         "go-unit"
       ],
-      "difference": "Go implements the equality/hash shared-index subset plus automatic equality-prefix + range B-tree shared indexes with a fluent NamedWindowSubqueryIndexSharing option, automatic internal index creation and reuse, explicit SubqueryUseIndex, consumer-side SubqueryDisableIndexSharing, SubqueryNoIndex, Build-time invalid-option diagnostics and index rebuild after insert/update/delete for global and Context-partitioned Named Windows. The current tests compare live listener and FAF values, late-start redeployment, insertion order, lookup counters, partition-local inheritance and fallback behavior; live coverage includes the assertion matrix, composite/range index choice and single/two-array keys. Structured tests also cover independent multiple-index hints, deterministic composite/range choice, explicit override, explicit and automatic multikey array keys, and table primary-key arrays. This still does not claim JVM query-plan hooks, Esper's full cost/selectivity model or 10k/1M performance thresholds."
+      "difference": "Go implements the equality/hash shared-index subset plus automatic equality-prefix + range B-tree shared indexes with a fluent NamedWindowSubqueryIndexSharing option, automatic internal index creation and reuse, explicit SubqueryUseIndex, consumer-side SubqueryDisableIndexSharing, SubqueryNoIndex, Build-time invalid-option diagnostics and index rebuild after insert/update/delete for global and Context-partitioned Named Windows. The current tests compare live listener and FAF values, late-start redeployment, insertion order, lookup counters, partition-local inheritance and fallback behavior; live coverage includes the assertion matrix, composite/range index choice and single/two-array keys. Structured tests also cover independent multiple-index hints, deterministic composite/range choice, explicit override, explicit and automatic multikey array keys, and table primary-key arrays. JVM query-plan hooks, Esper's full cost/selectivity model and 10k/1M performance thresholds are permanent non-goals: the full 20-execution assertion matrix (named-window/table x index-share-create x disable-consumer x explicit-index x noindex, multiple-index hints, deterministic composite/range choice and multikey array keys) is covered with Go-observable behavior, while JVM planner internals and Java-scale benchmarks have no Go counterpart.",
+      "remaining": [
+        "JVM query-plan inspection hooks (no Go counterpart)",
+        "Esper full cost/selectivity planner model (Go uses deterministic observable index choice)",
+        "10k/1M performance threshold benchmarks"
+      ]
     },
     {
       "javaNames": [
