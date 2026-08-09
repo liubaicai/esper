@@ -1138,12 +1138,6 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 	now := e.clock.Now()
 	e.refreshVariablesLocked()
 	variables := cloneValues(e.variables)
-	delta, err := window.insertWithVariables(now, underlying, variables)
-	if err != nil {
-		e.mu.Unlock()
-		return err
-	}
-	statements := e.sortedStatementsLocked()
 	e.pendingStatementDispatches = nil
 	e.pendingNamedWindowDispatches = nil
 	e.pendingRoutedEvents = nil
@@ -1151,6 +1145,12 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 	e.pendingVariableChanges = nil
 	e.pendingMatchRecognizeStateLimits = nil
 	e.pendingPatternSubexpressionLimits = nil
+	delta, err := window.insertWithVariables(ctx, now, underlying, variables)
+	if err != nil {
+		e.mu.Unlock()
+		return err
+	}
+	statements := e.sortedStatementsLocked()
 	dispatches := make([]statementDispatch, 0, len(statements))
 	for _, statement := range statements {
 		batch, changed, processErr := statement.processNamedWindow(ctx, now, delta, variables)
@@ -3441,6 +3441,14 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		return batch, changed, err
 	}
 	if s.plan.query.updateStream != nil {
+		if updateStreamTargetsNamedWindow(s.plan.query) {
+			// A named-window update attaches to the window insert path
+			// only (Esper binds the update strategy to the window, not to
+			// the underlying event type), so the plain stream dispatch
+			// never fires it. The subquery registry above still accepted
+			// the event to keep subquery state current.
+			return ResultBatch{}, false, nil
+		}
 		batch, replaced, dropped, err := s.runtime.processUpdateStream(s.plan, event, now, variables)
 		if err != nil {
 			return ResultBatch{}, false, err
@@ -4805,6 +4813,89 @@ func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.
 	}
 	batch.Sequence = r.seq.Add(1)
 	return batch, &replaced, false, nil
+}
+
+// processNamedWindowUpdate runs one update-istream statement against an event
+// offered to its target named window. It mirrors the update branch of
+// Statement.process: the where clause and assignments evaluate against the
+// offered (pre-update) event and the returned replacement carries the
+// copy-on-write update for the window insert path.
+func (s *Statement) processNamedWindowUpdate(ctx context.Context, event Event, now time.Time, variables map[string]Value) (ResultBatch, *Event, bool, error) {
+	if err := contextErr(ctx); err != nil {
+		return ResultBatch{}, nil, false, err
+	}
+	if s == nil {
+		return ResultBatch{}, nil, false, NewError(ErrorDependency, "nil statement")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed || s.state != StatementStarted {
+		return ResultBatch{}, nil, false, nil
+	}
+	variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
+	s.runtime.ctx = ctx
+	return s.runtime.processUpdateStream(s.plan, event, now, variables)
+}
+
+// windowUpdateStatementsLocked collects the update-istream statements whose
+// target is the given named window, ordered like the stream dispatch path
+// (ascending priority, drop entries first on ties, deployment order as the
+// stable fallback). The engine mutex must be held.
+func (e *Engine) windowUpdateStatementsLocked(definition NamedWindowDefinition) []*Statement {
+	if e == nil {
+		return nil
+	}
+	key := catalogKey(definition.moduleName, definition.name)
+	updates := make([]*Statement, 0, 1)
+	for _, statement := range e.sortedStatementsLocked() {
+		if statement == nil || statement.plan.query.updateStream == nil {
+			continue
+		}
+		source, err := sourceNode(statement.plan.query.input)
+		if err != nil || source == nil || source.kind != streamNamedWindow {
+			continue
+		}
+		if catalogKey(source.moduleName, source.sourceName) != key {
+			continue
+		}
+		updates = append(updates, statement)
+	}
+	return orderUpdateStatementsFirst(updates)
+}
+
+// applyNamedWindowUpdatesLocked preprocesses one event offered to a named
+// window through every update-istream statement targeting that window, in
+// priority order. Each matching statement replaces the in-flight event with
+// its updated copy for the next update and for the window insert; a matching
+// drop removes the event from the insert entirely. Update listener batches
+// queue onto the engine's pending statement dispatches so they publish in
+// the same dispatch cycle as the window delta, mirroring Esper's update
+// strategy delivery. The engine mutex must be held.
+func (e *Engine) applyNamedWindowUpdatesLocked(ctx context.Context, window *NamedWindow, event Event, now time.Time, variables map[string]Value) (Event, bool, error) {
+	if e == nil || window == nil || window.state == nil {
+		return event, false, nil
+	}
+	statements := e.windowUpdateStatementsLocked(window.state.def)
+	if len(statements) == 0 {
+		return event, false, nil
+	}
+	current := event
+	for _, statement := range statements {
+		batch, replaced, dropped, err := statement.processNamedWindowUpdate(ctx, current, now, variables)
+		if err != nil {
+			return Event{}, false, err
+		}
+		if !batch.empty() {
+			e.pendingStatementDispatches = append(e.pendingStatementDispatches, statementDispatch{statement: statement, batch: batch})
+		}
+		if dropped {
+			return Event{}, true, nil
+		}
+		if replaced != nil {
+			current = *replaced
+		}
+	}
+	return current, false, nil
 }
 
 // nullableUpdateFieldKind reports whether a schema field type can hold a
@@ -6241,6 +6332,12 @@ func (s *Statement) processNamedWindow(ctx context.Context, now time.Time, delta
 	s.runtime.ctx = ctx
 	if s.plan.query.contextName != "" {
 		return s.processNamedWindowContextLocked(ctx, now, delta, variables)
+	}
+	if updateStreamTargetsNamedWindow(s.plan.query) {
+		// A named-window update fires only from the window insert
+		// preprocessing (Esper's update strategy on the window); it never
+		// consumes the window delta as a subscriber.
+		return ResultBatch{}, false, nil
 	}
 	s.runtime.variables = variables
 	if s.plan.query.trigger != nil {

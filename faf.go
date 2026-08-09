@@ -627,7 +627,7 @@ func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, p
 			window.restoreMutationState(snapshot)
 			return tableMutationResult{}, err
 		}
-		rowDelta, insertErr := window.insertWithVariables(now, underlying, variables)
+		rowDelta, insertErr := window.insertWithVariables(ctx, now, underlying, variables)
 		if insertErr != nil {
 			window.restoreMutationState(snapshot)
 			return tableMutationResult{}, fmt.Errorf("multi-row insert row %d of %d failed: %w", rowIndex+1, len(rows), insertErr)

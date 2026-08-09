@@ -241,6 +241,15 @@ func updateIStreamDeployOne(t *testing.T, engine *Engine, plan Plan) (*Deploymen
 	return deployment, capture
 }
 
+func mustBuildUpdateIStream(t *testing.T, env *Environment, query Query) Plan {
+	t.Helper()
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return plan
+}
+
 // TestUpdateIStreamFieldsWithPriorityParity mirrors tryAssertionFieldsWithPriority
 // (map representation): eight prioritized updates plus a drop entry chained on
 // one stream, where clauses observing the running copy, drop removing events
@@ -1988,4 +1997,400 @@ func TestUpdateIStreamEnumAnyOfParity(t *testing.T) {
 	if got := s0.newResults[0].Get("updated").Any(); got != true {
 		t.Fatalf("s0 updated = %#v, want true", got)
 	}
+}
+
+// TestUpdateIStreamSendRouteSenderPreprocessParity mirrors
+// EPLOtherUpdateSendRouteSenderPreprocess: events routed from a listener back
+// into the engine pass through update-istream preprocessing exactly like
+// externally sent events, for both map and bean representations, and a @Drop
+// update also removes routed events. Esper's routeEventMap/routeEventBean map
+// to Engine.Route, which reenters the normal Send path from the listener
+// callback (listeners dispatch after the engine lock is released).
+func TestUpdateIStreamSendRouteSenderPreprocessParity(t *testing.T) {
+	env := newUpdateIStreamEnvironment(t)
+	if _, err := RegisterMap(env, "MyMapTypeSR", []FieldSpec{
+		FieldDef("p0", reflect.TypeOf("")),
+		FieldDef("p1", reflect.TypeOf("")),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	ctx := context.Background()
+
+	// Map representation: routed maps go through update preprocessing.
+	_, s0 := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		FromAny(env, "MyMapTypeSR").Query(StatementName("s0"))))
+	updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		FromAny(env, "MyMapTypeSR").UpdateStream(SetColumn("p0", Literal("a"))).Query(StatementName("update-map"))))
+
+	sendMap := func(p0, p1 string) {
+		t.Helper()
+		if err := engine.Send(ctx, "MyMapTypeSR", map[string]any{"p0": p0, "p1": p1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertS0 := func(label string, index int, p0, p1 string) {
+		t.Helper()
+		event := s0.newEvents[index]
+		if got := event.Get("p0").Any(); got != p0 {
+			t.Fatalf("%s p0 = %#v, want %#v", label, got, p0)
+		}
+		if got := event.Get("p1").Any(); got != p1 {
+			t.Fatalf("%s p1 = %#v, want %#v", label, got, p1)
+		}
+	}
+
+	sendMap("E1", "E1")
+	assertS0("map E1", 0, "a", "E1")
+	sendMap("E2", "E2")
+	assertS0("map E2", 1, "a", "E2")
+
+	triggerDeployment, err := engine.Deploy(ctx, mustBuildUpdateIStream(t, env,
+		From[updateIStreamBean](env, "SupportBean").Query(StatementName("trigger"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := triggerDeployment.Statements()[0].Subscribe(func(ctx context.Context, _ ResultBatch) error {
+		return engine.Route(ctx, "MyMapTypeSR", map[string]any{"p0": "E3", "p1": "E3"})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(ctx, "SupportBean", updateIStreamBean{}); err != nil {
+		t.Fatal(err)
+	}
+	assertS0("routed map E3", 2, "a", "E3")
+
+	// A drop update removes routed and sent events alike.
+	dropDeployment, _ := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		FromAny(env, "MyMapTypeSR").UpdateStream(SetColumn("p0", Literal("a"))).Query(StatementName("drop-map"), UpdateDrop())))
+	sendMap("E4", "E4")
+	sendMap("E5", "E5")
+	if err := engine.Send(ctx, "SupportBean", updateIStreamBean{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(s0.newEvents) != 3 {
+		t.Fatalf("s0 deliveries after drop = %d, want 3", len(s0.newEvents))
+	}
+	for _, deployment := range []*Deployment{dropDeployment, triggerDeployment} {
+		if err := deployment.Undeploy(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Bean representation: routed beans go through update preprocessing.
+	_, s0Bean := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		From[updateIStreamBean](env, "SupportBean").Query(StatementName("s0-bean"))))
+	updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		From[updateIStreamBean](env, "SupportBean").UpdateStream(SetColumn("intPrimitive", Literal(999))).Query(StatementName("update-bean"))))
+
+	sendBean := func(theString string) {
+		t.Helper()
+		if err := engine.Send(ctx, "SupportBean", updateIStreamBean{TheString: theString}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendBean("E1")
+	assertUpdateIStreamEvent(t, "bean E1", s0Bean.newEvents[0], "E1", 999)
+	sendBean("E2")
+	assertUpdateIStreamEvent(t, "bean E2", s0Bean.newEvents[1], "E2", 999)
+
+	triggerBeanDeployment, err := engine.Deploy(ctx, mustBuildUpdateIStream(t, env,
+		FromAny(env, "MyMapTypeSR").Query(StatementName("trigger-bean"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := triggerBeanDeployment.Statements()[0].Subscribe(func(ctx context.Context, _ ResultBatch) error {
+		return engine.Route(ctx, "SupportBean", updateIStreamBean{TheString: "E3"})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	sendMap("", "")
+	assertUpdateIStreamEvent(t, "routed bean E3", s0Bean.newEvents[2], "E3", 999)
+
+	updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		From[updateIStreamBean](env, "SupportBean").UpdateStream(SetColumn("intPrimitive", Literal(1))).Query(StatementName("drop-bean"), UpdateDrop())))
+	sendBean("E4")
+	sendBean("E4")
+	sendMap("", "")
+	if len(s0Bean.newEvents) != 3 {
+		t.Fatalf("s0-bean deliveries after drop = %d, want 3", len(s0Bean.newEvents))
+	}
+}
+
+// TestUpdateIStreamBeanTypeInheritanceParity mirrors
+// EPLOtherUpdateInsertDirectBeanTypeInheritance (map representation): an
+// update on a supertype applies to events inserted into child types, priority
+// orders updates across the hierarchy, and select-from-supertype observes the
+// updated copies. Esper declares the bean class hierarchy through create
+// schema ... as <class>; Go models the same event-type hierarchy with map
+// schemas and WithSchemaParent chains (bean class inheritance has no Go
+// counterpart, consistent with the bean-representation conventions of this
+// suite).
+func TestUpdateIStreamBeanTypeInheritanceParity(t *testing.T) {
+	env := NewEnvironment()
+	stringType := reflect.TypeOf("")
+	baseInterface, err := RegisterMap(env, "BaseInterface", []FieldSpec{FieldDef("i", stringType)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseOne, err := RegisterMap(env, "BaseOne", []FieldSpec{FieldDef("p", stringType)}, WithSchemaParent(baseInterface))
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseOneA, err := RegisterMap(env, "BaseOneA", []FieldSpec{FieldDef("pa", stringType)}, WithSchemaParent(baseOne))
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseOneB, err := RegisterMap(env, "BaseOneB", []FieldSpec{FieldDef("pb", stringType)}, WithSchemaParent(baseOne))
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseTwo, err := RegisterMap(env, "BaseTwo", []FieldSpec{FieldDef("p", stringType)}, WithSchemaParent(baseInterface))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = baseOneA
+	_ = baseOneB
+	_ = baseTwo
+	if _, err := RegisterMap(env, "MyMapTypeIDB", []FieldSpec{
+		FieldDef("p0", stringType),
+		FieldDef("p1", stringType),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	insertInto := func(target string, extra ...Selection) Plan {
+		t.Helper()
+		selections := []Selection{
+			Alias("i", Field[Event, string]("p0")),
+			Alias("p", Field[Event, string]("p1")),
+		}
+		selections = append(selections, extra...)
+		return mustBuildUpdateIStream(t, env, FromAny(env, "MyMapTypeIDB").Select(selections...).InsertInto(target, StatementName("insert")))
+	}
+	update := func(name, target, value string, priority int, where Expression[bool]) Plan {
+		t.Helper()
+		chain := FromAny(env, target).UpdateStream(SetColumn("i", Literal(value)))
+		if where != nil {
+			chain = chain.Where(where)
+		}
+		return mustBuildUpdateIStream(t, env, chain.Query(StatementName(name), UpdatePriority(priority)))
+	}
+	likeE := Like(Field[Event, string]("i"), Literal("E%"))
+
+	engine := NewEngine(env)
+	ctx := context.Background()
+	insertDeployment, _ := updateIStreamDeployOne(t, engine, insertInto("BaseOne"))
+	updateIStreamDeployOne(t, engine, update("a", "BaseInterface", "XYZ", 0, likeE))
+	_, s0 := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		FromAny(env, "BaseOne").Query(StatementName("s0"))))
+
+	send := func(p0, p1 string) {
+		t.Helper()
+		if err := engine.Send(ctx, "MyMapTypeIDB", map[string]any{"p0": p0, "p1": p1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertS0 := func(label string, event Event, i, p string) {
+		t.Helper()
+		if got := event.Get("i").Any(); got != i {
+			t.Fatalf("%s i = %#v, want %#v", label, got, i)
+		}
+		if got := event.Get("p").Any(); got != p {
+			t.Fatalf("%s p = %#v, want %#v", label, got, p)
+		}
+	}
+
+	send("E1", "E1")
+	assertS0("E1 (interface update applies to child insert)", s0.newEvents[0], "XYZ", "E1")
+	send("F1", "E2")
+	assertS0("E2 (where does not match)", s0.newEvents[1], "F1", "E2")
+
+	updateIStreamDeployOne(t, engine, update("b", "BaseOne", "BLANK", 2, nil))
+	send("somevalue", "E3")
+	assertS0("E3 (priority 2 wins)", s0.newEvents[2], "BLANK", "E3")
+
+	updateIStreamDeployOne(t, engine, update("c", "BaseOneA", "FINAL", 3, nil))
+	send("somevalue", "E4")
+	assertS0("E4 (BaseOneA update skips BaseOne events)", s0.newEvents[3], "BLANK", "E4")
+
+	if err := insertDeployment.Undeploy(ctx); err != nil {
+		t.Fatal(err)
+	}
+	insertDeployment, _ = updateIStreamDeployOne(t, engine, insertInto("BaseOneA", Alias("pa", Literal("a"))))
+	send("somevalue", "E5")
+	assertS0("E5 (priority 3 child update wins)", s0.newEvents[4], "FINAL", "E5")
+
+	if err := insertDeployment.Undeploy(ctx); err != nil {
+		t.Fatal(err)
+	}
+	insertDeployment, _ = updateIStreamDeployOne(t, engine, insertInto("BaseOneB", Alias("pb", Literal("b"))))
+	send("somevalue", "E6")
+	assertS0("E6 (sibling child type keeps priority 2)", s0.newEvents[5], "BLANK", "E6")
+
+	if err := insertDeployment.Undeploy(ctx); err != nil {
+		t.Fatal(err)
+	}
+	insertDeployment, _ = updateIStreamDeployOne(t, engine, insertInto("BaseTwo"))
+	_, s0Interface := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		FromAny(env, "BaseInterface").Query(StatementName("s0-interface"))))
+	send("E2", "E7")
+	if len(s0Interface.newEvents) != 1 {
+		t.Fatalf("s0-interface deliveries = %d, want 1", len(s0Interface.newEvents))
+	}
+	if got := s0Interface.newEvents[0].Get("i").Any(); got != "XYZ" {
+		t.Fatalf("s0-interface i = %#v, want XYZ", got)
+	}
+}
+
+// TestUpdateIStreamNamedWindowParity mirrors EPLOtherUpdateNamedWindow: an
+// update-istream whose target is a named window attaches to the window insert
+// path. The window, select-from-window consumers, on-select and on-insert
+// triggers all observe the updated copy, while the feeding insert statement
+// publishes the pre-update row; an update on the routed target stream of the
+// on-insert trigger preprocesses those routed rows independently. Esper's
+// milestone serde checkpoints have no Go counterpart.
+func TestUpdateIStreamNamedWindowParity(t *testing.T) {
+	env := NewEnvironment()
+	stringType := reflect.TypeOf("")
+	schema, err := RegisterMap(env, "MyMapTypeNW", []FieldSpec{
+		FieldDef("p0", stringType),
+		FieldDef("p1", stringType),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "AWindow", schema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "MyOtherStream", []FieldSpec{
+		FieldDef("p0", stringType),
+		FieldDef("p1", stringType),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[updateIStreamBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	ctx := context.Background()
+
+	_, insert := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		OnRecord(FromAny(env, "MyMapTypeNW")).InsertIntoNamedWindow("AWindow",
+			SetColumn("p0", Field[Event, any]("p0")),
+			SetColumn("p1", Field[Event, any]("p1")),
+		).Query(StatementName("insert"))))
+	_, selectCapture := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		FromNamedWindow(env, "AWindow").Query(StatementName("select"), WithOldStream())))
+	_, update := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		FromNamedWindow(env, "AWindow").UpdateStream(
+			SetColumn("p1", Literal("newvalue")),
+		).Query(StatementName("update"))))
+
+	window, ok := engine.NamedWindow("AWindow")
+	if !ok {
+		t.Fatal("AWindow runtime is missing")
+	}
+	var windowEvents []Event
+	if _, err := window.Subscribe(func(_ context.Context, delta NamedWindowDelta) error {
+		windowEvents = append(windowEvents, delta.New...)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	assertProps := func(label string, event Event, p0, p1 string) {
+		t.Helper()
+		if got := event.Get("p0").Any(); got != p0 {
+			t.Fatalf("%s p0 = %#v, want %#v", label, got, p0)
+		}
+		if got := event.Get("p1").Any(); got != p1 {
+			t.Fatalf("%s p1 = %#v, want %#v", label, got, p1)
+		}
+	}
+
+	if err := engine.Send(ctx, "MyMapTypeNW", map[string]any{"p0": "E1", "p1": "oldvalue"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(insert.newEvents) != 1 {
+		t.Fatalf("insert deliveries = %d, want 1", len(insert.newEvents))
+	}
+	assertProps("insert (pre-update)", insert.newEvents[0], "E1", "oldvalue")
+	if len(windowEvents) != 1 {
+		t.Fatalf("window deliveries = %d, want 1", len(windowEvents))
+	}
+	assertProps("window", windowEvents[0], "E1", "newvalue")
+	if len(selectCapture.newEvents) != 1 {
+		t.Fatalf("select deliveries = %d, want 1", len(selectCapture.newEvents))
+	}
+	assertProps("select", selectCapture.newEvents[0], "E1", "newvalue")
+	if len(update.newEvents) != 1 || len(update.oldEvents) != 1 {
+		t.Fatalf("update deliveries = %d/%d, want 1/1", len(update.newEvents), len(update.oldEvents))
+	}
+	assertProps("update new", update.newEvents[0], "E1", "newvalue")
+	assertProps("update old", update.oldEvents[0], "E1", "oldvalue")
+
+	beanIs := func(value string) Expression[bool] {
+		return Equal[string](Field[updateIStreamBean, string]("theString"), Literal(value))
+	}
+	windowProps := []Selection{
+		Alias("p0", NamedWindowField[string]("p0")),
+		Alias("p1", NamedWindowField[string]("p1")),
+	}
+	_, onselect := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		OnEvent(From[updateIStreamBean](env, "SupportBean").Filter(beanIs("A"))).SelectFromNamedWindow(
+			"AWindow", Literal[bool](true), windowProps...,
+		).Query(StatementName("onselect"))))
+	if err := engine.Send(ctx, "SupportBean", updateIStreamBean{TheString: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(onselect.newResults) != 1 {
+		t.Fatalf("onselect deliveries = %d, want 1", len(onselect.newResults))
+	}
+	if got := onselect.newResults[0].Get("p0").Any(); got != "E1" {
+		t.Fatalf("onselect p0 = %#v, want E1", got)
+	}
+	if got := onselect.newResults[0].Get("p1").Any(); got != "newvalue" {
+		t.Fatalf("onselect p1 = %#v, want newvalue", got)
+	}
+
+	_, oninsert := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		OnEvent(From[updateIStreamBean](env, "SupportBean").Filter(beanIs("B"))).SelectFromNamedWindow(
+			"AWindow", Literal[bool](true), windowProps...,
+		).Query(RouteTo("MyOtherStream"), StatementName("oninsert"))))
+	if err := engine.Send(ctx, "SupportBean", updateIStreamBean{TheString: "B", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(oninsert.newResults) != 1 {
+		t.Fatalf("oninsert deliveries = %d, want 1", len(oninsert.newResults))
+	}
+	if got := oninsert.newResults[0].Get("p1").Any(); got != "newvalue" {
+		t.Fatalf("oninsert p1 = %#v, want newvalue", got)
+	}
+
+	updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		FromAny(env, "MyOtherStream").UpdateStream(
+			SetColumn("p0", Literal("a")),
+			SetColumn("p1", Literal("b")),
+		).Query(StatementName("update-other"))))
+	_, s0 := updateIStreamDeployOne(t, engine, mustBuildUpdateIStream(t, env,
+		FromAny(env, "MyOtherStream").Query(StatementName("s0"))))
+	if err := engine.Send(ctx, "SupportBean", updateIStreamBean{TheString: "B", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(oninsert.newResults) != 2 {
+		t.Fatalf("oninsert deliveries = %d, want 2", len(oninsert.newResults))
+	}
+	if got := oninsert.newResults[1].Get("p0").Any(); got != "E1" {
+		t.Fatalf("oninsert second p0 = %#v, want E1", got)
+	}
+	if got := oninsert.newResults[1].Get("p1").Any(); got != "newvalue" {
+		t.Fatalf("oninsert second p1 = %#v, want newvalue", got)
+	}
+	if len(s0.newEvents) != 1 {
+		t.Fatalf("s0 deliveries = %d, want 1", len(s0.newEvents))
+	}
+	assertProps("s0 (routed row preprocessed)", s0.newEvents[0], "a", "b")
 }

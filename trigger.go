@@ -1894,14 +1894,26 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 				return tableMutationResult{}, err
 			}
 		}
-		delta, err := target.insertWithVariables(now, underlying, variables)
+		offered, offeredErr := target.newInsertEvent(now, underlying)
+		if offeredErr != nil {
+			return tableMutationResult{}, offeredErr
+		}
+		delta, err := target.insertWithVariables(ctx, now, underlying, variables)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
 		if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, variables, owner); err != nil {
 			return tableMutationResult{}, err
 		}
-		return tableMutationResult{newEvents: append([]Event(nil), delta.New...)}, nil
+		// The feeding trigger publishes the row it offered to the window;
+		// an update-istream on the window rewrites only the window-bound
+		// copy, so listeners observe the pre-update row like Esper's
+		// insert-into statement output.
+		newEvents := make([]Event, 0, 1)
+		if len(delta.New) > 0 {
+			newEvents = append(newEvents, offered)
+		}
+		return tableMutationResult{newEvents: newEvents}, nil
 	case triggerMergeTable:
 		hasMatchedClause := false
 		for _, clause := range definition.merge {
@@ -2085,6 +2097,7 @@ func executeInsertFromNamedWindowAction(ctx context.Context, engine *Engine, def
 	}
 	schema := target.Definition().schema
 	combined := NamedWindowDelta{Time: now}
+	offeredEvents := make([]Event, 0, 1)
 	for _, candidate := range snapshotNamedWindowState(source.state) {
 		if err := contextErr(ctx); err != nil {
 			return tableMutationResult{}, err
@@ -2106,17 +2119,26 @@ func executeInsertFromNamedWindowAction(ctx context.Context, engine *Engine, def
 		if mergeErr != nil {
 			return tableMutationResult{}, mergeErr
 		}
-		rowDelta, insertErr := target.insertWithVariables(now, underlying, variables)
+		offered, offeredErr := target.newInsertEvent(now, underlying)
+		if offeredErr != nil {
+			return tableMutationResult{}, offeredErr
+		}
+		rowDelta, insertErr := target.insertWithVariables(ctx, now, underlying, variables)
 		if insertErr != nil {
 			return tableMutationResult{}, insertErr
 		}
 		combined.New = append(combined.New, rowDelta.New...)
 		combined.Old = append(combined.Old, rowDelta.Old...)
+		// Listeners of the feeding trigger observe the offered (pre-update)
+		// rows; window-bound copies stay with the window delta.
+		if len(rowDelta.New) > 0 {
+			offeredEvents = append(offeredEvents, offered)
+		}
 	}
 	if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, combined, variables, owner); err != nil {
 		return tableMutationResult{}, err
 	}
-	return tableMutationResult{oldEvents: append([]Event(nil), combined.Old...), newEvents: append([]Event(nil), combined.New...)}, nil
+	return tableMutationResult{oldEvents: append([]Event(nil), combined.Old...), newEvents: offeredEvents}, nil
 }
 
 func executeTriggerAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, owner *Statement, runtime *statementRuntime) (mutation tableMutationResult, err error) {

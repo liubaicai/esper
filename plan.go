@@ -3518,12 +3518,26 @@ func (e *Environment) validateJoinCondition(condition JoinCondition, sources []*
 	return nil
 }
 
+// updateStreamTargetsNamedWindow reports whether an update-istream statement
+// targets a named window. Window-targeted updates attach to the window insert
+// path and never observe the plain stream dispatch.
+func updateStreamTargetsNamedWindow(query Query) bool {
+	if query.updateStream == nil {
+		return false
+	}
+	source, err := sourceNode(query.input)
+	return err == nil && source != nil && source.kind == streamNamedWindow
+}
+
 // validateUpdateStream validates an update-istream statement: the target must
-// be a plain (optionally filtered) event stream without data windows, the set
-// assignments reference declared properties with non-aggregate expressions,
-// and the optional where clause is a boolean expression. Mirroring Esper's
-// InternalEventRouter preprocessing, update statements do not carry their own
-// projection, output policy or route target.
+// be a plain (optionally filtered) event stream or named window without data
+// windows, the set assignments reference declared properties with
+// non-aggregate expressions, and the optional where clause is a boolean
+// expression. Mirroring Esper's InternalEventRouter preprocessing, update
+// statements do not carry their own projection, output policy or route
+// target. Named-window targets attach to the window insert path like Esper's
+// update strategy: every event offered to the window is preprocessed
+// copy-on-write before the window and its subscribers observe it.
 func (e *Environment) validateUpdateStream(query Query) error {
 	definition := query.updateStream
 	if query.input == nil {
@@ -3541,8 +3555,8 @@ func (e *Environment) validateUpdateStream(query Query) error {
 	if err != nil {
 		return err
 	}
-	if source.kind != streamSource {
-		return NewError(ErrorInvalidRule, "update target must be a plain event stream (named window, table, method and historical targets are not yet supported)")
+	if source.kind != streamSource && source.kind != streamNamedWindow {
+		return NewError(ErrorInvalidRule, "update target must be a plain event stream or named window (table, method and historical targets are not yet supported)")
 	}
 	if err := e.validateNode(query.input); err != nil {
 		return err

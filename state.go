@@ -3165,19 +3165,47 @@ func (w *NamedWindow) now() time.Time {
 }
 
 func (w *NamedWindow) insert(now time.Time, underlying any) (NamedWindowDelta, error) {
-	return w.insertWithVariables(now, underlying, nil)
+	return w.insertWithVariables(context.Background(), now, underlying, nil)
 }
 
-func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variables map[string]Value) (NamedWindowDelta, error) {
-	if w == nil || w.state == nil {
-		return NamedWindowDelta{}, NewError(ErrorState, "nil named window")
-	}
+// newInsertEvent builds the event offered to the window for one insert. The
+// event carries the window name as its type identity so update-istream
+// statements targeting the window and window subscribers observe the same
+// representation as Esper's named-window insert path.
+func (w *NamedWindow) newInsertEvent(now time.Time, underlying any) (Event, error) {
 	event, err := newEvent(w.state.def.schema, underlying, now)
 	if err != nil {
-		return NamedWindowDelta{}, err
+		return Event{}, err
 	}
 	event.typeName = w.state.def.name
 	event.streamType = w.state.def.name
+	return event, nil
+}
+
+func (w *NamedWindow) insertWithVariables(ctx context.Context, now time.Time, underlying any, variables map[string]Value) (NamedWindowDelta, error) {
+	if w == nil || w.state == nil {
+		return NamedWindowDelta{}, NewError(ErrorState, "nil named window")
+	}
+	event, err := w.newInsertEvent(now, underlying)
+	if err != nil {
+		return NamedWindowDelta{}, err
+	}
+	if w.engine != nil {
+		// Esper's update istream on a named window attaches an update
+		// strategy to the window insert path: every offered event is
+		// preprocessed copy-on-write (or removed by a matching drop)
+		// before the window contents, subscribers and on-triggers observe
+		// it. The original underlying stays untouched for the feeding
+		// statement's own listeners.
+		updated, dropped, updateErr := w.engine.applyNamedWindowUpdatesLocked(ctx, w, event, now, variables)
+		if updateErr != nil {
+			return NamedWindowDelta{}, updateErr
+		}
+		if dropped {
+			return NamedWindowDelta{Time: now}, nil
+		}
+		event = updated
+	}
 	state := w.state
 	if state.def.contextName != "" && state.contextKey == "" {
 		if partitionKey, fromContext := w.contextPartitionFromVariables(variables); fromContext {
