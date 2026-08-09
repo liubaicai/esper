@@ -625,7 +625,11 @@ func (d *triggerDefinition) description() string {
 			if len(selections) > 0 {
 				projection = strings.Join(selections, ",")
 			}
-			branches = append(branches, branch.Target+"["+condition+"]{"+projection+"}")
+			source := ""
+			if branch.source != nil {
+				source = " from " + branch.source.describe()
+			}
+			branches = append(branches, branch.Target+"["+condition+"]{"+projection+"}"+source)
 		}
 		return fmt.Sprintf("on(%s)->split-%s(%s)", d.input.describe(), mode, strings.Join(branches, "|"))
 	}

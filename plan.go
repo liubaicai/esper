@@ -2822,6 +2822,9 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 			return err
 		}
 		for _, branch := range query.trigger.splitBranches {
+			if err := visitStreamNodeExpressions(branch.source, visit); err != nil {
+				return err
+			}
 			if err := visit(branch.Condition); err != nil {
 				return err
 			}

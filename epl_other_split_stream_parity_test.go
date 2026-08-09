@@ -24,8 +24,25 @@ type splitStreamIntArrayEvent struct {
 	Value int    `esper:"value"`
 }
 
+type splitStreamOrderItem struct {
+	Amount    int     `esper:"amount"`
+	ItemID    string  `esper:"itemId"`
+	Price     float64 `esper:"price"`
+	ProductID string  `esper:"productId"`
+}
+
+type splitStreamOrderDetail struct {
+	OrderID string                 `esper:"orderId"`
+	Items   []splitStreamOrderItem `esper:"items"`
+}
+
+type splitStreamOrder struct {
+	OrderDetail splitStreamOrderDetail `esper:"orderdetail"`
+}
+
 type splitStreamRecorder struct {
 	events []Event
+	after  func(Event)
 }
 
 func newSplitStreamEnvironment(t *testing.T) *Environment {
@@ -70,6 +87,9 @@ func deploySplitPlan(t *testing.T, engine *Engine, plan Plan) (*Deployment, *spl
 				t.Fatalf("split-stream result is not an event: %#v", result)
 			}
 			recorder.events = append(recorder.events, event)
+			if recorder.after != nil {
+				recorder.after(event)
+			}
 		}
 		return nil
 	}); err != nil {
@@ -98,6 +118,288 @@ func splitEventStrings(recorder *splitStreamRecorder) []string {
 		values = append(values, value)
 	}
 	return values
+}
+
+func registerSplitOrderTypes(t *testing.T, env *Environment) {
+	t.Helper()
+	if _, err := RegisterStruct[splitStreamOrder](env, "SplitStreamOrder"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[splitStreamOrderItem](env, "SplitStreamOrderItem"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func splitOrderStream(env *Environment) (Stream[splitStreamOrder], Stream[splitStreamOrderItem]) {
+	orders := From[splitStreamOrder](env, "SplitStreamOrder")
+	detail := Field[splitStreamOrder, splitStreamOrderDetail]("orderdetail")
+	items := Unnest[splitStreamOrder, splitStreamOrderItem](orders, Property[[]splitStreamOrderItem](detail, "items"))
+	return orders, items
+}
+
+func splitOrder(orderID string, items ...splitStreamOrderItem) splitStreamOrder {
+	return splitStreamOrder{OrderDetail: splitStreamOrderDetail{OrderID: orderID, Items: items}}
+}
+
+func registerSplitMapTarget(t *testing.T, env *Environment, name string, fields ...FieldSpec) {
+	t.Helper()
+	if _, err := RegisterMap(env, name, fields); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func splitRecorderValues(recorder *splitStreamRecorder, field string) []any {
+	values := make([]any, 0, len(recorder.events))
+	for _, event := range recorder.events {
+		values = append(values, event.Get(field).Any())
+	}
+	return values
+}
+
+func TestSplitStreamFromClauseParity(t *testing.T) {
+	t.Run("begin-body-end", func(t *testing.T) {
+		env := NewEnvironment()
+		registerSplitOrderTypes(t, env)
+		registerSplitMapTarget(t, env, "BeginEvent", FieldDef("orderId", reflect.TypeOf("")))
+		registerSplitMapTarget(t, env, "OrderItem",
+			FieldDef("amount", reflect.TypeOf(int(0))),
+			FieldDef("itemId", reflect.TypeOf("")),
+			FieldDef("price", reflect.TypeOf(float64(0))),
+			FieldDef("productId", reflect.TypeOf("")),
+			FieldDef("orderId", reflect.TypeOf("")),
+		)
+		registerSplitMapTarget(t, env, "EndEvent", FieldDef("orderId", reflect.TypeOf("")))
+
+		orders, items := splitOrderStream(env)
+		orderID := Property[string](Field[splitStreamOrder, splitStreamOrderDetail]("orderdetail"), "orderId")
+		parentOrderID := Property[string](ContainedParentField[splitStreamOrderDetail]("orderdetail"), "orderId")
+		plan, err := env.Build(OnEvent(orders).SplitAll(
+			SplitFrom(orders).Into("BeginEvent", Alias("orderId", orderID)),
+			SplitFrom(items).Into("OrderItem",
+				Alias("amount", Field[splitStreamOrderItem, int]("amount")),
+				Alias("itemId", Field[splitStreamOrderItem, string]("itemId")),
+				Alias("price", Field[splitStreamOrderItem, float64]("price")),
+				Alias("productId", Field[splitStreamOrderItem, string]("productId")),
+				Alias("orderId", parentOrderID),
+			),
+			SplitFrom(orders).Into("EndEvent", Alias("orderId", orderID)),
+		).Query(StatementName("split-from-begin-body-end")))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		engine := NewEngine(env)
+		begin := deploySplitConsumer(t, env, engine, "BeginEvent")
+		body := deploySplitConsumer(t, env, engine, "OrderItem")
+		end := deploySplitConsumer(t, env, engine, "EndEvent")
+		var routeOrder []string
+		begin.after = func(Event) { routeOrder = append(routeOrder, "begin") }
+		body.after = func(Event) { routeOrder = append(routeOrder, "item") }
+		end.after = func(Event) { routeOrder = append(routeOrder, "end") }
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+
+		inputs := []splitStreamOrder{
+			splitOrder("PO200901",
+				splitStreamOrderItem{Amount: 1, ItemID: "A001", Price: 10, ProductID: "10020"},
+				splitStreamOrderItem{Amount: 2, ItemID: "A002", Price: 20, ProductID: "10021"},
+				splitStreamOrderItem{Amount: 3, ItemID: "A003", Price: 30, ProductID: "10022"}),
+			splitOrder("PO200902", splitStreamOrderItem{Amount: 1, ItemID: "B001", Price: 5, ProductID: "10022"}),
+			splitOrder("PO200904"),
+		}
+		for _, input := range inputs {
+			if err := engine.SendEvent(context.Background(), input); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if got := splitRecorderValues(begin, "orderId"); !reflect.DeepEqual(got, []any{"PO200901", "PO200902", "PO200904"}) {
+			t.Fatalf("begin order ids = %#v", got)
+		}
+		if got := splitRecorderValues(body, "itemId"); !reflect.DeepEqual(got, []any{"A001", "A002", "A003", "B001"}) {
+			t.Fatalf("body item ids = %#v", got)
+		}
+		if got := splitRecorderValues(body, "orderId"); !reflect.DeepEqual(got, []any{"PO200901", "PO200901", "PO200901", "PO200902"}) {
+			t.Fatalf("body order ids = %#v", got)
+		}
+		if got := splitRecorderValues(end, "orderId"); !reflect.DeepEqual(got, []any{"PO200901", "PO200902", "PO200904"}) {
+			t.Fatalf("end order ids = %#v", got)
+		}
+		wantOrder := []string{"begin", "item", "item", "item", "end", "begin", "item", "end", "begin", "end"}
+		if !reflect.DeepEqual(routeOrder, wantOrder) {
+			t.Fatalf("branch route order = %#v, want %#v", routeOrder, wantOrder)
+		}
+	})
+
+	t.Run("multiple-projections", func(t *testing.T) {
+		env := NewEnvironment()
+		registerSplitOrderTypes(t, env)
+		registerSplitMapTarget(t, env, "StartEvent", FieldDef("oi", reflect.TypeOf("")))
+		registerSplitMapTarget(t, env, "ThenEvent", FieldDef("oi", reflect.TypeOf("")), FieldDef("itemId", reflect.TypeOf("")))
+		registerSplitMapTarget(t, env, "MoreEvent",
+			FieldDef("oi", reflect.TypeOf("")), FieldDef("itemId", reflect.TypeOf("")), FieldDef("order", reflect.TypeOf(Event{})),
+		)
+		orders, items := splitOrderStream(env)
+		orderID := Property[string](Field[splitStreamOrder, splitStreamOrderDetail]("orderdetail"), "orderId")
+		parentOrderID := Property[string](ContainedParentField[splitStreamOrderDetail]("orderdetail"), "orderId")
+		plan, err := env.Build(OnEvent(orders).SplitAll(
+			SplitFrom(orders).Into("StartEvent", Alias("oi", orderID)),
+			SplitFrom(items).Into("ThenEvent",
+				Alias("oi", parentOrderID),
+				Alias("itemId", Field[splitStreamOrderItem, string]("itemId"))),
+			SplitFrom(items).Into("MoreEvent",
+				Alias("oi", parentOrderID),
+				Alias("itemId", Field[splitStreamOrderItem, string]("itemId")),
+				Alias("order", ContainedParentEvent())),
+		).Query(StatementName("split-from-multiple")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env)
+		start := deploySplitConsumer(t, env, engine, "StartEvent")
+		thenEvents := deploySplitConsumer(t, env, engine, "ThenEvent")
+		more := deploySplitConsumer(t, env, engine, "MoreEvent")
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+		input := splitOrder("PO200901", splitStreamOrderItem{ItemID: "A001"}, splitStreamOrderItem{ItemID: "A002"}, splitStreamOrderItem{ItemID: "A003"})
+		if err := engine.SendEvent(context.Background(), input); err != nil {
+			t.Fatal(err)
+		}
+		if got := splitRecorderValues(start, "oi"); !reflect.DeepEqual(got, []any{"PO200901"}) {
+			t.Fatalf("start = %#v", got)
+		}
+		if got := splitRecorderValues(thenEvents, "itemId"); !reflect.DeepEqual(got, []any{"A001", "A002", "A003"}) {
+			t.Fatalf("then = %#v", got)
+		}
+		if got := splitRecorderValues(more, "itemId"); !reflect.DeepEqual(got, []any{"A001", "A002", "A003"}) {
+			t.Fatalf("more = %#v", got)
+		}
+		for index, event := range more.events {
+			parent, ok := event.Get("order").Any().(Event)
+			if !ok || !reflect.DeepEqual(parent.Underlying(), input) {
+				t.Fatalf("more parent %d = %#v, want original order", index, event.Get("order").Any())
+			}
+		}
+	})
+
+	t.Run("output-first-where", func(t *testing.T) {
+		env := NewEnvironment()
+		registerSplitOrderTypes(t, env)
+		for _, target := range []string{"HeaderEvent", "StreamOne", "StreamTwo", "StreamThree"} {
+			registerSplitMapTarget(t, env, target, FieldDef("orderId", reflect.TypeOf("")), FieldDef("itemId", reflect.TypeOf("")))
+		}
+		orders, items := splitOrderStream(env)
+		orderID := Property[string](ContainedParentField[splitStreamOrderDetail]("orderdetail"), "orderId")
+		project := func() []Selection {
+			return []Selection{Alias("orderId", orderID), Alias("itemId", Field[splitStreamOrderItem, string]("itemId"))}
+		}
+		productID := Field[splitStreamOrderItem, string]("productId")
+		plan, err := env.Build(OnEvent(orders).SplitFirst(
+			SplitFrom(orders).IntoWhen(Literal(false), "HeaderEvent"),
+			SplitFrom(items.Filter(Equal[string](productID, Literal("10020")))).Into("StreamOne", project()...),
+			SplitFrom(items.Filter(Equal[string](productID, Literal("10022")))).Into("StreamTwo", project()...),
+			SplitFrom(items.Filter(In[string](productID, Literal("10020"), Literal("10025"), Literal("10022")))).Into("StreamThree", project()...),
+		).Query(StatementName("split-from-output-first")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env)
+		one := deploySplitConsumer(t, env, engine, "StreamOne")
+		two := deploySplitConsumer(t, env, engine, "StreamTwo")
+		three := deploySplitConsumer(t, env, engine, "StreamThree")
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+		inputs := []splitStreamOrder{
+			splitOrder("PO200901", splitStreamOrderItem{ItemID: "A001", ProductID: "10020"}, splitStreamOrderItem{ItemID: "A002", ProductID: "10022"}),
+			splitOrder("PO200902", splitStreamOrderItem{ItemID: "B001", ProductID: "10022"}),
+			splitOrder("PO200903", splitStreamOrderItem{ItemID: "C001", ProductID: "10025"}),
+			splitOrder("PO200904", splitStreamOrderItem{ItemID: "D001", ProductID: "99999"}),
+		}
+		for _, input := range inputs {
+			if err := engine.SendEvent(context.Background(), input); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if got := splitRecorderValues(one, "orderId"); !reflect.DeepEqual(got, []any{"PO200901"}) {
+			t.Fatalf("stream one = %#v", got)
+		}
+		if got := splitRecorderValues(two, "orderId"); !reflect.DeepEqual(got, []any{"PO200902"}) {
+			t.Fatalf("stream two = %#v", got)
+		}
+		if got := splitRecorderValues(three, "orderId"); !reflect.DeepEqual(got, []any{"PO200903"}) {
+			t.Fatalf("stream three = %#v", got)
+		}
+	})
+
+	t.Run("documentation-context-count", func(t *testing.T) {
+		env := NewEnvironment()
+		registerSplitOrderTypes(t, env)
+		registerSplitMapTarget(t, env, "MyOrderBeginEvent", FieldDef("orderId", reflect.TypeOf("")))
+		registerSplitMapTarget(t, env, "MyOrderItemEvent", FieldDef("orderId", reflect.TypeOf("")), FieldDef("itemId", reflect.TypeOf("")))
+		registerSplitMapTarget(t, env, "MyOrderEndEvent", FieldDef("orderId", reflect.TypeOf("")))
+		orders, items := splitOrderStream(env)
+		rootOrderID := Property[string](Field[splitStreamOrder, splitStreamOrderDetail]("orderdetail"), "orderId")
+		parentOrderID := Property[string](ContainedParentField[splitStreamOrderDetail]("orderdetail"), "orderId")
+		splitPlan, err := env.Build(OnEvent(orders).SplitAll(
+			SplitFrom(orders).Into("MyOrderBeginEvent", Alias("orderId", rootOrderID)),
+			SplitFrom(items).Into("MyOrderItemEvent",
+				Alias("orderId", parentOrderID),
+				Alias("itemId", Field[splitStreamOrderItem, string]("itemId"))),
+			SplitFrom(orders).Into("MyOrderEndEvent", Alias("orderId", rootOrderID)),
+		).Query(StatementName("split-from-doc-route")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		currentType := TypeName(EventValue[Event]())
+		if _, err := CreateInitiatedTerminatedContext(
+			env,
+			"MyOrderContext",
+			Field[Event, string]("orderId"),
+			Equal[string](currentType, Literal("MyOrderBeginEvent")),
+			Equal[string](currentType, Literal("MyOrderEndEvent")),
+		); err != nil {
+			t.Fatal(err)
+		}
+		countPlan, err := env.Build(FromAny(env, "MyOrderItemEvent").Aggregate(
+			Alias("orderItemCount", CountAll()),
+		).Query(
+			StatementName("split-from-doc-count"),
+			WithContext("MyOrderContext"),
+			WithOutput(OutputSnapshotWhenTerminated()),
+		))
+		if err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env)
+		countDeployment, err := engine.Deploy(context.Background(), countPlan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var counts []int64
+		if _, err := countDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+			for _, result := range batch.New {
+				row, ok := result.Row()
+				if !ok {
+					return NewError(ErrorTypeMismatch, "split context count result is not a row")
+				}
+				counts = append(counts, row.Get("orderItemCount").Any().(int64))
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := engine.Deploy(context.Background(), splitPlan); err != nil {
+			t.Fatal(err)
+		}
+		if err := engine.SendEvent(context.Background(), splitOrder("1010", splitStreamOrderItem{ItemID: "A0001"})); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(counts, []int64{1}) {
+			t.Fatalf("terminated context counts = %#v, want [1]", counts)
+		}
+	})
 }
 
 func TestSplitStream2SplitNoDefaultOutputFirstParity(t *testing.T) {
@@ -338,6 +640,9 @@ func TestSplitStreamInvalidParity(t *testing.T) {
 	if _, err := RegisterMap(env, "AStream", []FieldSpec{FieldDef("value", reflect.TypeOf(int(0)))}); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := RegisterStruct[splitStreamSupportBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
 	source := From[splitStreamSupportBean](env, "SupportBean")
 	intPrimitive := Field[splitStreamSupportBean, int]("intPrimitive")
 	if _, err := env.Build(OnEvent(source).SplitFirst().Query()); err == nil || !errors.Is(err, ErrorInvalidRule) {
@@ -355,6 +660,22 @@ func TestSplitStreamInvalidParity(t *testing.T) {
 		SplitInto("AStream", Alias("value", Sum[int](intPrimitive))),
 	).Query()); err == nil || !errors.Is(err, ErrorInvalidRule) {
 		t.Fatalf("aggregate split projection error = %v", err)
+	}
+	if _, err := env.Build(OnEvent(source).SplitFirst(
+		SplitFrom(From[splitStreamSupportBeanS0](env, "SupportBean_S0")).Into("AStream", Alias("value", Literal(1))),
+	).Query()); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("unrelated split branch source error = %v", err)
+	}
+	if _, err := env.Build(OnEvent(source).SplitFirst(
+		SplitFrom(source.Window(KeepAll())).Into("AStream", Alias("value", Literal(1))),
+	).Query()); err == nil || !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("stateful split branch source error = %v", err)
+	}
+	otherEnv := newSplitStreamEnvironment(t)
+	if _, err := env.Build(OnEvent(source).SplitFirst(
+		SplitFrom(From[splitStreamSupportBean](otherEnv, "SupportBean")).Into("AStream", Alias("value", Literal(1))),
+	).Query()); err == nil || !errors.Is(err, ErrorDependency) {
+		t.Fatalf("cross-environment split branch source error = %v", err)
 	}
 }
 

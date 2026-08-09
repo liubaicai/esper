@@ -15,6 +15,38 @@ type SplitStreamBranch struct {
 	Target     string
 	Condition  Expr
 	Selections []Selection
+	source     *streamNode
+	env        *Environment
+}
+
+// SplitStreamBranchBuilder binds one split branch to a fluent source derived
+// from the trigger stream. It is the Go counterpart of an EPL split-stream
+// branch that carries its own contained-event from-clause.
+type SplitStreamBranchBuilder struct {
+	source *streamNode
+	env    *Environment
+}
+
+// SplitFrom starts a branch-local source traversal. The source must resolve
+// to the same root event type as the OnEvent trigger and may add stateless
+// Filter and Unnest operators. Branches are evaluated in declaration order.
+func SplitFrom[T any](source Stream[T]) SplitStreamBranchBuilder {
+	return SplitStreamBranchBuilder{source: source.node, env: source.env}
+}
+
+// Into completes an unconditional branch-local insert.
+func (b SplitStreamBranchBuilder) Into(target string, selections ...Selection) SplitStreamBranch {
+	branch := SplitInto(target, selections...)
+	branch.source = b.source
+	branch.env = b.env
+	return branch
+}
+
+// IntoWhen completes a conditional branch-local insert.
+func (b SplitStreamBranchBuilder) IntoWhen(condition Expr, target string, selections ...Selection) SplitStreamBranch {
+	branch := b.Into(target, selections...)
+	branch.Condition = condition
+	return branch
 }
 
 // SplitInto creates an unconditional split branch.
@@ -52,6 +84,8 @@ func (s TriggerStream[T]) splitStream(all bool, branches []SplitStreamBranch) Tr
 			Target:     strings.TrimSpace(branch.Target),
 			Condition:  branch.Condition,
 			Selections: append([]Selection(nil), branch.Selections...),
+			source:     cloneStreamNode(branch.source),
+			env:        branch.env,
 		}
 	}
 	return TriggerQuery{
@@ -73,6 +107,22 @@ func (e *Environment) validateSplitStream(definition *triggerDefinition) error {
 		return NewError(ErrorInvalidRule, "split-stream requires at least one insert branch")
 	}
 	for index, branch := range definition.splitBranches {
+		input := definition.input
+		if branch.source != nil {
+			input = branch.source
+			if branch.env != nil && branch.env != e {
+				return NewError(ErrorDependency, fmt.Sprintf("split-stream branch %d belongs to a different environment", index))
+			}
+			if err := e.validateNode(input); err != nil {
+				return fmt.Errorf("split-stream branch %d source: %w", index, err)
+			}
+			if !splitStreamSharesRoot(definition.input, input) {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("split-stream branch %d source must derive from the trigger source", index))
+			}
+			if !triggerInputSupportsContainedTraversal(input) {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("split-stream branch %d source supports only source, filter and contained-event operators", index))
+			}
+		}
 		if branch.Target == "" {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("split-stream branch %d requires an insert target", index))
 		}
@@ -86,7 +136,7 @@ func (e *Environment) validateSplitStream(definition *triggerDefinition) error {
 			if isAggregateExpression(branch.Condition) {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("split-stream branch %d condition cannot contain aggregation", index))
 			}
-			if err := e.validateExprFields(definition.input, branch.Condition); err != nil {
+			if err := e.validateExprFields(input, branch.Condition); err != nil {
 				return fmt.Errorf("split-stream branch %d condition: %w", index, err)
 			}
 		}
@@ -98,14 +148,38 @@ func (e *Environment) validateSplitStream(definition *triggerDefinition) error {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("split-stream branch %d projection %d cannot contain aggregation", index, selectionIndex))
 			}
 		}
-		if err := validateMergeInsertSelections(e, definition.input, branch.Target, branch.Selections); err != nil {
+		if err := validateMergeInsertSelections(e, input, branch.Target, branch.Selections); err != nil {
 			return fmt.Errorf("split-stream branch %d: %w", index, err)
 		}
 	}
 	return nil
 }
 
+func splitStreamSharesRoot(trigger, branch *streamNode) bool {
+	triggerRoot := splitStreamRoot(trigger)
+	branchRoot := splitStreamRoot(branch)
+	if triggerRoot == nil || branchRoot == nil {
+		return false
+	}
+	return triggerRoot.kind == branchRoot.kind &&
+		triggerRoot.sourceName == branchRoot.sourceName &&
+		triggerRoot.moduleName == branchRoot.moduleName &&
+		triggerRoot.sourceType == branchRoot.sourceType
+}
+
+func splitStreamRoot(node *streamNode) *streamNode {
+	for node != nil && node.input != nil {
+		node = node.input
+	}
+	return node
+}
+
 func (s *Statement) processSplitStreamRuntime(ctx context.Context, runtime *statementRuntime, definition *triggerDefinition, now time.Time, event Event, variables map[string]Value) (ResultBatch, error) {
+	for _, branch := range definition.splitBranches {
+		if branch.source != nil {
+			return s.processSplitStreamBranchSources(ctx, runtime, definition, now, event, variables)
+		}
+	}
 	result := ResultBatch{Time: now}
 	processCandidate := func(candidate Event) error {
 		matched := false
@@ -114,11 +188,12 @@ func (s *Statement) processSplitStreamRuntime(ctx context.Context, runtime *stat
 				return err
 			}
 			evaluation := EvalContext{
-				Engine:     s.engine,
-				Event:      candidate,
-				OuterEvent: candidate,
-				Now:        now,
-				Variables:  variables,
+				Engine:               s.engine,
+				Event:                candidate,
+				OuterEvent:           candidate,
+				ContainedParentEvent: containedParentEvent(candidate),
+				Now:                  now,
+				Variables:            variables,
 			}
 			if branch.Condition != nil {
 				value, ok := boolValue(branch.Condition.eval(evaluation))
@@ -160,6 +235,75 @@ func (s *Statement) processSplitStreamRuntime(ctx context.Context, runtime *stat
 		return ResultBatch{}, err
 	}
 	if !result.empty() {
+		result.Sequence = runtime.seq.Add(1)
+	}
+	return result, nil
+}
+
+// processSplitStreamBranchSources evaluates branch-local contained-event
+// traversals branch-first. This preserves Esper's begin/body/end ordering:
+// every routed event from one insert clause is queued before the next clause
+// starts. In output-first mode the first branch producing at least one row
+// wins, while all matching rows from that branch are retained.
+func (s *Statement) processSplitStreamBranchSources(ctx context.Context, runtime *statementRuntime, definition *triggerDefinition, now time.Time, event Event, variables map[string]Value) (ResultBatch, error) {
+	result := ResultBatch{Time: now}
+	matched := false
+	for _, branch := range definition.splitBranches {
+		input := definition.input
+		if branch.source != nil {
+			input = branch.source
+		}
+		branchMatched := false
+		visit := func(candidate Event) error {
+			evaluation := EvalContext{
+				Engine:               s.engine,
+				Event:                candidate,
+				OuterEvent:           candidate,
+				ContainedParentEvent: containedParentEvent(candidate),
+				Now:                  now,
+				Variables:            variables,
+			}
+			if branch.Condition != nil {
+				value, ok := boolValue(branch.Condition.eval(evaluation))
+				if !ok || !value {
+					return nil
+				}
+			}
+			routed, err := s.splitStreamEvent(branch, candidate, evaluation, now)
+			if err != nil {
+				return err
+			}
+			s.engine.pendingRoutedEvents = append(s.engine.pendingRoutedEvents, routed)
+			branchMatched = true
+			return nil
+		}
+
+		var err error
+		if triggerInputContainsContained(input) && triggerInputSupportsContainedTraversal(input) {
+			err = runtime.forEachTriggerCandidate(input, event, now, visit)
+		} else {
+			var delta eventDelta
+			delta, err = runtime.insert(input, event, now)
+			if err == nil {
+				for _, candidate := range delta.newEvents {
+					if err = visit(candidate); err != nil {
+						break
+					}
+				}
+			}
+		}
+		if err != nil {
+			return ResultBatch{}, err
+		}
+		if branchMatched {
+			matched = true
+			if !definition.splitAll {
+				break
+			}
+		}
+	}
+	if !matched {
+		result.New = append(result.New, resultEvent(event))
 		result.Sequence = runtime.seq.Add(1)
 	}
 	return result, nil
