@@ -1762,6 +1762,31 @@
         "long-running 16-hour expiry and day-boundary cron traces beyond the implemented EXPIRED branch",
         "atomic transaction semantics spanning table, situation window and alert route callbacks"
       ]
+    },
+    {
+      "id": "client.runtime.statement-metadata",
+      "domain": "client",
+      "level": "G",
+      "summary": "Typed immutable built-in and application-defined statement metadata with schema-declaration metadata, nested values, defaults, arrays, enums, class types and validated hints",
+      "javaRefs": [
+        "ClientRuntimeStatementAnnotation"
+      ],
+      "goRefs": [
+        "statement_metadata.go",
+        "stream.go",
+        "schema.go",
+        "plan.go",
+        "runtime.go",
+        "client_runtime_statement_annotation_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "semantic wiring for every built-in Hint kind where a dedicated fluent rule control is not already implemented",
+        "optional per-statement lock suppression and shared concurrent traces beyond the Engine-wide serialized runtime boundary",
+        "metadata on declaration kinds beyond statements and event schemas, including tables, named windows, contexts and dataflows",
+        "Java annotation proxy equality, hash and rendering are replaced by Go value snapshots rather than reproduced"
+      ]
     }
   ],
   "cases": [
@@ -12942,6 +12967,61 @@
         "go-unit"
       ],
       "difference": "Go assembles the solution with typed UniqueBy, TimeWindow, GroupBy, IntoTable, KeepAll Named Window and TimerCron plans. Listener callbacks connect the materialized count statement and minute maintenance statement to situation-window mutations and typed OutputAlerts sends, replacing Java's multi-statement EPL module while retaining rule boundaries and reentrant Engine calls outside the transaction lock. ObjectArray PortScanEvent input, 20 unique ports, 30-second contributor retention, first-only DETECTED, minute UPDATE, UPDATE-before-DONE ordering below count 10 and the 16-hour EXPIRED branch are implemented. The three Java executions assert DETECTED=20, sustained UPDATE=20 after refreshes at 29/59 seconds, and final DONE=0 after expiry; the Go tests assert the same public sequence and contributor-derived detection count."
+    },
+    {
+      "id": "case.client-runtime-statement-annotation",
+      "javaRuntimeIds": [
+        "java-runtime-adc4844e57d4398023b0",
+        "java-runtime-1aae9668f1c7dcac1ad8",
+        "java-runtime-dcd6a102072176dc40c5",
+        "java-runtime-b7da3ce39ae9b4d0ba69",
+        "java-runtime-c7c94f9dc1bfc630bf8a",
+        "java-runtime-2395ea3bee9ef529c7aa"
+      ],
+      "javaNames": [
+        "ClientRuntimeStatementAnnotationBuiltin",
+        "ClientRuntimeStatementAnnotationAppSimple",
+        "ClientRuntimeStatementAnnotationAppNested",
+        "ClientRuntimeStatementAnnotationInvalid",
+        "ClientRuntimeStatementAnnotationSpecificImport",
+        "ClientRuntimeStatementAnnotationRecursive"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimeStatementAnnotation.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeStatementAnnotationBuiltinParity",
+        "TestClientRuntimeStatementAnnotationAppSimpleParity",
+        "TestClientRuntimeStatementAnnotationAppNestedParity",
+        "TestClientRuntimeStatementAnnotationInvalidParity",
+        "TestClientRuntimeStatementAnnotationSpecificImportParity",
+        "TestClientRuntimeStatementAnnotationRecursiveParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "statement-metadata",
+        "description",
+        "tag",
+        "hint",
+        "no-lock",
+        "custom-annotation",
+        "nested",
+        "array",
+        "enum",
+        "class-type",
+        "schema-metadata",
+        "invalid",
+        "plan-identity"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go replaces EPL @-annotation text, Java imports/class loading and reflection proxies with typed fluent options and immutable value contracts. StatementDescription, StatementTag, WithStatementHints and StatementNoLock expose built-ins; custom definitions validate required/defaulted attributes, exact Go types, duplicate/unknown fields, nil arrays/elements, nested definition identity, annotation arrays, named string enums and reflect.Type class values. Statement and Query return detached metadata snapshots, schema annotations survive registration and enter Plan identity, and a schema-annotated map event still flows through the normal runtime. Case-insensitive ParseAnnotationStringEnum replaces annotation-specific enum imports. Java EPL/SODA formatting, parser syntax categories, annotation proxy equals/hashCode/toString and raw class names are intentionally not reproduced. NoLock is exposed as an instruction while Go retains its Engine-wide serialized transaction boundary; rule-specific semantic controls remain explicit fluent methods rather than being inferred from metadata."
     }
   ],
   "mappings": [
@@ -13788,6 +13868,10 @@
     {
       "capabilityId": "client.runtime.solution-port-scan",
       "caseId": "case.client-runtime-solution-port-scan"
+    },
+    {
+      "capabilityId": "client.runtime.statement-metadata",
+      "caseId": "case.client-runtime-statement-annotation"
     }
   ]
 }

@@ -741,6 +741,7 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		routeTarget:                spec.routeTarget,
 		name:                       spec.name,
 		statementUserObject:        spec.statementUserObject,
+		statementMetadata:          cloneStatementMetadata(spec.statementMetadata),
 		selector:                   spec.selector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,
@@ -1244,6 +1245,7 @@ func (u UpdateStreamQuery) Query(options ...QueryOption) Query {
 	}
 	query.name = spec.name
 	query.statementUserObject = spec.statementUserObject
+	query.statementMetadata = cloneStatementMetadata(spec.statementMetadata)
 	query.contextName = spec.contextName
 	query.statementPriority = spec.statementPriority
 	query.statementPrioritySet = spec.statementPrioritySet
@@ -1328,6 +1330,7 @@ func (s OnDemandStream) query(action onDemandAction, predicate Expr, assignments
 		env:                  s.env,
 		input:                s.node,
 		name:                 spec.name,
+		statementMetadata:    cloneStatementMetadata(spec.statementMetadata),
 		selector:             spec.selector,
 		output:               spec.output,
 		contextName:          spec.contextName,
@@ -1523,6 +1526,7 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 		},
 		name:                       spec.name,
 		statementUserObject:        spec.statementUserObject,
+		statementMetadata:          cloneStatementMetadata(spec.statementMetadata),
 		selector:                   spec.selector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,
@@ -2496,6 +2500,7 @@ func outputBasePolicy(base []OutputPolicy) OutputPolicy {
 type querySpec struct {
 	name                       string
 	statementUserObject        any
+	statementMetadata          statementMetadata
 	selector                   StreamSelector
 	selections                 []Selection
 	routeTarget                string
@@ -2525,6 +2530,49 @@ type QueryOption func(*querySpec)
 
 func StatementName(name string) QueryOption {
 	return func(spec *querySpec) { spec.name = name }
+}
+
+// StatementDescription attaches descriptive statement metadata without
+// changing evaluation behavior.
+func StatementDescription(description string) QueryOption {
+	return func(spec *querySpec) {
+		spec.statementMetadata.description = description
+		spec.statementMetadata.descriptionSet = true
+	}
+}
+
+// StatementTag attaches one typed name/value tag. Multiple tags retain their
+// declaration order.
+func StatementTag(name, value string) QueryOption {
+	return func(spec *querySpec) {
+		spec.statementMetadata.tags = append(spec.statementMetadata.tags, StatementTagMetadata{Name: name, Value: value})
+	}
+}
+
+// WithStatementHints attaches already-validated built-in hints. Semantic
+// builder controls such as RowRecogQuery.IterateOnly remain explicit in their
+// respective fluent chain; this option exposes the corresponding metadata.
+func WithStatementHints(hints ...StatementHint) QueryOption {
+	return func(spec *querySpec) {
+		for _, hint := range hints {
+			spec.statementMetadata.hints = append(spec.statementMetadata.hints, cloneStatementHint(hint))
+		}
+	}
+}
+
+// StatementNoLock records the built-in NoLock instruction. The Go runtime's
+// engine-wide serialization remains in force; the metadata is available for
+// applications that provide their own concurrency policy around a rule.
+func StatementNoLock() QueryOption {
+	return func(spec *querySpec) { spec.statementMetadata.noLock = true }
+}
+
+// WithStatementAnnotation attaches one validated application-defined
+// annotation instance.
+func WithStatementAnnotation(annotation StatementAnnotation) QueryOption {
+	return func(spec *querySpec) {
+		spec.statementMetadata.annotations = append(spec.statementMetadata.annotations, cloneStatementAnnotation(annotation))
+	}
 }
 
 // StatementPriority orders ordinary continuous statements for one dispatch
@@ -2648,7 +2696,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -2685,6 +2733,7 @@ type Query struct {
 	tableTarget                string
 	name                       string
 	statementUserObject        any
+	statementMetadata          statementMetadata
 	selector                   StreamSelector
 	sink                       Sink
 	contextName                string
@@ -2704,6 +2753,13 @@ type Query struct {
 
 func (q Query) Name() string { return q.name }
 
+// Metadata returns a detached snapshot of query metadata before deployment.
+// A runtime-generated default statement name is only available from
+// Statement.Metadata after deployment.
+func (q Query) Metadata() StatementMetadata {
+	return statementMetadataSnapshot(q.name, q.statementMetadata)
+}
+
 func (q Query) description() string {
 	if q.updateStream != nil {
 		parts := []string{q.input.describe()}
@@ -2715,6 +2771,7 @@ func (q Query) description() string {
 		if q.updateStream.where != nil {
 			parts = append(parts, "where("+q.updateStream.where.Description()+")")
 		}
+		parts = appendQueryModifiers(parts, q)
 		return strings.Join(parts, " -> ")
 	}
 	if q.onDemand != nil {
@@ -2740,6 +2797,7 @@ func (q Query) description() string {
 		if q.contextName != "" {
 			parts = append(parts, "context("+q.contextName+")")
 		}
+		parts = appendQueryModifiers(parts, q)
 		return strings.Join(parts, " -> ")
 	}
 	if q.pattern != nil {
@@ -2874,6 +2932,9 @@ func (q Query) description() string {
 }
 
 func appendQueryModifiers(parts []string, query Query) []string {
+	if canonical := statementMetadataCanonical(query.statementMetadata); canonical != "" {
+		parts = append(parts, canonical)
+	}
 	if query.statementPrioritySet {
 		parts = append(parts, fmt.Sprintf("statement-priority(%d)", query.statementPriority))
 	}

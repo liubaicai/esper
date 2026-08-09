@@ -529,6 +529,9 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	if query.name != "" && strings.TrimSpace(query.name) == "" {
 		return Plan{}, fmt.Errorf("esper: statement name cannot be blank")
 	}
+	if err := validateStatementMetadata(query.statementMetadata); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "statement metadata", err)
+	}
 
 	description := query.description()
 	if query.routeTarget != "" {
@@ -601,7 +604,7 @@ func (e *Environment) Build(query Query) (Plan, error) {
 		for _, name := range defaultNames {
 			defaults = append(defaults, fmt.Sprintf("%s:%T:%v", name, schema.defaults[name], schema.defaults[name]))
 		}
-		canonicalParts = append(canonicalParts, fmt.Sprintf("schema(%s:%d:%d:%d:%t:variant=%d:parents=%s:%s:fields=%s:getters=%s:setters=%s:nested=%s:defaults=%s)", schema.Name(), schema.kind, schema.resolution, schema.accessor, schema.allowDynamic, schema.variantMode, parents, members, strings.Join(fields, ","), strings.Join(getters, ","), strings.Join(setters, ","), strings.Join(nestedNames, ","), strings.Join(defaults, ",")))
+		canonicalParts = append(canonicalParts, fmt.Sprintf("schema(%s:%d:%d:%d:%t:variant=%d:parents=%s:%s:fields=%s:getters=%s:setters=%s:nested=%s:defaults=%s:annotations=%s)", schema.Name(), schema.kind, schema.resolution, schema.accessor, schema.allowDynamic, schema.variantMode, parents, members, strings.Join(fields, ","), strings.Join(getters, ","), strings.Join(setters, ","), strings.Join(nestedNames, ","), strings.Join(defaults, ","), statementAnnotationsCanonical(schema.annotations)))
 		if len(schema.jsonAdapters) > 0 {
 			adapterNames := make([]string, 0, len(schema.jsonAdapters))
 			for name := range schema.jsonAdapters {

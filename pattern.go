@@ -1036,6 +1036,7 @@ func (p PatternQuery) Query(options ...QueryOption) Query {
 		routeTarget:                spec.routeTarget,
 		name:                       spec.name,
 		statementUserObject:        spec.statementUserObject,
+		statementMetadata:          cloneStatementMetadata(spec.statementMetadata),
 		selector:                   spec.selector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,

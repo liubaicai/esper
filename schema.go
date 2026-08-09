@@ -171,6 +171,7 @@ type schemaConfig struct {
 	nested       map[string]Schema
 	defaults     map[string]any
 	jsonAdapters []jsonFieldAdapterSpec
+	annotations  []StatementAnnotation
 }
 
 func WithPropertyResolution(style PropertyResolutionStyle) SchemaOption {
@@ -336,6 +337,15 @@ func WithSchemaParent(parent Schema) SchemaOption {
 	return func(cfg *schemaConfig) { cfg.parents = append(cfg.parents, parent) }
 }
 
+// WithSchemaAnnotation attaches application-defined metadata to an event
+// schema declaration. It is the Go-native counterpart of annotating an EPL
+// create-schema statement.
+func WithSchemaAnnotation(annotation StatementAnnotation) SchemaOption {
+	return func(cfg *schemaConfig) {
+		cfg.annotations = append(cfg.annotations, cloneStatementAnnotation(annotation))
+	}
+}
+
 // Schema is immutable after construction and safe for concurrent reads.
 type Schema struct {
 	identity       *schemaIdentityToken
@@ -357,6 +367,7 @@ type Schema struct {
 	parents        []Schema
 	variantSchemas []Schema
 	parentNames    []string
+	annotations    []StatementAnnotation
 }
 
 // NewSchema constructs a statically described event schema.
@@ -981,6 +992,9 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		}
 		jsonAdapters[canonical] = configured.adapter
 	}
+	if err := validateSchemaAnnotations(cfg.annotations); err != nil {
+		return Schema{}, fmt.Errorf("esper: schema %q: %w", name, err)
+	}
 	return Schema{
 		identity:     &schemaIdentityToken{},
 		name:         name,
@@ -998,6 +1012,7 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		jsonAdapters: jsonAdapters,
 		parents:      append([]Schema(nil), cfg.parents...),
 		parentNames:  parentNames,
+		annotations:  cloneStatementAnnotations(cfg.annotations),
 	}, nil
 }
 
@@ -1316,6 +1331,16 @@ func (s Schema) VariantMembers() []string { return append([]string(nil), s.varia
 func (s Schema) ParentNames() []string { return append([]string(nil), s.parentNames...) }
 
 func (s Schema) AllowsDynamicProperties() bool { return s.allowDynamic }
+
+// Annotations returns detached application-defined schema metadata.
+func (s Schema) Annotations() []StatementAnnotation {
+	return cloneStatementAnnotations(s.annotations)
+}
+
+// Annotation returns the named application-defined schema annotation.
+func (s Schema) Annotation(name string) (StatementAnnotation, bool) {
+	return statementAnnotationByName(s.annotations, name)
+}
 
 // JSONFieldAdapter returns the adapter bound to a declared JSON property.
 func (s Schema) JSONFieldAdapter(name string) (JSONFieldAdapter, bool) {

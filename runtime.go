@@ -1366,6 +1366,29 @@ func (s *Statement) Plan() Plan {
 	return s.plan
 }
 
+// Metadata returns a detached snapshot of the deployed statement's built-in
+// and custom metadata.
+func (s *Statement) Metadata() StatementMetadata {
+	if s == nil {
+		return StatementMetadata{}
+	}
+	return statementMetadataSnapshot(s.name, s.plan.query.statementMetadata)
+}
+
+// Annotation returns one named application-defined statement annotation.
+func (s *Statement) Annotation(name string) (StatementAnnotation, bool) {
+	if s == nil {
+		return StatementAnnotation{}, false
+	}
+	return statementAnnotationByName(s.plan.query.statementMetadata.annotations, name)
+}
+
+// HasNoLock reports whether the statement carries the built-in NoLock
+// instruction.
+func (s *Statement) HasNoLock() bool {
+	return s != nil && s.plan.query.statementMetadata.noLock
+}
+
 // Priority returns the ordinary continuous-statement dispatch priority.
 // Higher values run first. The bool is false when no explicit priority was
 // supplied and the effective priority is the default zero.

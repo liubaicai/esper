@@ -571,6 +571,7 @@ func (q TriggerQuery) Query(options ...QueryOption) Query {
 		name:                       spec.name,
 		routeTarget:                spec.routeTarget,
 		statementUserObject:        spec.statementUserObject,
+		statementMetadata:          cloneStatementMetadata(spec.statementMetadata),
 		selector:                   spec.selector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,
