@@ -324,6 +324,9 @@ func (q RowRecogQuery) Query(options ...QueryOption) Query {
 		orderBy:                    append([]SortKey(nil), spec.orderBy...),
 		limit:                      spec.limit,
 		offset:                     spec.offset,
+		statementPriority:          spec.statementPriority,
+		statementPrioritySet:       spec.statementPrioritySet,
+		statementDrop:              spec.statementDrop,
 	}
 }
 

@@ -1694,6 +1694,31 @@
         "shared concurrent contention traces that compare Java lock-log ordering with Go diagnostic snapshots",
         "lock diagnostics for storage-local and connector-owned mutexes outside the Engine transaction boundary"
       ]
+    },
+    {
+      "id": "client.runtime.priority-drop",
+      "domain": "client",
+      "level": "S",
+      "summary": "Priority-ordered continuous-statement dispatch and matching drop preemption across events, timers, named-window deltas and routed events",
+      "javaRefs": [
+        "ClientRuntimePriorityAndDropInstructions"
+      ],
+      "goRefs": [
+        "stream.go",
+        "plan.go",
+        "runtime.go",
+        "pattern.go",
+        "trigger.go",
+        "rowrecog.go",
+        "client_runtime_priority_drop_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "shared concurrent dispatch traces with priority changes caused by deployment churn",
+        "wider drop traces for context partitions, joins, output suppression and complex pattern consumption",
+        "Java annotation-array reflection beyond typed Statement priority/drop metadata"
+      ]
     }
   ],
   "cases": [
@@ -12752,6 +12777,56 @@
         "go-unit"
       ],
       "difference": "Java disables its internal timer thread, enables runtime lock-activity logging, sends one SupportBean to a count(*) statement and only asserts that the safe iterator returns c0=1; it does not assert logger text. Go already uses an explicit virtual clock with no internal timer thread by default. WithLockActivityTracing therefore enables an opt-in, bounded in-memory trace of the Engine transaction mutex instead of writing process-global logs. The detached trace records monotonic attempt/acquired/released transitions, supports clear without resetting sequence, and the parity test verifies balanced activity around deploy, send, snapshot and undeploy together with c0=1."
+    },
+    {
+      "id": "case.client-runtime-priority-drop",
+      "javaRuntimeIds": [
+        "java-runtime-6e569467437c6f7f8c37",
+        "java-runtime-8250f79ae1818e918001",
+        "java-runtime-c005f8e1dec80e3d79f7",
+        "java-runtime-de3907377cbfd9723875",
+        "java-runtime-6894b3cdc5e13999bf99",
+        "java-runtime-e3a43bc35450fc28aaea"
+      ],
+      "javaNames": [
+        "ClientRuntimeSchedulingPriority",
+        "ClientRuntimeSchedulingDrop",
+        "ClientRuntimeNamedWindowPriority",
+        "ClientRuntimeNamedWindowDrop",
+        "ClientRuntimePriority",
+        "ClientRuntimeAddRemoveStmts"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/runtime/ClientRuntimePriorityAndDropInstructions.java"
+      ],
+      "goTests": [
+        "TestClientRuntimeSchedulingPriorityParity",
+        "TestClientRuntimeSchedulingDropParity",
+        "TestClientRuntimeNamedWindowPriorityParity",
+        "TestClientRuntimeNamedWindowDropParity",
+        "TestClientRuntimePriorityParity",
+        "TestClientRuntimeAddRemoveStatementsParity",
+        "TestStatementPriorityDropPlanBoundaries"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "runtime",
+        "priority",
+        "drop",
+        "preemption",
+        "timer",
+        "named-window",
+        "routed-event",
+        "deployment-lifecycle",
+        "canonical-plan"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go exposes StatementPriority and StatementDrop as typed QueryOptions instead of Java annotations. Ordinary continuous dispatch is sorted by descending priority; at equal priority drop statements run first and otherwise deployment order is stable. A drop statement preempts only after it produces a result, and its own listener batch and routes remain visible. The same ordering applies to external and internal routed events, virtual-clock timers, direct and statement-fed named-window deltas, with undeploy/redeploy recomputing the active order. Management traversal deliberately remains deployment ordered. Update-istream retains its separate ascending UpdatePriority/UpdateDrop preprocessing contract, and Build rejects mixing the two option families. Named-window parity uses the same last-event window, typed insert trigger and on-window select shape as Java; Go sends the source by explicit registered name when the same struct also represents ABCStream."
     }
   ],
   "mappings": [
@@ -13586,6 +13661,10 @@
     {
       "capabilityId": "client.runtime.lock-activity",
       "caseId": "case.client-runtime-lock-logging"
+    },
+    {
+      "capabilityId": "client.runtime.priority-drop",
+      "caseId": "case.client-runtime-priority-drop"
     }
   ]
 }

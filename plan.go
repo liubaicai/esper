@@ -508,6 +508,12 @@ func (e *Environment) Build(query Query) (Plan, error) {
 	if err := e.validateQueryModifiers(query); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "result-set", err)
 	}
+	if query.onDemand != nil && (query.statementPrioritySet || query.statementDrop) {
+		return Plan{}, NewError(ErrorInvalidRule, "statement priority/drop applies only to continuous statements")
+	}
+	if query.updateStream != nil && (query.statementPrioritySet || query.statementDrop) {
+		return Plan{}, NewError(ErrorInvalidRule, "update-istream priority/drop must use UpdatePriority and UpdateDrop")
+	}
 	resultSchema, err := e.resultSchema(query)
 	if err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "projection", err)

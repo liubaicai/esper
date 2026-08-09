@@ -24,15 +24,15 @@ const (
 )
 
 type streamNode struct {
-	kind               streamNodeKind
-	input              *streamNode
-	sourceName         string
-	moduleName         string
+	kind       streamNodeKind
+	input      *streamNode
+	sourceName string
+	moduleName string
 	// sourceAlias is the join-visible logical name assigned through As. It is
 	// distinct from sourceName, which keeps addressing the registered event
 	// type, named window or table for catalog lookup and event matching.
-	sourceAlias        string
-	sourceType         reflect.Type
+	sourceAlias string
+	sourceType  reflect.Type
 	// isAlias marks a streamSource whose sourceName is an alias distinct from
 	// the registered event type name. Aliases are resolved through sourceType.
 	isAlias            bool
@@ -752,6 +752,9 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		limit:                      spec.limit,
 		offset:                     spec.offset,
 		indexHints:                 append([]indexHint(nil), spec.indexHints...),
+		statementPriority:          spec.statementPriority,
+		statementPrioritySet:       spec.statementPrioritySet,
+		statementDrop:              spec.statementDrop,
 	}
 }
 
@@ -794,7 +797,7 @@ func FromAs[T any](env *Environment, sourceName string) Stream[T] {
 		sourceName = typeOf[T]().Name()
 	}
 	return Stream[T]{
-		env: env,
+		env:  env,
 		node: &streamNode{kind: streamSource, sourceName: sourceName, sourceType: typeOf[T](), isAlias: true},
 	}
 }
@@ -1242,6 +1245,9 @@ func (u UpdateStreamQuery) Query(options ...QueryOption) Query {
 	query.name = spec.name
 	query.statementUserObject = spec.statementUserObject
 	query.contextName = spec.contextName
+	query.statementPriority = spec.statementPriority
+	query.statementPrioritySet = spec.statementPrioritySet
+	query.statementDrop = spec.statementDrop
 	if spec.updatePrioritySet {
 		query.updateStream.priority = spec.updatePriority
 	}
@@ -1319,14 +1325,17 @@ func (s OnDemandStream) query(action onDemandAction, predicate Expr, assignments
 		}
 	}
 	return Query{
-		env:         s.env,
-		input:       s.node,
-		name:        spec.name,
-		selector:    spec.selector,
-		output:      spec.output,
-		contextName: spec.contextName,
-		onDemand:    &onDemandDefinition{action: action, predicate: predicate, assignments: append([]TableAssignment(nil), assignments...)},
-		indexHints:  append([]indexHint(nil), spec.indexHints...),
+		env:                  s.env,
+		input:                s.node,
+		name:                 spec.name,
+		selector:             spec.selector,
+		output:               spec.output,
+		contextName:          spec.contextName,
+		onDemand:             &onDemandDefinition{action: action, predicate: predicate, assignments: append([]TableAssignment(nil), assignments...)},
+		indexHints:           append([]indexHint(nil), spec.indexHints...),
+		statementPriority:    spec.statementPriority,
+		statementPrioritySet: spec.statementPrioritySet,
+		statementDrop:        spec.statementDrop,
 	}
 }
 
@@ -1525,6 +1534,9 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 		limit:                      spec.limit,
 		offset:                     spec.offset,
 		indexHints:                 append([]indexHint(nil), spec.indexHints...),
+		statementPriority:          spec.statementPriority,
+		statementPrioritySet:       spec.statementPrioritySet,
+		statementDrop:              spec.statementDrop,
 	}
 }
 
@@ -2499,6 +2511,9 @@ type querySpec struct {
 	offset                     int
 	allowNoSink                bool
 	indexHints                 []indexHint
+	statementPriority          int
+	statementPrioritySet       bool
+	statementDrop              bool
 	updatePriority             int
 	updatePrioritySet          bool
 	updateDrop                 bool
@@ -2510,6 +2525,27 @@ type QueryOption func(*querySpec)
 
 func StatementName(name string) QueryOption {
 	return func(spec *querySpec) { spec.name = name }
+}
+
+// StatementPriority orders ordinary continuous statements for one dispatch
+// cycle. Higher values run first; equal values keep deployment order except
+// that StatementDrop entries run before non-drop entries.
+//
+// Update-istream preprocessing has its own ascending priority contract and
+// therefore continues to use UpdatePriority instead.
+func StatementPriority(priority int) QueryOption {
+	return func(spec *querySpec) {
+		spec.statementPriority = priority
+		spec.statementPrioritySet = true
+	}
+}
+
+// StatementDrop makes an ordinary continuous statement preempt lower-priority
+// statements after it produces a result for the current event, timer or named
+// window delta. The drop statement's own listeners and routes still receive
+// its result. Use UpdateDrop for update-istream preprocessing.
+func StatementDrop() QueryOption {
+	return func(spec *querySpec) { spec.statementDrop = true }
 }
 
 // UpdatePriority sets the update-istream priority, the Go chain equivalent
@@ -2612,7 +2648,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...)}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -2661,6 +2697,9 @@ type Query struct {
 	limit                      int
 	offset                     int
 	indexHints                 []indexHint
+	statementPriority          int
+	statementPrioritySet       bool
+	statementDrop              bool
 }
 
 func (q Query) Name() string { return q.name }
@@ -2835,6 +2874,12 @@ func (q Query) description() string {
 }
 
 func appendQueryModifiers(parts []string, query Query) []string {
+	if query.statementPrioritySet {
+		parts = append(parts, fmt.Sprintf("statement-priority(%d)", query.statementPriority))
+	}
+	if query.statementDrop {
+		parts = append(parts, "statement-drop")
+	}
 	if len(query.indexHints) > 0 {
 		hints := make([]string, 0, len(query.indexHints))
 		for _, hint := range query.indexHints {

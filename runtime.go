@@ -1252,7 +1252,7 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 		e.mu.Unlock()
 		return err
 	}
-	statements := e.sortedStatementsLocked()
+	statements := e.dispatchStatementsLocked()
 	dispatches := make([]statementDispatch, 0, len(statements))
 	for _, statement := range statements {
 		batch, changed, processErr := statement.processNamedWindow(ctx, now, delta, variables)
@@ -1269,6 +1269,9 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 			if routeErr := e.queueStatementRoutesLocked(statement, batch, now); routeErr != nil {
 				e.mu.Unlock()
 				return routeErr
+			}
+			if statement.plan.query.statementDrop {
+				break
 			}
 		}
 	}
@@ -1361,6 +1364,22 @@ func (s *Statement) Plan() Plan {
 		return Plan{}
 	}
 	return s.plan
+}
+
+// Priority returns the ordinary continuous-statement dispatch priority.
+// Higher values run first. The bool is false when no explicit priority was
+// supplied and the effective priority is the default zero.
+func (s *Statement) Priority() (int, bool) {
+	if s == nil {
+		return 0, false
+	}
+	return s.plan.query.statementPriority, s.plan.query.statementPrioritySet
+}
+
+// DropsLowerPriority reports whether this statement preempts lower-priority
+// statements after it produces a result for a dispatch cycle.
+func (s *Statement) DropsLowerPriority() bool {
+	return s != nil && s.plan.query.statementDrop
 }
 
 // DeploymentID returns the stable deployment that owns this statement.
@@ -2366,7 +2385,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 			return NewError(ErrorState, fmt.Sprintf("route event limit %d exceeded", maxRoutedEventsPerSend))
 		}
 		processedRoutes++
-		statements := e.sortedStatementsLocked()
+		statements := e.dispatchStatementsLocked()
 		matched := false
 		for _, statement := range orderUpdateStatementsFirst(statements) {
 			if statement.matchesEventFilter(current, now, variables) {
@@ -2395,6 +2414,9 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 				if routeErr := e.queueStatementRoutesLocked(statement, batch, now); routeErr != nil {
 					e.mu.Unlock()
 					return routeErr
+				}
+				if statement.plan.query.statementDrop {
+					break
 				}
 			}
 		}
@@ -2738,7 +2760,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	}
 	e.refreshVariablesLocked()
 	variables := cloneValues(e.variables)
-	statements := e.sortedStatementsLocked()
+	statements := e.dispatchStatementsLocked()
 	if coalesceSchedules {
 		for _, statement := range statements {
 			statement.coalesceSchedulesLocked(at)
@@ -2773,6 +2795,9 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 						e.mu.Unlock()
 						return routeErr
 					}
+					if statement.plan.query.statementDrop {
+						break
+					}
 				}
 			}
 		}
@@ -2788,6 +2813,9 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 			if routeErr := e.queueStatementRoutesLocked(statement, batch, at); routeErr != nil {
 				e.mu.Unlock()
 				return routeErr
+			}
+			if statement.plan.query.statementDrop {
+				break
 			}
 		}
 	}
@@ -2877,15 +2905,34 @@ func (e *Engine) sortedStatementsLocked() []*Statement {
 	for _, statement := range e.statements {
 		statements = append(statements, statement)
 	}
-	// Event processing follows deployment order, which is observable when one
-	// statement mutates a named window/table and another statement consumes the
-	// same input event. Names remain a deterministic fallback for legacy or
-	// externally constructed statements that do not carry an order.
+	// Catalog traversal follows deployment order. Names remain a deterministic
+	// fallback for legacy or externally constructed statements that do not
+	// carry an order.
 	sort.SliceStable(statements, func(i, j int) bool {
 		if statements[i].deploymentOrder != statements[j].deploymentOrder {
 			return statements[i].deploymentOrder < statements[j].deploymentOrder
 		}
 		return statements[i].name < statements[j].name
+	})
+	return statements
+}
+
+// dispatchStatementsLocked returns the continuous-statement order for one
+// runtime cycle without changing deployment-ordered management traversal.
+// Higher priorities run first. At equal priority a drop statement precedes
+// non-drop statements, and stable deployment order breaks all remaining ties.
+func (e *Engine) dispatchStatementsLocked() []*Statement {
+	statements := e.sortedStatementsLocked()
+	sort.SliceStable(statements, func(i, j int) bool {
+		left := statements[i].plan.query
+		right := statements[j].plan.query
+		if left.statementPriority != right.statementPriority {
+			return left.statementPriority > right.statementPriority
+		}
+		if left.statementDrop != right.statementDrop {
+			return left.statementDrop
+		}
+		return false
 	})
 	return statements
 }
@@ -2970,7 +3017,7 @@ func (e *Engine) queueNamedWindowDeltaLocked(ctx context.Context, now time.Time,
 	if e == nil || window == nil || delta.empty() {
 		return nil
 	}
-	statements := e.sortedStatementsLocked()
+	statements := e.dispatchStatementsLocked()
 	for _, statement := range statements {
 		if statement == owner || !containsNamedWindow(statement.plan.query.input, statement.plan.query.join) {
 			continue
@@ -2986,6 +3033,9 @@ func (e *Engine) queueNamedWindowDeltaLocked(ctx context.Context, now time.Time,
 			e.pendingStatementDispatches = append(e.pendingStatementDispatches, statementDispatch{statement: statement, batch: batch})
 			if err := e.queueStatementRoutesLocked(statement, batch, now); err != nil {
 				return err
+			}
+			if statement.plan.query.statementDrop {
+				break
 			}
 		}
 	}
@@ -3025,7 +3075,7 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		processed++
 		current := routedQueue[0]
 		routedQueue = routedQueue[1:]
-		for _, statement := range orderUpdateStatementsFirst(e.sortedStatementsLocked()) {
+		for _, statement := range orderUpdateStatementsFirst(e.dispatchStatementsLocked()) {
 			batch, changed, err := statement.process(ctx, now, current, variables)
 			if err != nil {
 				return err
@@ -3045,6 +3095,9 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 			*dispatches = append(*dispatches, statementDispatch{statement: statement, batch: batch})
 			if err := e.queueStatementRoutesLocked(statement, batch, now); err != nil {
 				return err
+			}
+			if statement.plan.query.statementDrop {
+				break
 			}
 		}
 		*dispatches = append(*dispatches, e.pendingStatementDispatches...)
