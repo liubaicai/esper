@@ -1558,6 +1558,24 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window grouped retention %T is not a supported data window view", grouped.Inner))
 		}
 	}
+	if composite, ok := config.retention.(CompositeWindowSpec); ok {
+		if composite.Mode != IntersectWindowMode {
+			// Esper named windows declare intersecting view stacks
+			// (#length(2)#unique(x)); a union view stack has no named-window
+			// form and is rejected at definition time here.
+			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, "named-window composite retention supports intersection only")
+		}
+		if len(composite.Windows) < 2 {
+			return NamedWindowDefinition{}, NewError(ErrorInvalidRule, "named-window composite retention requires at least two child views")
+		}
+		for _, child := range composite.Windows {
+			switch child.(type) {
+			case KeepAllWindowSpec, LengthWindowSpec, UniqueWindowSpec:
+			default:
+				return NamedWindowDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("named-window composite retention %T is not a supported data window view", child))
+			}
+		}
+	}
 	seenIndexes := make(map[string]struct{}, len(config.indexes))
 	indexes := make([]NamedWindowIndexDefinition, 0, len(config.indexes))
 	uniqueIndexes := make([]NamedWindowIndexDefinition, 0, len(config.indexes))
@@ -1730,6 +1748,10 @@ type namedWindowRuntime struct {
 	listeners         map[uint64]NamedWindowListener
 	nextID            uint64
 	indexLookups      atomic.Uint64
+	// compositeChildren holds one child runtime per child view of an
+	// intersecting composite retention (#length(2)#unique(x)); the window
+	// contents are the intersection of the child contents.
+	compositeChildren []*namedWindowRuntime
 }
 
 // namedWindowIndexEntry is the ordered representation of one B-tree index
@@ -1766,6 +1788,16 @@ func newNamedWindowRuntime(definition NamedWindowDefinition, contextKey string) 
 	}
 	if retention, sorted := definition.retention.(SortedWindowSpec); sorted && retention.Rank && len(retention.UniqueKeys) > 0 {
 		state.keyed = make(map[string]storedEvent)
+	}
+	if composite, ok := definition.retention.(CompositeWindowSpec); ok && composite.Mode == IntersectWindowMode {
+		children := make([]*namedWindowRuntime, len(composite.Windows))
+		for index, childSpec := range composite.Windows {
+			childDefinition := definition
+			childDefinition.retention = childSpec
+			childDefinition.indexes = nil
+			children[index] = newNamedWindowRuntime(childDefinition, contextKey)
+		}
+		state.compositeChildren = children
 	}
 	return state
 }
@@ -2663,6 +2695,10 @@ func (w *NamedWindow) deleteWhereState(ctx context.Context, state *namedWindowRu
 		if _, isBatch := retention.Inner.(TimeBatchWindowSpec); isBatch {
 			delta.Old = nil
 		}
+	case CompositeWindowSpec:
+		// Esper forwards intersection removes to every child view, so the
+		// child states stay consistent with the window contents.
+		removeFromNamedWindowCompositeChildrenLocked(state, delta.Old)
 	}
 	w.rebuildUniqueStateForLocked(state)
 	return delta, nil
@@ -2726,6 +2762,9 @@ func (w *NamedWindow) updateWhereState(ctx context.Context, state *namedWindowRu
 	if state == nil {
 		return NamedWindowDelta{}, NewError(ErrorState, "nil named-window partition")
 	}
+	if composite, ok := state.def.retention.(CompositeWindowSpec); ok {
+		return w.updateCompositeWhereState(state, predicate, update, now, composite)
+	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	delta := NamedWindowDelta{Time: now}
@@ -2748,6 +2787,65 @@ func (w *NamedWindow) updateWhereState(ctx context.Context, state *namedWindowRu
 		state.entries[index] = storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt}
 	}
 	w.rebuildUniqueStateForLocked(state)
+	return delta, nil
+}
+
+// updateCompositeWhereState applies on-update to an intersecting view stack.
+// Each matched event leaves every child view and its replacement enters every
+// child view (Esper pushes insert+remove through the intersection); the
+// window contents are then recomputed as the intersection of the child
+// contents, so a replacement expelled by one child (or an update that expels
+// an untouched row through a child view) leaves the window as old data.
+func (w *NamedWindow) updateCompositeWhereState(state *namedWindowRuntime, predicate func(Event) bool, update func(Event) (any, error), now time.Time, composite CompositeWindowSpec) (NamedWindowDelta, error) {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if len(state.compositeChildren) != len(composite.Windows) {
+		return NamedWindowDelta{}, NewError(ErrorState, "named-window composite retention is not initialized")
+	}
+	delta := NamedWindowDelta{Time: now}
+	previous := append([]storedEvent(nil), state.entries...)
+	replacements := make(map[int]Event)
+	for index, entry := range previous {
+		if !predicate(entry.event) {
+			continue
+		}
+		underlying, err := update(entry.event)
+		if err != nil {
+			return NamedWindowDelta{}, err
+		}
+		updated, err := newEvent(state.def.schema, underlying, now)
+		if err != nil {
+			return NamedWindowDelta{}, err
+		}
+		updated.typeName = state.def.name
+		updated.streamType = state.def.name
+		removeFromNamedWindowCompositeChildrenLocked(state, []Event{entry.event})
+		stored := storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt}
+		for childIndex, child := range state.compositeChildren {
+			if err := insertNamedWindowCompositeChildLocked(child, composite.Windows[childIndex], stored, now); err != nil {
+				return NamedWindowDelta{}, err
+			}
+		}
+		delta.Old = append(delta.Old, entry.event)
+		replacements[index] = updated
+	}
+	kept := make([]storedEvent, 0, len(previous))
+	for index, stored := range previous {
+		if updated, replaced := replacements[index]; replaced {
+			if namedWindowCompositeContainsAll(state.compositeChildren, updated) {
+				kept = append(kept, storedEvent{event: updated, receivedAt: stored.receivedAt, expiresAt: stored.expiresAt})
+				delta.New = append(delta.New, updated)
+			}
+			continue
+		}
+		if namedWindowCompositeContainsAll(state.compositeChildren, stored.event) {
+			kept = append(kept, stored)
+			continue
+		}
+		delta.Old = append(delta.Old, stored.event)
+	}
+	state.entries = kept
+	rebuildNamedWindowIndexesLocked(state)
 	return delta, nil
 }
 
@@ -3310,6 +3408,36 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 			return delta, nil
 		}
 		state.entries = append(state.entries, entry)
+	case CompositeWindowSpec:
+		// Intersecting view stacks (#length(2)#unique(intPrimitive)): each
+		// child view retains independently; the window contents are the
+		// intersection of the child contents. An event expelled by any
+		// child leaves the window as old data in the triggering insert
+		// delta (Esper IntersectionView).
+		if len(state.compositeChildren) != len(retention.Windows) {
+			return NamedWindowDelta{}, NewError(ErrorState, "named-window composite retention is not initialized")
+		}
+		previous := append([]storedEvent(nil), state.entries...)
+		for index, child := range state.compositeChildren {
+			if err := insertNamedWindowCompositeChildLocked(child, retention.Windows[index], entry, now); err != nil {
+				return NamedWindowDelta{}, err
+			}
+		}
+		admitted := namedWindowCompositeContainsAll(state.compositeChildren, event)
+		kept := make([]storedEvent, 0, len(previous)+1)
+		for _, stored := range previous {
+			if namedWindowCompositeContainsAll(state.compositeChildren, stored.event) {
+				kept = append(kept, stored)
+				continue
+			}
+			delta.Old = append(delta.Old, stored.event)
+		}
+		if admitted {
+			kept = append(kept, entry)
+		} else {
+			delta.New = nil
+		}
+		state.entries = kept
 	case UniqueWindowSpec:
 		if state.keyed == nil {
 			state.keyed = make(map[string]storedEvent)
@@ -3343,6 +3471,95 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 	}
 	rebuildNamedWindowIndexesLocked(state)
 	return delta, nil
+}
+
+// insertNamedWindowCompositeChildLocked applies one child view's retention
+// rule to a composite child runtime. Only the event-driven data window views
+// Esper commonly stacks on named windows are supported; validation rejects
+// every other child at definition time.
+func insertNamedWindowCompositeChildLocked(child *namedWindowRuntime, spec WindowSpec, entry storedEvent, now time.Time) error {
+	switch childSpec := spec.(type) {
+	case KeepAllWindowSpec:
+		child.entries = append(child.entries, entry)
+	case LengthWindowSpec:
+		child.entries = append(child.entries, entry)
+		for len(child.entries) > childSpec.Size {
+			child.entries = child.entries[1:]
+		}
+	case UniqueWindowSpec:
+		if child.keyed == nil {
+			child.keyed = make(map[string]storedEvent)
+		}
+		key := uniqueWindowKey(childSpec, entry.event, now, nil)
+		if previous, exists := child.keyed[key]; exists {
+			if childSpec.First {
+				return nil
+			}
+			for index, candidate := range child.entries {
+				if sameEvent(candidate.event, previous.event) {
+					child.entries[index] = entry
+					child.keyed[key] = entry
+					return nil
+				}
+			}
+			child.keyed[key] = entry
+			child.entries = append(child.entries, entry)
+			return nil
+		}
+		child.keyed[key] = entry
+		child.keyOrder = append(child.keyOrder, key)
+		child.entries = append(child.entries, entry)
+	default:
+		return NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window composite child %T", spec))
+	}
+	return nil
+}
+
+// namedWindowCompositeContainsAll reports whether every composite child
+// currently retains the event.
+func namedWindowCompositeContainsAll(children []*namedWindowRuntime, event Event) bool {
+	for _, child := range children {
+		if !containsEvent(child.entries, event) {
+			return false
+		}
+	}
+	return true
+}
+
+// removeFromNamedWindowCompositeChildrenLocked drops events from every
+// composite child so a window-level delete stays consistent with the child
+// view states (Esper forwards intersection removes to all children).
+func removeFromNamedWindowCompositeChildrenLocked(state *namedWindowRuntime, removed []Event) {
+	if len(removed) == 0 || len(state.compositeChildren) == 0 {
+		return
+	}
+	removedSet := make([]storedEvent, len(removed))
+	for index, event := range removed {
+		removedSet[index] = storedEvent{event: event}
+	}
+	for _, child := range state.compositeChildren {
+		kept := child.entries[:0]
+		for _, entry := range child.entries {
+			if !containsEvent(removedSet, entry.event) {
+				kept = append(kept, entry)
+			}
+		}
+		child.entries = kept
+		if child.keyed != nil {
+			for key, stored := range child.keyed {
+				if containsEvent(removedSet, stored.event) {
+					delete(child.keyed, key)
+				}
+			}
+			keyOrder := child.keyOrder[:0]
+			for _, key := range child.keyOrder {
+				if _, exists := child.keyed[key]; exists {
+					keyOrder = append(keyOrder, key)
+				}
+			}
+			child.keyOrder = keyOrder
+		}
+	}
 }
 
 func (w *NamedWindow) expire(at time.Time) NamedWindowDelta {

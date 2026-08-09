@@ -3330,3 +3330,146 @@ func TestInfraNWViewsOnInsertPreemptiveTwoWindowParity(t *testing.T) {
 	}
 	nwViewsAssertNew(t, s0, "s0 trigger", []any{9})
 }
+
+// TestInfraNWViewsIntersectionParity mirrors InfraIntersection: a window with
+// an intersecting view stack (#length(2)#unique(intPrimitive)) retains the
+// intersection of the child views; inserting E3 expires E1 through the length
+// view and replaces E2 through the unique view, so both leave as old data in
+// any order. The delete/update steps are Java-probed Esper 9.0.0 behavior on
+// the same window: on-delete removes the window contents from every child
+// view, and on-update delivers the original rows as old data and the
+// replacement rows as new data while the child views stay consistent for
+// later inserts (E6 expires the updated rows through both children).
+func TestInfraNWViewsIntersectionParity(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterStruct[nwViewsBeanFull](env, "SupportBean")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowINT", schema, NamedWindowRetention(
+		IntersectWindows(LengthWindow(2), Unique(Field[nwViewsBeanFull, int]("intPrimitive"))),
+	)); err != nil {
+		t.Fatal(err)
+	}
+	intType := reflect.TypeOf(0)
+	if _, err := RegisterMap(env, "TriggerD", []FieldSpec{FieldDef("trigger", intType)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "TriggerU", []FieldSpec{FieldDef("trigger", intType)}); err != nil {
+		t.Fatal(err)
+	}
+
+	source := From[nwViewsBeanFull](env, "SupportBean")
+	insertPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"MyWindowINT",
+		SetColumn("theString", Field[nwViewsBeanFull, string]("theString")),
+		SetColumn("intPrimitive", Field[nwViewsBeanFull, int]("intPrimitive")),
+		SetColumn("longPrimitive", Field[nwViewsBeanFull, int64]("longPrimitive")),
+		SetColumn("boolPrimitive", Field[nwViewsBeanFull, bool]("boolPrimitive")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromNamedWindow(env, "MyWindowINT").Query(
+		StatementName("s0"),
+		WithOldStream(),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deletePlan, err := env.Build(OnRecord(FromAny(env, "TriggerD")).DeleteAllFromNamedWindow(
+		"MyWindowINT",
+	).Query(StatementName("delete")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(OnRecord(FromAny(env, "TriggerU")).UpdateNamedWindow(
+		"MyWindowINT",
+		Literal(true),
+		SetColumn("theString", Literal("UPD")),
+	).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployments := make([]*Deployment, 0, 3)
+	for _, plan := range []Plan{insertPlan, deletePlan, updatePlan} {
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deployments = append(deployments, deployment)
+	}
+	probe := &nwViewsProbe{rowOf: func(event Event) []any {
+		return []any{event.Get("theString").Any(), event.Get("intPrimitive").Any()}
+	}}
+	nwViewsSubscribeStatement(t, consumerDeployment.Statements()[0], probe)
+
+	send := func(theString string, intPrimitive int) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsBeanFull{TheString: theString, IntPrimitive: intPrimitive}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	trigger := func(eventType string) {
+		t.Helper()
+		if err := engine.Send(context.Background(), eventType, map[string]any{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	send("E1", 1)
+	nwViewsAssertNew(t, probe, "s0 E1", []any{"E1", 1})
+	send("E2", 2)
+	nwViewsAssertNew(t, probe, "s0 E2", []any{"E2", 2})
+	send("E3", 2)
+	if probe.count != 1 {
+		t.Fatalf("s0 E3 invoked %d times, want 1 (new=%#v old=%#v)", probe.count, probe.newRows, probe.oldRows)
+	}
+	nwViewsAssertRows(t, "s0 E3 new", probe.newRows, [][]any{{"E3", 2}})
+	nwViewsAssertRowsAnyOrder(t, "s0 E3 old", probe.oldRows, [][]any{{"E1", 1}, {"E2", 2}})
+	probe.reset()
+
+	// on-delete empties the window: only the intersected contents leave.
+	trigger("TriggerD")
+	nwViewsAssertOld(t, probe, "s0 delete", []any{"E3", 2})
+
+	send("E4", 1)
+	nwViewsAssertNew(t, probe, "s0 E4", []any{"E4", 1})
+	send("E5", 3)
+	nwViewsAssertNew(t, probe, "s0 E5", []any{"E5", 3})
+
+	// on-update delivers the original rows as old data and the replacements
+	// as new data, keeping the child views consistent.
+	trigger("TriggerU")
+	if probe.count != 1 {
+		t.Fatalf("s0 update invoked %d times, want 1 (new=%#v old=%#v)", probe.count, probe.newRows, probe.oldRows)
+	}
+	nwViewsAssertRows(t, "s0 update new", probe.newRows, [][]any{{"UPD", 1}, {"UPD", 3}})
+	nwViewsAssertRows(t, "s0 update old", probe.oldRows, [][]any{{"E4", 1}, {"E5", 3}})
+	probe.reset()
+
+	// E6 shares the unique key with the second updated row; the length view
+	// expires the first updated row, so both updated rows leave as old data.
+	send("E6", 3)
+	if probe.count != 1 {
+		t.Fatalf("s0 E6 invoked %d times, want 1 (new=%#v old=%#v)", probe.count, probe.newRows, probe.oldRows)
+	}
+	nwViewsAssertRows(t, "s0 E6 new", probe.newRows, [][]any{{"E6", 3}})
+	nwViewsAssertRowsAnyOrder(t, "s0 E6 old", probe.oldRows, [][]any{{"UPD", 1}, {"UPD", 3}})
+	probe.reset()
+
+	for _, deployment := range deployments {
+		if err := deployment.Undeploy(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := consumerDeployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
