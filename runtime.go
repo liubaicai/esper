@@ -4729,7 +4729,10 @@ func (r *statementRuntime) processUpdateStream(plan Plan, event Event, now time.
 	}
 	definition := plan.query.updateStream
 	accepted := delta.newEvents[0]
-	evalContext := EvalContext{Event: accepted, Now: now, Variables: r.variables}
+	// Engine lets subquery set/where expressions take their consistent
+	// snapshot; OuterEvent binds correlated subqueries to the pre-update
+	// event, matching Esper's update-istream correlation scope.
+	evalContext := EvalContext{Engine: r.engine, Event: accepted, OuterEvent: accepted, Now: now, Variables: r.variables}
 	if definition.where != nil {
 		value := definition.where.eval(evalContext)
 		if matched, ok := boolValue(value); !ok || !matched {

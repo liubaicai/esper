@@ -3598,9 +3598,6 @@ func (e *Environment) validateUpdateStream(query Query) error {
 		if expressionNodeContainsAggregate(assignment.Expr.node()) {
 			return NewError(ErrorInvalidRule, "aggregation functions are not supported within update-set expressions")
 		}
-		if expressionNodeContainsSubquery(assignment.Expr.node()) {
-			return NewError(ErrorInvalidRule, "subqueries within update-set expressions are not yet supported")
-		}
 		if expressionContainsPreviousAccess(assignment.Expr.node()) {
 			return NewError(ErrorInvalidRule, "update-set expressions cannot use previous or prior access")
 		}
@@ -3624,9 +3621,6 @@ func (e *Environment) validateUpdateStream(query Query) error {
 		}
 		if expressionNodeContainsAggregate(definition.where.node()) {
 			return NewError(ErrorInvalidRule, "aggregation functions are not supported within update where clauses")
-		}
-		if expressionNodeContainsSubquery(definition.where.node()) {
-			return NewError(ErrorInvalidRule, "subqueries within update where clauses are not yet supported")
 		}
 		if expressionContainsPreviousAccess(definition.where.node()) {
 			return NewError(ErrorInvalidRule, "update where clauses cannot use previous or prior access")

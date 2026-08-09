@@ -1637,3 +1637,217 @@ func TestUpdateIStreamExpressionParity(t *testing.T) {
 		t.Fatalf("s0 b = %#v, want 1 (swapped)", got)
 	}
 }
+
+// TestUpdateIStreamSubqueryParity mirrors EPLOtherUpdateSubquery: subqueries
+// in update-set and update-where. The uncorrelated part sets theString from a
+// last-event scalar subquery gated by an IN-subquery where clause (empty
+// subquery assigns null to the nullable property); the correlated part reads
+// the pre-update event via OuterField (null subquery result skips the write
+// on the non-nullable int property). Esper's optional stream alias
+// (as mystream) has no Go counterpart; the correlated redeploy boundary is
+// mirrored with a fresh identical plan.
+func TestUpdateIStreamSubqueryParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[updateIStreamBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "MyMapTypeSelect", []FieldSpec{
+		FieldDef("s0", reflect.TypeOf("")),
+		FieldDef("s1", reflect.TypeOf(int(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "MyMapTypeWhere", []FieldSpec{
+		FieldDef("w0", reflect.TypeOf(int(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "ABCStreamSQ", []FieldSpec{
+		FieldDef("theString", reflect.TypeOf((*any)(nil)).Elem()),
+		FieldDef("intPrimitive", reflect.TypeOf(int(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(Select(
+		From[updateIStreamBean](env, "SupportBean"),
+		Alias("theString", Field[updateIStreamBean, string]("theString")),
+		Alias("intPrimitive", Field[updateIStreamBean, int]("intPrimitive")),
+	).InsertInto("ABCStreamSQ", StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromAny(env, "ABCStreamSQ").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	update1Plan, err := env.Build(FromAny(env, "ABCStreamSQ").UpdateStream(
+		SetColumn("theString", SubqueryValue[string](
+			FromAny(env, "MyMapTypeSelect").Window(LastEvent()),
+			Field[Event, string]("s0"),
+		)),
+	).Where(SubqueryIn[int](
+		Field[Event, int]("intPrimitive"),
+		FromAny(env, "MyMapTypeWhere").Window(KeepAll()),
+		Field[Event, int]("w0"),
+	)).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	correlated := func(name string) Plan {
+		t.Helper()
+		plan, err := env.Build(FromAny(env, "ABCStreamSQ").UpdateStream(
+			SetColumn("intPrimitive", SubqueryValue[int](
+				FromAny(env, "MyMapTypeSelect").Window(KeepAll()),
+				Field[Event, int]("s1"),
+				Equal[string](Field[Event, string]("s0"), OuterField[string]("theString")),
+			)),
+		).Query(StatementName(name)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return plan
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, insertPlan)
+	update1Deployment, _ := updateIStreamDeployOne(t, engine, update1Plan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+
+	send := func(theString string, intPrimitive int) {
+		t.Helper()
+		if err := engine.Send(context.Background(), "SupportBean", updateIStreamBean{TheString: theString, IntPrimitive: intPrimitive}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendMap := func(eventType string, event map[string]any) {
+		t.Helper()
+		if err := engine.Send(context.Background(), eventType, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertRow := func(label string, index int, theString any, intPrimitive int) {
+		t.Helper()
+		if len(s0.newResults) <= index {
+			t.Fatalf("%s: s0 deliveries = %d, want at least %d", label, len(s0.newResults), index+1)
+		}
+		result := s0.newResults[index]
+		if got := result.Get("theString").Any(); got != theString {
+			t.Fatalf("%s theString = %#v, want %#v", label, got, theString)
+		}
+		if got := result.Get("intPrimitive").Any(); got != intPrimitive {
+			t.Fatalf("%s intPrimitive = %#v, want %d", label, got, intPrimitive)
+		}
+	}
+
+	send("E1", 0)
+	assertRow("E1", 0, "E1", 0)
+
+	sendMap("MyMapTypeWhere", map[string]any{"w0": 1})
+	send("E2", 1)
+	assertRow("E2 (empty subquery assigns null)", 1, nil, 1)
+
+	send("E3", 2)
+	assertRow("E3", 2, "E3", 2)
+
+	sendMap("MyMapTypeSelect", map[string]any{"s0": "newvalue"})
+	send("E4", 1)
+	assertRow("E4", 3, "newvalue", 1)
+
+	sendMap("MyMapTypeSelect", map[string]any{"s0": "othervalue"})
+	send("E5", 1)
+	assertRow("E5", 4, "othervalue", 1)
+
+	// Correlated subquery: null result skips the write on the primitive int.
+	if err := update1Deployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	update2Deployment, _ := updateIStreamDeployOne(t, engine, correlated("update2"))
+	send("E6", 8)
+	assertRow("E6 (null subquery skips)", 5, "E6", 8)
+
+	sendMap("MyMapTypeSelect", map[string]any{"s0": "E7", "s1": 91})
+	send("E7", 0)
+	assertRow("E7", 6, "E7", 91)
+
+	// Esper's as-clause variant correlates through the stream alias; Go
+	// redeploys an identical plan to mirror the boundary.
+	if err := update2Deployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	updateIStreamDeployOne(t, engine, correlated("update3"))
+	send("E8", 111)
+	assertRow("E8 (null subquery skips)", 7, "E8", 111)
+
+	sendMap("MyMapTypeSelect", map[string]any{"s0": "E9", "s1": -1})
+	send("E9", 0)
+	assertRow("E9", 8, "E9", -1)
+}
+
+// TestUpdateIStreamSubqueryMultikeyWArrayParity mirrors
+// EPLOtherUpdateSubqueryMultikeyWArray: a scalar grouped subquery with an
+// array (multikey) group key assigns the single group's aggregate, and a
+// multi-group result assigns null (Esper's scalar grouped subselect
+// semantics, surfaced in Go through SubqueryGroupScalar).
+func TestUpdateIStreamSubqueryMultikeyWArrayParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "SupportEventWithIntArray", []FieldSpec{
+		FieldDef("id", reflect.TypeOf("")),
+		FieldDef("array", reflect.TypeOf([]int{})),
+		FieldDef("value", reflect.TypeOf(int(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "Arriving", []FieldSpec{
+		FieldDef("value", reflect.TypeOf((*any)(nil)).Elem()),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	updatePlan, err := env.Build(FromAny(env, "Arriving").UpdateStream(
+		SetColumn("value", SubqueryGroupScalar[[]int, int](
+			FromAny(env, "SupportEventWithIntArray").Window(KeepAll()),
+			Field[Event, []int]("array"),
+			Sum[int](Field[Event, int]("value")),
+		)),
+	).Query(StatementName("update")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Plan, err := env.Build(FromAny(env, "Arriving").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	updateIStreamDeployOne(t, engine, updatePlan)
+	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
+
+	sendSWIA := func(id string, array []int, value int) {
+		t.Helper()
+		if err := engine.Send(context.Background(), "SupportEventWithIntArray", map[string]any{"id": id, "array": array, "value": value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	trigger := func(label string, want any) {
+		t.Helper()
+		before := len(s0.newResults)
+		if err := engine.Send(context.Background(), "Arriving", map[string]any{}); err != nil {
+			t.Fatal(err)
+		}
+		if len(s0.newResults) != before+1 {
+			t.Fatalf("%s: s0 deliveries = %d, want %d", label, len(s0.newResults), before+1)
+		}
+		if got := s0.newResults[before].Get("value").Any(); got != want {
+			t.Fatalf("%s value = %#v, want %#v", label, got, want)
+		}
+	}
+
+	sendSWIA("E1", []int{1, 2}, 10)
+	sendSWIA("E2", []int{1, 2}, 11)
+	trigger("single group {1,2}", 21)
+
+	sendSWIA("E3", []int{1, 2}, 12)
+	trigger("single group {1,2} after E3", 33)
+
+	sendSWIA("E4", []int{1}, 13)
+	trigger("two groups assign null", nil)
+}

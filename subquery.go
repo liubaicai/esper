@@ -1449,6 +1449,44 @@ func SubqueryGroupByAny[K any, V any](source RecordStream, key Expression[K], pr
 	})
 }
 
+// SubqueryGroupScalar groups the current inner snapshot by key and returns
+// the single accepted group's projected value as a scalar, mirroring Esper's
+// scalar grouped subselect: zero groups produce null and multiple groups
+// produce null (Esper assigns null when a scalar grouped subselect returns
+// more than one row, as observed in the update-istream multikey regression).
+// An aggregate projection such as Sum contributes one value per group; a
+// scalar projection contributes the first accepted row of the single group.
+// Slice, array, map and struct keys are supported because the key value is
+// never used as a Go map key.
+func SubqueryGroupScalar[K any, V any](source RecordStream, key Expression[K], projection Expression[V], options ...SubqueryGroupOption) Expression[V] {
+	config := SubqueryGroupConfig{}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	definition := &subqueryDefinition{
+		source:              source.node,
+		predicate:           config.Where,
+		projection:          projection,
+		groupBy:             key,
+		having:              config.Having,
+		grouped:             true,
+		aggregateProjection: isAggregateExpression(projection),
+	}
+	return makeSubqueryExpr[V]("subquery-group-scalar", "group-scalar("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		if len(values) != 1 {
+			return Null()
+		}
+		group, ok := values[0].Any().(subqueryGroupValue)
+		if !ok {
+			return Null()
+		}
+		return group.value
+	})
+}
+
 func newSubqueryColumnsDefinition(source RecordStream, selections []Selection, options ...SubqueryOption) *subqueryDefinition {
 	config := SubqueryConfig{Cardinality: SubqueryFirst}
 	for _, option := range options {
