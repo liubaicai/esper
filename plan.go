@@ -1286,6 +1286,9 @@ func (e *Environment) validateQueryModifiers(query Query) error {
 		if key.Expr == nil {
 			return fmt.Errorf("order-by key %d is nil", index)
 		}
+		if expressionNodeContainsSubquery(key.Expr.node()) {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("order-by key %d: subselects not allowed within order-by clause", index))
+		}
 		if query.rowRecog != nil {
 			node := key.Expr.node()
 			if node == nil || node.kind != "result-field" {
@@ -3521,6 +3524,13 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 	for _, key := range definition.groupBy {
 		if key == nil {
 			return NewError(ErrorInvalidRule, "group-by expression is required")
+		}
+		// Esper rejects subselects within group-by. Go keeps a documented
+		// extension for join aggregates, where a correlated subquery group
+		// key carries the join tuple scope (JoinField correlation), so the
+		// rejection applies to plain single-source aggregates only.
+		if definition.join == nil && expressionNodeContainsSubquery(key.node()) {
+			return NewError(ErrorInvalidRule, "subselects not allowed within group-by")
 		}
 		if err := validateFields(definition.input, key); err != nil {
 			return err

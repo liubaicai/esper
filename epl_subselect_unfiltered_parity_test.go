@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -294,6 +295,16 @@ func TestSubselectUnfilteredInvalidSubselectParity(t *testing.T) {
 			t.Fatalf("%s must be rejected", label)
 		}
 	}
+	assertInvalidMessage := func(label, want string, query Query) {
+		t.Helper()
+		_, err := env.Build(query)
+		if err == nil {
+			t.Fatalf("%s must be rejected", label)
+		}
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("%s error %q must contain %q", label, err.Error(), want)
+		}
+	}
 
 	// Subquery without a limiting window in the select clause.
 	assertInvalid("windowless-select", Select(
@@ -353,6 +364,29 @@ func TestSubselectUnfilteredInvalidSubselectParity(t *testing.T) {
 			Literal("a"),
 		)),
 	).Query(StatementName("s0")))
+
+	// Subselect nested inside a group-by key. Esper reports "Subselects not
+	// allowed within group-by" ahead of any subquery planning diagnostic, so
+	// the Go builder rejects before the window-less inner source is checked.
+	assertInvalidMessage("group-by-subselect", "subselects not allowed within group-by",
+		From[subselectFilteredS0](env, "SupportBean_S0").GroupBy(
+			Add[int](Field[subselectFilteredS0, int]("id"), SubqueryValue[int](
+				From[subselectFilteredS1](env, "SupportBean_S1").AsRecord(),
+				Field[any, int]("id"),
+			)),
+		).Select(
+			Alias("id", Field[subselectFilteredS0, int]("id")),
+		).Query(StatementName("s0")))
+
+	// Subselect nested inside an order-by key: "Subselects not allowed
+	// within order-by clause".
+	assertInvalidMessage("order-by-subselect", "subselects not allowed within order-by clause", Select(
+		From[subselectFilteredS0](env, "SupportBean_S0"),
+		Alias("id", Field[subselectFilteredS0, int]("id")),
+	).Query(StatementName("s0"), OrderBy(Ascending(SubqueryValue[int](
+		From[subselectFilteredS1](env, "SupportBean_S1").AsRecord(),
+		Field[any, int]("id"),
+	)))))
 }
 
 // TestSubselectUnfilteredStreamPriorParity mirrors

@@ -1461,9 +1461,9 @@
         "epl_subselect_unfiltered_parity_test.go"
       ],
       "phase": 1,
-      "status": "partial",
+      "status": "mapped",
       "remaining": [
-        "EPLSubselectInvalidSubselect group-by/order-by subselect rejection is not yet implemented in the Go builder (subselects nested inside GroupBy keys or OrderBy expressions should be rejected at Build time)"
+        "join-aggregate correlated subquery group-by keys remain a documented Go extension beyond Esper (tuple-scope correlation via JoinField)"
       ]
     },
     {
@@ -11688,13 +11688,13 @@
         "last-event",
         "length-window"
       ],
-      "status": "partial",
+      "status": "mapped",
       "evidence": [
         "java-runtime-inventory",
         "go-unit",
         "java-suite-EPLSubselectUnfiltered"
       ],
-      "difference": "Multi-row scalar subselects return null via explicit SubqueryNullOnMultiple where Esper coerces silently; the StreamPrior object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity test. Esper prior(0, x) is the candidate row itself and prior(N, x) maps to Go Prior(N-1, x). InvalidSubselect: nested-subquery rejection covers the scalar-projection shape Esper rejects, while Go keeps documented extensions for subqueries inside filter predicates (SubqueryExists scopes) and multi-column SubqueryRow fragments; the unqualified-correlation-property and IN-wildcard-type-mismatch scenarios are compile-time impossible in Go typed builders (approved differences); group-by/order-by subselect rejection remains."
+      "difference": "Multi-row scalar subselects return null via explicit SubqueryNullOnMultiple where Esper coerces silently; the StreamPrior object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity test. Esper prior(0, x) is the candidate row itself and prior(N, x) maps to Go Prior(N-1, x). InvalidSubselect: nested-subquery rejection covers the scalar-projection shape Esper rejects, while Go keeps documented extensions for subqueries inside filter predicates (SubqueryExists scopes) and multi-column SubqueryRow fragments; the unqualified-correlation-property and IN-wildcard-type-mismatch scenarios are compile-time impossible in Go typed builders (approved differences); group-by and order-by subselect rejections are now enforced at Build time, with the group-by check scoped to plain aggregates because join-aggregate correlated subquery group keys remain a documented Go extension carrying the join tuple scope (JoinField correlation)."
     },
     {
       "id": "case.infra-namedwindow-views",
