@@ -1525,12 +1525,36 @@
         "epl_other_split_stream_parity_test.go"
       ],
       "phase": 1,
-      "status": "partial",
+      "status": "mapped",
       "remaining": [
-        "contained-event from-clause branches",
-        "context property/event projection",
-        "preemptive named-window target insertion",
-        "complete representation and Java trace parity"
+        "shared Java/Go trace harness beyond the per-execution parity probes"
+      ]
+    },
+    {
+      "id": "client.basic",
+      "domain": "client",
+      "level": "G",
+      "summary": "Basic client-facing fluent statement construction, naming, filtering, projection, aggregation, length-window IR streams and one-shot timer patterns",
+      "javaRefs": [
+        "ClientBasicAggregation",
+        "ClientBasicAnnotation",
+        "ClientBasicFilter",
+        "ClientBasicLengthWindow",
+        "ClientBasicPattern",
+        "ClientBasicSelect",
+        "ClientBasicSelectClause"
+      ],
+      "goRefs": [
+        "stream.go",
+        "runtime.go",
+        "pattern.go",
+        "client_basic_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Java annotation arrays beyond the statement name use explicit Go query options or domain-specific builders",
+        "shared client API trace beyond these seven basic executions"
       ]
     }
   ],
@@ -12248,6 +12272,65 @@
         "java-suite-TestSuiteEPLOther"
       ],
       "difference": "Go exposes SplitFirst and SplitAll on a typed TriggerStream, with explicit SplitInto/SplitIntoWhen branches and pre-registered target schemas instead of EPL/SODA split clauses. SplitFrom(source).Into/IntoWhen adds a branch-local fluent source derived from the on-event root; source/filter/contained-event chains are evaluated branch-first so output-all preserves Begin/body/End route ordering, output-first selects the first branch producing rows, and one selected contained branch may emit multiple rows. SplitFirst stops after the first true branch, SplitAll emits every true branch, an unconditional final branch is the default, and when no branch matches the split statement emits the original source event. Wildcard branches preserve source fields through target-schema projection; named projections evaluate against the source event and may read ContainedParentField/ContainedParentEvent. A SplitInto target may name either a registered event type or a Named Window. Named Window targets are inserted immediately while ordinary stream routes remain queued, so a later-declared window branch is visible to an earlier-declared ordinary route's on-select cascade; map, ObjectArray, Avro, JSON and typed JSON target representations preserve their schema kind. Branch predicates and projections share the statement subquery registry: the scalar lastevent case preserves Null before SupportBean_S0 arrives and selects p00/p01 after it, while SubqueryGroupScalar over []int keys returns one-group sums and Null for multiple groups without requiring Go-comparable array keys. The FromClause documentation flow routes Begin, Item and End events through one queue, allowing an initiated-terminated context to emit the item count at termination. A context-bound single insert projects ContextID, the ContextInitiatingEvent underlying pointer and the current trigger underlying pointer without losing object identity. The builder rejects missing branches, unknown targets, unrelated/stateful branch sources, non-bool conditions and direct aggregate projections; aggregate expressions remain valid inside a subquery boundary. SODA/model round-trips are intentionally absent and are represented by the immutable fluent Plan."
+    },
+    {
+      "id": "case.client-basic",
+      "javaRuntimeIds": [
+        "java-runtime-40381e19d6042b8e08da",
+        "java-runtime-a04a95f6f67818d37e28",
+        "java-runtime-1c056fd7dfada09d7a79",
+        "java-runtime-8bdea5731ad16f448473",
+        "java-runtime-b52d65efcb1418bb072d",
+        "java-runtime-1f840e4b34b31051e2d3",
+        "java-runtime-4540e5d2e66b187c2d18"
+      ],
+      "javaNames": [
+        "ClientBasicAggregation",
+        "ClientBasicAnnotation",
+        "ClientBasicFilter",
+        "ClientBasicLengthWindow",
+        "ClientBasicPattern",
+        "ClientBasicSelect",
+        "ClientBasicSelectClause"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/basic/ClientBasicAggregation.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/basic/ClientBasicAnnotation.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/basic/ClientBasicFilter.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/basic/ClientBasicLengthWindow.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/basic/ClientBasicPattern.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/basic/ClientBasicSelect.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/basic/ClientBasicSelectClause.java"
+      ],
+      "goTests": [
+        "TestClientBasicAggregationParity",
+        "TestClientBasicAnnotationParity",
+        "TestClientBasicFilterParity",
+        "TestClientBasicLengthWindowParity",
+        "TestClientBasicPatternParity",
+        "TestClientBasicSelectParity",
+        "TestClientBasicSelectClauseParity"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "basic",
+        "statement-name",
+        "filter",
+        "projection",
+        "aggregate",
+        "length-window",
+        "irstream",
+        "pattern",
+        "timer",
+        "object-identity"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go constructs all seven basic statements with typed fluent builders rather than EPL text. StatementName is stable deployment metadata and covers the only annotation value asserted by the Java execution; Java Tag/Priority/Drop annotation-array reflection is not copied onto ordinary select statements. Wildcard select and length-window IR results preserve underlying pointer identity, CountAll emits 1/2/3, the field filter and named projection match Java, and the one-shot timer example uses TimerAt at the equivalent virtual-clock deadline because Go's TimerInterval builder is intentionally recurring."
     }
   ],
   "mappings": [
@@ -13046,6 +13129,10 @@
     {
       "capabilityId": "epl.other.split-stream",
       "caseId": "case.epl-other-split-stream"
+    },
+    {
+      "capabilityId": "client.basic",
+      "caseId": "case.client-basic"
     }
   ]
 }
