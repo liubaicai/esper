@@ -2195,6 +2195,32 @@
       ]
     },
     {
+      "id": "client.compile.statement-object-model",
+      "domain": "client",
+      "level": "G",
+      "summary": "Immutable fluent Query object model with detached expression and pattern AST inspection, stable Plan round-trips and complete clause composition",
+      "javaRefs": [
+        "ClientCompileStatementObjectModel",
+        "EPStatementObjectModel",
+        "Expression",
+        "PatternExpr"
+      ],
+      "goRefs": [
+        "statement_model.go",
+        "stream.go",
+        "plan.go",
+        "client_compile_statement_object_model_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Query and PatternStream are the executable immutable object model; Go does not expose a second mutable SODA hierarchy",
+        "InspectExpression and PatternNodeModel expose detached typed structure and constructor kinds without accepting serialized rule text",
+        "Plan.Query can be rebuilt into an identical Plan hash and canonical representation inside the same Environment",
+        "EPL parsing, toEPL formatting, Java serialization and parser-derived precedence normalization are intentionally not copied"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -14393,6 +14419,54 @@
       "difference": "CompileBatch accepts fluent NewCompileItem(query) values, compiles every item, and returns either all Plans in order or one CompileBatchError containing all CompileErrorItem values in input order. Each item preserves zero-based Index, an explicit or default one-based Line, whitespace-normalized diagnostic Expression and the structured Build Cause; Items returns a detached slice and Unwrap exposes the first cause. Two-item, multiline lines 1/6 and XX-newline-X cases reproduce the Java item counts, ordering, locations and single-line diagnostic shape. Invalid item metadata is aggregated without exposing successful sibling Plans. Java discovers statement text and lines by parsing EPL and reports unknown schema type/parser wording; Go requires real reflect.Type values, never parses the diagnostic text, and reports the corresponding typed builder/semantic cause."
     },
     {
+      "id": "case.client-compile-statement-object-model",
+      "javaRuntimeIds": [
+        "java-runtime-9a1575d7ece070133212",
+        "java-runtime-2b089990078354caaff4",
+        "java-runtime-10a9eeb018c49cd2ca35",
+        "java-runtime-30b9654e46d554b1e141",
+        "java-runtime-12909f3bb2238b952285"
+      ],
+      "javaNames": [
+        "ClientCompileSODACreateFromOM",
+        "ClientCompileSODACreateFromOMComplete",
+        "ClientCompileSODAEPLtoOMtoStmt",
+        "ClientCompileSODAPrecedenceExpressions",
+        "ClientCompileSODAPrecedencePatterns"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileStatementObjectModel.java"
+      ],
+      "goTests": [
+        "TestClientCompileSODACreateFromOMMatchesEsper",
+        "TestClientCompileSODACreateFromOMCompleteMatchesEsper",
+        "TestClientCompileSODAEPLToOMToStmtMatchesEsper",
+        "TestClientCompileSODAPrecedenceExpressionsMatchesEsper",
+        "TestClientCompileSODAPrecedencePatternsMatchesEsper",
+        "TestStatementObjectModelsAreDetachedAndNilSafe"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "statement-object-model",
+        "typed-ast",
+        "fluent-query",
+        "expression-precedence",
+        "pattern-precedence",
+        "plan-round-trip",
+        "immutable",
+        "detached-snapshot"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go uses the executable immutable Query and PatternStream values as its statement object model instead of maintaining a parallel mutable SODA class hierarchy. A wildcard model builds, deploys and preserves the received underlying value; the complete fluent model covers insert target columns by typed target schema, projections, IN filter, time window, pre-aggregate where, group-by, having, output interval and ordering. Plan.Query rebuilt in the same Environment retains name metadata, canonical bytes and hash. InspectExpression and PatternNodeModel expose detached recursive typed trees whose root and child kinds cover every Java precedence case. Parentheses are expressed directly by Go function nesting, so no EPL text parser/toEPL normalization or Java serialization surface is copied."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15478,6 +15552,10 @@
     {
       "capabilityId": "client.compile.batch-errors",
       "caseId": "case.client-compile-exception-items"
+    },
+    {
+      "capabilityId": "client.compile.statement-object-model",
+      "caseId": "case.client-compile-statement-object-model"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",

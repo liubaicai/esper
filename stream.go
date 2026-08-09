@@ -2779,6 +2779,11 @@ type Query struct {
 func (q Query) Name() string   { return q.name }
 func (q Query) Module() string { return q.moduleName }
 
+// TypedDescription returns the compiler's stable structural description of
+// this fluent Query. It supports logging and object-model inspection but is
+// deliberately not accepted as a rule-definition language.
+func (q Query) TypedDescription() string { return q.description() }
+
 // ModuleUses returns the detached public-module dependency selection applied
 // by ModulePath.Build.
 func (q Query) ModuleUses() []string { return append([]string(nil), q.moduleUses...) }
