@@ -2936,8 +2936,10 @@ func visitWindowExpressions(window WindowSpec, visit func(Expr) error) error {
 	case ExpressionBatchWindowSpec:
 		return visit(value.Trigger)
 	case GroupWindowSpec:
-		if err := visit(value.Key); err != nil {
-			return err
+		for _, key := range value.effectiveKeys() {
+			if err := visit(key); err != nil {
+				return err
+			}
 		}
 		return visitWindowExpressions(value.Inner, visit)
 	case CompositeWindowSpec:

@@ -1810,6 +1810,7 @@ func (w ExpressionBatchWindowSpec) validate() error {
 // length, time, batch, expression and uniqueness windows.
 type GroupWindowSpec struct {
 	Key   Expr
+	Keys  []Expr
 	Inner WindowSpec
 }
 
@@ -1817,16 +1818,43 @@ func GroupWindow(key Expr, inner WindowSpec) GroupWindowSpec {
 	return GroupWindowSpec{Key: key, Inner: inner}
 }
 
+// GroupWindowKeys is the multi-key form of GroupWindow, mirroring Esper's
+// #groupwin(propOne, propTwo) grouped retention.
+func GroupWindowKeys(keys []Expr, inner WindowSpec) GroupWindowSpec {
+	return GroupWindowSpec{Keys: append([]Expr(nil), keys...), Inner: inner}
+}
+
+func (w GroupWindowSpec) effectiveKeys() []Expr {
+	if len(w.Keys) > 0 {
+		return w.Keys
+	}
+	if w.Key != nil {
+		return []Expr{w.Key}
+	}
+	return nil
+}
+
 func (GroupWindowSpec) windowSpec() {}
 func (w GroupWindowSpec) description() string {
-	if w.Key == nil || w.Inner == nil {
+	keys := w.effectiveKeys()
+	if len(keys) == 0 || w.Inner == nil {
 		return "group-window(<invalid>)"
 	}
-	return "group-window(" + w.Key.Description() + "," + w.Inner.description() + ")"
+	descriptions := make([]string, 0, len(keys))
+	for _, key := range keys {
+		descriptions = append(descriptions, key.Description())
+	}
+	return "group-window(" + strings.Join(descriptions, ",") + "," + w.Inner.description() + ")"
 }
 func (w GroupWindowSpec) validate() error {
-	if w.Key == nil {
+	keys := w.effectiveKeys()
+	if len(keys) == 0 {
 		return fmt.Errorf("esper: group window key expression is required")
+	}
+	for _, key := range keys {
+		if key == nil {
+			return fmt.Errorf("esper: group window key expression is required")
+		}
 	}
 	if w.Inner == nil {
 		return fmt.Errorf("esper: group window inner window is required")

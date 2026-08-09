@@ -7724,7 +7724,7 @@ func removeFromWindowState(spec WindowSpec, state *windowRuntimeState, event Eve
 		if state.groups == nil {
 			return false
 		}
-		key := groupWindowKey(window.Key, event, now, variables)
+		key := groupWindowKeys(window.effectiveKeys(), event, now, variables)
 		child := state.groups[key]
 		if child == nil {
 			return false
@@ -7778,7 +7778,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		if state.groups == nil {
 			state.groups = make(map[string]*windowRuntimeState)
 		}
-		key := groupWindowKey(window.Key, event, now, r.variables)
+		key := groupWindowKeys(window.effectiveKeys(), event, now, r.variables)
 		child := state.groups[key]
 		if child == nil {
 			child = &windowRuntimeState{}
@@ -8091,11 +8091,25 @@ func uniqueWindowKey(window UniqueWindowSpec, event Event, now time.Time, variab
 }
 
 func groupWindowKey(expression Expr, event Event, now time.Time, variables map[string]Value) string {
-	if expression == nil {
+	return groupWindowKeys([]Expr{expression}, event, now, variables)
+}
+
+// groupWindowKeys encodes the multi-key group identity of an event, mirroring
+// Esper's #groupwin(propOne, propTwo) partition semantics.
+func groupWindowKeys(expressions []Expr, event Event, now time.Time, variables map[string]Value) string {
+	if len(expressions) == 0 {
 		return encodeKey([]any{ValueMissing, nil})
 	}
-	value := expression.eval(EvalContext{Event: event, Now: now, Variables: variables})
-	return encodeKey([]any{value.State(), value.Any()})
+	values := make([]any, 0, len(expressions)*2)
+	for _, expression := range expressions {
+		if expression == nil {
+			values = append(values, ValueMissing, nil)
+			continue
+		}
+		value := expression.eval(EvalContext{Event: event, Now: now, Variables: variables})
+		values = append(values, value.State(), value.Any())
+	}
+	return encodeKey(values)
 }
 
 func sortedWindowKey(window SortedWindowSpec, event Event, now time.Time, variables map[string]Value) string {

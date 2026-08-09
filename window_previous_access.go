@@ -38,7 +38,7 @@ func windowPreviousAccessHistoryForEvent(spec WindowSpec, state *windowRuntimeSt
 		return nil
 	}
 	if window, ok := spec.(GroupWindowSpec); ok {
-		key := groupWindowKey(window.Key, event, now, variables)
+		key := groupWindowKeys(window.effectiveKeys(), event, now, variables)
 		return windowPreviousAccessHistoryForEvent(window.Inner, state.groups[key], event, now, variables)
 	}
 	switch spec.(type) {

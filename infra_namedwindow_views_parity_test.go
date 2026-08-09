@@ -2943,3 +2943,248 @@ func TestInfraNWViewsLateConsumerJoinParity(t *testing.T) {
 	nwViewsAssertNew(t, s2, "s2 E3", []any{"E3", int64(2), "S2"})
 	nwViewsAssertRowsAnyOrder(t, "s2 iterator", s2Snapshot(), [][]any{{"E1", int64(1), "S1"}, {"E2", int64(1), "S1"}, {"E3", int64(2), "S2"}})
 }
+
+// nwViewsBeanFull mirrors SupportBean (theString, intPrimitive, longPrimitive,
+// boolPrimitive) for the grouped late-start executions.
+type nwViewsBeanFull struct {
+	TheString     string `esper:"theString"`
+	IntPrimitive  int    `esper:"intPrimitive"`
+	LongPrimitive int64  `esper:"longPrimitive"`
+	BoolPrimitive bool   `esper:"boolPrimitive"`
+}
+
+// nwViewsGroupedSchema mirrors the (theString, intPrimitive) window schema of
+// InfraSelectGroupedViewLateStart.
+type nwViewsGroupedSchema struct {
+	TheString    string `esper:"theString"`
+	IntPrimitive int    `esper:"intPrimitive"`
+}
+
+// nwViewsVariableSet mirrors SupportVariableSetEvent (variableName, value).
+type nwViewsVariableSet struct {
+	VariableName string `esper:"variableName"`
+	Value        string `esper:"value"`
+}
+
+// nwViewsGroupedFull mirrors the window-created schema of
+// InfraSelectGroupedViewLateStartVariableIterate (theString, intPrimitive,
+// longPrimitive, boolPrimitive). Esper derives a distinct event type for the
+// create-window select columns, so the Go port registers a distinct struct;
+// reusing nwViewsBeanFull would re-point the Go-type -> event-type index and
+// misroute SupportBean sends.
+type nwViewsGroupedFull struct {
+	TheString     string `esper:"theString"`
+	IntPrimitive  int    `esper:"intPrimitive"`
+	LongPrimitive int64  `esper:"longPrimitive"`
+	BoolPrimitive bool   `esper:"boolPrimitive"`
+}
+
+// TestInfraNWViewsSelectGroupedViewLateStartParity mirrors
+// InfraSelectGroupedViewLateStart: a #groupwin(theString, intPrimitive)#length(9)
+// window retains every row (no group reaches the per-group limit) and a
+// group-by count consumer deployed late replays the retained rows into its
+// grouped aggregate state, iterating ten groups in order.
+func TestInfraNWViewsSelectGroupedViewLateStartParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[nwViewsBeanFull](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	windowSchema, err := RegisterStruct[nwViewsGroupedSchema](env, "MyWindowSGVSSchema")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowSGVS", windowSchema, NamedWindowRetention(GroupWindowKeys(
+		[]Expr{
+			Field[nwViewsGroupedSchema, string]("theString"),
+			Field[nwViewsGroupedSchema, int]("intPrimitive"),
+		},
+		LengthWindow(9),
+	))); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(OnEvent(From[nwViewsBeanFull](env, "SupportBean")).InsertIntoNamedWindow(
+		"MyWindowSGVS",
+		SetColumn("theString", Field[nwViewsBeanFull, string]("theString")),
+		SetColumn("intPrimitive", Field[nwViewsBeanFull, int]("intPrimitive")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), insertPlan); err != nil {
+		t.Fatal(err)
+	}
+	send := func(theString string, intPrimitive int) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsBeanFull{TheString: theString, IntPrimitive: intPrimitive}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, stringValue := range []string{"c0", "c1", "c2"} {
+		for j := 0; j < 3; j++ {
+			send(stringValue, j)
+		}
+	}
+	send("c0", 1)
+	send("c1", 2)
+	send("c3", 3)
+
+	window, ok := engine.NamedWindow("MyWindowSGVS")
+	if !ok {
+		t.Fatal("grouped late-start window is missing")
+	}
+	if events, err := window.Snapshot(context.Background()); err != nil || len(events) != 12 {
+		t.Fatalf("create iterator length = %d err=%v, want 12", len(events), err)
+	}
+
+	// select theString, intPrimitive, count(*) from MyWindowSGVS
+	//   group by theString, intPrimitive order by theString, intPrimitive
+	theString := Field[any, string]("theString")
+	intPrimitive := Field[any, int]("intPrimitive")
+	s0Plan, err := env.Build(FromNamedWindow(env, "MyWindowSGVS").GroupBy(theString, intPrimitive).Select(
+		Alias("theString", theString),
+		Alias("intPrimitive", intPrimitive),
+		Alias("count", CountAll()),
+	).Query(
+		StatementName("s0"),
+		OrderBy(Ascending(theString), Ascending(intPrimitive)),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Deployment, err := engine.Deploy(context.Background(), s0Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nwViewsAssertRows(t, "s0 iterator", nwViewsStatementSnapshot(t, s0Deployment.Statements()[0], "theString", "intPrimitive", "count"), [][]any{
+		{"c0", 0, int64(1)},
+		{"c0", 1, int64(2)},
+		{"c0", 2, int64(1)},
+		{"c1", 0, int64(1)},
+		{"c1", 1, int64(1)},
+		{"c1", 2, int64(2)},
+		{"c2", 0, int64(1)},
+		{"c2", 1, int64(1)},
+		{"c2", 2, int64(1)},
+		{"c3", 3, int64(1)},
+	})
+}
+
+// TestInfraNWViewsSelectGroupedViewLateStartVariableIterateParity mirrors
+// InfraSelectGroupedViewLateStartVariableIterate: a variable-driven having
+// clause over the late-started grouped aggregate narrows the iterator to the
+// selected theString group each time the variable is set by an on-set trigger.
+func TestInfraNWViewsSelectGroupedViewLateStartVariableIterateParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[nwViewsBeanFull](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[nwViewsVariableSet](env, "SupportVariableSetEvent"); err != nil {
+		t.Fatal(err)
+	}
+	windowSchema, err := RegisterStruct[nwViewsGroupedFull](env, "MyWindowSGVLSSchema")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowSGVLS", windowSchema, NamedWindowRetention(GroupWindowKeys(
+		[]Expr{
+			Field[nwViewsGroupedFull, string]("theString"),
+			Field[nwViewsGroupedFull, int]("intPrimitive"),
+		},
+		LengthWindow(9),
+	))); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(OnEvent(From[nwViewsBeanFull](env, "SupportBean")).InsertIntoNamedWindow(
+		"MyWindowSGVLS",
+		SetColumn("theString", Field[nwViewsBeanFull, string]("theString")),
+		SetColumn("intPrimitive", Field[nwViewsBeanFull, int]("intPrimitive")),
+		SetColumn("longPrimitive", Field[nwViewsBeanFull, int64]("longPrimitive")),
+		SetColumn("boolPrimitive", Field[nwViewsBeanFull, bool]("boolPrimitive")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.RegisterVariable("var_1_1_1", ""); err != nil {
+		t.Fatal(err)
+	}
+	setPlan, err := env.Build(OnEvent(From[nwViewsVariableSet](env, "SupportVariableSetEvent").Filter(
+		Equal[string](Field[nwViewsVariableSet, string]("variableName"), Literal[string]("var_1_1_1")),
+	)).SetVariables(
+		SetVariableExpr("var_1_1_1", Field[nwViewsVariableSet, string]("value")),
+	).Query(StatementName("set")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	for _, plan := range []Plan{insertPlan, setPlan} {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send := func(event nwViewsBeanFull) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setVariable := func(value string) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), nwViewsVariableSet{VariableName: "var_1_1_1", Value: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, stringValue := range []string{"c0", "c1", "c2"} {
+		for j := 0; j < 3; j++ {
+			send(nwViewsBeanFull{TheString: stringValue, IntPrimitive: j, LongPrimitive: int64(j), BoolPrimitive: true})
+		}
+	}
+	send(nwViewsBeanFull{TheString: "c1", IntPrimitive: 1, LongPrimitive: 10, BoolPrimitive: true})
+
+	window, ok := engine.NamedWindow("MyWindowSGVLS")
+	if !ok {
+		t.Fatal("variable-iterate window is missing")
+	}
+	if events, err := window.Snapshot(context.Background()); err != nil || len(events) != 10 {
+		t.Fatalf("create iterator length = %d err=%v, want 10", len(events), err)
+	}
+
+	// select theString, intPrimitive, avg(longPrimitive) as avgLong, count(boolPrimitive) as cntBool
+	//   from MyWindowSGVLS group by theString, intPrimitive
+	//   having theString = var_1_1_1 order by theString, intPrimitive
+	theString := Field[any, string]("theString")
+	intPrimitive := Field[any, int]("intPrimitive")
+	s0Plan, err := env.Build(FromNamedWindow(env, "MyWindowSGVLS").GroupBy(theString, intPrimitive).Select(
+		Alias("theString", theString),
+		Alias("intPrimitive", intPrimitive),
+		Alias("avgLong", Avg[int64](Field[any, int64]("longPrimitive"))),
+		Alias("cntBool", Count[bool](Field[any, bool]("boolPrimitive"))),
+	).Having(
+		Equal[string](theString, VariableRef[string]("var_1_1_1")),
+	).Query(
+		StatementName("s0"),
+		OrderBy(Ascending(theString), Ascending(intPrimitive)),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Deployment, err := engine.Deploy(context.Background(), s0Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s0Snapshot := func() [][]any { return nwViewsStatementSnapshot(t, s0Deployment.Statements()[0], "theString", "intPrimitive", "avgLong", "cntBool") }
+
+	setVariable("c0")
+	nwViewsAssertRows(t, "s0 iterator c0", s0Snapshot(), [][]any{
+		{"c0", 0, 0.0, int64(1)},
+		{"c0", 1, 1.0, int64(1)},
+		{"c0", 2, 2.0, int64(1)},
+	})
+
+	setVariable("c1")
+	nwViewsAssertRows(t, "s0 iterator c1", s0Snapshot(), [][]any{
+		{"c1", 0, 0.0, int64(1)},
+		{"c1", 1, 5.5, int64(2)},
+		{"c1", 2, 2.0, int64(1)},
+	})
+}

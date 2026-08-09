@@ -2993,7 +2993,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 				// as old data in the same delta as the triggering insert.
 				entries = append(entries, storedEvent{event: preparedInsert, receivedAt: now})
 				delta.New = append(delta.New, preparedInsert)
-				kept, expelled := expelGroupedLengthOverflow(entries, retention.Key, inner.Size, now, nil)
+				kept, expelled := expelGroupedLengthOverflow(entries, retention.effectiveKeys(), inner.Size, now, nil)
 				entries = kept
 				delta.Old = append(delta.Old, expelled...)
 			case TimeBatchWindowSpec:
@@ -3281,7 +3281,7 @@ func (w *NamedWindow) insertWithVariables(now time.Time, underlying any, variabl
 			// group; the oldest events of an over-full group leave as old
 			// data in the same delta as the triggering insert.
 			state.entries = append(state.entries, entry)
-			kept, expelled := expelGroupedLengthOverflow(state.entries, retention.Key, inner.Size, now, variables)
+			kept, expelled := expelGroupedLengthOverflow(state.entries, retention.effectiveKeys(), inner.Size, now, variables)
 			state.entries = kept
 			delta.Old = append(delta.Old, expelled...)
 		case TimeBatchWindowSpec:
@@ -3463,7 +3463,7 @@ func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindow
 		if !ok || state.timeBatchBoundary.IsZero() {
 			return NamedWindowDelta{}
 		}
-		return expireNamedWindowGroupedBatchRollover(state, at, inner.Duration, retention.Key)
+		return expireNamedWindowGroupedBatchRollover(state, at, inner.Duration, retention.effectiveKeys())
 	case TimeOrderWindowSpec:
 		// time_order keeps events sorted by their external timestamp and
 		// expires them under the engine clock at timestamp plus the period.
@@ -3555,7 +3555,7 @@ func expireNamedWindowBatchRollover(state *namedWindowRuntime, at time.Time, dur
 // batch is delivered with events grouped by the group key in first-seen
 // group order (Esper concatenates the per-group completed batches into one
 // new-data delivery).
-func expireNamedWindowGroupedBatchRollover(state *namedWindowRuntime, at time.Time, duration time.Duration, key Expr) NamedWindowDelta {
+func expireNamedWindowGroupedBatchRollover(state *namedWindowRuntime, at time.Time, duration time.Duration, keys []Expr) NamedWindowDelta {
 	delta := NamedWindowDelta{Time: at}
 	changed := false
 	for !state.timeBatchBoundary.After(at) {
@@ -3567,7 +3567,7 @@ func expireNamedWindowGroupedBatchRollover(state *namedWindowRuntime, at time.Ti
 			groupOrder := make([]string, 0)
 			grouped := make(map[string][]Event)
 			for _, entry := range state.entries {
-				groupKey := groupWindowKey(key, entry.event, at, nil)
+				groupKey := groupWindowKeys(keys, entry.event, at, nil)
 				if _, seen := grouped[groupKey]; !seen {
 					groupOrder = append(groupOrder, groupKey)
 				}
@@ -3593,10 +3593,10 @@ func expireNamedWindowGroupedBatchRollover(state *namedWindowRuntime, at time.Ti
 // expelGroupedLengthOverflow removes the oldest events of every group whose
 // retained count exceeds the per-group size, returning the kept entries and
 // the expelled events oldest-first (Esper #groupwin(key)#length(size)).
-func expelGroupedLengthOverflow(entries []storedEvent, key Expr, size int, now time.Time, variables map[string]Value) ([]storedEvent, []Event) {
+func expelGroupedLengthOverflow(entries []storedEvent, keys []Expr, size int, now time.Time, variables map[string]Value) ([]storedEvent, []Event) {
 	counts := make(map[string]int)
 	for _, entry := range entries {
-		counts[groupWindowKey(key, entry.event, now, variables)]++
+		counts[groupWindowKeys(keys, entry.event, now, variables)]++
 	}
 	excess := make(map[string]int)
 	for groupKey, count := range counts {
@@ -3610,7 +3610,7 @@ func expelGroupedLengthOverflow(entries []storedEvent, key Expr, size int, now t
 	kept := entries[:0]
 	var expelled []Event
 	for _, entry := range entries {
-		groupKey := groupWindowKey(key, entry.event, now, variables)
+		groupKey := groupWindowKeys(keys, entry.event, now, variables)
 		if excess[groupKey] > 0 {
 			excess[groupKey]--
 			expelled = append(expelled, entry.event)
