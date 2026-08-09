@@ -3550,3 +3550,78 @@ func TestInfraNWViewsDeepSupertypeInsertParity(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestInfraNWViewsSelectStreamDotStarInsertParity mirrors
+// InfraSelectStreamDotStarInsert: an object-array window declared (p0 int)
+// with insert into ... select intPrimitive as p0, sb.* as c0 from SupportBean
+// as sb. Esper compiles the stream-star column and silently drops it at
+// insert (Java-probed Esper 9.0.0: the object-array row holds p0 only). The
+// Go typed chain deliberately validates insert columns against the window
+// schema, so the undeclared c0 column is a Build-time ErrorUnknownName — an
+// approved difference; the expressible p0-only form retains exactly p0,
+// matching the Java runtime observation.
+func TestInfraNWViewsSelectStreamDotStarInsertParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[nwViewsBeanFull](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	windowSchema, err := RegisterObjectArray(env, "MyNWWindowObjectArray", []FieldSpec{
+		FieldDef("p0", reflect.TypeOf(0)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyNWWindowObjectArray", windowSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	source := From[nwViewsBeanFull](env, "SupportBean")
+
+	// sb.* as c0: the Go chain validates insert columns against the window
+	// schema, so the undeclared stream-star column fails at Build time
+	// instead of compiling and being silently dropped at insert.
+	if _, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"MyNWWindowObjectArray",
+		SetColumn("p0", Field[nwViewsBeanFull, int]("intPrimitive")),
+		SetColumn("c0", Field[nwViewsBeanFull, string]("theString")),
+	).Query(StatementName("insert-c0"))); err == nil || !errors.Is(err, ErrorUnknownName) {
+		t.Fatalf("stream-star insert error = %v, want ErrorUnknownName", err)
+	}
+
+	// The expressible form retains exactly p0, matching the Java probe (the
+	// object-array row holds p0 only).
+	insertPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow(
+		"MyNWWindowObjectArray",
+		SetColumn("p0", Field[nwViewsBeanFull, int]("intPrimitive")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	insertDeployment, err := engine.Deploy(context.Background(), insertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	window, ok := engine.NamedWindow("MyNWWindowObjectArray")
+	if !ok {
+		t.Fatal("object-array window is missing")
+	}
+	if err := engine.SendEvent(context.Background(), nwViewsBeanFull{TheString: "E1", IntPrimitive: 5}); err != nil {
+		t.Fatal(err)
+	}
+	events, err := window.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("window holds %d events, want 1", len(events))
+	}
+	if got := events[0].Get("p0").Any(); got != 5 {
+		t.Fatalf("window p0 = %#v, want 5", got)
+	}
+	if names := events[0].Schema().PropertyNames(); !reflect.DeepEqual(names, []string{"p0"}) {
+		t.Fatalf("window event properties = %#v, want [p0]", names)
+	}
+	if err := insertDeployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
