@@ -297,6 +297,18 @@ type TriggerQuery struct {
 	definition *triggerDefinition
 }
 
+// InModule binds table or Named Window target resolution to a typed module.
+// It returns a detached query value and never mutates the original chain.
+func (q TriggerQuery) InModule(module Module) TriggerQuery {
+	if q.definition == nil {
+		return q
+	}
+	definition := *q.definition
+	definition.moduleName = module.name
+	q.definition = &definition
+	return q
+}
+
 func (s TriggerStream[T]) InsertIntoTable(table string, assignments ...TableAssignment) TriggerQuery {
 	return s.trigger(table, triggerInsertTable, assignments, nil)
 }

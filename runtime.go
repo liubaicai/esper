@@ -303,6 +303,7 @@ type Engine struct {
 	namedWindows                       map[string]*NamedWindow
 	statements                         map[string]*Statement
 	deployments                        map[string]*Deployment
+	activeProtectedModules             map[string]string
 	dataflows                          map[*DataflowInstance]struct{}
 	savedDataflowInstances             map[string]*DataflowInstance
 	pendingStatementDispatches         []statementDispatch
@@ -360,6 +361,7 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		namedWindows:                    make(map[string]*NamedWindow),
 		statements:                      make(map[string]*Statement),
 		deployments:                     make(map[string]*Deployment),
+		activeProtectedModules:          make(map[string]string),
 		dataflows:                       make(map[*DataflowInstance]struct{}),
 		savedDataflowInstances:          make(map[string]*DataflowInstance),
 	}
@@ -379,28 +381,40 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 	if env != nil {
 		env.mu.RLock()
 		for name, definition := range env.contexts {
+			if _, protected := env.protectedModuleForQualifiedNameLocked(name); protected {
+				continue
+			}
 			engine.contextCreated[name] = true
 			if definition.isTemporal() {
 				engine.contextTemporalOrigins[name] = engine.clock.Now()
 			}
 		}
 		for name, definition := range env.variables {
+			if _, protected := env.protectedModuleForQualifiedNameLocked(name); protected {
+				continue
+			}
 			if definition.context == "" {
 				engine.variables[name] = definition.initial
 			}
 		}
 		for name, definition := range env.tables {
+			if module, ok := env.modules[definition.moduleName]; ok && module.visibility == ModuleProtected {
+				continue
+			}
 			engine.tables[name] = newTable(definition)
 		}
 		namedWindowNames := make([]string, 0, len(env.namedWindows))
-		for name := range env.namedWindows {
+		for name, definition := range env.namedWindows {
+			if module, ok := env.modules[definition.moduleName]; ok && module.visibility == ModuleProtected {
+				continue
+			}
 			namedWindowNames = append(namedWindowNames, name)
 		}
 		sort.Strings(namedWindowNames)
 		for index, name := range namedWindowNames {
 			definition := env.namedWindows[name]
 			engine.namedWindows[name] = newNamedWindow(definition, engine)
-			engine.registerNamedWindowMetricsLocked(definition.Name(), uint64(index+1))
+			engine.registerNamedWindowMetricsLocked(namedWindowMetricName(definition), uint64(index+1))
 		}
 		env.mu.RUnlock()
 	}
@@ -408,6 +422,109 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 }
 
 func (e *Environment) NewEngine(options ...EngineOption) *Engine { return NewEngine(e, options...) }
+
+func (e *Engine) activateProtectedModuleLocked(moduleName, deploymentID string) error {
+	if e == nil || e.env == nil {
+		return NewError(ErrorDependency, "engine has no environment")
+	}
+	moduleName = normalizeModuleName(moduleName)
+	if existing, active := e.activeProtectedModules[moduleName]; active {
+		return NewError(ErrorDeployment, fmt.Sprintf("protected module %q is already active in deployment %q", moduleName, existing))
+	}
+	e.env.mu.RLock()
+	definition, exists := e.env.modules[moduleName]
+	if !exists || definition.visibility != ModuleProtected {
+		e.env.mu.RUnlock()
+		return NewError(ErrorDependency, fmt.Sprintf("module %q is not protected", moduleName))
+	}
+	e.activeProtectedModules[moduleName] = deploymentID
+	for name, variable := range e.env.variables {
+		owner, protected := e.env.protectedModuleForQualifiedNameLocked(name)
+		if !protected || owner != moduleName || variable.context != "" {
+			continue
+		}
+		e.variables[name] = variable.initial
+	}
+	for name, contextDefinition := range e.env.contexts {
+		owner, protected := e.env.protectedModuleForQualifiedNameLocked(name)
+		if !protected || owner != moduleName {
+			continue
+		}
+		e.contextCreated[name] = true
+		if contextDefinition.isTemporal() {
+			e.contextTemporalOrigins[name] = e.clock.Now()
+		}
+		e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
+			kind:  contextNotificationCreated,
+			state: ContextStateEvent{ContextName: name},
+		})
+	}
+	for key, tableDefinition := range e.env.tables {
+		if tableDefinition.moduleName == moduleName {
+			e.tables[key] = newTable(tableDefinition)
+		}
+	}
+	for key, windowDefinition := range e.env.namedWindows {
+		if windowDefinition.moduleName != moduleName {
+			continue
+		}
+		e.namedWindows[key] = newNamedWindow(windowDefinition, e)
+		e.registerNamedWindowMetricsLocked(namedWindowMetricName(windowDefinition), e.nextID+1)
+	}
+	e.env.mu.RUnlock()
+	return nil
+}
+
+func (e *Engine) deactivateProtectedModuleLocked(moduleName string) {
+	if e == nil || e.env == nil {
+		return
+	}
+	moduleName = normalizeModuleName(moduleName)
+	if _, active := e.activeProtectedModules[moduleName]; !active {
+		return
+	}
+	e.env.mu.RLock()
+	for name := range e.env.variables {
+		owner, protected := e.env.protectedModuleForQualifiedNameLocked(name)
+		if protected && owner == moduleName {
+			delete(e.variables, name)
+			delete(e.variableChangeListeners, name)
+		}
+	}
+	for name := range e.env.contexts {
+		owner, protected := e.env.protectedModuleForQualifiedNameLocked(name)
+		if !protected || owner != moduleName {
+			continue
+		}
+		if e.contextCreated[name] {
+			e.queueContextDestroyedLocked(name)
+		}
+		delete(e.contextVariables, name)
+		delete(e.contextPartitionRefs, name)
+		delete(e.contextPartitionIDs, name)
+		delete(e.contextPartitionNextIDs, name)
+		delete(e.contextPartitionInstanceNextIDs, name)
+		delete(e.contextPartitionDescriptors, name)
+		delete(e.contextPartitionListeners, name)
+		delete(e.contextTemporalOrigins, name)
+		delete(e.contextCreated, name)
+		delete(e.contextStatementRefs, name)
+	}
+	for key, tableDefinition := range e.env.tables {
+		if tableDefinition.moduleName == moduleName {
+			delete(e.tables, key)
+			delete(e.contextTableOwnership, key)
+		}
+	}
+	for key, windowDefinition := range e.env.namedWindows {
+		if windowDefinition.moduleName == moduleName {
+			e.removeNamedWindowMetricsLocked(namedWindowMetricName(windowDefinition))
+			delete(e.namedWindows, key)
+		}
+	}
+	e.env.mu.RUnlock()
+	delete(e.activeProtectedModules, moduleName)
+}
 
 func (e *Engine) Now() time.Time {
 	if e == nil || e.clock == nil {
@@ -474,6 +591,15 @@ func (e *Engine) setVariablesLocked(ctx context.Context, assignments []VariableA
 		if !ok {
 			return NewError(ErrorUnknownName, fmt.Sprintf("variable %q is not registered", assignment.Name))
 		}
+		if moduleName, protected := func() (string, bool) {
+			e.env.mu.RLock()
+			defer e.env.mu.RUnlock()
+			return e.env.protectedModuleForQualifiedNameLocked(assignment.Name)
+		}(); protected {
+			if _, active := e.activeProtectedModules[moduleName]; !active {
+				return NewError(ErrorUnknownName, fmt.Sprintf("variable %q is not active", assignment.Name))
+			}
+		}
 		if definition.context != "" {
 			return NewError(ErrorState, fmt.Sprintf("variable %q is context-partitioned; use SetContextVariable", assignment.Name))
 		}
@@ -537,6 +663,11 @@ func (e *Engine) refreshVariablesLocked() {
 	for name, definition := range e.env.variables {
 		if definition.context != "" {
 			continue
+		}
+		if moduleName, protected := e.env.protectedModuleForQualifiedNameLocked(name); protected {
+			if _, active := e.activeProtectedModules[moduleName]; !active {
+				continue
+			}
 		}
 		if _, exists := e.variables[name]; !exists {
 			e.variables[name] = definition.initial
@@ -1204,6 +1335,11 @@ func (e *Engine) TableInModule(moduleName, name string) (*Table, bool) {
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if definition, ok := e.env.moduleDefinition(moduleName); ok && definition.visibility == ModuleProtected {
+		if _, active := e.activeProtectedModules[normalizeModuleName(moduleName)]; !active {
+			return nil, false
+		}
+	}
 	table, ok := e.tables[catalogKey(moduleName, name)]
 	return table, ok
 }
@@ -1235,6 +1371,11 @@ func (e *Engine) ensureNamedWindowLockedInModule(moduleName, name string) (*Name
 		return nil, false
 	}
 	key := catalogKey(moduleName, name)
+	if definition, ok := e.env.moduleDefinition(moduleName); ok && definition.visibility == ModuleProtected {
+		if _, active := e.activeProtectedModules[normalizeModuleName(moduleName)]; !active {
+			return nil, false
+		}
+	}
 	if window, ok := e.namedWindows[key]; ok {
 		return window, true
 	}
@@ -1249,7 +1390,7 @@ func (e *Engine) ensureNamedWindowLockedInModule(moduleName, name string) (*Name
 	}
 	window := newNamedWindow(definition, e)
 	e.namedWindows[key] = window
-	e.registerNamedWindowMetricsLocked(definition.Name(), e.nextID+1)
+	e.registerNamedWindowMetricsLocked(namedWindowMetricName(definition), e.nextID+1)
 	return window, true
 }
 
@@ -1885,6 +2026,7 @@ type Deployment struct {
 	engine     *Engine
 	id         string
 	statements []*Statement
+	moduleName string
 	closed     bool
 }
 
@@ -1893,6 +2035,14 @@ func (d *Deployment) ID() string {
 		return ""
 	}
 	return d.id
+}
+
+// Module returns the protected module namespace owned by this deployment.
+func (d *Deployment) Module() string {
+	if d == nil {
+		return ""
+	}
+	return d.moduleName
 }
 
 func (d *Deployment) Statements() []*Statement {
@@ -1999,10 +2149,22 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		return nil, NewError(ErrorInvalidRule, "deployment requires at least one plan")
 	}
 	seenNames := make(map[string]struct{}, len(requests))
+	deploymentModule := ""
 	for index := range requests {
 		request := &requests[index]
 		if request.plan.query.env != e.env || request.plan.schemaVersion == "" {
 			return nil, NewError(ErrorDependency, fmt.Sprintf("plan %d does not belong to this engine", index))
+		}
+		planModule := normalizeModuleName(request.plan.query.moduleName)
+		if index == 0 {
+			deploymentModule = planModule
+		} else if planModule != deploymentModule {
+			return nil, NewError(ErrorDependency, "all plans in one deployment must belong to the same module")
+		}
+		if planModule != "" {
+			if _, ok := e.env.moduleDefinition(planModule); !ok {
+				return nil, NewError(ErrorUnknownName, fmt.Sprintf("module %q is not registered", planModule))
+			}
 		}
 		parameterTypes, parameterErr := queryParameterTypes(e.env, request.plan.query)
 		if parameterErr != nil {
@@ -2051,7 +2213,18 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 	}
 	e.nextID++
 	deploymentID := fmt.Sprintf("deployment-%d", e.nextID)
-	deployment := &Deployment{engine: e, id: deploymentID, statements: make([]*Statement, 0, len(requests))}
+	deployment := &Deployment{engine: e, id: deploymentID, moduleName: deploymentModule, statements: make([]*Statement, 0, len(requests))}
+	protectedModule := false
+	activationContextEventStart := len(e.pendingContextEvents)
+	if deploymentModule != "" {
+		if definition, ok := e.env.moduleDefinition(deploymentModule); ok && definition.visibility == ModuleProtected {
+			protectedModule = true
+			if err := e.activateProtectedModuleLocked(deploymentModule, deploymentID); err != nil {
+				e.mu.Unlock()
+				return nil, err
+			}
+		}
+	}
 	tableSnapshots := make(map[string]tableMutationSnapshot)
 	for _, request := range requests {
 		if target := request.plan.query.tableTarget; target != "" {
@@ -2075,6 +2248,10 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 			}
 			for _, prepared := range deployment.statements {
 				e.cleanupPreparedStatementLocked(prepared)
+			}
+			if protectedModule {
+				e.deactivateProtectedModuleLocked(deploymentModule)
+				e.pendingContextEvents = e.pendingContextEvents[:activationContextEventStart]
 			}
 			e.mu.Unlock()
 			return nil, err
@@ -2460,6 +2637,11 @@ func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
 		e.removeStatementMetricsLocked(statement)
 		delete(e.statements, statement.id)
 		statement.markClosedLocked()
+	}
+	if deployment.moduleName != "" {
+		if definition, ok := e.env.moduleDefinition(deployment.moduleName); ok && definition.visibility == ModuleProtected {
+			e.deactivateProtectedModuleLocked(deployment.moduleName)
+		}
 	}
 	deployment.mu.Lock()
 	deployment.closed = true
@@ -6756,6 +6938,12 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 	}
 	sort.Strings(keys)
 	entries := make([]aggregateResultEntry, 0, len(keys))
+	if len(keys) == 0 && len(definition.groupBy) == 0 {
+		values, visible := evaluateEmptyAggregateGroup(definition, now, r.variables)
+		if visible {
+			entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: "<all>"})
+		}
+	}
 	for _, key := range keys {
 		group := r.aggregateState.groups[key]
 		if group == nil || (len(group.events) == 0 && !aggregateDefinitionUsesEver(definition)) {

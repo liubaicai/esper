@@ -2738,6 +2738,7 @@ type updateStreamDefinition struct {
 // Query is an immutable logical statement definition.
 type Query struct {
 	env                        *Environment
+	moduleName                 string
 	input                      *streamNode
 	aggregate                  *aggregateDefinition
 	join                       *joinDefinition
@@ -2773,7 +2774,8 @@ type Query struct {
 	subscriberDisallowed       bool
 }
 
-func (q Query) Name() string { return q.name }
+func (q Query) Name() string   { return q.name }
+func (q Query) Module() string { return q.moduleName }
 
 // Metadata returns a detached snapshot of query metadata before deployment.
 // A runtime-generated default statement name is only available from
@@ -2954,6 +2956,9 @@ func (q Query) description() string {
 }
 
 func appendQueryModifiers(parts []string, query Query) []string {
+	if query.moduleName != "" {
+		parts = append(parts, "module("+query.moduleName+")")
+	}
 	if canonical := statementMetadataCanonical(query.statementMetadata); canonical != "" {
 		parts = append(parts, canonical)
 	}

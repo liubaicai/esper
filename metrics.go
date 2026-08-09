@@ -492,6 +492,31 @@ func (e *Engine) registerNamedWindowMetricsLocked(name string, order uint64) {
 	e.registerStatementMetricEntryLocked(statementMetricKey{deploymentID: "environment", statementName: name}, order)
 }
 
+func namedWindowMetricName(definition NamedWindowDefinition) string {
+	return catalogKey(definition.moduleName, definition.name)
+}
+
+func (e *Engine) removeNamedWindowMetricsLocked(name string) {
+	if e == nil || e.statementMetrics == nil || strings.TrimSpace(name) == "" {
+		return
+	}
+	key := statementMetricKey{deploymentID: "environment", statementName: name}
+	entry := e.statementMetrics.entries[key]
+	if entry == nil {
+		return
+	}
+	entry.removed = true
+	delete(e.statementMetrics.entries, key)
+	if entry.group != nil {
+		for index, candidate := range entry.group.entries {
+			if candidate == entry {
+				entry.group.entries = append(entry.group.entries[:index], entry.group.entries[index+1:]...)
+				break
+			}
+		}
+	}
+}
+
 func (e *Engine) registerStatementMetricEntryLocked(key statementMetricKey, order uint64) {
 	if e == nil || e.statementMetrics == nil {
 		return
@@ -592,7 +617,7 @@ func (e *Engine) recordNamedWindowMetricInputLocked(window *NamedWindow, delta N
 	if e == nil || e.statementMetrics == nil || window == nil || window.state == nil {
 		return
 	}
-	entry := e.statementMetrics.entries[statementMetricKey{deploymentID: "environment", statementName: window.state.def.Name()}]
+	entry := e.statementMetrics.entries[statementMetricKey{deploymentID: "environment", statementName: namedWindowMetricName(window.state.def)}]
 	if entry == nil || !entry.enabled {
 		return
 	}

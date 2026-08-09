@@ -2526,7 +2526,9 @@ func inferDataflowBuiltinPorts(operator DataflowOperator) DataflowOperator {
 	case BeaconSourceKind:
 		setDataflowBuiltinPortType(&operator.OutputPortTypes, "out", dataflowBeaconValueType(operator.Events))
 	case LogSinkKind:
-		setDataflowBuiltinPortType(&operator.InputPortTypes, "in", dataflowRecordType())
+		// Log accepts arbitrary values, including primitive Beacon output. Keep
+		// the port wildcard instead of narrowing it to the Event/Row union used
+		// by Filter and Select.
 	}
 	return operator
 }

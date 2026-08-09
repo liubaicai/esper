@@ -1880,10 +1880,38 @@
       "phase": 1,
       "status": "mapped",
       "remaining": [
-        "deployment-local protected namespaces for infra, variables, contexts, event types and declared expressions are a separate capability slice",
+        "deployment-local protected namespaces are covered by client.multitenancy.protected-deployment-namespace",
         "Java compiler paths and access-modifier callbacks are replaced by explicitly registered typed schemas and immutable Plans",
         "continuous Table joins currently preload the Table snapshot at deployment instead of probing the secondary index for every driver event",
         "module name, uses/import visibility and ambiguity diagnostics remain in the compile/deploy capability backlog"
+      ]
+    },
+    {
+      "id": "client.multitenancy.protected-deployment-namespace",
+      "domain": "client",
+      "level": "G",
+      "summary": "Typed protected modules with deployment-local Table, Named Window, variable, context, event-type and declared-expression identity plus atomic deploy/undeploy lifecycle",
+      "javaRefs": [
+        "ClientMultitenancyProtectedInfra",
+        "ClientMultitenancyProtectedVariable",
+        "ClientMultitenancyProtectedContext",
+        "ClientMultitenancyProtectedEventType",
+        "ClientMultitenancyProtectedExpr"
+      ],
+      "goRefs": [
+        "module.go",
+        "plan.go",
+        "runtime.go",
+        "trigger.go",
+        "client_multitenancy_protected_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "public/protected cross-deployment uses/import dependency graphs and ambiguity diagnostics remain a later module-visibility slice",
+        "module-local struct, JSON, XML, Avro, ObjectArray and Variant convenience constructors can be added over the same qualified schema identity",
+        "the Environment retains immutable compile-time module artifacts after undeploy while Engine runtime definitions and state disappear",
+        "Java compiler-path access-modifier callbacks, EPL module text and JVM classloader caches are intentionally not copied"
       ]
     },
     {
@@ -13435,7 +13463,64 @@
         "java-source",
         "go-unit"
       ],
-      "difference": "Go expresses one Java compiled module as an ordered DeployPlans call and two Java compiler-path modules as separate immutable Plan deployments over an explicitly registered public derived-stream schema. The same-deployment producer/filtered consumer preserves E1/E4 delivery and E2/E3 suppression; the late consumer does not replay E1 and receives E2-E4. The Table case declares the composite primary key plus BasketIndex in the typed Environment, verifies the selected equality IndexPlan, and joins A/B VWAPrice events to weights 1/2. Java module text, compiler-path access-modifier callbacks and JVM query-plan hooks are not copied. The current continuous Table join preloads its passive Table side at deployment, so this case proves plan selection and observable results rather than a per-event physical index lookup. Deployment-local protected definitions tested by ClientMultitenancyProtected remain unmapped."
+      "difference": "Go expresses one Java compiled module as an ordered DeployPlans call and two Java compiler-path modules as separate immutable Plan deployments over an explicitly registered public derived-stream schema. The same-deployment producer/filtered consumer preserves E1/E4 delivery and E2/E3 suppression; the late consumer does not replay E1 and receives E2-E4. The Table case declares the composite primary key plus BasketIndex in the typed Environment, verifies the selected equality IndexPlan, and joins A/B VWAPrice events to weights 1/2. Java module text, compiler-path access-modifier callbacks and JVM query-plan hooks are not copied. The current continuous Table join preloads its passive Table side at deployment, so this case proves plan selection and observable results rather than a per-event physical index lookup. Deployment-local protected definitions are mapped separately by case.client-multitenancy-protected."
+    },
+    {
+      "id": "case.client-multitenancy-protected",
+      "javaRuntimeIds": [
+        "java-runtime-05256681de8ed3bf58fb",
+        "java-runtime-9d7119a26c5854720bba",
+        "java-runtime-d425a9c7e0df9af7cfa1",
+        "java-runtime-8ec3499892eb78e277d0",
+        "java-runtime-cc5803fbee1da6651f44",
+        "java-runtime-e6fe2217041ad19a048d"
+      ],
+      "javaNames": [
+        "ClientMultitenancyProtectedInfra{namedWindow=true}",
+        "ClientMultitenancyProtectedInfra{namedWindow=false}",
+        "ClientMultitenancyProtectedVariable",
+        "ClientMultitenancyProtectedContext",
+        "ClientMultitenancyProtectedEventType",
+        "ClientMultitenancyProtectedExpr"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/multitenancy/ClientMultitenancyProtected.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/multitenancy/ClientMultitenancyProtected.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/multitenancy/ClientMultitenancyProtected.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/multitenancy/ClientMultitenancyProtected.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/multitenancy/ClientMultitenancyProtected.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/multitenancy/ClientMultitenancyProtected.java"
+      ],
+      "goTests": [
+        "TestClientMultitenancyProtectedInfraParity",
+        "TestClientMultitenancyProtectedVariableParity",
+        "TestClientMultitenancyProtectedContextParity",
+        "TestClientMultitenancyProtectedEventTypeParity",
+        "TestClientMultitenancyProtectedExpressionParity",
+        "TestClientMultitenancyProtectedDeploymentLifecycleValidation"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "multitenancy",
+        "module",
+        "protected",
+        "deployment-local",
+        "named-window",
+        "table",
+        "variable",
+        "context",
+        "event-type",
+        "declared-expression",
+        "lifecycle"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go uses RegisterModule(name, ProtectedModule()) and Module.Build rather than EPL module text or compiler-path access-modifier callbacks. Module-qualified handles bind Table/Named Window targets, variables, contexts, map event types and declared expressions into immutable Plan identity. Engine deployment atomically materializes the protected runtime catalog, rejects a second active deployment of the same protected module, preserves same logical names in different modules, and removes runtime state on undeploy while another module continues processing. The tests reproduce Java's A/B infra rows, 10/20 timer variables, initiated-context counts, same-name count/sum event schemas and expression values 1/2. Immutable Environment compile artifacts intentionally remain reusable for redeployment."
     },
     {
       "id": "case.client-instrument-instrumentation-disabled",
@@ -14467,6 +14552,10 @@
     {
       "capabilityId": "client.multitenancy.module-routing-index",
       "caseId": "case.client-multitenancy-insert-index"
+    },
+    {
+      "capabilityId": "client.multitenancy.protected-deployment-namespace",
+      "caseId": "case.client-multitenancy-protected"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",

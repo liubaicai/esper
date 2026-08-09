@@ -240,6 +240,9 @@ func (e *Environment) RegisterTableInModule(moduleName, name string, columns []T
 	definition.moduleName = moduleName
 	definition.schema.name = "table:" + key
 	e.tables[key] = definition
+	if moduleName != "" {
+		e.moduleObjects[key] = moduleName
+	}
 	return definition, nil
 }
 
@@ -1689,6 +1692,9 @@ func (e *Environment) RegisterNamedWindowInModule(moduleName, name string, schem
 	}
 	definition.moduleName = moduleName
 	e.namedWindows[key] = definition
+	if moduleName != "" {
+		e.moduleObjects[key] = moduleName
+	}
 	return definition, nil
 }
 
@@ -1740,7 +1746,7 @@ type namedWindowRuntime struct {
 	timeBatchBoundary time.Time
 	extBatchBoundary  time.Time
 	maxExtTimestamp   time.Time
-	batchLast     []Event
+	batchLast         []Event
 	indexes           map[string]map[string][]int
 	indexEntries      map[string][]namedWindowIndexEntry
 	keyed             map[string]storedEvent

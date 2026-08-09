@@ -30,7 +30,8 @@ type Environment struct {
 	enumPlugins           map[string]enumPluginDefinition
 	dateTimePlugins       map[string]dateTimePluginDefinition
 	scripts               map[string]scriptDefinition
-	modules               map[string]struct{}
+	modules               map[string]moduleDefinition
+	moduleObjects         map[string]string
 	tables                map[string]TableDefinition
 	namedWindows          map[string]NamedWindowDefinition
 	contexts              map[string]ContextDefinition
@@ -49,7 +50,8 @@ func NewEnvironment() *Environment {
 		enumPlugins:           make(map[string]enumPluginDefinition),
 		dateTimePlugins:       make(map[string]dateTimePluginDefinition),
 		scripts:               make(map[string]scriptDefinition),
-		modules:               make(map[string]struct{}),
+		modules:               make(map[string]moduleDefinition),
+		moduleObjects:         make(map[string]string),
 		tables:                make(map[string]TableDefinition),
 		namedWindows:          make(map[string]NamedWindowDefinition),
 		contexts:              make(map[string]ContextDefinition),
@@ -618,6 +620,18 @@ func (e *Environment) Build(query Query) (Plan, error) {
 			canonicalParts = append(canonicalParts, fmt.Sprintf("schema-adapters(%s:%s)", schema.Name(), strings.Join(adapters, ",")))
 		}
 	}
+	e.mu.RLock()
+	moduleNames := make([]string, 0, len(e.modules))
+	moduleDefinitions := make(map[string]moduleDefinition, len(e.modules))
+	for name, definition := range e.modules {
+		moduleNames = append(moduleNames, name)
+		moduleDefinitions[name] = definition
+	}
+	e.mu.RUnlock()
+	sort.Strings(moduleNames)
+	for _, name := range moduleNames {
+		canonicalParts = append(canonicalParts, fmt.Sprintf("module-definition(%s:%s)", name, moduleDefinitions[name].visibility))
+	}
 	for _, variable := range e.Variables() {
 		canonicalParts = append(canonicalParts, fmt.Sprintf("variable(%s:%s:%s:%s:%t)", variable.name, variable.context, variable.typ, variable.initial.String(), variable.constant))
 	}
@@ -979,7 +993,7 @@ func (e *Environment) validateNamedWindowTriggerContext(definition *triggerDefin
 	if e == nil || definition == nil || definition.target != triggerTargetNamedWindow {
 		return nil
 	}
-	window, ok := e.NamedWindow(definition.table)
+	window, ok := e.NamedWindowInModule(definition.moduleName, definition.table)
 	if !ok {
 		return nil
 	}
@@ -3205,7 +3219,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 		return e.sourceSchema(source)
 	}
 	if query.trigger != nil && query.trigger.target == triggerTargetNamedWindow && query.trigger.action == triggerSelectTable {
-		window, ok := e.NamedWindow(query.trigger.table)
+		window, ok := e.NamedWindowInModule(query.trigger.moduleName, query.trigger.table)
 		if !ok {
 			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown named window %q", query.trigger.table))
 		}
@@ -3227,7 +3241,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 		return newProjectionResultSchema("result:"+query.name, fields, query.selections)
 	}
 	if query.trigger != nil && query.trigger.target == triggerTargetNamedWindow && query.trigger.action != triggerSetVariables {
-		window, ok := e.NamedWindow(query.trigger.table)
+		window, ok := e.NamedWindowInModule(query.trigger.moduleName, query.trigger.table)
 		if !ok {
 			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown named window %q", query.trigger.table))
 		}
@@ -3268,7 +3282,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 		return newProjectionResultSchema("result:"+query.name, fields, query.selections)
 	}
 	if query.trigger != nil && query.trigger.action != triggerSetVariables {
-		table, ok := e.Table(query.trigger.table)
+		table, ok := e.TableInModule(query.trigger.moduleName, query.trigger.table)
 		if !ok {
 			return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown table %q", query.trigger.table))
 		}
