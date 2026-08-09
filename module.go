@@ -263,6 +263,38 @@ func (p ModulePath) Uses(modules ...Module) ModulePath {
 	return p
 }
 
+// UsesNames appends module dependency declarations without requiring those
+// modules to be registered in this Environment. Unknown names are ignored for
+// symbol resolution unless a referenced object actually requires them. This
+// supports separately assembled/deployed module graphs while preserving the
+// declarations in Query.ModuleUses and Plan canonical identity.
+func (p ModulePath) UsesNames(names ...string) ModulePath {
+	if p.err != nil {
+		return p
+	}
+	if p.env == nil {
+		p.err = NewError(ErrorDependency, "module path has no environment")
+		return p
+	}
+	seen := make(map[string]struct{}, len(p.uses)+len(names))
+	for _, name := range p.uses {
+		seen[name] = struct{}{}
+	}
+	for _, name := range names {
+		name = normalizeModuleName(name)
+		if name == "" {
+			p.err = NewError(ErrorInvalidRule, "used module name is required")
+			return p
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		p.uses = append(p.uses, name)
+	}
+	return p
+}
+
 // Build binds module identity and dependency selection to an immutable Plan.
 func (p ModulePath) Build(query Query) (Plan, error) {
 	if p.err != nil {
@@ -363,7 +395,10 @@ func (p ModulePath) resolve(kind moduleObjectKind, logicalName string) (string, 
 		for _, moduleName := range p.uses {
 			definition, exists := p.env.modules[moduleName]
 			if !exists {
-				return "", NewError(ErrorUnknownName, fmt.Sprintf("used module %q is not registered", moduleName))
+				// UsesNames permits dependency declarations for modules assembled or
+				// deployed elsewhere. Such names participate in Plan identity and
+				// deployment ordering but do not contribute local catalog candidates.
+				continue
 			}
 			if definition.visibility != ModulePublic && moduleName != p.moduleName {
 				return "", NewError(ErrorUnknownName, fmt.Sprintf("module %q is not public", moduleName))
