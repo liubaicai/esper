@@ -566,6 +566,19 @@ func (p PatternStream) followedByWithMaximum(maximum int, maximumSet bool, maxim
 // It is the fluent Go equivalent of an observer-capable followed-by: unlike
 // FollowedBy, the right side may be a timer, event, or another combinator.
 func (p PatternStream) Then(other PatternStream) PatternStream {
+	return p.thenWithMaximum(other, 0, false)
+}
+
+// ThenMax chains an arbitrary PatternStream branch after the current branch
+// while limiting the number of concurrent matches waiting on the right side
+// of this followed-by edge. It is the fluent Go counterpart of Esper's
+// -[N]> operator with a parenthesized right side and is checked during
+// Build just like FollowedByMax.
+func (p PatternStream) ThenMax(maximum int, other PatternStream) PatternStream {
+	return p.thenWithMaximum(other, maximum, true)
+}
+
+func (p PatternStream) thenWithMaximum(other PatternStream, maximum int, maximumSet bool) PatternStream {
 	if p.def == nil {
 		return p
 	}
@@ -576,9 +589,11 @@ func (p PatternStream) Then(other PatternStream) PatternStream {
 	copyDefinition.everyDistinctExpiry = 0
 	copyDefinition.everyDistinctExpirySet = false
 	copyDefinition.root = &patternNode{
-		kind:  patternSequenceNode,
-		left:  patternBranchRoot(p.def),
-		right: patternBranchRoot(other.def),
+		kind:           patternSequenceNode,
+		left:           patternBranchRoot(p.def),
+		right:          patternBranchRoot(other.def),
+		sequenceMax:    maximum,
+		sequenceMaxSet: maximumSet,
 	}
 	if other.def == nil || p.env != other.env {
 		copyDefinition.sourceMismatch = true
@@ -1048,6 +1063,19 @@ type PatternQuery struct {
 	env        *Environment
 	definition *patternDefinition
 	selections []Selection
+	where      Expr
+}
+
+// Where applies a post-match filter to the completed pattern, the fluent Go
+// counterpart of a where-clause following Esper's "from pattern [...]". The
+// predicate evaluates against the match's tags (via TagField) and suppresses
+// matches it does not accept.
+func (p PatternQuery) Where(predicate Expression[bool]) PatternQuery {
+	copy := p
+	if predicate != nil {
+		copy.where = predicate
+	}
+	return copy
 }
 
 func (p PatternQuery) Query(options ...QueryOption) Query {
@@ -1062,6 +1090,7 @@ func (p PatternQuery) Query(options ...QueryOption) Query {
 		input:                      p.definitionInput(),
 		pattern:                    p.definition,
 		patternSelections:          append([]Selection(nil), p.selections...),
+		patternWhere:               p.where,
 		routeTarget:                spec.routeTarget,
 		name:                       spec.name,
 		statementUserObject:        spec.statementUserObject,

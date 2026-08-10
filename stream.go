@@ -2753,6 +2753,7 @@ type Query struct {
 	joinSelections             []JoinSelection
 	joinWhere                  Expr
 	patternSelections          []Selection
+	patternWhere               Expr
 	routeTarget                string
 	tableTarget                string
 	name                       string

@@ -3158,6 +3158,35 @@
         "and-state match cache keeps the latest match per side instead of Esper's full combination list for repeated every-leg completions before the other side completes",
         "standalone (non-every) or-with-not roots fire on the first event instead of at deploy time"
       ]
+    },
+    {
+      "id": "pattern.operator-followed-by",
+      "domain": "pattern",
+      "level": "G",
+      "summary": "Pattern followed-by operator semantics: a completed followed-by stays resident while its right branch has not quit (an every leg keeps reporting fresh completions through the completed-sequence advance; an or-with-not branch that already reported its vacant match still listens for the positive alternative); right branches satisfied at spawn (not, or-with-not) complete the followed-by immediately with a null right side; outer every over a followed-by keeps the completed sequence in its spawned set and starts a fresh sibling per completion so nested multiplicities (every (b -> every d), every (every a -> every b)) match Esper exactly; correlated not predicates cancel only their own branch; bounded -[N]> edges and the statement-level where filter after from pattern are supported",
+      "javaRefs": [
+        "PatternOpWHarness",
+        "PatternFollowedByWithNot",
+        "PatternFollowedByTimer",
+        "PatternMemoryRFIDEvent",
+        "PatternRFIDZoneExit",
+        "PatternRFIDZoneEnter",
+        "PatternFollowedNotEvery",
+        "PatternFollowedEveryMultiple",
+        "PatternFilterGreaterThen",
+        "PatternFollowedOrPermFalse"
+      ],
+      "goRefs": [
+        "pattern_followedby_parity_test.go",
+        "runtime.go",
+        "pattern.go"
+      ],
+      "phase": 3,
+      "status": "mapped",
+      "remaining": [
+        "harness USE_EPL_AND_CONSUME_NOCHECK style (consume + discard/suppress annotations) is tracked under the consuming-pattern suites",
+        "COMPILE_TO_MODEL/COMPILE_TO_EPL object-model round-trip styles are EPL-compiler features outside the fluent Go API surface"
+      ]
     }
   ],
   "cases": [
@@ -17830,6 +17859,65 @@
         "go-unit"
       ],
       "difference": "Go parity tests replay the exact W-harness match sequences including every(every(b)) and-not B3 doubling, spawn-swallowed every(b or not d), and single-attempt every(b -> d) with and-not. Go-style differences: the object-model toEPL round trip is covered by Go pattern model shape tests; an or match carries only the firing branch's tags; the and side cache keeps the latest match per side (no cartesian combination list); standalone or-with-not roots fire on the first event rather than at deploy."
+    },
+    {
+      "id": "case.pattern-operator-followed-by",
+      "javaRuntimeIds": [
+        "java-runtime-d896ea164e3cebd5c27e",
+        "java-runtime-df0604ce4c4e286b3e6e",
+        "java-runtime-4759bc801b8c0be6c10a",
+        "java-runtime-a477964502f64fe1b368",
+        "java-runtime-f8ac45e337f93e276ac3",
+        "java-runtime-6a045f5ae813471b32e8",
+        "java-runtime-8631344fa90a6c397c84",
+        "java-runtime-25f948812c392841f1e5",
+        "java-runtime-4e9e6ad069be6a8e6074",
+        "java-runtime-7682cbc4f27c52c33cce"
+      ],
+      "javaNames": [
+        "PatternOpWHarness",
+        "PatternFollowedByWithNot",
+        "PatternFollowedByTimer",
+        "PatternMemoryRFIDEvent",
+        "PatternRFIDZoneExit",
+        "PatternRFIDZoneEnter",
+        "PatternFollowedNotEvery",
+        "PatternFollowedEveryMultiple",
+        "PatternFilterGreaterThen",
+        "PatternFollowedOrPermFalse"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedBy.java"
+      ],
+      "goTests": [
+        "TestPatternOperatorFollowedByWHarnessMatchesEsper",
+        "TestPatternFollowedByWithNotMatchesEsper",
+        "TestPatternFollowedByTimerMatchesEsper",
+        "TestPatternMemoryRFIDEventMatchesEsper",
+        "TestPatternRFIDZoneExitMatchesEsper",
+        "TestPatternRFIDZoneEnterMatchesEsper",
+        "TestPatternFollowedNotEveryMatchesEsper",
+        "TestPatternFollowedEveryMultipleMatchesEsper",
+        "TestPatternFilterGreaterThenMatchesEsper",
+        "TestPatternFollowedOrPermFalseMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "followed-by",
+        "not",
+        "or",
+        "every",
+        "timer",
+        "within",
+        "correlation"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go parity tests replay the exact W-harness match sequences validated against the live Java engine (16 cases including the four-fire every (every a -> every b) B3 multiplicity, spawn-fired b -> (d or not d) with vacant d=null, and retained done-sequences that re-fire per fresh every-leg completion). ThenMax exposes bounded -[N]> edges with composite right sides; PatternQuery.Where is the fluent counterpart of the statement-level where after from pattern [...]. Harness consume/discard style and object-model round-trip styles are out of fluent-API scope."
     }
   ],
   "mappings": [
@@ -19020,14 +19108,18 @@
     {
       "capabilityId": "pattern.operator-not",
       "caseId": "case.pattern-operator-not"
+    },
+    {
+      "capabilityId": "pattern.operator-followed-by",
+      "caseId": "case.pattern-operator-followed-by"
     }
   ],
   "summary": {
-    "totalCases": 297,
-    "totalCapabilities": 104,
-    "mappedCases": 279,
+    "totalCases": 298,
+    "totalCapabilities": 105,
+    "mappedCases": 280,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1918
+    "disposedRuntimeIds": 1928
   }
 }

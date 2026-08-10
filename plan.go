@@ -2878,6 +2878,9 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 		if err := visitSelectionsExpressions(query.patternSelections, visit); err != nil {
 			return err
 		}
+		if err := visit(query.patternWhere); err != nil {
+			return err
+		}
 	}
 	if query.rowRecog != nil {
 		if err := visitStreamNodeExpressions(query.rowRecog.input, visit); err != nil {

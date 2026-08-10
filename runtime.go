@@ -11772,6 +11772,20 @@ func patternCanContinueAfterMatch(progress *patternProgress) bool {
 			// matches: EvalAndStateNode reports isQuitted=false in that case and
 			// EvalOrStateNode skips quitInternal for a non-quitting child.
 			return !patternCompletionPermanent(progress)
+		case patternSequenceNode:
+			// A completed followed-by stays resident while its right branch did
+			// not quit: an every leg keeps reporting fresh completions through
+			// the completed-sequence advance, and an or-with-not branch that
+			// already reported its vacant match still listens for the positive
+			// alternative or the falsifying event.
+			if right := progress.right; right != nil && right.node != nil {
+				return !right.quit && !patternCompletionPermanent(right)
+			}
+		case patternWithinNode:
+			// A timer guard delegates survival to its child: a followed-by
+			// whose every right leg keeps reporting stays resident inside the
+			// guard, exactly like EvalWithinStateNode forwarding isQuitted.
+			return patternCanContinueAfterMatch(progress.child)
 		}
 	}
 	return false
@@ -11821,12 +11835,25 @@ func patternCompletionPermanent(progress *patternProgress) bool {
 	switch progress.node.kind {
 	case patternEveryNode:
 		return false
+	case patternNotNode:
+		// A not node never quits on its own: it reports its begin-state match
+		// with isQuitted=false and only dies when the forbidden event arrives.
+		return false
 	case patternWithinNode:
 		if patternWithinCanContinue(progress) {
 			return false
 		}
 		return !patternRepeatingLegAlive(progress.child)
-	case patternSequenceNode, patternAndNode:
+	case patternSequenceNode:
+		if progress.phase >= 2 && progress.right != nil {
+			// A completed followed-by quits exactly when its last child quit.
+			return patternCompletionPermanent(progress.right)
+		}
+		// A followed-by waiting on its right side with a repeating left leg
+		// reports isQuitted=false in Esper: the every leg keeps spawning
+		// waiting branches.
+		return !patternRepeatingLegAlive(progress.left) && !patternRepeatingLegAlive(progress.right)
+	case patternAndNode:
 		// A completed followed-by/and branch with a repeating leg reports
 		// isQuitted=false in Esper: every-distinct legs keep pairing later
 		// distinct events with the tags the branch already captured.
@@ -12124,8 +12151,34 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 
 	case patternSequenceNode:
 		if progress.phase >= 2 || progress.done {
+			// A completed followed-by stays alive while its right branch has not
+			// quit: an every leg keeps reporting fresh completions, and an
+			// or-with-not branch that already reported its vacant match still
+			// listens for the positive alternative. Esper keeps such children
+			// in the followed-by state's node set; only fresh completions may
+			// re-fire the sequence.
 			next := clonePatternProgress(progress)
-			return []patternTransition{patternTransitionFor(next)}
+			right := next.right
+			if right == nil || right.quit || patternProgressTerminal(right) {
+				return []patternTransition{patternTransitionFor(next)}
+			}
+			rightTransitions := advancePatternNodeTrigger(right, trigger, variables)
+			result := make([]patternTransition, 0, len(rightTransitions))
+			for _, rightTransition := range rightTransitions {
+				candidate := clonePatternProgress(next)
+				candidate.right = rightTransition.state
+				fired := patternSideFiredFresh(progress.node.right, rightTransition, trigger)
+				if fired {
+					candidate.tags = mergePatternTags(progress.tags, rightTransition.state.tags)
+					candidate.tagValues = mergePatternTagValues(progress.tagValues, rightTransition.state.tagValues)
+					candidate.done = true
+				}
+				if patternProgressTerminal(rightTransition.state) && !patternSatisfied(rightTransition.state) {
+					candidate.expired = true
+				}
+				result = append(result, patternTransitionFrom(candidate, fired, rightTransition))
+			}
+			return result
 		}
 		if progress.phase == 0 {
 			leftTransitions := advancePatternNodeTrigger(progress.left, trigger, variables)
@@ -12158,6 +12211,13 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					inheritPatternProgressTags(next, next.right)
 					armPatternProgressTimers(next.right, trigger.now, variables)
 					next.started = true
+					if patternSatisfied(next.right) {
+						// A right branch satisfied at spawn (a not, or an or with a
+						// not side) reports its begin-state match immediately in
+						// Esper, completing the followed-by with a null right side.
+						next.phase = 2
+						next.done = true
+					}
 				}
 				result = append(result, patternTransitionFrom(next, patternSatisfied(next), leftTransition))
 				if leftTransition.complete && progress.node.left != nil && progress.node.left.kind == patternEveryNode {
@@ -12200,22 +12260,6 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				next.done = true
 			}
 			result = append(result, patternTransitionFrom(next, patternSatisfied(next), rightTransition))
-			if rightTransition.complete && progress.node.right != nil && progress.node.right.kind == patternEveryNode {
-				// A repeating right leg (every/every-distinct) keeps the
-				// followed-by branch resident after each match: Esper pairs the
-				// captured left tags with every later distinct right firing.
-				// Reset the fired flag on the retained every node so the
-				// continuation waits for the next completion instead of
-				// re-reporting the consumed one.
-				continuation := clonePatternProgress(progress)
-				continuation.right = clonePatternProgress(rightTransition.state)
-				continuation.right.done = false
-				continuation.right.started = true
-				continuation.tags = clonePatternTags(progress.tags)
-				continuation.tagValues = clonePatternTagValues(progress.tagValues)
-				continuation.started = true
-				result = append(result, patternTransitionFrom(continuation, false, rightTransition))
-			}
 		}
 		return result
 
@@ -12573,12 +12617,22 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					next.tagValues = clonePatternTagValues(childTransition.state.tagValues)
 					next.done = true
 				}
-				if next.node.everyExpr == nil && patternRepeatingLegAlive(childTransition.state) && !patternCompletionPermanent(childTransition.state) {
+				spawnSibling := next.node.everyExpr == nil && patternRepeatingLegAlive(childTransition.state) && !patternCompletionPermanent(childTransition.state)
+				if !spawnSibling {
+					next.child = newPatternEveryChildProgress(next.node.child)
+					inheritPatternSpawnTags(base.spawnTags, base.spawnTagValues, next.child)
+					armPatternProgressTimers(next.child, trigger.now, variables)
+				}
+				result = append(result, patternTransitionFrom(next, fired, childTransition))
+				if spawnSibling {
 					// Esper's every keeps a completed child that did not quit in
 					// its spawned set and starts a fresh sibling alongside it.
 					// Both keep listening, which is what multiplies nested-every
 					// matches: the retained child fires again on later events and
-					// every firing spawns yet another sibling.
+					// every firing spawns yet another sibling. The retained
+					// child keeps its older position so matches fire in
+					// lineage order, exactly like EvalEveryStateNode's
+					// spawnedNodes list.
 					sibling := clonePatternProgress(base)
 					sibling.child = newPatternEveryChildProgress(next.node.child)
 					sibling.done = false
@@ -12587,13 +12641,10 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					inheritPatternSpawnTags(base.spawnTags, base.spawnTagValues, sibling.child)
 					armPatternProgressTimers(sibling.child, trigger.now, variables)
 					result = append(result, patternTransitionFrom(sibling, false))
-				} else {
-					next.child = newPatternEveryChildProgress(next.node.child)
-					inheritPatternSpawnTags(base.spawnTags, base.spawnTagValues, next.child)
-					armPatternProgressTimers(next.child, trigger.now, variables)
 				}
+			} else {
+				result = append(result, patternTransitionFrom(next, fired, childTransition))
 			}
-			result = append(result, patternTransitionFrom(next, fired, childTransition))
 		}
 		return result
 
@@ -13099,6 +13150,14 @@ func evaluatePatternMatch(definition *patternDefinition, match patternMatch, pla
 		return Row{}, false
 	}
 	ctx := EvalContext{Event: match.current, Tags: match.tags, TagValues: match.tagValues, Now: now, Variables: variables}
+	if plan.query.patternWhere != nil {
+		// Esper's where-clause after "from pattern [...]" filters completed
+		// matches without affecting pattern state.
+		value := plan.query.patternWhere.eval(ctx)
+		if allowed, ok := boolValue(value); !ok || !allowed {
+			return Row{}, false
+		}
+	}
 	values := make([]Value, 0, len(plan.query.patternSelections))
 	for _, selection := range plan.query.patternSelections {
 		values = append(values, selection.Expr.eval(ctx))
