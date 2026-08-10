@@ -254,7 +254,13 @@
       "summary": "Core window retention, composite/group behavior and stable multi-key unique window history for fluent Go streams",
       "javaRefs": [
         "TestSuiteView",
-        "ViewMultikeyWArray"
+        "ViewMultikeyWArray",
+        "ViewSortSceneOne",
+        "ViewSortSceneTwo",
+        "ViewSortedSingleKeyBuiltin",
+        "ViewSortedMultikey",
+        "ViewSortedPrimitiveKey",
+        "ViewSortedPrev"
       ],
       "goRefs": [
         "stream.go",
@@ -262,13 +268,13 @@
         "runtime.go",
         "view_test.go",
         "group_window_test.go",
-        "composite_window_test.go"
+        "composite_window_test.go",
+        "view_sort_parity_test.go"
       ],
       "phase": 2,
       "status": "partial",
       "remaining": [
         "complete Java view family and parameterized-context matrix",
-        "rank/sort additional navigation and union/intersection propagation combinations",
         "reclaim hints, iterator/fragment metadata and shared Java/Go trace"
       ]
     },
@@ -17519,6 +17525,107 @@
         "go-unit"
       ],
       "difference": "Go Prior is 0-based from the previous event (Prior(0) is the immediately preceding event), so Java prior(1, x) maps to Go Prior(0, x); the asserted window-history values are identical."
+    },
+    {
+      "id": "case.view-sort-scenes",
+      "javaRuntimeIds": [
+        "java-runtime-3f3d09204a9f45ae766d",
+        "java-runtime-0ecb0d838725b95d5dc5"
+      ],
+      "javaNames": [
+        "ViewSortSceneOne",
+        "ViewSortSceneTwo"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewSort.java"
+      ],
+      "goTests": [
+        "TestViewSortSceneOneMatchesEsper",
+        "TestViewSortSceneTwoMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "sort",
+        "multi-key",
+        "descending",
+        "iterator",
+        "self-eviction",
+        "equal-key-order"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.view-sorted-keys",
+      "javaRuntimeIds": [
+        "java-runtime-446806e006e4e94f557a",
+        "java-runtime-437a569afc8b9686721f",
+        "java-runtime-82b46f086fc32e21fb2d"
+      ],
+      "javaNames": [
+        "ViewSortedSingleKeyBuiltin",
+        "ViewSortedMultikey",
+        "ViewSortedPrimitiveKey"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewSort.java"
+      ],
+      "goTests": [
+        "TestViewSortedSingleKeyBuiltinMatchesEsper",
+        "TestViewSortedMultikeyMatchesEsper",
+        "TestViewSortedPrimitiveKeyMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "sort",
+        "string-key",
+        "enum-key",
+        "numeric-key",
+        "self-eviction"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java SupportEnum orders by enum ordinal; the Go model uses the enum name string whose lexicographic order matches the ordinal order for ENUM_VALUE_1 < ENUM_VALUE_2."
+    },
+    {
+      "id": "case.view-sorted-prev",
+      "javaRuntimeIds": [
+        "java-runtime-be1068f9d0f38ba24c7a"
+      ],
+      "javaNames": [
+        "ViewSortedPrev"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewSort.java"
+      ],
+      "goTests": [
+        "TestViewSortedPrevMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "sort",
+        "prev",
+        "prevtail",
+        "prevcount",
+        "prevwindow",
+        "sorted-access-order"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -18681,12 +18788,24 @@
     {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-lengthwindow-iterator-prevprior"
+    },
+    {
+      "capabilityId": "view.window-core",
+      "caseId": "case.view-sort-scenes"
+    },
+    {
+      "capabilityId": "view.window-core",
+      "caseId": "case.view-sorted-keys"
+    },
+    {
+      "capabilityId": "view.window-core",
+      "caseId": "case.view-sorted-prev"
     }
   ],
   "summary": {
-    "totalCases": 290,
+    "totalCases": 293,
     "totalCapabilities": 103,
-    "mappedCases": 272,
+    "mappedCases": 275,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
     "disposedRuntimeIds": 1898

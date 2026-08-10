@@ -10361,13 +10361,13 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 				delete(state.keyed, uniqueKey)
 			}
 		}
+		if stored.lineageID == 0 {
+			stored.lineageID = r.nextJoinLineageID()
+		}
 		state.entries = append(state.entries, stored)
 		sort.SliceStable(state.entries, func(i, j int) bool {
-			return compareStoredEvents(state.entries[i].event, state.entries[j].event, window.Keys, now, r.variables) < 0
+			return sortedWindowEntryLess(state.entries[i], state.entries[j], window.Keys, window.Rank, now, r.variables)
 		})
-		if !window.Rank {
-			reverseSortedEqualRuns(state.entries, window.Keys, now, r.variables)
-		}
 		for len(state.entries) > window.Size {
 			removeIndex := len(state.entries) - 1
 			if window.Rank {
@@ -10455,17 +10455,20 @@ func sortedWindowKey(window SortedWindowSpec, event Event, now time.Time, variab
 	return encodeKey(values)
 }
 
-func reverseSortedEqualRuns(entries []storedEvent, keys []SortKey, now time.Time, variables map[string]Value) {
-	for start := 0; start < len(entries); {
-		end := start + 1
-		for end < len(entries) && compareStoredEvents(entries[start].event, entries[end].event, keys, now, variables) == 0 {
-			end++
-		}
-		for left, right := start, end-1; left < right; left, right = left+1, right-1 {
-			entries[left], entries[right] = entries[right], entries[left]
-		}
-		start = end
+// sortedWindowEntryLess orders sorted-window entries by the configured sort
+// keys. Esper sorted windows iterate equal-key runs most-recent-first, so
+// non-rank windows break key ties by descending arrival sequence (lineageID);
+// rank windows keep stable arrival order among equal keys. The deterministic
+// tie-break keeps repeated inserts consistent, which a sort-then-reverse-runs
+// pass cannot guarantee once the retained order no longer matches arrival.
+func sortedWindowEntryLess(left, right storedEvent, keys []SortKey, rank bool, now time.Time, variables map[string]Value) bool {
+	if comparison := compareStoredEvents(left.event, right.event, keys, now, variables); comparison != 0 {
+		return comparison < 0
 	}
+	if rank {
+		return false
+	}
+	return left.lineageID > right.lineageID
 }
 
 func rankEvictionIndex(entries []storedEvent, keys []SortKey, now time.Time, variables map[string]Value) int {

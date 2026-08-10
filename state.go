@@ -1753,6 +1753,7 @@ type namedWindowRuntime struct {
 	keyOrder          []string
 	listeners         map[uint64]NamedWindowListener
 	nextID            uint64
+	entrySeq          uint64
 	indexLookups      atomic.Uint64
 	// compositeChildren holds one child runtime per child view of an
 	// intersecting composite retention (#length(2)#unique(x)); the window
@@ -1945,11 +1946,8 @@ func normalizeSortedNamedWindowEntries(entries []storedEvent, retention SortedWi
 		normalized = deduplicated
 	}
 	sort.SliceStable(normalized, func(i, j int) bool {
-		return compareStoredEvents(normalized[i].event, normalized[j].event, retention.Keys, now, nil) < 0
+		return sortedWindowEntryLess(normalized[i], normalized[j], retention.Keys, retention.Rank, now, nil)
 	})
-	if !retention.Rank {
-		reverseSortedEqualRuns(normalized, retention.Keys, now, nil)
-	}
 	if retention.Rank && len(retention.UniqueKeys) > 0 {
 		keyed = make(map[string]storedEvent, len(normalized))
 		for _, entry := range normalized {
@@ -1961,6 +1959,10 @@ func normalizeSortedNamedWindowEntries(entries []storedEvent, retention SortedWi
 
 func applySortedNamedWindowInsertLocked(state *namedWindowRuntime, retention SortedWindowSpec, entry storedEvent, now time.Time, delta *NamedWindowDelta) {
 	entries, keyed := normalizeSortedNamedWindowEntries(state.entries, retention, now)
+	if entry.lineageID == 0 {
+		state.entrySeq++
+		entry.lineageID = state.entrySeq
+	}
 	var uniqueKey string
 	if retention.Rank && len(retention.UniqueKeys) > 0 {
 		uniqueKey = sortedWindowKey(retention, entry.event, now, nil)
@@ -1977,11 +1979,8 @@ func applySortedNamedWindowInsertLocked(state *namedWindowRuntime, retention Sor
 	}
 	entries = append(entries, entry)
 	sort.SliceStable(entries, func(i, j int) bool {
-		return compareStoredEvents(entries[i].event, entries[j].event, retention.Keys, now, nil) < 0
+		return sortedWindowEntryLess(entries[i], entries[j], retention.Keys, retention.Rank, now, nil)
 	})
-	if !retention.Rank {
-		reverseSortedEqualRuns(entries, retention.Keys, now, nil)
-	}
 	for len(entries) > retention.Size {
 		removeIndex := len(entries) - 1
 		if retention.Rank {
