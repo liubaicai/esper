@@ -3022,21 +3022,22 @@
         "ViewFirstUniqueSimple",
         "ViewFirstUniqueSceneOne",
         "ViewKeepAllIterator",
-        "ViewKeepAllWindowStats"
+        "ViewKeepAllWindowStats",
+        "ViewFirstEventMarketData",
+        "ViewLastEventMarketData",
+        "ViewFirstLengthMarketData",
+        "ViewLengthWindowIterator",
+        "ViewLengthWindowWPrevPrior"
       ],
       "goRefs": [
         "view_parity_test.go",
-        "view_firstunique_parity_test.go"
+        "view_firstunique_parity_test.go",
+        "view_marketdata_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
       "remaining": [
-        "ViewLengthWindowWPrevPrior",
         "ViewLengthWinWPropertyDetail",
-        "ViewLengthWindowIterator",
-        "ViewFirstEventMarketData",
-        "ViewLastEventMarketData",
-        "ViewFirstLengthMarketData",
         "ViewFirstTime suite",
         "ViewTimeWin suite",
         "ViewTimeBatch suite",
@@ -17445,6 +17446,79 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.view-marketdata-variants",
+      "javaRuntimeIds": [
+        "java-runtime-5c32ea97d29ecbe957cb",
+        "java-runtime-af419392d33ae4b948d8",
+        "java-runtime-2389705da83584b445a1"
+      ],
+      "javaNames": [
+        "ViewFirstEventMarketData",
+        "ViewLastEventMarketData",
+        "ViewFirstLengthMarketData"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewFirstEvent.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewLastEvent.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewFirstLength.java"
+      ],
+      "goTests": [
+        "TestViewFirstEventMarketDataMatchesEsper",
+        "TestViewLastEventMarketDataMatchesEsper",
+        "TestViewFirstLengthMarketDataMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "first-event",
+        "last-event",
+        "first-length",
+        "iterator",
+        "wildcard"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.view-lengthwindow-iterator-prevprior",
+      "javaRuntimeIds": [
+        "java-runtime-4d40aea7f335d0ba0d9a",
+        "java-runtime-20e53f2db18344e29925"
+      ],
+      "javaNames": [
+        "ViewLengthWindowIterator",
+        "ViewLengthWindowWPrevPrior"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewLengthWin.java"
+      ],
+      "goTests": [
+        "TestViewLengthWindowIteratorMatchesEsper",
+        "TestViewLengthWindowPrevPriorMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "length-window",
+        "iterator",
+        "prev",
+        "prior",
+        "prevtail",
+        "prevcount",
+        "prevwindow"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go Prior is 0-based from the previous event (Prior(0) is the immediately preceding event), so Java prior(1, x) maps to Go Prior(0, x); the asserted window-history values are identical."
     }
   ],
   "mappings": [
@@ -18599,14 +18673,22 @@
     {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-keepall-iterator-stats"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-marketdata-variants"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-lengthwindow-iterator-prevprior"
     }
   ],
   "summary": {
-    "totalCases": 288,
+    "totalCases": 290,
     "totalCapabilities": 103,
-    "mappedCases": 270,
+    "mappedCases": 272,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1893
+    "disposedRuntimeIds": 1898
   }
 }
