@@ -3063,6 +3063,25 @@
         "ResultSetOutputLimit* suites",
         "ResultSetQueryType* suites"
       ]
+    },
+    {
+      "id": "eplother.stream-selector",
+      "domain": "epl-other",
+      "level": "G",
+      "summary": "Stream selector semantics: irstream (insert+remove) reports new events in New and evicted in Old; rstream reports only evicted events in Old with no insert output",
+      "javaRefs": [
+        "EPLOtherIStreamRStreamConfigSelectorIRStream",
+        "EPLOtherIStreamRStreamConfigSelectorRStream"
+      ],
+      "goRefs": [
+        "view_parity_test.go"
+      ],
+      "phase": 2,
+      "status": "mapped",
+      "remaining": [
+        "EPLOtherIStreamRStreamKeywords suite",
+        "EPLOtherSelectExprStreamSelector suite"
+      ]
     }
   ],
   "cases": [
@@ -17235,6 +17254,40 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.eplother-stream-selector",
+      "javaRuntimeIds": [
+        "java-runtime-043dced54921cbf3b571",
+        "java-runtime-1e4ca2cb69bc79b30c91"
+      ],
+      "javaNames": [
+        "EPLOtherIStreamRStreamConfigSelectorIRStream",
+        "EPLOtherIStreamRStreamConfigSelectorRStream"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherIStreamRStreamConfigSelectorIRStream.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherIStreamRStreamConfigSelectorRStream.java"
+      ],
+      "goTests": [
+        "TestEPLOtherIRStreamSelectorMatchesEsper",
+        "TestEPLOtherRStreamSelectorMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "epl-other",
+        "irstream",
+        "rstream",
+        "stream-selector",
+        "length-window",
+        "eviction"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -18308,11 +18361,11 @@
     }
   ],
   "summary": {
-    "totalCases": 283,
-    "totalCapabilities": 101,
-    "mappedCases": 265,
+    "totalCases": 284,
+    "totalCapabilities": 102,
+    "mappedCases": 266,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1884
+    "disposedRuntimeIds": 1886
   }
 }

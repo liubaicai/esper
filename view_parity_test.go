@@ -184,3 +184,87 @@ func TestViewFirstLengthMatchesEsper(t *testing.T) {
 		t.Fatalf("after E3: got %d batches, want 2 (first-length full)", len(*batches))
 	}
 }
+
+// TestEPLOtherIRStreamSelectorMatchesEsper covers
+// EPLOtherIStreamRStreamConfigSelectorIRStream: default irstream behavior
+// with length window shows both new (inserted) and old (evicted) events.
+func TestEPLOtherIRStreamSelectorMatchesEsper(t *testing.T) {
+	env, engine := newViewParityEnv(t)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	source := From[viewParityBean](env, "SupportBean")
+	_, batches := deployViewParity(t, env, engine, source.Window(LengthWindow(3)), "s0")
+
+	// Fill the window (3 events)
+	sendViewBean(t, engine, "a", 0)
+	sendViewBean(t, engine, "b", 0)
+	sendViewBean(t, engine, "c", 0)
+
+	// Reset: send 4th event - 'a' evicted
+	sendViewBean(t, engine, "d", 0)
+
+	// Last batch should show new=d, old=a
+	lastBatch := (*batches)[len(*batches)-1]
+	if len(lastBatch.New) != 1 {
+		t.Fatalf("new rows = %d, want 1", len(lastBatch.New))
+	}
+	if got := lastBatch.New[0].Get("theString").Any(); got != "d" {
+		t.Fatalf("new theString=%v, want d", got)
+	}
+
+	if len(lastBatch.Old) != 1 {
+		t.Fatalf("old rows = %d, want 1", len(lastBatch.Old))
+	}
+	if got := lastBatch.Old[0].Get("theString").Any(); got != "a" {
+		t.Fatalf("old theString=%v, want a (evicted)", got)
+	}
+}
+
+// TestEPLOtherRStreamSelectorMatchesEsper covers
+// EPLOtherIStreamRStreamConfigSelectorRStream: rstream selector reports
+// only removed events as new data; inserts produce no output.
+func TestEPLOtherRStreamSelectorMatchesEsper(t *testing.T) {
+	env, engine := newViewParityEnv(t)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	source := From[viewParityBean](env, "SupportBean")
+	plan, err := env.Build(source.Window(LengthWindow(3)).Query(
+		StatementName("s0"), WithRemoveStreamOnly(),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Send a,b,c - rstream does not report inserts, so no output
+	sendViewBean(t, engine, "a", 0)
+	sendViewBean(t, engine, "b", 0)
+	sendViewBean(t, engine, "c", 0)
+	if len(batches) != 0 {
+		t.Fatalf("rstream should not report inserts, got %d batches", len(batches))
+	}
+
+	// Send d - 'a' evicted, rstream reports 'a' via Old (Go models rstream
+	// removed events in batch.Old rather than listener newData)
+	sendViewBean(t, engine, "d", 0)
+	if len(batches) != 1 {
+		t.Fatalf("rstream should report eviction, got %d batches", len(batches))
+	}
+	if len(batches[0].Old) != 1 {
+		t.Fatalf("rstream old rows = %d, want 1", len(batches[0].Old))
+	}
+	if got := batches[0].Old[0].Get("theString").Any(); got != "a" {
+		t.Fatalf("rstream old theString=%v, want a (evicted)", got)
+	}
+}
