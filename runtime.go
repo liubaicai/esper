@@ -4671,6 +4671,14 @@ type patternProgress struct {
 	// without this flag a freshly spawned filter would be dropped by the
 	// active-set admission check until its first match.
 	armed                   bool
+	// spawnTags/spawnTagValues snapshot an Every node's begin state: the tags
+	// the node held when its first child was armed. Esper starts every spawned
+	// child with that begin state, not with the tags of the match that just
+	// fired, so a restarted attempt must not inherit the previous attempt's
+	// captured events.
+	spawnTags             map[string]Event
+	spawnTagValues        map[string][]Event
+	spawnCaptured         bool
 	minimum                 int
 	maximum                 int
 	boundsResolved          bool
@@ -11268,6 +11276,19 @@ func inheritPatternProgressTags(parent, child *patternProgress) {
 	child.tagValues = mergePatternTagValues(parent.tagValues, child.tagValues)
 }
 
+// inheritPatternSpawnTags seeds a freshly spawned child with an Every node's
+// begin-state tags. Esper starts spawned children with the every node's
+// beginState; using the just-fired match tags instead would leak the previous
+// attempt's captured events into the next attempt (and merge priority would
+// let them shadow freshly captured events carrying the same tag).
+func inheritPatternSpawnTags(spawnTags map[string]Event, spawnTagValues map[string][]Event, child *patternProgress) {
+	if child == nil {
+		return
+	}
+	child.tags = mergePatternTags(spawnTags, child.tags)
+	child.tagValues = mergePatternTagValues(spawnTagValues, child.tagValues)
+}
+
 // armPatternProgressFilters marks every event filter in a freshly spawned
 // subtree as listening. Esper starts spawned child state nodes immediately,
 // so the branch must count as active before its first match; otherwise the
@@ -11577,6 +11598,8 @@ func clonePatternProgress(progress *patternProgress) *patternProgress {
 	copyProgress.schedulePeriod = clonePatternTimerScheduleRuntime(progress.schedulePeriod)
 	copyProgress.tags = clonePatternTags(progress.tags)
 	copyProgress.tagValues = clonePatternTagValues(progress.tagValues)
+	copyProgress.spawnTags = clonePatternTags(progress.spawnTags)
+	copyProgress.spawnTagValues = clonePatternTagValues(progress.spawnTagValues)
 	if len(progress.distinct) > 0 {
 		copyProgress.distinct = make(map[string]struct{}, len(progress.distinct))
 		for key := range progress.distinct {
@@ -12420,25 +12443,35 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 		// previous completion was processed. Re-creating it here would reset
 		// an inner timer guard on every virtual-clock callback and could keep
 		// Within().Every() alive forever.
-		base := clonePatternProgress(progress)
-		expirePatternProgressDistinct(base, trigger.now)
-		child := base.child
-		childTransitions := advancePatternNodeTrigger(child, trigger, variables)
-		result := make([]patternTransition, 0, len(childTransitions))
-		for _, childTransition := range childTransitions {
-			next := clonePatternProgress(base)
-			next.child = childTransition.state
-			next.started = true
-			fired := childTransition.complete
-			if patternProgressTerminal(childTransition.state) && !childTransition.complete {
-				// Every restarts its child after a failed/terminated attempt. This
-				// matters for timer-and-not branches: a forbidden event cancels
-				// only the current attempt, and the next timer is armed from the
-				// cancellation time rather than ending the enclosing repetition.
-				next.child = newPatternProgress(next.node.child)
-				armPatternProgressTimers(next.child, trigger.now, variables)
-				next.started = patternProgressActive(next.child)
-			}
+	base := clonePatternProgress(progress)
+	expirePatternProgressDistinct(base, trigger.now)
+	if !base.spawnCaptured {
+		// The first advance sees the Every node's begin state: tags inherited
+		// from an enclosing branch before any child fired. Snapshot them so
+		// restarted children below observe the same begin state Esper passes
+		// to EvalStateNode.start.
+		base.spawnTags = clonePatternTags(base.tags)
+		base.spawnTagValues = clonePatternTagValues(base.tagValues)
+		base.spawnCaptured = true
+	}
+	child := base.child
+	childTransitions := advancePatternNodeTrigger(child, trigger, variables)
+	result := make([]patternTransition, 0, len(childTransitions))
+	for _, childTransition := range childTransitions {
+		next := clonePatternProgress(base)
+		next.child = childTransition.state
+		next.started = true
+		fired := childTransition.complete
+		if patternProgressTerminal(childTransition.state) && !childTransition.complete {
+			// Every restarts its child after a failed/terminated attempt. This
+			// matters for timer-and-not branches: a forbidden event cancels
+			// only the current attempt, and the next timer is armed from the
+			// cancellation time rather than ending the enclosing repetition.
+			next.child = newPatternProgress(next.node.child)
+			inheritPatternSpawnTags(base.spawnTags, base.spawnTagValues, next.child)
+			armPatternProgressTimers(next.child, trigger.now, variables)
+			next.started = patternProgressActive(next.child)
+		}
 			if childTransition.complete {
 				if next.node.everyExpr != nil {
 					keyValue := next.node.everyExpr.eval(EvalContext{Event: trigger.event, Tags: childTransition.state.tags, TagValues: childTransition.state.tagValues, Now: trigger.now, Variables: variables})
@@ -12465,12 +12498,12 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				sibling.done = false
 				sibling.started = true
 				armPatternProgressFilters(sibling.child)
-				inheritPatternProgressTags(sibling, sibling.child)
+				inheritPatternSpawnTags(base.spawnTags, base.spawnTagValues, sibling.child)
 				armPatternProgressTimers(sibling.child, trigger.now, variables)
 				result = append(result, patternTransitionFrom(sibling, false))
 			} else {
 				next.child = newPatternProgress(next.node.child)
-				inheritPatternProgressTags(next, next.child)
+				inheritPatternSpawnTags(base.spawnTags, base.spawnTagValues, next.child)
 				armPatternProgressTimers(next.child, trigger.now, variables)
 			}
 		}

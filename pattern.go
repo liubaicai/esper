@@ -609,6 +609,23 @@ func (p PatternStream) Every() PatternStream {
 		p.def = &copyDefinition
 		return p
 	}
+	if p.def.root != nil && !p.def.every && p.def.everyDistinct == nil {
+		switch p.def.root.kind {
+		case patternAndNode, patternOrNode, patternSequenceNode, patternMatchUntilNode, patternUntilNode, patternNotNode:
+			// every <compound>: Esper's every state node holds exactly one
+			// active child attempt and only spawns the next attempt when the
+			// current one completes or fails. A definition-level every would
+			// instead start an overlapping fresh root for every event, which
+			// double-fires once two events match the same side of a compound
+			// (for example every (a and b) receiving two a-events before b).
+			// Materialize the every into the AST so the compound attempt stays
+			// single, matching Esper.
+			copyDefinition.steps = nil
+			copyDefinition.root = &patternNode{kind: patternEveryNode, child: p.def.root}
+			p.def = &copyDefinition
+			return p
+		}
+	}
 	copyDefinition.every = true
 	copyDefinition.steps = append([]patternStep(nil), p.def.steps...)
 	copyDefinition.root = p.def.root

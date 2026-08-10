@@ -60,14 +60,16 @@ func TestContainedNestedPatternSelectMatchesEsper(t *testing.T) {
 	}
 	support := From[containedAdvancedSupport](env, "ContainedAdvancedSupport")
 
-	// Every() is applied to the complete sequence so each contained review
-	// gets its own waiting branch, matching `every r=... -> SupportBean(...)`.
+	// Every() is applied to the left leg so each contained review gets its
+	// own waiting branch, matching every r=... -> SupportBean(...) (Esper's
+	// grouped every (r -> s) would hold a single attempt and ignore later
+	// reviews until the current attempt completes).
 	left := PatternFrom(reviews, "r", Literal[bool](true))
 	right := PatternFrom(support, "s", Equal[int64](
 		Field[containedAdvancedSupport, int64]("intPrimitive"),
 		TagField[int64]("r", "reviewId"),
 	))
-	plan, err := env.Build(left.Then(right).Every().Select(
+	plan, err := env.Build(left.Every().Then(right).Select(
 		Alias("reviewId", TagField[int64]("r", "reviewId")),
 	).Query(StatementName("contained-nested-pattern")))
 	if err != nil {

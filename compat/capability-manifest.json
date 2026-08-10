@@ -11126,7 +11126,10 @@
         "java-runtime-28fc7f508485cbc765a2",
         "java-runtime-6155a2b0181e2169f2a4",
         "java-runtime-d74fc320152752b79c83",
-        "java-runtime-7276e263a66840600dbc"
+        "java-runtime-7276e263a66840600dbc",
+        "java-runtime-66a43e9408a14cf8f604",
+        "java-runtime-8b97b4372f306a507abb",
+        "java-runtime-7967b2ee31d9e49e2b18"
       ],
       "javaNames": [
         "PatternEverySimple",
@@ -11190,7 +11193,11 @@
         "TestPatternMatchUntilWithTerminatorUsesBounds",
         "TestPatternMatchUntilWithTerminatorBelowMinimumExpires",
         "TestPatternOperatorEverySimpleMatchesEsper",
-        "TestPatternOperatorEveryMultiplicityMatchesEsper"
+        "TestPatternOperatorEveryMultiplicityMatchesEsper",
+        "TestPatternOperatorEveryFollowedByMatchesEsper",
+        "TestPatternOperatorEveryFollowedByWithinMatchesEsper",
+        "TestPatternOperatorEveryWithAndMatchesEsper",
+        "TestPatternOperatorEveryAndNotMatchesEsper"
       ],
       "tags": [
         "correctness",
@@ -11202,7 +11209,7 @@
         "java-baseline",
         "go-unit"
       ],
-      "difference": "Go covers outer Within versus inner Within().EveryDistinct() scope, distinct suppression with an AST-owned Every state, virtual-clock expiry via Within and explicit EveryDistinctFor, ordinary Pattern and Pattern Context lifecycle, scoped WithinOrMax guards, dynamic duration from captured tags, variables, deployment parameters and component expressions, repeated-tag property access including indexed fields from repeated event tags, component-wise fixed-duration parameters, variable reconfiguration for the next recurring timer period, microsecond precision, recurring month-calendar boundaries, mixed calendar-plus-fixed timer periods, exact-deadline tests, edge-scoped FollowedByMax capacity for nested/composed followed-by branches, and MatchUntil expression bounds resolved from variables, deployment parameters, null open bounds and captured outer tags. Bounded-until additionally preserves a capped repeated branch while waiting for a terminator, gives the terminator priority on the same event, and expires without output below the lower bound. Nested Every levels now multiply matches exactly like Esper: every(every(b)) fires B2 twice and B3 four times, every^3 fires B2 three times and B3 nine times, every^4 fires B2 four times and B3 sixteen times, because a completed non-quitting child stays resident while a fresh sibling is spawned alongside it. Java additionally covers ISO period parsing, multi-key expiry, nested observer/guard/consumption combinations and exact execution trace parity; Go WithinOrMax, dynamic duration and dynamic MatchUntil support do not yet cover every nested parent transition, followed-by dynamic maxima or the complete consumption policy matrix."
+      "difference": "Go covers outer Within versus inner Within().EveryDistinct() scope, distinct suppression with an AST-owned Every state, virtual-clock expiry via Within and explicit EveryDistinctFor, ordinary Pattern and Pattern Context lifecycle, scoped WithinOrMax guards, dynamic duration from captured tags, variables, deployment parameters and component expressions, repeated-tag property access including indexed fields from repeated event tags, component-wise fixed-duration parameters, variable reconfiguration for the next recurring timer period, microsecond precision, recurring month-calendar boundaries, mixed calendar-plus-fixed timer periods, exact-deadline tests, edge-scoped FollowedByMax capacity for nested/composed followed-by branches, and MatchUntil expression bounds resolved from variables, deployment parameters, null open bounds and captured outer tags. Bounded-until additionally preserves a capped repeated branch while waiting for a terminator, gives the terminator priority on the same event, and expires without output below the lower bound. Compound every (every (a and b), every (timer:interval and not X)) now materializes into the AST so the every state holds a single active attempt like Esper's EvalEveryStateNode, and restarted attempts inherit the every begin-state tags instead of the just-fired match tags (spawn-state snapshot). Nested Every levels now multiply matches exactly like Esper: every(every(b)) fires B2 twice and B3 four times, every^3 fires B2 three times and B3 nine times, every^4 fires B2 four times and B3 sixteen times, because a completed non-quitting child stays resident while a fresh sibling is spawned alongside it. Java additionally covers ISO period parsing, multi-key expiry, nested observer/guard/consumption combinations and exact execution trace parity; Go WithinOrMax, dynamic duration and dynamic MatchUntil support do not yet cover every nested parent transition, followed-by dynamic maxima or the complete consumption policy matrix."
     },
     {
       "id": "case.pattern-guard-observer-prearmed",
@@ -11249,7 +11256,8 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorEvery.java"
       ],
       "goTests": [
-        "TestPatternEveryMatchUntilStartsAfterCompletionEvent"
+        "TestPatternEveryMatchUntilStartsAfterCompletionEvent",
+        "TestPatternOperatorEveryFollowedByMatchesEsper"
       ],
       "tags": [
         "correctness",
@@ -11264,7 +11272,7 @@
         "java-runtime-inventory",
         "go-unit"
       ],
-      "difference": "Go does not restart a definition-level Every root on the same event that completed the previous root; the next root receives only subsequent events. Multi-layer Every over a bare filter now multiplies matches like Esper; observer/guard failure restart and full consumption trace remain open."
+      "difference": "PatternEveryFollowedBy is now covered by an exact parity test: every a=SupportBean -> b=SupportBean(theString=a.theString) spawns one waiting branch per a-event and a later correlated event completes only the matching branch. Go still does not restart a definition-level Every root on the same event that completed the previous root; the next root receives only subsequent events. Observer/guard failure restart cascades and the full consumption trace remain open."
     },
     {
       "id": "case.pattern-match-until-not",
@@ -18947,6 +18955,6 @@
     "mappedCases": 278,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1909
+    "disposedRuntimeIds": 1912
   }
 }

@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 type patternEveryA struct {
@@ -199,4 +200,273 @@ func TestPatternOperatorEveryMultiplicityMatchesEsper(t *testing.T) {
 			t.Fatalf("every^4(b=B) counts = %v, want B1x1 B2x4 B3x16", counts)
 		}
 	})
+}
+
+// TestPatternOperatorEveryFollowedByMatchesEsper covers PatternEveryFollowedBy:
+// every a=SupportBean -> b=SupportBean(theString=a.theString). Each a-event
+// spawns its own waiting branch; a later event with the same theString
+// completes only the branch whose a carries that value.
+func TestPatternOperatorEveryFollowedByMatchesEsper(t *testing.T) {
+	env := newPatternOpEnv(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	source := From[patternOpBean](env, "SupportBean")
+	pattern := PatternFrom(source, "a", Literal[bool](true)).Every().Then(
+		PatternFrom(source, "b", Equal[string](
+			Field[patternOpBean, string]("theString"),
+			TagField[string]("a", "theString"),
+		)),
+	)
+	plan, err := env.Build(pattern.Select(
+		Alias("c0", TagField[string]("a", "theString")),
+		Alias("c1", TagField[int]("a", "intPrimitive")),
+		Alias("c2", TagField[int]("b", "intPrimitive")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("pattern result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sendPatternOpBean(t, engine, "E1", 1)
+	if len(rows) != 0 {
+		t.Fatalf("single a-event must not fire, rows = %#v", rows)
+	}
+	sendPatternOpBean(t, engine, "E2", 10)
+	if len(rows) != 0 {
+		t.Fatalf("different theString must not complete the waiting branch, rows = %#v", rows)
+	}
+	sendPatternOpBean(t, engine, "E1", 2)
+	if len(rows) != 1 {
+		t.Fatalf("correlated b-event should fire exactly once, rows = %#v", rows)
+	}
+	row := rows[0]
+	if row.Get("c0").Any() != "E1" || row.Get("c1").Any() != 1 || row.Get("c2").Any() != 2 {
+		t.Fatalf("row = (%v,%v,%v), want (E1,1,2)", row.Get("c0").Any(), row.Get("c1").Any(), row.Get("c2").Any())
+	}
+}
+
+// TestPatternOperatorEveryFollowedByWithinMatchesEsper covers
+// PatternEveryFollowedByWithin: every a=SupportBean -> b=SupportBean(theString=
+// a.theString) where timer:within(10 sec). Each a-spawned branch expires 10
+// seconds after its a-event; an expired branch cannot complete even when a
+// later event carries the correlated value.
+func TestPatternOperatorEveryFollowedByWithinMatchesEsper(t *testing.T) {
+	env := newPatternOpEnv(t)
+	engine := NewEngine(env, WithStartTime(time.UnixMilli(0).UTC()))
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	source := From[patternOpBean](env, "SupportBean")
+	waiting := PatternFrom(source, "b", Equal[string](
+		Field[patternOpBean, string]("theString"),
+		TagField[string]("a", "theString"),
+	)).Within(10 * time.Second)
+	pattern := PatternFrom(source, "a", Literal[bool](true)).Every().Then(waiting)
+	plan, err := env.Build(pattern.Select(
+		Alias("c0", TagField[string]("a", "theString")),
+		Alias("c1", TagField[int]("a", "intPrimitive")),
+		Alias("c2", TagField[int]("b", "intPrimitive")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("pattern result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	advance := func(ms int64) {
+		t.Helper()
+		if err := engine.AdvanceTime(context.Background(), time.UnixMilli(ms).UTC()); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	advance(5000)
+	sendPatternOpBean(t, engine, "E1", 1)
+	if len(rows) != 0 {
+		t.Fatalf("single a-event must not fire, rows = %#v", rows)
+	}
+	advance(8000)
+	sendPatternOpBean(t, engine, "E2", 10)
+	if len(rows) != 0 {
+		t.Fatalf("different theString must not fire, rows = %#v", rows)
+	}
+	// t=15000 expires the branch started by E1 at t=5000 (10 second guard).
+	advance(15000)
+	sendPatternOpBean(t, engine, "E1", 2)
+	if len(rows) != 0 {
+		t.Fatalf("expired branch must not complete, rows = %#v", rows)
+	}
+	sendPatternOpBean(t, engine, "E2", 11)
+	if len(rows) != 1 {
+		t.Fatalf("live E2 branch should fire exactly once, rows = %#v", rows)
+	}
+	row := rows[0]
+	if row.Get("c0").Any() != "E2" || row.Get("c1").Any() != 10 || row.Get("c2").Any() != 11 {
+		t.Fatalf("row = (%v,%v,%v), want (E2,10,11)", row.Get("c0").Any(), row.Get("c1").Any(), row.Get("c2").Any())
+	}
+}
+
+// TestPatternOperatorEveryWithAndMatchesEsper covers PatternEveryWithAnd:
+// every (a=SupportBean(intPrimitive>0) and b=SupportBean(intPrimitive<0)).
+// The and-attempt caches the first event on each side, ignores further
+// same-side events, fires once when both sides have matched, and only then
+// does the enclosing every spawn the next attempt.
+func TestPatternOperatorEveryWithAndMatchesEsper(t *testing.T) {
+	env := newPatternOpEnv(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	source := From[patternOpBean](env, "SupportBean")
+	pattern := PatternFrom(source, "a", Greater[int](
+		Field[patternOpBean, int]("intPrimitive"), Literal(0),
+	)).And(PatternFrom(source, "b", Less[int](
+		Field[patternOpBean, int]("intPrimitive"), Literal(0),
+	))).Every()
+	plan, err := env.Build(pattern.Select(
+		Alias("c0", TagField[string]("a", "theString")),
+		Alias("c1", TagField[string]("b", "theString")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("pattern result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sendPatternOpBean(t, engine, "E1", 1)
+	sendPatternOpBean(t, engine, "E2", 1)
+	if len(rows) != 0 {
+		t.Fatalf("two positive-side events must not fire without a negative-side event, rows = %#v", rows)
+	}
+	sendPatternOpBean(t, engine, "E3", -1)
+	if len(rows) != 1 {
+		t.Fatalf("completing negative-side event should fire exactly once, rows = %#v", rows)
+	}
+	if rows[0].Get("c0").Any() != "E1" || rows[0].Get("c1").Any() != "E3" {
+		t.Fatalf("first fire = (%v,%v), want (E1,E3)", rows[0].Get("c0").Any(), rows[0].Get("c1").Any())
+	}
+	sendPatternOpBean(t, engine, "E4", -2)
+	if len(rows) != 1 {
+		t.Fatalf("negative-side event alone must not fire the fresh attempt, rows = %#v", rows)
+	}
+	sendPatternOpBean(t, engine, "E5", 2)
+	if len(rows) != 2 {
+		t.Fatalf("positive-side event should complete the fresh attempt, rows = %#v", rows)
+	}
+	if rows[1].Get("c0").Any() != "E5" || rows[1].Get("c1").Any() != "E4" {
+		t.Fatalf("second fire = (%v,%v), want (E5,E4)", rows[1].Get("c0").Any(), rows[1].Get("c1").Any())
+	}
+}
+
+// TestPatternOperatorEveryAndNotMatchesEsper covers PatternEveryAndNot:
+// every (timer:interval(6) and not SupportBean). A SupportBean cancels only
+// the current attempt; the enclosing every immediately arms the next 6 second
+// timer from the cancellation time.
+func TestPatternOperatorEveryAndNotMatchesEsper(t *testing.T) {
+	env := newPatternOpEnv(t)
+	engine := NewEngine(env, WithStartTime(time.UnixMilli(0).UTC()))
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	source := From[patternOpBean](env, "SupportBean")
+	pattern := TimerInterval(source, 6*time.Second).And(
+		PatternFrom(source, "sb", Literal[bool](true)).Not(),
+	).Every()
+	plan, err := env.Build(pattern.Select(
+		Alias("alert", Literal("No event within 6 seconds")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var alerts []string
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("pattern result is not a row: %#v", result)
+			}
+			alerts = append(alerts, row.Get("alert").Any().(string))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	advance := func(ms int64) {
+		t.Helper()
+		if err := engine.AdvanceTime(context.Background(), time.UnixMilli(ms).UTC()); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	advance(2000)
+	sendPatternOpBean(t, engine, "E1", 1) // cancels the attempt armed at t=0
+	advance(6000)
+	advance(7000)
+	advance(7999)
+	if len(alerts) != 0 {
+		t.Fatalf("cancelled attempt must not fire, alerts = %#v", alerts)
+	}
+	advance(8000) // 6 seconds after the t=2000 cancellation
+	if len(alerts) != 1 || alerts[0] != "No event within 6 seconds" {
+		t.Fatalf("alerts = %#v, want one alert at t=8000", alerts)
+	}
+	advance(12000)
+	sendPatternOpBean(t, engine, "E2", 2) // cancels the attempt armed at t=8000
+	advance(13000)
+	sendPatternOpBean(t, engine, "E3", 3) // cancels the attempt armed at t=12000
+	advance(18999)
+	if len(alerts) != 1 {
+		t.Fatalf("cancelled attempts must not fire, alerts = %#v", alerts)
+	}
+	advance(19000) // 6 seconds after the t=13000 cancellation
+	if len(alerts) != 2 || alerts[1] != "No event within 6 seconds" {
+		t.Fatalf("alerts = %#v, want second alert at t=19000", alerts)
+	}
 }

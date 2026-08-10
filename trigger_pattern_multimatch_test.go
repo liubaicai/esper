@@ -48,17 +48,20 @@ func TestTriggerPatternMultimatchMatchesInfraPatternMultimatch(t *testing.T) {
 			input := From[triggerInfraFlowEvent](env, sourceName)
 			theString := Field[triggerInfraFlowEvent, string]("theString")
 			intPrimitive := Field[triggerInfraFlowEvent, int]("intPrimitive")
+			// Every() applies to the left leg so each A-event spawns its own
+			// waiting branch (every a -> b), matching the multi-match assertions
+			// below; a grouped every (a -> b) would hold a single attempt.
 			pattern := PatternFrom(
 				input,
 				"a",
 				LikeOf(theString, Literal("A%")),
-			).FollowedBy(
+			).Every().FollowedBy(
 				"b",
 				And(
 					LikeOf(theString, Literal("B%")),
 					Equal[int](intPrimitive, TagField[int]("a", "intPrimitive")),
 				),
-			).Every()
+			)
 			patternPlan, err := env.Build(pattern.Select(
 				Alias("c1", TagField[string]("a", "theString")),
 				Alias("c2", TagField[string]("b", "theString")),
