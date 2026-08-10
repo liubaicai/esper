@@ -2840,6 +2840,76 @@ func recoverUDF(result *Value) {
 	}
 }
 
+// Func1Ctx registers a named unary function that also receives the current
+// EvalContext, mirroring Java's EPLMethodInvocationContext parameter. The UDF
+// can read the current Event, Group, Engine, statement user object and other
+// evaluation-scoped state.
+func Func1Ctx[A, B any](name string, function func(A, EvalContext) B, argument Expression[A]) Expression[B] {
+	children := udfChildren(argument)
+	return makeUDFExpr[B](udfDescription(name, argument), children, udfConfiguration(name, function == nil, argument == nil), func(ctx EvalContext) (result Value) {
+		defer recoverUDF(&result)
+		if function == nil || argument == nil {
+			return Null()
+		}
+		input := argument.eval(ctx)
+		if !input.IsPresent() {
+			return Null()
+		}
+		value, err := As[A](input)
+		if err != nil {
+			return Null()
+		}
+		return Present(function(value, ctx))
+	})
+}
+
+// Func2Ctx registers a named binary function that also receives the current
+// EvalContext, mirroring Java's EPLMethodInvocationContext parameter.
+func Func2Ctx[A, B, C any](name string, function func(A, B, EvalContext) C, first Expression[A], second Expression[B]) Expression[C] {
+	children := udfChildren(first, second)
+	return makeUDFExpr[C](udfDescription(name, first, second), children, udfConfiguration(name, function == nil, first == nil, second == nil), func(ctx EvalContext) (result Value) {
+		defer recoverUDF(&result)
+		if function == nil || first == nil || second == nil {
+			return Null()
+		}
+		firstValue := first.eval(ctx)
+		secondValue := second.eval(ctx)
+		if !firstValue.IsPresent() || !secondValue.IsPresent() {
+			return Null()
+		}
+		firstArgument, err := As[A](firstValue)
+		if err != nil {
+			return Null()
+		}
+		secondArgument, err := As[B](secondValue)
+		if err != nil {
+			return Null()
+		}
+		return Present(function(firstArgument, secondArgument, ctx))
+	})
+}
+
+// Func1Rethrow registers a named unary function whose panics are propagated
+// to the caller instead of being caught and turned into Null, mirroring
+// Java's @RethrowExceptions annotation on single-row functions.
+func Func1Rethrow[A, B any](name string, function func(A) B, argument Expression[A]) Expression[B] {
+	children := udfChildren(argument)
+	return makeUDFExpr[B](udfDescription(name, argument), children, udfConfiguration(name, function == nil, argument == nil), func(ctx EvalContext) (result Value) {
+		if function == nil || argument == nil {
+			return Null()
+		}
+		input := argument.eval(ctx)
+		if !input.IsPresent() {
+			return Null()
+		}
+		value, err := As[A](input)
+		if err != nil {
+			return Null()
+		}
+		return Present(function(value))
+	})
+}
+
 // AggregateExpression is evaluated over EvalContext.Group by an aggregate
 // stream. It remains an Expr so field and variable dependencies are visible
 // to Build validation.

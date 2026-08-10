@@ -641,15 +641,22 @@ func statementHasMetricOutputConsumer(statement *Statement) bool {
 	return len(statement.listeners) > 0 || statement.subscriber != nil || statement.plan.query.sink != nil
 }
 
-func (e *Engine) processStatementWithMetricsLocked(ctx context.Context, statement *Statement, now time.Time, event Event, variables map[string]Value, accepted bool) (ResultBatch, bool, error) {
+func (e *Engine) processStatementWithMetricsLocked(ctx context.Context, statement *Statement, now time.Time, event Event, variables map[string]Value, accepted bool) (batch ResultBatch, changed bool, err error) {
 	if statement == nil {
 		return ResultBatch{}, false, nil
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = NewError(ErrorInternal, fmt.Sprintf("panic evaluating statement %q: %v", statement.name, r))
+			batch = ResultBatch{}
+			changed = false
+		}
+	}()
 	sample := statementMetricSample{}
 	if accepted {
 		sample = e.startStatementMetricSampleLocked(statement)
 	}
-	batch, changed, err := statement.process(ctx, now, event, variables)
+	batch, changed, err = statement.process(ctx, now, event, variables)
 	if err == nil {
 		e.auditStatementProcessLocked(statement, event, now, accepted, batch, changed)
 	}

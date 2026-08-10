@@ -2708,6 +2708,104 @@
         "Java deployment-private objects are module-scoped catalog identities in Go: the same logical name coexists per module and is consumed independently",
         "evolved definitions after undeployAll use a new registration identity because Go registrations are environment-scoped; the deploy/undeploy/redeploy lifecycle and filter-cleanup equivalent (no active deployments, no output) are pinned directly"
       ]
+    },
+    {
+      "id": "client.extend.single-row-function",
+      "domain": "client",
+      "level": "G",
+      "summary": "Single-row function (UDF) registration, invocation in select/pattern/filter/having/window, context passing, exception behavior (log vs rethrow), null propagation, chaining and type validation",
+      "javaRefs": [
+        "ClientExtendSingleRowFunction",
+        "SupportSingleRowFunction",
+        "ExtensionSingleRowFunction",
+        "EPLMethodInvocationContext"
+      ],
+      "goRefs": [
+        "expr.go",
+        "client_extend_udf_parity_test.go"
+      ],
+      "phase": 2,
+      "status": "mapped",
+      "remaining": [
+        "Func1/Func2/Func3/Func4 are the Go-native UDF registration with stable names in the Plan; Func1Ctx/Func2Ctx pass EvalContext (statement name, event, engine) mirroring Java EPLMethodInvocationContext; Func1Rethrow propagates panics as engine errors instead of catching them as Null; UDF panics during statement processing are caught by engine-level recovery and returned as ErrorInternal so the mutex is never orphaned",
+        "Java method chaining maps to nested Func calls; Java failed-compile parameter type mismatches are Null at runtime in Go (Go uses compile-time typed functions); Java eplToModelCompileDeploy has no Go counterpart (EPL text compilation is out of scope)"
+      ]
+    },
+    {
+      "id": "client.extend.udf-varargs",
+      "domain": "client",
+      "level": "G",
+      "summary": "UDF varargs invocation: Go uses explicit typed slices instead of Java auto-unboxing varargs, with context-passing and collection-of-event variants",
+      "javaRefs": [
+        "ClientExtendUDFVarargs",
+        "SupportSingleRowFunction"
+      ],
+      "goRefs": [
+        "expr.go",
+        "client_extend_udf_parity_test.go"
+      ],
+      "phase": 2,
+      "status": "mapped",
+      "remaining": [
+        "Java varargs (int...) map to Go []int arguments with explicit types; overload resolution by exact-match priority is not replicated (Go uses distinct named functions)"
+      ]
+    },
+    {
+      "id": "client.extend.udf-return-type-events",
+      "domain": "client",
+      "level": "G",
+      "summary": "UDF returning events for enum method chaining (Java EventBean[] wrapping)",
+      "javaRefs": [
+        "ClientExtendUDFReturnTypeIsEvents"
+      ],
+      "goRefs": [
+        "expr.go",
+        "client_extend_udf_parity_test.go"
+      ],
+      "phase": 2,
+      "status": "approved-difference",
+      "remaining": [
+        "Java UDFs returning EventBean[] or Collection<EventBean> automatically get wrapped as events for enum method chaining; Go has no EventBean concept and UDFs return plain Go values. The equivalent is a UDF returning []string or []map[string]any that the caller processes with Go-native operations."
+      ]
+    },
+    {
+      "id": "client.extend.inlined-class",
+      "domain": "client",
+      "level": "N",
+      "summary": "Application-inlined Java class compilation via Janino at deploy time (UDF and aggregation function)",
+      "javaRefs": [
+        "ClientExtendUDFInlinedClass",
+        "ClientExtendAggregationInlinedClass",
+        "ClassProvided"
+      ],
+      "goRefs": [
+        "expr.go",
+        "client_extend_udf_parity_test.go"
+      ],
+      "phase": 8,
+      "status": "approved-difference",
+      "remaining": [
+        "Java uses Janino to compile inline Java source into deployment artifacts; Go has no runtime code compilation. UDFs map to Func1/Func2 with statically linked Go functions, aggregation functions map to PluginAggregateFactory, and FAF/overloaded/multi-module-uses patterns map to their Go-native equivalents. All 14 executions are approved-difference."
+      ]
+    },
+    {
+      "id": "client.extend.adapter-loader",
+      "domain": "client",
+      "level": "N",
+      "summary": "Java PluginLoader mechanism for loading extensions by class name with initialization order",
+      "javaRefs": [
+        "ClientExtendAdapterLoader",
+        "SupportPluginLoader"
+      ],
+      "goRefs": [
+        "module.go",
+        "client_extend_udf_parity_test.go"
+      ],
+      "phase": 8,
+      "status": "approved-difference",
+      "remaining": [
+        "Java loads extension modules by class name via PluginLoader; Go uses explicit registration of Func/PluginAggregate/DefineExpression in the Environment. The initialization order and destroy semantics are managed by the Environment lifecycle."
+      ]
     }
   ],
   "cases": [
@@ -15972,6 +16070,219 @@
         "go-unit"
       ],
       "difference": "Java allows redefinition because deployment-private objects are undeployed with their deployment and the name is freed; Go materializes create statements as environment/module registrations, so same-named private objects are module-scoped identities (A::MyWindow vs B::MyWindow) that coexist and are consumed independently, and an evolved definition after undeployAll uses a new registration identity. The lifecycle parity is pinned directly: deploy/undeployAll cycles of schema+window+insert modules, the same immutable plans redeployed twice (Java deploys the same EPCompiled), on-merge insert-into/delete chains, table redeploy with evolved columns, and the filter-cleanup equivalent (zero active deployments and no output after undeploy-all)."
+    },
+    {
+      "id": "case.client-extend-single-row-function",
+      "javaRuntimeIds": [
+        "java-runtime-99ea797b5eea02ab8d0e",
+        "java-runtime-67a954ec05a4887cf60c",
+        "java-runtime-8ae8129373779537a6fa",
+        "java-runtime-e5618b498eaf07721242",
+        "java-runtime-897d0e2e5e0f69a293bf"
+      ],
+      "javaNames": [
+        "ClientExtendSRFSingleMethod",
+        "ClientExtendSRFPropertyOrSingleRowMethod",
+        "ClientExtendSRFChainMethod",
+        "ClientExtendSRFEventBeanFootprint",
+        "ClientExtendSRFFailedValidation"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendSingleRowFunction.java"
+      ],
+      "goTests": [
+        "TestClientExtendSRFSingleMethodMatchesEsper",
+        "TestClientExtendSRFPropertyOrSingleRowMethodMatchesEsper",
+        "TestClientExtendSRFChainMethodMatchesEsper",
+        "TestClientExtendSRFEventBeanFootprintMatchesEsper",
+        "TestClientExtendSRFFailedValidationMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "extension",
+        "udf",
+        "single-row-function",
+        "exception",
+        "context"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Func1/Func2/Func3/Func4 provide the Go-native UDF API with stable names and typed arguments; Func1Ctx/Func2Ctx pass EvalContext mirroring Java EPLMethodInvocationContext (statement name, event, engine); Func1Rethrow propagates panics as engine errors instead of catching them as Null. Engine-level panic recovery in processStatementWithMetricsLocked converts panics to ErrorInternal so the mutex is never orphaned. Java method chaining maps to nested Func calls; parameter type validation is compile-time in Go vs runtime in Java; EPL text compilation (eplToModelCompileDeploy) is out of Go scope."
+    },
+    {
+      "id": "case.client-extend-udf-varargs",
+      "javaRuntimeIds": [
+        "java-runtime-e71491adbab7b7e5cbfb",
+        "java-runtime-2d133d185f99df741548"
+      ],
+      "javaNames": [
+        "ClientExtendUDFVarargsCombinations",
+        "ClientExtendUDFVarargsCollOfEvent"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendUDFVarargs.java"
+      ],
+      "goTests": [
+        "TestClientExtendUDFVarargsMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "extension",
+        "udf",
+        "varargs"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java varargs (int...) map to Go []int arguments with explicit types. Overload resolution by exact-match priority is not replicated (Go uses distinct named functions). The collection-of-event variant maps to a UDF receiving Event via EventValue and returning Go-native types."
+    },
+    {
+      "id": "case.client-extend-udf-return-type-events",
+      "javaRuntimeIds": [
+        "java-runtime-257d9386d5f219421ed5"
+      ],
+      "javaNames": [
+        "ClientExtendUDFReturnTypeIsEvents"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendUDFReturnTypeIsEvents.java"
+      ],
+      "goTests": [
+        "TestClientExtendUDFReturnTypeIsEventsDisposition"
+      ],
+      "tags": [
+        "client",
+        "extension",
+        "udf",
+        "event-return",
+        "approved-difference"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java UDFs returning EventBean[] or Collection<EventBean> automatically get wrapped as events for enum method chaining; Go has no EventBean concept. The equivalent is a UDF returning []string or []map[string]any that the caller processes with Go-native operations. The disposition test pins a UDF returning []string from a comma-separated input."
+    },
+    {
+      "id": "case.client-extend-udf-inlined-class",
+      "javaRuntimeIds": [
+        "java-runtime-3efa97584b0397e05b83",
+        "java-runtime-f4dbe4e4ba50366d46db",
+        "java-runtime-47fe2fc80c3a12a4074c",
+        "java-runtime-8f2576f3c1814c1e58fd",
+        "java-runtime-1bb8027f13f90856b81f",
+        "java-runtime-f3c1edec345eeac54818",
+        "java-runtime-b0345d7e5e18c4d264f7",
+        "java-runtime-d8b47900cf827f5ed499"
+      ],
+      "javaNames": [
+        "ClientExtendUDFInlinedLocalClass{soda=false}",
+        "ClientExtendUDFInlinedLocalClass{soda=true}",
+        "ClientExtendUDFInlinedInvalid",
+        "ClientExtendUDFInlinedFAF",
+        "ClientExtendUDFCreateInlinedSameModule",
+        "ClientExtendUDFCreateInlinedOtherModule",
+        "ClientExtendUDFInlinedWOptions",
+        "ClientExtendUDFOverloaded"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendUDFInlinedClass.java"
+      ],
+      "goTests": [
+        "TestClientExtendUDFInlinedClassDisposition"
+      ],
+      "tags": [
+        "client",
+        "extension",
+        "udf",
+        "inlined-class",
+        "approved-difference"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java uses Janino to compile inline Java source at deploy time; Go has no runtime code compilation. UDFs map to Func2/Func3 with statically linked Go functions. The disposition test pins multiply(int,int) and multiply(int,int,int) as Go Func2/Func3 equivalents."
+    },
+    {
+      "id": "case.client-extend-aggregation-inlined-class",
+      "javaRuntimeIds": [
+        "java-runtime-bb1f6d05cdc0412fe1a1",
+        "java-runtime-405e81ed25b98feacfd8",
+        "java-runtime-6b176c67bb8a498a10af",
+        "java-runtime-6f3faba534397320be88",
+        "java-runtime-dddf0268f32ca42fe3db",
+        "java-runtime-16c9b28b34b15c21aa83"
+      ],
+      "javaNames": [
+        "ClientExtendAggregationInlinedLocalClass",
+        "ClientExtendAggregationInlinedFAF",
+        "ClientExtendAggregationInlinedSameModule",
+        "ClientExtendAggregationInlinedOtherModule",
+        "ClientExtendAggregationInlinedInvalid",
+        "ClientExtendAggregationInlinedMultiModuleUses"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendAggregationInlinedClass.java"
+      ],
+      "goTests": [
+        "TestClientExtendAggregationInlinedClassDisposition"
+      ],
+      "tags": [
+        "client",
+        "extension",
+        "aggregation",
+        "inlined-class",
+        "approved-difference"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java uses Janino to compile inline aggregation function source; Go uses PluginAggregateFactory with AggregatePluginState[T]. The disposition test pins concat as a Go-native string concatenation plugin."
+    },
+    {
+      "id": "case.client-extend-adapter-loader",
+      "javaRuntimeIds": [
+        "java-runtime-28065dadb158bb0b31e7"
+      ],
+      "javaNames": [
+        "ClientExtendAdapterLoader"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendAdapterLoader.java"
+      ],
+      "goTests": [
+        "TestClientExtendAdapterLoaderDisposition"
+      ],
+      "tags": [
+        "client",
+        "extension",
+        "adapter-loader",
+        "approved-difference"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java loads extension modules by class name via PluginLoader with ordered init/destroy; Go uses explicit Environment registration. The disposition test pins a DefineExpression as the Go-native adapter equivalent."
     }
   ],
   "mappings": [
@@ -17006,6 +17317,30 @@
     {
       "capabilityId": "client.deploy.redefinition-lifecycle",
       "caseId": "case.client-deploy-redefinition"
+    },
+    {
+      "capabilityId": "client.extend.single-row-function",
+      "caseId": "case.client-extend-single-row-function"
+    },
+    {
+      "capabilityId": "client.extend.udf-varargs",
+      "caseId": "case.client-extend-udf-varargs"
+    },
+    {
+      "capabilityId": "client.extend.udf-return-type-events",
+      "caseId": "case.client-extend-udf-return-type-events"
+    },
+    {
+      "capabilityId": "client.extend.inlined-class",
+      "caseId": "case.client-extend-udf-inlined-class"
+    },
+    {
+      "capabilityId": "client.extend.inlined-class",
+      "caseId": "case.client-extend-aggregation-inlined-class"
+    },
+    {
+      "capabilityId": "client.extend.adapter-loader",
+      "caseId": "case.client-extend-adapter-loader"
     }
   ]
 }
