@@ -2676,15 +2676,36 @@ func (e *Engine) deploymentDependenciesLocked(requests []deploymentRequest) []st
 			}
 		}
 	}
-	if len(uses) == 0 {
-		return nil
-	}
-	dependencies := make([]*Deployment, 0, len(uses))
+	dependencyIDs := make(map[string]struct{})
 	for _, deployment := range e.deployments {
 		if deployment == nil {
 			continue
 		}
 		if _, used := uses[normalizeModuleName(deployment.moduleName)]; used {
+			dependencyIDs[deployment.id] = struct{}{}
+		}
+	}
+	// Java derives deploymentIdDependencies from the provider deployments of
+	// referenced path objects; union the catalog-reference providers with the
+	// declared typed module uses. The pending deployment is not yet active, so
+	// a provider lookup never returns the deployment itself.
+	for _, request := range requests {
+		for _, ref := range collectDeploymentResourceReferences(request.plan.query) {
+			provider := e.moduleProviderDeploymentLocked(ref.moduleName())
+			if provider != nil {
+				dependencyIDs[provider.id] = struct{}{}
+			}
+		}
+	}
+	if len(dependencyIDs) == 0 {
+		return nil
+	}
+	dependencies := make([]*Deployment, 0, len(dependencyIDs))
+	for _, deployment := range e.deployments {
+		if deployment == nil {
+			continue
+		}
+		if _, referenced := dependencyIDs[deployment.id]; referenced {
 			dependencies = append(dependencies, deployment)
 		}
 	}
@@ -3115,13 +3136,16 @@ func (e *Engine) undeploy(ctx context.Context, deploymentID string, force bool) 
 		return NewError(ErrorDeployment, fmt.Sprintf("deployment %q not found", deploymentID))
 	}
 	if !force {
-		if dependent := e.deploymentDependentLocked(deploymentID); dependent != nil {
-			e.mu.Unlock()
-			return &UndeployPreconditionError{DeploymentID: deploymentID, ReferencedBy: dependent.id}
-		}
+		// Esper's Undeployer reports the module-owned resource that still has
+		// referencing deployments; the typed deployment-ID graph is the Go
+		// supplement for object-less typed module-use chains and runs second.
 		if precondition := e.deploymentResourcePreconditionLocked(deployment); precondition != nil {
 			e.mu.Unlock()
 			return precondition
+		}
+		if dependent := e.deploymentDependentLocked(deploymentID); dependent != nil {
+			e.mu.Unlock()
+			return &UndeployPreconditionError{DeploymentID: deploymentID, ReferencedBy: dependent.id}
 		}
 	}
 	delete(e.deployments, deploymentID)

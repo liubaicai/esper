@@ -135,16 +135,17 @@ func (r deploymentResourceRef) resource() DeploymentResource {
 }
 
 // deploymentResourceCollector gathers the module-owned catalog references of
-// one query. Only cross-module references become undeploy dependencies, so
-// collection records every module-qualified identity and the deploy path
-// filters same-module ownership.
+// one query. References to objects owned by the referencing deployment's own
+// module are internal only while that deployment provides the module catalog;
+// the deploy path decides which collected references become edges.
 type deploymentResourceCollector struct {
+	env  *Environment
 	seen map[deploymentResourceRef]struct{}
 	refs []deploymentResourceRef
 }
 
-func newDeploymentResourceCollector() *deploymentResourceCollector {
-	return &deploymentResourceCollector{seen: make(map[deploymentResourceRef]struct{})}
+func newDeploymentResourceCollector(env *Environment) *deploymentResourceCollector {
+	return &deploymentResourceCollector{env: env, seen: make(map[deploymentResourceRef]struct{})}
 }
 
 func (c *deploymentResourceCollector) add(kind DeploymentResourceKind, identity string) {
@@ -166,6 +167,33 @@ func (c *deploymentResourceCollector) add(kind DeploymentResourceKind, identity 
 	c.refs = append(c.refs, ref)
 }
 
+// eventType records an event-type reference together with the direct nested
+// property schemas of the referenced schema. Esper records schema-property
+// event types as deployment dependencies of the referencing deployment (see
+// ClientDeployListDependencyStar); Go resolves the same direct references
+// from the immutable schema metadata. Module-less nested schemas are filtered
+// by add because they are not deployment-owned.
+func (c *deploymentResourceCollector) eventType(identity string) {
+	c.add(DeploymentResourceEventType, identity)
+	if c.env == nil {
+		return
+	}
+	identity = strings.TrimSpace(identity)
+	c.env.mu.RLock()
+	schema, ok := c.env.schemas[identity]
+	c.env.mu.RUnlock()
+	if !ok {
+		return
+	}
+	for _, nestedName := range schema.NestedSchemaNames() {
+		nested, ok := schema.NestedSchema(nestedName)
+		if !ok {
+			continue
+		}
+		c.add(DeploymentResourceEventType, nested.Name())
+	}
+}
+
 func (c *deploymentResourceCollector) stream(node *streamNode) {
 	for current := node; current != nil; current = current.input {
 		switch current.kind {
@@ -175,7 +203,7 @@ func (c *deploymentResourceCollector) stream(node *streamNode) {
 			c.add(DeploymentResourceTable, catalogKey(current.moduleName, current.sourceName))
 		case streamSource:
 			if !current.isAlias {
-				c.add(DeploymentResourceEventType, current.sourceName)
+				c.eventType(current.sourceName)
 			}
 		}
 		if current.pattern != nil {
@@ -227,7 +255,7 @@ func (c *deploymentResourceCollector) expressionNode(node *exprNode) {
 // the module-owned catalog objects the plan references, in first-observed
 // order. Same-module ownership and dependent filtering happen at record time.
 func collectDeploymentResourceReferences(query Query) []deploymentResourceRef {
-	collector := newDeploymentResourceCollector()
+	collector := newDeploymentResourceCollector(query.env)
 	collector.stream(query.input)
 	if query.aggregate != nil {
 		collector.stream(query.aggregate.input)
@@ -261,7 +289,7 @@ func collectDeploymentResourceReferences(query Query) []deploymentResourceRef {
 		}
 	}
 	if query.routeTarget != "" {
-		collector.add(DeploymentResourceEventType, query.routeTarget)
+		collector.eventType(query.routeTarget)
 	}
 	if query.tableTarget != "" {
 		collector.add(DeploymentResourceTable, query.tableTarget)
@@ -276,17 +304,27 @@ func collectDeploymentResourceReferences(query Query) []deploymentResourceRef {
 	return collector.refs
 }
 
-// recordDeploymentResourceDependentsLocked indexes the cross-module catalog
-// references of a freshly activated deployment. The engine mutex must be held.
+// recordDeploymentResourceDependentsLocked indexes the catalog references of a
+// freshly activated deployment. References to module-less (preconfigured)
+// objects are not deployment-owned and never become edges. References to the
+// deployment's own module are internal while the deployment provides the
+// module catalog (it is the earliest active deployment of that module); a
+// later same-module deployment depends on the provider instead, mirroring
+// Java's per-deployment path registry dependency entries. The engine mutex
+// must be held.
 func (e *Engine) recordDeploymentResourceDependentsLocked(deployment *Deployment, requests []deploymentRequest) {
 	if e == nil || deployment == nil {
 		return
 	}
 	moduleName := normalizeModuleName(deployment.moduleName)
+	provider := e.moduleProviderDeploymentLocked(moduleName)
 	for _, request := range requests {
 		for _, ref := range collectDeploymentResourceReferences(request.plan.query) {
-			if ref.moduleName() == "" || ref.moduleName() == moduleName {
-				// Same-module references are internal to the provider.
+			if ref.moduleName() == "" {
+				continue
+			}
+			if ref.moduleName() == moduleName && provider != nil && provider.id == deployment.id {
+				// The provider's references to its own module catalog are internal.
 				continue
 			}
 			dependents := e.resourceDependents[ref]
@@ -297,6 +335,26 @@ func (e *Engine) recordDeploymentResourceDependentsLocked(deployment *Deployment
 			dependents[deployment.id] = struct{}{}
 		}
 	}
+}
+
+// moduleProviderDeploymentLocked returns the earliest active deployment that
+// provides the module's catalog, or nil when the module has no active
+// deployment. The engine mutex must be held.
+func (e *Engine) moduleProviderDeploymentLocked(moduleName string) *Deployment {
+	moduleName = normalizeModuleName(moduleName)
+	if e == nil || moduleName == "" {
+		return nil
+	}
+	var provider *Deployment
+	for _, deployment := range e.deployments {
+		if deployment == nil || normalizeModuleName(deployment.moduleName) != moduleName {
+			continue
+		}
+		if provider == nil || deployment.order < provider.order {
+			provider = deployment
+		}
+	}
+	return provider
 }
 
 // removeDeploymentResourceDependentsLocked drops every dependent edge owned by

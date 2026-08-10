@@ -2651,6 +2651,63 @@
         "duplicate detection is scoped per catalog identity (module::name), so different modules expose the same logical name without conflict, matching the Java path registry per-module key",
         "Java create-index duplicate deployments and application-inlined classes are approved differences: duplicate index names are rejected when the owning table/named-window definition is built, and Go has no runtime-compiled class artifact"
       ]
+    },
+    {
+      "id": "client.deploy.dependency-listing",
+      "domain": "client",
+      "level": "G",
+      "summary": "Deployment dependency listing: consumed/provided catalog-object edges between deployments, nested schema event-type references, edge-derived deployment dependencies and per-deployment same-module edges",
+      "javaRefs": [
+        "ClientDeployListDependencies",
+        "ClientDeployListDependenciesObjectTypes",
+        "ClientDeployListDependenciesWModuleName",
+        "ClientDeployListDependenciesNoDependencies",
+        "ClientDeployListDependencyStar",
+        "ClientDeployListDependenciesInvalid",
+        "DeployerHelperDependencies",
+        "EPDeploymentDependencyConsumed",
+        "EPDeploymentDependencyProvided",
+        "EPObjectType"
+      ],
+      "goRefs": [
+        "deployment_dependencies.go",
+        "deployment_resources.go",
+        "runtime.go",
+        "client_deploy_list_dependencies_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "consumed/provided lists expose the module-owned catalog edges recorded at deploy time, including same-module cross-deployment edges and direct nested schema event-type references; unknown and blank IDs report not-found (Java null/IllegalArgumentException mapping)",
+        "script dependency names render Esper name#paramNum form (MyScript#1) from registered argument-type metadata",
+        "Java index and application-inlined class dependency items are approved representation differences: Go indexes are registration-time definition options riding the owning infra edge, and class equivalents ride the declared-expression edge",
+        "same-module consumer edges now also block the provider undeploy, matching Undeployer.checkDependency"
+      ]
+    },
+    {
+      "id": "client.deploy.redefinition-lifecycle",
+      "domain": "client",
+      "level": "G",
+      "summary": "Redefinition lifecycle: deploy/undeployAll cycles, same-plan redeploy, evolved definitions and same-named private objects coexisting across module scopes",
+      "javaRefs": [
+        "ClientDeployRedefinition",
+        "ClientDeployRedefinitionCreateSchemaNamedWindowInsert",
+        "ClientDeployRedefinitionNamedWindow",
+        "ClientDeployRedefinitionInsertInto",
+        "ClientDeployRedefinitionVariables"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "module.go",
+        "state.go",
+        "client_deploy_redefinition_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Java deployment-private objects are module-scoped catalog identities in Go: the same logical name coexists per module and is consumed independently",
+        "evolved definitions after undeployAll use a new registration identity because Go registrations are environment-scoped; the deploy/undeploy/redeploy lifecycle and filter-cleanup equivalent (no active deployments, no output) are pinned directly"
+      ]
     }
   ],
   "cases": [
@@ -15822,6 +15879,99 @@
         "go-unit"
       ],
       "difference": "Java tracks create-index statements as separately deployed path objects and rejects a duplicate index name on the same infra at deploy time; Go declares indexes as registration-time definition options, so a duplicate index name is rejected when the owning table/named-window definition is built and index names stay scoped to their owning infra. Java application-inlined classes are JVM deployment artifacts with their own path registry; Go has no runtime-compiled class artifact, the callable equivalent is an analyzable module-scoped declared expression whose duplicate registration is the declared-expression precondition, and a module without class artifacts deploys and undeploys cleanly."
+    },
+    {
+      "id": "case.client-deploy-list-dependencies",
+      "javaRuntimeIds": [
+        "java-runtime-0234bb0db11a13ce47b6",
+        "java-runtime-80a10936eae78af5da9b",
+        "java-runtime-f1b96b645b7717f5d67d",
+        "java-runtime-562ddcff18fae642e748",
+        "java-runtime-660269d99654d4ad0c66"
+      ],
+      "javaNames": [
+        "ClientDeployListDependenciesObjectTypes",
+        "ClientDeployListDependenciesWModuleName",
+        "ClientDeployListDependenciesNoDependencies",
+        "ClientDeployListDependencyStar",
+        "ClientDeployListDependenciesInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployListDependencies.java"
+      ],
+      "goTests": [
+        "TestClientDeployListDependenciesObjectTypesMatchesEsper",
+        "TestClientDeployListDependenciesWModuleNameMatchesEsper",
+        "TestClientDeployListDependenciesNoDependenciesMatchesEsper",
+        "TestClientDeployListDependencyStarMatchesEsper",
+        "TestClientDeployListDependenciesInvalidMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "deploy",
+        "dependency",
+        "named-window",
+        "table",
+        "variable",
+        "context",
+        "event-type",
+        "declared-expression",
+        "script",
+        "module",
+        "nested-schema"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Engine.DeploymentDependenciesConsumed/Provided expose the module-owned catalog edges recorded at deploy time as detached deterministically ordered lists, covering all seven object kinds with script name#paramNum rendering. Java tracks edges per deployment even inside one module: Go now records same-module cross-deployment edges whenever the consumer is not the module provider, and those edges also block the provider undeploy in Undeployer order. Schema-property event types become dependencies by collecting the direct nested property schemas of every referenced event type (ClientDeployListDependencyStar). Deployment.Dependencies unions the declared typed module uses with the provider deployments of referenced catalog objects, matching Java deriving deploymentIdDependencies from path references. Java index and application-inlined class dependency items have no Go dependency objects (approved representation difference): indexes are registration-time definition options riding the owning table/named-window edge, and the class equivalent rides the declared-expression edge. Java returns null for unknown deployments and raises IllegalArgumentException for null IDs; Go reports not-found for unknown and blank IDs. Java @protected windows map to public Go modules because a protected Go module allows a single active deployment."
+    },
+    {
+      "id": "case.client-deploy-redefinition",
+      "javaRuntimeIds": [
+        "java-runtime-8e37c36272674f7debed",
+        "java-runtime-c5e34eb126edf052a425",
+        "java-runtime-93c9d04b3d070460b2b1",
+        "java-runtime-2faf94eb3bebd1aebf01"
+      ],
+      "javaNames": [
+        "ClientDeployRedefinitionCreateSchemaNamedWindowInsert",
+        "ClientDeployRedefinitionNamedWindow",
+        "ClientDeployRedefinitionInsertInto",
+        "ClientDeployRedefinitionVariables"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployRedefinition.java"
+      ],
+      "goTests": [
+        "TestClientDeployRedefinitionCreateSchemaNamedWindowInsertMatchesEsper",
+        "TestClientDeployRedefinitionNamedWindowMatchesEsper",
+        "TestClientDeployRedefinitionInsertIntoMatchesEsper",
+        "TestClientDeployRedefinitionVariablesMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "deploy",
+        "redefinition",
+        "lifecycle",
+        "named-window",
+        "table",
+        "variable",
+        "event-type",
+        "insert-into",
+        "module"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java allows redefinition because deployment-private objects are undeployed with their deployment and the name is freed; Go materializes create statements as environment/module registrations, so same-named private objects are module-scoped identities (A::MyWindow vs B::MyWindow) that coexist and are consumed independently, and an evolved definition after undeployAll uses a new registration identity. The lifecycle parity is pinned directly: deploy/undeployAll cycles of schema+window+insert modules, the same immutable plans redeployed twice (Java deploys the same EPCompiled), on-merge insert-into/delete chains, table redeploy with evolved columns, and the filter-cleanup equivalent (zero active deployments and no output after undeploy-all)."
     }
   ],
   "mappings": [
@@ -16848,6 +16998,14 @@
     {
       "capabilityId": "client.deploy.duplicate-preconditions",
       "caseId": "case.client-deploy-duplicate-index-class-disposition"
+    },
+    {
+      "capabilityId": "client.deploy.dependency-listing",
+      "caseId": "case.client-deploy-list-dependencies"
+    },
+    {
+      "capabilityId": "client.deploy.redefinition-lifecycle",
+      "caseId": "case.client-deploy-redefinition"
     }
   ]
 }
