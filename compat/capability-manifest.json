@@ -3033,12 +3033,15 @@
         "ViewLastEventMarketData",
         "ViewFirstLengthMarketData",
         "ViewLengthWindowIterator",
-        "ViewLengthWindowWPrevPrior"
+        "ViewLengthWindowWPrevPrior",
+        "ViewTimeWindowSceneOne",
+        "ViewTimeWindowSceneTwo"
       ],
       "goRefs": [
         "view_parity_test.go",
         "view_firstunique_parity_test.go",
-        "view_marketdata_parity_test.go"
+        "view_marketdata_parity_test.go",
+        "view_timewin_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -17626,6 +17629,39 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.view-timewindow-scenes",
+      "javaRuntimeIds": [
+        "java-runtime-25dfb49811c974a34e5d",
+        "java-runtime-a8007c80ae5756bb4ddb"
+      ],
+      "javaNames": [
+        "ViewTimeWindowSceneOne",
+        "ViewTimeWindowSceneTwo"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeWin.java"
+      ],
+      "goTests": [
+        "TestViewTimeWindowSceneOneMatchesEsper",
+        "TestViewTimeWindowSceneTwoMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "time-window",
+        "virtual-clock",
+        "expiry",
+        "iterator",
+        "batch-expiry"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -18800,14 +18836,18 @@
     {
       "capabilityId": "view.window-core",
       "caseId": "case.view-sorted-prev"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-timewindow-scenes"
     }
   ],
   "summary": {
-    "totalCases": 293,
+    "totalCases": 294,
     "totalCapabilities": 103,
-    "mappedCases": 275,
+    "mappedCases": 276,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1898
+    "disposedRuntimeIds": 1900
   }
 }
