@@ -2234,17 +2234,22 @@
         "ClientCompileLargeSelectCol",
         "ClientCompileLargeCreateSchemaAndInsert",
         "ClientCompileLargeAggregation",
-        "ClientCompileLargeAggregationAccess"
+        "ClientCompileLargeAggregationAccess",
+        "ClientCompileLargeTableAggregationReset",
+        "ClientCompileLargeTableAggregationEnterLeaveMethod",
+        "ClientCompileLargeTableAggregationEnterLeaveAccessAgg"
       ],
       "goRefs": [
         "expr.go",
         "stream.go",
         "plan.go",
+        "trigger.go",
         "client_compile_large_parity_test.go",
         "client_compile_large_wconfig_substitution_parity_test.go",
         "client_compile_large_wconfig_select_parity_test.go",
         "client_compile_large_wconfig_schema_insert_parity_test.go",
-        "client_compile_large_wconfig_aggregation_parity_test.go"
+        "client_compile_large_wconfig_aggregation_parity_test.go",
+        "client_compile_large_wconfig_table_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2253,7 +2258,8 @@
         "result-schema order, field types, canonical bytes and hash are verified across a Plan.Query rebuild",
         "Go compiles an in-memory typed AST and therefore has no JVM class-file constant-pool or generated-method-size boundary",
         "ClientCompileLargeWConfig method and access aggregation stress executions are mapped with 5,000 and 2,000 result columns respectively",
-        "the remaining ClientCompileLargeWConfig table aggregation matrix remains open"
+        "ClientCompileLargeWConfig table reset, enter-leave method aggregation and enter-leave window-access executions are mapped at 1,000 columns each",
+        "all twelve ClientCompileLargeWConfig executions are mapped; the broader Java compiler/runtime inventory remains incremental"
       ]
     },
     {
@@ -14691,6 +14697,48 @@
       "difference": "The method-aggregation test builds 5,000 typed Sum(Add(intPrimitive, index)) projections over LastEvent and verifies every c0 through c4999 after inputs 10 and 50. The access-aggregation test builds 1,000 independent SortedAccessBy states over KeepAll, yielding 2,000 result columns; every cN is the first event and every dN is the complete sorted event collection. This retains the Java execution's large aggregate-state and result-schema pressure through fluent typed expressions, while additionally asserting the selectFrom-equivalent collection that Java constructs but does not inspect."
     },
     {
+      "id": "case.client-compile-large-wconfig-table",
+      "javaRuntimeIds": [
+        "java-runtime-9b6d3d2531685e165774",
+        "java-runtime-b45c5d40a32ca915872c",
+        "java-runtime-7853b2f96670d7ef0b4e"
+      ],
+      "javaNames": [
+        "ClientCompileLargeTableAggregationReset",
+        "ClientCompileLargeTableAggregationEnterLeaveMethod",
+        "ClientCompileLargeTableAggregationEnterLeaveAccessAgg"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileLargeWConfig.java"
+      ],
+      "goTests": [
+        "TestClientCompileLargeTableAggregationResetMatchesEsper",
+        "TestClientCompileLargeTableAggregationEnterLeaveMethodMatchesEsper",
+        "TestClientCompileLargeTableAggregationEnterLeaveAccessAggMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "large-plan",
+        "table",
+        "aggregation",
+        "aggregate-reset",
+        "enter-leave",
+        "window-access",
+        "length-window",
+        "1000-columns",
+        "stress"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go adds the fluent ResetTableAggregates trigger for the tested no-primary-key into-table aggregate row: naming all 1,000 columns corresponds to repeated cN.reset(), while omitting the list corresponds to the table-alias reset. Both forms clear the owning live aggregate contribution state and immediately rematerialize 1,000 null sum columns; the next event starts at its own value. Separate LengthWindow(1) tests verify 1,000 Sum(Add(intPrimitive, index)) columns leave the prior event, and 1,000 WindowAccessBy columns retain exactly the current event after replacement. Complete-column reset is explicit in Go so one materialized row cannot expose mutually inconsistent contribution sets."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15800,6 +15848,10 @@
     {
       "capabilityId": "client.compile.large-plan",
       "caseId": "case.client-compile-large-wconfig-aggregation"
+    },
+    {
+      "capabilityId": "client.compile.large-plan",
+      "caseId": "case.client-compile-large-wconfig-table"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",

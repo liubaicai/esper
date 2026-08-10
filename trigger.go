@@ -19,6 +19,9 @@ const (
 	triggerSetVariables
 	triggerSelectTable
 	triggerDeleteAllTable
+	// triggerResetTableAggregates resets the live aggregate state that owns a
+	// no-key into-table row, then rematerializes the empty aggregate row.
+	triggerResetTableAggregates
 	// triggerInsertFromNamedWindow inserts one projected row per source
 	// named-window event into the target named window, mirroring Esper's
 	// "on T insert into Target(cols) select ... from Source" trigger form.
@@ -245,6 +248,7 @@ type triggerDefinition struct {
 	selections          []Selection
 	splitBranches       []SplitStreamBranch
 	splitAll            bool
+	resetColumns        []string
 	// eventExpression is the single-event projection form used when a
 	// trigger inserts the result of a method/UDF into a Variant-typed named
 	// window.  It is deliberately separate from column assignments: a
@@ -407,6 +411,28 @@ func (s TriggerStream[T]) DeleteFromTableWhere(table string, predicate Expressio
 // DeleteAllFromTable removes every row from a table when the trigger arrives.
 func (s TriggerStream[T]) DeleteAllFromTable(table string) TriggerQuery {
 	return s.trigger(table, triggerDeleteAllTable, nil, nil)
+}
+
+// ResetTableAggregates resets the live aggregate state materialized into a
+// no-primary-key table. Naming every column is the fluent equivalent of
+// Esper's "update set c0.reset(), c1.reset(), ..." form; omitting columns is
+// the whole-row alias equivalent to "tableAlias.reset()". The current
+// contract intentionally resets one complete aggregate row so all projected
+// columns continue to share one coherent contribution set.
+func (s TriggerStream[T]) ResetTableAggregates(table string, columns ...string) TriggerQuery {
+	normalized := make([]string, len(columns))
+	for index, column := range columns {
+		normalized[index] = strings.TrimSpace(column)
+	}
+	return TriggerQuery{
+		env: s.env,
+		definition: &triggerDefinition{
+			input:        s.node,
+			table:        strings.TrimSpace(table),
+			action:       triggerResetTableAggregates,
+			resetColumns: normalized,
+		},
+	}
 }
 
 // InsertIntoNamedWindow appends a projected event to a named window. The
@@ -613,15 +639,16 @@ func (d *triggerDefinition) description() string {
 		return "trigger(<nil>)"
 	}
 	action := map[triggerActionKind]string{
-		triggerInsertTable:    "insert",
-		triggerUpsertTable:    "upsert",
-		triggerUpdateTable:    "update",
-		triggerDeleteTable:    "delete",
-		triggerMergeTable:     "merge",
-		triggerSetVariables:   "set-variables",
-		triggerSelectTable:    "select",
-		triggerDeleteAllTable: "delete-all",
-		triggerSplitStream:    "split-stream",
+		triggerInsertTable:          "insert",
+		triggerUpsertTable:          "upsert",
+		triggerUpdateTable:          "update",
+		triggerDeleteTable:          "delete",
+		triggerMergeTable:           "merge",
+		triggerSetVariables:         "set-variables",
+		triggerSelectTable:          "select",
+		triggerDeleteAllTable:       "delete-all",
+		triggerResetTableAggregates: "reset-aggregates",
+		triggerSplitStream:          "split-stream",
 	}[d.action]
 	if d.action == triggerSplitStream {
 		mode := "first"
@@ -753,6 +780,13 @@ func (d *triggerDefinition) description() string {
 	if d.action == triggerInsertFromNamedWindow {
 		return fmt.Sprintf("on(%s)->named-window.insert-from(%s;%s)", d.input.describe(), d.sourceTable, describeTableAssignments(d.assignments))
 	}
+	if d.action == triggerResetTableAggregates {
+		columns := "*"
+		if len(d.resetColumns) > 0 {
+			columns = strings.Join(d.resetColumns, ",")
+		}
+		return fmt.Sprintf("on(%s)->table.reset-aggregates(%s;%s)", d.input.describe(), d.table, columns)
+	}
 	where := ""
 	if d.where != nil {
 		where = ",where=" + d.where.Description()
@@ -802,6 +836,36 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 	table, ok := e.TableInModule(definition.moduleName, definition.table)
 	if !ok {
 		return NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown table %q", definition.table))
+	}
+	if definition.action == triggerResetTableAggregates {
+		if len(table.PrimaryKey()) != 0 {
+			return NewError(ErrorInvalidRule, "table aggregate reset currently requires a no-primary-key target")
+		}
+		columns := table.Columns()
+		if len(definition.resetColumns) == 0 {
+			return nil
+		}
+		declared := make(map[string]struct{}, len(columns))
+		for _, column := range columns {
+			declared[column.Name] = struct{}{}
+		}
+		seen := make(map[string]struct{}, len(definition.resetColumns))
+		for index, column := range definition.resetColumns {
+			if column == "" {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("table aggregate reset column %d is blank", index))
+			}
+			if _, exists := declared[column]; !exists {
+				return NewError(ErrorUnknownName, fmt.Sprintf("table aggregate reset references unknown column %q", column))
+			}
+			if _, exists := seen[column]; exists {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("table aggregate reset duplicates column %q", column))
+			}
+			seen[column] = struct{}{}
+		}
+		if len(seen) != len(columns) {
+			return NewError(ErrorInvalidRule, "table aggregate reset must name every column or omit the column list")
+		}
+		return nil
 	}
 	if definition.where != nil {
 		if definition.action != triggerUpdateTable && definition.action != triggerDeleteTable && definition.action != triggerSelectTable {
@@ -857,7 +921,7 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 		}
 		return nil
 	}
-	if definition.action != triggerDeleteTable && definition.action != triggerDeleteAllTable && definition.action != triggerMergeTable && len(definition.assignments) == 0 {
+	if definition.action != triggerDeleteTable && definition.action != triggerDeleteAllTable && definition.action != triggerResetTableAggregates && definition.action != triggerMergeTable && len(definition.assignments) == 0 {
 		return NewError(ErrorInvalidRule, "table trigger requires at least one assignment")
 	}
 	for index, assignment := range definition.assignments {
@@ -2339,6 +2403,21 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		}
 		mutation.oldRows = append(mutation.oldRows, rows...)
 		return mutation, nil
+	case triggerResetTableAggregates:
+		oldRows, err := table.snapshotInScope(ctx, scope)
+		if err != nil {
+			return tableMutationResult{}, err
+		}
+		if err := resetIntoTableAggregateStatements(ctx, engine, definition, owner, runtime, now); err != nil {
+			return tableMutationResult{}, err
+		}
+		newRows, err := table.snapshotInScope(ctx, scope)
+		if err != nil {
+			return tableMutationResult{}, err
+		}
+		mutation.oldRows = append(mutation.oldRows, oldRows...)
+		mutation.newRows = append(mutation.newRows, newRows...)
+		return mutation, nil
 	case triggerMergeTable:
 		keys, err := evaluateTriggerKeys(definition.keys, evaluation)
 		if err != nil {
@@ -2440,6 +2519,54 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 	default:
 		return tableMutationResult{}, NewError(ErrorInvalidRule, "unknown trigger action")
 	}
+}
+
+func resetIntoTableAggregateStatements(ctx context.Context, engine *Engine, definition *triggerDefinition, owner *Statement, triggerRuntime *statementRuntime, now time.Time) error {
+	if engine == nil || definition == nil {
+		return NewError(ErrorDependency, "table aggregate reset has no engine or definition")
+	}
+	target := catalogKey(definition.moduleName, definition.table)
+	reset := false
+	for _, statement := range engine.sortedStatementsLocked() {
+		if statement == nil || statement == owner || statement.plan.query.aggregate == nil || statement.plan.query.tableTarget == "" {
+			continue
+		}
+		moduleName, tableName := splitCatalogKey(statement.plan.query.tableTarget)
+		if catalogKey(moduleName, tableName) != target {
+			continue
+		}
+		statement.mu.Lock()
+		if statement.closed || statement.state != StatementStarted {
+			statement.mu.Unlock()
+			continue
+		}
+		if statement.plan.query.contextName == "" {
+			statement.runtime.aggregateState = &aggregateRuntimeState{groups: make(map[string]*aggregateGroup)}
+			if err := statement.runtime.persistAggregateTable(statement.plan, now); err != nil {
+				statement.mu.Unlock()
+				return err
+			}
+			reset = true
+		} else if triggerRuntime != nil && triggerRuntime.partitionContextName == statement.plan.query.contextName && triggerRuntime.partitionKey != "" {
+			partition := statement.runtime.partitions[triggerRuntime.partitionKey]
+			if partition != nil {
+				partition.aggregateState = &aggregateRuntimeState{groups: make(map[string]*aggregateGroup)}
+				if err := partition.persistAggregateTable(statement.plan, now); err != nil {
+					statement.mu.Unlock()
+					return err
+				}
+				reset = true
+			}
+		}
+		statement.mu.Unlock()
+		if err := contextErr(ctx); err != nil {
+			return err
+		}
+	}
+	if !reset {
+		return NewError(ErrorState, fmt.Sprintf("table aggregate reset found no active into-table aggregate for %q", definition.table))
+	}
+	return nil
 }
 
 func executeTableWhereAction(ctx context.Context, engine *Engine, table *Table, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, runtime *statementRuntime, scope string) (tableMutationResult, error) {
