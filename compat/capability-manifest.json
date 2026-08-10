@@ -2231,7 +2231,8 @@
         "ClientCompileLargeWConfig",
         "ClientCompileLargeSubstitutionParams",
         "ClientCompileLargeSubstitutionParamsFAF",
-        "ClientCompileLargeSelectCol"
+        "ClientCompileLargeSelectCol",
+        "ClientCompileLargeCreateSchemaAndInsert"
       ],
       "goRefs": [
         "expr.go",
@@ -2239,7 +2240,8 @@
         "plan.go",
         "client_compile_large_parity_test.go",
         "client_compile_large_wconfig_substitution_parity_test.go",
-        "client_compile_large_wconfig_select_parity_test.go"
+        "client_compile_large_wconfig_select_parity_test.go",
+        "client_compile_large_wconfig_schema_insert_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2247,7 +2249,7 @@
         "the mapped execution covers one thousand result columns with twenty-six literal addends per column",
         "result-schema order, field types, canonical bytes and hash are verified across a Plan.Query rebuild",
         "Go compiles an in-memory typed AST and therefore has no JVM class-file constant-pool or generated-method-size boundary",
-        "the remaining ClientCompileLargeWConfig aggregation, table and create-schema/insert representation matrix remains open"
+        "the remaining ClientCompileLargeWConfig aggregation and table matrix remains open"
       ]
     },
     {
@@ -14606,6 +14608,46 @@
       "difference": "For each representation Go registers an explicit 5,000-field target schema, compiles the typed theString-plus-index projections, routes the result and observes it through a downstream statement. Every c0 through c4999 property exists and equals x0 through x4999. MAP preserves a map[string]any underlying and OBJECTARRAY preserves an ordered []any underlying. The extra typed route makes representation materialization explicit instead of selecting an EPL output annotation, while retaining the Java execution's metadata, value and underlying contracts."
     },
     {
+      "id": "case.client-compile-large-wconfig-schema-insert",
+      "javaRuntimeIds": [
+        "java-runtime-83c76773153ea0844140",
+        "java-runtime-bf754308369e953b6cd1",
+        "java-runtime-3bfac2c1b13cff5c0951"
+      ],
+      "javaNames": [
+        "ClientCompileLargeCreateSchemaAndInsert{representation=MAP, numColumns=5000, widening=false}",
+        "ClientCompileLargeCreateSchemaAndInsert{representation=MAP, numColumns=5000, widening=true}",
+        "ClientCompileLargeCreateSchemaAndInsert{representation=OBJECTARRAY, numColumns=5000, widening=false}"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileLargeWConfig.java"
+      ],
+      "goTests": [
+        "TestClientCompileLargeCreateSchemaAndInsertMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "large-plan",
+        "5000-columns",
+        "create-schema",
+        "insert-into",
+        "map",
+        "object-array",
+        "numeric-widening",
+        "current-timestamp",
+        "reversed-field-order"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go explicitly registers MAP or OBJECTARRAY schemas with the same reversed p4999-through-p0 declaration order, verifies all 5,000 fields are int64, and routes 5,000 typed projections into the target. The non-widening variants add each int literal to CurrentTimestamp at virtual epoch-millis 1,000,000; the widening variant adds int to a typed int64 literal. Every named property equals index plus 1,000,000, and the ObjectArray physical first/last positions reflect the reversed schema order. Java create-schema EPL and public/bus annotations map to direct fluent schema registration and routing."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15707,6 +15749,10 @@
     {
       "capabilityId": "client.compile.large-plan",
       "caseId": "case.client-compile-large-wconfig-select"
+    },
+    {
+      "capabilityId": "client.compile.large-plan",
+      "caseId": "case.client-compile-large-wconfig-schema-insert"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",
