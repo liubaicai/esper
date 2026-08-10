@@ -3082,6 +3082,33 @@
         "EPLOtherIStreamRStreamKeywords suite",
         "EPLOtherSelectExprStreamSelector suite"
       ]
+    },
+    {
+      "id": "epl.insertinto-pattern",
+      "domain": "insert-into",
+      "level": "G",
+      "summary": "Insert pattern match results into a derived stream, consuming from the derived stream. OR pattern with every matches S0 or S1 events, projects tagged fields (es0id/es1id) into a new stream via InsertInto.",
+      "javaRefs": [
+        "EPLInsertIntoPropsWildcard"
+      ],
+      "goRefs": [
+        "insert_pattern_parity_test.go"
+      ],
+      "phase": 2,
+      "status": "mapped",
+      "remaining": [
+        "EPLInsertIntoProps",
+        "EPLInsertIntoNoProps",
+        "EPLInsertIntoFromPatternNamedWindow",
+        "EPLInsertIntoEmptyPropType suite",
+        "EPLInsertIntoEventTypedColumnFromProp suite",
+        "EPLInsertIntoIRStreamFunc",
+        "EPLInsertIntoPopulateCreateStream suite",
+        "EPLInsertIntoPopulateSingleColByMethodCall",
+        "EPLInsertIntoPopulateUndStreamSelect suite",
+        "EPLInsertIntoTransposePattern suite",
+        "EPLInsertIntoWrapper suite"
+      ]
     }
   ],
   "cases": [
@@ -17288,6 +17315,36 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.epl-insertinto-pattern",
+      "javaRuntimeIds": [
+        "java-runtime-4dc2b394114fdaf84056"
+      ],
+      "javaNames": [
+        "EPLInsertIntoPropsWildcard"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoFromPattern.java"
+      ],
+      "goTests": [
+        "TestInsertIntoFromPatternMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "epl-insertinto",
+        "pattern",
+        "or",
+        "every",
+        "insert-into",
+        "stream-routing"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -18361,11 +18418,11 @@
     }
   ],
   "summary": {
-    "totalCases": 284,
-    "totalCapabilities": 102,
-    "mappedCases": 266,
+    "totalCases": 285,
+    "totalCapabilities": 103,
+    "mappedCases": 267,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1886
+    "disposedRuntimeIds": 1887
   }
 }

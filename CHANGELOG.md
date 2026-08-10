@@ -4,6 +4,8 @@
 
 ## 2026-08-10
 
+本轮启动 EPLInsertInto domain：关闭 EPLInsertIntoFromPattern suite 的 EPLInsertIntoPropsWildcard execution，新增 1 个 runtime ID。新增 insert_pattern_parity_test.go（1 个 parity 测试），覆盖 OR+Every 模式匹配结果插入派生流（every (es0=S0 or es1=S1) → insert into MyStream(es0id, es1id) → 从 MyStream 消费）。S0 事件匹配时 es0id=10/es1id 为 null，S1 事件匹配时 es1id=20/es0id 为 null。新增 epl.insertinto-pattern capability（phase 2, mapped）及 1 个 mapped case。Coverage 1887/4140 (45.58%)，285 case 中 267 mapped / 1 partial / 17 approved-difference。
+
 本轮补充 EPLOther domain：关闭 EPLOtherIStreamRStreamConfigSelectorIRStream 与 EPLOtherIStreamRStreamConfigSelectorRStream 2 个 execution。新增 2 个 parity 测试，验证 irstream 选择器（length 窗口满时新事件进 New、被驱逐事件进 Old）与 rstream 选择器（插入不产生输出，驱逐事件进 Old）。Go 侧使用 WithOldStream()（对应 irstream）和 WithRemoveStreamOnly()（对应 rstream）QueryOption；Go 的 rstream 语义将驱逐事件放入 batch.Old 而非 Esper 的 listener newData 参数。新增 eplother.stream-selector capability（phase 2, mapped）及 1 个 mapped case。Coverage 1886/4140 (45.56%)，284 case 中 266 mapped / 1 partial / 17 approved-difference。
 
 本轮启动 ResultSet domain：关闭 ResultSetAggregateMaxMinGroupBy suite 的 2/6 execution（ResultSetAggregateMinMax/ResultSetAggregateMinNoGroupHaving），新增 2 个 runtime ID。新增 resultset_aggregate_parity_test.go（3 个 parity 测试），覆盖 min/max/count/sum/avg 聚合函数与 group-by 组合、distinct 聚合（min/max distinct volume 去重）、length 窗口与聚合交互（窗口滑动时旧值被移除重新计算）、null 值在聚合中跳过（null volume 不参与 min/max 计算）、having 子句过滤聚合结果（sum > 150 才输出）。nullable 字段（*int64 volume）通过 Cast[*int64, int64] 转换为 Ordered 类型供 Min/Max 使用。新增 resultset.aggregate-group-by capability（phase 2, mapped）及 1 个 mapped case。Coverage 1884/4140 (45.51%)，283 case 中 265 mapped / 1 partial / 17 approved-difference。
