@@ -5030,6 +5030,11 @@ func (e *Environment) validatePattern(definition *patternDefinition, selections 
 	}
 	tagSources := patternTagSources(definition)
 	if definition.root != nil {
+		if definition.everyDistinct != nil {
+			if err := e.validateExprFields(definition.input, definition.everyDistinct); err != nil {
+				return fmt.Errorf("every-distinct key: %w", err)
+			}
+		}
 		if err := e.validatePatternNodeFields(definition.input, definition.root, tagSources, true); err != nil {
 			return err
 		}

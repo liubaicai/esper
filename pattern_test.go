@@ -108,13 +108,13 @@ func TestPatternEveryDistinctKeyExpiresOnVirtualClock(t *testing.T) {
 		t.Fatal(err)
 	}
 	expiryPlan, err := env.Build(makePattern(
-		PatternFrom(base, "a", Literal[bool](true)).EveryDistinctFor(key, time.Second),
+		PatternFrom(base, "a", Literal[bool](true)).EveryDistinctFor(time.Second, key),
 	))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := env.Build(makePattern(
-		PatternFrom(base, "a", Literal[bool](true)).EveryDistinctFor(key, 0),
+		PatternFrom(base, "a", Literal[bool](true)).EveryDistinctFor(0, key),
 	)); err == nil {
 		t.Fatal("zero every-distinct expiry was accepted")
 	}
@@ -223,7 +223,7 @@ func TestPatternEveryDistinctForInsideWithinExpiresNodeState(t *testing.T) {
 	env, _ := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")
 	key := Field[runtimeTestTrade, string]("symbol")
-	plan, err := env.Build(PatternFrom(base, "a", Literal[bool](true)).Within(10*time.Second).EveryDistinctFor(key, time.Second).Select(
+	plan, err := env.Build(PatternFrom(base, "a", Literal[bool](true)).Within(10*time.Second).EveryDistinctFor(time.Second, key).Select(
 		Alias("symbol", TagField[string]("a", "symbol")),
 	).Query())
 	if err != nil {

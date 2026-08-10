@@ -70,6 +70,7 @@ type patternNode struct {
 	cronOneShot            bool
 	distinctExpiry         time.Duration
 	distinctExpirySet      bool
+	distinctExpiryCalendar *OutputCalendarPeriod
 }
 
 func patternEvent(tag string, predicate Expression[bool]) *patternNode {
@@ -240,6 +241,7 @@ type patternDefinition struct {
 	everyDistinct          Expr
 	everyDistinctExpiry    time.Duration
 	everyDistinctExpirySet bool
+	everyDistinctCalendar  *OutputCalendarPeriod
 	maxStates              int
 	within                 time.Duration
 	guard                  Expression[bool]
@@ -648,56 +650,108 @@ func (p PatternStream) Every() PatternStream {
 	return p
 }
 
-func (p PatternStream) EveryDistinct(key Expr) PatternStream {
+// EveryDistinct restarts the subexpression for every distinct combination of
+// the key expressions, mirroring Esper's every-distinct: the first match for
+// a key combination is reported and later matches with an already-reported
+// combination are swallowed. Keys are tracked per spawned subexpression
+// instance; a falsified attempt (for example a not-branch dying) restarts
+// with an empty key set, exactly like EvalEveryDistinctStateNode.
+func (p PatternStream) EveryDistinct(keys ...Expr) PatternStream {
 	if p.def == nil {
 		return p
 	}
-	copyDefinition := *p.def
-	if p.def.root != nil && p.def.root.kind == patternWithinNode && !p.def.every && p.def.everyDistinct == nil {
-		copyDefinition.steps = nil
-		copyDefinition.root = &patternNode{kind: patternEveryNode, child: p.def.root, everyExpr: key}
-		return PatternStream{env: p.env, def: &copyDefinition}
-	}
-	copyDefinition.every = true
-	copyDefinition.everyDistinct = key
-	copyDefinition.steps = append([]patternStep(nil), p.def.steps...)
-	copyDefinition.root = p.def.root
-	return PatternStream{env: p.env, def: &copyDefinition}
+	return p.everyDistinctMaterialize(patternDistinctKeyExpression(keys), 0, false, nil)
 }
 
 // EveryDistinctFor limits the lifetime of a distinct key. Once expiry has
 // elapsed on the engine's virtual clock, a later event with the same key may
 // start a new match. This mirrors Esper's optional expiry interval while
 // keeping the primary API expression-oriented.
-func (p PatternStream) EveryDistinctFor(key Expr, expiry time.Duration) PatternStream {
+func (p PatternStream) EveryDistinctFor(expiry time.Duration, keys ...Expr) PatternStream {
 	if p.def == nil {
 		return p
 	}
-	if p.def.root != nil && p.def.root.kind == patternWithinNode && !p.def.every && p.def.everyDistinct == nil {
-		copyDefinition := *p.def
-		copyDefinition.steps = nil
-		copyDefinition.within = 0
-		copyDefinition.every = false
-		copyDefinition.everyDistinct = nil
-		copyDefinition.everyDistinctExpiry = 0
-		copyDefinition.everyDistinctExpirySet = false
-		copyDefinition.root = &patternNode{
-			kind:              patternEveryNode,
-			child:             p.def.root,
-			everyExpr:         key,
-			distinctExpiry:    expiry,
-			distinctExpirySet: true,
-		}
-		return PatternStream{env: p.env, def: &copyDefinition}
+	return p.everyDistinctMaterialize(patternDistinctKeyExpression(keys), expiry, true, nil)
+}
+
+// EveryDistinctForCalendar limits the lifetime of a distinct key with a
+// calendar period, mirroring Esper's month-scoped every-distinct expiry
+// (every-distinct(key, 1 month)): a key expires once the virtual clock
+// reaches the first-seen time shifted by the calendar period.
+func (p PatternStream) EveryDistinctForCalendar(years, months, days int, keys ...Expr) PatternStream {
+	if p.def == nil {
+		return p
 	}
+	return p.everyDistinctMaterialize(patternDistinctKeyExpression(keys), 0, true, &OutputCalendarPeriod{Years: years, Months: months, Days: days})
+}
+
+// everyDistinctMaterialize applies an every-distinct declaration to the
+// current pattern. Filter roots keep the definition-level form (one
+// persistent filter child, matching EvalFilterStateNode's non-quitting
+// behavior under every); compound roots materialize the every-distinct into
+// the AST so the child attempt stays single, exactly like Every does.
+func (p PatternStream) everyDistinctMaterialize(key Expr, expiry time.Duration, expirySet bool, calendar *OutputCalendarPeriod) PatternStream {
 	copyDefinition := *p.def
+	if p.def.root != nil && !p.def.every && p.def.everyDistinct == nil {
+		switch p.def.root.kind {
+		case patternAndNode, patternOrNode, patternSequenceNode, patternMatchUntilNode, patternUntilNode, patternNotNode, patternWithinNode:
+			copyDefinition.steps = nil
+			copyDefinition.root = &patternNode{
+				kind:                   patternEveryNode,
+				child:                  p.def.root,
+				everyExpr:              key,
+				distinctExpiry:         expiry,
+				distinctExpirySet:      expirySet,
+				distinctExpiryCalendar: calendar,
+			}
+			return PatternStream{env: p.env, def: &copyDefinition}
+		}
+	}
 	copyDefinition.every = true
 	copyDefinition.everyDistinct = key
 	copyDefinition.everyDistinctExpiry = expiry
-	copyDefinition.everyDistinctExpirySet = true
+	copyDefinition.everyDistinctExpirySet = expirySet
+	copyDefinition.everyDistinctCalendar = calendar
 	copyDefinition.steps = append([]patternStep(nil), p.def.steps...)
 	copyDefinition.root = p.def.root
 	return PatternStream{env: p.env, def: &copyDefinition}
+}
+
+// patternDistinctKeyExpression folds one or more every-distinct key
+// expressions into a single expression. Multiple keys evaluate to their
+// value slice so encodeKey compares the combination content-wise, matching
+// Esper's multi-expression every-distinct key.
+func patternDistinctKeyExpression(keys []Expr) Expr {
+	filtered := make([]Expr, 0, len(keys))
+	for _, key := range keys {
+		if key != nil {
+			filtered = append(filtered, key)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+	if len(filtered) == 1 {
+		return filtered[0]
+	}
+	children := make([]*exprNode, 0, len(filtered))
+	descriptions := make([]string, 0, len(filtered))
+	for _, key := range filtered {
+		children = append(children, key.node())
+		descriptions = append(descriptions, key.Description())
+	}
+	return makeExpr[[]any]("distinct-key-composite", strings.Join(descriptions, ","), children, func(ctx EvalContext) Value {
+		values := make([]any, 0, len(filtered))
+		for _, key := range filtered {
+			value := key.eval(ctx)
+			if !value.IsPresent() {
+				values = append(values, nil)
+				continue
+			}
+			values = append(values, value.Any())
+		}
+		return Present(values)
+	})
 }
 
 // MaxStates bounds the number of active followed-by matches. It is both a
@@ -750,7 +804,14 @@ func (p PatternStream) withinNode(duration time.Duration, durationExpr Expr, cal
 	copyDefinition.everyDistinctExpirySet = false
 	child := p.def.root
 	if p.def.every || p.def.everyDistinct != nil {
-		child = &patternNode{kind: patternEveryNode, child: child, everyExpr: p.def.everyDistinct}
+		child = &patternNode{
+			kind:                   patternEveryNode,
+			child:                  child,
+			everyExpr:              p.def.everyDistinct,
+			distinctExpiry:         p.def.everyDistinctExpiry,
+			distinctExpirySet:      p.def.everyDistinctExpirySet,
+			distinctExpiryCalendar: p.def.everyDistinctCalendar,
+		}
 	}
 	var calendarCopy *OutputCalendarPeriod
 	if calendar != nil {
@@ -1039,7 +1100,14 @@ func patternBranchRoot(definition *patternDefinition) *patternNode {
 	}
 	root := definition.root
 	if definition.every || definition.everyDistinct != nil {
-		return &patternNode{kind: patternEveryNode, child: root, everyExpr: definition.everyDistinct}
+		return &patternNode{
+			kind:                   patternEveryNode,
+			child:                  root,
+			everyExpr:              definition.everyDistinct,
+			distinctExpiry:         definition.everyDistinctExpiry,
+			distinctExpirySet:      definition.everyDistinctExpirySet,
+			distinctExpiryCalendar: definition.everyDistinctCalendar,
+		}
 	}
 	return root
 }
@@ -1170,8 +1238,18 @@ func validatePattern(definition *patternDefinition) error {
 	if definition.everyDistinct != nil && !definition.every {
 		return NewError(ErrorInvalidRule, "every-distinct requires every")
 	}
-	if definition.everyDistinctExpirySet && definition.everyDistinctExpiry <= 0 {
+	if definition.everyDistinctExpirySet && definition.everyDistinctExpiry <= 0 && definition.everyDistinctCalendar == nil {
 		return NewError(ErrorInvalidRule, "every-distinct expiry must be positive")
+	}
+	if definition.everyDistinctCalendar != nil {
+		if err := validatePatternDistinctCalendar(definition.everyDistinctCalendar); err != nil {
+			return err
+		}
+	}
+	if definition.everyDistinct != nil {
+		if err := validatePatternDistinctKey(definition.everyDistinct, definition.root); err != nil {
+			return err
+		}
 	}
 	if definition.maxStates < 0 {
 		return NewError(ErrorInvalidRule, "pattern max states cannot be negative")
@@ -1200,6 +1278,98 @@ func validatePattern(definition *patternDefinition) error {
 
 func validatePatternNode(node *patternNode, seen map[string]struct{}) error {
 	return validatePatternNodeScope(node, seen, false)
+}
+
+// validatePatternDistinctCalendar checks an every-distinct calendar expiry
+// period for negative or all-zero components.
+func validatePatternDistinctCalendar(calendar *OutputCalendarPeriod) error {
+	if calendar.Years < 0 || calendar.Months < 0 || calendar.Days < 0 {
+		return NewError(ErrorInvalidRule, "every-distinct calendar expiry cannot be negative")
+	}
+	if calendar.Years == 0 && calendar.Months == 0 && calendar.Days == 0 {
+		return NewError(ErrorInvalidRule, "every-distinct calendar expiry must be positive")
+	}
+	return nil
+}
+
+// validatePatternDistinctKey enforces Esper's every-distinct key rules: each
+// key expression must be non-constant, and every tag a key references must be
+// produced by the distinct subexpression itself (Esper reports "Failed to
+// validate pattern every-distinct expression" for both).
+func validatePatternDistinctKey(key Expr, child *patternNode) error {
+	if key == nil {
+		return NewError(ErrorInvalidRule, "every-distinct requires at least one key expression")
+	}
+	if patternDistinctKeyIsConstant(key.node()) {
+		return NewError(ErrorInvalidRule, "every-distinct key expressions must each return non-constant result values")
+	}
+	if child != nil {
+		tags := collectPatternNodeTags(child)
+		for _, tag := range exprNodeTagReferences(key.node()) {
+			if !tags[tag] {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("every-distinct key expression references tag %q which is not produced by its subexpression", tag))
+			}
+		}
+	}
+	return nil
+}
+
+// patternDistinctKeyIsConstant reports whether a key expression (or any
+// member of a composite key) is a literal constant.
+func patternDistinctKeyIsConstant(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.kind == "distinct-key-composite" {
+		for _, child := range node.children {
+			if child != nil && child.kind == "literal" {
+				return true
+			}
+		}
+		return false
+	}
+	return node.kind == "literal"
+}
+
+// collectPatternNodeTags gathers every tag the pattern subtree can produce.
+func collectPatternNodeTags(node *patternNode) map[string]bool {
+	tags := make(map[string]bool)
+	var walk func(n *patternNode)
+	walk = func(n *patternNode) {
+		if n == nil {
+			return
+		}
+		if n.tag != "" {
+			tags[n.tag] = true
+		}
+		walk(n.left)
+		walk(n.right)
+		walk(n.child)
+	}
+	walk(node)
+	return tags
+}
+
+// exprNodeTagReferences gathers the pattern tags an expression tree reads.
+func exprNodeTagReferences(node *exprNode) []string {
+	tags := make([]string, 0)
+	var walk func(n *exprNode)
+	walk = func(n *exprNode) {
+		if n == nil {
+			return
+		}
+		switch n.kind {
+		case "tag-field", "tag-field-at", "pattern-event":
+			if n.tagName != "" {
+				tags = append(tags, n.tagName)
+			}
+		}
+		for _, child := range n.children {
+			walk(child)
+		}
+	}
+	walk(node)
+	return tags
 }
 
 func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allowDuplicate bool) error {
@@ -1280,11 +1450,21 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		if node.everyExpr != nil && node.everyExpr.Type() == nil {
 			return NewError(ErrorInvalidRule, "every-distinct key expression is invalid")
 		}
-		if node.distinctExpirySet && node.distinctExpiry <= 0 {
+		if node.distinctExpirySet && node.distinctExpiry <= 0 && node.distinctExpiryCalendar == nil {
 			return NewError(ErrorInvalidRule, "every-distinct expiry must be positive")
+		}
+		if node.distinctExpiryCalendar != nil {
+			if err := validatePatternDistinctCalendar(node.distinctExpiryCalendar); err != nil {
+				return err
+			}
 		}
 		if node.distinctExpirySet && node.everyExpr == nil {
 			return NewError(ErrorInvalidRule, "every-distinct expiry requires a key expression")
+		}
+		if node.everyExpr != nil {
+			if err := validatePatternDistinctKey(node.everyExpr, node.child); err != nil {
+				return err
+			}
 		}
 		return validatePatternNodeScope(node.child, seen, false)
 	case patternWithinNode:

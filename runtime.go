@@ -4548,16 +4548,32 @@ func patternDistinctExpiry(definition *patternDefinition) time.Duration {
 	return definition.within
 }
 
+// patternDistinctExpiryCalendar returns the calendar period bounding a
+// distinct key's lifetime, if the statement declared one.
+func patternDistinctExpiryCalendar(definition *patternDefinition) *OutputCalendarPeriod {
+	if definition == nil || !definition.everyDistinctExpirySet {
+		return nil
+	}
+	return definition.everyDistinctCalendar
+}
+
+// patternDistinctExpiryArmed reports whether distinct keys expire at all,
+// by fixed duration or calendar period.
+func patternDistinctExpiryArmed(definition *patternDefinition) bool {
+	return patternDistinctExpiry(definition) > 0 || patternDistinctExpiryCalendar(definition) != nil
+}
+
 func expirePatternDistinct(state *patternRuntimeState, definition *patternDefinition, now time.Time) {
 	if state == nil || len(state.distinctAt) == 0 {
 		return
 	}
 	expiry := patternDistinctExpiry(definition)
-	if expiry <= 0 {
+	calendar := patternDistinctExpiryCalendar(definition)
+	if expiry <= 0 && calendar == nil {
 		return
 	}
 	for key, startedAt := range state.distinctAt {
-		if !startedAt.Add(expiry).After(now) {
+		if !patternDistinctKeyDeadline(expiry, calendar, startedAt).After(now) {
 			delete(state.distinctAt, key)
 			delete(state.distinct, key)
 		}
@@ -4572,7 +4588,7 @@ func recordPatternDistinct(state *patternRuntimeState, definition *patternDefini
 		state.distinct = make(map[string]struct{})
 	}
 	state.distinct[key] = struct{}{}
-	if patternDistinctExpiry(definition) > 0 {
+	if patternDistinctExpiryArmed(definition) {
 		if state.distinctAt == nil {
 			state.distinctAt = make(map[string]time.Time)
 		}
@@ -5755,7 +5771,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 }
 
 func initializeContextPatternTimer(state **patternRuntimeState, definition *patternDefinition, at time.Time, variables map[string]Value) bool {
-	if state == nil || definition == nil || definition.root == nil || (!patternContainsTimer(definition.root) && definition.within <= 0 && patternDistinctExpiry(definition) <= 0) {
+	if state == nil || definition == nil || definition.root == nil || (!patternContainsTimer(definition.root) && definition.within <= 0 && !patternDistinctExpiryArmed(definition)) {
 		return false
 	}
 	if *state == nil {
@@ -5895,7 +5911,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 }
 
 func advanceContextPatternTime(state **patternRuntimeState, definition *patternDefinition, now time.Time, variables map[string]Value, seedTags map[string]Event, seedTagValues map[string][]Event, runtime *statementRuntime, phase string) []patternMatch {
-	if state == nil || definition == nil || definition.root == nil || (!patternContainsTimer(definition.root) && definition.within <= 0 && patternDistinctExpiry(definition) <= 0) {
+	if state == nil || definition == nil || definition.root == nil || (!patternContainsTimer(definition.root) && definition.within <= 0 && !patternDistinctExpiryArmed(definition)) {
 		return nil
 	}
 	if !initializeContextPatternTimer(state, definition, now, variables) {
@@ -11796,15 +11812,26 @@ func patternEveryCanContinue(progress *patternProgress) bool {
 }
 
 func expirePatternProgressDistinct(progress *patternProgress, now time.Time) {
-	if progress == nil || progress.node == nil || !progress.node.distinctExpirySet || progress.node.distinctExpiry <= 0 || len(progress.distinctAt) == 0 {
+	if progress == nil || progress.node == nil || !progress.node.distinctExpirySet || len(progress.distinctAt) == 0 {
 		return
 	}
 	for key, startedAt := range progress.distinctAt {
-		if !startedAt.Add(progress.node.distinctExpiry).After(now) {
+		if !patternDistinctKeyDeadline(progress.node.distinctExpiry, progress.node.distinctExpiryCalendar, startedAt).After(now) {
 			delete(progress.distinctAt, key)
 			delete(progress.distinct, key)
 		}
 	}
+}
+
+// patternDistinctKeyDeadline computes when a distinct key first seen at
+// "from" expires: the calendar period (if any) applies before the fixed
+// duration, mirroring Esper's month/day/second every-distinct expiry forms.
+func patternDistinctKeyDeadline(expiry time.Duration, calendar *OutputCalendarPeriod, from time.Time) time.Time {
+	deadline := from
+	if calendar != nil {
+		deadline = deadline.AddDate(calendar.Years, calendar.Months, calendar.Days)
+	}
+	return deadline.Add(expiry)
 }
 
 func recordPatternProgressDistinct(progress *patternProgress, key string, now time.Time) {
@@ -12715,8 +12742,15 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 		for _, childTransition := range childTransitions {
 			next := clonePatternProgress(base)
 			next.child = childTransition.state
-			next.tags = mergePatternTags(progress.tags, childTransition.state.tags)
-			next.tagValues = mergePatternTagValues(progress.tagValues, childTransition.state.tagValues)
+			if childTransition.complete {
+				// Only a completing repetition contributes its captures to
+				// the accumulated tag arrays. A retained non-quitting child
+				// (every leg) carries its last firing's tags on every
+				// advance; merging those on non-completing transitions would
+				// duplicate earlier repetitions into the tag arrays.
+				next.tags = mergePatternTags(progress.tags, childTransition.state.tags)
+				next.tagValues = mergePatternTagValues(progress.tagValues, childTransition.state.tagValues)
+			}
 			next.count = progress.count
 			next.started = progress.count > 0 || patternProgressActive(childTransition.state)
 			if patternProgressTerminal(childTransition.state) && !childTransition.complete && next.count < next.minimum {
@@ -12728,9 +12762,18 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					next.done = true
 					next.child = nil
 				} else {
-					next.child = newPatternProgress(progress.node.child)
-					inheritPatternProgressTags(next, next.child)
-					armPatternProgressTimers(next.child, trigger.now, variables)
+					if !patternCompletionPermanent(childTransition.state) {
+						// A non-quitting child (an every or every-distinct
+						// leg) stays installed across repetitions, exactly
+						// like EvalMatchUntilStateNode keeping a child that
+						// reported isQuitted=false: an every-distinct child
+						// must keep accumulating its key set between the
+						// matches the match-until counts.
+					} else {
+						next.child = newPatternProgress(progress.node.child)
+						inheritPatternProgressTags(next, next.child)
+						armPatternProgressTimers(next.child, trigger.now, variables)
+					}
 				}
 			}
 			matchUntilTransition := patternTransitionFrom(next, patternSatisfied(next), childTransition)
@@ -12830,6 +12873,16 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				inheritPatternSpawnTags(base.spawnTags, base.spawnTagValues, next.child)
 				armPatternProgressTimers(next.child, trigger.now, variables)
 				next.started = patternProgressActive(next.child)
+				if next.node.everyExpr != nil {
+					// EvalEveryDistinctStateNode.evaluateFalse spawns the
+					// replacement child with an empty key set: a falsified
+					// every-distinct attempt resets its distinct keys, so a
+					// key reported by an earlier attempt becomes fresh again.
+					next.distinct = make(map[string]struct{})
+					if next.node.distinctExpirySet {
+						next.distinctAt = make(map[string]time.Time)
+					}
+				}
 			}
 			if childTransition.complete {
 				if next.node.everyExpr != nil {
@@ -13084,8 +13137,8 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				if transition.state == nil || (!transition.complete && !patternProgressActive(transition.state)) {
 					continue
 				}
-				if definition.everyDistinct != nil {
-					keyValue := definition.everyDistinct.eval(EvalContext{Event: event, Now: now, Variables: r.variables})
+			if definition.everyDistinct != nil {
+				keyValue := definition.everyDistinct.eval(EvalContext{Event: event, Tags: transition.state.tags, TagValues: transition.state.tagValues, Now: now, Variables: r.variables})
 					key := encodeKey([]any{keyValue.State(), keyValue.Any()})
 					if _, exists := r.patternState.distinct[key]; exists {
 						continue

@@ -3557,8 +3557,8 @@ func TestPatternContextEveryDistinctExpiresOnVirtualClock(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	base := From[runtimeTestTrade](env, "Trade")
 	start := PatternFrom(base, "a", Literal[bool](true)).EveryDistinctFor(
-		Field[runtimeTestTrade, string]("symbol"),
 		time.Second,
+		Field[runtimeTestTrade, string]("symbol"),
 	)
 	if _, err := CreateOverlappingPatternInitiatedContext(env, "pattern-distinct-expiry", start); err != nil {
 		t.Fatal(err)

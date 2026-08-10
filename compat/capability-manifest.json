@@ -2954,7 +2954,6 @@
       "status": "mapped",
       "remaining": [
         "PatternConsumingPattern suite",
-        "PatternOperatorEveryDistinct suite",
         "PatternOperatorMatchUntil suite",
         "PatternObserver* suites",
         "PatternGuardWhile suite",
@@ -3188,6 +3187,40 @@
       "remaining": [
         "harness USE_EPL_AND_CONSUME_NOCHECK style (consume + discard/suppress annotations) is tracked under the consuming-pattern suites",
         "COMPILE_TO_MODEL/COMPILE_TO_EPL object-model round-trip styles are EPL-compiler features outside the fluent Go API surface"
+      ]
+    },
+    {
+      "id": "pattern.operator-everydistinct",
+      "domain": "pattern",
+      "level": "G",
+      "summary": "Pattern every-distinct operator semantics: an every-distinct keeps a per-instance distinct key set with optional time or calendar expiry; falsification restarts spawn with an empty key set exactly like EvalEveryDistinctStateNode.evaluateFalse; compound roots (and/or/followed-by/match-until/until/not/within) materialize the distinct state into the spawned every node so per-instance key sets survive restarts, while a plain filter root keeps definition-level distinct state; keys are constant expressions evaluated against the arriving event and may reference captured tags; match-until keeps a retained non-quitting every-distinct child (with its key set) instead of replacing it between bounds",
+      "javaRefs": [
+        "PatternEveryDistinctSimple",
+        "PatternEveryDistinctWTime",
+        "PatternExpireSeenBeforeKey",
+        "PatternEveryDistinctOverFilter",
+        "PatternRepeatOverDistinct",
+        "PatternEveryDistinctOverRepeat",
+        "PatternEveryDistinctOverAnd",
+        "PatternEveryDistinctOverOr",
+        "PatternEveryDistinctOverNot",
+        "PatternEveryDistinctOverFollowedBy",
+        "PatternEveryDistinctWithinFollowedBy",
+        "PatternFollowedByWithDistinct",
+        "PatternInvalid",
+        "PatternMonthScoped",
+        "PatternEveryDistinctMultikeyWArray"
+      ],
+      "goRefs": [
+        "pattern_everydistinct_parity_test.go",
+        "pattern.go",
+        "runtime.go"
+      ],
+      "phase": 3,
+      "status": "mapped",
+      "remaining": [
+        "PatternTimerWithinOverDistinct and PatternEveryDistinctOverTimerWithin already map under the timer-within case",
+        "expression-declared distinct keys beyond constant/tag references are rejected at build time"
       ]
     }
   ],
@@ -17962,6 +17995,79 @@
         "go-unit"
       ],
       "difference": "Go parity tests replay the exact W-harness match sequences validated against the live Java engine (15 and-expressions and 9 or-expressions over the mixed event set, including the cartesian eventsPerChild multiplicities every a and every d and every b = D1x4/D2x4/B3x4/D3x6 and the nested-every or-chains up to 32 fires at D3). The fluent API builds 3-sided ands left-associatively (combination counts multiply through identically); Java's same-tag b and b uses distinct Go tags b1/b2; a or a fires one row with merged captures where Esper merges the shared tag. Fires within one event compare as a multiset exactly like the Java harness compareLists. ESPER-402 keeps the count(*) projection, now evaluated over the pattern match stream."
+    },
+    {
+      "id": "case.pattern-operator-every-distinct",
+      "javaRuntimeIds": [
+        "java-runtime-593adaf9d26cd35ab4c9",
+        "java-runtime-666dd3af9524272914d9",
+        "java-runtime-904c2139b52a7eaeedfb",
+        "java-runtime-7d52c9e689e3eeca65d7",
+        "java-runtime-9ad19ee9b29674b08443",
+        "java-runtime-d09d0786090e8a2e387e",
+        "java-runtime-fa2df3aeba01a5eda1d2",
+        "java-runtime-6aab27f9a29d3ad7188f",
+        "java-runtime-c23dddb4d0d001809ffd",
+        "java-runtime-c28f82ea566795672292",
+        "java-runtime-58fcea53e80425896c2d",
+        "java-runtime-0fe853af533719599512",
+        "java-runtime-2542b81b75a973a3cc38",
+        "java-runtime-d211795c3ecad71c297a",
+        "java-runtime-1c2ea40ffffe4e58a323"
+      ],
+      "javaNames": [
+        "PatternEveryDistinctSimple",
+        "PatternEveryDistinctWTime",
+        "PatternExpireSeenBeforeKey",
+        "PatternEveryDistinctOverFilter",
+        "PatternRepeatOverDistinct",
+        "PatternEveryDistinctOverRepeat",
+        "PatternEveryDistinctOverAnd",
+        "PatternEveryDistinctOverOr",
+        "PatternEveryDistinctOverNot",
+        "PatternEveryDistinctOverFollowedBy",
+        "PatternEveryDistinctWithinFollowedBy",
+        "PatternFollowedByWithDistinct",
+        "PatternInvalid",
+        "PatternMonthScoped",
+        "PatternEveryDistinctMultikeyWArray"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorEveryDistinct.java"
+      ],
+      "goTests": [
+        "TestPatternEveryDistinctSimpleMatchesEsper",
+        "TestPatternEveryDistinctWTimeMatchesEsper",
+        "TestPatternExpireSeenBeforeKeyMatchesEsper",
+        "TestPatternEveryDistinctOverFilterMatchesEsper",
+        "TestPatternRepeatOverDistinctMatchesEsper",
+        "TestPatternEveryDistinctOverRepeatMatchesEsper",
+        "TestPatternEveryDistinctOverAndMatchesEsper",
+        "TestPatternEveryDistinctOverOrMatchesEsper",
+        "TestPatternEveryDistinctOverNotMatchesEsper",
+        "TestPatternEveryDistinctOverFollowedByMatchesEsper",
+        "TestPatternEveryDistinctWithinFollowedByMatchesEsper",
+        "TestPatternFollowedByWithDistinctMatchesEsper",
+        "TestPatternEveryDistinctInvalidMatchesEsper",
+        "TestPatternEveryDistinctMonthScopedMatchesEsper",
+        "TestPatternEveryDistinctMultikeyWArrayMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "every-distinct",
+        "distinct-key",
+        "expiry",
+        "calendar",
+        "match-until",
+        "followed-by"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go parity tests replay the Java suite's exact event/time sequences for all 15 open executions (duplicate suppression per key, wtime expiry with re-admission, expire-seen-before-key ordering, repeat-over-distinct bounds, every-distinct over and/or/not/followed-by/within roots, followed-by with per-instance distinct, month-scoped calendar expiry, and multi-key with int-array events). The fluent API takes variadic keys and an explicit expiry duration or calendar period where EPL embeds them in the every-distinct syntax; validation errors (non-constant key, invalid calendar) surface at Build time instead of at statement creation."
     }
   ],
   "mappings": [
@@ -19160,14 +19266,18 @@
     {
       "capabilityId": "pattern.operator-and-or",
       "caseId": "case.pattern-operator-and-or-harness"
+    },
+    {
+      "capabilityId": "pattern.operator-everydistinct",
+      "caseId": "case.pattern-operator-every-distinct"
     }
   ],
   "summary": {
-    "totalCases": 299,
-    "totalCapabilities": 105,
-    "mappedCases": 281,
+    "totalCases": 300,
+    "totalCapabilities": 106,
+    "mappedCases": 282,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1932
+    "disposedRuntimeIds": 1947
   }
 }
