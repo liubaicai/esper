@@ -4449,6 +4449,7 @@ type statementRuntime struct {
 	derivedStates            map[*streamNode]*aggregateRuntimeState
 	patternState             *patternRuntimeState
 	patternJoinStates        map[*streamNode]*patternJoinRuntime
+	patternAggregateGroup    []Event
 	contextStartPatternState *patternRuntimeState
 	contextEndPatternState   *patternRuntimeState
 	contextPatternTags       map[string]Event
@@ -4694,10 +4695,25 @@ type patternProgress struct {
 	left                    *patternProgress
 	right                   *patternProgress
 	child                   *patternProgress
-	tags                    map[string]Event
-	tagValues               map[string][]Event
-	distinct                map[string]struct{}
-	distinctAt              map[string]time.Time
+	// leftList/rightList accumulate every match each and-side reported while
+	// active, mirroring EvalAndStateNode's eventsPerChild: a plain filter
+	// contributes one entry, an every leg one per firing, and a begin-state
+	// match (not / or-with-not) seeds the list with its vacant snapshot.
+	leftList   []patternSideMatch
+	rightList  []patternSideMatch
+	andSeeded  bool
+	tags       map[string]Event
+	tagValues  map[string][]Event
+	distinct   map[string]struct{}
+	distinctAt map[string]time.Time
+}
+
+// patternSideMatch is one cached and-side match: the tag snapshot a child
+// reported to its and parent, later combined with fresh matches from the
+// other side to produce the and's cartesian output.
+type patternSideMatch struct {
+	tags      map[string]Event
+	tagValues map[string][]Event
 }
 
 type patternTransition struct {
@@ -4709,6 +4725,11 @@ type patternTransition struct {
 	matched          bool
 	consumed         bool
 	consumptionLevel int
+	// fireOnly carries an additional completion of the same state lineage
+	// (one and-state firing a cartesian combination). Parents propagate the
+	// completion upward and spawn per fire exactly like Esper's per-match
+	// callbacks, but never retain the state as a continuing copy.
+	fireOnly bool
 }
 
 // patternTrigger distinguishes an incoming event from a virtual-clock
@@ -5672,7 +5693,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if transition.complete {
 				completedAny = true
 				completed = append(completed, candidate)
-				if patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
+				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternProgressTerminal(transition.state) {
@@ -5683,7 +5704,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if patternProgressTerminal(transition.state) {
 				terminal = true
 			}
-			if patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
+			if !transition.fireOnly && patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
@@ -5712,7 +5733,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if transition.complete {
 				completedAny = true
 				completed = append(completed, started)
-				if patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, started, definition) {
+				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, started, definition) {
 					nextActive = append(nextActive, started)
 				}
 				if patternProgressTerminal(transition.state) {
@@ -5840,7 +5861,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 			}
 			if transition.complete {
 				completed = append(completed, candidate)
-				if patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
+				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternProgressTerminal(transition.state) {
@@ -5861,7 +5882,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 			if patternProgressTerminal(transition.state) {
 				terminal = true
 			}
-			if patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
+			if !transition.fireOnly && patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
@@ -11438,6 +11459,11 @@ func patternDurationDeadline(node *patternNode, progress *patternProgress, at ti
 	}
 	if node.duration <= 0 {
 		if node.calendar == nil {
+			if node.duration == 0 && node.kind == patternTimerIntervalNode {
+				// timer:interval(0) is due on the arming clock immediately,
+				// matching Esper's zero-length interval observer.
+				return deadline, true
+			}
 			return time.Time{}, false
 		}
 		return deadline, true
@@ -11551,6 +11577,41 @@ func mergePatternTags(parts ...map[string]Event) map[string]Event {
 	return merged
 }
 
+// clonePatternSideMatches deep-copies an and-side match list.
+func clonePatternSideMatches(matches []patternSideMatch) []patternSideMatch {
+	if len(matches) == 0 {
+		return nil
+	}
+	copied := make([]patternSideMatch, len(matches))
+	for index, match := range matches {
+		copied[index] = patternSideMatch{
+			tags:      clonePatternTags(match.tags),
+			tagValues: clonePatternTagValues(match.tagValues),
+		}
+	}
+	return copied
+}
+
+// patternSideMatchSnapshot captures the tags a child state currently reports
+// to its and parent.
+func patternSideMatchSnapshot(progress *patternProgress) patternSideMatch {
+	return patternSideMatch{
+		tags:      clonePatternTags(progress.tags),
+		tagValues: clonePatternTagValues(progress.tagValues),
+	}
+}
+
+// mergePatternSideMatch combines a fresh side match with a cached match from
+// the other side into one and-output tag set. The fresh match wins on
+// duplicate tags, mirroring how the firing child's MatchedEventMap is
+// populated last in EvalAndStateNode.generateMatchEvents.
+func mergePatternSideMatch(fresh, cached patternSideMatch) patternSideMatch {
+	return patternSideMatch{
+		tags:      mergePatternTags(cached.tags, fresh.tags),
+		tagValues: mergePatternTagValues(cached.tagValues, fresh.tagValues),
+	}
+}
+
 func mergePatternTagValues(parts ...map[string][]Event) map[string][]Event {
 	var count int
 	for _, part := range parts {
@@ -11614,6 +11675,8 @@ func clonePatternProgress(progress *patternProgress) *patternProgress {
 	copyProgress.tagValues = clonePatternTagValues(progress.tagValues)
 	copyProgress.spawnTags = clonePatternTags(progress.spawnTags)
 	copyProgress.spawnTagValues = clonePatternTagValues(progress.spawnTagValues)
+	copyProgress.leftList = clonePatternSideMatches(progress.leftList)
+	copyProgress.rightList = clonePatternSideMatches(progress.rightList)
 	if len(progress.distinct) > 0 {
 		copyProgress.distinct = make(map[string]struct{}, len(progress.distinct))
 		for key := range progress.distinct {
@@ -12026,6 +12089,158 @@ func capturePatternEvent(progress *patternProgress, event Event) {
 	progress.tagValues[progress.node.tag] = append(progress.tagValues[progress.node.tag], event)
 }
 
+// patternAndSideFiredFresh reports whether one and-side transition carries a
+// completion raised by the current trigger, for eventsPerChild bookkeeping.
+// Unlike patternSideFiredFresh it does not treat every clock callback as
+// fresh: a side that was already satisfied before this trigger only
+// contributes its cached match, exactly like a quitted Esper filter whose
+// match stays in eventsPerChild without reporting new callbacks.
+func patternAndSideFiredFresh(side *patternProgress, transition patternTransition, trigger patternTrigger) bool {
+	if !transition.complete {
+		return false
+	}
+	if side != nil && side.node != nil && side.node.kind == patternEveryNode {
+		// An every node sets complete only when its child fired on this event.
+		return true
+	}
+	if transition.matched {
+		return true
+	}
+	return trigger.isTimer && !patternSatisfied(side)
+}
+
+// advancePatternAndTrigger evaluates an and-state for one event or timer
+// callback, mirroring EvalAndStateNode: each side accumulates every match it
+// reports while active (eventsPerChild), a side's fresh completion fires
+// against every cached combination of the other side, and one and-state
+// reports each combination as a separate parent callback. The first fire
+// rides the retained carrier transition; extra fires are emit-only.
+func advancePatternAndTrigger(progress *patternProgress, trigger patternTrigger, variables map[string]Value) []patternTransition {
+	base := clonePatternProgress(progress)
+	if !base.andSeeded {
+		base.andSeeded = true
+		// Esper seeds eventsPerChild with begin-state matches reported during
+		// start: a not child (or an or-with-not) reports its vacant match at
+		// start, which later combines with the positive side's matches.
+		if patternSatisfied(base.left) && !base.left.quit {
+			base.leftList = []patternSideMatch{patternSideMatchSnapshot(base.left)}
+		}
+		if patternSatisfied(base.right) && !base.right.quit {
+			base.rightList = []patternSideMatch{patternSideMatchSnapshot(base.right)}
+		}
+	}
+	leftTransitions := advancePatternNodeTrigger(base.left, trigger, variables)
+	rightTransitions := advancePatternNodeTrigger(base.right, trigger, variables)
+
+	// A side dies when every alternative is terminal without satisfaction;
+	// the and then expires atomically without firing, even when the other
+	// side completed on the same event (the forbidden event wins).
+	leftDead := patternTransitionsAllTerminalUnsatisfied(leftTransitions)
+	rightDead := patternTransitionsAllTerminalUnsatisfied(rightTransitions)
+
+	// Collect this event's fresh per-side completions, including the extra
+	// combination fires (fireOnly) reported by a nested and-state. Truth
+	// retained from an earlier completion (a done filter re-reporting
+	// satisfied on a later event) is not fresh: Esper's eventsPerChild only
+	// grows when a child actually matches the current event.
+	leftFresh := make([]patternSideMatch, 0, 1)
+	for _, leftTransition := range leftTransitions {
+		if leftTransition.complete && patternAndSideFiredFresh(base.left, leftTransition, trigger) {
+			leftFresh = append(leftFresh, patternSideMatchSnapshot(leftTransition.state))
+		}
+	}
+	rightFresh := make([]patternSideMatch, 0, 1)
+	for _, rightTransition := range rightTransitions {
+		if rightTransition.complete && patternAndSideFiredFresh(base.right, rightTransition, trigger) {
+			rightFresh = append(rightFresh, patternSideMatchSnapshot(rightTransition.state))
+		}
+	}
+
+	// EvalAndStateNode.evaluateTrue fires the fresh match against every
+	// cached combination of the other sides; the left child is evaluated
+	// before the right, so right completions see the left cache updated.
+	fires := make([]patternSideMatch, 0, len(leftFresh)+len(rightFresh))
+	if !leftDead && !rightDead {
+		for _, fresh := range leftFresh {
+			for _, cached := range base.rightList {
+				fires = append(fires, mergePatternSideMatch(fresh, cached))
+			}
+		}
+	}
+	leftList := append(clonePatternSideMatches(base.leftList), leftFresh...)
+	if !leftDead && !rightDead {
+		for _, fresh := range rightFresh {
+			for _, cached := range leftList {
+				fires = append(fires, mergePatternSideMatch(fresh, cached))
+			}
+		}
+	}
+	rightList := append(clonePatternSideMatches(base.rightList), rightFresh...)
+
+	result := make([]patternTransition, 0, len(leftTransitions)*len(rightTransitions))
+	carrier := -1
+	for _, leftTransition := range leftTransitions {
+		if leftTransition.fireOnly {
+			continue
+		}
+		for _, rightTransition := range rightTransitions {
+			if rightTransition.fireOnly {
+				continue
+			}
+			next := clonePatternProgress(base)
+			next.left = leftTransition.state
+			next.right = rightTransition.state
+			next.leftList = clonePatternSideMatches(leftList)
+			next.rightList = clonePatternSideMatches(rightList)
+			next.tags = mergePatternTags(leftTransition.state.tags, rightTransition.state.tags)
+			next.tagValues = mergePatternTagValues(leftTransition.state.tagValues, rightTransition.state.tagValues)
+			next.started = patternProgressActive(next.left) || patternProgressActive(next.right)
+			if (patternProgressTerminal(leftTransition.state) && !patternSatisfied(leftTransition.state)) || (patternProgressTerminal(rightTransition.state) && !patternSatisfied(rightTransition.state)) {
+				next.expired = true
+			}
+			if next.expired {
+				next.leftList = nil
+				next.rightList = nil
+			}
+			if carrier < 0 && (leftTransition.complete || rightTransition.complete) {
+				carrier = len(result)
+			}
+			result = append(result, patternTransitionFrom(next, false, leftTransition, rightTransition))
+		}
+	}
+	if len(fires) > 0 && carrier >= 0 {
+		carrierTransition := result[carrier]
+		carrierTransition.state.tags = clonePatternTags(fires[0].tags)
+		carrierTransition.state.tagValues = clonePatternTagValues(fires[0].tagValues)
+		carrierTransition.state.done = true
+		carrierTransition.complete = true
+		result[carrier] = carrierTransition
+		for _, extra := range fires[1:] {
+			extraState := clonePatternProgress(result[carrier].state)
+			extraState.tags = clonePatternTags(extra.tags)
+			extraState.tagValues = clonePatternTagValues(extra.tagValues)
+			extraTransition := patternTransitionFrom(extraState, true, result[carrier])
+			extraTransition.fireOnly = true
+			result = append(result, extraTransition)
+		}
+	}
+	return result
+}
+
+// patternTransitionsAllTerminalUnsatisfied reports whether every alternative
+// of one and-side died without satisfaction on this event.
+func patternTransitionsAllTerminalUnsatisfied(transitions []patternTransition) bool {
+	if len(transitions) == 0 {
+		return false
+	}
+	for _, transition := range transitions {
+		if !(patternProgressTerminal(transition.state) && !patternSatisfied(transition.state)) {
+			return false
+		}
+	}
+	return true
+}
+
 func patternTransitionFor(progress *patternProgress) patternTransition {
 	complete := patternSatisfied(progress)
 	if progress != nil && progress.node != nil && progress.node.kind == patternNotNode {
@@ -12176,7 +12391,9 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				if patternProgressTerminal(rightTransition.state) && !patternSatisfied(rightTransition.state) {
 					candidate.expired = true
 				}
-				result = append(result, patternTransitionFrom(candidate, fired, rightTransition))
+				candidateTransition := patternTransitionFrom(candidate, fired, rightTransition)
+				candidateTransition.fireOnly = rightTransition.fireOnly && rightTransition.complete
+				result = append(result, candidateTransition)
 			}
 			return result
 		}
@@ -12259,38 +12476,14 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				next.phase = 2
 				next.done = true
 			}
-			result = append(result, patternTransitionFrom(next, patternSatisfied(next), rightTransition))
+			seqTransition := patternTransitionFrom(next, patternSatisfied(next), rightTransition)
+			seqTransition.fireOnly = rightTransition.fireOnly && rightTransition.complete
+			result = append(result, seqTransition)
 		}
 		return result
 
 	case patternAndNode:
-		leftTransitions := advancePatternNodeTrigger(progress.left, trigger, variables)
-		rightTransitions := advancePatternNodeTrigger(progress.right, trigger, variables)
-		result := make([]patternTransition, 0, len(leftTransitions)*len(rightTransitions))
-		for _, leftTransition := range leftTransitions {
-			for _, rightTransition := range rightTransitions {
-				next := clonePatternProgress(progress)
-				next.left = leftTransition.state
-				next.right = rightTransition.state
-				next.tags = mergePatternTags(leftTransition.state.tags, rightTransition.state.tags)
-				next.tagValues = mergePatternTagValues(leftTransition.state.tagValues, rightTransition.state.tagValues)
-				next.started = patternProgressActive(next.left) || patternProgressActive(next.right)
-				if (patternProgressTerminal(leftTransition.state) && !patternSatisfied(leftTransition.state)) || (patternProgressTerminal(rightTransition.state) && !patternSatisfied(rightTransition.state)) {
-					next.expired = true
-				}
-				// The and fires when some child reports true for the current event
-				// while every side holds a (possibly cached) match. Truth retained
-				// from an earlier completion cannot trigger the and again, but it
-				// does satisfy the cache check, mirroring Esper's eventsPerChild.
-				leftSatisfied := patternSatisfied(next.left)
-				rightSatisfied := patternSatisfied(next.right)
-				next.done = leftSatisfied && rightSatisfied &&
-					(patternSideFiredFresh(progress.node.left, leftTransition, trigger) ||
-						patternSideFiredFresh(progress.node.right, rightTransition, trigger))
-				result = append(result, patternTransitionFrom(next, next.done && !next.expired, leftTransition, rightTransition))
-			}
-		}
-		return result
+		return advancePatternAndTrigger(progress, trigger, variables)
 
 	case patternOrNode:
 		if progress.quit {
@@ -12345,7 +12538,9 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				if !next.done && patternProgressTerminal(leftTransition.state) && patternProgressTerminal(next.right) {
 					next.expired = true
 				}
-				result = append(result, patternTransitionFrom(next, next.done && !next.expired, leftTransition))
+				orTransition := patternTransitionFrom(next, next.done && !next.expired, leftTransition)
+				orTransition.fireOnly = leftTransition.fireOnly && next.done
+				result = append(result, orTransition)
 			}
 			for _, rightTransition := range rightTransitions {
 				if !rightTransition.consumed {
@@ -12368,7 +12563,9 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				if !next.done && patternProgressTerminal(next.left) && patternProgressTerminal(rightTransition.state) {
 					next.expired = true
 				}
-				result = append(result, patternTransitionFrom(next, next.done && !next.expired, rightTransition))
+				orTransition := patternTransitionFrom(next, next.done && !next.expired, rightTransition)
+				orTransition.fireOnly = rightTransition.fireOnly && next.done
+				result = append(result, orTransition)
 			}
 			return result
 		}
@@ -12536,7 +12733,9 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					armPatternProgressTimers(next.child, trigger.now, variables)
 				}
 			}
-			result = append(result, patternTransitionFrom(next, patternSatisfied(next), childTransition))
+			matchUntilTransition := patternTransitionFrom(next, patternSatisfied(next), childTransition)
+			matchUntilTransition.fireOnly = childTransition.fireOnly && childTransition.complete
+			result = append(result, matchUntilTransition)
 		}
 		return result
 
@@ -12563,7 +12762,9 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				if terminatorTransition.complete {
 					next.done = true
 				}
-				result = append(result, patternTransitionFrom(next, patternSatisfied(next), childTransition, terminatorTransition))
+				untilTransition := patternTransitionFrom(next, patternSatisfied(next), childTransition, terminatorTransition)
+				untilTransition.fireOnly = (childTransition.fireOnly && childTransition.complete) || (terminatorTransition.fireOnly && terminatorTransition.complete)
+				result = append(result, untilTransition)
 			}
 		}
 		return result
@@ -12588,6 +12789,34 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 		childTransitions := advancePatternNodeTrigger(child, trigger, variables)
 		result := make([]patternTransition, 0, len(childTransitions))
 		for _, childTransition := range childTransitions {
+			if childTransition.fireOnly {
+				// An extra combination fire of a retained and-state: emit and
+				// spawn a sibling per fire (Esper's every gets one callback per
+				// match), but never retain another copy of the same state.
+				if !childTransition.complete {
+					continue
+				}
+				if base.node.everyExpr == nil && patternRepeatingLegAlive(childTransition.state) && !patternCompletionPermanent(childTransition.state) {
+					sibling := clonePatternProgress(base)
+					sibling.child = newPatternEveryChildProgress(base.node.child)
+					sibling.done = false
+					sibling.started = true
+					armPatternProgressFilters(sibling.child)
+					inheritPatternSpawnTags(base.spawnTags, base.spawnTagValues, sibling.child)
+					armPatternProgressTimers(sibling.child, trigger.now, variables)
+					result = append(result, patternTransitionFrom(sibling, false))
+				}
+				emit := clonePatternProgress(base)
+				emit.child = childTransition.state
+				emit.started = true
+				emit.done = true
+				emit.tags = clonePatternTags(childTransition.state.tags)
+				emit.tagValues = clonePatternTagValues(childTransition.state.tagValues)
+				emitTransition := patternTransitionFrom(emit, true, childTransition)
+				emitTransition.fireOnly = true
+				result = append(result, emitTransition)
+				continue
+			}
 			next := clonePatternProgress(base)
 			next.child = childTransition.state
 			next.started = true
@@ -12689,7 +12918,9 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					candidate.done = true
 				}
 			}
-			result = append(result, patternTransitionFrom(candidate, childTransition.complete && patternSatisfied(candidate), childTransition))
+			withinTransition := patternTransitionFrom(candidate, childTransition.complete && patternSatisfied(candidate), childTransition)
+			withinTransition.fireOnly = childTransition.fireOnly && childTransition.complete
+			result = append(result, withinTransition)
 		}
 		return result
 	default:
@@ -12822,10 +13053,10 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				}
 				if transition.complete {
 					completed = true
-					if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
+					if row, visible := r.evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 						batch.New = append(batch.New, resultRow(row))
 					}
-					if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
+					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
 						nextActive = append(nextActive, candidate)
 					}
 					if patternWithinTerminal(transition.state) || patternCompletionPermanent(transition.state) {
@@ -12836,7 +13067,7 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				if patternProgressTerminal(transition.state) {
 					terminal = true
 				}
-				if patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
+				if !transition.fireOnly && patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 			}
@@ -12870,10 +13101,10 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				}
 				if transition.complete {
 					completed = true
-					if row, visible := evaluatePatternMatch(definition, started, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, started) {
+					if row, visible := r.evaluatePatternMatch(definition, started, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, started) {
 						batch.New = append(batch.New, resultRow(row))
 					}
-					if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, started, definition) {
+					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, started, definition) {
 						nextActive = append(nextActive, started)
 					}
 					if patternWithinTerminal(transition.state) || patternCompletionPermanent(transition.state) {
@@ -12946,7 +13177,7 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 			dueAt := r.patternState.timerNext
 			match := patternMatch{current: Event{}, startedAt: dueAt}
 			if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
-				if row, visible := evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
+				if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
 					batch.New = append(batch.New, resultRow(row))
 				}
 			}
@@ -12964,7 +13195,7 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 		if !r.patternState.timerEmitted && !now.Before(r.patternState.timerNext) {
 			match := patternMatch{current: Event{}, startedAt: r.patternState.timerNext}
 			if patternGuardAllows(plan.query.pattern, Event{}, now, r.variables) {
-				if row, visible := evaluatePatternMatch(plan.query.pattern, match, plan, now, r.variables); visible {
+				if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, now, r.variables); visible {
 					batch.New = append(batch.New, resultRow(row))
 				}
 			}
@@ -12977,7 +13208,7 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 				dueAt := r.patternState.schedulePeriod.next
 				match := patternMatch{current: Event{}, startedAt: dueAt}
 				if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
-					if row, visible := evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
+					if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
 						batch.New = append(batch.New, resultRow(row))
 					}
 				}
@@ -12988,7 +13219,7 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 				dueAt := root.schedule[r.patternState.scheduleIndex]
 				match := patternMatch{current: Event{}, startedAt: dueAt}
 				if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
-					if row, visible := evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
+					if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
 						batch.New = append(batch.New, resultRow(row))
 					}
 				}
@@ -13007,7 +13238,7 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 			dueAt := r.patternState.cronNext
 			match := patternMatch{current: Event{}, startedAt: dueAt}
 			if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
-				if row, visible := evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
+				if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
 					batch.New = append(batch.New, resultRow(row))
 				}
 			}
@@ -13078,10 +13309,10 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 			}
 			if transition.complete {
 				completed = true
-				if row, visible := evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
+				if row, visible := r.evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 					batch.New = append(batch.New, resultRow(row))
 				}
-				if patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
+				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternWithinTerminal(transition.state) {
@@ -13100,7 +13331,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 			if patternWithinTerminal(transition.state) {
 				terminal = true
 			}
-			if patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
+			if !transition.fireOnly && patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
@@ -13145,7 +13376,7 @@ func clonePatternMatch(match patternMatch) patternMatch {
 	}
 }
 
-func evaluatePatternMatch(definition *patternDefinition, match patternMatch, plan Plan, now time.Time, variables map[string]Value) (Row, bool) {
+func (r *statementRuntime) evaluatePatternMatch(definition *patternDefinition, match patternMatch, plan Plan, now time.Time, variables map[string]Value) (Row, bool) {
 	if len(plan.query.patternSelections) == 0 {
 		return Row{}, false
 	}
@@ -13158,11 +13389,30 @@ func evaluatePatternMatch(definition *patternDefinition, match patternMatch, pla
 			return Row{}, false
 		}
 	}
+	if patternSelectionsHaveAggregate(plan.query.patternSelections) {
+		// Ungrouped aggregates over a pattern stream see one representative
+		// per match reported so far (including this one), so count(*) is the
+		// running number of matches exactly like Esper's aggregate over the
+		// pattern insert stream.
+		r.patternAggregateGroup = append(r.patternAggregateGroup, match.current)
+		ctx.Group = r.patternAggregateGroup
+	}
 	values := make([]Value, 0, len(plan.query.patternSelections))
 	for _, selection := range plan.query.patternSelections {
 		values = append(values, selection.Expr.eval(ctx))
 	}
 	return newRow(plan.resultSchema, values), true
+}
+
+// patternSelectionsHaveAggregate reports whether any pattern projection is a
+// top-level aggregate expression evaluated over the match stream.
+func patternSelectionsHaveAggregate(selections []Selection) bool {
+	for _, selection := range selections {
+		if _, ok := selection.Expr.(interface{ aggregateMarker() }); ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *statementRuntime) patternExpire(definition *patternDefinition, now time.Time) {

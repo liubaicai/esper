@@ -1322,6 +1322,11 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		if node.duration > 0 {
 			durationForms++
 		}
+		if node.duration == 0 && node.durationExpr == nil && node.calendar == nil {
+			// Esper accepts timer:interval(0): the observer is due at the
+			// clock the statement started on and fires immediately.
+			durationForms++
+		}
 		if node.durationExpr != nil {
 			durationForms++
 			if node.durationExpr.Type() != typeOf[time.Duration]() {

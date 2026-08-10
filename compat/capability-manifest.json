@@ -2935,28 +2935,30 @@
       "id": "pattern.operator-and-or",
       "domain": "pattern",
       "level": "G",
-      "summary": "Pattern AND/OR operator semantics: both sides must match for AND, either side matches for OR, AND with Every on one side fires once when both sides complete",
+      "summary": "Pattern AND/OR operator semantics: AND keeps one eventsPerChild match list per side and a side's fresh completion fires against every cached combination of the other side, one parent callback per combination, exactly like EvalAndStateNode; quitted plain filters keep contributing their cached match without new callbacks; OR fires once per branch completion and a permanently completed branch kills the whole or, while a non-quitting branch (every leg, not) lets it survive; correlated and-of-nots complete the enclosing followed-by at spawn; timer:interval(0) arms a fire due at the deployment clock",
       "javaRefs": [
         "PatternOperatorAndSimple",
         "PatternOrSimple",
-        "PatternOperatorAndWithEveryAndTerminationOptimization"
+        "PatternOperatorAndWithEveryAndTerminationOptimization",
+        "PatternOperatorAndWHarness",
+        "PatternOperatorAndNotDefaultTrue",
+        "PatternOrAndNotAndZeroStart",
+        "PatternOperatorOrWHarness"
       ],
       "goRefs": [
-        "pattern_operator_parity_test.go"
+        "pattern_operator_parity_test.go",
+        "pattern_and_or_parity_test.go",
+        "runtime.go"
       ],
       "phase": 3,
       "status": "mapped",
       "remaining": [
-        "PatternOperatorAndWHarness",
-        "PatternOperatorAndNotDefaultTrue",
-        "PatternOrAndNotAndZeroStart",
-        "PatternOperatorOrWHarness",
         "PatternConsumingPattern suite",
         "PatternOperatorEveryDistinct suite",
-        "PatternOperatorFollowedBy suite",
         "PatternOperatorMatchUntil suite",
         "PatternObserver* suites",
-        "PatternGuardWhile suite"
+        "PatternGuardWhile suite",
+        "aggregates over pattern streams support ungrouped count-style selections only; grouped/having aggregate forms remain with the ResultSet domain"
       ]
     },
     {
@@ -17918,6 +17920,48 @@
         "go-unit"
       ],
       "difference": "Go parity tests replay the exact W-harness match sequences validated against the live Java engine (16 cases including the four-fire every (every a -> every b) B3 multiplicity, spawn-fired b -> (d or not d) with vacant d=null, and retained done-sequences that re-fire per fresh every-leg completion). ThenMax exposes bounded -[N]> edges with composite right sides; PatternQuery.Where is the fluent counterpart of the statement-level where after from pattern [...]. Harness consume/discard style and object-model round-trip styles are out of fluent-API scope."
+    },
+    {
+      "id": "case.pattern-operator-and-or-harness",
+      "javaRuntimeIds": [
+        "java-runtime-b20edb19758d5524af65",
+        "java-runtime-a25e7d100020cff2b39c",
+        "java-runtime-40ab46aa6b7a8ecba88a",
+        "java-runtime-f649ade7d09e77133ac1"
+      ],
+      "javaNames": [
+        "PatternOperatorAndWHarness",
+        "PatternOperatorAndNotDefaultTrue",
+        "PatternOrAndNotAndZeroStart",
+        "PatternOperatorOrWHarness"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorAnd.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorOr.java"
+      ],
+      "goTests": [
+        "TestPatternOperatorAndWHarnessMatchesEsper",
+        "TestPatternOperatorAndNotDefaultTrueMatchesEsper",
+        "TestPatternOperatorOrWHarnessMatchesEsper",
+        "TestPatternOperatorOrAndNotAndZeroStartMatchesEsper",
+        "TestPatternOperatorAndWithEveryAndTerminationOptimizationMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "and",
+        "or",
+        "not",
+        "every",
+        "timer",
+        "correlation"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go parity tests replay the exact W-harness match sequences validated against the live Java engine (15 and-expressions and 9 or-expressions over the mixed event set, including the cartesian eventsPerChild multiplicities every a and every d and every b = D1x4/D2x4/B3x4/D3x6 and the nested-every or-chains up to 32 fires at D3). The fluent API builds 3-sided ands left-associatively (combination counts multiply through identically); Java's same-tag b and b uses distinct Go tags b1/b2; a or a fires one row with merged captures where Esper merges the shared tag. Fires within one event compare as a multiset exactly like the Java harness compareLists. ESPER-402 keeps the count(*) projection, now evaluated over the pattern match stream."
     }
   ],
   "mappings": [
@@ -19112,14 +19156,18 @@
     {
       "capabilityId": "pattern.operator-followed-by",
       "caseId": "case.pattern-operator-followed-by"
+    },
+    {
+      "capabilityId": "pattern.operator-and-or",
+      "caseId": "case.pattern-operator-and-or-harness"
     }
   ],
   "summary": {
-    "totalCases": 298,
+    "totalCases": 299,
     "totalCapabilities": 105,
-    "mappedCases": 280,
+    "mappedCases": 281,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1928
+    "disposedRuntimeIds": 1932
   }
 }

@@ -380,8 +380,16 @@ func TestPatternAndSupportsEveryBranch(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if len(rows) != 1 || rows[0].Get("left").Any() != "A" || rows[0].Get("right").Any() != "B" {
+	// Esper caches every match of the every-branch in the and's
+	// eventsPerChild: when A finally arrives it fires once per cached B,
+	// producing {A,B1} and {A,B2} (verified against the Java runtime).
+	if len(rows) != 2 {
 		t.Fatalf("every branch rows = %#v", rows)
+	}
+	for _, row := range rows {
+		if row.Get("left").Any() != "A" || row.Get("right").Any() != "B" {
+			t.Fatalf("every branch rows = %#v", rows)
+		}
 	}
 }
 
@@ -932,8 +940,14 @@ func TestPatternTimerIntervalAndAtUseVirtualClock(t *testing.T) {
 	if intervalRows[0].Get("now").Any() != time.Unix(1, 0).UTC() || atRows[0].Get("now").Any() != at {
 		t.Fatalf("timer values interval=%#v at=%#v", intervalRows, atRows)
 	}
-	if _, err := env.Build(TimerInterval(base, 0).Select(Alias("now", CurrentTime())).Query(StatementName("invalid-timer"))); err == nil {
-		t.Fatal("zero timer interval was accepted")
+	// Esper accepts timer:interval(0): the observer is due at the deployment
+	// clock and fires immediately (PatternOrAndNotAndZeroStart). Negative
+	// intervals remain invalid.
+	if _, err := env.Build(TimerInterval(base, 0).Select(Alias("now", CurrentTime())).Query(StatementName("zero-timer"))); err != nil {
+		t.Fatalf("zero timer interval was rejected: %v", err)
+	}
+	if _, err := env.Build(TimerInterval(base, -time.Second).Select(Alias("now", CurrentTime())).Query(StatementName("invalid-timer"))); err == nil {
+		t.Fatal("negative timer interval was accepted")
 	}
 }
 
