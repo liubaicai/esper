@@ -597,6 +597,18 @@ func (p PatternStream) Every() PatternStream {
 		copyDefinition.root = &patternNode{kind: patternEveryNode, child: p.def.root}
 		return PatternStream{env: p.env, def: &copyDefinition}
 	}
+	if p.def.everyDistinct == nil && (p.def.every || (p.def.root != nil && p.def.root.kind == patternEveryNode)) {
+		// Nested every (every(every(...))): materialize the pending definition
+		// level every (or an already materialized every root) into the AST and
+		// wrap one more every level around it, so each completion restarts all
+		// enclosing every levels, matching Esper's nested-every match
+		// multiplicity.
+		copyDefinition.steps = nil
+		copyDefinition.root = &patternNode{kind: patternEveryNode, child: patternBranchRoot(p.def)}
+		copyDefinition.every = false
+		p.def = &copyDefinition
+		return p
+	}
 	copyDefinition.every = true
 	copyDefinition.steps = append([]patternStep(nil), p.def.steps...)
 	copyDefinition.root = p.def.root

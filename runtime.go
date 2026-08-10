@@ -4665,6 +4665,12 @@ type patternProgress struct {
 	blocked                 bool
 	started                 bool
 	expired                 bool
+	// armed marks an event filter that is listening even though it has not
+	// captured an event yet. Esper starts every spawned child state node
+	// immediately, so a nested-every sibling stays resident between events;
+	// without this flag a freshly spawned filter would be dropped by the
+	// active-set admission check until its first match.
+	armed                   bool
 	minimum                 int
 	maximum                 int
 	boundsResolved          bool
@@ -11262,6 +11268,23 @@ func inheritPatternProgressTags(parent, child *patternProgress) {
 	child.tagValues = mergePatternTagValues(parent.tagValues, child.tagValues)
 }
 
+// armPatternProgressFilters marks every event filter in a freshly spawned
+// subtree as listening. Esper starts spawned child state nodes immediately,
+// so the branch must count as active before its first match; otherwise the
+// active-set admission check would drop a nested-every sibling that has not
+// consumed an event yet.
+func armPatternProgressFilters(progress *patternProgress) {
+	if progress == nil || progress.node == nil {
+		return
+	}
+	if progress.node.kind == patternEventNode && !progress.done {
+		progress.armed = true
+	}
+	armPatternProgressFilters(progress.left)
+	armPatternProgressFilters(progress.right)
+	armPatternProgressFilters(progress.child)
+}
+
 func resolvePatternMatchUntilBounds(progress *patternProgress, trigger patternTrigger, variables map[string]Value) bool {
 	if progress == nil || progress.node == nil || progress.node.kind != patternMatchUntilNode || progress.boundsResolved {
 		return progress != nil && progress.boundsResolved
@@ -11578,7 +11601,7 @@ func patternProgressActive(progress *patternProgress) bool {
 	}
 	switch progress.node.kind {
 	case patternEventNode:
-		return progress.started
+		return progress.started || progress.armed
 	case patternSequenceNode:
 		return progress.phase > 0 || patternProgressActive(progress.left) || patternProgressActive(progress.right)
 	case patternAndNode, patternOrNode:
@@ -12426,18 +12449,34 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 						recordPatternProgressDistinct(next, key, trigger.now)
 					}
 				}
-				if fired {
-					next.tags = clonePatternTags(childTransition.state.tags)
-					next.tagValues = clonePatternTagValues(childTransition.state.tagValues)
-					next.done = true
-				}
+			if fired {
+				next.tags = clonePatternTags(childTransition.state.tags)
+				next.tagValues = clonePatternTagValues(childTransition.state.tagValues)
+				next.done = true
+			}
+			if next.node.everyExpr == nil && patternRepeatingLegAlive(childTransition.state) && !patternCompletionPermanent(childTransition.state) {
+				// Esper's every keeps a completed child that did not quit in
+				// its spawned set and starts a fresh sibling alongside it.
+				// Both keep listening, which is what multiplies nested-every
+				// matches: the retained child fires again on later events and
+				// every firing spawns yet another sibling.
+				sibling := clonePatternProgress(base)
+				sibling.child = newPatternProgress(next.node.child)
+				sibling.done = false
+				sibling.started = true
+				armPatternProgressFilters(sibling.child)
+				inheritPatternProgressTags(sibling, sibling.child)
+				armPatternProgressTimers(sibling.child, trigger.now, variables)
+				result = append(result, patternTransitionFrom(sibling, false))
+			} else {
 				next.child = newPatternProgress(next.node.child)
 				inheritPatternProgressTags(next, next.child)
 				armPatternProgressTimers(next.child, trigger.now, variables)
 			}
-			result = append(result, patternTransitionFrom(next, fired, childTransition))
 		}
-		return result
+		result = append(result, patternTransitionFrom(next, fired, childTransition))
+	}
+	return result
 
 	case patternWithinNode:
 		next := clonePatternProgress(progress)
