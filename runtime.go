@@ -12306,15 +12306,22 @@ func patternTransitionFrom(progress *patternProgress, complete bool, sources ...
 // reports true for the current event, while the other sides contribute their
 // cached matches. A done filter re-reporting satisfaction or an every node
 // that fired on a previous event must not trigger the parent again.
-func patternSideFiredFresh(node *patternNode, transition patternTransition, trigger patternTrigger) bool {
+func patternSideFiredFresh(side *patternProgress, transition patternTransition, trigger patternTrigger) bool {
 	if !transition.complete {
 		return false
 	}
-	if node != nil && node.kind == patternEveryNode {
+	if side != nil && side.node != nil && side.node.kind == patternEveryNode {
 		// An every node sets complete only when its child fired on this event.
 		return true
 	}
-	return transition.matched || trigger.isTimer
+	if transition.matched {
+		return true
+	}
+	// A timer callback counts as fresh only when the side was not already
+	// satisfied before this trigger: a done timer re-reporting satisfaction
+	// on a later clock advance must not re-fire its parent, exactly like the
+	// and-side freshness rule.
+	return trigger.isTimer && !patternSatisfied(side)
 }
 
 func advancePatternNode(progress *patternProgress, event Event, now time.Time, variables map[string]Value) []patternTransition {
@@ -12415,7 +12422,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 			for _, rightTransition := range rightTransitions {
 				candidate := clonePatternProgress(next)
 				candidate.right = rightTransition.state
-				fired := patternSideFiredFresh(progress.node.right, rightTransition, trigger)
+				fired := patternSideFiredFresh(progress.right, rightTransition, trigger)
 				if fired {
 					candidate.tags = mergePatternTags(progress.tags, rightTransition.state.tags)
 					candidate.tagValues = mergePatternTagValues(progress.tagValues, rightTransition.state.tagValues)
@@ -12560,7 +12567,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				// supply a fresh completion, and its retained truth must not
 				// re-fire the or. An or match carries only the firing branch's
 				// captured events.
-				next.done = patternSideFiredFresh(progress.node.left, leftTransition, trigger)
+				next.done = patternSideFiredFresh(progress.left, leftTransition, trigger)
 				if next.done {
 					next.tags = clonePatternTags(leftTransition.state.tags)
 					next.tagValues = clonePatternTagValues(leftTransition.state.tagValues)
@@ -12585,7 +12592,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				next.tags = mergePatternTags(next.left.tags, rightTransition.state.tags)
 				next.tagValues = mergePatternTagValues(next.left.tagValues, rightTransition.state.tagValues)
 				next.started = patternProgressActive(next.left) || patternProgressActive(next.right)
-				next.done = patternSideFiredFresh(progress.node.right, rightTransition, trigger)
+				next.done = patternSideFiredFresh(progress.right, rightTransition, trigger)
 				if next.done {
 					next.tags = clonePatternTags(rightTransition.state.tags)
 					next.tagValues = clonePatternTagValues(rightTransition.state.tagValues)
@@ -12617,8 +12624,8 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				// event; truth retained from an earlier firing (a done filter, an
 				// every leg between fires) must not re-fire the or. An or match
 				// carries only the firing branch's captured events.
-				leftFired := patternSideFiredFresh(progress.node.left, leftTransition, trigger)
-				rightFired := patternSideFiredFresh(progress.node.right, rightTransition, trigger)
+				leftFired := patternSideFiredFresh(progress.left, leftTransition, trigger)
+				rightFired := patternSideFiredFresh(progress.right, rightTransition, trigger)
 				next.done = leftFired || rightFired
 				if next.done {
 					switch {

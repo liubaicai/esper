@@ -777,7 +777,8 @@
         "PatternObserverTimerInterval",
         "PatternObserverTimerSchedule",
         "PatternFollowedByFilter",
-        "PatternFragment"
+        "PatternFragment",
+        "PatternIntervalSpecExpressionWithProperty"
       ],
       "goRefs": [
         "pattern.go",
@@ -787,7 +788,8 @@
         "pattern_followed_by_max_test.go",
         "pattern_followed_by_max_listener_test.go",
         "pattern_consumption_test.go",
-        "pattern_composite_parity_test.go"
+        "pattern_composite_parity_test.go",
+        "pattern_observer_interval_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -18146,6 +18148,35 @@
         "go-unit"
       ],
       "difference": "Go parity tests replay the Java suite's exact event/time sequences for all 7 open executions: the 52-case W-harness over the timed mixed event set (unbounded until, exact/tight/loose/open ranges, until-wins on shared events, terminator-below-minimum expiry, and/or/sequence compositions, timer terminators, every precedence ESPER-339, nested until array roll-up), select-clause array element access with out-of-range Null, follow-on correlation over a[0]/a[1]/a[2] elements (concat/equals/in/not-in/between), every-repeated correlated sequences, and the invalid-pattern validations the fluent API can express. Registered mappings: Java [:M]/[N:]/[0:M] range literals map to MatchUntil(0, M)/MatchUntil(N, 0)/MatchUntil(0, 1); untagged EPL filters use a surrogate tag in the fluent API; wildcard fragment EventBeans map to explicit TagEvents/TagFieldAt projections; arrayLength/Array.getLength map to TagCount."
+    },
+    {
+      "id": "case.pattern-observer-timer-interval-expression",
+      "javaRuntimeIds": [
+        "java-runtime-36d18111e663f599bc14"
+      ],
+      "javaNames": [
+        "PatternIntervalSpecExpressionWithProperty"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java"
+      ],
+      "goTests": [
+        "TestPatternObserverIntervalSpecExpressionWithPropertyMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "observer",
+        "timer-interval",
+        "dynamic-interval",
+        "every"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go parity test replays the Java event/time sequence exactly: two events at t=10000 arm per-event dynamic timers from the captured event's intPrimitive property and fire at t=12000 (E2, 2s) and t=13000 (E1, 3s). The fluent API composes the dynamic interval as TimerIntervalExpr(DurationSeconds[int](TagField[int](a, intPrimitive))) where EPL embeds the property-timeperiod product inline; the engine-side freshness alignment (a done timer re-reporting satisfaction on a later clock advance no longer re-fires its sequence/or parent) matches EvalStateNode per-callback semantics."
     }
   ],
   "mappings": [
@@ -19352,14 +19383,18 @@
     {
       "capabilityId": "pattern.operator-matchuntil",
       "caseId": "case.pattern-operator-matchuntil"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-observer-timer-interval-expression"
     }
   ],
   "summary": {
-    "totalCases": 301,
+    "totalCases": 302,
     "totalCapabilities": 107,
-    "mappedCases": 283,
+    "mappedCases": 284,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1954
+    "disposedRuntimeIds": 1955
   }
 }
