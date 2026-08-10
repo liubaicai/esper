@@ -3037,7 +3037,11 @@
         "ViewTimeWindowSceneOne",
         "ViewTimeWindowSceneTwo",
         "ViewTimeBatch10Sec",
-        "ViewTimeBatchSceneOne"
+        "ViewTimeBatchSceneOne",
+        "ViewTimeBatchMultirow",
+        "ViewTimeBatchMultiBatch",
+        "ViewTimeBatchNoRefPoint",
+        "ViewTimeBatchLonger"
       ],
       "goRefs": [
         "view_parity_test.go",
@@ -17670,18 +17674,30 @@
       "id": "case.view-timebatch-basic",
       "javaRuntimeIds": [
         "java-runtime-77fc0819a391d361a0c8",
-        "java-runtime-5a110975a6ab7750e433"
+        "java-runtime-5a110975a6ab7750e433",
+        "java-runtime-9ae5cbb72669d84a7f7f",
+        "java-runtime-a3c81710a21ac12db682",
+        "java-runtime-5e01b6f92f8d8bc5851e",
+        "java-runtime-28a898700ff4cba95f14"
       ],
       "javaNames": [
         "ViewTimeBatch10Sec",
-        "ViewTimeBatchSceneOne"
+        "ViewTimeBatchSceneOne",
+        "ViewTimeBatchMultirow",
+        "ViewTimeBatchMultiBatch",
+        "ViewTimeBatchNoRefPoint",
+        "ViewTimeBatchLonger"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeBatch.java"
       ],
       "goTests": [
         "TestViewTimeBatch10SecMatchesEsper",
-        "TestViewTimeBatchSceneOneMatchesEsper"
+        "TestViewTimeBatchSceneOneMatchesEsper",
+        "TestViewTimeBatchMultirowMatchesEsper",
+        "TestViewTimeBatchMultiBatchMatchesEsper",
+        "TestViewTimeBatchNoRefPointMatchesEsper",
+        "TestViewTimeBatchLongerMatchesEsper"
       ],
       "tags": [
         "correctness",
@@ -18888,6 +18904,6 @@
     "mappedCases": 277,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1902
+    "disposedRuntimeIds": 1906
   }
 }
