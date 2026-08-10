@@ -2866,6 +2866,56 @@
       "remaining": [
         "Go provides VirtualDataWindowProvider with Data()/Lookup() for snapshot and point queries; Java management events (start-index, stop-index, stop-window), consumer add/remove lifecycle, SPI lookup context, query plan index choices, context partitioning and on-merge/on-delete/on-select integration are approved differences"
       ]
+    },
+    {
+      "id": "expr.filter-expressions",
+      "domain": "expr",
+      "level": "G",
+      "summary": "Filter expression evaluation covering relational operators, math expressions, IN/NOT-IN set membership, Between, boolean combinations, null propagation, constant true, and equality semantics",
+      "javaRefs": [
+        "ExprFilterConstant",
+        "ExprFilterRelationalOpRange",
+        "ExprFilterMathExpression",
+        "ExprFilterBooleanExpr",
+        "ExprFilterIn3ValuesAndNull",
+        "ExprFilterNotEqualsNull",
+        "ExprFilterInSet",
+        "ExprFilterNotEqualsConsolidate",
+        "ExprFilterRelationalOpConstantFirst",
+        "ExprFilterNullBooleanExpr",
+        "ExprFilterEqualsSemanticFilter",
+        "ExprFilterEqualsSemanticExpr",
+        "ExprFilterCombinationEqualsOp",
+        "ExprFilterNotIn"
+      ],
+      "goRefs": [
+        "expr_filter_expressions_parity_test.go"
+      ],
+      "phase": 2,
+      "status": "mapped",
+      "remaining": [
+        "ExprFilterOverInClause",
+        "ExprFilterPromoteIndexToSetNotIn",
+        "ExprFilterShortCircuitEvalAndOverspecified",
+        "ExprFilterEnumSyntaxOne",
+        "ExprFilterEnumSyntaxTwo",
+        "ExprFilterPatternFunc",
+        "ExprFilterPatternFunc3Stream",
+        "ExprFilterPatternWithExpr",
+        "ExprFilterStaticFunc",
+        "ExprFilterWithEqualsSameCompare",
+        "ExprFilterExprReversed",
+        "ExprFilterRewriteWhere",
+        "ExprFilterNotEqualsOp",
+        "ExprFilterInvalid",
+        "ExprFilterInstanceMethodWWildcard",
+        "ExprFilterInDynamic",
+        "ExprFilterInExpr",
+        "ExprFilterInInvalid",
+        "ExprFilterReuse",
+        "ExprFilterLargeThreading",
+        "ExprFilterOptimizable"
+      ]
     }
   ],
   "cases": [
@@ -4246,7 +4296,7 @@
         "java-junit",
         "go-unit"
       ],
-      "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1→5/5/1, then 5→7/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text."
+      "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1\u21925/5/1, then 5\u21927/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text."
     },
     {
       "id": "case.trigger-merge-simple-insert",
@@ -4635,7 +4685,7 @@
         "java-junit",
         "go-unit"
       ],
-      "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null→B/source-inner, true→source-inner, false→A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open."
+      "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null\u2192B/source-inner, true\u2192source-inner, false\u2192A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open."
     },
     {
       "id": "case.trigger-pattern-multimatch",
@@ -6929,7 +6979,7 @@
         "java-runtime-inventory",
         "go-unit"
       ],
-      "difference": "The Go baseline exercises the corresponding semantic paths with bounded samples: two-stream high/low selectivity, range and numeric coercion, three-stream inner/outer coercion, five-stream readiness and unidirectional range probing. Java's JVM-specific millisecond thresholds, merge/nested/index selection hints, 10k–100k load sizes, static UDF/variable expression path and exact physical plan are not treated as cross-language equalities; Go records timings for regression visibility and leaves those contracts open."
+      "difference": "The Go baseline exercises the corresponding semantic paths with bounded samples: two-stream high/low selectivity, range and numeric coercion, three-stream inner/outer coercion, five-stream readiness and unidirectional range probing. Java's JVM-specific millisecond thresholds, merge/nested/index selection hints, 10k\u2013100k load sizes, static UDF/variable expression path and exact physical plan are not treated as cross-language equalities; Go records timings for regression visibility and leaves those contracts open."
     },
     {
       "id": "case.dataflow-typed-ports",
@@ -16428,6 +16478,126 @@
         "go-unit"
       ],
       "difference": "Go provides VirtualDataWindowProvider with Data()/Lookup(); Java management events, consumer lifecycle, SPI lookup context, query plan index choices, context partitioning and on-merge/on-delete/on-select integration are approved differences"
+    },
+    {
+      "id": "case.expr-filter-expressions-core",
+      "javaRuntimeIds": [
+        "java-runtime-3d1804dc179e132d65f3",
+        "java-runtime-c17beea875a4168b4f13",
+        "java-runtime-cbbc4ebc1b33622285e9",
+        "java-runtime-d100393536c0f27c9b91",
+        "java-runtime-7b8b0e89991fb523e3c0",
+        "java-runtime-3de6e1b8cff6dc686b34"
+      ],
+      "javaNames": [
+        "ExprFilterConstant",
+        "ExprFilterRelationalOpRange",
+        "ExprFilterMathExpression",
+        "ExprFilterBooleanExpr",
+        "ExprFilterRelationalOpConstantFirst",
+        "ExprFilterNullBooleanExpr"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterConstantMatchesEsper",
+        "TestExprFilterRelationalOpRangeMatchesEsper",
+        "TestExprFilterMathExpressionMatchesEsper",
+        "TestExprFilterBooleanExprMatchesEsper",
+        "TestExprFilterRelationalOpConstantFirstMatchesEsper",
+        "TestExprFilterNullBooleanExprMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "relational-op",
+        "math",
+        "null-handling"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.expr-filter-in-set-notin",
+      "javaRuntimeIds": [
+        "java-runtime-70258724acea75cb27c2",
+        "java-runtime-6187290b7377115b35b4",
+        "java-runtime-a6bf76aba7d8e3ef50ed",
+        "java-runtime-6a89b450923969ac5b99",
+        "java-runtime-5d4692af2b8d6cd3be2a"
+      ],
+      "javaNames": [
+        "ExprFilterInSet",
+        "ExprFilterIn3ValuesAndNull",
+        "ExprFilterNotEqualsConsolidate",
+        "ExprFilterCombinationEqualsOp",
+        "ExprFilterNotIn"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterInAndBetween.java"
+      ],
+      "goTests": [
+        "TestExprFilterInSetMatchesEsper",
+        "TestExprFilterIn3ValuesAndNullMatchesEsper",
+        "TestExprFilterNotInMatchesEsper",
+        "TestExprFilterAndOrCombinationMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "in",
+        "not-in",
+        "set-membership",
+        "null-propagation"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.expr-filter-equality-semantics",
+      "javaRuntimeIds": [
+        "java-runtime-27adcfc463af65ebd242",
+        "java-runtime-a68ce7c2639cc470bd20",
+        "java-runtime-f97aa2f71195a13e85a7"
+      ],
+      "javaNames": [
+        "ExprFilterNotEqualsNull",
+        "ExprFilterEqualsSemanticFilter",
+        "ExprFilterEqualsSemanticExpr"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterNotEqualsNullMatchesEsper",
+        "TestExprFilterEqualsSemanticMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "equality",
+        "not-equals",
+        "semantic"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -17499,5 +17669,13 @@
       "capabilityId": "client.extend.virtual-data-window",
       "caseId": "case.client-extend-virtual-data-window"
     }
-  ]
+  ],
+  "summary": {
+    "totalCases": 270,
+    "totalCapabilities": 97,
+    "mappedCases": 253,
+    "partialCases": 0,
+    "approvedDifferenceCases": 17,
+    "disposedRuntimeIds": 1842
+  }
 }
