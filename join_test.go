@@ -355,7 +355,7 @@ func TestJoinAggregateWhereFiltersTuplesBeforeGrouping(t *testing.T) {
 		t.Fatalf("first filtered aggregate batch = %#v", batches)
 	}
 	prior, priorOK := batches[0].Old[0].Row()
-	if !priorOK || prior.Get("symbol").Any() != "A" || !prior.Get("count").IsNull() || !prior.Get("total").IsNull() {
+	if !priorOK || prior.Get("symbol").Any() != "A" || prior.Get("count").Any() != int64(0) || !prior.Get("total").IsNull() {
 		t.Fatalf("first filtered aggregate null-prior row = %#v", batches[0].Old)
 	}
 	row, ok := batches[0].New[0].Row()

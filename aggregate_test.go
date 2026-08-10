@@ -428,7 +428,7 @@ func TestAggregateWhereFiltersOrdinaryEventsBeforeGrouping(t *testing.T) {
 		t.Fatalf("ordinary aggregate Where batches = %#v", batches)
 	}
 	prior, priorOK := batches[0].Old[0].Row()
-	if !priorOK || prior.Get("symbol").Any() != "A" || !prior.Get("count").IsNull() || !prior.Get("sum").IsNull() {
+	if !priorOK || prior.Get("symbol").Any() != "A" || prior.Get("count").Any() != int64(0) || !prior.Get("sum").IsNull() {
 		t.Fatalf("ordinary aggregate Where null-prior row = %#v", batches[0].Old)
 	}
 	first, ok := batches[0].New[0].Row()

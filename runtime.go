@@ -13044,12 +13044,14 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		}
 		if visible && !emittedBefore && len(definition.groupBy) > 0 && plan.query.selector == SelectIRStream {
 			// Esper group-by irstream semantics: creating a group pairs the
-			// first new row with a null-prior old row whose group-by columns
-			// are populated and whose aggregate columns are null.
+			// first new row with a prior old row whose group-by columns are
+			// populated and whose aggregate columns evaluate over the empty
+			// group: count(*) is 0 while sum/avg/min/max are null.
 			nullPrior := make([]Value, len(newValues))
+			emptyCtx := aggregateGroupContext(definition, nil, nil, nil, false, group.groupingSet, group.current, nil, nil, now, r.variables, group.pluginStates, group.multiPluginStates)
 			for index, selection := range definition.selections {
 				if isAggregateExpression(selection.Expr) {
-					nullPrior[index] = Null()
+					nullPrior[index] = evaluateAggregateExpression(selection.Expr, emptyCtx)
 				} else {
 					nullPrior[index] = newValues[index]
 				}

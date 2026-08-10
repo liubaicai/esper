@@ -2891,11 +2891,14 @@
         "ExprFilterSimpleIntAndEnumWrite",
         "ExprFilterExprReversed",
         "ExprFilterNotEqualsOp",
-        "ExprFilterWithEqualsSameCompare"
+        "ExprFilterWithEqualsSameCompare",
+        "ExprFilterWhereClauseSimple",
+        "ExprFilterWhereClauseNumericType"
       ],
       "goRefs": [
         "expr_filter_expressions_parity_test.go",
-        "expr_filter_in_and_between_parity_test.go"
+        "expr_filter_in_and_between_parity_test.go",
+        "expr_filter_where_clause_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3009,22 +3012,25 @@
       "id": "view.basic-windows",
       "domain": "view",
       "level": "G",
-      "summary": "Basic data window views: keep-all (retains all events), length (sliding, evicts oldest), first-event (first only), last-event (latest only, replaces previous), first-length (first N events)",
+      "summary": "Basic data window views: keep-all (retains all events, ordered iterator, grouped aggregate stats with irstream prior rows), length (sliding, evicts oldest), first-event (first only), last-event (latest only, replaces previous), first-length (first N events), firstunique (first event per unique key)",
       "javaRefs": [
         "ViewKeepAllSimple",
         "ViewLengthWindowSceneOne",
         "ViewFirstEventSceneOne",
         "ViewLastEventSceneOne",
-        "ViewFirstLengthSceneOne"
+        "ViewFirstLengthSceneOne",
+        "ViewFirstUniqueSimple",
+        "ViewFirstUniqueSceneOne",
+        "ViewKeepAllIterator",
+        "ViewKeepAllWindowStats"
       ],
       "goRefs": [
-        "view_parity_test.go"
+        "view_parity_test.go",
+        "view_firstunique_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
       "remaining": [
-        "ViewKeepAllIterator",
-        "ViewKeepAllWindowStats",
         "ViewLengthWindowWPrevPrior",
         "ViewLengthWinWPropertyDetail",
         "ViewLengthWindowIterator",
@@ -3032,7 +3038,6 @@
         "ViewLastEventMarketData",
         "ViewFirstLengthMarketData",
         "ViewFirstTime suite",
-        "ViewFirstUnique suite",
         "ViewTimeWin suite",
         "ViewTimeBatch suite",
         "ViewParameterizedByContext suite"
@@ -17345,6 +17350,101 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.expr-filter-where-clause",
+      "javaRuntimeIds": [
+        "java-runtime-8b0466fca64074e6e036",
+        "java-runtime-6e4d24daf6c89abdbd34"
+      ],
+      "javaNames": [
+        "ExprFilterWhereClauseSimple",
+        "ExprFilterWhereClauseNumericType"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterWhereClause.java"
+      ],
+      "goTests": [
+        "TestExprFilterWhereClauseSimpleMatchesEsper",
+        "TestExprFilterWhereClauseNumericTypeMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "where-clause",
+        "numeric-coercion"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.view-firstunique",
+      "javaRuntimeIds": [
+        "java-runtime-539015b0941ce8fc7488",
+        "java-runtime-572f37a8782b7d5b55e2"
+      ],
+      "javaNames": [
+        "ViewFirstUniqueSimple",
+        "ViewFirstUniqueSceneOne"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewFirstUnique.java"
+      ],
+      "goTests": [
+        "TestViewFirstUniqueSimpleMatchesEsper",
+        "TestViewFirstUniqueSceneOneMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "firstunique",
+        "iterator",
+        "order-by"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.view-keepall-iterator-stats",
+      "javaRuntimeIds": [
+        "java-runtime-bfa188652501304f3d38",
+        "java-runtime-8142fb07ec9e2af45b05"
+      ],
+      "javaNames": [
+        "ViewKeepAllIterator",
+        "ViewKeepAllWindowStats"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewKeepAll.java"
+      ],
+      "goTests": [
+        "TestViewKeepAllIteratorMatchesEsper",
+        "TestViewKeepAllWindowStatsMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "keep-all",
+        "iterator",
+        "group-by",
+        "aggregate",
+        "irstream"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -18415,14 +18515,98 @@
     {
       "capabilityId": "client.extend.virtual-data-window",
       "caseId": "case.client-extend-virtual-data-window"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-in-set-notin"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-not-between"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-in-expr"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-equality-semantics"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-reversed-notequals-samecompare"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-expressions-core"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-where-clause"
+    },
+    {
+      "capabilityId": "pattern.operator-and-or",
+      "caseId": "case.pattern-operator-and-or-simple"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-where"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-count-reverse"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-quantifiers"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-distinct-firstlast"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-minmax-sum-avg"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-orderby-take-minmaxby"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-select"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-basic-windows"
+    },
+    {
+      "capabilityId": "resultset.aggregate-group-by",
+      "caseId": "case.resultset-aggregate-minmax-groupby"
+    },
+    {
+      "capabilityId": "eplother.stream-selector",
+      "caseId": "case.eplother-stream-selector"
+    },
+    {
+      "capabilityId": "epl.insertinto-pattern",
+      "caseId": "case.epl-insertinto-pattern"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-firstunique"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-keepall-iterator-stats"
     }
   ],
   "summary": {
-    "totalCases": 285,
+    "totalCases": 288,
     "totalCapabilities": 103,
-    "mappedCases": 267,
+    "mappedCases": 270,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1887
+    "disposedRuntimeIds": 1893
   }
 }

@@ -185,6 +185,157 @@ func TestViewFirstLengthMatchesEsper(t *testing.T) {
 	}
 }
 
+// TestViewKeepAllIteratorMatchesEsper covers ViewKeepAllIterator:
+// select symbol, price from SupportMarketDataBean#keepall — the iterator
+// returns every retained event in arrival order.
+func TestViewKeepAllIteratorMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[viewUniqueMarketData](env, "SupportMarketDataBean"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	source := From[viewUniqueMarketData](env, "SupportMarketDataBean").Window(KeepAll())
+	plan, err := env.Build(source.Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stmt := deployment.Statements()[0]
+
+	send := func(symbol string, price float64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), viewUniqueMarketData{Symbol: symbol, Price: price}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertIterator := func(want ...viewUniqueMarketData) {
+		t.Helper()
+		result, err := stmt.Snapshot(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(result.Results()) != len(want) {
+			t.Fatalf("iterator size = %d, want %d (%#v)", len(result.Results()), len(want), result.Results())
+		}
+		for i, row := range result.Results() {
+			if got := row.Get("symbol").Any(); got != want[i].Symbol {
+				t.Fatalf("iterator[%d] symbol = %v, want %s", i, got, want[i].Symbol)
+			}
+			if got := row.Get("price").Any(); got != want[i].Price {
+				t.Fatalf("iterator[%d] price = %v, want %v", i, got, want[i].Price)
+			}
+		}
+	}
+
+	send("ABC", 20)
+	send("DEF", 100)
+	assertIterator(viewUniqueMarketData{Symbol: "ABC", Price: 20}, viewUniqueMarketData{Symbol: "DEF", Price: 100})
+
+	send("EFG", 50)
+	assertIterator(
+		viewUniqueMarketData{Symbol: "ABC", Price: 20},
+		viewUniqueMarketData{Symbol: "DEF", Price: 100},
+		viewUniqueMarketData{Symbol: "EFG", Price: 50},
+	)
+}
+
+// TestViewKeepAllWindowStatsMatchesEsper covers ViewKeepAllWindowStats:
+// select irstream symbol, count(*) as cnt, sum(price) as mysum from
+// SupportMarketDataBean#keepall group by symbol — grouped aggregates over a
+// keep-all window report the new state in the insert stream and the previous
+// state in the remove stream (first event per group reports cnt=0/sum=null).
+func TestViewKeepAllWindowStatsMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[viewUniqueMarketData](env, "SupportMarketDataBean"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	symbol := Field[viewUniqueMarketData, string]("symbol")
+	price := Field[viewUniqueMarketData, float64]("price")
+	grouped := From[viewUniqueMarketData](env, "SupportMarketDataBean").
+		Window(KeepAll()).
+		GroupBy(symbol).
+		Select(
+			Alias("symbol", symbol),
+			Alias("cnt", CountAll()),
+			Alias("mysum", Sum[float64](price)),
+		)
+	plan, err := env.Build(grouped.Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	send := func(sym string, price float64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), viewUniqueMarketData{Symbol: sym, Price: price}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertPair := func(index int, sym string, newCnt int64, newSum float64, oldCnt int64, oldSum any) {
+		t.Helper()
+		if len(batches) != index+1 {
+			t.Fatalf("batches = %d, want %d", len(batches), index+1)
+		}
+		newRow, ok := batches[index].New[0].Row()
+		if !ok {
+			t.Fatalf("batch %d new row is not a projection row", index)
+		}
+		if got := newRow.Get("symbol").Any(); got != sym {
+			t.Fatalf("batch %d new symbol = %v, want %s", index, got, sym)
+		}
+		if got := newRow.Get("cnt").Any(); got != newCnt {
+			t.Fatalf("batch %d new cnt = %v, want %d", index, got, newCnt)
+		}
+		if got := newRow.Get("mysum").Any(); got != newSum {
+			t.Fatalf("batch %d new mysum = %v, want %v", index, got, newSum)
+		}
+		oldRow, ok := batches[index].Old[0].Row()
+		if !ok {
+			t.Fatalf("batch %d old row is not a projection row", index)
+		}
+		if got := oldRow.Get("symbol").Any(); got != sym {
+			t.Fatalf("batch %d old symbol = %v, want %s", index, got, sym)
+		}
+		if got := oldRow.Get("cnt").Any(); got != oldCnt {
+			t.Fatalf("batch %d old cnt = %v, want %d", index, got, oldCnt)
+		}
+		if got := oldRow.Get("mysum").Any(); got != oldSum {
+			t.Fatalf("batch %d old mysum = %v, want %v", index, got, oldSum)
+		}
+	}
+
+	send("S1", 100)
+	assertPair(0, "S1", 1, 100.0, 0, nil)
+
+	send("S2", 50)
+	assertPair(1, "S2", 1, 50.0, 0, nil)
+
+	send("S1", 5)
+	assertPair(2, "S1", 2, 105.0, 1, 100.0)
+
+	send("S2", -1)
+	assertPair(3, "S2", 2, 49.0, 1, 50.0)
+}
+
 // TestEPLOtherIRStreamSelectorMatchesEsper covers
 // EPLOtherIStreamRStreamConfigSelectorIRStream: default irstream behavior
 // with length window shows both new (inserted) and old (evicted) events.
