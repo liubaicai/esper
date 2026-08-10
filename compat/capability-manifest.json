@@ -2230,14 +2230,16 @@
         "ClientCompileLargeConstantPoolDueToMethods",
         "ClientCompileLargeWConfig",
         "ClientCompileLargeSubstitutionParams",
-        "ClientCompileLargeSubstitutionParamsFAF"
+        "ClientCompileLargeSubstitutionParamsFAF",
+        "ClientCompileLargeSelectCol"
       ],
       "goRefs": [
         "expr.go",
         "stream.go",
         "plan.go",
         "client_compile_large_parity_test.go",
-        "client_compile_large_wconfig_substitution_parity_test.go"
+        "client_compile_large_wconfig_substitution_parity_test.go",
+        "client_compile_large_wconfig_select_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2245,7 +2247,7 @@
         "the mapped execution covers one thousand result columns with twenty-six literal addends per column",
         "result-schema order, field types, canonical bytes and hash are verified across a Plan.Query rebuild",
         "Go compiles an in-memory typed AST and therefore has no JVM class-file constant-pool or generated-method-size boundary",
-        "the remaining ClientCompileLargeWConfig aggregation, table and Map/ObjectArray representation matrix remains open"
+        "the remaining ClientCompileLargeWConfig aggregation, table and create-schema/insert representation matrix remains open"
       ]
     },
     {
@@ -14567,6 +14569,43 @@
       "difference": "The live typed plan declares 5,000 named string Parameter expressions, binds p0 through p4999 in one DeployWithParameters snapshot and verifies c0 through c4999 after a source event; caller mutations after deployment do not alter the captured bindings. The FAF plan reads one LastEvent Named Window row, concatenates p0=x with the same 5,000 named parameters, reuses PreparedQuery and verifies xv0 through xv4999. Go parameters are typed AST nodes and native maps rather than parsed ?:name:type tokens and a Java StatementSubstitutionParameter callback."
     },
     {
+      "id": "case.client-compile-large-wconfig-select",
+      "javaRuntimeIds": [
+        "java-runtime-1e965938cef02e64f49f",
+        "java-runtime-ad3e7b832e47aea1cb84"
+      ],
+      "javaNames": [
+        "ClientCompileLargeSelectCol{representation=MAP}",
+        "ClientCompileLargeSelectCol{representation=OBJECTARRAY}"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileLargeWConfig.java"
+      ],
+      "goTests": [
+        "TestClientCompileLargeSelectColMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "large-plan",
+        "5000-columns",
+        "projection",
+        "map",
+        "object-array",
+        "underlying",
+        "routing",
+        "event-metadata"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "For each representation Go registers an explicit 5,000-field target schema, compiles the typed theString-plus-index projections, routes the result and observes it through a downstream statement. Every c0 through c4999 property exists and equals x0 through x4999. MAP preserves a map[string]any underlying and OBJECTARRAY preserves an ordered []any underlying. The extra typed route makes representation materialization explicit instead of selecting an EPL output annotation, while retaining the Java execution's metadata, value and underlying contracts."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15664,6 +15703,10 @@
     {
       "capabilityId": "client.compile.large-plan",
       "caseId": "case.client-compile-large-wconfig-substitution"
+    },
+    {
+      "capabilityId": "client.compile.large-plan",
+      "caseId": "case.client-compile-large-wconfig-select"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",
