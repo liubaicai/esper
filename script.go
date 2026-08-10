@@ -128,7 +128,7 @@ func registerScriptDefinition(env *Environment, name string, definition scriptDe
 	env.mu.Lock()
 	defer env.mu.Unlock()
 	if _, exists := env.scripts[name]; exists {
-		return NewError(ErrorInvalidRule, fmt.Sprintf("script %q is already registered", name))
+		return duplicateScriptError(name, definition)
 	}
 	env.scripts[name] = definition
 	return nil

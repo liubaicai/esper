@@ -132,7 +132,7 @@ func TestNamedExpressionReferenceRejectsInvalidDependencies(t *testing.T) {
 		t.Fatalf("cyclic expression Build error = %v", err)
 	}
 
-	if err := DefineExpression[int64](env, "double-value", Literal(int64(3))); err == nil || !strings.Contains(err.Error(), "already registered") {
+	if err := DefineExpression[int64](env, "double-value", Literal(int64(3))); err == nil || !strings.Contains(err.Error(), "A declared-expression by name 'double-value' has already been created for module 'unnamed'") {
 		t.Fatalf("duplicate expression registration error = %v", err)
 	}
 	if err := DefineExpression[int64](env, "nil-expression", nil); err == nil || !strings.Contains(err.Error(), "requires an expression") {

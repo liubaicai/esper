@@ -1138,7 +1138,7 @@ func (e *Environment) registerContextDefinition(definition ContextDefinition) (C
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if _, exists := e.contexts[definition.name]; exists {
-		return ContextDefinition{}, NewError(ErrorDependency, fmt.Sprintf("context %q is already registered", definition.name))
+		return ContextDefinition{}, duplicateModuleObjectError(DeploymentResourceContext, definition.name)
 	}
 	e.contexts[definition.name] = definition
 	return definition, nil

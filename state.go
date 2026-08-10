@@ -235,7 +235,7 @@ func (e *Environment) RegisterTableInModule(moduleName, name string, columns []T
 	}
 	key := catalogKey(moduleName, name)
 	if _, exists := e.tables[key]; exists {
-		return TableDefinition{}, NewError(ErrorDependency, fmt.Sprintf("table %q is already registered in module %q", name, moduleName))
+		return TableDefinition{}, duplicateModuleObjectError(DeploymentResourceTable, key)
 	}
 	definition.moduleName = moduleName
 	definition.schema.name = "table:" + key
@@ -1688,7 +1688,7 @@ func (e *Environment) RegisterNamedWindowInModule(moduleName, name string, schem
 	}
 	key := catalogKey(moduleName, name)
 	if _, exists := e.namedWindows[key]; exists {
-		return NamedWindowDefinition{}, NewError(ErrorDependency, fmt.Sprintf("named window %q is already registered in module %q", name, moduleName))
+		return NamedWindowDefinition{}, duplicateModuleObjectError(DeploymentResourceNamedWindow, key)
 	}
 	definition.moduleName = moduleName
 	e.namedWindows[key] = definition

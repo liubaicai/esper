@@ -77,7 +77,7 @@ func (e *Environment) RegisterSchema(schema Schema) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if _, exists := e.schemas[schema.Name()]; exists {
-		return fmt.Errorf("esper: schema %q is already registered", schema.Name())
+		return duplicateModuleObjectError(DeploymentResourceEventType, schema.Name())
 	}
 	if schema.kind == SchemaVariant && schema.variantMode == VariantPredefined {
 		for _, member := range schema.variantMembers {
@@ -183,7 +183,7 @@ func (e *Environment) RegisterVariable(name string, initial any, options ...Vari
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if _, exists := e.variables[name]; exists {
-		return fmt.Errorf("esper: variable %q is already registered", name)
+		return duplicateModuleObjectError(DeploymentResourceVariable, name)
 	}
 	e.variables[name] = definition
 	return nil
@@ -210,7 +210,7 @@ func (e *Environment) RegisterContextVariable(contextName, name string, initial 
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if _, exists := e.variables[name]; exists {
-		return fmt.Errorf("esper: variable %q is already registered", name)
+		return duplicateModuleObjectError(DeploymentResourceVariable, name)
 	}
 	e.variables[name] = definition
 	return nil

@@ -2576,6 +2576,81 @@
         "Go dataflow definitions are environment-owned and therefore use deploymentId environment instead of a Java create-dataflow statement deployment",
         "audit delivery is an Engine-local typed management surface rather than process-global logging state or an ordinary event stream"
       ]
+    },
+    {
+      "id": "client.deploy.path-dependency-preconditions",
+      "domain": "client",
+      "level": "G",
+      "summary": "Deploy-time path dependency preconditions resolving cross-module catalog references (named window, table, event type, variable, context, declared expression, script) against active provider deployments, with preconfigured/index/class dispositions",
+      "javaRefs": [
+        "ClientDeployPreconditionDependency",
+        "ClientVisibilityDeployDepNamedWindow",
+        "ClientVisibilityDeployDepTable",
+        "ClientVisibilityDeployDepVariablePath",
+        "ClientVisibilityDeployDepExprDecl",
+        "ClientVisibilityDeployDepScript",
+        "ClientVisibilityDeployDepContext",
+        "ClientVisibilityDeployDepEventTypePath",
+        "ClientVisibilityDeployDepNamedWindowOfNamedModule",
+        "ClientVisibilityDeployDepClass",
+        "ClientVisibilityDeployDepIndex",
+        "ClientVisibilityDeployDepVariablePreconfig",
+        "ClientVisibilityDeployDepEventTypePreconfig",
+        "DeployerHelperResolver",
+        "PathRegistry",
+        "EPDeployPreconditionException"
+      ],
+      "goRefs": [
+        "deployment_resources.go",
+        "deployment_rollout.go",
+        "module.go",
+        "client_deploy_precondition_dependency_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "deploy-time resolution rejects a consumer whose referenced module-owned catalog object has no active provider deployment, in Esper check order (named window, table, event type, variable, context, declared expression, script) with DeployPreconditionError/ErrorDependency and rollout item index propagation",
+        "preconfigured event types and variables are validated at the Go compile boundary instead of a Java configuration/runtime skew deploy precondition (approved difference)",
+        "Java create-index deployments and application-inlined classes are approved differences: Go declares indexes as registration-time definition options and has no runtime-compiled class artifact"
+      ]
+    },
+    {
+      "id": "client.deploy.duplicate-preconditions",
+      "domain": "client",
+      "level": "G",
+      "summary": "Duplicate module-object preconditions for named window, table, event type, variable, declared expression, script and context catalog registrations, with index/class dispositions",
+      "javaRefs": [
+        "ClientDeployPreconditionDuplicate",
+        "ClientDeployPrecondDupNamedWindow",
+        "ClientDeployPrecondDupTable",
+        "ClientDeployPrecondDupEventType",
+        "ClientDeployPrecondDupVariable",
+        "ClientDeployPrecondDupExprDecl",
+        "ClientDeployPrecondDupScript",
+        "ClientDeployPrecondDupContext",
+        "ClientDeployPrecondDupIndex",
+        "ClientDeployPrecondDupClass",
+        "PathExceptionAlreadyRegistered",
+        "DeployerHelperUpdatePath",
+        "EPDeployPreconditionException"
+      ],
+      "goRefs": [
+        "registration_duplicate.go",
+        "module.go",
+        "plan.go",
+        "state.go",
+        "context.go",
+        "script.go",
+        "expression_definition.go",
+        "client_deploy_precondition_duplicate_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "Go materializes EPL create statements as Environment/Module registrations, so the duplicate precondition is enforced at the registration boundary with DuplicateModuleObjectError/ErrorDependency preserving Esper message text",
+        "duplicate detection is scoped per catalog identity (module::name), so different modules expose the same logical name without conflict, matching the Java path registry per-module key",
+        "Java create-index duplicate deployments and application-inlined classes are approved differences: duplicate index names are rejected when the owning table/named-window definition is built, and Go has no runtime-compiled class artifact"
+      ]
     }
   ],
   "cases": [
@@ -11012,7 +11087,7 @@
         "java-runtime-ce59597514a34ae4be1e",
         "java-runtime-c95712eb926e95925f93",
         "java-runtime-81e4600dcd9eb3662030",
-        "java-runtime-c957d42efacb559ec6a9",
+        "java-runtime-c954d42efacb559ec6a9",
         "java-runtime-27292b381d32d3e536a2"
       ],
       "javaNames": [
@@ -15555,6 +15630,198 @@
         "go-unit"
       ],
       "difference": "StatementAudit uses typed AuditCategory values and enters immutable Plan identity instead of parsing @Audit text. Bare StatementAudit/Audit enables all 14 Java categories. AuditRecord preserves runtime URI, deployment ID, statement name, context partition ID, category, virtual clock and message; the strict Java STREAM callback is reproduced at runtimeTime=1 with the expected filter/event summary. SubscribeAudit is removable and Engine-local, and callbacks are queued under the transaction lock then delivered outside it so they may safely re-enter Engine APIs. AuditFormatter supports %u/%d/%s/%i/%c/%m/%tutc/%tzone. Dataflow audit is configured on the fluent definition and uses deploymentId environment because Go does not model create-dataflow as an EPL statement; no JVM-global AuditPath logger/callback state is copied."
+    },
+    {
+      "id": "case.client-deploy-path-dependency-preconditions",
+      "javaRuntimeIds": [
+        "java-runtime-734943fee93577564edd",
+        "java-runtime-80f2c8b60a3f71696894",
+        "java-runtime-3e513cf7daff38d25e3d",
+        "java-runtime-faaff4722d6ad8ad5b31",
+        "java-runtime-6572e0ebecf33e9f34ea",
+        "java-runtime-aad1fad85d39d50a9335",
+        "java-runtime-f1ea89b32fd0a9347df8",
+        "java-runtime-279fed69be603700c083"
+      ],
+      "javaNames": [
+        "ClientVisibilityDeployDepNamedWindow",
+        "ClientVisibilityDeployDepTable",
+        "ClientVisibilityDeployDepVariablePath",
+        "ClientVisibilityDeployDepExprDecl",
+        "ClientVisibilityDeployDepScript",
+        "ClientVisibilityDeployDepContext",
+        "ClientVisibilityDeployDepEventTypePath",
+        "ClientVisibilityDeployDepNamedWindowOfNamedModule"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployPreconditionDependency.java"
+      ],
+      "goTests": [
+        "TestClientDeployPreconditionDepNamedWindowMatchesEsper",
+        "TestClientDeployPreconditionDepTableMatchesEsper",
+        "TestClientDeployPreconditionDepVariablePathMatchesEsper",
+        "TestClientDeployPreconditionDepExprDeclMatchesEsper",
+        "TestClientDeployPreconditionDepScriptMatchesEsper",
+        "TestClientDeployPreconditionDepContextMatchesEsper",
+        "TestClientDeployPreconditionDepEventTypePathMatchesEsper",
+        "TestClientDeployPreconditionDepNamedWindowOfNamedModuleMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "invalid",
+        "client",
+        "deploy",
+        "precondition",
+        "path-dependency",
+        "named-window",
+        "table",
+        "variable",
+        "context",
+        "event-type",
+        "declared-expression",
+        "script",
+        "module"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Engine deploy resolves every cross-module catalog reference collected from the immutable plan (Named Window/Table sources, triggers and subqueries, variable references, WithContext identities, module event-type sources and insert-into targets, declared-expression references and script calls) against the active provider deployments, mirroring DeployerHelperResolver.resolveDependencies. An unmet reference aborts the deploy before any visible state with DeployPreconditionError carrying kind, logical name and owning module in Esper check order (named window, table, event type, variable, context, declared expression, script), classified ErrorDependency, with rollout failures surfacing the zero-based item index; the active deployment set is unchanged. Module-less consumers of a named module follow the same provider-first order as the Java RegressionPath variant."
+    },
+    {
+      "id": "case.client-deploy-path-dependency-dispositions",
+      "javaRuntimeIds": [
+        "java-runtime-7413f1ef4e04191880e0",
+        "java-runtime-758ea25223510429ca0f",
+        "java-runtime-4bdc79f0f4b7878a980e",
+        "java-runtime-d8af65299b1a00e2e7c9"
+      ],
+      "javaNames": [
+        "ClientVisibilityDeployDepClass",
+        "ClientVisibilityDeployDepIndex",
+        "ClientVisibilityDeployDepVariablePreconfig",
+        "ClientVisibilityDeployDepEventTypePreconfig"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployPreconditionDependency.java"
+      ],
+      "goTests": [
+        "TestClientDeployPreconditionDepClassDisposition",
+        "TestClientDeployPreconditionDepIndexDisposition",
+        "TestClientDeployPreconditionDepVariablePreconfigDisposition",
+        "TestClientDeployPreconditionDepEventTypePreconfigDisposition"
+      ],
+      "tags": [
+        "invalid",
+        "client",
+        "deploy",
+        "precondition",
+        "path-dependency",
+        "index",
+        "inlined-class",
+        "preconfigured",
+        "approved-difference"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java compiles against a deep-copied configuration and fails at deploy time when the runtime lacks the preconfigured event type or variable; Go has no compile/runtime configuration skew because Environment.Build validates every reference against the serving environment, so the same guarantee is enforced at the compile boundary (unknown name) and cross-environment plans are rejected at deploy with ErrorDependency. Java create-index deployments have no Go counterpart because indexes are registration-time table/named-window definition options; an index-hinted table consumer still depends on the owning table and hits the table path precondition. Java application-inlined classes are JVM deployment artifacts; Go statically links callable providers so they carry no deployment dependency at all. All four dispositions are pinned by Go tests instead of faking Java artifacts."
+    },
+    {
+      "id": "case.client-deploy-duplicate-preconditions",
+      "javaRuntimeIds": [
+        "java-runtime-25f7375d5d177476311a",
+        "java-runtime-8a2cfeaf7482ec8e76a4",
+        "java-runtime-b5ad2cbcca67eec0327f",
+        "java-runtime-ada1de503f6ec1e6c405",
+        "java-runtime-f63e837d1257e18a0261",
+        "java-runtime-922dbc5845308f5c9dc4",
+        "java-runtime-82fe5045814757f84456"
+      ],
+      "javaNames": [
+        "ClientDeployPrecondDupNamedWindow",
+        "ClientDeployPrecondDupTable",
+        "ClientDeployPrecondDupEventType",
+        "ClientDeployPrecondDupVariable",
+        "ClientDeployPrecondDupExprDecl",
+        "ClientDeployPrecondDupScript",
+        "ClientDeployPrecondDupContext"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployPreconditionDuplicate.java"
+      ],
+      "goTests": [
+        "TestClientDeployPrecondDupNamedWindowMatchesEsper",
+        "TestClientDeployPrecondDupTableMatchesEsper",
+        "TestClientDeployPrecondDupEventTypeMatchesEsper",
+        "TestClientDeployPrecondDupVariableMatchesEsper",
+        "TestClientDeployPrecondDupExprDeclMatchesEsper",
+        "TestClientDeployPrecondDupScriptMatchesEsper",
+        "TestClientDeployPrecondDupContextMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "invalid",
+        "client",
+        "deploy",
+        "precondition",
+        "duplicate",
+        "named-window",
+        "table",
+        "variable",
+        "context",
+        "event-type",
+        "declared-expression",
+        "script",
+        "module"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go materializes EPL create window/table/schema/variable/expression/script/context statements as Environment or Module registrations, so the duplicate precondition Java raises at deploy time (PathExceptionAlreadyRegistered as EPDeployPreconditionException) is enforced at the registration boundary: a second registration of the same catalog identity returns DuplicateModuleObjectError carrying kind, logical name and owning module, classified ErrorDependency, preserving Esper message text (\"A precondition is not satisfied: A named window by name 'SimpleWindow' has already been created for module 'ABC'\") and the unnamed module rendering. Identities are scoped per module, so a different module exposes the same logical name without conflict, matching the Java path registry per-module key; the rejected duplicate leaves the provider registration intact. Script duplicates render Esper NameAndParamNum identity (myscript (1 parameters)) from registered argument-type metadata."
+    },
+    {
+      "id": "case.client-deploy-duplicate-index-class-disposition",
+      "javaRuntimeIds": [
+        "java-runtime-130b392c5cba1619384d",
+        "java-runtime-81be4da43428b80152be"
+      ],
+      "javaNames": [
+        "ClientDeployPrecondDupIndex",
+        "ClientDeployPrecondDupClass"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployPreconditionDuplicate.java"
+      ],
+      "goTests": [
+        "TestClientDeployPrecondDupIndexDisposition",
+        "TestClientDeployPrecondDupClassDisposition"
+      ],
+      "tags": [
+        "invalid",
+        "client",
+        "deploy",
+        "precondition",
+        "duplicate",
+        "index",
+        "inlined-class",
+        "approved-difference"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java tracks create-index statements as separately deployed path objects and rejects a duplicate index name on the same infra at deploy time; Go declares indexes as registration-time definition options, so a duplicate index name is rejected when the owning table/named-window definition is built and index names stay scoped to their owning infra. Java application-inlined classes are JVM deployment artifacts with their own path registry; Go has no runtime-compiled class artifact, the callable equivalent is an analyzable module-scoped declared expression whose duplicate registration is the declared-expression precondition, and a module without class artifacts deploys and undeploys cleanly."
     }
   ],
   "mappings": [
@@ -16565,6 +16832,22 @@
     {
       "capabilityId": "client.instrument.audit",
       "caseId": "case.client-instrument-audit"
+    },
+    {
+      "capabilityId": "client.deploy.path-dependency-preconditions",
+      "caseId": "case.client-deploy-path-dependency-preconditions"
+    },
+    {
+      "capabilityId": "client.deploy.path-dependency-preconditions",
+      "caseId": "case.client-deploy-path-dependency-dispositions"
+    },
+    {
+      "capabilityId": "client.deploy.duplicate-preconditions",
+      "caseId": "case.client-deploy-duplicate-preconditions"
+    },
+    {
+      "capabilityId": "client.deploy.duplicate-preconditions",
+      "caseId": "case.client-deploy-duplicate-index-class-disposition"
     }
   ]
 }

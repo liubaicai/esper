@@ -128,7 +128,7 @@ func TestJSONVisibilityUsesExplicitEnvironmentCatalogBoundary(t *testing.T) {
 	if err != nil || secondEvent.Get("carId").Any() != "E1" {
 		t.Fatalf("second catalog event = %#v (%v)", secondEvent.Underlying(), err)
 	}
-	if _, err := RegisterJSON(first, "JsonSchema", []FieldSpec{FieldDef("size", reflect.TypeOf(""))}); err == nil || !strings.Contains(err.Error(), "already registered") {
+	if _, err := RegisterJSON(first, "JsonSchema", []FieldSpec{FieldDef("size", reflect.TypeOf(""))}); err == nil || !strings.Contains(err.Error(), "An event type by name 'JsonSchema' has already been created for module 'unnamed'") {
 		t.Fatalf("same-catalog duplicate schema error = %v", err)
 	}
 	// Java's public/protected module/path visibility is intentionally not

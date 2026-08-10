@@ -46,7 +46,7 @@ func (e *Environment) DefineExpression(name string, expression Expr) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if _, exists := e.expressions[name]; exists {
-		return NewError(ErrorInvalidRule, fmt.Sprintf("expression definition %q is already registered", name))
+		return duplicateModuleObjectError(DeploymentResourceExpression, name)
 	}
 	e.expressions[name] = ExpressionDefinition{Name: name, Expr: expression, Parameters: parameters}
 	return nil

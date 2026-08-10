@@ -260,7 +260,7 @@ func TestScriptProviderRejectsMissingAndMismatchedDefinitionsAtBuild(t *testing.
 		t.Fatalf("foreign script Build error = %v", err)
 	}
 
-	if err := DefineScript[string](env, "typed-script", "go", func(EvalContext, []Value) (string, error) { return "duplicate", nil }); err == nil || !strings.Contains(err.Error(), "already registered") {
+	if err := DefineScript[string](env, "typed-script", "go", func(EvalContext, []Value) (string, error) { return "duplicate", nil }); err == nil || !strings.Contains(err.Error(), "A script by name 'typed-script' has already been created for module 'unnamed'") {
 		t.Fatalf("duplicate script registration error = %v", err)
 	}
 }
