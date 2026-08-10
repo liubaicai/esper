@@ -288,6 +288,7 @@ type Engine struct {
 	contextTableOwnership              map[string]map[string]map[uint64]tableContextRowOwnership
 	contextTemporalOrigins             map[string]time.Time
 	contextStateListeners              []ContextStateListener
+	deploymentStateListeners           []DeploymentStateListener
 	contextCreated                     map[string]bool
 	contextStatementRefs               map[string]int
 	pendingContextEvents               []contextNotification
@@ -1558,6 +1559,16 @@ func (s *Statement) ID() string {
 	}
 	return s.id
 }
+
+// Sequence returns the stable one-based runtime statement sequence used for
+// deterministic dispatch order across ordinary deployments and rollouts.
+func (s *Statement) Sequence() uint64 {
+	if s == nil {
+		return 0
+	}
+	return s.deploymentOrder
+}
+
 func (s *Statement) Name() string {
 	if s == nil {
 		return ""
@@ -2366,17 +2377,34 @@ func (e *Engine) DeployPlans(ctx context.Context, plans []Plan, options ...Deplo
 }
 
 func (e *Engine) deployRequests(ctx context.Context, requests []deploymentRequest, config deploymentConfig) (*Deployment, error) {
-	if err := contextErr(ctx); err != nil {
+	requests, deploymentModule, err := e.prepareDeploymentRequests(ctx, requests, config)
+	if err != nil {
 		return nil, err
 	}
+	e.mu.Lock()
+	activation, err := e.deployPreparedRequestsLocked(ctx, requests, config, deploymentModule)
+	e.mu.Unlock()
+	if err != nil {
+		return nil, err
+	}
+	if err := e.dispatchDeploymentActivation(ctx, activation, -1); err != nil {
+		return nil, err
+	}
+	return activation.deployment, nil
+}
+
+func (e *Engine) prepareDeploymentRequests(ctx context.Context, requests []deploymentRequest, config deploymentConfig) ([]deploymentRequest, string, error) {
+	if err := contextErr(ctx); err != nil {
+		return nil, "", err
+	}
 	if e == nil || e.env == nil {
-		return nil, NewError(ErrorDependency, "engine has no environment")
+		return nil, "", NewError(ErrorDependency, "engine has no environment")
 	}
 	if len(requests) == 0 {
-		return nil, NewError(ErrorInvalidRule, "deployment requires at least one plan")
+		return nil, "", NewError(ErrorInvalidRule, "deployment requires at least one plan")
 	}
 	if config.deploymentIDSet && config.deploymentID == "" {
-		return nil, NewError(ErrorDeployment, "deployment id cannot be blank")
+		return nil, "", NewError(ErrorDeployment, "deployment id cannot be blank")
 	}
 	seenNames := make(map[string]struct{}, len(requests))
 	deploymentModule := ""
@@ -2388,24 +2416,24 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		}
 		if err := e.validateOwnedPlan(request.plan, compatibilityIndex); err != nil {
 			if _, ok := err.(*PlanCompatibilityError); ok {
-				return nil, err
+				return nil, "", err
 			}
-			return nil, NewError(ErrorDependency, fmt.Sprintf("plan %d does not belong to this engine", index))
+			return nil, "", NewError(ErrorDependency, fmt.Sprintf("plan %d does not belong to this engine", index))
 		}
 		planModule := normalizeModuleName(request.plan.query.moduleName)
 		if index == 0 {
 			deploymentModule = planModule
 		} else if planModule != deploymentModule {
-			return nil, NewError(ErrorDependency, "all plans in one deployment must belong to the same module")
+			return nil, "", NewError(ErrorDependency, "all plans in one deployment must belong to the same module")
 		}
 		if planModule != "" {
 			if _, ok := e.env.moduleDefinition(planModule); !ok {
-				return nil, NewError(ErrorUnknownName, fmt.Sprintf("module %q is not registered", planModule))
+				return nil, "", NewError(ErrorUnknownName, fmt.Sprintf("module %q is not registered", planModule))
 			}
 		}
 		parameterTypes, parameterErr := queryParameterTypes(e.env, request.plan.query)
 		if parameterErr != nil {
-			return nil, WrapError(ErrorInvalidRule, fmt.Sprintf("plan %d parameters", index), parameterErr)
+			return nil, "", WrapError(ErrorInvalidRule, fmt.Sprintf("plan %d parameters", index), parameterErr)
 		}
 		name := request.plan.query.name
 		if config.nameResolver != nil {
@@ -2418,7 +2446,7 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 				Metadata:         request.plan.query.Metadata(),
 			})
 			if err != nil {
-				return nil, WrapError(ErrorDeployment, fmt.Sprintf("resolve statement name for plan %d", index), err)
+				return nil, "", WrapError(ErrorDeployment, fmt.Sprintf("resolve statement name for plan %d", index), err)
 			}
 			name = resolved
 		}
@@ -2426,11 +2454,11 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 			name = fmt.Sprintf("stmt-%d", index)
 		}
 		if strings.TrimSpace(name) == "" {
-			return nil, NewError(ErrorDeployment, fmt.Sprintf("statement name resolver returned a blank name for plan %d", index))
+			return nil, "", NewError(ErrorDeployment, fmt.Sprintf("statement name resolver returned a blank name for plan %d", index))
 		}
 		name = strings.TrimSpace(name)
 		if _, exists := seenNames[name]; exists {
-			return nil, NewError(ErrorDeployment, fmt.Sprintf("duplicate statement name %q within deployment", name))
+			return nil, "", NewError(ErrorDeployment, fmt.Sprintf("duplicate statement name %q within deployment", name))
 		}
 		seenNames[name] = struct{}{}
 		request.name = name
@@ -2450,54 +2478,62 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 				Metadata:         request.plan.query.Metadata(),
 			})
 			if err != nil {
-				return nil, WrapError(ErrorDeployment, fmt.Sprintf("resolve statement user object for plan %d", index), err)
+				return nil, "", WrapError(ErrorDeployment, fmt.Sprintf("resolve statement user object for plan %d", index), err)
 			}
 			request.userObject = resolved
 			request.userObjectSet = true
 		}
 		if config.parameterResolver != nil {
 			if request.parameterized {
-				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("plan %d already has direct parameter bindings", index))
+				return nil, "", NewError(ErrorInvalidRule, fmt.Sprintf("plan %d already has direct parameter bindings", index))
 			}
 			parameterContext := newStatementParameterContext(index, request.plan, config.deploymentID, name, parameterTypes)
 			bindings, err := config.parameterResolver(parameterContext)
 			if err != nil {
-				return nil, WrapError(ErrorDeployment, fmt.Sprintf("resolve statement parameters for plan %d", index), err)
+				return nil, "", WrapError(ErrorDeployment, fmt.Sprintf("resolve statement parameters for plan %d", index), err)
 			}
 			parameters, err := statementParameterBindings(request.plan, bindings)
 			if err != nil {
-				return nil, WrapError(ErrorInvalidRule, fmt.Sprintf("plan %d parameters", index), err)
+				return nil, "", WrapError(ErrorInvalidRule, fmt.Sprintf("plan %d parameters", index), err)
 			}
 			request.parameters = parameters
 			request.parameterized = true
 		}
 		if len(parameterTypes) > 0 && !request.parameterized {
-			return nil, NewError(ErrorInvalidRule, fmt.Sprintf("plan %d contains substitution parameters; use DeployWithParameters, DeployWithPositionalParameters or a deployment parameter resolver", index))
+			return nil, "", NewError(ErrorInvalidRule, fmt.Sprintf("plan %d contains substitution parameters; use DeployWithParameters, DeployWithPositionalParameters or a deployment parameter resolver", index))
 		}
 		if request.parameterized {
 			if err := validateParameterBindings(parameterTypes, request.parameters); err != nil {
-				return nil, err
+				return nil, "", err
 			}
 		}
 		if request.plan.query.contextName != "" {
 			if _, ok := e.env.Context(request.plan.query.contextName); !ok {
-				return nil, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", request.plan.query.contextName))
+				return nil, "", NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", request.plan.query.contextName))
 			}
 		}
 	}
 	if err := contextErr(ctx); err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	e.mu.Lock()
+	return requests, deploymentModule, nil
+}
+
+type deploymentActivation struct {
+	deployment     *Deployment
+	contextEvents  []contextNotification
+	auditRecords   []AuditRecord
+	auditListeners []AuditListener
+}
+
+func (e *Engine) deployPreparedRequestsLocked(ctx context.Context, requests []deploymentRequest, config deploymentConfig, deploymentModule string) (deploymentActivation, error) {
 	if e.closed {
-		e.mu.Unlock()
-		return nil, NewError(ErrorState, "engine is closed")
+		return deploymentActivation{}, NewError(ErrorState, "engine is closed")
 	}
 	deploymentID := config.deploymentID
 	if deploymentID != "" {
 		if _, exists := e.deployments[deploymentID]; exists {
-			e.mu.Unlock()
-			return nil, NewError(ErrorDeployment, fmt.Sprintf("deployment id %q is already active", deploymentID))
+			return deploymentActivation{}, NewError(ErrorDeployment, fmt.Sprintf("deployment id %q is already active", deploymentID))
 		}
 		e.nextID++
 	} else {
@@ -2531,8 +2567,7 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		if definition, ok := e.env.moduleDefinition(deploymentModule); ok && definition.visibility == ModuleProtected {
 			protectedModule = true
 			if err := e.activateProtectedModuleLocked(deploymentModule, deploymentID); err != nil {
-				e.mu.Unlock()
-				return nil, err
+				return deploymentActivation{}, err
 			}
 		}
 	}
@@ -2565,8 +2600,7 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 				e.deactivateProtectedModuleLocked(deploymentModule)
 				e.pendingContextEvents = e.pendingContextEvents[:activationContextEventStart]
 			}
-			e.mu.Unlock()
-			return nil, err
+			return deploymentActivation{}, err
 		}
 		deployment.statements = append(deployment.statements, statement)
 	}
@@ -2593,15 +2627,34 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 	}
 	contextEvents := e.takeContextEventsLocked()
 	auditRecords, auditListeners := e.takeAuditDispatchLocked()
-	e.mu.Unlock()
-	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
-		return nil, err
+	return deploymentActivation{
+		deployment:     deployment,
+		contextEvents:  contextEvents,
+		auditRecords:   auditRecords,
+		auditListeners: auditListeners,
+	}, nil
+}
+
+func (e *Engine) dispatchDeploymentActivation(ctx context.Context, activation deploymentActivation, rolloutItemIndex int) error {
+	if activation.deployment == nil {
+		return nil
 	}
-	e.dispatchContextEvents(contextEvents)
-	for _, statement := range deployment.statements {
+	if err := dispatchAuditRecords(ctx, activation.auditRecords, activation.auditListeners); err != nil {
+		return err
+	}
+	e.dispatchContextEvents(activation.contextEvents)
+	for _, statement := range activation.deployment.statements {
 		e.notifyDataflowStatementDeployed(statement)
 	}
-	return deployment, nil
+	e.dispatchDeploymentState(DeploymentStateEvent{
+		State:            DeploymentStateDeployed,
+		RuntimeURI:       e.runtimeURI,
+		DeploymentID:     activation.deployment.id,
+		ModuleName:       activation.deployment.moduleName,
+		Statements:       activation.deployment.Statements(),
+		RolloutItemIndex: rolloutItemIndex,
+	})
+	return nil
 }
 
 func (e *Engine) deploymentDependenciesLocked(requests []deploymentRequest) []string {
@@ -3076,6 +3129,14 @@ func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
 	for _, statement := range removedStatements {
 		e.notifyDataflowStatementUndeployed(statement)
 	}
+	e.dispatchDeploymentState(DeploymentStateEvent{
+		State:            DeploymentStateUndeployed,
+		RuntimeURI:       e.runtimeURI,
+		DeploymentID:     deployment.id,
+		ModuleName:       deployment.moduleName,
+		Statements:       removedStatements,
+		RolloutItemIndex: -1,
+	})
 	return closeDeploymentSinks(deployment)
 }
 

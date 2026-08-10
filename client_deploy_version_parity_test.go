@@ -41,6 +41,15 @@ func TestClientDeployVersionMinorCheckMatchesEsper(t *testing.T) {
 		_, err := engine.DeployPlans(context.Background(), []Plan{legacy})
 		return err
 	}(), true, 0)
+	rolloutErr := func() error {
+		_, err := engine.Rollout(context.Background(), RolloutPlans(legacy))
+		return err
+	}()
+	assertCompatibilityError(t, rolloutErr, false, 0)
+	var indexedRolloutErr *DeploymentRolloutError
+	if !errors.As(rolloutErr, &indexedRolloutErr) || indexedRolloutErr.RolloutItemIndex() != 0 {
+		t.Fatalf("rollout compatibility item = %#v", indexedRolloutErr)
+	}
 	assertCompatibilityError(t, func() error {
 		_, err := engine.ExecuteFireAndForget(context.Background(), legacy)
 		return err
