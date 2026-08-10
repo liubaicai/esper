@@ -775,7 +775,9 @@
         "PatternConsumingFilter",
         "PatternObserverTimerAt",
         "PatternObserverTimerInterval",
-        "PatternObserverTimerSchedule"
+        "PatternObserverTimerSchedule",
+        "PatternFollowedByFilter",
+        "PatternFragment"
       ],
       "goRefs": [
         "pattern.go",
@@ -784,7 +786,8 @@
         "pattern_guard_observer_matrix_test.go",
         "pattern_followed_by_max_test.go",
         "pattern_followed_by_max_listener_test.go",
-        "pattern_consumption_test.go"
+        "pattern_consumption_test.go",
+        "pattern_composite_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -17714,6 +17717,39 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.pattern-composite-select",
+      "javaRuntimeIds": [
+        "java-runtime-a8267fe1d7ff5c2b11cd",
+        "java-runtime-767c86964d0e82f68dc3"
+      ],
+      "javaNames": [
+        "PatternFollowedByFilter",
+        "PatternFragment"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternCompositeSelect.java"
+      ],
+      "goTests": [
+        "TestPatternCompositeFollowedByFilterMatchesEsper",
+        "TestPatternCompositeFragmentMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "followed-by",
+        "match-until",
+        "fragment",
+        "tag-events",
+        "insert-into"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java wildcard pattern select materializes fragment EventBeans (indexed for repeated tags) with FragmentEventType metadata; Go projects tags explicitly as typed []Event values via TagEvents, preserving per-tag event type names and property access (a[0].id) without fragment descriptor objects."
     }
   ],
   "mappings": [
@@ -18896,14 +18932,18 @@
     {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-timebatch-basic"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-composite-select"
     }
   ],
   "summary": {
-    "totalCases": 295,
+    "totalCases": 296,
     "totalCapabilities": 103,
-    "mappedCases": 277,
+    "mappedCases": 278,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1906
+    "disposedRuntimeIds": 1908
   }
 }
