@@ -2952,11 +2952,9 @@
         "PatternOrAndNotAndZeroStart",
         "PatternOperatorOrWHarness",
         "PatternConsumingPattern suite",
-        "PatternOperatorEvery suite",
         "PatternOperatorEveryDistinct suite",
         "PatternOperatorFollowedBy suite",
         "PatternOperatorMatchUntil suite",
-        "PatternOperatorNot suite",
         "PatternObserver* suites",
         "PatternGuardWhile suite"
       ]
@@ -3133,6 +3131,32 @@
         "EPLInsertIntoPopulateUndStreamSelect suite",
         "EPLInsertIntoTransposePattern suite",
         "EPLInsertIntoWrapper suite"
+      ]
+    },
+    {
+      "id": "pattern.operator-not",
+      "domain": "pattern",
+      "level": "G",
+      "summary": "Pattern NOT operator semantics: and-not fires when the positive side completes before the forbidden event; or-not under every is swallowed at spawn; every-leg and/not combinations keep a single retained and-state that fires per fresh completion until the forbidden event kills it permanently; correlated not predicates cancel only the matching followed-by branch",
+      "javaRefs": [
+        "PatternOperatorNotWHarness",
+        "PatternOp",
+        "PatternUniformEvents",
+        "PatternNotFollowedBy",
+        "PatternNotTimeInterval",
+        "PatternNotWithEvery"
+      ],
+      "goRefs": [
+        "pattern_not_parity_test.go",
+        "runtime.go",
+        "pattern.go"
+      ],
+      "phase": 3,
+      "status": "mapped",
+      "remaining": [
+        "Esper raises one or-callback per branch when one unconsumed event matches both every branches; the fluent runtime represents that as a single merged row",
+        "and-state match cache keeps the latest match per side instead of Esper's full combination list for repeated every-leg completions before the other side completes",
+        "standalone (non-every) or-with-not roots fire on the first event instead of at deploy time"
       ]
     }
   ],
@@ -17761,6 +17785,51 @@
         "go-unit"
       ],
       "difference": "Java wildcard pattern select materializes fragment EventBeans (indexed for repeated tags) with FragmentEventType metadata; Go projects tags explicitly as typed []Event values via TagEvents, preserving per-tag event type names and property access (a[0].id) without fragment descriptor objects."
+    },
+    {
+      "id": "case.pattern-operator-not",
+      "javaRuntimeIds": [
+        "java-runtime-2331794b72786e9c4f5a",
+        "java-runtime-d63139bd088e1748c2b1",
+        "java-runtime-4a4ace4f7759f62b76dc",
+        "java-runtime-226fc61616333fcc8835",
+        "java-runtime-3e621e3146db7acdf073",
+        "java-runtime-ab7e164f327146b9b9cc"
+      ],
+      "javaNames": [
+        "PatternOperatorNotWHarness",
+        "PatternOp",
+        "PatternUniformEvents",
+        "PatternNotFollowedBy",
+        "PatternNotTimeInterval",
+        "PatternNotWithEvery"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorNot.java"
+      ],
+      "goTests": [
+        "TestPatternOperatorNotWHarnessMatchesEsper",
+        "TestPatternOperatorNotUniformEventsMatchesEsper",
+        "TestPatternOperatorNotTimeIntervalMatchesEsper",
+        "TestPatternOperatorNotFollowedByMatchesEsper",
+        "TestPatternOperatorNotWithEveryMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "not",
+        "and",
+        "or",
+        "every",
+        "followed-by",
+        "timer"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go parity tests replay the exact W-harness match sequences including every(every(b)) and-not B3 doubling, spawn-swallowed every(b or not d), and single-attempt every(b -> d) with and-not. Go-style differences: the object-model toEPL round trip is covered by Go pattern model shape tests; an or match carries only the firing branch's tags; the and side cache keeps the latest match per side (no cartesian combination list); standalone or-with-not roots fire on the first event rather than at deploy."
     }
   ],
   "mappings": [
@@ -18947,14 +19016,18 @@
     {
       "capabilityId": "pattern.basic",
       "caseId": "case.pattern-composite-select"
+    },
+    {
+      "capabilityId": "pattern.operator-not",
+      "caseId": "case.pattern-operator-not"
     }
   ],
   "summary": {
-    "totalCases": 296,
-    "totalCapabilities": 103,
-    "mappedCases": 278,
+    "totalCases": 297,
+    "totalCapabilities": 104,
+    "mappedCases": 279,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1912
+    "disposedRuntimeIds": 1918
   }
 }
