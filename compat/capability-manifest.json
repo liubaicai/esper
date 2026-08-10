@@ -2320,6 +2320,55 @@
       ]
     },
     {
+      "id": "client.deploy.statement-options",
+      "domain": "client",
+      "level": "G",
+      "summary": "Deployment-time statement name and user-object resolvers with typed plan metadata, deterministic identity and runtime evaluation-context propagation",
+      "javaRefs": [
+        "ClientDeployStatementName",
+        "ClientDeployUserObject",
+        "StatementNameRuntimeContext",
+        "StatementUserObjectRuntimeContext"
+      ],
+      "goRefs": [
+        "runtime.go",
+        "statement_metadata.go",
+        "expr_evaluation_context.go",
+        "client_deploy_statement_options_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "WithDeploymentID supplies the final deployment identity to preflight resolver contexts; generated IDs are assigned after resolver preflight and therefore are not exposed there yet",
+        "TypedDescription and detached StatementMetadata replace raw EPL text and shared Java annotation-array identity",
+        "deployment-time user objects override the runtime Statement and CurrentEvaluationContext without changing immutable Plan identity",
+        "complete rollout-scoped option resolution and cross-deployment atomicity remain separate work"
+      ]
+    },
+    {
+      "id": "client.deploy.jvm-class-loading",
+      "domain": "client",
+      "level": "N",
+      "summary": "Disposition for Java deployment ClassLoader callbacks that load generated module-provider bytecode",
+      "javaRefs": [
+        "ClientDeployClassLoaderOption",
+        "DeploymentClassLoaderOption",
+        "ClassLoader"
+      ],
+      "goRefs": [
+        "plan.go",
+        "runtime.go",
+        "client_deploy_statement_options_parity_test.go"
+      ],
+      "phase": 0,
+      "status": "approved-difference",
+      "remaining": [
+        "Go links event types, functions and providers into the executable and deploys typed Plans without generated classes",
+        "plugin and symbol registration use explicit Go registries rather than per-deployment JVM class loaders",
+        "future portable artifact loading must define a Go-native registry and compatibility contract instead of copying ClassLoader interception"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -14909,6 +14958,79 @@
       "difference": "Esper loads an 8.0.0 EPCompiled JAR under runtime 9.0.0 and rejects ordinary deploy, rollout item zero and fire-and-forget before execution. Go carries schema and compiler provenance directly on each immutable typed Plan, returns PlanCompatibilityError with current and artifact contracts, rejects ordinary Deploy and ExecuteFireAndForget without an item index, and reports zero from DeploymentPlanIndex for the equivalent single-item DeployPlans preflight. MarshalArtifact/LoadPlanArtifact preserves and validates both versions. Go does not load Java serialized JARs, and full atomic multi-deployment Engine.Rollout behavior remains covered by the separate ClientDeployRollout suite."
     },
     {
+      "id": "case.client-deploy-statement-options",
+      "javaRuntimeIds": [
+        "java-runtime-28542a952f515a769276",
+        "java-runtime-40de916407870961dff6",
+        "java-runtime-46ae48cdfa915b96b5d6"
+      ],
+      "javaNames": [
+        "ClientDeployStatementNameResolveContext",
+        "ClientDeployUserObjectValues",
+        "ClientDeployUserObjectResolveContext"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployStatementName.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployUserObject.java"
+      ],
+      "goTests": [
+        "TestClientDeployStatementNameResolveContextMatchesEsper",
+        "TestClientDeployUserObjectValuesMatchEsper",
+        "TestClientDeployUserObjectResolveContextMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "deploy",
+        "statement-name",
+        "user-object",
+        "resolver",
+        "deployment-id",
+        "typed-description",
+        "metadata",
+        "evaluation-context",
+        "invalid"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "DeploymentStatementNameContext now exposes the zero-based Plan index, immutable Plan, original name, requested/final explicit deployment ID, typed structural description and detached compiled metadata; the resolver renames s0 to hello and the active Statement retains that name. WithDeploymentStatementUserObjectResolver runs after name resolution, accepts nil, string and native struct values, exposes original/resolved statement identity plus typed metadata, and overrides Statement.UserObject and CurrentEvaluationContext without changing Plan hash. Go uses an explicit WithDeploymentID in the parity contexts because generated deployment IDs are assigned after preflight today. TypedDescription replaces EPL text, detached metadata replaces annotation-array pointer identity, and Go user objects need not implement Java Serializable. Resolver errors abort before any deployment is visible."
+    },
+    {
+      "id": "case.client-deploy-class-loader-option",
+      "javaRuntimeIds": [
+        "java-runtime-b3a1840029a50a24c12e"
+      ],
+      "javaNames": [
+        "ClientDeployClassLoaderOptionSimple"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployClassLoaderOption.java"
+      ],
+      "goTests": [
+        "TestClientDeployClassLoaderOptionIsIntentionallyNotExposed"
+      ],
+      "tags": [
+        "client",
+        "deploy",
+        "approved-difference",
+        "jvm",
+        "class-loader",
+        "generated-bytecode",
+        "native-linking"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "The Java execution installs a per-deployment ClassLoader and only asserts that generated module-provider class loading invokes it at least once. Go emits no JVM bytecode and has no generated deployment class to intercept: event types and providers are statically linked or explicitly registered, while Plan.Manifest identifies the Go-native fluent builder. The disposition test verifies ordinary typed Plan build/deploy/undeploy and stable manifest identity. A fake callback invocation would not provide class isolation or loading semantics, so no DeploymentClassLoaderOption is exposed."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -16034,6 +16156,14 @@
     {
       "capabilityId": "client.deploy.plan-compatibility",
       "caseId": "case.client-deploy-version"
+    },
+    {
+      "capabilityId": "client.deploy.statement-options",
+      "caseId": "case.client-deploy-statement-options"
+    },
+    {
+      "capabilityId": "client.deploy.jvm-class-loading",
+      "caseId": "case.client-deploy-class-loader-option"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",

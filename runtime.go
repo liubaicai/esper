@@ -1530,6 +1530,7 @@ type Statement struct {
 	deployment               *Deployment
 	deploymentOrder          uint64
 	plan                     Plan
+	userObject               any
 	parameters               ParameterValues
 	id                       string
 	name                     string
@@ -1570,13 +1571,13 @@ func (s *Statement) Plan() Plan {
 	return s.plan
 }
 
-// UserObject returns the opaque compile-time metadata attached through
-// WithStatementUserObject or WithStatementUserObjectResolver.
+// UserObject returns the opaque deployment-time value when a deployment
+// resolver supplied one, otherwise the compile-time statement user object.
 func (s *Statement) UserObject() any {
 	if s == nil {
 		return nil
 	}
-	return s.plan.query.statementUserObject
+	return s.userObject
 }
 
 // Metadata returns a detached snapshot of the deployed statement's built-in
@@ -2133,14 +2134,34 @@ func (d *Deployment) Undeploy(ctx context.Context) error {
 // DeploymentStatementNameContext describes one plan while a multi-plan
 // deployment resolves its runtime statement names.
 type DeploymentStatementNameContext struct {
-	Index        int
-	Plan         Plan
-	OriginalName string
+	Index            int
+	Plan             Plan
+	OriginalName     string
+	DeploymentID     string
+	TypedDescription string
+	Metadata         StatementMetadata
 }
 
 // DeploymentStatementNameResolver selects the runtime name for one plan.
 // Returning an error aborts the deployment before any statement is visible.
 type DeploymentStatementNameResolver func(DeploymentStatementNameContext) (string, error)
+
+// DeploymentStatementUserObjectContext describes one statement after its
+// deployment-time name has been resolved and before it becomes visible.
+type DeploymentStatementUserObjectContext struct {
+	Index            int
+	Plan             Plan
+	OriginalName     string
+	StatementName    string
+	DeploymentID     string
+	StatementID      string
+	TypedDescription string
+	Metadata         StatementMetadata
+}
+
+// DeploymentStatementUserObjectResolver selects an opaque runtime value for
+// each statement. Returning an error aborts the complete deployment.
+type DeploymentStatementUserObjectResolver func(DeploymentStatementUserObjectContext) (any, error)
 
 // StatementParameterBindings is the immutable result of resolving one
 // statement's deployment-time substitution parameters. Exactly one of Named
@@ -2186,6 +2207,7 @@ type StatementParameterResolver func(StatementParameterContext) (StatementParame
 
 type deploymentConfig struct {
 	nameResolver            DeploymentStatementNameResolver
+	userObjectResolver      DeploymentStatementUserObjectResolver
 	parameterResolver       StatementParameterResolver
 	deploymentID            string
 	deploymentIDSet         bool
@@ -2199,6 +2221,13 @@ type DeploymentOption func(*deploymentConfig)
 // time. Resolved names must be non-blank and unique within the deployment.
 func WithDeploymentStatementNameResolver(resolver DeploymentStatementNameResolver) DeploymentOption {
 	return func(config *deploymentConfig) { config.nameResolver = resolver }
+}
+
+// WithDeploymentStatementUserObjectResolver overrides statement user objects
+// after deployment-time name resolution. The value does not change Plan
+// canonical identity and is captured by the deployed Statement/runtime.
+func WithDeploymentStatementUserObjectResolver(resolver DeploymentStatementUserObjectResolver) DeploymentOption {
+	return func(config *deploymentConfig) { config.userObjectResolver = resolver }
 }
 
 // WithDeploymentParameterResolver binds parameters independently for each
@@ -2275,10 +2304,18 @@ type deploymentRequest struct {
 	parameters    ParameterValues
 	parameterized bool
 	name          string
+	userObject    any
+	userObjectSet bool
 }
 
-func (e *Engine) Deploy(ctx context.Context, plan Plan) (*Deployment, error) {
-	return e.deployRequests(ctx, []deploymentRequest{{plan: plan}}, deploymentConfig{})
+func (e *Engine) Deploy(ctx context.Context, plan Plan, options ...DeploymentOption) (*Deployment, error) {
+	config := deploymentConfig{}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	return e.deployRequests(ctx, []deploymentRequest{{plan: plan}}, config)
 }
 
 // DeployWithParameters deploys a live statement with one immutable binding
@@ -2359,7 +2396,14 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		}
 		name := request.plan.query.name
 		if config.nameResolver != nil {
-			resolved, err := config.nameResolver(DeploymentStatementNameContext{Index: index, Plan: request.plan, OriginalName: name})
+			resolved, err := config.nameResolver(DeploymentStatementNameContext{
+				Index:            index,
+				Plan:             request.plan,
+				OriginalName:     name,
+				DeploymentID:     config.deploymentID,
+				TypedDescription: request.plan.query.TypedDescription(),
+				Metadata:         request.plan.query.Metadata(),
+			})
 			if err != nil {
 				return nil, WrapError(ErrorDeployment, fmt.Sprintf("resolve statement name for plan %d", index), err)
 			}
@@ -2376,6 +2420,27 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		}
 		seenNames[name] = struct{}{}
 		request.name = name
+		if config.userObjectResolver != nil {
+			statementID := name
+			if config.deploymentID != "" {
+				statementID = config.deploymentID + ":" + name
+			}
+			resolved, err := config.userObjectResolver(DeploymentStatementUserObjectContext{
+				Index:            index,
+				Plan:             request.plan,
+				OriginalName:     request.plan.query.name,
+				StatementName:    name,
+				DeploymentID:     config.deploymentID,
+				StatementID:      statementID,
+				TypedDescription: request.plan.query.TypedDescription(),
+				Metadata:         request.plan.query.Metadata(),
+			})
+			if err != nil {
+				return nil, WrapError(ErrorDeployment, fmt.Sprintf("resolve statement user object for plan %d", index), err)
+			}
+			request.userObject = resolved
+			request.userObjectSet = true
+		}
 		if config.parameterResolver != nil {
 			if request.parameterized {
 				return nil, NewError(ErrorInvalidRule, fmt.Sprintf("plan %d already has direct parameter bindings", index))
@@ -2531,6 +2596,11 @@ func (e *Engine) prepareStatementLocked(ctx context.Context, deployment *Deploym
 	name := request.name
 	runtimeQuery := plan.query
 	runtimeQuery.name = name
+	userObject := plan.query.statementUserObject
+	if request.userObjectSet {
+		userObject = request.userObject
+	}
+	runtimeQuery.statementUserObject = userObject
 	statement := &Statement{
 		engine:          e,
 		deployment:      deployment,
@@ -2538,6 +2608,7 @@ func (e *Engine) prepareStatementLocked(ctx context.Context, deployment *Deploym
 		id:              deployment.id + ":" + name,
 		name:            name,
 		plan:            plan,
+		userObject:      userObject,
 		parameters:      cloneParameterValues(request.parameters),
 		listeners:       make(map[uint64]Listener),
 		state:           StatementStarted,
