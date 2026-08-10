@@ -473,3 +473,174 @@ func TestExprFilterNullBooleanExprMatchesEsper(t *testing.T) {
 		t.Fatal("intBoxed=10 > 5 should invoke")
 	}
 }
+
+// TestExprFilterExprReversedMatchesEsper covers ExprFilterExprReversed:
+// constant on left side of comparison: 5 = intBoxed.
+func TestExprFilterExprReversedMatchesEsper(t *testing.T) {
+	env := newFilterTestEnv(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	source := From[filterTestBean](env, "SupportBean")
+	plan, err := env.Build(source.Filter(
+		EqualOf(Literal(5), Field[filterTestBean, *int]("intBoxed")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wasInvoked := subscribeFilter(t, deployment)
+
+	sendFilterBean(t, engine, "E", 0, intPtr(5), nil)
+	if !wasInvoked() {
+		t.Fatal("5 = intBoxed(5) should invoke")
+	}
+	sendFilterBean(t, engine, "E", 0, intPtr(6), nil)
+	if wasInvoked() {
+		t.Fatal("5 = intBoxed(6) should not invoke")
+	}
+}
+
+// TestExprFilterNotEqualsOpMatchesEsper covers ExprFilterNotEqualsOp:
+// theString != 'a' filter, null string does not match.
+func TestExprFilterNotEqualsOpMatchesEsper(t *testing.T) {
+	env := newFilterTestEnv(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	source := From[filterTestBean](env, "SupportBean")
+	plan, err := env.Build(source.Filter(
+		NotEqual[string](Field[filterTestBean, string]("theString"), Literal("a")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wasInvoked := subscribeFilter(t, deployment)
+
+	sendFilterBean(t, engine, "a", 0, nil, nil)
+	if wasInvoked() {
+		t.Fatal("theString='a' should not match !='a'")
+	}
+	sendFilterBean(t, engine, "b", 0, nil, nil)
+	if !wasInvoked() {
+		t.Fatal("theString='b' should match !='a'")
+	}
+	sendFilterBean(t, engine, "a", 0, nil, nil)
+	if wasInvoked() {
+		t.Fatal("theString='a' should not match !='a'")
+	}
+}
+
+// TestExprFilterWithEqualsSameCompareMatchesEsper covers
+// ExprFilterWithEqualsSameCompare: cross-type and self-comparison equality,
+// IN with field operands, NOT IN with mixed constants/fields, and range
+// with field bound.
+func TestExprFilterWithEqualsSameCompareMatchesEsper(t *testing.T) {
+	// Test data: (intBoxed, doubleBoxed) pairs
+	type td struct {
+		intBox *int
+		dblBox *float64
+	}
+	data1 := []td{{intPtr(1), floatPtr(1.0)}, {intPtr(1), floatPtr(10.0)}}
+
+	cases1 := []struct {
+		name string
+		expr Expression[bool]
+		want []bool
+	}{
+		{"int-eq-double", EqualOf(Field[filterTestBean, *int]("intBoxed"), Field[filterTestBean, *float64]("doubleBoxed")), []bool{true, false}},
+		{"self-eq", And(EqualOf(Field[filterTestBean, *int]("intBoxed"), Field[filterTestBean, *int]("intBoxed")), EqualOf(Field[filterTestBean, *float64]("doubleBoxed"), Field[filterTestBean, *float64]("doubleBoxed"))), []bool{true, true}},
+		{"double-eq-int", EqualOf(Field[filterTestBean, *float64]("doubleBoxed"), Field[filterTestBean, *int]("intBoxed")), []bool{true, false}},
+		{"double-in-int", InOf(Field[filterTestBean, *float64]("doubleBoxed"), Field[filterTestBean, *int]("intBoxed")), []bool{true, false}},
+		{"int-in-double", InOf(Field[filterTestBean, *int]("intBoxed"), Field[filterTestBean, *float64]("doubleBoxed")), []bool{true, false}},
+	}
+
+	for _, tc := range cases1 {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newFilterTestEnv(t)
+			eng := NewEngine(e)
+			defer func() { _ = eng.Close(context.Background()) }()
+			source := From[filterTestBean](e, "SupportBean")
+			plan, err := e.Build(source.Filter(tc.expr).Query(StatementName("s0")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			dep, err := eng.Deploy(context.Background(), plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wasInvoked := subscribeFilter(t, dep)
+			for i, d := range data1 {
+				sendFilterBean(t, eng, "", 0, d.intBox, d.dblBox)
+				if got := wasInvoked(); got != tc.want[i] {
+					t.Fatalf("(%s) case %d invoked=%v, want %v", tc.name, i, got, tc.want[i])
+				}
+			}
+		})
+	}
+
+	// doubleBoxed not in (10, intBoxed) with intBoxed=1, doubleBoxed={1,5,10}
+	t.Run("double-not-in-mixed", func(t *testing.T) {
+		e := newFilterTestEnv(t)
+		eng := NewEngine(e)
+		defer func() { _ = eng.Close(context.Background()) }()
+		source := From[filterTestBean](e, "SupportBean")
+		plan, err := e.Build(source.Filter(
+			NotInOf(Field[filterTestBean, *float64]("doubleBoxed"), Literal(float64(10)), Field[filterTestBean, *int]("intBoxed")),
+		).Query(StatementName("s0")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		dep, err := eng.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wasInvoked := subscribeFilter(t, dep)
+		want := []bool{false, true, false}
+		dblVals := []float64{1.0, 5.0, 10.0}
+		for i, dv := range dblVals {
+			sendFilterBean(t, eng, "", 0, intPtr(1), floatPtr(dv))
+			if got := wasInvoked(); got != want[i] {
+				t.Fatalf("doubleBoxed=%g invoked=%v, want %v", dv, got, want[i])
+			}
+		}
+	})
+
+	// doubleBoxed in (intBoxed:20) with intBoxed={0,1,2}, doubleBoxed=1
+	// range (intBoxed:20] means > intBoxed AND <= 20
+	t.Run("double-in-field-range", func(t *testing.T) {
+		e := newFilterTestEnv(t)
+		eng := NewEngine(e)
+		defer func() { _ = eng.Close(context.Background()) }()
+		source := From[filterTestBean](e, "SupportBean")
+		plan, err := e.Build(source.Filter(
+			And(
+				GreaterOf(Field[filterTestBean, *float64]("doubleBoxed"), Field[filterTestBean, *int]("intBoxed")),
+				LessOrEqualOf(Field[filterTestBean, *float64]("doubleBoxed"), Literal(20)),
+			),
+		).Query(StatementName("s0")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		dep, err := eng.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wasInvoked := subscribeFilter(t, dep)
+		want := []bool{true, false, false}
+		intVals := []int{0, 1, 2}
+		for i, iv := range intVals {
+			sendFilterBean(t, eng, "", 0, intPtr(iv), floatPtr(1.0))
+			if got := wasInvoked(); got != want[i] {
+				t.Fatalf("intBoxed=%d doubleBoxed=1 invoked=%v, want %v", iv, got, want[i])
+			}
+		}
+	})
+}

@@ -2888,7 +2888,10 @@
         "ExprFilterCombinationEqualsOp",
         "ExprFilterNotIn",
         "ExprFilterInExpr",
-        "ExprFilterSimpleIntAndEnumWrite"
+        "ExprFilterSimpleIntAndEnumWrite",
+        "ExprFilterExprReversed",
+        "ExprFilterNotEqualsOp",
+        "ExprFilterWithEqualsSameCompare"
       ],
       "goRefs": [
         "expr_filter_expressions_parity_test.go",
@@ -2906,10 +2909,7 @@
         "ExprFilterPatternFunc3Stream",
         "ExprFilterPatternWithExpr",
         "ExprFilterStaticFunc",
-        "ExprFilterWithEqualsSameCompare",
-        "ExprFilterExprReversed",
         "ExprFilterRewriteWhere",
-        "ExprFilterNotEqualsOp",
         "ExprFilterInvalid",
         "ExprFilterInstanceMethodWWildcard",
         "ExprFilterInDynamic",
@@ -16668,6 +16668,44 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.expr-filter-reversed-notequals-samecompare",
+      "javaRuntimeIds": [
+        "java-runtime-9c7e7b65d2fa3b2ce2d4",
+        "java-runtime-a11644940846d54c523c",
+        "java-runtime-93f5a8ab121235565acc"
+      ],
+      "javaNames": [
+        "ExprFilterExprReversed",
+        "ExprFilterNotEqualsOp",
+        "ExprFilterWithEqualsSameCompare"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterExprReversedMatchesEsper",
+        "TestExprFilterNotEqualsOpMatchesEsper",
+        "TestExprFilterWithEqualsSameCompareMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "reversed",
+        "not-equals",
+        "cross-type-equality",
+        "field-in-field",
+        "not-in-mixed",
+        "field-range"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -17741,11 +17779,11 @@
     }
   ],
   "summary": {
-    "totalCases": 272,
+    "totalCases": 273,
     "totalCapabilities": 97,
-    "mappedCases": 255,
+    "mappedCases": 256,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1844
+    "disposedRuntimeIds": 1847
   }
 }
