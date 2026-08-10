@@ -2806,6 +2806,66 @@
       "remaining": [
         "Java loads extension modules by class name via PluginLoader; Go uses explicit registration of Func/PluginAggregate/DefineExpression in the Environment. The initialization order and destroy semantics are managed by the Environment lifecycle."
       ]
+    },
+    {
+      "id": "client.extend.pattern-guard",
+      "domain": "client",
+      "level": "G",
+      "summary": "Custom pattern guard registration and factory lookup",
+      "javaRefs": [
+        "ClientExtendPatternGuard",
+        "PatternGuard",
+        "GuardForge"
+      ],
+      "goRefs": [
+        "extension_registration.go",
+        "client_extend_plugin_parity_test.go"
+      ],
+      "phase": 5,
+      "status": "mapped",
+      "remaining": [
+        "RegisterPatternGuard registers a named factory returning a GuardFunc closure; full wiring into pattern evaluation pipeline is a follow-on slice; Java invalid-compile message uses namespace:name syntax that has no Go counterpart"
+      ]
+    },
+    {
+      "id": "client.extend.custom-view",
+      "domain": "client",
+      "level": "G",
+      "summary": "Custom view factory registration",
+      "javaRefs": [
+        "ClientExtendView",
+        "ViewFactoryForge",
+        "SupportTrendSpotterView"
+      ],
+      "goRefs": [
+        "extension_registration.go",
+        "client_extend_plugin_parity_test.go"
+      ],
+      "phase": 5,
+      "status": "mapped",
+      "remaining": [
+        "RegisterCustomView registers a named factory returning WindowSpec; Java trendspotter/flushedsimple views are complex stateful views; full runtime execution of custom views is a follow-on slice"
+      ]
+    },
+    {
+      "id": "client.extend.virtual-data-window",
+      "domain": "client",
+      "level": "G",
+      "summary": "Virtual data window provider registration for external backing stores",
+      "javaRefs": [
+        "ClientExtendVirtualDataWindow",
+        "VirtualDataWindowForge",
+        "SupportVirtualDW"
+      ],
+      "goRefs": [
+        "extension_registration.go",
+        "client_extend_plugin_parity_test.go"
+      ],
+      "phase": 6,
+      "status": "approved-difference",
+      "remaining": [
+        "Go provides VirtualDataWindowProvider with Data()/Lookup() for snapshot and point queries; Java management events (start-index, stop-index, stop-window), consumer add/remove lifecycle, SPI lookup context, query plan index choices, context partitioning and on-merge/on-delete/on-select integration are approved differences"
+      ]
     }
   ],
   "cases": [
@@ -16283,6 +16343,91 @@
         "go-unit"
       ],
       "difference": "Java loads extension modules by class name via PluginLoader with ordered init/destroy; Go uses explicit Environment registration. The disposition test pins a DefineExpression as the Go-native adapter equivalent."
+    },
+    {
+      "id": "case.client-extend-pattern-guard",
+      "javaRuntimeIds": [
+        "java-runtime-026eb4ce4891d0644d4d"
+      ],
+      "javaNames": [
+        "ClientExtendPatternGuard"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendPatternGuard.java"
+      ],
+      "goTests": [
+        "TestClientExtendPatternGuardMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "extension",
+        "pattern-guard",
+        "custom"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "RegisterPatternGuard provides a named CustomPatternGuardFactory whose GuardFunc closure limits pattern completions; full wiring into the pattern evaluation pipeline is a follow-on slice"
+    },
+    {
+      "id": "case.client-extend-custom-view",
+      "javaRuntimeIds": [
+        "java-runtime-e184ededf64b02d1b6dd"
+      ],
+      "javaNames": [
+        "ClientExtendView"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendView.java"
+      ],
+      "goTests": [
+        "TestClientExtendViewMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "extension",
+        "custom-view"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "RegisterCustomView provides a named CustomViewFactory returning WindowSpec; Java trendspotter/flushedsimple are complex stateful views; full runtime execution is a follow-on slice"
+    },
+    {
+      "id": "case.client-extend-virtual-data-window",
+      "javaRuntimeIds": [
+        "java-runtime-37d9cd0fb204fb6df577"
+      ],
+      "javaNames": [
+        "ClientExtendVirtualDataWindow"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/extension/ClientExtendVirtualDataWindow.java"
+      ],
+      "goTests": [
+        "TestClientExtendVirtualDataWindowDisposition"
+      ],
+      "tags": [
+        "client",
+        "extension",
+        "virtual-data-window",
+        "approved-difference"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go provides VirtualDataWindowProvider with Data()/Lookup(); Java management events, consumer lifecycle, SPI lookup context, query plan index choices, context partitioning and on-merge/on-delete/on-select integration are approved differences"
     }
   ],
   "mappings": [
@@ -17341,6 +17486,18 @@
     {
       "capabilityId": "client.extend.adapter-loader",
       "caseId": "case.client-extend-adapter-loader"
+    },
+    {
+      "capabilityId": "client.extend.pattern-guard",
+      "caseId": "case.client-extend-pattern-guard"
+    },
+    {
+      "capabilityId": "client.extend.custom-view",
+      "caseId": "case.client-extend-custom-view"
+    },
+    {
+      "capabilityId": "client.extend.virtual-data-window",
+      "caseId": "case.client-extend-virtual-data-window"
     }
   ]
 }

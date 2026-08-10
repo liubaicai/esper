@@ -44,6 +44,7 @@ type Environment struct {
 	dataflows             map[string]DataflowDefinition
 	savedDataflows        map[string]DataflowDefinition
 	expressions           map[string]ExpressionDefinition
+	extensions            *extensionRegistry
 }
 
 func NewEnvironment() *Environment {
@@ -64,6 +65,7 @@ func NewEnvironment() *Environment {
 		dataflows:             make(map[string]DataflowDefinition),
 		savedDataflows:        make(map[string]DataflowDefinition),
 		expressions:           make(map[string]ExpressionDefinition),
+		extensions:            newExtensionRegistry(),
 	}
 }
 
