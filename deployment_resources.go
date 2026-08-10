@@ -1,6 +1,7 @@
 package esper
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 )
@@ -19,6 +20,7 @@ const (
 	DeploymentResourceContext
 	DeploymentResourceEventType
 	DeploymentResourceExpression
+	DeploymentResourceScript
 )
 
 // label matches the object-type wording Esper uses in its undeploy
@@ -37,6 +39,8 @@ func (k DeploymentResourceKind) label() string {
 		return "Event type"
 	case DeploymentResourceExpression:
 		return "Declared-expression"
+	case DeploymentResourceScript:
+		return "Script"
 	default:
 		return "Resource"
 	}
@@ -137,6 +141,8 @@ func (c *deploymentResourceCollector) expressionNode(node *exprNode) {
 		c.add(DeploymentResourceVariable, node.variableName)
 	case "expression-ref":
 		c.add(DeploymentResourceExpression, node.expressionName)
+	case "script":
+		c.add(DeploymentResourceScript, node.scriptName)
 	}
 	for _, child := range node.children {
 		c.expressionNode(child)
@@ -292,7 +298,28 @@ func (e *Engine) deploymentResourcePreconditionLocked(deployment *Deployment) *U
 	ref := blocked[0]
 	dependent := e.earliestResourceDependentLocked(ref, deployment.id)
 	resource := ref.resource()
+	if ref.kind == DeploymentResourceScript {
+		resource.Name = e.scriptResourceNameLocked(ref)
+	}
 	return &UndeployPreconditionError{DeploymentID: deployment.id, ReferencedBy: dependent, Resource: &resource}
+}
+
+// scriptResourceNameLocked renders Esper's NameAndParamNum identity form
+// ("myscript (1 parameters)") when the registered definition declares its
+// argument types; providers without declared argument types keep the plain
+// logical name. The engine mutex must be held.
+func (e *Engine) scriptResourceNameLocked(ref deploymentResourceRef) string {
+	_, name := splitCatalogKey(ref.identity)
+	if e == nil || e.env == nil {
+		return name
+	}
+	e.env.mu.RLock()
+	definition, ok := e.env.scripts[ref.identity]
+	e.env.mu.RUnlock()
+	if !ok || !definition.argumentTypesSet {
+		return name
+	}
+	return fmt.Sprintf("%s (%d parameters)", name, len(definition.argumentTypes))
 }
 
 // earliestResourceDependentLocked returns the earliest active deployment, in

@@ -431,3 +431,102 @@ func TestClientUndeployPrecondDepExprDeclMatchesEsper(t *testing.T) {
 		t.Fatalf("deployments remain active = %#v", got)
 	}
 }
+
+func TestClientUndeployPrecondDepScriptMatchesEsper(t *testing.T) {
+	env := newUndeployResourceEnvironment(t)
+	module, err := env.RegisterModule("undeploy.script", PublicModule())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Java's "create expression double myscript(stringvalue) [0]" is a Go
+	// script provider registered under the module-local script identity.
+	if err := RegisterModuleScript[float64](module, "myscript", "js", func(ctx ScriptContext) (Value, error) {
+		return Present(0.0), nil
+	}, ScriptArgumentTypes(reflect.TypeOf(""))); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	deployUndeployResourceProvider(t, engine, module, "provider")
+
+	consumerA := Select(From[clientDeployUndeployResourceEvent](env, "SupportBean"),
+		Alias("col", ScriptCall[float64](env, module.QualifiedName("myscript"), Literal("a")))).Query(StatementName("A"))
+	deployUndeployResourceConsumer(t, env, engine, consumerA, "consumer-a")
+	assertUndeployResourcePrecondition(t, engine, "provider", "consumer-a", DeploymentResourceScript, "myscript (1 parameters)")
+	if err := engine.Undeploy(context.Background(), "consumer-a"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := engine.Undeploy(context.Background(), "provider"); err != nil {
+		t.Fatalf("provider undeploy after dependents removed: %v", err)
+	}
+	if got := engine.Deployments(); len(got) != 0 {
+		t.Fatalf("deployments remain active = %#v", got)
+	}
+}
+
+// TestClientUndeployPrecondDepIndexDisposition fixes the approved difference
+// for Java's create-index deployments: Go declares indexes as
+// table/named-window definition options at registration time, so no separate
+// index deployment exists. The observable dependency stays on the owning
+// infrastructure: an index-hinted consumer still blocks undeploying the
+// table's provider with the Table resource precondition.
+func TestClientUndeployPrecondDepIndexDisposition(t *testing.T) {
+	env := newUndeployResourceEnvironment(t)
+	module, err := env.RegisterModule("undeploy.index", PublicModule())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := module.RegisterTable("MyTable", []TableColumn{
+		PrimaryKeyColumn[string]("k1"),
+		TableColumnOf[int64]("i1"),
+	}, SecondaryIndex("MyIndexOnTable", "i1")); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	deployUndeployResourceProvider(t, engine, module, "provider")
+
+	// Java's "select * from SupportBean as sb, MyTable as mt where
+	// sb.intPrimitive = mt.i1" uses MyIndexOnTable; the Go chain keeps the
+	// same index-selected table access as an index-hinted subquery and the
+	// undeploy dependency resolves to the owning table.
+	consumerA := Select(From[clientDeployUndeployResourceEvent](env, "SupportBean"),
+		Alias("row", SubqueryValueWithOptions[any](FromTableInModule(env, module.Name(), "MyTable"), EventValue[any](),
+			SubqueryWhere(Equal[int64](Field[any, int64]("i1"), Literal(10))),
+			SubqueryUseIndex("MyIndexOnTable")))).Query(StatementName("A"))
+	deployUndeployResourceConsumer(t, env, engine, consumerA, "consumer-a")
+	assertUndeployResourcePrecondition(t, engine, "provider", "consumer-a", DeploymentResourceTable, "MyTable")
+	if err := engine.Undeploy(context.Background(), "consumer-a"); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Undeploy(context.Background(), "provider"); err != nil {
+		t.Fatalf("provider undeploy after dependents removed: %v", err)
+	}
+}
+
+// TestClientUndeployPrecondDepClassDisposition fixes the approved difference
+// for Java's application-inlined classes: Go has no runtime-compiled class
+// artifact to deploy or undeploy. Shared callable providers are statically
+// linked or explicitly registered (the script registry), and their
+// module-owned dependency is already enforced by the script precondition.
+func TestClientUndeployPrecondDepClassDisposition(t *testing.T) {
+	env := newUndeployResourceEnvironment(t)
+	module, err := env.RegisterModule("undeploy.class", PublicModule())
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment := deployUndeployResourceProvider(t, engine, module, "provider")
+	// No class artifact exists, so nothing blocks this undeploy; the module
+	// deployment tears down cleanly like any catalog-free deployment.
+	if err := deployment.Undeploy(context.Background()); err != nil {
+		t.Fatalf("class-free provider undeploy: %v", err)
+	}
+	if got := engine.Deployments(); len(got) != 0 {
+		t.Fatalf("deployments remain active = %#v", got)
+	}
+	if err := engine.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+}
