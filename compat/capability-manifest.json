@@ -2948,6 +2948,62 @@
         "PatternObserver* suites",
         "PatternGuardWhile suite"
       ]
+    },
+    {
+      "id": "expr.enum-collection-methods",
+      "domain": "expr",
+      "level": "G",
+      "summary": "Enumeration methods on collections: where, count/countof, reverse, allof/anyof, distinct/distinctby, firstof/lastof, min/max/minof/maxof/minby/maxby, sum/sumof, average/averageof, orderby, take/takelast/takewhile/takewhilelast, select",
+      "javaRefs": [
+        "ExprEnumWhereEvents",
+        "ExprEnumWhereScalar",
+        "ExprEnumWhereScalarBoolean",
+        "ExprEnumCountOfEvents",
+        "ExprEnumCountOfScalar",
+        "ExprEnumReverseEvents",
+        "ExprEnumReverseScalar",
+        "ExprEnumAllOfAnyOfEvents",
+        "ExprEnumAllOfAnyOfScalar",
+        "ExprEnumDistinctEvents",
+        "ExprEnumDistinctScalar",
+        "ExprEnumFirstLastScalar",
+        "ExprEnumFirstLastEventProperty",
+        "ExprEnumFirstLastEvent",
+        "ExprEnumFirstLastEventWithPredicate",
+        "ExprEnumMinMaxScalar",
+        "ExprEnumMinMaxScalarChain",
+        "ExprEnumMinMaxEvents",
+        "ExprEnumSumEvents",
+        "ExprEnumSumScalar",
+        "ExprEnumAverageEvents",
+        "ExprEnumAverageScalar",
+        "ExprEnumOrderByEvents",
+        "ExprEnumOrderByEventsPlus",
+        "ExprEnumOrderByScalar",
+        "ExprEnumTakeWhileEvents",
+        "ExprEnumTakeWhileScalar",
+        "ExprEnumMinMaxByEvents",
+        "ExprEnumMinMaxByScalar",
+        "ExprEnumSelectFromEventsPlain"
+      ],
+      "goRefs": [
+        "expr_enum_parity_test.go"
+      ],
+      "phase": 2,
+      "status": "mapped",
+      "remaining": [
+        "ExprEnumArrayOf suite",
+        "ExprEnumDataSources suite",
+        "ExprEnumDocSamples suite",
+        "ExprEnumExceptIntersectUnion suite",
+        "ExprEnumChained",
+        "ExprEnumMostLeastFrequent suite",
+        "ExprEnumNested suite",
+        "ExprEnumSequenceEqual suite",
+        "ExprEnumToMap suite",
+        "ExprEnumAggregate suite",
+        "ExprEnumGroupBy suite"
+      ]
     }
   ],
   "cases": [
@@ -16772,6 +16828,270 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.expr-enum-where",
+      "javaRuntimeIds": [
+        "java-runtime-ee90b62b1b0a2e8fbd07",
+        "java-runtime-d3f759269c6ba7759bae",
+        "java-runtime-778357113a914dbe99c2"
+      ],
+      "javaNames": [
+        "ExprEnumWhereEvents",
+        "ExprEnumWhereScalar",
+        "ExprEnumWhereScalarBoolean"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumWhere.java"
+      ],
+      "goTests": [
+        "TestExprEnumWhereMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "enum",
+        "where",
+        "filter",
+        "index",
+        "size"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.expr-enum-count-reverse",
+      "javaRuntimeIds": [
+        "java-runtime-91e46af639e2bd41577d",
+        "java-runtime-208403f21fe941dd4a67",
+        "java-runtime-bfdb6650f3a9cc79b721",
+        "java-runtime-42a43aecc126f7b2852d"
+      ],
+      "javaNames": [
+        "ExprEnumCountOfEvents",
+        "ExprEnumCountOfScalar",
+        "ExprEnumReverseEvents",
+        "ExprEnumReverseScalar"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumCountOf.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumReverse.java"
+      ],
+      "goTests": [
+        "TestExprEnumCountOfMatchesEsper",
+        "TestExprEnumReverseMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "enum",
+        "count",
+        "reverse"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.expr-enum-quantifiers",
+      "javaRuntimeIds": [
+        "java-runtime-4621c83526aa813202c9",
+        "java-runtime-0952cc001d1075a5d28f"
+      ],
+      "javaNames": [
+        "ExprEnumAllOfAnyOfEvents",
+        "ExprEnumAllOfAnyOfScalar"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumAllOfAnyOf.java"
+      ],
+      "goTests": [
+        "TestExprEnumAllOfAnyOfMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "enum",
+        "allof",
+        "anyof",
+        "quantifier",
+        "empty"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.expr-enum-distinct-firstlast",
+      "javaRuntimeIds": [
+        "java-runtime-e81d55486d8eeed73790",
+        "java-runtime-484aecdf9909f0e0cec3",
+        "java-runtime-4ef3ef5d09ae02ac029a",
+        "java-runtime-22db06c0766ca3788e81",
+        "java-runtime-614c1a9f7dd8037d8ff6",
+        "java-runtime-643d291539bc0467ebcd"
+      ],
+      "javaNames": [
+        "ExprEnumDistinctEvents",
+        "ExprEnumDistinctScalar",
+        "ExprEnumFirstLastScalar",
+        "ExprEnumFirstLastEventProperty",
+        "ExprEnumFirstLastEvent",
+        "ExprEnumFirstLastEventWithPredicate"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDistinct.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumFirstLastOf.java"
+      ],
+      "goTests": [
+        "TestExprEnumDistinctMatchesEsper",
+        "TestExprEnumFirstLastOfMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "enum",
+        "distinct",
+        "distinct-by",
+        "first-of",
+        "last-of"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.expr-enum-minmax-sum-avg",
+      "javaRuntimeIds": [
+        "java-runtime-36c7cf2230b2a5f5f3f4",
+        "java-runtime-3015932ecbe4d1bde2d6",
+        "java-runtime-de1bcaf9deecd986e68d",
+        "java-runtime-86b7fb2d3adcd0aeff95",
+        "java-runtime-95a7de21cca4c78877cb",
+        "java-runtime-726123e637422bea0d86",
+        "java-runtime-23c59932117b5d9b6674"
+      ],
+      "javaNames": [
+        "ExprEnumMinMaxScalar",
+        "ExprEnumMinMaxScalarChain",
+        "ExprEnumMinMaxEvents",
+        "ExprEnumSumEvents",
+        "ExprEnumSumScalar",
+        "ExprEnumAverageEvents",
+        "ExprEnumAverageScalar"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMax.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumSumOf.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumAverage.java"
+      ],
+      "goTests": [
+        "TestExprEnumMinMaxMatchesEsper",
+        "TestExprEnumSumOfMatchesEsper",
+        "TestExprEnumAverageOfMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "enum",
+        "min",
+        "max",
+        "sum",
+        "average"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.expr-enum-orderby-take-minmaxby",
+      "javaRuntimeIds": [
+        "java-runtime-2aea51bcd3f24077469b",
+        "java-runtime-62778dfbe39b9c32b6f5",
+        "java-runtime-2ec6618bc45779487cba",
+        "java-runtime-20f72c349b9ce67fecbc",
+        "java-runtime-447c1c613c16900be514",
+        "java-runtime-75a28b37242598d0e4a6",
+        "java-runtime-1631dc89e9b0451cfc87"
+      ],
+      "javaNames": [
+        "ExprEnumOrderByEvents",
+        "ExprEnumOrderByEventsPlus",
+        "ExprEnumOrderByScalar",
+        "ExprEnumTakeWhileEvents",
+        "ExprEnumTakeWhileScalar",
+        "ExprEnumMinMaxByEvents",
+        "ExprEnumMinMaxByScalar"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumOrderBy.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumTakeWhileAndWhileLast.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMinMaxBy.java"
+      ],
+      "goTests": [
+        "TestExprEnumOrderByMatchesEsper",
+        "TestExprEnumTakeMatchesEsper",
+        "TestExprEnumMinMaxByMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "enum",
+        "order-by",
+        "take",
+        "take-last",
+        "take-while",
+        "min-by",
+        "max-by"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.expr-enum-select",
+      "javaRuntimeIds": [],
+      "javaNames": [
+        "ExprEnumSelectFromEventsPlain"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumSelectFrom.java"
+      ],
+      "goTests": [
+        "TestExprEnumSelectMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "enum",
+        "select",
+        "projection"
+      ],
+      "status": "partial",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -17845,11 +18165,11 @@
     }
   ],
   "summary": {
-    "totalCases": 274,
-    "totalCapabilities": 98,
-    "mappedCases": 257,
-    "partialCases": 0,
+    "totalCases": 281,
+    "totalCapabilities": 99,
+    "mappedCases": 263,
+    "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1850
+    "disposedRuntimeIds": 1877
   }
 }

@@ -4,6 +4,8 @@
 
 ## 2026-08-10
 
+本轮批量登记 ExprEnum collection methods：新增 expr_enum_parity_test.go（13 个 parity 测试），覆盖 where（element/index/size lambda）、count/countof、reverse、allof/anyof（含空集合 vacuous truth）、distinct/distinctby、firstof/lastof、min/max/minof/maxof/minby/maxby、sum/sumof、average/averageof、orderby（自然序+key selector 升降序）、take/takelast/takewhile/takewhilelast、select 投影。共处置 13 个 Java enum suite 的 27 个 runtime execution（mapped），另有 1 个 partial case（SelectFrom）。新增 expr.enum-collection-methods capability（phase 2, mapped）、6 个 mapped case 和 1 个 partial case。Coverage 1877/4140 (45.34%)，281 case 中 263 mapped / 1 partial / 17 approved-difference。
+
 本轮启动 Pattern domain：关闭 PatternOperatorAnd 的 2/4 execution 与 PatternOperatorOr 的 1/3 execution，新增 3 个 runtime ID。新增 pattern_operator_parity_test.go（3 个 parity 测试），覆盖 AND 操作符（a and b：两侧事件都到达才触发，先到事件暂存等待后到事件）、OR 操作符（a or b：任一侧到达即触发，未匹配侧为 null）、AND+Every 组合（a and every b：A 到达后 B 触发匹配）。Go Pattern API 使用 PatternFrom(source, tag, filter).And/Or(other) 构建组合模式，patternBranchRoot 保留 every 语义为 patternEveryNode。新增 pattern.operator-and-or capability（phase 3, mapped）及 1 个 mapped case。Coverage 1850/4140 (44.69%)，274 case 中 257 mapped / 0 partial / 17 approved-difference。
 
 本轮补充 ExprFilterExpressions 剩余 3 个 execution（ExprFilterExprReversed/NotEqualsOp/WithEqualsSameCompare），新增 3 个 runtime ID。覆盖常量-字段反向比较（5 = intBoxed）、NotEqualsOp（theString != a，null 不匹配）、跨类型字段相等性（intBoxed=doubleBoxed）、自比较（intBoxed=intBoxed AND doubleBoxed=doubleBoxed）、IN 含字段操作数（doubleBoxed in (intBoxed)）、NOT IN 混合常量字段（doubleBoxed not in (10, intBoxed)）以及字段范围（doubleBoxed in (intBoxed:20)，lower-exclusive）。新增 1 个 mapped case。Coverage 1847/4140 (44.61%)，273 case 中 256 mapped / 0 partial / 17 approved-difference。
