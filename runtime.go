@@ -2054,9 +2054,11 @@ type Deployment struct {
 	mu             sync.RWMutex
 	engine         *Engine
 	id             string
+	order          uint64
 	statements     []*Statement
 	moduleName     string
 	moduleMetadata ModuleMetadata
+	dependencies   []string
 	lastUpdatedAt  time.Time
 	closed         bool
 }
@@ -2105,6 +2107,17 @@ func (d *Deployment) Statements() []*Statement {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	return append([]*Statement(nil), d.statements...)
+}
+
+// Dependencies returns active deployment IDs that provide modules used by
+// this deployment. The snapshot is detached and ordered deterministically.
+func (d *Deployment) Dependencies() []string {
+	if d == nil {
+		return nil
+	}
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return append([]string(nil), d.dependencies...)
 }
 
 // Statement returns the statement with the given name within this deployment.
@@ -2415,6 +2428,7 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		if strings.TrimSpace(name) == "" {
 			return nil, NewError(ErrorDeployment, fmt.Sprintf("statement name resolver returned a blank name for plan %d", index))
 		}
+		name = strings.TrimSpace(name)
 		if _, exists := seenNames[name]; exists {
 			return nil, NewError(ErrorDeployment, fmt.Sprintf("duplicate statement name %q within deployment", name))
 		}
@@ -2504,8 +2518,10 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 	deployment := &Deployment{
 		engine:         e,
 		id:             deploymentID,
+		order:          e.nextID,
 		moduleName:     deploymentModule,
 		moduleMetadata: moduleMetadata,
+		dependencies:   e.deploymentDependenciesLocked(requests),
 		lastUpdatedAt:  e.clock.Now(),
 		statements:     make([]*Statement, 0, len(requests)),
 	}
@@ -2586,6 +2602,108 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 		e.notifyDataflowStatementDeployed(statement)
 	}
 	return deployment, nil
+}
+
+func (e *Engine) deploymentDependenciesLocked(requests []deploymentRequest) []string {
+	if e == nil || len(requests) == 0 {
+		return nil
+	}
+	uses := make(map[string]struct{})
+	for _, request := range requests {
+		for _, moduleName := range request.plan.query.moduleUses {
+			moduleName = normalizeModuleName(moduleName)
+			if moduleName != "" {
+				uses[moduleName] = struct{}{}
+			}
+		}
+	}
+	if len(uses) == 0 {
+		return nil
+	}
+	dependencies := make([]*Deployment, 0, len(uses))
+	for _, deployment := range e.deployments {
+		if deployment == nil {
+			continue
+		}
+		if _, used := uses[normalizeModuleName(deployment.moduleName)]; used {
+			dependencies = append(dependencies, deployment)
+		}
+	}
+	sort.Slice(dependencies, func(left, right int) bool {
+		if dependencies[left].order != dependencies[right].order {
+			return dependencies[left].order < dependencies[right].order
+		}
+		return dependencies[left].id < dependencies[right].id
+	})
+	ids := make([]string, len(dependencies))
+	for index, deployment := range dependencies {
+		ids[index] = deployment.id
+	}
+	return ids
+}
+
+// IsDeployed reports whether a deployment ID is currently active.
+func (e *Engine) IsDeployed(deploymentID string) bool {
+	if e == nil {
+		return false
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	_, exists := e.deployments[strings.TrimSpace(deploymentID)]
+	return exists
+}
+
+// Deployment returns one active deployment by ID.
+func (e *Engine) Deployment(deploymentID string) (*Deployment, bool) {
+	if e == nil {
+		return nil, false
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	deployment, exists := e.deployments[strings.TrimSpace(deploymentID)]
+	return deployment, exists
+}
+
+// Deployments returns active deployments in deployment order.
+func (e *Engine) Deployments() []*Deployment {
+	if e == nil {
+		return nil
+	}
+	e.mu.Lock()
+	deployments := make([]*Deployment, 0, len(e.deployments))
+	for _, deployment := range e.deployments {
+		if deployment != nil {
+			deployments = append(deployments, deployment)
+		}
+	}
+	e.mu.Unlock()
+	sort.Slice(deployments, func(left, right int) bool {
+		if deployments[left].order != deployments[right].order {
+			return deployments[left].order < deployments[right].order
+		}
+		return deployments[left].id < deployments[right].id
+	})
+	return deployments
+}
+
+// Statement returns one active statement scoped by deployment ID and runtime
+// statement name. Blank or unknown identifiers return false.
+func (e *Engine) Statement(deploymentID, statementName string) (*Statement, bool) {
+	if e == nil {
+		return nil, false
+	}
+	deploymentID = strings.TrimSpace(deploymentID)
+	statementName = strings.TrimSpace(statementName)
+	if deploymentID == "" || statementName == "" {
+		return nil, false
+	}
+	e.mu.Lock()
+	deployment := e.deployments[deploymentID]
+	e.mu.Unlock()
+	if deployment == nil {
+		return nil, false
+	}
+	return deployment.Statement(statementName)
 }
 
 func (e *Engine) prepareStatementLocked(ctx context.Context, deployment *Deployment, request deploymentRequest, deploymentOrder uint64) (*Statement, error) {

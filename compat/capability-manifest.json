@@ -2369,6 +2369,33 @@
       ]
     },
     {
+      "id": "client.deploy.management",
+      "domain": "client",
+      "level": "G",
+      "summary": "Active deployment enumeration and lookup, deployment-scoped statement lookup, module dependency snapshots, name normalization and duplicate-ID rejection",
+      "javaRefs": [
+        "ClientDeployResult",
+        "ClientDeployResultSimple",
+        "ClientDeployGetStmtByDepIdAndName",
+        "ClientDeploySameDeploymentId",
+        "EPDeploymentService"
+      ],
+      "goRefs": [
+        "plan.go",
+        "runtime.go",
+        "runtime_path.go",
+        "client_deploy_result_management_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "ClientDeployStateListener and rollout item indexes remain part of the pending atomic rollout/state-listener slice",
+        "Engine.Statement uses idiomatic value-plus-bool lookup; blank identifiers return false instead of throwing Java IllegalArgumentException",
+        "typed Query descriptions replace StatementProperty.EPL source text",
+        "deployment dependencies currently derive from active typed module uses; full public/protected object dependency and undeploy-precondition graphs remain separate capabilities"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -15031,6 +15058,50 @@
       "difference": "The Java execution installs a per-deployment ClassLoader and only asserts that generated module-provider class loading invokes it at least once. Go emits no JVM bytecode and has no generated deployment class to intercept: event types and providers are statically linked or explicitly registered, while Plan.Manifest identifies the Go-native fluent builder. The disposition test verifies ordinary typed Plan build/deploy/undeploy and stable manifest identity. A fake callback invocation would not provide class isolation or loading semantics, so no DeploymentClassLoaderOption is exposed."
     },
     {
+      "id": "case.client-deploy-result-management",
+      "javaRuntimeIds": [
+        "java-runtime-0fa3ff7ef130c0bb50f3",
+        "java-runtime-d7dec0744e698bf72ab8",
+        "java-runtime-0507847ff313dde44822"
+      ],
+      "javaNames": [
+        "ClientDeployResultSimple",
+        "ClientDeployGetStmtByDepIdAndName",
+        "ClientDeploySameDeploymentId"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployResult.java"
+      ],
+      "goTests": [
+        "TestClientDeployResultSimpleMatchesEsper",
+        "TestClientDeployGetStatementByDeploymentIDAndNameMatchesEsper",
+        "TestClientDeploySameDeploymentIDMatchesEsper",
+        "TestDeploymentDependenciesFollowActiveModuleUses"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "deploy",
+        "management",
+        "deployment-enumeration",
+        "statement-lookup",
+        "deployment-id",
+        "duplicate-id",
+        "dependencies",
+        "module-uses",
+        "name-trim",
+        "typed-description",
+        "undeploy"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Engine exposes IsDeployed, Deployment, deployment-ordered Deployments and deployment-scoped Statement lookups; Deployment exposes detached active-module dependency IDs. The simple result deploys two named typed Plans in one deployment, verifies empty dependencies and active/inactive lifecycle, and uses Query.TypedDescription instead of Java StatementProperty.EPL. Five explicit deployment IDs with repeated statement names prove two-key lookup identity, while Build and lookup trim statement-name whitespace. Blank or unknown Go lookups return (nil,false) rather than throwing for nil Java arguments. A repeated ABC deployment ID returns ErrorDeployment and leaves the original active set unchanged. Go registers schemas directly in Environment instead of deploying a textual create-schema statement. ClientDeployStateListener remains unmapped until rollout item event semantics are implemented."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -16164,6 +16235,10 @@
     {
       "capabilityId": "client.deploy.jvm-class-loading",
       "caseId": "case.client-deploy-class-loader-option"
+    },
+    {
+      "capabilityId": "client.deploy.management",
+      "caseId": "case.client-deploy-result-management"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",

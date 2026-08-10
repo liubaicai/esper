@@ -636,6 +636,7 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	if query.name != "" && strings.TrimSpace(query.name) == "" {
 		return Plan{}, fmt.Errorf("esper: statement name cannot be blank")
 	}
+	query.name = strings.TrimSpace(query.name)
 	if err := validateStatementMetadata(query.statementMetadata); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "statement metadata", err)
 	}
