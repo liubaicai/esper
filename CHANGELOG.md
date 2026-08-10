@@ -4,6 +4,8 @@
 
 ## 2026-08-10
 
+本轮启动 View domain：关闭 5 个 Java view suite 的基础 execution（ViewKeepAllSimple/ViewLengthWindowSceneOne/ViewFirstEventSceneOne/ViewLastEventSceneOne/ViewFirstLengthSceneOne），新增 5 个 runtime ID。新增 view_parity_test.go（5 个 parity 测试），覆盖 keep-all 窗口（保留全部事件，新事件只产生 insert）、length 滑动窗口（保留最近 N 条，窗口满时旧事件移除）、first-event 窗口（仅保留首个事件，后续事件不产生 insert）、last-event 窗口（仅保留最新事件，新事件替换旧事件产生 old stream）、first-length 窗口（仅保留前 N 条，后续不产生 insert）。新增 view.basic-windows capability（phase 2, mapped）及 1 个 mapped case。Coverage 1882/4140 (45.46%)，282 case 中 264 mapped / 1 partial / 17 approved-difference。
+
 本轮批量登记 ExprEnum collection methods：新增 expr_enum_parity_test.go（13 个 parity 测试），覆盖 where（element/index/size lambda）、count/countof、reverse、allof/anyof（含空集合 vacuous truth）、distinct/distinctby、firstof/lastof、min/max/minof/maxof/minby/maxby、sum/sumof、average/averageof、orderby（自然序+key selector 升降序）、take/takelast/takewhile/takewhilelast、select 投影。共处置 13 个 Java enum suite 的 27 个 runtime execution（mapped），另有 1 个 partial case（SelectFrom）。新增 expr.enum-collection-methods capability（phase 2, mapped）、6 个 mapped case 和 1 个 partial case。Coverage 1877/4140 (45.34%)，281 case 中 263 mapped / 1 partial / 17 approved-difference。
 
 本轮启动 Pattern domain：关闭 PatternOperatorAnd 的 2/4 execution 与 PatternOperatorOr 的 1/3 execution，新增 3 个 runtime ID。新增 pattern_operator_parity_test.go（3 个 parity 测试），覆盖 AND 操作符（a and b：两侧事件都到达才触发，先到事件暂存等待后到事件）、OR 操作符（a or b：任一侧到达即触发，未匹配侧为 null）、AND+Every 组合（a and every b：A 到达后 B 触发匹配）。Go Pattern API 使用 PatternFrom(source, tag, filter).And/Or(other) 构建组合模式，patternBranchRoot 保留 every 语义为 patternEveryNode。新增 pattern.operator-and-or capability（phase 3, mapped）及 1 个 mapped case。Coverage 1850/4140 (44.69%)，274 case 中 257 mapped / 0 partial / 17 approved-difference。

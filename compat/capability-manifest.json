@@ -3004,6 +3004,39 @@
         "ExprEnumAggregate suite",
         "ExprEnumGroupBy suite"
       ]
+    },
+    {
+      "id": "view.basic-windows",
+      "domain": "view",
+      "level": "G",
+      "summary": "Basic data window views: keep-all (retains all events), length (sliding, evicts oldest), first-event (first only), last-event (latest only, replaces previous), first-length (first N events)",
+      "javaRefs": [
+        "ViewKeepAllSimple",
+        "ViewLengthWindowSceneOne",
+        "ViewFirstEventSceneOne",
+        "ViewLastEventSceneOne",
+        "ViewFirstLengthSceneOne"
+      ],
+      "goRefs": [
+        "view_parity_test.go"
+      ],
+      "phase": 2,
+      "status": "mapped",
+      "remaining": [
+        "ViewKeepAllIterator",
+        "ViewKeepAllWindowStats",
+        "ViewLengthWindowWPrevPrior",
+        "ViewLengthWinWPropertyDetail",
+        "ViewLengthWindowIterator",
+        "ViewFirstEventMarketData",
+        "ViewLastEventMarketData",
+        "ViewFirstLengthMarketData",
+        "ViewFirstTime suite",
+        "ViewFirstUnique suite",
+        "ViewTimeWin suite",
+        "ViewTimeBatch suite",
+        "ViewParameterizedByContext suite"
+      ]
     }
   ],
   "cases": [
@@ -17092,6 +17125,53 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.view-basic-windows",
+      "javaRuntimeIds": [
+        "java-runtime-8aca0b8d4d7200acece6",
+        "java-runtime-a01b59f9e3e87c142fea",
+        "java-runtime-607d915be914a5dce34f",
+        "java-runtime-260c9f5af6a4a10d5c80",
+        "java-runtime-d99cd0eba0b2e2ca64ba"
+      ],
+      "javaNames": [
+        "ViewKeepAllSimple",
+        "ViewLengthWindowSceneOne",
+        "ViewFirstEventSceneOne",
+        "ViewLastEventSceneOne",
+        "ViewFirstLengthSceneOne"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewKeepAll.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewLengthWin.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewFirstEvent.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewLastEvent.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewFirstLength.java"
+      ],
+      "goTests": [
+        "TestViewKeepAllSimpleMatchesEsper",
+        "TestViewLengthWindowMatchesEsper",
+        "TestViewFirstEventMatchesEsper",
+        "TestViewLastEventMatchesEsper",
+        "TestViewFirstLengthMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "window",
+        "keep-all",
+        "length",
+        "first-event",
+        "last-event",
+        "first-length"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -18165,11 +18245,11 @@
     }
   ],
   "summary": {
-    "totalCases": 281,
-    "totalCapabilities": 99,
-    "mappedCases": 263,
+    "totalCases": 282,
+    "totalCapabilities": 100,
+    "mappedCases": 264,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1877
+    "disposedRuntimeIds": 1882
   }
 }
