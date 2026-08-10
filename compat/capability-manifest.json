@@ -2955,7 +2955,6 @@
       "phase": 3,
       "status": "mapped",
       "remaining": [
-        "PatternConsumingPattern suite",
         "PatternObserver* suites",
         "PatternGuardWhile suite",
         "aggregates over pattern streams support ungrouped count-style selections only; grouped/having aggregate forms remain with the ResultSet domain"
@@ -3250,6 +3249,35 @@
         "zero-valued range literals ([0], [:0], [0:0]) and until-required variable ranges are Java parser errors; the fluent API expresses unbounded/zero-lower forms explicitly (maximum<=0 unbounded, minimum==0 no lower bound)",
         "tag-array references inside an own filter expression and non-numeric bounds expressions are Go compile-time/API-shape differences",
         "Java wildcard pattern select materializes fragment EventBeans; the fluent API projects repeated arrays explicitly with TagEvents/TagFieldAt, and arrayLength/Array.getLength map to TagCount"
+      ]
+    },
+    {
+      "id": "pattern.consuming-pattern",
+      "domain": "pattern",
+      "level": "G",
+      "summary": "Pattern-level consumption policies: DiscardPartialsOnMatch drops all in-progress pattern instances once any match completes on the triggering event and blocks new starts on that event, matching the observable behavior of Esper's @DiscardPartialsOnMatch (which discards partial matches sharing events with the completed match) across the suite's or/and/not/guard/observer/match-until/every scenarios; SuppressOverlappingMatches hides later completions within one dispatch batch whose captured events overlap an already-emitted match, exactly like PatternRemoveDispatchView; both policies are fluent query options validated to require a pattern query and rejected with context, joins or actions",
+      "javaRefs": [
+        "PatternOrOp",
+        "PatternMatchUntilOp",
+        "PatternObserverOp",
+        "PatternAndOp",
+        "PatternNotOpNotImpacted",
+        "PatternGuardOp",
+        "PatternEveryOp",
+        "PatternInvalid"
+      ],
+      "goRefs": [
+        "pattern_consuming_parity_test.go",
+        "pattern_consumption_test.go",
+        "runtime.go",
+        "plan.go"
+      ],
+      "phase": 3,
+      "status": "mapped",
+      "remaining": [
+        "PatternFollowedByOp and PatternCombination already map under pattern.basic",
+        "Esper discards partial matches selectively by shared events; the fluent runtime drops all in-progress instances on a completing event, which is observably identical across the suite scenarios but coarser for unrelated overlapping branches",
+        "unknown pattern-level annotations and discard/suppress in EPL joins, context declarations and on-actions are EPL-parser concerns; the fluent surface rejects the policies on non-pattern queries and with context/joins/actions at Build"
       ]
     }
   ],
@@ -18177,6 +18205,60 @@
         "go-unit"
       ],
       "difference": "Go parity test replays the Java event/time sequence exactly: two events at t=10000 arm per-event dynamic timers from the captured event's intPrimitive property and fire at t=12000 (E2, 2s) and t=13000 (E1, 3s). The fluent API composes the dynamic interval as TimerIntervalExpr(DurationSeconds[int](TagField[int](a, intPrimitive))) where EPL embeds the property-timeperiod product inline; the engine-side freshness alignment (a done timer re-reporting satisfaction on a later clock advance no longer re-fires its sequence/or parent) matches EvalStateNode per-callback semantics."
+    },
+    {
+      "id": "case.pattern-consuming-pattern",
+      "javaRuntimeIds": [
+        "java-runtime-8e30a16e34092e3b3742",
+        "java-runtime-6b6505c959136c3dffbc",
+        "java-runtime-b96fd653b52e966cc46f",
+        "java-runtime-204901b97ff5298c0b63",
+        "java-runtime-a57b022e8826c8e5efff",
+        "java-runtime-6db4f37cda543c66b717",
+        "java-runtime-883bc48f57554cf9f5bd",
+        "java-runtime-541aa40d957733a92221"
+      ],
+      "javaNames": [
+        "PatternOrOp",
+        "PatternMatchUntilOp",
+        "PatternObserverOp",
+        "PatternAndOp",
+        "PatternNotOpNotImpacted",
+        "PatternGuardOp",
+        "PatternEveryOp",
+        "PatternInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternConsumingPattern.java"
+      ],
+      "goTests": [
+        "TestPatternConsumingOrOpMatchesEsper",
+        "TestPatternConsumingMatchUntilOpMatchesEsper",
+        "TestPatternConsumingObserverOpMatchesEsper",
+        "TestPatternConsumingAndOpMatchesEsper",
+        "TestPatternConsumingAndChildSequenceMatchesEsper",
+        "TestPatternConsumingNotOpMatchesEsper",
+        "TestPatternConsumingGuardOpMatchesEsper",
+        "TestPatternConsumingEveryOpMatchesEsper",
+        "TestPatternConsumingInvalidMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "consumption",
+        "discard-partials",
+        "suppress-overlapping",
+        "every",
+        "match-until",
+        "observer",
+        "guard"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go parity tests replay the Java scenarios for all 8 open executions with the same event and time sequences: or-branches with correlation, bounded and ranged match-until repeats (including the timer-and-not terminated range), per-branch dynamic observer intervals, and-states and child-sequence and-sides, the discard-immune not branch, timer:within guards at begin and child states, and every/every-distinct begin and child states - each with the discard policy on and off. The fluent API expresses @DiscardPartialsOnMatch and @SuppressOverlappingMatches as DiscardPartialsOnMatch()/SuppressOverlappingMatches() query options; untagged EPL filters use surrogate tags; unknown pattern-level annotations are an EPL-parser concern with no fluent surface."
     }
   ],
   "mappings": [
@@ -19387,14 +19469,18 @@
     {
       "capabilityId": "pattern.basic",
       "caseId": "case.pattern-observer-timer-interval-expression"
+    },
+    {
+      "capabilityId": "pattern.consuming-pattern",
+      "caseId": "case.pattern-consuming-pattern"
     }
   ],
   "summary": {
-    "totalCases": 302,
-    "totalCapabilities": 107,
-    "mappedCases": 284,
+    "totalCases": 303,
+    "totalCapabilities": 108,
+    "mappedCases": 285,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1955
+    "disposedRuntimeIds": 1963
   }
 }
