@@ -2954,7 +2954,6 @@
       "status": "mapped",
       "remaining": [
         "PatternConsumingPattern suite",
-        "PatternOperatorMatchUntil suite",
         "PatternObserver* suites",
         "PatternGuardWhile suite",
         "aggregates over pattern streams support ungrouped count-style selections only; grouped/having aggregate forms remain with the ResultSet domain"
@@ -3221,6 +3220,34 @@
       "remaining": [
         "PatternTimerWithinOverDistinct and PatternEveryDistinctOverTimerWithin already map under the timer-within case",
         "expression-declared distinct keys beyond constant/tag references are rejected at build time"
+      ]
+    },
+    {
+      "id": "pattern.operator-matchuntil",
+      "domain": "pattern",
+      "level": "G",
+      "summary": "Pattern match-until operator semantics: an exact [N] repeat fires on the Nth match; a tightly-bound [N:N] with an until fires on the bound without waiting for the terminator, while looser ranges ([N:M], [:M], [N:]) stop collecting at the maximum but only fire through the terminator, exactly like EvalMatchUntilStateNode.isTightlyBound; the until branch is started first so a shared event always resolves in the terminator's favor and the match does not count; a terminator arriving below the minimum expires the node permanently; repeated tags accumulate into arrays that nested until expressions roll up (inner arrays addAll into the outer arrays); a completed repetition keeps reporting its retained satisfaction so and/or parents combine its cached match",
+      "javaRefs": [
+        "PatternMatchUntilSimple",
+        "PatternOp",
+        "PatternSelectArray",
+        "PatternUseFilter",
+        "PatternRepeatUseTags",
+        "PatternArrayFunctionRepeat",
+        "PatternInvalid"
+      ],
+      "goRefs": [
+        "pattern_matchuntil_parity_test.go",
+        "pattern.go",
+        "runtime.go"
+      ],
+      "phase": 3,
+      "status": "mapped",
+      "remaining": [
+        "PatternExpressionBounds and PatternBoundRepeatWithNot already map under pattern.basic",
+        "zero-valued range literals ([0], [:0], [0:0]) and until-required variable ranges are Java parser errors; the fluent API expresses unbounded/zero-lower forms explicitly (maximum<=0 unbounded, minimum==0 no lower bound)",
+        "tag-array references inside an own filter expression and non-numeric bounds expressions are Go compile-time/API-shape differences",
+        "Java wildcard pattern select materializes fragment EventBeans; the fluent API projects repeated arrays explicitly with TagEvents/TagFieldAt, and arrayLength/Array.getLength map to TagCount"
       ]
     }
   ],
@@ -18068,6 +18095,57 @@
         "go-unit"
       ],
       "difference": "Go parity tests replay the Java suite's exact event/time sequences for all 15 open executions (duplicate suppression per key, wtime expiry with re-admission, expire-seen-before-key ordering, repeat-over-distinct bounds, every-distinct over and/or/not/followed-by/within roots, followed-by with per-instance distinct, month-scoped calendar expiry, and multi-key with int-array events). The fluent API takes variadic keys and an explicit expiry duration or calendar period where EPL embeds them in the every-distinct syntax; validation errors (non-constant key, invalid calendar) surface at Build time instead of at statement creation."
+    },
+    {
+      "id": "case.pattern-operator-matchuntil",
+      "javaRuntimeIds": [
+        "java-runtime-93ea4ae0a2ca85d18a0d",
+        "java-runtime-0383244f373c8a0ffc8b",
+        "java-runtime-bd06e4f21e0083fb261d",
+        "java-runtime-4b8c99341f4a3af06ea9",
+        "java-runtime-eb238a96331acf6fc30b",
+        "java-runtime-602d438d756709deb50e",
+        "java-runtime-50cec2b441fd878bf1f1"
+      ],
+      "javaNames": [
+        "PatternMatchUntilSimple",
+        "PatternOp",
+        "PatternSelectArray",
+        "PatternUseFilter",
+        "PatternRepeatUseTags",
+        "PatternArrayFunctionRepeat",
+        "PatternInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorMatchUntil.java"
+      ],
+      "goTests": [
+        "TestPatternMatchUntilSimpleMatchesEsper",
+        "TestPatternMatchUntilOpBasicMatchesEsper",
+        "TestPatternMatchUntilOpBoundsMatchesEsper",
+        "TestPatternMatchUntilOpCompositionMatchesEsper",
+        "TestPatternMatchUntilSelectArrayMatchesEsper",
+        "TestPatternMatchUntilUseFilterMatchesEsper",
+        "TestPatternMatchUntilRepeatUseTagsMatchesEsper",
+        "TestPatternMatchUntilArrayFunctionRepeatMatchesEsper",
+        "TestPatternMatchUntilInvalidMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "match-until",
+        "repeat",
+        "until",
+        "tag-array",
+        "correlation",
+        "timer"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go parity tests replay the Java suite's exact event/time sequences for all 7 open executions: the 52-case W-harness over the timed mixed event set (unbounded until, exact/tight/loose/open ranges, until-wins on shared events, terminator-below-minimum expiry, and/or/sequence compositions, timer terminators, every precedence ESPER-339, nested until array roll-up), select-clause array element access with out-of-range Null, follow-on correlation over a[0]/a[1]/a[2] elements (concat/equals/in/not-in/between), every-repeated correlated sequences, and the invalid-pattern validations the fluent API can express. Registered mappings: Java [:M]/[N:]/[0:M] range literals map to MatchUntil(0, M)/MatchUntil(N, 0)/MatchUntil(0, 1); untagged EPL filters use a surrogate tag in the fluent API; wildcard fragment EventBeans map to explicit TagEvents/TagFieldAt projections; arrayLength/Array.getLength map to TagCount."
     }
   ],
   "mappings": [
@@ -19270,14 +19348,18 @@
     {
       "capabilityId": "pattern.operator-everydistinct",
       "caseId": "case.pattern-operator-every-distinct"
+    },
+    {
+      "capabilityId": "pattern.operator-matchuntil",
+      "caseId": "case.pattern-operator-matchuntil"
     }
   ],
   "summary": {
-    "totalCases": 300,
-    "totalCapabilities": 106,
-    "mappedCases": 282,
+    "totalCases": 301,
+    "totalCapabilities": 107,
+    "mappedCases": 283,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1947
+    "disposedRuntimeIds": 1954
   }
 }

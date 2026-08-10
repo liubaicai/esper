@@ -11767,6 +11767,12 @@ func patternSatisfied(progress *patternProgress) bool {
 		if progress.node.dynamicBounds && progress.count == 0 && !progress.started {
 			return false
 		}
+		// A zero lower bound never satisfies the repetition on its own: with
+		// no terminator attached the node would otherwise report satisfied at
+		// spawn, which Esper only allows through an until branch.
+		if progress.node.minimum <= 0 && progress.count == 0 {
+			return false
+		}
 		return progress.count >= progress.minimum
 	case patternUntilNode:
 		return progress.done
@@ -12724,20 +12730,39 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					}
 					if childTransition.complete {
 						next.count++
+						// A tightly-bound repetition (minimum == maximum > 0)
+						// completes the match-until as soon as the bound is
+						// reached, exactly like EvalMatchUntilStateNode firing
+						// on isTightlyBound without waiting for the terminator.
+						// A looser maximum only stops the collection; the
+						// until branch still decides whether a match fires.
 						if next.maximum > 0 && next.count >= next.maximum {
 							next.child = nil
+							if next.minimum == next.maximum {
+								next.done = true
+							}
 						} else {
 							next.child = newPatternProgress(base.node.child)
 							inheritPatternProgressTags(next, next.child)
 							armPatternProgressTimers(next.child, trigger.now, variables)
 						}
 					}
-					result = append(result, patternTransitionFrom(next, false, childTransition, terminatorTransition))
+					result = append(result, patternTransitionFrom(next, next.done, childTransition, terminatorTransition))
 				}
 			}
 			return result
 		}
-		childTransitions := advancePatternNodeTrigger(base.child, trigger, variables)
+		var childTransitions []patternTransition
+		if base.child == nil {
+			// A completed repetition released its child when the bound was
+			// reached. It still owns a cached match, so it must keep
+			// reporting its retained satisfaction — exactly like a done
+			// filter — for and/or parents to combine against; returning no
+			// transition at all would silently drop the parent's fire.
+			childTransitions = []patternTransition{{state: nil}}
+		} else {
+			childTransitions = advancePatternNodeTrigger(base.child, trigger, variables)
+		}
 		result := make([]patternTransition, 0, len(childTransitions))
 		for _, childTransition := range childTransitions {
 			next := clonePatternProgress(base)

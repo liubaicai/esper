@@ -916,8 +916,12 @@ func (p PatternStream) Not() PatternStream {
 
 // MatchUntil repeats a child pattern until at least minimum matches have
 // completed and at most maximum matches are accepted. maximum <= 0 means
-// unbounded. The repeated tag resolves to the latest event through TagField;
-// TagCount exposes the full repetition count to projections.
+// unbounded and minimum == 0 means no lower bound, matching Esper's [:max]
+// and [min:] range forms. With an Until terminator attached and
+// minimum == maximum > 0 the repetition fires as soon as the bound is
+// reached, exactly like Esper's tightly-bound match-until. The repeated tag
+// resolves to the latest event through TagField; TagCount exposes the full
+// repetition count to projections.
 func (p PatternStream) MatchUntil(minimum, maximum int) PatternStream {
 	if p.def == nil {
 		return p
@@ -1428,8 +1432,8 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		if node.maximumExpr != nil && node.maximumExpr.Type() != typeOf[int]() {
 			return NewError(ErrorTypeMismatch, "match-until maximum expression must return int")
 		}
-		if !node.dynamicBounds && node.minimum <= 0 {
-			return NewError(ErrorInvalidRule, "match-until minimum must be positive")
+		if !node.dynamicBounds && node.minimum < 0 {
+			return NewError(ErrorInvalidRule, "match-until minimum must not be negative")
 		}
 		if !node.dynamicBounds && node.maximum > 0 && node.maximum < node.minimum {
 			return NewError(ErrorInvalidRule, "match-until maximum must be at least minimum")
