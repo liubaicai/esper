@@ -4,6 +4,8 @@
 
 ## 2026-08-10
 
+本轮启动 Pattern domain：关闭 PatternOperatorAnd 的 2/4 execution 与 PatternOperatorOr 的 1/3 execution，新增 3 个 runtime ID。新增 pattern_operator_parity_test.go（3 个 parity 测试），覆盖 AND 操作符（a and b：两侧事件都到达才触发，先到事件暂存等待后到事件）、OR 操作符（a or b：任一侧到达即触发，未匹配侧为 null）、AND+Every 组合（a and every b：A 到达后 B 触发匹配）。Go Pattern API 使用 PatternFrom(source, tag, filter).And/Or(other) 构建组合模式，patternBranchRoot 保留 every 语义为 patternEveryNode。新增 pattern.operator-and-or capability（phase 3, mapped）及 1 个 mapped case。Coverage 1850/4140 (44.69%)，274 case 中 257 mapped / 0 partial / 17 approved-difference。
+
 本轮补充 ExprFilterExpressions 剩余 3 个 execution（ExprFilterExprReversed/NotEqualsOp/WithEqualsSameCompare），新增 3 个 runtime ID。覆盖常量-字段反向比较（5 = intBoxed）、NotEqualsOp（theString != a，null 不匹配）、跨类型字段相等性（intBoxed=doubleBoxed）、自比较（intBoxed=intBoxed AND doubleBoxed=doubleBoxed）、IN 含字段操作数（doubleBoxed in (intBoxed)）、NOT IN 混合常量字段（doubleBoxed not in (10, intBoxed)）以及字段范围（doubleBoxed in (intBoxed:20)，lower-exclusive）。新增 1 个 mapped case。Coverage 1847/4140 (44.61%)，273 case 中 256 mapped / 0 partial / 17 approved-difference。
 
 本轮扩展 ExprFilter domain：关闭 ExprFilterInAndBetween suite 的 ExprFilterInExpr 和 ExprFilterSimpleIntAndEnumWrite 2 个 execution，新增 2 个 runtime ID（共 16 个 ExprFilter runtime ID 已处置）。新增 expr_filter_in_and_between_parity_test.go（8 个 parity 测试含 30+ 子测试），覆盖字符串关系比较（>、<、>=、<=）、字符串范围（inclusive/lower-excl/upper-excl/both-excl）、bool IN、int IN/Between（含反序边界归一化）、int 范围 4 种包含排除组合、long IN、NotBetween/NotIn（含反序边界）、string NotIn、simple int IN (1,10)。范围表达式 in [a:b]/(a:b]/[a:b)/(a:b) 的 4 种包含排除模式通过 And(GreaterOf/LessOf) 组合实现。BetweenOf/NotBetweenOf 自动归一化反序边界（between 2 and 1 等价 between 1 and 2）。新增 2 个 mapped case。Coverage 1844/4140 (44.54%)，272 case 中 255 mapped / 0 partial / 17 approved-difference。

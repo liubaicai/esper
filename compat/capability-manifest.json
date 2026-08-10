@@ -2918,6 +2918,36 @@
         "ExprFilterLargeThreading",
         "ExprFilterOptimizable"
       ]
+    },
+    {
+      "id": "pattern.operator-and-or",
+      "domain": "pattern",
+      "level": "G",
+      "summary": "Pattern AND/OR operator semantics: both sides must match for AND, either side matches for OR, AND with Every on one side fires once when both sides complete",
+      "javaRefs": [
+        "PatternOperatorAndSimple",
+        "PatternOrSimple",
+        "PatternOperatorAndWithEveryAndTerminationOptimization"
+      ],
+      "goRefs": [
+        "pattern_operator_parity_test.go"
+      ],
+      "phase": 3,
+      "status": "mapped",
+      "remaining": [
+        "PatternOperatorAndWHarness",
+        "PatternOperatorAndNotDefaultTrue",
+        "PatternOrAndNotAndZeroStart",
+        "PatternOperatorOrWHarness",
+        "PatternConsumingPattern suite",
+        "PatternOperatorEvery suite",
+        "PatternOperatorEveryDistinct suite",
+        "PatternOperatorFollowedBy suite",
+        "PatternOperatorMatchUntil suite",
+        "PatternOperatorNot suite",
+        "PatternObserver* suites",
+        "PatternGuardWhile suite"
+      ]
     }
   ],
   "cases": [
@@ -16706,6 +16736,42 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.pattern-operator-and-or-simple",
+      "javaRuntimeIds": [
+        "java-runtime-c51fcb71443a00d40178",
+        "java-runtime-04fffc043992b37fb3b1",
+        "java-runtime-8c6bd55ab52ea2c944ad"
+      ],
+      "javaNames": [
+        "PatternOperatorAndSimple",
+        "PatternOrSimple",
+        "PatternOperatorAndWithEveryAndTerminationOptimization"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorAnd.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorOr.java"
+      ],
+      "goTests": [
+        "TestPatternOperatorAndSimpleMatchesEsper",
+        "TestPatternOperatorOrSimpleMatchesEsper",
+        "TestPatternOperatorAndWithEveryMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "and",
+        "or",
+        "every",
+        "operator"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -17779,11 +17845,11 @@
     }
   ],
   "summary": {
-    "totalCases": 273,
-    "totalCapabilities": 97,
-    "mappedCases": 256,
+    "totalCases": 274,
+    "totalCapabilities": 98,
+    "mappedCases": 257,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1847
+    "disposedRuntimeIds": 1850
   }
 }
