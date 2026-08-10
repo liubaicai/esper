@@ -385,12 +385,13 @@ func RegisterVariantAny(env *Environment, name string, opts ...SchemaOption) (Sc
 // Plan is an immutable, canonicalized logical statement. It contains no raw
 // function pointer and can later be extended with versioned serde metadata.
 type Plan struct {
-	schemaVersion string
-	canonical     []byte
-	hash          string
-	query         Query
-	resultSchema  Schema
-	indexPlan     IndexPlan
+	schemaVersion   string
+	compilerVersion string
+	canonical       []byte
+	hash            string
+	query           Query
+	resultSchema    Schema
+	indexPlan       IndexPlan
 }
 
 // PlanManifest identifies the compiler contract and Go provider that produced
@@ -408,10 +409,10 @@ func (p Plan) Canonical() []byte     { return append([]byte(nil), p.canonical...
 
 // Manifest returns compiler provenance for a valid Plan.
 func (p Plan) Manifest() PlanManifest {
-	if p.schemaVersion == "" || len(p.canonical) == 0 || p.hash == "" {
+	if p.schemaVersion == "" || p.compilerVersion == "" || len(p.canonical) == 0 || p.hash == "" {
 		return PlanManifest{}
 	}
-	return PlanManifest{CompilerVersion: CompilerVersion, Provider: compilerProvider}
+	return PlanManifest{CompilerVersion: p.compilerVersion, Provider: compilerProvider}
 }
 
 // IndexPlan returns a detached, deterministic access-path summary. It is a
@@ -643,7 +644,7 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	if query.routeTarget != "" {
 		description += " -> route(" + query.routeTarget + ")"
 	}
-	canonicalParts := []string{planSchemaVersion, description}
+	canonicalParts := []string{planSchemaVersion, CompilerVersion, description}
 	parameterNames := make([]string, 0, len(parameterTypes))
 	for name := range parameterTypes {
 		parameterNames = append(parameterNames, name)
@@ -918,12 +919,13 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	canonical := []byte(strings.Join(canonicalParts, "\n"))
 	digest := sha256.Sum256(canonical)
 	return Plan{
-		schemaVersion: planSchemaVersion,
-		canonical:     canonical,
-		hash:          hex.EncodeToString(digest[:]),
-		query:         query,
-		resultSchema:  resultSchema,
-		indexPlan:     indexPlan.clone(),
+		schemaVersion:   planSchemaVersion,
+		compilerVersion: CompilerVersion,
+		canonical:       canonical,
+		hash:            hex.EncodeToString(digest[:]),
+		query:           query,
+		resultSchema:    resultSchema,
+		indexPlan:       indexPlan.clone(),
 	}, nil
 }
 

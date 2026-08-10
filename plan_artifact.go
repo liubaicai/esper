@@ -10,16 +10,22 @@ import (
 const maxPlanArtifactBytes = 16 << 20
 
 type PlanArtifact struct {
-	SchemaVersion string `json:"schemaVersion"`
-	Hash          string `json:"hash"`
-	Canonical     []byte `json:"canonical"`
+	SchemaVersion   string `json:"schemaVersion"`
+	CompilerVersion string `json:"compilerVersion"`
+	Hash            string `json:"hash"`
+	Canonical       []byte `json:"canonical"`
 }
 
 func (p Plan) MarshalArtifact() ([]byte, error) {
-	if p.schemaVersion == "" || len(p.canonical) == 0 || p.hash == "" {
+	if p.schemaVersion == "" || p.compilerVersion == "" || len(p.canonical) == 0 || p.hash == "" {
 		return nil, NewError(ErrorState, "cannot serialize an empty plan")
 	}
-	artifact := PlanArtifact{SchemaVersion: p.schemaVersion, Hash: p.hash, Canonical: p.Canonical()}
+	artifact := PlanArtifact{
+		SchemaVersion:   p.schemaVersion,
+		CompilerVersion: p.compilerVersion,
+		Hash:            p.hash,
+		Canonical:       p.Canonical(),
+	}
 	encoded, err := json.Marshal(artifact)
 	if err != nil {
 		return nil, fmt.Errorf("esper: encode plan artifact: %w", err)
@@ -38,8 +44,14 @@ func LoadPlanArtifact(data []byte) (PlanArtifact, error) {
 	if err := json.Unmarshal(data, &artifact); err != nil {
 		return PlanArtifact{}, WrapError(ErrorDependency, "plan-artifact", err)
 	}
-	if artifact.SchemaVersion != planSchemaVersion {
-		return PlanArtifact{}, NewError(ErrorDependency, fmt.Sprintf("unsupported plan schema version %q", artifact.SchemaVersion))
+	if artifact.SchemaVersion == "" || artifact.CompilerVersion == "" {
+		return PlanArtifact{}, NewError(ErrorDependency, "plan artifact version metadata is incomplete")
+	}
+	if err := validatePlanCompatibility(Plan{
+		schemaVersion:   artifact.SchemaVersion,
+		compilerVersion: artifact.CompilerVersion,
+	}, nil); err != nil {
+		return PlanArtifact{}, err
 	}
 	digest := sha256.Sum256(artifact.Canonical)
 	if hex.EncodeToString(digest[:]) != artifact.Hash {

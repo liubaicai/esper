@@ -2292,6 +2292,34 @@
       ]
     },
     {
+      "id": "client.deploy.plan-compatibility",
+      "domain": "client",
+      "level": "G",
+      "summary": "Runtime preflight for immutable Plan schema/compiler compatibility across deployment, batch deployment, fire-and-forget and serialized artifact loading",
+      "javaRefs": [
+        "ClientDeployVersion",
+        "ClientDeployVersionMinorCheck",
+        "EPCompiledManifest",
+        "EPDeployDeploymentVersionException"
+      ],
+      "goRefs": [
+        "plan.go",
+        "plan_artifact.go",
+        "plan_compatibility.go",
+        "runtime.go",
+        "faf.go",
+        "client_deploy_version_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "PlanArtifact validates detached canonical bytes and version metadata but does not yet reconstruct an executable typed Query across processes",
+        "DeployPlans exposes the failing zero-based Plan index for this preflight; complete multi-deployment Engine.Rollout atomicity is a separate pending capability",
+        "the provisional Go contracts require exact schema/compiler versions until an explicit compatible-version policy is introduced",
+        "Java JAR serialization, generated module-provider bytecode and class loading are not Go runtime contracts"
+      ]
+    },
+    {
       "id": "client.instrument.instrumentation-disabled",
       "domain": "client",
       "level": "N",
@@ -14847,6 +14875,40 @@
       "difference": "Go adds the fluent ResetTableAggregates trigger for the tested no-primary-key into-table aggregate row: naming all 1,000 columns corresponds to repeated cN.reset(), while omitting the list corresponds to the table-alias reset. Both forms clear the owning live aggregate contribution state and immediately rematerialize 1,000 null sum columns; the next event starts at its own value. Separate LengthWindow(1) tests verify 1,000 Sum(Add(intPrimitive, index)) columns leave the prior event, and 1,000 WindowAccessBy columns retain exactly the current event after replacement. Complete-column reset is explicit in Go so one materialized row cannot expose mutually inconsistent contribution sets."
     },
     {
+      "id": "case.client-deploy-version",
+      "javaRuntimeIds": [
+        "java-runtime-c294ea2d462a0503c131"
+      ],
+      "javaNames": [
+        "ClientDeployVersionMinorCheck"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployVersion.java"
+      ],
+      "goTests": [
+        "TestClientDeployVersionMinorCheckMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "deploy",
+        "plan",
+        "artifact",
+        "schema-version",
+        "compiler-version",
+        "batch-plan-index",
+        "fire-and-forget",
+        "invalid"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Esper loads an 8.0.0 EPCompiled JAR under runtime 9.0.0 and rejects ordinary deploy, rollout item zero and fire-and-forget before execution. Go carries schema and compiler provenance directly on each immutable typed Plan, returns PlanCompatibilityError with current and artifact contracts, rejects ordinary Deploy and ExecuteFireAndForget without an item index, and reports zero from DeploymentPlanIndex for the equivalent single-item DeployPlans preflight. MarshalArtifact/LoadPlanArtifact preserves and validates both versions. Go does not load Java serialized JARs, and full atomic multi-deployment Engine.Rollout behavior remains covered by the separate ClientDeployRollout suite."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15968,6 +16030,10 @@
     {
       "capabilityId": "client.compile.large-plan",
       "caseId": "case.client-compile-large-wconfig-table"
+    },
+    {
+      "capabilityId": "client.deploy.plan-compatibility",
+      "caseId": "case.client-deploy-version"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",

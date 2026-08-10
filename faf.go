@@ -216,8 +216,8 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 	if e == nil || e.env == nil {
 		return NewError(ErrorDependency, "engine has no environment")
 	}
-	if plan.query.env != e.env || plan.schemaVersion == "" {
-		return NewError(ErrorDependency, "plan does not belong to this engine")
+	if err := e.validateOwnedPlan(plan, nil); err != nil {
+		return err
 	}
 	if plan.query.routeTarget == "" {
 		return NewError(ErrorInvalidRule, "fire-and-forget route target is not configured")
@@ -286,8 +286,8 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 	if e == nil || e.env == nil {
 		return QueryResult{}, NewError(ErrorDependency, "engine has no environment")
 	}
-	if plan.query.env != e.env || plan.schemaVersion == "" {
-		return QueryResult{}, NewError(ErrorDependency, "plan does not belong to this engine")
+	if err := e.validateOwnedPlan(plan, nil); err != nil {
+		return QueryResult{}, err
 	}
 	if plan.query.contextName != "" {
 		definition, ok := e.env.Context(plan.query.contextName)
@@ -2163,8 +2163,8 @@ func (e *Engine) PrepareFireAndForget(plan Plan) (*PreparedQuery, error) {
 	if e == nil || e.env == nil {
 		return nil, NewError(ErrorDependency, "engine has no environment")
 	}
-	if plan.query.env != e.env || plan.schemaVersion == "" {
-		return nil, NewError(ErrorDependency, "plan does not belong to this engine")
+	if err := e.validateOwnedPlan(plan, nil); err != nil {
+		return nil, err
 	}
 	return &PreparedQuery{engine: e, plan: plan}, nil
 }

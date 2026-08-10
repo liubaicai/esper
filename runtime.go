@@ -2185,10 +2185,11 @@ type StatementParameterContext struct {
 type StatementParameterResolver func(StatementParameterContext) (StatementParameterBindings, error)
 
 type deploymentConfig struct {
-	nameResolver      DeploymentStatementNameResolver
-	parameterResolver StatementParameterResolver
-	deploymentID      string
-	deploymentIDSet   bool
+	nameResolver            DeploymentStatementNameResolver
+	parameterResolver       StatementParameterResolver
+	deploymentID            string
+	deploymentIDSet         bool
+	indexCompatibilityError bool
 }
 
 // DeploymentOption configures a DeployPlans operation.
@@ -2301,7 +2302,7 @@ func (e *Engine) DeployWithPositionalParameters(ctx context.Context, plan Plan, 
 // declaration order for dispatch and management traversal. Unnamed plans use
 // stmt-0, stmt-1 and so on, matching Esper module deployment names.
 func (e *Engine) DeployPlans(ctx context.Context, plans []Plan, options ...DeploymentOption) (*Deployment, error) {
-	config := deploymentConfig{}
+	config := deploymentConfig{indexCompatibilityError: true}
 	for _, option := range options {
 		if option != nil {
 			option(&config)
@@ -2331,7 +2332,14 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 	deploymentModule := ""
 	for index := range requests {
 		request := &requests[index]
-		if request.plan.query.env != e.env || request.plan.schemaVersion == "" {
+		var compatibilityIndex *int
+		if config.indexCompatibilityError {
+			compatibilityIndex = &index
+		}
+		if err := e.validateOwnedPlan(request.plan, compatibilityIndex); err != nil {
+			if _, ok := err.(*PlanCompatibilityError); ok {
+				return nil, err
+			}
 			return nil, NewError(ErrorDependency, fmt.Sprintf("plan %d does not belong to this engine", index))
 		}
 		planModule := normalizeModuleName(request.plan.query.moduleName)
@@ -9646,9 +9654,10 @@ func (r *statementRuntime) insertDerived(node *streamNode, delta eventDelta, now
 		name:      node.sourceName,
 	}
 	temporaryPlan := Plan{
-		schemaVersion: planSchemaVersion,
-		query:         temporaryQuery,
-		resultSchema:  node.derived.schema,
+		schemaVersion:   planSchemaVersion,
+		compilerVersion: CompilerVersion,
+		query:           temporaryQuery,
+		resultSchema:    node.derived.schema,
 	}
 	previous := r.aggregateState
 	r.aggregateState = state
