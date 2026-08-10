@@ -2446,23 +2446,33 @@
       "id": "client.deploy.undeploy-dependencies",
       "domain": "client",
       "level": "G",
-      "summary": "Unknown-deployment rejection and deterministic active deployment dependency preconditions for safe reverse-order undeploy",
+      "summary": "Unknown-deployment rejection, deterministic active deployment dependency preconditions and module-owned resource dependency preconditions for safe reverse-order undeploy",
       "javaRefs": [
         "ClientDeployUndeploy",
         "ClientUndeployInvalid",
         "ClientUndeployDependencyChain",
+        "ClientUndeployPrecondDepNamedWindow",
+        "ClientUndeployPrecondDepTable",
+        "ClientUndeployPrecondDepVariable",
+        "ClientUndeployPrecondDepContext",
+        "ClientUndeployPrecondDepEventType",
+        "ClientUndeployPrecondDepExprDecl",
+        "Undeployer",
+        "PathRegistry",
         "EPUndeployNotFoundException",
         "EPUndeployPreconditionException"
       ],
       "goRefs": [
         "runtime.go",
+        "deployment_resources.go",
         "deployment_rollout.go",
         "client_deploy_undeploy_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
       "remaining": [
-        "this slice enforces deployment-ID edges captured from active typed module uses; resource-specific variable, schema, context, expression, table, Named Window, index, script and class dependencies remain separate ClientDeployUndeploy executions",
+        "this slice enforces deployment-ID edges captured from active typed module uses plus module-owned Named Window, Table, variable, context, event-type and declared-expression dependency preconditions; script, index and application-class resource dependencies remain separate ClientDeployUndeploy executions",
+        "Java create-index deployments have no Go counterpart because Go declares indexes as table/named-window definition options at registration time",
         "Go returns ErrorDeployment for unknown IDs and structured UndeployPreconditionError/ErrorDependency for referenced deployments instead of Java exception subclasses"
       ]
     },
@@ -15287,6 +15297,59 @@
       "difference": "Unknown deployment IDs return ErrorDeployment without changing state. Active typed module-use edges are captured as deployment IDs; Engine.Undeploy deterministically rejects a provider while the earliest active dependent remains, returning UndeployPreconditionError with provider/dependent IDs and ErrorDependency. A/B/C/D verifies dependency snapshots, a typed value of 10, failed A/B removals preserving all four deployments, then successful D/C/B/A reverse-order removal. Java's execution builds a public variable chain; Go uses typed module-use ownership for this deployment-graph slice, while resource-specific variable and other public-object preconditions remain mapped separately."
     },
     {
+      "id": "case.client-deploy-undeploy-resource-preconditions",
+      "javaRuntimeIds": [
+        "java-runtime-06afdf5456b8ac6ab3d7",
+        "java-runtime-493d54eb03cdf9ab0879",
+        "java-runtime-df48666e1036c1c2ab3f",
+        "java-runtime-bf69e9bea9a1d60f656a",
+        "java-runtime-1c773445d79911adab98",
+        "java-runtime-922f3dcbbad6dae64074"
+      ],
+      "javaNames": [
+        "ClientUndeployPrecondDepNamedWindow",
+        "ClientUndeployPrecondDepVariable",
+        "ClientUndeployPrecondDepContext",
+        "ClientUndeployPrecondDepEventType",
+        "ClientUndeployPrecondDepExprDecl",
+        "ClientUndeployPrecondDepTable"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/deploy/ClientDeployUndeploy.java"
+      ],
+      "goTests": [
+        "TestClientUndeployPrecondDepNamedWindowMatchesEsper",
+        "TestClientUndeployPrecondDepTableMatchesEsper",
+        "TestClientUndeployPrecondDepVariableMatchesEsper",
+        "TestClientUndeployPrecondDepContextMatchesEsper",
+        "TestClientUndeployPrecondDepEventTypeMatchesEsper",
+        "TestClientUndeployPrecondDepExprDeclMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "invalid",
+        "client",
+        "deploy",
+        "undeploy",
+        "precondition",
+        "resource-dependency",
+        "named-window",
+        "table",
+        "variable",
+        "context",
+        "event-type",
+        "declared-expression",
+        "state-isolation"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Deploy-time reference collection indexes the module-owned catalog objects each plan touches: Named Window/Table sources, triggers, insert targets and subqueries, variable references and variable-set assignments, WithContext identities, module event-type sources and insert-into targets, and declared-expression references. A deployment provides its module's catalog while it is the earliest active deployment of that module; Engine.Undeploy rejects the provider in Esper's check order (named window, table, variable, context, event type, declared expression) with UndeployPreconditionError carrying provider/dependent IDs plus the blocking DeploymentResource, classified ErrorDependency, and neither side changes state. Java's SimpleTable['a'] key accessor maps to a primary-key table subquery and Java's separate create-index deployment has no Go counterpart because Go declares indexes as table/named-window definition options at registration time (approved representation difference). Script, index and application-class resource dependencies remain separate ClientDeployUndeploy executions."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -16436,6 +16499,10 @@
     {
       "capabilityId": "client.deploy.undeploy-dependencies",
       "caseId": "case.client-deploy-undeploy-dependency-chain"
+    },
+    {
+      "capabilityId": "client.deploy.undeploy-dependencies",
+      "caseId": "case.client-deploy-undeploy-resource-preconditions"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",

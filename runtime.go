@@ -304,6 +304,7 @@ type Engine struct {
 	namedWindows                       map[string]*NamedWindow
 	statements                         map[string]*Statement
 	deployments                        map[string]*Deployment
+	resourceDependents                 map[deploymentResourceRef]map[string]struct{}
 	activeProtectedModules             map[string]string
 	dataflows                          map[*DataflowInstance]struct{}
 	savedDataflowInstances             map[string]*DataflowInstance
@@ -362,6 +363,7 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		namedWindows:                    make(map[string]*NamedWindow),
 		statements:                      make(map[string]*Statement),
 		deployments:                     make(map[string]*Deployment),
+		resourceDependents:              make(map[deploymentResourceRef]map[string]struct{}),
 		activeProtectedModules:          make(map[string]string),
 		dataflows:                       make(map[*DataflowInstance]struct{}),
 		savedDataflowInstances:          make(map[string]*DataflowInstance),
@@ -2609,6 +2611,7 @@ func (e *Engine) deployPreparedRequestsLocked(ctx context.Context, requests []de
 		e.registerStatementMetricsLocked(statement)
 	}
 	e.deployments[deploymentID] = deployment
+	e.recordDeploymentResourceDependentsLocked(deployment, requests)
 	for _, statement := range deployment.statements {
 		contextName := statement.plan.query.contextName
 		if contextName == "" {
@@ -3098,17 +3101,28 @@ func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
 	if e == nil {
 		return nil
 	}
+	return e.undeploy(ctx, deploymentID, false)
+}
+
+func (e *Engine) undeploy(ctx context.Context, deploymentID string, force bool) error {
 	e.mu.Lock()
 	deployment, exists := e.deployments[deploymentID]
 	if !exists {
 		e.mu.Unlock()
 		return NewError(ErrorDeployment, fmt.Sprintf("deployment %q not found", deploymentID))
 	}
-	if dependent := e.deploymentDependentLocked(deploymentID); dependent != nil {
-		e.mu.Unlock()
-		return &UndeployPreconditionError{DeploymentID: deploymentID, ReferencedBy: dependent.id}
+	if !force {
+		if dependent := e.deploymentDependentLocked(deploymentID); dependent != nil {
+			e.mu.Unlock()
+			return &UndeployPreconditionError{DeploymentID: deploymentID, ReferencedBy: dependent.id}
+		}
+		if precondition := e.deploymentResourcePreconditionLocked(deployment); precondition != nil {
+			e.mu.Unlock()
+			return precondition
+		}
 	}
 	delete(e.deployments, deploymentID)
+	e.removeDeploymentResourceDependentsLocked(deploymentID)
 	removedStatements := append([]*Statement(nil), deployment.statements...)
 	for _, statement := range deployment.statements {
 		e.removeStatementMetricsLocked(statement)
@@ -3971,7 +3985,7 @@ func (e *Engine) Close(ctx context.Context) error {
 	e.mu.Unlock()
 	sort.Strings(ids)
 	for _, id := range ids {
-		if err := e.Undeploy(ctx, id); err != nil {
+		if err := e.undeploy(ctx, id, true); err != nil {
 			return err
 		}
 	}

@@ -209,11 +209,19 @@ type DeploymentRolloutError struct {
 type UndeployPreconditionError struct {
 	DeploymentID string
 	ReferencedBy string
+	// Resource is set when the blocking dependency is a module-owned catalog
+	// object (named window, table, variable, context, event type or declared
+	// expression) rather than a typed module-use edge.
+	Resource *DeploymentResource
 }
 
 func (err *UndeployPreconditionError) Error() string {
 	if err == nil {
 		return "esper: undeploy precondition failed"
+	}
+	if err.Resource != nil {
+		return fmt.Sprintf("esper: %s: %s %q cannot be un-deployed as it is referenced by deployment %q",
+			ErrorDependency, err.Resource.Kind.label(), err.Resource.Name, err.ReferencedBy)
 	}
 	return fmt.Sprintf("esper: %s: deployment %q cannot be undeployed; referenced by active deployment %q",
 		ErrorDependency, err.DeploymentID, err.ReferencedBy)
@@ -374,6 +382,7 @@ func (e *Engine) rollbackRolloutLocked(activations []deploymentActivation, nextI
 			continue
 		}
 		delete(e.deployments, deployment.id)
+		e.removeDeploymentResourceDependentsLocked(deployment.id)
 		for _, statement := range deployment.statements {
 			e.removeStatementMetricsLocked(statement)
 			delete(e.statements, statement.id)
