@@ -778,7 +778,12 @@
         "PatternObserverTimerSchedule",
         "PatternFollowedByFilter",
         "PatternFragment",
-        "PatternIntervalSpecExpressionWithProperty"
+        "PatternIntervalSpecExpressionWithProperty",
+        "PatternAtWeekdays",
+        "PatternAtWeekdaysPrepared",
+        "PatternAtWeekdaysVariable",
+        "PatternExpression",
+        "PatternEvery15thMonth"
       ],
       "goRefs": [
         "pattern.go",
@@ -789,7 +794,8 @@
         "pattern_followed_by_max_listener_test.go",
         "pattern_consumption_test.go",
         "pattern_composite_parity_test.go",
-        "pattern_observer_interval_parity_test.go"
+        "pattern_observer_interval_parity_test.go",
+        "pattern_observer_at_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -18259,6 +18265,49 @@
         "go-unit"
       ],
       "difference": "Go parity tests replay the Java scenarios for all 8 open executions with the same event and time sequences: or-branches with correlation, bounded and ranged match-until repeats (including the timer-and-not terminated range), per-branch dynamic observer intervals, and-states and child-sequence and-sides, the discard-immune not branch, timer:within guards at begin and child states, and every/every-distinct begin and child states - each with the discard policy on and off. The fluent API expresses @DiscardPartialsOnMatch and @SuppressOverlappingMatches as DiscardPartialsOnMatch()/SuppressOverlappingMatches() query options; untagged EPL filters use surrogate tags; unknown pattern-level annotations are an EPL-parser concern with no fluent surface."
+    },
+    {
+      "id": "case.pattern-observer-timer-at-cron",
+      "javaRuntimeIds": [
+        "java-runtime-9bcf323dead547591260",
+        "java-runtime-a5c988d2da204b65278e",
+        "java-runtime-ebf8a921d46d5ca81a3e",
+        "java-runtime-5ac43c080cc8aab598a7",
+        "java-runtime-6bb0b534c11edfa51e64"
+      ],
+      "javaNames": [
+        "PatternAtWeekdays",
+        "PatternAtWeekdaysPrepared",
+        "PatternAtWeekdaysVariable",
+        "PatternExpression",
+        "PatternEvery15thMonth"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerAt.java"
+      ],
+      "goTests": [
+        "TestPatternObserverTimerAtWeekdaysMatchesEsper",
+        "TestPatternObserverTimerAtWeekdaysPreparedMatchesEsper",
+        "TestPatternObserverTimerAtWeekdaysVariableMatchesEsper",
+        "TestPatternObserverTimerAtExpressionMatchesEsper",
+        "TestPatternObserverTimerAtEvery15thMonthMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "observer",
+        "timer-at",
+        "cron",
+        "weekday",
+        "variables",
+        "substitution-parameters"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go parity tests replay the Java weekday sweep starting Sunday 2008-08-03 10:00 UTC and assert fires land exactly at 08:00 on Mon Aug 4 through Fri Aug 8: cron weekday values number Sunday=0 through Saturday=6 exactly like Esper's ScheduleSpec (7 accepted as a Sunday alias), so [1,2,3,4,5] is Monday..Friday. The fluent API composes the cron fields as a CronSchedule with CronValues/CronWildcard/CronEvery/CronValuesExpr; EPL inline arithmetic in cron fields maps to Subtract/Add over Literals inside CronValuesExpr, variables map to VariableRef, and ?::int substitution maps to 1-based ParameterAt with DeployWithPositionalParameters; the EPL every wrapper over a recurring cron observer is retained in the fluent shape and fires once per occurrence."
     }
   ],
   "mappings": [
@@ -19473,14 +19522,18 @@
     {
       "capabilityId": "pattern.consuming-pattern",
       "caseId": "case.pattern-consuming-pattern"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-observer-timer-at-cron"
     }
   ],
   "summary": {
-    "totalCases": 303,
+    "totalCases": 304,
     "totalCapabilities": 108,
-    "mappedCases": 285,
+    "mappedCases": 286,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1963
+    "disposedRuntimeIds": 1968
   }
 }
