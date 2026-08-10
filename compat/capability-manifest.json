@@ -2232,7 +2232,9 @@
         "ClientCompileLargeSubstitutionParams",
         "ClientCompileLargeSubstitutionParamsFAF",
         "ClientCompileLargeSelectCol",
-        "ClientCompileLargeCreateSchemaAndInsert"
+        "ClientCompileLargeCreateSchemaAndInsert",
+        "ClientCompileLargeAggregation",
+        "ClientCompileLargeAggregationAccess"
       ],
       "goRefs": [
         "expr.go",
@@ -2241,7 +2243,8 @@
         "client_compile_large_parity_test.go",
         "client_compile_large_wconfig_substitution_parity_test.go",
         "client_compile_large_wconfig_select_parity_test.go",
-        "client_compile_large_wconfig_schema_insert_parity_test.go"
+        "client_compile_large_wconfig_schema_insert_parity_test.go",
+        "client_compile_large_wconfig_aggregation_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2249,7 +2252,8 @@
         "the mapped execution covers one thousand result columns with twenty-six literal addends per column",
         "result-schema order, field types, canonical bytes and hash are verified across a Plan.Query rebuild",
         "Go compiles an in-memory typed AST and therefore has no JVM class-file constant-pool or generated-method-size boundary",
-        "the remaining ClientCompileLargeWConfig aggregation and table matrix remains open"
+        "ClientCompileLargeWConfig method and access aggregation stress executions are mapped with 5,000 and 2,000 result columns respectively",
+        "the remaining ClientCompileLargeWConfig table aggregation matrix remains open"
       ]
     },
     {
@@ -14648,6 +14652,45 @@
       "difference": "Go explicitly registers MAP or OBJECTARRAY schemas with the same reversed p4999-through-p0 declaration order, verifies all 5,000 fields are int64, and routes 5,000 typed projections into the target. The non-widening variants add each int literal to CurrentTimestamp at virtual epoch-millis 1,000,000; the widening variant adds int to a typed int64 literal. Every named property equals index plus 1,000,000, and the ObjectArray physical first/last positions reflect the reversed schema order. Java create-schema EPL and public/bus annotations map to direct fluent schema registration and routing."
     },
     {
+      "id": "case.client-compile-large-wconfig-aggregation",
+      "javaRuntimeIds": [
+        "java-runtime-19510e794fe075a6574d",
+        "java-runtime-ffcd5cc3df792e0a2318"
+      ],
+      "javaNames": [
+        "ClientCompileLargeAggregation",
+        "ClientCompileLargeAggregationAccess"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileLargeWConfig.java"
+      ],
+      "goTests": [
+        "TestClientCompileLargeAggregationMatchesEsper",
+        "TestClientCompileLargeAggregationAccessMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "large-plan",
+        "aggregation",
+        "aggregate-access",
+        "sorted",
+        "last-event",
+        "keep-all",
+        "5000-columns",
+        "2000-columns",
+        "stress"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "The method-aggregation test builds 5,000 typed Sum(Add(intPrimitive, index)) projections over LastEvent and verifies every c0 through c4999 after inputs 10 and 50. The access-aggregation test builds 1,000 independent SortedAccessBy states over KeepAll, yielding 2,000 result columns; every cN is the first event and every dN is the complete sorted event collection. This retains the Java execution's large aggregate-state and result-schema pressure through fluent typed expressions, while additionally asserting the selectFrom-equivalent collection that Java constructs but does not inspect."
+    },
+    {
       "id": "case.client-instrument-instrumentation-disabled",
       "javaRuntimeIds": [
         "java-runtime-caaad1238dc1fc1d2afe"
@@ -15753,6 +15796,10 @@
     {
       "capabilityId": "client.compile.large-plan",
       "caseId": "case.client-compile-large-wconfig-schema-insert"
+    },
+    {
+      "capabilityId": "client.compile.large-plan",
+      "caseId": "case.client-compile-large-wconfig-aggregation"
     },
     {
       "capabilityId": "client.instrument.instrumentation-disabled",
