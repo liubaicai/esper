@@ -231,6 +231,37 @@ func (err *UndeployPreconditionError) Is(target error) bool {
 	return err != nil && target == ErrorDependency
 }
 
+// DeployPreconditionError reports that a deployment references a module-owned
+// catalog object whose provider module has no active deployment, mirroring
+// Esper's EPDeployPreconditionException from path-dependency resolution.
+// Deploy the provider module first, then deploy the consumer. RolloutItemIndex
+// is -1 for ordinary Deploy calls; rollout failures surface the failing item
+// through DeploymentRolloutError.RolloutItemIndex.
+type DeployPreconditionError struct {
+	Kind       DeploymentResourceKind
+	Name       string
+	ModuleName string
+	// RolloutItemIndex mirrors EPDeployPreconditionException's rollout item
+	// number and is -1 for non-rollout deployments.
+	RolloutItemIndex int
+}
+
+func (err *DeployPreconditionError) Error() string {
+	if err == nil {
+		return "esper: deploy precondition failed"
+	}
+	message := fmt.Sprintf("Required dependency %s '%s'", err.Kind.dependencyLabel(), err.Name)
+	if err.ModuleName != "" {
+		message += fmt.Sprintf(" module '%s'", err.ModuleName)
+	}
+	message += " cannot be found"
+	return fmt.Sprintf("esper: %s: A precondition is not satisfied: %s", ErrorDependency, message)
+}
+
+func (err *DeployPreconditionError) Is(target error) bool {
+	return err != nil && target == ErrorDependency
+}
+
 func (err *DeploymentRolloutError) Error() string {
 	if err == nil {
 		return "esper: rollout failed"

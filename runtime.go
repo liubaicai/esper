@@ -2532,6 +2532,9 @@ func (e *Engine) deployPreparedRequestsLocked(ctx context.Context, requests []de
 	if e.closed {
 		return deploymentActivation{}, NewError(ErrorState, "engine is closed")
 	}
+	if precondition := e.deploymentPathPreconditionLocked(requests, normalizeModuleName(deploymentModule)); precondition != nil {
+		return deploymentActivation{}, precondition
+	}
 	deploymentID := config.deploymentID
 	if deploymentID != "" {
 		if _, exists := e.deployments[deploymentID]; exists {

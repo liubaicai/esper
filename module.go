@@ -466,6 +466,21 @@ func (e *Environment) hasModuleObjectLocked(kind moduleObjectKind, identity stri
 	}
 }
 
+// hasModuleObject is the locking variant of hasModuleObjectLocked for callers
+// outside the Environment mutex, such as the deploy-time provider check.
+func (e *Environment) hasModuleObject(kind DeploymentResourceKind, identity string) bool {
+	if e == nil {
+		return false
+	}
+	objectKind, ok := kind.moduleObjectKind()
+	if !ok {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.hasModuleObjectLocked(objectKind, identity)
+}
+
 func (p ModulePath) resolve(kind moduleObjectKind, logicalName string) (string, error) {
 	if p.err != nil {
 		return "", p.err

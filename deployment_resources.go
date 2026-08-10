@@ -46,6 +46,67 @@ func (k DeploymentResourceKind) label() string {
 	}
 }
 
+// dependencyLabel matches the lowercase object-type wording Esper's
+// PathRegistryObjectType uses in deploy precondition messages ("Required
+// dependency named window 'W' module 'M' cannot be found").
+func (k DeploymentResourceKind) dependencyLabel() string {
+	switch k {
+	case DeploymentResourceNamedWindow:
+		return "named window"
+	case DeploymentResourceTable:
+		return "table"
+	case DeploymentResourceVariable:
+		return "variable"
+	case DeploymentResourceContext:
+		return "context"
+	case DeploymentResourceEventType:
+		return "event type"
+	case DeploymentResourceExpression:
+		return "declared-expression"
+	case DeploymentResourceScript:
+		return "script"
+	default:
+		return "resource"
+	}
+}
+
+// moduleObjectKind maps a resource kind to the catalog bucket consulted for
+// the registration half of the deploy provider check.
+func (k DeploymentResourceKind) moduleObjectKind() (moduleObjectKind, bool) {
+	switch k {
+	case DeploymentResourceNamedWindow:
+		return moduleObjectNamedWindow, true
+	case DeploymentResourceTable:
+		return moduleObjectTable, true
+	case DeploymentResourceVariable:
+		return moduleObjectVariable, true
+	case DeploymentResourceContext:
+		return moduleObjectContext, true
+	case DeploymentResourceEventType:
+		return moduleObjectEventType, true
+	case DeploymentResourceExpression:
+		return moduleObjectExpression, true
+	case DeploymentResourceScript:
+		return moduleObjectScript, true
+	default:
+		return 0, false
+	}
+}
+
+// deployPreconditionPathOrder is the path-object check order of Esper's
+// DeployerHelperResolver.resolveDependencies: named windows, tables, event
+// types, variables, contexts, declared expressions, then scripts. The first
+// unsatisfied reference in this order determines the reported precondition.
+var deployPreconditionPathOrder = []DeploymentResourceKind{
+	DeploymentResourceNamedWindow,
+	DeploymentResourceTable,
+	DeploymentResourceEventType,
+	DeploymentResourceVariable,
+	DeploymentResourceContext,
+	DeploymentResourceExpression,
+	DeploymentResourceScript,
+}
+
 // DeploymentResource names one module-owned catalog object in an undeploy
 // precondition report. Name is the logical object name as registered inside
 // its module; ModuleName is the owning module.
@@ -345,4 +406,72 @@ func (e *Engine) earliestResourceDependentLocked(ref deploymentResourceRef, excl
 		return candidates[left].id < candidates[right].id
 	})
 	return candidates[0].id
+}
+
+// deploymentPathPreconditionLocked resolves every cross-module catalog
+// reference of a pending deployment against the active provider deployments,
+// mirroring Esper's DeployerHelperResolver.resolveDependencies. A reference
+// is satisfied when its owning module has an active deployment and the object
+// is registered in the environment catalog; references owned by the pending
+// deployment's own module are provided by the deployment itself. The engine
+// mutex must be held.
+func (e *Engine) deploymentPathPreconditionLocked(requests []deploymentRequest, deploymentModule string) *DeployPreconditionError {
+	if e == nil || e.env == nil {
+		return nil
+	}
+	refsByKind := make(map[DeploymentResourceKind]map[string]struct{})
+	for _, request := range requests {
+		for _, ref := range collectDeploymentResourceReferences(request.plan.query) {
+			moduleName := ref.moduleName()
+			if moduleName == "" || moduleName == deploymentModule {
+				// Preconfigured (module-less) objects are validated when the
+				// plan is built; same-module references are provided by this
+				// deployment.
+				continue
+			}
+			identities := refsByKind[ref.kind]
+			if identities == nil {
+				identities = make(map[string]struct{})
+				refsByKind[ref.kind] = identities
+			}
+			identities[ref.identity] = struct{}{}
+		}
+	}
+	if len(refsByKind) == 0 {
+		return nil
+	}
+	for _, kind := range deployPreconditionPathOrder {
+		identities := refsByKind[kind]
+		if len(identities) == 0 {
+			continue
+		}
+		sorted := make([]string, 0, len(identities))
+		for identity := range identities {
+			sorted = append(sorted, identity)
+		}
+		sort.Strings(sorted)
+		for _, identity := range sorted {
+			moduleName, name := splitCatalogKey(identity)
+			if e.hasActiveModuleDeploymentLocked(moduleName) && e.env.hasModuleObject(kind, identity) {
+				continue
+			}
+			return &DeployPreconditionError{Kind: kind, Name: name, ModuleName: moduleName, RolloutItemIndex: -1}
+		}
+	}
+	return nil
+}
+
+// hasActiveModuleDeploymentLocked reports whether any active deployment
+// provides the module's catalog, matching the path-registry provider lookup
+// Esper performs at deploy time. The engine mutex must be held.
+func (e *Engine) hasActiveModuleDeploymentLocked(moduleName string) bool {
+	if e == nil || moduleName == "" {
+		return false
+	}
+	for _, deployment := range e.deployments {
+		if deployment != nil && normalizeModuleName(deployment.moduleName) == moduleName {
+			return true
+		}
+	}
+	return false
 }

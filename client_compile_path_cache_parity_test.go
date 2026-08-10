@@ -169,6 +169,18 @@ func TestClientCompilePathCacheObjectTypesMatchesEsper(t *testing.T) {
 	}
 
 	engine := NewEngine(env)
+	// Java's runtime deployments provide module objects through a deployment
+	// of the owning module; deploy the provider before the cached consumer.
+	providerPlan, err := module.Build(
+		Select(From[clientCompilePathCacheBean](env, "SupportBean"),
+			Alias("theString", Field[clientCompilePathCacheBean, string]("theString"))).Query(StatementName("provider")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), providerPlan); err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := engine.Deploy(context.Background(), plan)
 	if err != nil {
 		t.Fatal(err)

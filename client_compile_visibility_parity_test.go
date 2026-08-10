@@ -122,7 +122,25 @@ func assertClientVisibilityNoneResolve(t *testing.T, path ModulePath) {
 	}
 }
 
-func deployClientVisibilityProjection(t *testing.T, path ModulePath) Row {
+// deployClientVisibilityProvider deploys one pass-through statement of the
+// provider module, mirroring Java deploying the module that contains the
+// @public create statements before consumers compiled against its path are
+// deployed themselves.
+func deployClientVisibilityProvider(t *testing.T, engine *Engine, module Module) {
+	t.Helper()
+	plan, err := module.Build(
+		Select(From[clientMultitenancySupportBean](module.env, "SupportBean"),
+			Alias("theString", Field[clientMultitenancySupportBean, string]("theString"))).Query(StatementName("provider")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), plan); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func deployClientVisibilityProjection(t *testing.T, path ModulePath, providers ...Module) Row {
 	t.Helper()
 	variable, err := ModulePathVariableRef[string](path, "abc")
 	if err != nil {
@@ -150,6 +168,9 @@ func deployClientVisibilityProjection(t *testing.T, path ModulePath) Row {
 		t.Fatal(err)
 	}
 	engine := NewEngine(path.env)
+	for _, provider := range providers {
+		deployClientVisibilityProvider(t, engine, provider)
+	}
 	deployment, err := engine.Deploy(context.Background(), plan)
 	if err != nil {
 		t.Fatal(err)
@@ -228,7 +249,7 @@ func TestClientCompileVisibilityProtectedAndPublicMatchEsper(t *testing.T) {
 		}
 		registerClientVisibilityCatalog(t, env, module, "public")
 		assertClientVisibilityAllResolve(t, env.Path(), module.Name())
-		row := deployClientVisibilityProjection(t, env.Path())
+		row := deployClientVisibilityProjection(t, env.Path(), module)
 		if row.Get("script").Any() != "public" {
 			t.Fatalf("public script = %#v", row.Get("script"))
 		}
@@ -266,7 +287,8 @@ func TestClientCompileVisibilityAmbiguousPathAndUsesDisambiguationMatchEsper(t *
 
 	path := env.Uses(moduleB)
 	assertClientVisibilityAllResolve(t, path, moduleB.Name())
-	row := deployClientVisibilityProjection(t, path)
+	// Java deploys both providing modules before the consumer.
+	row := deployClientVisibilityProjection(t, path, moduleA, moduleB)
 	for _, field := range []string{"variable", "expression", "script", "inline"} {
 		if got := row.Get(field).Any(); got != "def" {
 			t.Fatalf("uses b %s = %#v, want def", field, got)
@@ -378,6 +400,16 @@ func TestClientCompileVisibilityAnnotationsAndBusEventTypeMatchEsper(t *testing.
 		t.Fatal(err)
 	}
 	engine := NewEngine(env)
+	// Java deploys the module that contains the @Public @BusEventType schema
+	// before the consumer statement; the Go chain mirrors that provider-first
+	// order with a pass-through deployment of the owning module.
+	providerPlan, err := module.Build(FromAny(env, module.EventType("MyEvent")).Query(StatementName("provider")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), providerPlan); err != nil {
+		t.Fatal(err)
+	}
 	deployment, err := engine.Deploy(context.Background(), plan)
 	if err != nil {
 		t.Fatal(err)
@@ -416,7 +448,10 @@ func TestClientCompileVisibilityPublicNamedWindowAcrossDeploymentsMatchEsper(t *
 		SetColumn("theString", Field[clientMultitenancySupportBean, string]("theString")),
 		SetColumn("intPrimitive", Field[clientMultitenancySupportBean, int]("intPrimitive")),
 	).InModule(module).Query(StatementName("insert"))
-	insertPlan, err := env.Build(insertQuery)
+	// The insert statement belongs to the owning module deployment, matching
+	// Java deploying the module that contains the create-window before
+	// consumers in other deployments.
+	insertPlan, err := module.Build(insertQuery)
 	if err != nil {
 		t.Fatal(err)
 	}
