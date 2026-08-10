@@ -2050,12 +2050,14 @@ func (s *Subscription) Close() error {
 }
 
 type Deployment struct {
-	mu         sync.RWMutex
-	engine     *Engine
-	id         string
-	statements []*Statement
-	moduleName string
-	closed     bool
+	mu             sync.RWMutex
+	engine         *Engine
+	id             string
+	statements     []*Statement
+	moduleName     string
+	moduleMetadata ModuleMetadata
+	lastUpdatedAt  time.Time
+	closed         bool
 }
 
 func (d *Deployment) ID() string {
@@ -2071,6 +2073,28 @@ func (d *Deployment) Module() string {
 		return ""
 	}
 	return d.moduleName
+}
+
+// ModuleMetadata returns a detached snapshot of the metadata captured from
+// the typed module at deployment time.
+func (d *Deployment) ModuleMetadata() ModuleMetadata {
+	if d == nil {
+		return ModuleMetadata{}
+	}
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return cloneModuleMetadata(d.moduleMetadata)
+}
+
+// LastUpdatedAt is the engine-clock time at which this deployment became
+// active. A zero value is returned for a nil deployment.
+func (d *Deployment) LastUpdatedAt() time.Time {
+	if d == nil {
+		return time.Time{}
+	}
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.lastUpdatedAt
 }
 
 func (d *Deployment) Statements() []*Statement {
@@ -2398,7 +2422,20 @@ func (e *Engine) deployRequests(ctx context.Context, requests []deploymentReques
 			}
 		}
 	}
-	deployment := &Deployment{engine: e, id: deploymentID, moduleName: deploymentModule, statements: make([]*Statement, 0, len(requests))}
+	moduleMetadata := ModuleMetadata{}
+	if deploymentModule != "" {
+		if definition, ok := e.env.moduleDefinition(deploymentModule); ok {
+			moduleMetadata = cloneModuleMetadata(definition.metadata)
+		}
+	}
+	deployment := &Deployment{
+		engine:         e,
+		id:             deploymentID,
+		moduleName:     deploymentModule,
+		moduleMetadata: moduleMetadata,
+		lastUpdatedAt:  e.clock.Now(),
+		statements:     make([]*Statement, 0, len(requests)),
+	}
 	protectedModule := false
 	activationContextEventStart := len(e.pendingContextEvents)
 	if deploymentModule != "" {

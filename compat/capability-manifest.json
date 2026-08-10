@@ -2020,6 +2020,35 @@
       ]
     },
     {
+      "id": "client.compile.module-artifact",
+      "domain": "client",
+      "level": "G",
+      "summary": "Typed module metadata, default uses declarations and ordered multi-plan deployment without an EPL module parser",
+      "javaRefs": [
+        "ClientCompileModule",
+        "ClientCompileModuleWImports",
+        "ClientCompileModuleTwoModules",
+        "ClientCompileModuleLineNumberAndComments",
+        "ClientCompileModuleParse",
+        "ClientCompileModuleParseFail",
+        "ClientCompileModuleCommentTrailing",
+        "ClientCompileModuleEPLModuleText"
+      ],
+      "goRefs": [
+        "module.go",
+        "runtime.go",
+        "client_compile_module_parity_test.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "ModuleMetadata preserves URI, archive name, opaque user object, ordered uses and diagnostic import labels as detached snapshots",
+        "Module.Build applies declared uses to typed Plan identity and Engine.DeployPlans preserves statement order inside one module deployment",
+        "Go package imports are resolved by the Go compiler and do not provide a runtime class-name import table",
+        "EPL module text parsing, comment tokens, parser line spans, resource loading diagnostics and MODULETEXT round-tripping are intentionally not exposed"
+      ]
+    },
+    {
       "id": "client.compile.engine-runtime-path",
       "domain": "client",
       "level": "G",
@@ -14172,6 +14201,85 @@
       "difference": "OrderModules snapshots generic ModuleOrderItem[T] values and reproduces Esper's dependency-first ordering for zero/one/two/three/five-item graphs, two independent trees, arbitrary input orders, anonymous modules and duplicate names. Missing dependencies are satisfied by proposed or already-deployed names and otherwise return ErrorDependency; self-use is allowed; multi-node cycles report a stable dependency path, while AllowUnresolvedModuleUses and AllowCircularModuleUses provide deterministic opt-outs. ModulePath.UsesNames records unknown external names in Query.ModuleUses and Plan canonical while ignoring them as local catalog candidates, so a global variable can resolve through a path declaring uses dummy. Go does not parse textual module/uses declarations or return Java ModuleOrder objects."
     },
     {
+      "id": "case.client-compile-module-runtime",
+      "javaRuntimeIds": [
+        "java-runtime-da28f889f44fec515c3b",
+        "java-runtime-0ddcb79cc71e5ebae8a0"
+      ],
+      "javaNames": [
+        "ClientCompileModuleWImports",
+        "ClientCompileModuleTwoModules"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileModule.java"
+      ],
+      "goTests": [
+        "TestClientCompileModuleWImportsMatchesEsper",
+        "TestClientCompileModuleTwoModulesMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "client",
+        "compile",
+        "module",
+        "imports",
+        "metadata",
+        "multi-plan-deployment",
+        "uri",
+        "archive-name",
+        "user-object",
+        "uses"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "The WImports test deploys the same typed module plan twice and verifies intPrimitive+1 yields 5 and 7 while the Java package import label is retained in detached ModuleMetadata; Go resolves functions and packages at source compile time rather than importing Java class names inside a rule. The TwoModules test deploys two ordered two-Plan module artifacts simultaneously and verifies module names, statement counts, active deployment IDs, non-zero engine-clock update times, URI/archive/user-object metadata, ordered uses/import labels and snapshot isolation. Java create-schema EPL is represented by explicitly registered typed catalog definitions and immutable Plans rather than statement text."
+    },
+    {
+      "id": "case.client-compile-module-text-parser",
+      "javaRuntimeIds": [
+        "java-runtime-d287b8c5286692804028",
+        "java-runtime-97c19e874ae9ff4268d3",
+        "java-runtime-f43c3fd46df3b68ea011",
+        "java-runtime-16e8d83f45d735116910",
+        "java-runtime-acc17c5c4494cb8786e1"
+      ],
+      "javaNames": [
+        "ClientCompileModuleLineNumberAndComments",
+        "ClientCompileModuleParse",
+        "ClientCompileModuleParseFail",
+        "ClientCompileModuleCommentTrailing",
+        "ClientCompileModuleEPLModuleText"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/client/compile/ClientCompileModule.java"
+      ],
+      "goTests": [
+        "TestClientCompileModuleTextParsingIsIntentionallyNotExposed"
+      ],
+      "tags": [
+        "client",
+        "compile",
+        "module",
+        "approved-difference",
+        "epl-parser",
+        "comments",
+        "line-numbers",
+        "resource-loading",
+        "module-text"
+      ],
+      "status": "approved-difference",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go intentionally has no EPL/module-text parser: modules and rules are built from typed values, so comment-only/trailing-comment artifacts, parser-owned line/content spans, classpath .epl resource loading, textual keyword/control-character diagnostics and MODULETEXT round-tripping have no runtime contract to reproduce. The disposition test verifies typed module name/uses/import declarations, deduplication, Plan module-use identity, one-Plan deployment, blank declaration diagnostics and rejection of an empty deployment. Plan canonical/TypedDescription provide analyzable logical identity instead of retaining source text."
+    },
+    {
       "id": "case.client-compile-engine-path",
       "javaRuntimeIds": [
         "java-runtime-b8bac588e58faea82ad2",
@@ -15796,6 +15904,14 @@
     {
       "capabilityId": "client.compile.module-ordering",
       "caseId": "case.client-compile-module-uses"
+    },
+    {
+      "capabilityId": "client.compile.module-artifact",
+      "caseId": "case.client-compile-module-runtime"
+    },
+    {
+      "capabilityId": "client.compile.module-artifact",
+      "caseId": "case.client-compile-module-text-parser"
     },
     {
       "capabilityId": "client.compile.engine-runtime-path",

@@ -29,12 +29,34 @@ func (v ModuleVisibility) String() string {
 
 type moduleDefinition struct {
 	visibility ModuleVisibility
+	metadata   ModuleMetadata
 }
 
 type moduleConfig struct {
 	visibility         ModuleVisibility
 	visibilitySet      bool
 	visibilityConflict bool
+	metadata           ModuleMetadata
+	err                error
+}
+
+// ModuleMetadata is detached compile/deployment metadata for one typed module.
+// URI, archive name and user object are application-owned labels. Uses
+// participates in the module's default typed resolution path; Imports is
+// retained for diagnostics only because Go package imports are resolved by the
+// Go compiler rather than by a runtime rule parser.
+type ModuleMetadata struct {
+	URI         string
+	ArchiveName string
+	UserObject  any
+	Uses        []string
+	Imports     []string
+}
+
+func cloneModuleMetadata(metadata ModuleMetadata) ModuleMetadata {
+	metadata.Uses = append([]string(nil), metadata.Uses...)
+	metadata.Imports = append([]string(nil), metadata.Imports...)
+	return metadata
 }
 
 // ModuleOption configures a typed module namespace.
@@ -66,6 +88,71 @@ func ProtectedModule() ModuleOption {
 // A Uses dependency can select one public module when several export the same
 // logical name.
 func PublicModule() ModuleOption { return setModuleVisibility(ModulePublic) }
+
+// WithModuleURI attaches an application URI to the typed module and its
+// deployments.
+func WithModuleURI(uri string) ModuleOption {
+	return func(config *moduleConfig) { config.metadata.URI = uri }
+}
+
+// WithModuleArchiveName attaches an archive/source label to the typed module.
+func WithModuleArchiveName(name string) ModuleOption {
+	return func(config *moduleConfig) { config.metadata.ArchiveName = name }
+}
+
+// WithModuleUserObject attaches one opaque application value to the module.
+func WithModuleUserObject(value any) ModuleOption {
+	return func(config *moduleConfig) { config.metadata.UserObject = value }
+}
+
+// WithModuleUses declares the module names available through the module's
+// default typed resolution path. Names preserve first-declaration order.
+func WithModuleUses(names ...string) ModuleOption {
+	return func(config *moduleConfig) {
+		if config.err != nil {
+			return
+		}
+		uses, err := normalizeModuleMetadataNames("uses", names)
+		if err != nil {
+			config.err = err
+			return
+		}
+		config.metadata.Uses = uses
+	}
+}
+
+// WithModuleImports records source-language import labels for diagnostics.
+// They do not alter Go symbol resolution.
+func WithModuleImports(names ...string) ModuleOption {
+	return func(config *moduleConfig) {
+		if config.err != nil {
+			return
+		}
+		imports, err := normalizeModuleMetadataNames("import", names)
+		if err != nil {
+			config.err = err
+			return
+		}
+		config.metadata.Imports = imports
+	}
+}
+
+func normalizeModuleMetadataNames(kind string, names []string) ([]string, error) {
+	result := make([]string, 0, len(names))
+	seen := make(map[string]struct{}, len(names))
+	for index, name := range names {
+		name = normalizeModuleName(name)
+		if name == "" {
+			return nil, NewError(ErrorInvalidRule, fmt.Sprintf("module %s name %d is blank", kind, index))
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		result = append(result, name)
+	}
+	return result, nil
+}
 
 // catalogKey is the internal identity for a named catalog object. The empty
 // module keeps the original unqualified Go API behavior; a non-empty module
@@ -113,6 +200,7 @@ func (e *Environment) moduleDefinition(name string) (moduleDefinition, bool) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	definition, ok := e.modules[normalizeModuleName(name)]
+	definition.metadata = cloneModuleMetadata(definition.metadata)
 	return definition, ok
 }
 
@@ -123,6 +211,7 @@ type Module struct {
 	env        *Environment
 	name       string
 	visibility ModuleVisibility
+	metadata   ModuleMetadata
 }
 
 func (m Module) Name() string                 { return m.name }
@@ -130,6 +219,9 @@ func (m Module) Visibility() ModuleVisibility { return m.visibility }
 func (m Module) Private() bool                { return m.visibility == ModulePrivate }
 func (m Module) Protected() bool              { return m.visibility == ModuleProtected }
 func (m Module) Public() bool                 { return m.visibility == ModulePublic }
+
+// Metadata returns a detached snapshot of module compile/deployment metadata.
+func (m Module) Metadata() ModuleMetadata { return cloneModuleMetadata(m.metadata) }
 
 // RegisterModule creates a named catalog namespace. Modules are immutable
 // namespace identities; their contained definitions can be registered while
@@ -151,14 +243,17 @@ func (e *Environment) RegisterModule(name string, options ...ModuleOption) (Modu
 	if config.visibilityConflict {
 		return Module{}, NewError(ErrorInvalidRule, "module cannot be private, protected and public at the same time")
 	}
+	if config.err != nil {
+		return Module{}, config.err
+	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if _, exists := e.modules[name]; exists {
 		return Module{}, NewError(ErrorDependency, "module "+name+" is already registered")
 	}
-	definition := moduleDefinition{visibility: config.visibility}
+	definition := moduleDefinition{visibility: config.visibility, metadata: cloneModuleMetadata(config.metadata)}
 	e.modules[name] = definition
-	return Module{env: e, name: name, visibility: definition.visibility}, nil
+	return Module{env: e, name: name, visibility: definition.visibility, metadata: cloneModuleMetadata(definition.metadata)}, nil
 }
 
 // Module returns a previously registered namespace.
@@ -173,7 +268,7 @@ func (e *Environment) Module(name string) (Module, bool) {
 	if !ok {
 		return Module{}, false
 	}
-	return Module{env: e, name: name, visibility: definition.visibility}, true
+	return Module{env: e, name: name, visibility: definition.visibility, metadata: cloneModuleMetadata(definition.metadata)}, true
 }
 
 // RegisterModule is also available as a package-level constructor for code
@@ -196,7 +291,7 @@ func (m Module) Build(query Query) (Plan, error) {
 		return Plan{}, NewError(ErrorDependency, "query belongs to a different or nil environment")
 	}
 	query.moduleName = m.name
-	query.moduleUses = nil
+	query.moduleUses = append([]string(nil), m.metadata.Uses...)
 	return m.env.Build(query)
 }
 
@@ -217,7 +312,7 @@ func (m Module) Path() ModulePath {
 	if m.env == nil {
 		return ModulePath{err: NewError(ErrorDependency, "module has no environment")}
 	}
-	return ModulePath{env: m.env, moduleName: m.name}
+	return ModulePath{env: m.env, moduleName: m.name, uses: append([]string(nil), m.metadata.Uses...), selected: len(m.metadata.Uses) > 0}
 }
 
 // Uses constructs a same-module scope with explicit public dependencies.
