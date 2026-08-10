@@ -2886,10 +2886,13 @@
         "ExprFilterEqualsSemanticFilter",
         "ExprFilterEqualsSemanticExpr",
         "ExprFilterCombinationEqualsOp",
-        "ExprFilterNotIn"
+        "ExprFilterNotIn",
+        "ExprFilterInExpr",
+        "ExprFilterSimpleIntAndEnumWrite"
       ],
       "goRefs": [
-        "expr_filter_expressions_parity_test.go"
+        "expr_filter_expressions_parity_test.go",
+        "expr_filter_in_and_between_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -2910,7 +2913,6 @@
         "ExprFilterInvalid",
         "ExprFilterInstanceMethodWWildcard",
         "ExprFilterInDynamic",
-        "ExprFilterInExpr",
         "ExprFilterInInvalid",
         "ExprFilterReuse",
         "ExprFilterLargeThreading",
@@ -16598,6 +16600,74 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.expr-filter-in-expr",
+      "javaRuntimeIds": [
+        "java-runtime-30ee715092d6d6cce146",
+        "java-runtime-0049f338c05b9e23db42"
+      ],
+      "javaNames": [
+        "ExprFilterInExpr",
+        "ExprFilterSimpleIntAndEnumWrite"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterInAndBetween.java"
+      ],
+      "goTests": [
+        "TestExprFilterInExprStringRelationalMatchesEsper",
+        "TestExprFilterInExprStringRangeMatchesEsper",
+        "TestExprFilterInExprBoolInMatchesEsper",
+        "TestExprFilterInExprIntInMatchesEsper",
+        "TestExprFilterInExprLongInMatchesEsper",
+        "TestExprFilterSimpleIntInMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "in",
+        "between",
+        "range",
+        "reversed-bounds"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.expr-filter-not-between",
+      "javaRuntimeIds": [
+        "java-runtime-5d4692af2b8d6cd3be2a"
+      ],
+      "javaNames": [
+        "ExprFilterNotIn"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterInAndBetween.java"
+      ],
+      "goTests": [
+        "TestExprFilterNotBetweenMatchesEsper",
+        "TestExprFilterNotInStringMatchesEsper",
+        "TestExprFilterNotInMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "not-between",
+        "not-in",
+        "reversed-bounds"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -17671,11 +17741,11 @@
     }
   ],
   "summary": {
-    "totalCases": 270,
+    "totalCases": 272,
     "totalCapabilities": 97,
-    "mappedCases": 253,
+    "mappedCases": 255,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1842
+    "disposedRuntimeIds": 1844
   }
 }
