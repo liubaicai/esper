@@ -7662,7 +7662,7 @@ func (r *statementRuntime) currentStreamEvents(node *streamNode, now time.Time) 
 		}
 		return r.filterPartitionEvents(events, now)
 	case streamWindow:
-		return windowHistory(node.window, r.windows[node])
+		return windowIteratorEvents(node.window, r.windows[node])
 	case streamFilter:
 		events := r.currentStreamEvents(node.input, now)
 		filtered := make([]Event, 0, len(events))
@@ -10620,7 +10620,10 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 			state.externalAt = state.entries[len(state.entries)-1].receivedAt
 		}
 	case TimeBatchWindowSpec:
-		if state.started && !now.Before(state.start.Add(window.Duration)) && len(state.pendingNew) > 0 {
+		// Esper TimeBatchView delivers a batch when the current batch or the
+		// previous batch holds events: an empty current batch still flushes the
+		// previous batch as old data once (no force-update, no reference point).
+		if state.started && !now.Before(state.start.Add(window.Duration)) && (len(state.pendingNew) > 0 || len(state.entries) > 0) {
 			result = mergeDelta(result, flushPendingBatch(state))
 			state.start = now
 		}
@@ -10859,6 +10862,38 @@ func eventsFromStored(entries []storedEvent) []Event {
 // windowHistory returns the retained events in the order used by previous
 // value expressions. Group windows are flattened only as a fallback; the
 // event-specific map below preserves the correct partition history.
+// windowIteratorEvents exposes the events visible to the statement iterator
+// (Snapshot). Batch windows iterate the currently accumulating batch
+// (pendingNew), not the last flushed batch, mirroring the iterators of
+// Esper's TimeBatchView/LengthBatchView/TimeLengthBatchView and externally
+// timed batch view; all other windows iterate their retained entries.
+func windowIteratorEvents(spec WindowSpec, state *windowRuntimeState) []Event {
+	if state == nil {
+		return nil
+	}
+	if window, ok := spec.(GroupWindowSpec); ok {
+		keys := make([]string, 0, len(state.groups))
+		for key := range state.groups {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		var result []Event
+		for _, key := range keys {
+			result = append(result, windowIteratorEvents(window.Inner, state.groups[key])...)
+		}
+		return result
+	}
+	switch window := spec.(type) {
+	case TimeBatchWindowSpec, LengthBatchWindowSpec, TimeLengthBatchWindowSpec:
+		return eventsFromStored(state.pendingNew)
+	case ExternallyTimedWindowSpec:
+		if window.Batch {
+			return eventsFromStored(state.pendingNew)
+		}
+	}
+	return windowHistory(spec, state)
+}
+
 func windowHistory(spec WindowSpec, state *windowRuntimeState) []Event {
 	if state == nil {
 		return nil
