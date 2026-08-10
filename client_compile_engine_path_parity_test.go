@@ -158,7 +158,8 @@ func TestClientCompileEnginePathObjectTypesMatchEsper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := engine.Deploy(context.Background(), contextPlan); err != nil {
+	contextConsumer, err := engine.Deploy(context.Background(), contextPlan)
+	if err != nil {
 		t.Fatal(err)
 	}
 	consumer, err := engine.Deploy(context.Background(), consumerPlan)
@@ -188,6 +189,12 @@ func TestClientCompileEnginePathObjectTypesMatchEsper(t *testing.T) {
 		}
 	}
 
+	if err := consumer.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := contextConsumer.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 	if err := activation.Undeploy(context.Background()); err != nil {
 		t.Fatal(err)
 	}

@@ -204,6 +204,25 @@ type DeploymentRolloutError struct {
 	Err       error
 }
 
+// UndeployPreconditionError reports that an active deployment still depends
+// on the requested deployment. The dependency must be removed first.
+type UndeployPreconditionError struct {
+	DeploymentID string
+	ReferencedBy string
+}
+
+func (err *UndeployPreconditionError) Error() string {
+	if err == nil {
+		return "esper: undeploy precondition failed"
+	}
+	return fmt.Sprintf("esper: %s: deployment %q cannot be undeployed; referenced by active deployment %q",
+		ErrorDependency, err.DeploymentID, err.ReferencedBy)
+}
+
+func (err *UndeployPreconditionError) Is(target error) bool {
+	return err != nil && target == ErrorDependency
+}
+
 func (err *DeploymentRolloutError) Error() string {
 	if err == nil {
 		return "esper: rollout failed"

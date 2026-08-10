@@ -3104,6 +3104,10 @@ func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
 		e.mu.Unlock()
 		return NewError(ErrorDeployment, fmt.Sprintf("deployment %q not found", deploymentID))
 	}
+	if dependent := e.deploymentDependentLocked(deploymentID); dependent != nil {
+		e.mu.Unlock()
+		return &UndeployPreconditionError{DeploymentID: deploymentID, ReferencedBy: dependent.id}
+	}
 	delete(e.deployments, deploymentID)
 	removedStatements := append([]*Statement(nil), deployment.statements...)
 	for _, statement := range deployment.statements {
@@ -3138,6 +3142,34 @@ func (e *Engine) Undeploy(ctx context.Context, deploymentID string) error {
 		RolloutItemIndex: -1,
 	})
 	return closeDeploymentSinks(deployment)
+}
+
+func (e *Engine) deploymentDependentLocked(deploymentID string) *Deployment {
+	if e == nil || deploymentID == "" {
+		return nil
+	}
+	dependents := make([]*Deployment, 0)
+	for _, deployment := range e.deployments {
+		if deployment == nil || deployment.id == deploymentID {
+			continue
+		}
+		for _, dependencyID := range deployment.dependencies {
+			if dependencyID == deploymentID {
+				dependents = append(dependents, deployment)
+				break
+			}
+		}
+	}
+	if len(dependents) == 0 {
+		return nil
+	}
+	sort.Slice(dependents, func(left, right int) bool {
+		if dependents[left].order != dependents[right].order {
+			return dependents[left].order < dependents[right].order
+		}
+		return dependents[left].id < dependents[right].id
+	})
+	return dependents[0]
 }
 
 func closeDeploymentSinks(deployment *Deployment) error {
