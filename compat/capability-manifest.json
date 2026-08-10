@@ -3037,6 +3037,32 @@
         "ViewTimeBatch suite",
         "ViewParameterizedByContext suite"
       ]
+    },
+    {
+      "id": "resultset.aggregate-group-by",
+      "domain": "resultset",
+      "level": "G",
+      "summary": "Aggregate min/max/count/sum/avg with group-by, distinct variants, having clause, length window interaction, and null value skipping in aggregates",
+      "javaRefs": [
+        "ResultSetAggregateMinMax",
+        "ResultSetAggregateMinNoGroupHaving"
+      ],
+      "goRefs": [
+        "resultset_aggregate_parity_test.go"
+      ],
+      "phase": 2,
+      "status": "mapped",
+      "remaining": [
+        "ResultSetAggregateMinMaxOM",
+        "ResultSetAggregateMinMaxViewCompile",
+        "ResultSetAggregateMinMaxJoin",
+        "ResultSetAggregateMinNoGroupSelectHaving",
+        "ResultSetAggregateMedianAndDeviation suite",
+        "ResultSetAggregateMinMax suite (subquery/named-window variants)",
+        "ResultSetOrderBy* suites",
+        "ResultSetOutputLimit* suites",
+        "ResultSetQueryType* suites"
+      ]
     }
   ],
   "cases": [
@@ -17172,6 +17198,43 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.resultset-aggregate-minmax-groupby",
+      "javaRuntimeIds": [
+        "java-runtime-6ee286d6f857ddbbd091",
+        "java-runtime-cd645170c5defa3996da"
+      ],
+      "javaNames": [
+        "ResultSetAggregateMinMax",
+        "ResultSetAggregateMinNoGroupHaving"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMaxMinGroupBy.java"
+      ],
+      "goTests": [
+        "TestResultSetAggregateMinMaxGroupByMatchesEsper",
+        "TestResultSetAggregateCountSumAvgGroupByMatchesEsper",
+        "TestResultSetAggregateHavingMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "resultset",
+        "aggregate",
+        "min",
+        "max",
+        "distinct",
+        "group-by",
+        "having",
+        "null-handling",
+        "window"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
   ],
   "mappings": [
@@ -18245,11 +18308,11 @@
     }
   ],
   "summary": {
-    "totalCases": 282,
-    "totalCapabilities": 100,
-    "mappedCases": 264,
+    "totalCases": 283,
+    "totalCapabilities": 101,
+    "mappedCases": 265,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1882
+    "disposedRuntimeIds": 1884
   }
 }
