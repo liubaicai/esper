@@ -12,7 +12,7 @@ Esper 9.0.0 的 Go 移植正在按 [实施规划](docs/esper-go-port-implementat
 
 ## 大概进度
 
-当前 capability 对账进度为：Java inventory 的 4,140 个可执行 runtime 中，manifest 已建立 2,067 条 runtime 关联、覆盖 2,067 个唯一 runtime，约 49.93%；319 个 capability case 中 301 个标为 mapped、1 个 partial、17 个 approved-difference。49.93% 是“已建立 Java runtime 对账/处置证据”的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
+当前 capability 对账进度为：Java inventory 的 4,140 个可执行 runtime 中，manifest 已建立 2,067 条 runtime 关联、覆盖 2,067 个唯一 runtime，约 49.93%；320 个 capability case 中 302 个标为 mapped、1 个 partial、17 个 approved-difference。49.93% 是“已建立 Java runtime 对账/处置证据”的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
 
 Java 基线的静态回归候选清单在 compat/static-manifest.json，运行态 execution 清单在 compat/java-execution-inventory.jsonl，非 Regression 的源资产盘点在 compat/source-test-manifest.json，首批 capability/case 映射在 compat/capability-manifest.json；这些清单都不是全量 Go 映射完成或 Java/Go 行为差分通过的证明。
 

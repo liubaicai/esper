@@ -2946,12 +2946,21 @@
         "ExprFilterNotEqualsOp",
         "ExprFilterWithEqualsSameCompare",
         "ExprFilterWhereClauseSimple",
-        "ExprFilterWhereClauseNumericType"
+        "ExprFilterWhereClauseNumericType",
+        "ExprFilterOptimizable",
+        "ExprFilterInAndBetween",
+        "ExprFilterLargeThreading",
+        "ExprFilterWhereClauseNoDataWindowPerformance",
+        "ExprFilterInDynamic",
+        "ExprFilterReuse",
+        "ExprFilterInMultipleWithBool",
+        "ExprFilterInMultipleNonMatchingFirst"
       ],
       "goRefs": [
         "expr_filter_expressions_parity_test.go",
         "expr_filter_in_and_between_parity_test.go",
-        "expr_filter_where_clause_parity_test.go"
+        "expr_filter_where_clause_parity_test.go",
+        "expr_filter_optimizable_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -2968,11 +2977,7 @@
         "ExprFilterRewriteWhere",
         "ExprFilterInvalid",
         "ExprFilterInstanceMethodWWildcard",
-        "ExprFilterInDynamic",
-        "ExprFilterInInvalid",
-        "ExprFilterReuse",
-        "ExprFilterLargeThreading",
-        "ExprFilterOptimizable"
+        "ExprFilterInInvalid"
       ]
     },
     {
@@ -19039,6 +19044,57 @@
         "go-unit"
       ],
       "difference": ""
+    },
+    {
+      "id": "case.expr-filter-optimizable",
+      "javaRuntimeIds": [],
+      "javaNames": [
+        "ExprFilterOptimizable",
+        "ExprFilterInAndBetween",
+        "ExprFilterLargeThreading",
+        "ExprFilterWhereClauseNoDataWindowPerformance",
+        "ExprFilterInDynamic",
+        "ExprFilterReuse",
+        "ExprFilterInMultipleWithBool",
+        "ExprFilterInMultipleNonMatchingFirst"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizable.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterInAndBetween.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterLargeThreading.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterWhereClauseNoDataWindowPerformance.java"
+      ],
+      "goTests": [
+        "TestExprFilterRegExManyOrMatchesEsper",
+        "TestExprFilterOrContextMatchesEsper",
+        "TestExprFilterOptimizableTypeOfMatchesEsper",
+        "TestExprFilterVariableMethodCallMatchesEsper",
+        "TestExprFilterInKeywordMultivalueMatchesEsper",
+        "TestExprFilterOrToInRewriteMatchesEsper",
+        "TestExprFilterDeployTimeConstantMatchesEsper",
+        "TestExprFilterInMultipleWithBoolMatchesEsper",
+        "TestExprFilterReuseMatchesEsper",
+        "TestExprFilterLargeThreadingMatchesEsper",
+        "TestExprFilterWhereClauseManyStatementsMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "optimizable",
+        "deploy-time-constant",
+        "in-keyword",
+        "or-rewrite",
+        "typeof",
+        "variable-method"
+      ],
+      "status": "mapped",
+      "javaStaticIds": [
+        "java-13836443e35d06f55859",
+        "java-17cece2bf9c2df0b27f1",
+        "java-a977dd316de9d77c011c",
+        "java-588b47c3c9d091cbd6a2"
+      ]
     }
   ],
   "mappings": [
@@ -20317,12 +20373,16 @@
     {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-expression-batch"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-optimizable"
     }
   ],
   "summary": {
-    "totalCases": 319,
+    "totalCases": 320,
     "totalCapabilities": 108,
-    "mappedCases": 301,
+    "mappedCases": 302,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
     "disposedRuntimeIds": 2067
