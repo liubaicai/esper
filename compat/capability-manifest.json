@@ -801,7 +801,9 @@
         "PatternUseResult",
         "PatternOperatorFollowedByMax2Noprevent",
         "PatternOperatorFollowedByMax2Prevent",
-        "PatternOperatorFollowedByMax4Prevent"
+        "PatternOperatorFollowedByMax4Prevent",
+        "PatternStartLoop",
+        "PatternSuperAndInterfaces"
       ],
       "goRefs": [
         "pattern.go",
@@ -822,7 +824,9 @@
         "pattern_repeatroute_parity_test.go",
         "pattern_startstop_parity_test.go",
         "pattern_useresult_parity_test.go",
-        "pattern_followed_by_max_pool_test.go"
+        "pattern_followed_by_max_pool_test.go",
+        "pattern_startloop_parity_test.go",
+        "pattern_super_interfaces_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -18674,6 +18678,60 @@
         "go-unit"
       ],
       "difference": "Runtime-wide subexpression pool (WithPatternSubexpressionMax/WithPatternSubexpressionPreventStart) replays PatternSubexpressionPoolRuntimeSvcImpl accounting as a per-event delta against committed match state; per-statement counts in the overflow event match Java's ConditionPatternRuntimeSubexpressionMax exactly for the suite sequences. A completion that is synchronous with its spawn (a right side satisfied at start) fires before pool admission in Go, whereas Java rejects the spawn silently; no suite scenario exercises that combination. Context start/end pattern states are not charged to the pool."
+    },
+    {
+      "id": "case.pattern-start-loop",
+      "javaRuntimeIds": [
+        "java-runtime-51b725e6be29dfcc6753"
+      ],
+      "javaNames": [
+        "PatternStartLoop"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternStartLoop.java"
+      ],
+      "goTests": [
+        "TestPatternStartLoopMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "lifecycle",
+        "reentrancy"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java fires a bare not-root at deploy time (begin-state true) and the listener loop is driven by that fire; the Go port rejects bare negative roots at Build (root negative pattern has no positive completion), so the replay drives the same listener-callback deploy/undeploy/redeploy cycles (ST1..ST10) from an explicit driver statement and asserts the bare not-root build rejection. The smoke property — reentrant lifecycle calls from a pattern listener neither deadlock nor corrupt the engine — is identical."
+    },
+    {
+      "id": "case.pattern-super-interfaces",
+      "javaRuntimeIds": [
+        "java-runtime-5d57f7852abc5d530cbb"
+      ],
+      "javaNames": [
+        "PatternSuperAndInterfaces"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternSuperAndInterfaces.java"
+      ],
+      "goTests": [
+        "TestPatternSuperAndInterfacesMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "inheritance",
+        "interfaces"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java class hierarchies map to parented Map schemas (WithSchemaParent), with multi-parent dedup matching the interface diamond. Getter overrides (SupportOverrideOne/OneA/OneB) map to the effective most-derived property value stored per concrete record, since the shadowed base storage is unobservable through any Java getter; all 28 Java filter cases replay with exact match sets identified by concrete type name."
     }
   ],
   "mappings": [
@@ -19928,14 +19986,22 @@
     {
       "capabilityId": "pattern.basic",
       "caseId": "case.pattern-followed-by-max-pool"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-start-loop"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-super-interfaces"
     }
   ],
   "summary": {
-    "totalCases": 313,
+    "totalCases": 315,
     "totalCapabilities": 108,
-    "mappedCases": 295,
+    "mappedCases": 297,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2003
+    "disposedRuntimeIds": 2005
   }
 }
