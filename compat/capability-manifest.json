@@ -3094,7 +3094,11 @@
         "ViewLastUniqueSceneOne",
         "ViewLastUniqueSceneTwo",
         "ViewUniqueExpressionParameter",
-        "ViewUniqueTwoWindows"
+        "ViewUniqueTwoWindows",
+        "ViewLengthBatchSceneOne",
+        "ViewLengthBatchSize2",
+        "ViewLengthBatchSize1",
+        "ViewUnionSceneOne"
       ],
       "goRefs": [
         "view_expression_parity_test.go",
@@ -3103,7 +3107,9 @@
         "view_parity_test.go",
         "view_timebatch_parity_test.go",
         "view_timewin_parity_test.go",
-        "view_unique_parity_test.go"
+        "view_unique_parity_test.go",
+        "view_length_batch_parity_test.go",
+        "view_union_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -19127,6 +19133,52 @@
         "unique"
       ],
       "status": "mapped"
+    },
+    {
+      "id": "case.view-length-batch-basic",
+      "javaStaticIds": [
+        "java-15a175599615ad531fa0"
+      ],
+      "javaNames": [
+        "ViewLengthBatchSceneOne",
+        "ViewLengthBatchSize2",
+        "ViewLengthBatchSize1"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewLengthBatch.java"
+      ],
+      "goTests": [
+        "TestViewLengthBatchSceneOneMatchesEsper",
+        "TestViewLengthBatchSize2MatchesEsper",
+        "TestViewLengthBatchSize1MatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "length-batch"
+      ],
+      "status": "mapped"
+    },
+    {
+      "id": "case.view-union-basic",
+      "javaStaticIds": [
+        "java-00d0cbf98ea0a82bc6f3"
+      ],
+      "javaNames": [
+        "ViewUnionFirstUniqueAndFirstLength"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewUnion.java"
+      ],
+      "goTests": [
+        "TestViewUnionLengthUniqueMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "union"
+      ],
+      "status": "mapped"
     }
   ],
   "mappings": [
@@ -20413,12 +20465,20 @@
     {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-unique-basic"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-length-batch-basic"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-union-basic"
     }
   ],
   "summary": {
-    "totalCases": 321,
+    "totalCases": 323,
     "totalCapabilities": 108,
-    "mappedCases": 303,
+    "mappedCases": 305,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
     "disposedRuntimeIds": 2067

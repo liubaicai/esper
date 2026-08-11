@@ -1,8 +1,10 @@
-本轮关闭 ExprFilterExpressions 剩余可观测 execution（ExprFilterOverInClause、ExprFilterStaticFunc、ExprFilterInstanceMethodWWildcard、ExprFilterNotEqualsConsolidate），新增 4 个 parity 测试含 8 个子用例：OverInClause（pattern Every + IN + 关系过滤）、StaticFunc（UDF isStringEquals + 复合过滤 + ne-consolidate）、InstanceMethod（EventValue 上的实例方法调用 always-true/event-bean）、NotEqualsConsolidate（not-in vs != AND != 等价矩阵）。同时将 ExprFilterOverInClause/StaticFunc/InstanceMethodWWildcard/NotEqualsConsolidate 从 expr.filter-expressions 的 remaining 移除。Coverage 2,067/4,140（49.93%）＃320 case 中 302 mapped / 1 partial / 17 approved-difference。本轮不需要 MySQL Docker。
+本轮关闭 ExprFilterExpressions 剩余可观测 execution（ExprFilterOverInClause、ExprFilterStaticFunc、ExprFilterInstanceMethodWWildcard、ExprFilterNotEqualsConsolidate），新增 4 个 parity 测试含 8 个子用例：OverInClause（pattern Every + IN + 关系过滤）、StaticFunc（UDF isStringEquals + 复合过滤 + ne-consolidate）、InstanceMethod（EventValue 上的实例方法调用 always-true/event-bean）、NotEqualsConsolidate（not-in vs != AND != 等价矩阵）。同时将 ExprFilterOverInClause/StaticFunc/InstanceMethodWWildcard/NotEqualsConsolidate 从 expr.filter-expressions 的 remaining 移除。Coverage 2,067/4,140（49.93%），320 case 中 302 mapped / 1 partial / 17 approved-difference。本轮不需要 MySQL Docker。
 
 ## 2026-08-12
 
-本轮关闭 ViewUnique suite（4 个 parity 测试）。SceneOne（单键 unique(symbol) 替换语义 + 快照）、SceneTwo（复合键 unique(symbol|feed)）、ExpressionParameter（unique(abs(intPrimitive)) 表达式参数）、TwoWindows（两独立 unique 窗口各自状态）。Coverage 2,067/4,140（49.93%）＃321 case 中 303 mapped / 1 partial / 17 approved-difference。本轮不需要 MySQL Docker。
+本轮关闭 ViewLengthBatch 剩余可观测子集（3 个 parity 测试）与 ViewUnion 首个联合窗口执行（1 个 parity 测试）。LengthBatchSceneOne/Size2/Size1 验证批次缓冲、整批 new flush、前一批 old 流和 iterator 当前批；UnionFirstUniqueAndFirstLength 验证联合窗口在任一 child 保留时保留事件。Coverage 2,067/4,140（49.93%），323 case 中 305 mapped / 1 partial / 17 approved-difference。本轮不需要 MySQL Docker。
+
+本轮关闭 ViewUnique suite（4 个 parity 测试）。SceneOne（单键 unique(symbol) 替换语义 + 快照）、SceneTwo（复合键 unique(symbol|feed)）、ExpressionParameter（unique(abs(intPrimitive)) 表达式参数）、TwoWindows（两独立 unique 窗口各自状态）。Coverage 2,067/4,140（49.93%），321 case 中 303 mapped / 1 partial / 17 approved-difference。本轮不需要 MySQL Docker。
 
 # 迁移进度 Changelog
 
