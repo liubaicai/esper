@@ -300,6 +300,14 @@ type EvalContext struct {
 	OutputRemoveTotal    int64
 	OutputLastOutputTime time.Time
 
+	// Expression-window built-ins are populated while an expression or
+	// expression-batch view evaluates its keep/trigger predicate. They are
+	// explicit runtime context rather than opaque callbacks, so UDFs can
+	// consume them through ViewReference/ExpiredCount and the plan remains
+	// analyzable.
+	WindowReference    []Event
+	WindowExpiredCount int64
+
 	// resultRow is populated only while a projected result is being ordered.
 	// It lets analyzable result-field expressions sort Row projections without
 	// exposing an untyped callback to the planner.

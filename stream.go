@@ -1840,16 +1840,23 @@ func (w ExpressionWindowSpec) validate() error {
 	if w.Keep.Type() != typeOf[bool]() {
 		return fmt.Errorf("esper: expression window predicate must return bool, got %s", w.Keep.Type())
 	}
+	if expressionContainsWindowForbiddenNode(w.Keep) {
+		return fmt.Errorf("esper: expression window predicate cannot contain subquery, previous or prior expressions")
+	}
 	return nil
 }
 
 // ExpressionBatchOption configures whether the event that makes the trigger
-// true belongs to the batch being emitted. The default is false, matching
-// Esper's expr_batch default.
+// true belongs to the batch being emitted. Esper defaults this to true; use
+// ExcludeTriggerEvent to reproduce the explicit false form.
 type ExpressionBatchOption func(*ExpressionBatchWindowSpec)
 
 func IncludeTriggerEvent() ExpressionBatchOption {
 	return func(spec *ExpressionBatchWindowSpec) { spec.IncludeTrigger = true }
+}
+
+func ExcludeTriggerEvent() ExpressionBatchOption {
+	return func(spec *ExpressionBatchWindowSpec) { spec.IncludeTrigger = false }
 }
 
 type ExpressionBatchWindowSpec struct {
@@ -1858,7 +1865,7 @@ type ExpressionBatchWindowSpec struct {
 }
 
 func ExpressionBatch(trigger Expression[bool], options ...ExpressionBatchOption) ExpressionBatchWindowSpec {
-	spec := ExpressionBatchWindowSpec{Trigger: trigger}
+	spec := ExpressionBatchWindowSpec{Trigger: trigger, IncludeTrigger: true}
 	for _, option := range options {
 		if option != nil {
 			option(&spec)
@@ -1881,7 +1888,36 @@ func (w ExpressionBatchWindowSpec) validate() error {
 	if w.Trigger.Type() != typeOf[bool]() {
 		return fmt.Errorf("esper: expression batch trigger must return bool, got %s", w.Trigger.Type())
 	}
+	if expressionContainsWindowForbiddenNode(w.Trigger) {
+		return fmt.Errorf("esper: expression batch trigger cannot contain subquery, previous or prior expressions")
+	}
 	return nil
+}
+
+func expressionContainsWindowForbiddenNode(expression Expr) bool {
+	if expression == nil || expression.node() == nil {
+		return false
+	}
+	var walk func(*exprNode) bool
+	walk = func(node *exprNode) bool {
+		if node == nil {
+			return false
+		}
+		if strings.HasPrefix(node.kind, "subquery-") {
+			return true
+		}
+		switch node.kind {
+		case "prev", "prior", "prev-tail", "prior-tail", "prev-count", "prev-window":
+			return true
+		}
+		for _, child := range node.children {
+			if walk(child) {
+				return true
+			}
+		}
+		return false
+	}
+	return walk(expression.node())
 }
 
 // GroupWindow applies an inner window independently for each key. It is the

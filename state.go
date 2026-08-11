@@ -2054,6 +2054,24 @@ func (w *NamedWindow) rebuildUniqueStateForLocked(state *namedWindowRuntime) {
 	rebuildNamedWindowIndexesLocked(state)
 }
 
+// applyExpressionNamedWindowRetentionLocked re-evaluates an expression-window
+// keep predicate over the current named-window entries after a delete. The
+// predicate keeps popping the oldest rows until it holds, exactly like the
+// ordinary expression-window expiry loop, and returns the reduced entries
+// together with the rows it expelled.
+func applyExpressionNamedWindowRetentionLocked(state *namedWindowRuntime, retention ExpressionWindowSpec, now time.Time) ([]storedEvent, []Event) {
+	if state == nil || len(state.entries) == 0 {
+		return state.entries, nil
+	}
+	entries := append([]storedEvent(nil), state.entries...)
+	var removed []Event
+	for len(entries) > 0 && !windowPredicate(retention.Keep, entries, now, nil, 0) {
+		removed = append(removed, entries[0].event)
+		entries = entries[1:]
+	}
+	return entries, removed
+}
+
 func (w *NamedWindow) Definition() NamedWindowDefinition {
 	if w == nil || w.state == nil {
 		return NamedWindowDefinition{}
@@ -2690,6 +2708,31 @@ func (w *NamedWindow) deleteWhereState(ctx context.Context, state *namedWindowRu
 	}
 	state.entries = kept
 	switch retention := state.def.retention.(type) {
+	case ExpressionWindowSpec:
+		// #expr(keep) named-window retention: an on-delete that leaves
+		// rows behind lets the keep predicate re-evaluate over the
+		// reduced window and expels rows that no longer qualify. This
+		// mirrors Java ViewExpressionWindowAggregationWOnDelete where
+		// deleting the heavy row makes previously accumulated rows pass
+		// or fail the aggregate threshold again.
+		reduced, removed := applyExpressionNamedWindowRetentionLocked(state, retention, now)
+		if len(removed) > 0 {
+			delta.Old = append(delta.Old, removed...)
+		}
+		state.entries = reduced
+	case ExpressionBatchWindowSpec:
+		// #expr_batch(trigger) named-window retention: deletes can only
+		// remove rows from the accumulating batch; the trigger predicate
+		// is not re-evaluated by a delete. Pending batch delivery remains
+		// driven by the next insert boundary.
+		reduced := state.entries[:0]
+		for _, entry := range state.entries {
+			if containsEvent(reduced, entry.event) || containsEvent(kept, entry.event) {
+				reduced = append(reduced, entry)
+			}
+		}
+		state.entries = reduced
+		delta.Old = nil
 	case TimeBatchWindowSpec, LengthBatchWindowSpec, TimeLengthBatchWindowSpec:
 		// Events accumulated in the current batch were never delivered
 		// as new data, so deleting them produces no remove stream either.
@@ -2918,7 +2961,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 	}
 	if insertEvent {
 		switch state.def.retention.(type) {
-		case KeepAllWindowSpec, LengthWindowSpec, LengthBatchWindowSpec, FirstLengthWindowSpec, LastEventWindowSpec, FirstEventWindowSpec, TimeWindowSpec, FirstTimeWindowSpec, TimeBatchWindowSpec, TimeLengthBatchWindowSpec, TimeAccumWindowSpec, ExternallyTimedWindowSpec, TimeOrderWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec, GroupWindowSpec:
+		case KeepAllWindowSpec, LengthWindowSpec, LengthBatchWindowSpec, FirstLengthWindowSpec, LastEventWindowSpec, FirstEventWindowSpec, TimeWindowSpec, FirstTimeWindowSpec, TimeBatchWindowSpec, TimeLengthBatchWindowSpec, TimeAccumWindowSpec, ExternallyTimedWindowSpec, TimeOrderWindowSpec, TimeToLiveWindowSpec, TimeToLiveAtWindowSpec, UniqueWindowSpec, SortedWindowSpec, GroupWindowSpec, ExpressionWindowSpec, ExpressionBatchWindowSpec:
 		default:
 			return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", state.def.retention))
 		}
@@ -3499,6 +3542,57 @@ func (w *NamedWindow) insertWithVariables(ctx context.Context, now time.Time, un
 		state.entries = append(state.entries, entry)
 	case SortedWindowSpec:
 		applySortedNamedWindowInsertLocked(state, retention, entry, now, &delta)
+	case ExpressionWindowSpec:
+		// #expr(keep) named-window retention applies the keep predicate
+		// at insert time exactly like the stream expression window: the
+		// newest row is added first and the predicate pops the oldest
+		// rows until it holds. Expelled rows leave as old data.
+		state.entries = append(state.entries, entry)
+		kept, expelled := applyExpressionNamedWindowRetentionLocked(state, retention, now)
+		state.entries = kept
+		delta.Old = append(delta.Old, expelled...)
+	case ExpressionBatchWindowSpec:
+		// #expr_batch(trigger) named-window retention accumulates the
+		// current batch silently; when the trigger predicate holds over
+		// the accumulated rows the batch is delivered as new data and
+		// the previous delivered batch leaves as old data. The trigger
+		// event is included by default (Java default true).
+		candidate := append(append([]storedEvent(nil), state.entries...), entry)
+		if !windowPredicate(retention.Trigger, candidate, now, nil, 0) {
+			state.entries = candidate
+			return NamedWindowDelta{Time: now}, nil
+		}
+		if !retention.IncludeTrigger {
+			// The trigger event starts the next batch; the preceding
+			// pending events are delivered now and the trigger remains
+			// pending. Java explicit false form.
+			pending := state.entries
+			state.entries = nil
+			delta.Old = append(delta.Old, state.batchLast...)
+			delta.New = nil
+			state.batchLast = make([]Event, 0, len(pending))
+			for _, retained := range pending {
+				state.batchLast = append(state.batchLast, retained.event)
+			}
+			if len(pending) == 0 {
+				state.entries = []storedEvent{entry}
+				return delta, nil
+			}
+			for _, retained := range pending {
+				delta.New = append(delta.New, retained.event)
+			}
+			state.entries = []storedEvent{entry}
+			return delta, nil
+		}
+		state.entries = candidate
+		delta.New = nil
+		delta.Old = append(delta.Old, state.batchLast...)
+		state.batchLast = make([]Event, 0, len(state.entries))
+		for _, retained := range state.entries {
+			delta.New = append(delta.New, retained.event)
+			state.batchLast = append(state.batchLast, retained.event)
+		}
+		state.entries = nil
 	default:
 		return NamedWindowDelta{}, NewError(ErrorInvalidRule, fmt.Sprintf("unsupported named-window retention %T", retention))
 	}

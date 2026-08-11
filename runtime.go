@@ -4445,6 +4445,7 @@ type windowRuntimeState struct {
 	keyed      map[string]storedEvent
 	keyOrder   []string
 	groups     map[string]*windowRuntimeState
+	groupOrder []string
 	children   []*windowRuntimeState
 }
 
@@ -9735,6 +9736,15 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		r.windows[node] = state
 		result.history = windowHistory(node.window, state)
 		result.historyByEvent = windowHistoryByEvent(node.window, state)
+		if _, batch := node.window.(ExpressionBatchWindowSpec); batch && len(result.newEvents) > 0 {
+			// Esper's expression batch view posts the completed batch as one
+			// new-data array and PREV-family expressions resolve against the
+			// batch order: each row sees the batch prefix through itself.
+			result.historyByEvent = make(map[string][]Event, len(result.newEvents))
+			for index, event := range result.newEvents {
+				result.historyByEvent[eventIdentity(event)] = append([]Event(nil), result.newEvents[:index+1]...)
+			}
+		}
 		if windowUsesPreviousAccess(node.window) {
 			result.previousByEvent = windowPreviousAccessByEvent(node.window, state)
 			if result.previousByEvent == nil {
@@ -9847,6 +9857,14 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 			}
 			if removeFromWindowState(node.window, state, candidate, now, r.variables) {
 				result.oldEvents = append(result.oldEvents, candidate)
+			}
+		}
+		if window, ok := node.window.(ExpressionWindowSpec); ok {
+			var expiredCount int64
+			for len(state.entries) > 0 && !windowPredicate(window.Keep, state.entries, now, r.variables, expiredCount) {
+				result.oldEvents = append(result.oldEvents, state.entries[0].event)
+				state.entries = state.entries[1:]
+				expiredCount++
 			}
 		}
 		result.history = windowHistory(node.window, state)
@@ -10131,6 +10149,7 @@ func removeFromWindowState(spec WindowSpec, state *windowRuntimeState, event Eve
 		removed := removeFromWindowState(window.Inner, child, event, now, variables)
 		if windowStateEmpty(child) {
 			delete(state.groups, key)
+			state.groupOrder = removeStringValue(state.groupOrder, key)
 		}
 		return removed
 	}
@@ -10181,6 +10200,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		child := state.groups[key]
 		if child == nil {
 			child = &windowRuntimeState{}
+			state.groupOrder = append(state.groupOrder, key)
 		}
 		result, err := r.addToWindow(window.Inner, child, event, now)
 		if err != nil {
@@ -10369,14 +10389,16 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 	case ExpressionWindowSpec:
 		state.entries = append(state.entries, stored)
 		result := eventDelta{newEvents: []Event{event}}
-		for len(state.entries) > 0 && !windowPredicate(window.Keep, state.entries, now, r.variables) {
+		var expiredCount int64
+		for len(state.entries) > 0 && !windowPredicate(window.Keep, state.entries, now, r.variables, expiredCount) {
 			result.oldEvents = append(result.oldEvents, state.entries[0].event)
 			state.entries = state.entries[1:]
+			expiredCount++
 		}
 		return result, nil
 	case ExpressionBatchWindowSpec:
 		candidate := append(append([]storedEvent(nil), state.pendingNew...), stored)
-		if !windowPredicate(window.Trigger, candidate, now, r.variables) {
+		if !windowPredicate(window.Trigger, candidate, now, r.variables, 0) {
 			state.pendingNew = candidate
 			return eventDelta{}, nil
 		}
@@ -10611,16 +10633,16 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 	}
 	if window, ok := spec.(GroupWindowSpec); ok {
 		result := eventDelta{}
-		keys := make([]string, 0, len(state.groups))
-		for key := range state.groups {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
+		keys := groupWindowOrder(state)
 		for _, key := range keys {
 			child := state.groups[key]
+			if child == nil {
+				continue
+			}
 			result = mergeDelta(result, r.expireWindowState(window.Inner, child, now))
 			if windowStateEmpty(child) {
 				delete(state.groups, key)
+				state.groupOrder = removeStringValue(state.groupOrder, key)
 			}
 		}
 		return result
@@ -10717,9 +10739,20 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 			state.started = false
 		}
 	case ExpressionWindowSpec:
-		for len(state.entries) > 0 && !windowPredicate(window.Keep, state.entries, now, r.variables) {
+		var expiredCount int64
+		for len(state.entries) > 0 && !windowPredicate(window.Keep, state.entries, now, r.variables, expiredCount) {
 			result.oldEvents = append(result.oldEvents, state.entries[0].event)
 			state.entries = state.entries[1:]
+			expiredCount++
+		}
+	case ExpressionBatchWindowSpec:
+		// A variable change re-evaluates the trigger without a new event
+		// (Java ExpressionBatchView.update schedules a callback at delay 0).
+		// The engine's time-expire path doubles as that callback boundary for
+		// the chain API; a true trigger flushes the currently accumulating
+		// batch as new data and the previous batch as old data.
+		if windowPredicate(window.Trigger, state.pendingNew, now, r.variables, 0) {
+			result = mergeDelta(result, flushPendingBatch(state))
 		}
 	}
 	return result
@@ -10835,11 +10868,7 @@ func storedWindowHistory(spec WindowSpec, state *windowRuntimeState) []storedEve
 		return nil
 	}
 	if window, ok := spec.(GroupWindowSpec); ok {
-		keys := make([]string, 0, len(state.groups))
-		for key := range state.groups {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
+		keys := groupWindowOrder(state)
 		var result []storedEvent
 		for _, key := range keys {
 			result = append(result, storedWindowHistory(window.Inner, state.groups[key])...)
@@ -10941,11 +10970,7 @@ func windowIteratorEvents(spec WindowSpec, state *windowRuntimeState) []Event {
 		return nil
 	}
 	if window, ok := spec.(GroupWindowSpec); ok {
-		keys := make([]string, 0, len(state.groups))
-		for key := range state.groups {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
+		keys := groupWindowOrder(state)
 		var result []Event
 		for _, key := range keys {
 			result = append(result, windowIteratorEvents(window.Inner, state.groups[key])...)
@@ -10953,7 +10978,7 @@ func windowIteratorEvents(spec WindowSpec, state *windowRuntimeState) []Event {
 		return result
 	}
 	switch window := spec.(type) {
-	case TimeBatchWindowSpec, LengthBatchWindowSpec, TimeLengthBatchWindowSpec:
+	case TimeBatchWindowSpec, LengthBatchWindowSpec, TimeLengthBatchWindowSpec, ExpressionBatchWindowSpec:
 		return eventsFromStored(state.pendingNew)
 	case ExternallyTimedWindowSpec:
 		if window.Batch {
@@ -10968,11 +10993,7 @@ func windowHistory(spec WindowSpec, state *windowRuntimeState) []Event {
 		return nil
 	}
 	if window, ok := spec.(GroupWindowSpec); ok {
-		keys := make([]string, 0, len(state.groups))
-		for key := range state.groups {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
+		keys := groupWindowOrder(state)
 		var result []Event
 		for _, key := range keys {
 			result = append(result, windowHistory(window.Inner, state.groups[key])...)
@@ -11034,11 +11055,7 @@ func windowHistoryByEvent(spec WindowSpec, state *windowRuntimeState) map[string
 	}
 	if window, ok := spec.(GroupWindowSpec); ok {
 		result := make(map[string][]Event)
-		keys := make([]string, 0, len(state.groups))
-		for key := range state.groups {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
+		keys := groupWindowOrder(state)
 		for _, key := range keys {
 			child := state.groups[key]
 			history := windowHistory(window.Inner, child)
@@ -11071,7 +11088,45 @@ func removeWindowKeyOrder(state *windowRuntimeState, key string) {
 	}
 }
 
-func windowPredicate(expression Expression[bool], entries []storedEvent, now time.Time, variables map[string]Value) bool {
+func removeStringValue(values []string, target string) []string {
+	for index, candidate := range values {
+		if candidate == target {
+			return append(values[:index], values[index+1:]...)
+		}
+	}
+	return values
+}
+
+// groupWindowOrder returns the group keys in the order their groups were
+// first created. Esper's group-by views back their group map with insertion
+// order, so iterator/snapshot flattening must preserve first-seen order
+// rather than sorted key order.
+func groupWindowOrder(state *windowRuntimeState) []string {
+	if state == nil || len(state.groups) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(state.groups))
+	seen := make(map[string]struct{}, len(state.groups))
+	for _, key := range state.groupOrder {
+		if _, ok := state.groups[key]; ok {
+			keys = append(keys, key)
+			seen[key] = struct{}{}
+		}
+	}
+	if len(seen) == len(state.groups) {
+		return keys
+	}
+	remaining := make([]string, 0, len(state.groups)-len(seen))
+	for key := range state.groups {
+		if _, ok := seen[key]; !ok {
+			remaining = append(remaining, key)
+		}
+	}
+	sort.Strings(remaining)
+	return append(keys, remaining...)
+}
+
+func windowPredicate(expression Expression[bool], entries []storedEvent, now time.Time, variables map[string]Value, expiredCount int64) bool {
 	if expression == nil {
 		return false
 	}
@@ -11083,7 +11138,14 @@ func windowPredicate(expression Expression[bool], entries []storedEvent, now tim
 	if len(group) > 0 {
 		current = group[len(group)-1]
 	}
-	value := expression.eval(EvalContext{Event: current, Group: group, Now: now, Variables: variables})
+	value := expression.eval(EvalContext{
+		Event:              current,
+		Group:              group,
+		WindowReference:    append([]Event(nil), group...),
+		WindowExpiredCount: expiredCount,
+		Now:                now,
+		Variables:          variables,
+	})
 	matched, ok := boolValue(value)
 	return ok && matched
 }

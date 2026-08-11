@@ -26,7 +26,7 @@ func TestExpressionWindowExpiresOldestUntilPredicateIsTrue(t *testing.T) {
 func TestExpressionBatchWithAndWithoutTriggerEvent(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	trigger := GreaterOrEqual[int64](CountAll(), Literal(int64(3)))
-	_, excluded := deployViewTest(t, env, engine, From[runtimeTestTrade](env, "Trade").Window(ExpressionBatch(trigger)), "expression-batch-excluded")
+	_, excluded := deployViewTest(t, env, engine, From[runtimeTestTrade](env, "Trade").Window(ExpressionBatch(trigger, ExcludeTriggerEvent())), "expression-batch-excluded")
 	for _, symbol := range []string{"A", "B", "C", "D"} {
 		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol}); err != nil {
 			t.Fatal(err)

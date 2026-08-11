@@ -263,13 +263,14 @@
         "ViewSortedPrev"
       ],
       "goRefs": [
-        "stream.go",
+        "composite_window_test.go",
+        "group_window_test.go",
         "plan.go",
         "runtime.go",
-        "view_test.go",
-        "group_window_test.go",
-        "composite_window_test.go",
-        "view_sort_parity_test.go"
+        "stream.go",
+        "view_expression_parity_test.go",
+        "view_sort_parity_test.go",
+        "view_test.go"
       ],
       "phase": 2,
       "status": "partial",
@@ -3087,11 +3088,12 @@
         "ViewTimeBatchLonger"
       ],
       "goRefs": [
-        "view_parity_test.go",
+        "view_expression_parity_test.go",
         "view_firstunique_parity_test.go",
         "view_marketdata_parity_test.go",
-        "view_timewin_parity_test.go",
-        "view_timebatch_parity_test.go"
+        "view_parity_test.go",
+        "view_timebatch_parity_test.go",
+        "view_timewin_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -4700,7 +4702,7 @@
         "java-junit",
         "go-unit"
       ],
-      "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1\u21925/5/1, then 5\u21927/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text."
+      "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1→5/5/1, then 5→7/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text."
     },
     {
       "id": "case.trigger-merge-simple-insert",
@@ -5089,7 +5091,7 @@
         "java-junit",
         "go-unit"
       ],
-      "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null\u2192B/source-inner, true\u2192source-inner, false\u2192A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open."
+      "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null→B/source-inner, true→source-inner, false→A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open."
     },
     {
       "id": "case.trigger-pattern-multimatch",
@@ -7383,7 +7385,7 @@
         "java-runtime-inventory",
         "go-unit"
       ],
-      "difference": "The Go baseline exercises the corresponding semantic paths with bounded samples: two-stream high/low selectivity, range and numeric coercion, three-stream inner/outer coercion, five-stream readiness and unidirectional range probing. Java's JVM-specific millisecond thresholds, merge/nested/index selection hints, 10k\u2013100k load sizes, static UDF/variable expression path and exact physical plan are not treated as cross-language equalities; Go records timings for regression visibility and leaves those contracts open."
+      "difference": "The Go baseline exercises the corresponding semantic paths with bounded samples: two-stream high/low selectivity, range and numeric coercion, three-stream inner/outer coercion, five-stream readiness and unidirectional range probing. Java's JVM-specific millisecond thresholds, merge/nested/index selection hints, 10k–100k load sizes, static UDF/variable expression path and exact physical plan are not treated as cross-language equalities; Go records timings for regression visibility and leaves those contracts open."
     },
     {
       "id": "case.dataflow-typed-ports",
@@ -18795,9 +18797,148 @@
         "go-unit"
       ],
       "difference": "The Java suite asserts AST-to-EPL text rendering (EvalRootForgeNode.toEPL). The fluent API builds the same ASTs directly, so each of the ~150 forms is asserted through the detached pattern model shape (Kind/children), a stable canonical description across two inspections, the operator-specific description markers (followed-by maximum -[N]>, match-until [min:max] bounds, within-max, consume levels, every-distinct expiry, timer-interval/at/within kinds), and a successful Build. Java text normalization cases (every (every b) renders as every every b, ESPER-339 every-precedence over repetition, until left-associativity) map to a single shared AST shape since the fluent builder carries no redundant parentheses. The canonical description is the Go typed pattern text (tag:predicate), not EPL; untagged filters and terminators take distinct placeholder tags that are never projected."
+    },
+    {
+      "id": "case.view-expression-window",
+      "javaRuntimeIds": [
+        "java-runtime-feef242da145c59be1bb",
+        "java-runtime-1fd41f23589a5af4132c",
+        "java-runtime-0c450c9d1c1fcf3b5523",
+        "java-runtime-5d04258cf2eb6e0025fd",
+        "java-runtime-2ea3302a92f786153790",
+        "java-runtime-984f59c809d70e02b3da",
+        "java-runtime-9171e672cfde4fa06cb5",
+        "java-runtime-0201ff1e8d8eaabe883f",
+        "java-runtime-bef7f02bfc8cb8b18b86",
+        "java-runtime-d9281b1cc6d48c4984e1",
+        "java-runtime-e4c4569b44a3e479c37e",
+        "java-runtime-8f167cedfd9b5d56fe67",
+        "java-runtime-5ccd88d79fe264701059"
+      ],
+      "javaNames": [
+        "ViewExpressionWindowSceneOne",
+        "ViewExpressionWindowNewestEventOldestEvent",
+        "ViewExpressionWindowLengthWindow",
+        "ViewExpressionWindowTimeWindow",
+        "ViewExpressionWindowUDFBuiltin",
+        "ViewExpressionWindowInvalid",
+        "ViewExpressionWindowPrev",
+        "ViewExpressionWindowAggregationUngrouped",
+        "ViewExpressionWindowAggregationWGroupwin",
+        "ViewExpressionWindowNamedWindowDelete",
+        "ViewExpressionWindowAggregationWOnDelete",
+        "ViewExpressionWindowVariable",
+        "ViewExpressionWindowDynamicTimeWindow"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionWindow.java"
+      ],
+      "goTests": [
+        "TestViewExpressionWindowSceneOneParity",
+        "TestViewExpressionWindowNewestOldestParity",
+        "TestViewExpressionWindowCurrentCountParity",
+        "TestViewExpressionWindowTimestampDifferenceParity",
+        "TestViewExpressionWindowUDFBuiltinsParity",
+        "TestViewExpressionWindowInvalidParity",
+        "TestViewExpressionWindowPrevProjectionParity",
+        "TestViewExpressionWindowAggregationParity",
+        "TestViewExpressionWindowGroupedAggregationParity",
+        "TestViewExpressionWindowNamedWindowDeleteParity",
+        "TestViewExpressionWindowAggregationOnDeleteParity",
+        "TestViewExpressionWindowVariableParity",
+        "TestViewExpressionWindowDynamicTimestampParity"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "expression-window",
+        "expr-window",
+        "iterator",
+        "prev",
+        "aggregate",
+        "named-window",
+        "variable",
+        "virtual-clock"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
+    },
+    {
+      "id": "case.view-expression-batch",
+      "javaRuntimeIds": [
+        "java-runtime-a4012797b6db56fc35ed",
+        "java-runtime-bc9403566ad19ca73ed9",
+        "java-runtime-d68cff5ac536057a77b8",
+        "java-runtime-5804edaff708d2d83a5e",
+        "java-runtime-ad02b23eda34efdfd83e",
+        "java-runtime-3bec407608d81eebcc12",
+        "java-runtime-cfb5c3a23c3ab8bf2029",
+        "java-runtime-c6280a36141e2f9ac8c7",
+        "java-runtime-6301447e4e4eaa27af22",
+        "java-runtime-a8e7fc62db8793496c86",
+        "java-runtime-36fb2be2ea2ba4270df5",
+        "java-runtime-ace804f86e16f62ae8f5",
+        "java-runtime-afb34438de3f25c964cb"
+      ],
+      "javaNames": [
+        "ViewExpressionBatchNewestEventOldestEvent",
+        "ViewExpressionBatchLengthBatch",
+        "ViewExpressionBatchTimeBatch",
+        "ViewExpressionBatchUDFBuiltin",
+        "ViewExpressionBatchInvalid",
+        "ViewExpressionBatchPrev",
+        "ViewExpressionBatchEventPropBatch",
+        "ViewExpressionBatchAggregationUngrouped",
+        "ViewExpressionBatchAggregationWGroupwin",
+        "ViewExpressionBatchAggregationOnDelete",
+        "ViewExpressionBatchNamedWindowDelete",
+        "ViewExpressionBatchDynamicTimeBatch",
+        "ViewExpressionBatchVariableBatch"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewExpressionBatch.java"
+      ],
+      "goTests": [
+        "TestViewExpressionBatchNewestOldestParity",
+        "TestViewExpressionBatchLengthBatchParity",
+        "TestViewExpressionBatchTimeBatchParity",
+        "TestViewExpressionBatchUDFBuiltinsParity",
+        "TestViewExpressionBatchInvalidParity",
+        "TestViewExpressionBatchPrevParity",
+        "TestViewExpressionBatchEventPropBatchParity",
+        "TestViewExpressionBatchAggregationUngroupedParity",
+        "TestViewExpressionBatchGroupedAggregationParity",
+        "TestViewExpressionBatchAggregationOnDeleteParity",
+        "TestViewExpressionBatchNamedWindowDeleteParity",
+        "TestViewExpressionBatchDynamicTimeParity",
+        "TestViewExpressionBatchVariableParity"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "expression-batch",
+        "expr-batch",
+        "trigger-event",
+        "iterator",
+        "prev",
+        "aggregate",
+        "named-window",
+        "variable",
+        "virtual-clock"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": ""
     }
-	],
-	"mappings": [
+  ],
+  "mappings": [
     {
       "capabilityId": "event.object-array",
       "caseId": "case.object-array-query-fields"
@@ -20056,7 +20197,7 @@
     },
     {
       "capabilityId": "pattern.basic",
-        "caseId": "case.pattern-super-interfaces"
+      "caseId": "case.pattern-super-interfaces"
     },
     {
       "capabilityId": "pattern.basic",
@@ -20065,14 +20206,22 @@
     {
       "capabilityId": "pattern.basic",
       "caseId": "case.pattern-expression-text"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-expression-window"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-expression-batch"
     }
-	],
-	"summary": {
-    "totalCases": 317,
-		"totalCapabilities": 108,
-    "mappedCases": 299,
-		"partialCases": 1,
-		"approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2009
-	}
+  ],
+  "summary": {
+    "totalCases": 319,
+    "totalCapabilities": 108,
+    "mappedCases": 301,
+    "partialCases": 1,
+    "approvedDifferenceCases": 17,
+    "disposedRuntimeIds": 2035
+  }
 }
