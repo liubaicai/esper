@@ -1,3 +1,7 @@
+本轮关闭 ExprFilterExpressions 剩余可观测 execution（ExprFilterOverInClause、ExprFilterStaticFunc、ExprFilterInstanceMethodWWildcard、ExprFilterNotEqualsConsolidate），新增 4 个 parity 测试含 8 个子用例：OverInClause（pattern Every + IN + 关系过滤）、StaticFunc（UDF isStringEquals + 复合过滤 + ne-consolidate）、InstanceMethod（EventValue 上的实例方法调用 always-true/event-bean）、NotEqualsConsolidate（not-in vs != AND != 等价矩阵）。同时将 ExprFilterOverInClause/StaticFunc/InstanceMethodWWildcard/NotEqualsConsolidate 从 expr.filter-expressions 的 remaining 移除。Coverage 2,067/4,140（49.93%）＃320 case 中 302 mapped / 1 partial / 17 approved-difference。本轮不需要 MySQL Docker。
+
+## 2026-08-12
+
 # 迁移进度 Changelog
 
 按切片记录 Esper 9.0.0 → Go 的迁移明细；[README](README.md) 只保留移植概况与大概进度。每完成一个切片在此追加记录，并同步 `compat/capability-manifest.json` 与 [实施规划](docs/esper-go-port-implementation-plan.md)。历史条目由 README 迁入，保持原始行文与顺序。

@@ -644,3 +644,211 @@ func TestExprFilterWithEqualsSameCompareMatchesEsper(t *testing.T) {
 		}
 	})
 }
+
+// ---- ExprFilterOverInClause ----
+
+type filterTradeEventBean struct {
+	ID     int64  `esper:"id"`
+	UserID string `esper:"userId"`
+	Amount int64  `esper:"amount"`
+}
+
+// TestExprFilterOverInClauseMatchesEsper covers ExprFilterOverInClause:
+// a pattern filter with IN and relational predicates fires only for matching
+// events.
+func TestExprFilterOverInClauseMatchesEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[filterTradeEventBean](env, "SupportTradeEvent"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	stream := From[filterTradeEventBean](env, "SupportTradeEvent")
+	pattern := PatternFrom(stream, "event1", And(
+		InOf(Field[filterTradeEventBean, string]("userId"), Literal("100"), Literal("101")),
+		GreaterOrEqualOf(Field[filterTradeEventBean, int64]("amount"), Literal(int64(1000))),
+	)).Every()
+	plan, err := env.Build(pattern.
+		Select(Alias("event1_id", TagField[int64]("event1", "id"))).
+		Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dep, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	invoked := subscribeFilter(t, dep)
+
+	if err := engine.SendEvent(context.Background(), filterTradeEventBean{ID: 1, UserID: "100", Amount: 1001}); err != nil {
+		t.Fatal(err)
+	}
+	if !invoked() {
+		t.Fatal("userId=100 amount=1001 should fire")
+	}
+	if err := engine.SendEvent(context.Background(), filterTradeEventBean{ID: 2, UserID: "102", Amount: 1001}); err != nil {
+		t.Fatal(err)
+	}
+	if invoked() {
+		t.Fatal("userId=102 should not fire")
+	}
+}
+
+// ---- ExprFilterStaticFunc ----
+
+// TestExprFilterStaticFuncMatchesEsper covers ExprFilterStaticFunc: a filter
+// with a UDF (isStringEquals) combined with equality predicates.
+func TestExprFilterStaticFuncMatchesEsper(t *testing.T) {
+	cases := []struct {
+		name string
+		expr Expression[bool]
+		want []bool
+	}{
+		{"udf-only", Func2[string, string, bool](
+			"isStringEquals",
+			func(prefix, value string) bool { return value == prefix },
+			Literal("b"),
+			Field[filterTestBean, string]("theString"),
+		), []bool{false, true, false}},
+		{"eq+udf-concat", And(
+			Equal[string](Literal("b"), Field[filterTestBean, string]("theString")),
+			Func2[string, string, bool]("isStringEquals",
+				func(prefix, value string) bool { return value == prefix },
+				Literal("bx"),
+				Concat(Field[filterTestBean, string]("theString"), Literal("x"))),
+		), []bool{false, true, false}},
+		{"ne-consolidate", And(
+			NotEqual[string](Field[filterTestBean, string]("theString"), Literal("a")),
+			NotEqual[string](Field[filterTestBean, string]("theString"), Literal("c")),
+		), []bool{false, true, false}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newFilterTestEnv(t)
+			eng := NewEngine(e)
+			defer func() { _ = eng.Close(context.Background()) }()
+			plan, err := e.Build(From[filterTestBean](e, "SupportBean").
+				Filter(tc.expr).Query(StatementName("s0")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			d, err := eng.Deploy(context.Background(), plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			inv := subscribeFilter(t, d)
+			for i, s := range []string{"a", "b", "c"} {
+				sendFilterBean(t, eng, s, 0, nil, nil)
+				if got := inv(); got != tc.want[i] {
+					t.Fatalf("theString=%s invoked=%v, want %v", s, got, tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+// ---- ExprFilterInstanceMethodWWildcard ----
+
+type filterInstanceMethodBean struct {
+	X int `esper:"x"`
+}
+
+func (b filterInstanceMethodBean) MyInstanceMethodAlwaysTrue() bool { return true }
+func (b filterInstanceMethodBean) MyInstanceMethodEventBean(propertyName string, expected int) bool {
+	return b.X == expected
+}
+
+// TestExprFilterInstanceMethodMatchesEsper covers
+// ExprFilterInstanceMethodWWildcard: instance methods on the current event
+// used as filter predicates.
+func TestExprFilterInstanceMethodMatchesEsper(t *testing.T) {
+	cases := []struct {
+		name string
+		expr Expression[bool]
+		want []bool
+	}{
+		{"always-true", Method[bool](
+			EventValue[filterInstanceMethodBean](),
+			"MyInstanceMethodAlwaysTrue",
+		), []bool{true, true, true}},
+		{"event-bean-x-eq-1", Method[bool](
+			EventValue[filterInstanceMethodBean](),
+			"MyInstanceMethodEventBean",
+			Literal("x"), Literal(1),
+		), []bool{false, true, false}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := NewEnvironment()
+			if _, err := RegisterStruct[filterInstanceMethodBean](e, "SupportInstanceMethodBean"); err != nil {
+				t.Fatal(err)
+			}
+			eng := NewEngine(e)
+			defer func() { _ = eng.Close(context.Background()) }()
+			plan, err := e.Build(From[filterInstanceMethodBean](e, "SupportInstanceMethodBean").
+				Filter(tc.expr).Query(StatementName("s0")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			d, err := eng.Deploy(context.Background(), plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			inv := subscribeFilter(t, d)
+			for i := 0; i < 3; i++ {
+				if err := eng.SendEvent(context.Background(), filterInstanceMethodBean{X: i}); err != nil {
+					t.Fatal(err)
+				}
+				if got := inv(); got != tc.want[i] {
+					t.Fatalf("x=%d invoked=%v, want %v", i, got, tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+// ---- ExprFilterNotEqualsConsolidate ----
+
+// TestExprFilterNotEqualsConsolidateMatchesEsper covers
+// ExprFilterNotEqualsConsolidate: two equivalent forms of not-in/not-equals
+// produce the same match set for values 0..4.
+func TestExprFilterNotEqualsConsolidateMatchesEsper(t *testing.T) {
+	forms := []struct {
+		name string
+		expr Expression[bool]
+	}{
+		{"not-in", NotInOf(Field[filterTestBean, int]("intPrimitive"), Literal(1), Literal(2))},
+		{"neq-and-neq", And(
+			NotEqual[int](Field[filterTestBean, int]("intPrimitive"), Literal(1)),
+			NotEqual[int](Field[filterTestBean, int]("intPrimitive"), Literal(2)),
+		)},
+	}
+	want := []bool{true, false, false, true, true}
+
+	for _, form := range forms {
+		t.Run(form.name, func(t *testing.T) {
+			e := newFilterTestEnv(t)
+			eng := NewEngine(e)
+			defer func() { _ = eng.Close(context.Background()) }()
+			plan, err := e.Build(From[filterTestBean](e, "SupportBean").
+				Filter(form.expr).Query(StatementName("s0")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			d, err := eng.Deploy(context.Background(), plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			inv := subscribeFilter(t, d)
+			for i := 0; i < 5; i++ {
+				sendFilterBean(t, eng, "", i, nil, nil)
+				if got := inv(); got != want[i] {
+					t.Fatalf("intPrimitive=%d invoked=%v, want %v", i, got, want[i])
+				}
+			}
+		})
+	}
+}

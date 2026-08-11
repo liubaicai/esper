@@ -2954,7 +2954,11 @@
         "ExprFilterInDynamic",
         "ExprFilterReuse",
         "ExprFilterInMultipleWithBool",
-        "ExprFilterInMultipleNonMatchingFirst"
+        "ExprFilterInMultipleNonMatchingFirst",
+        "ExprFilterOverInClause",
+        "ExprFilterStaticFunc",
+        "ExprFilterInstanceMethodWWildcard",
+        "ExprFilterNotEqualsConsolidate"
       ],
       "goRefs": [
         "expr_filter_expressions_parity_test.go",
@@ -2965,7 +2969,6 @@
       "phase": 2,
       "status": "mapped",
       "remaining": [
-        "ExprFilterOverInClause",
         "ExprFilterPromoteIndexToSetNotIn",
         "ExprFilterShortCircuitEvalAndOverspecified",
         "ExprFilterEnumSyntaxOne",
@@ -2973,11 +2976,8 @@
         "ExprFilterPatternFunc",
         "ExprFilterPatternFunc3Stream",
         "ExprFilterPatternWithExpr",
-        "ExprFilterStaticFunc",
         "ExprFilterRewriteWhere",
-        "ExprFilterInvalid",
-        "ExprFilterInstanceMethodWWildcard",
-        "ExprFilterInInvalid"
+        "ExprFilterInvalid"
       ]
     },
     {
