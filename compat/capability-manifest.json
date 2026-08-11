@@ -2964,18 +2964,15 @@
         "expr_filter_expressions_parity_test.go",
         "expr_filter_in_and_between_parity_test.go",
         "expr_filter_where_clause_parity_test.go",
-        "expr_filter_optimizable_parity_test.go"
+        "expr_filter_optimizable_parity_test.go",
+        "expr_filter_pattern_enum_parity_test.go",
+        "expr_in_between.go"
       ],
       "phase": 2,
       "status": "mapped",
       "remaining": [
         "ExprFilterPromoteIndexToSetNotIn",
         "ExprFilterShortCircuitEvalAndOverspecified",
-        "ExprFilterEnumSyntaxOne",
-        "ExprFilterEnumSyntaxTwo",
-        "ExprFilterPatternFunc",
-        "ExprFilterPatternFunc3Stream",
-        "ExprFilterPatternWithExpr",
         "ExprFilterRewriteWhere",
         "ExprFilterInvalid"
       ]
@@ -17618,6 +17615,142 @@
       "difference": ""
     },
     {
+      "id": "case.expr-filter-enum-syntax",
+      "javaRuntimeIds": [
+        "java-runtime-e62e68a2fc91d4980c8b",
+        "java-runtime-5eed27041d879614c93f"
+      ],
+      "javaStaticIds": [
+        "java-1083159f911415128a8b"
+      ],
+      "javaNames": [
+        "ExprFilterEnumSyntaxOne",
+        "ExprFilterEnumSyntaxTwo"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterEnumSyntaxMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "enum",
+        "pattern",
+        "where-clause"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go models SupportEnum as a typed string enum and uses typed Literal values in fluent expressions instead of Java class-member/valueOf syntax"
+    },
+    {
+      "id": "case.expr-filter-pattern-func",
+      "javaRuntimeIds": [
+        "java-runtime-7d95287f0f0d990934ca"
+      ],
+      "javaStaticIds": [
+        "java-1083159f911415128a8b"
+      ],
+      "javaNames": [
+        "ExprFilterPatternFunc"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterPatternFuncMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "pattern",
+        "correlation",
+        "range",
+        "in"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java self-qualified b properties are represented by the current event Field in Go because the fluent predicate is evaluated against the current event before its result tag is bound"
+    },
+    {
+      "id": "case.expr-filter-pattern-func-3stream",
+      "javaRuntimeIds": [
+        "java-runtime-06eff930bf7472cc7636"
+      ],
+      "javaStaticIds": [
+        "java-1083159f911415128a8b"
+      ],
+      "javaNames": [
+        "ExprFilterPatternFunc3Stream"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterPatternFunc3StreamMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "pattern",
+        "three-stream",
+        "correlation",
+        "null-safe"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java pattern filter comma syntax is expressed as explicit And calls in Go; source event fields use current Field while captured a/b values use TagField"
+    },
+    {
+      "id": "case.expr-filter-pattern-with-expr",
+      "javaRuntimeIds": [
+        "java-runtime-c0712ac092ba4438602a"
+      ],
+      "javaStaticIds": [
+        "java-1083159f911415128a8b"
+      ],
+      "javaNames": [
+        "ExprFilterPatternWithExpr"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterPatternWithExprMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "pattern",
+        "correlation",
+        "arithmetic"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go uses a typed market-data struct and Multiply expression in place of Java SupportMarketDataBean and EPL arithmetic text"
+    },
+    {
       "id": "case.view-firstunique",
       "javaRuntimeIds": [
         "java-runtime-539015b0941ce8fc7488",
@@ -20324,6 +20457,22 @@
     {
       "capabilityId": "expr.filter-expressions",
       "caseId": "case.expr-filter-where-clause"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-enum-syntax"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-pattern-func"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-pattern-func-3stream"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-pattern-with-expr"
     },
     {
       "capabilityId": "pattern.operator-and-or",

@@ -25,10 +25,24 @@ func BetweenOf(value, lower, upper Expr) Expression[bool] {
 	return betweenExpression("between-of", value, lower, upper, false)
 }
 
+// BetweenRangeOf compares mixed ordered operands with independently selected
+// lower and upper boundary inclusivity. It is the fluent counterpart of
+// Esper's four bracketed range forms. Reversed numeric bounds are normalized
+// before comparison while the boundary markers remain attached to the lower
+// and upper comparison positions, matching Esper's range normalization.
+func BetweenRangeOf(value, lower, upper Expr, lowerInclusive, upperInclusive bool) Expression[bool] {
+	return betweenExpressionWithBounds("between-range-of", value, lower, upper, false, lowerInclusive, upperInclusive)
+}
+
 // NotBetweenOf is the explicit fluent negation of BetweenOf. It retains
 // Esper's rule that an absent value or bound yields false rather than true.
 func NotBetweenOf(value, lower, upper Expr) Expression[bool] {
 	return betweenExpression("not-between-of", value, lower, upper, true)
+}
+
+// NotBetweenRangeOf is the null-aware negated form of BetweenRangeOf.
+func NotBetweenRangeOf(value, lower, upper Expr, lowerInclusive, upperInclusive bool) Expression[bool] {
+	return betweenExpressionWithBounds("not-between-range-of", value, lower, upper, true, lowerInclusive, upperInclusive)
 }
 
 func inExpression(kind string, value Expr, negate bool, candidates ...Expr) Expression[bool] {
@@ -120,6 +134,10 @@ func inExpression(kind string, value Expr, negate bool, candidates ...Expr) Expr
 }
 
 func betweenExpression(kind string, value, lower, upper Expr, negate bool) Expression[bool] {
+	return betweenExpressionWithBounds(kind, value, lower, upper, negate, true, true)
+}
+
+func betweenExpressionWithBounds(kind string, value, lower, upper Expr, negate, lowerInclusive, upperInclusive bool) Expression[bool] {
 	parts := []string{expressionDescription(value), expressionDescription(lower), expressionDescription(upper)}
 	children := make([]*exprNode, 0, 3)
 	for _, operand := range []Expr{value, lower, upper} {
@@ -187,7 +205,8 @@ func betweenExpression(kind string, value, lower, upper Expr, negate bool) Expre
 		if !lowerOK || !upperOK {
 			return Present(false)
 		}
-		matched := lowerComparison >= 0 && upperComparison <= 0
+		matched := (lowerComparison > 0 || (lowerInclusive && lowerComparison == 0)) &&
+			(upperComparison < 0 || (upperInclusive && upperComparison == 0))
 		if negate {
 			return Present(!matched)
 		}
