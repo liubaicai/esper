@@ -2,6 +2,8 @@
 
 ## 2026-08-12
 
+本轮关闭 ViewGroup/ViewIntersect 的可观测基础子集：GroupWindow 分组长度窗口、分组虚拟时间到期、数组键和 Intersect 窗口的所有 child 保留条件，对应 5 个 Go 测试（复用 group_window_test.go/composite_window_test.go 中已有可观测对照）。Coverage 2,067/4,140（49.93%），325 case 中 307 mapped / 1 partial / 17 approved-difference。本轮不需要 MySQL Docker。
+
 本轮关闭 ViewLengthBatch 剩余可观测子集（3 个 parity 测试）与 ViewUnion 首个联合窗口执行（1 个 parity 测试）。LengthBatchSceneOne/Size2/Size1 验证批次缓冲、整批 new flush、前一批 old 流和 iterator 当前批；UnionFirstUniqueAndFirstLength 验证联合窗口在任一 child 保留时保留事件。Coverage 2,067/4,140（49.93%），323 case 中 305 mapped / 1 partial / 17 approved-difference。本轮不需要 MySQL Docker。
 
 本轮关闭 ViewUnique suite（4 个 parity 测试）。SceneOne（单键 unique(symbol) 替换语义 + 快照）、SceneTwo（复合键 unique(symbol|feed)）、ExpressionParameter（unique(abs(intPrimitive)) 表达式参数）、TwoWindows（两独立 unique 窗口各自状态）。Coverage 2,067/4,140（49.93%），321 case 中 303 mapped / 1 partial / 17 approved-difference。本轮不需要 MySQL Docker。

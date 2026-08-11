@@ -19179,6 +19179,53 @@
         "union"
       ],
       "status": "mapped"
+    },
+    {
+      "id": "case.view-group-basic",
+      "javaStaticIds": [
+        "java-1eaa11c89e08defabf22"
+      ],
+      "javaNames": [
+        "ViewGroupLengthWin",
+        "ViewGroupTimeWin"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
+      ],
+      "goTests": [
+        "TestGroupWindowKeepsIndependentLengthState",
+        "TestGroupWindowExpiresEachPartitionOnVirtualTime",
+        "TestGroupWindowUsesArrayKeyIdentity"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "group-window"
+      ],
+      "status": "mapped"
+    },
+    {
+      "id": "case.view-intersect-basic",
+      "javaStaticIds": [
+        "java-099d757b97d6b93b2878"
+      ],
+      "javaNames": [
+        "ViewIntersectTimeWin",
+        "ViewIntersectThreeUnique"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewIntersect.java"
+      ],
+      "goTests": [
+        "TestIntersectWindowRequiresEveryChild",
+        "TestCompositeUniqueWindowsUseArrayKeyContent"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "intersect"
+      ],
+      "status": "mapped"
     }
   ],
   "mappings": [
@@ -20473,12 +20520,20 @@
     {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-union-basic"
+    },
+    {
+      "capabilityId": "view.window-core",
+      "caseId": "case.view-group-basic"
+    },
+    {
+      "capabilityId": "view.window-core",
+      "caseId": "case.view-intersect-basic"
     }
   ],
   "summary": {
-    "totalCases": 323,
+    "totalCases": 325,
     "totalCapabilities": 108,
-    "mappedCases": 305,
+    "mappedCases": 307,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
     "disposedRuntimeIds": 2067
