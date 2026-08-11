@@ -797,7 +797,8 @@
         "PatternOperatorOperatorMix",
         "PatternDeadPattern",
         "PatternRepeatRouteEvent",
-        "PatternStartStop"
+        "PatternStartStop",
+        "PatternUseResult"
       ],
       "goRefs": [
         "pattern.go",
@@ -816,7 +817,8 @@
         "pattern_complexprops_parity_test.go",
         "pattern_operatormix_parity_test.go",
         "pattern_repeatroute_parity_test.go",
-        "pattern_startstop_parity_test.go"
+        "pattern_startstop_parity_test.go",
+        "pattern_useresult_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -18582,6 +18584,49 @@
         "go-unit"
       ],
       "difference": "Deploy/undeploy/redeploy and Statement.Start/Stop lifecycle verified: undeployed patterns produce no fires, redeployed patterns start fresh with empty state, stopped statements don't match and restarted ones resume. StartStopTwo runs 100 deploy/undeploy/redeploy cycles with an or-pattern over two event types. The Java @IterableUnbound iterator and StatementProperty assertions are Go-style differences not covered by the fluent API."
+    },
+    {
+      "id": "case.pattern-use-result",
+      "javaRuntimeIds": [
+        "java-runtime-1d2b4634f6df165c7a4c",
+        "java-runtime-7331d28182ac5ad8f852",
+        "java-runtime-c272a4f896f00efc9f39",
+        "java-runtime-67055d51125cbbec3f47",
+        "java-runtime-30ed4910a20939808e08",
+        "java-runtime-7c55b4804041def42992"
+      ],
+      "javaNames": [
+        "PatternNumeric",
+        "PatternObjectId",
+        "PatternFollowedByFilter",
+        "PatternPatternTypeCacheForRepeat",
+        "PatternBooleanExprRemoveConsiderTag",
+        "PatternBooleanExprRemoveConsiderArrayTag"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternUseResult.java"
+      ],
+      "goTests": [
+        "TestPatternNumericMatchesEsper",
+        "TestPatternObjectIdMatchesEsper",
+        "TestPatternFollowedByFilterMatchesEsper",
+        "TestPatternTypeCacheForRepeatMatchesEsper",
+        "TestPatternBooleanExprRemoveConsiderTagMatchesEsper",
+        "TestPatternBooleanExprRemoveConsiderArrayTagMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "followed-by",
+        "tag-correlation",
+        "match-until"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Tag-property correlation in followed-by filters replayed over the Java SupportBean_N/SupportBean_S0 event sets with exact match sequences. PatternFollowedByFilter drives 100 events with a fixed-seed PRNG (Java uses an unseeded Random) and asserts the same no-shared-userId invariant. The Java SupportFilterServiceHelper filter-count assertions in the RemoveConsider executions are engine-internal bookkeeping, recorded as a Go-style difference; the observable fire/no-fire matrix is asserted exactly."
     }
   ],
   "mappings": [
@@ -19828,14 +19873,18 @@
     {
       "capabilityId": "pattern.basic",
       "caseId": "case.pattern-start-stop"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-use-result"
     }
   ],
   "summary": {
-    "totalCases": 311,
+    "totalCases": 312,
     "totalCapabilities": 108,
-    "mappedCases": 293,
+    "mappedCases": 294,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1992
+    "disposedRuntimeIds": 1998
   }
 }
