@@ -1727,34 +1727,107 @@ func (w TimeWindowSpec) validate() error {
 	return nil
 }
 
-type TimeBatchWindowSpec struct{ Duration time.Duration }
+type TimeBatchWindowSpec struct {
+	Duration       time.Duration
+	ForceUpdate    bool
+	StartEager     bool
+	CalendarYears  int
+	CalendarMonths int
+	CalendarDays   int
+}
 
 func TimeBatch(duration time.Duration) TimeBatchWindowSpec {
 	return TimeBatchWindowSpec{Duration: duration}
 }
-func (TimeBatchWindowSpec) windowSpec()           {}
-func (w TimeBatchWindowSpec) description() string { return "time-batch(" + w.Duration.String() + ")" }
+
+// TimeBatchForce builds a time-batch window with Esper's control-keyword
+// flags. ForceUpdate delivers the update callback at every boundary even when
+// both the current and previous batch are empty; StartEager seeds the first
+// boundary at deployment time and implies ForceUpdate (Esper TimeBatchFlags:
+// start_eager sets force_update=true).
+func TimeBatchForce(duration time.Duration, forceUpdate, startEager bool) TimeBatchWindowSpec {
+	return TimeBatchWindowSpec{Duration: duration, ForceUpdate: forceUpdate || startEager, StartEager: startEager}
+}
+
+// TimeBatchCalendar creates a time-batch window with calendar-period
+// boundaries (Esper time_batch(1 month)).
+func TimeBatchCalendar(years, months, days int) TimeBatchWindowSpec {
+	return TimeBatchWindowSpec{CalendarYears: years, CalendarMonths: months, CalendarDays: days}
+}
+
+func (TimeBatchWindowSpec) windowSpec() {}
+func (w TimeBatchWindowSpec) description() string {
+	if w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
+		return fmt.Sprintf("time-batch(%dY%dM%dD)", w.CalendarYears, w.CalendarMonths, w.CalendarDays)
+	}
+	if !w.ForceUpdate && !w.StartEager {
+		return "time-batch(" + w.Duration.String() + ")"
+	}
+	flags := make([]string, 0, 2)
+	if w.ForceUpdate {
+		flags = append(flags, "force_update")
+	}
+	if w.StartEager {
+		flags = append(flags, "start_eager")
+	}
+	return fmt.Sprintf("time-batch(%s,%s)", w.Duration, strings.Join(flags, ","))
+}
 func (w TimeBatchWindowSpec) validate() error {
-	if w.Duration <= 0 {
+	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
+	if (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
 		return fmt.Errorf("esper: time-batch window duration must be positive, got %s", w.Duration)
 	}
 	return nil
 }
 
 type TimeLengthBatchWindowSpec struct {
-	Duration time.Duration
-	Size     int
+	Duration       time.Duration
+	Size           int
+	ForceUpdate    bool
+	StartEager     bool
+	CalendarYears  int
+	CalendarMonths int
+	CalendarDays   int
 }
 
 func TimeLengthBatch(duration time.Duration, size int) TimeLengthBatchWindowSpec {
 	return TimeLengthBatchWindowSpec{Duration: duration, Size: size}
 }
+
+// TimeLengthBatchForce builds a time-length batch window with Esper's control
+// keywords. ForceUpdate delivers the update callback at every boundary even
+// when both batches are empty; StartEager seeds the first boundary at
+// deployment time and implies ForceUpdate (TimeBatchFlags).
+func TimeLengthBatchForce(duration time.Duration, size int, forceUpdate, startEager bool) TimeLengthBatchWindowSpec {
+	return TimeLengthBatchWindowSpec{Duration: duration, Size: size, ForceUpdate: forceUpdate || startEager, StartEager: startEager}
+}
+
+// TimeLengthBatchCalendar creates a time-length batch window with
+// calendar-period boundaries.
+func TimeLengthBatchCalendar(years, months, days int, size int) TimeLengthBatchWindowSpec {
+	return TimeLengthBatchWindowSpec{Size: size, CalendarYears: years, CalendarMonths: months, CalendarDays: days}
+}
+
 func (TimeLengthBatchWindowSpec) windowSpec() {}
 func (w TimeLengthBatchWindowSpec) description() string {
-	return fmt.Sprintf("time-length-batch(%s,%d)", w.Duration, w.Size)
+	if w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
+		return fmt.Sprintf("time-length-batch(%dY%dM%dD,%d)", w.CalendarYears, w.CalendarMonths, w.CalendarDays, w.Size)
+	}
+	if !w.ForceUpdate && !w.StartEager {
+		return fmt.Sprintf("time-length-batch(%s,%d)", w.Duration, w.Size)
+	}
+	flags := make([]string, 0, 2)
+	if w.ForceUpdate {
+		flags = append(flags, "force_update")
+	}
+	if w.StartEager {
+		flags = append(flags, "start_eager")
+	}
+	return fmt.Sprintf("time-length-batch(%s,%d,%s)", w.Duration, w.Size, strings.Join(flags, ","))
 }
 func (w TimeLengthBatchWindowSpec) validate() error {
-	if w.Duration <= 0 || w.Size <= 0 {
+	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
+	if w.Size <= 0 || (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
 		return fmt.Errorf("esper: time-length-batch requires positive duration and size")
 	}
 	return nil
@@ -1786,30 +1859,66 @@ func (w FirstLengthWindowSpec) validate() error {
 	return nil
 }
 
-type FirstTimeWindowSpec struct{ Duration time.Duration }
+type FirstTimeWindowSpec struct {
+	Duration       time.Duration
+	CalendarYears  int
+	CalendarMonths int
+	CalendarDays   int
+}
 
 func FirstTime(duration time.Duration) FirstTimeWindowSpec {
 	return FirstTimeWindowSpec{Duration: duration}
 }
-func (FirstTimeWindowSpec) windowSpec()           {}
-func (w FirstTimeWindowSpec) description() string { return "first-time(" + w.Duration.String() + ")" }
+
+// FirstTimeCalendar creates a first-time window whose closing deadline is
+// measured with calendar arithmetic (Esper firsttime(1 month)).
+func FirstTimeCalendar(years, months, days int) FirstTimeWindowSpec {
+	return FirstTimeWindowSpec{CalendarYears: years, CalendarMonths: months, CalendarDays: days}
+}
+
+func (FirstTimeWindowSpec) windowSpec() {}
+func (w FirstTimeWindowSpec) description() string {
+	if w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
+		return fmt.Sprintf("first-time(%dY%dM%dD)", w.CalendarYears, w.CalendarMonths, w.CalendarDays)
+	}
+	return "first-time(" + w.Duration.String() + ")"
+}
 func (w FirstTimeWindowSpec) validate() error {
-	if w.Duration <= 0 {
-		return fmt.Errorf("esper: first-time window duration must be positive, got %s", w.Duration)
+	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
+	if (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
+		return fmt.Errorf("esper: first-time window requires a positive duration")
 	}
 	return nil
 }
 
-type TimeAccumWindowSpec struct{ Duration time.Duration }
+type TimeAccumWindowSpec struct {
+	Duration       time.Duration
+	CalendarYears  int
+	CalendarMonths int
+	CalendarDays   int
+}
 
 func TimeAccum(duration time.Duration) TimeAccumWindowSpec {
 	return TimeAccumWindowSpec{Duration: duration}
 }
-func (TimeAccumWindowSpec) windowSpec()           {}
-func (w TimeAccumWindowSpec) description() string { return "time-accum(" + w.Duration.String() + ")" }
+
+// TimeAccumCalendar creates a time-accum window whose expiry deadline is
+// measured with calendar arithmetic (Esper time_accum(1 month)).
+func TimeAccumCalendar(years, months, days int) TimeAccumWindowSpec {
+	return TimeAccumWindowSpec{CalendarYears: years, CalendarMonths: months, CalendarDays: days}
+}
+
+func (TimeAccumWindowSpec) windowSpec() {}
+func (w TimeAccumWindowSpec) description() string {
+	if w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
+		return fmt.Sprintf("time-accum(%dY%dM%dD)", w.CalendarYears, w.CalendarMonths, w.CalendarDays)
+	}
+	return "time-accum(" + w.Duration.String() + ")"
+}
 func (w TimeAccumWindowSpec) validate() error {
-	if w.Duration <= 0 {
-		return fmt.Errorf("esper: time-accum window duration must be positive, got %s", w.Duration)
+	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
+	if (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
+		return fmt.Errorf("esper: time-accum window requires a positive duration")
 	}
 	return nil
 }
@@ -2035,9 +2144,14 @@ func (w CompositeWindowSpec) validate() error {
 }
 
 type ExternallyTimedWindowSpec struct {
-	Timestamp Expr
-	Duration  time.Duration
-	Batch     bool
+	Timestamp       Expr
+	Duration        time.Duration
+	Batch           bool
+	ReferenceSet    bool
+	ReferenceMillis int64
+	CalendarYears   int
+	CalendarMonths  int
+	CalendarDays    int
 }
 
 type TimeOrderWindowSpec struct {
@@ -2086,16 +2200,50 @@ func ExternallyTimed(timestamp Expr, duration time.Duration) ExternallyTimedWind
 func ExternallyTimedBatch(timestamp Expr, duration time.Duration) ExternallyTimedWindowSpec {
 	return ExternallyTimedWindowSpec{Timestamp: timestamp, Duration: duration, Batch: true}
 }
+
+// ExternallyTimedWithReference supplies Esper's optional reference-point
+// argument for the sliding external-timestamp window. A zero reference is a
+// valid explicit reference and is distinguished from "no reference" by the
+// ReferenceSet flag.
+func ExternallyTimedWithReference(timestamp Expr, duration time.Duration, referenceMillis int64) ExternallyTimedWindowSpec {
+	return ExternallyTimedWindowSpec{Timestamp: timestamp, Duration: duration, ReferenceSet: true, ReferenceMillis: referenceMillis}
+}
+
+// ExternallyTimedBatchWithReference supplies Esper's optional reference-point
+// argument for ext_timed_batch (for example ext_timed_batch(ts, 10, 0L)).
+func ExternallyTimedBatchWithReference(timestamp Expr, duration time.Duration, referenceMillis int64) ExternallyTimedWindowSpec {
+	return ExternallyTimedWindowSpec{Timestamp: timestamp, Duration: duration, Batch: true, ReferenceSet: true, ReferenceMillis: referenceMillis}
+}
+
+// ExternallyTimedCalendar creates an externally-timestamped window with
+// calendar-period retention (Esper ext_timed(ts, 1 month)).
+func ExternallyTimedCalendar(timestamp Expr, years, months, days int) ExternallyTimedWindowSpec {
+	return ExternallyTimedWindowSpec{Timestamp: timestamp, CalendarYears: years, CalendarMonths: months, CalendarDays: days}
+}
+
+// ExternallyTimedBatchCalendar creates an externally-timestamped batch window
+// with calendar-period boundaries (Esper ext_timed_batch(ts, 1 month)).
+func ExternallyTimedBatchCalendar(timestamp Expr, years, months, days int) ExternallyTimedWindowSpec {
+	return ExternallyTimedWindowSpec{Timestamp: timestamp, Batch: true, CalendarYears: years, CalendarMonths: months, CalendarDays: days}
+}
+
 func (ExternallyTimedWindowSpec) windowSpec() {}
 func (w ExternallyTimedWindowSpec) description() string {
 	name := "externally-timed"
 	if w.Batch {
 		name = "externally-timed-batch"
 	}
+	if w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
+		return fmt.Sprintf("%s(%s,%dY%dM%dD)", name, w.Timestamp.Description(), w.CalendarYears, w.CalendarMonths, w.CalendarDays)
+	}
+	if w.ReferenceSet {
+		return fmt.Sprintf("%s(%s,%s,%d)", name, w.Timestamp.Description(), w.Duration, w.ReferenceMillis)
+	}
 	return name + "(" + w.Timestamp.Description() + "," + w.Duration.String() + ")"
 }
 func (w ExternallyTimedWindowSpec) validate() error {
-	if w.Timestamp == nil || w.Duration <= 0 {
+	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
+	if w.Timestamp == nil || (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
 		return fmt.Errorf("esper: externally-timed window requires timestamp and positive duration")
 	}
 	return nil

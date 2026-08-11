@@ -54,7 +54,7 @@ func windowUsesPreviousAccess(spec WindowSpec) bool {
 		return windowUsesPreviousAccess(window.Inner)
 	}
 	switch spec.(type) {
-	case TimeOrderWindowSpec, SortedWindowSpec:
+	case TimeOrderWindowSpec, SortedWindowSpec, TimeAccumWindowSpec:
 		return true
 	default:
 		return false
@@ -66,7 +66,7 @@ func windowUsesArrivalPrior(spec WindowSpec) bool {
 		return true
 	}
 	switch spec.(type) {
-	case TimeOrderWindowSpec, SortedWindowSpec:
+	case TimeOrderWindowSpec, SortedWindowSpec, TimeAccumWindowSpec:
 		return true
 	default:
 		return false
@@ -106,7 +106,7 @@ func windowPriorHistoryForEvent(spec WindowSpec, state *windowRuntimeState, targ
 		return nil
 	}
 	switch spec.(type) {
-	case TimeOrderWindowSpec, SortedWindowSpec:
+	case TimeOrderWindowSpec, SortedWindowSpec, TimeAccumWindowSpec:
 		return arrivalHistoryThrough(state.arrival, target)
 	default:
 		return nil
@@ -127,7 +127,7 @@ func windowPriorAccessByEvent(spec WindowSpec, state *windowRuntimeState) map[st
 		return result
 	}
 	switch spec.(type) {
-	case TimeOrderWindowSpec, SortedWindowSpec:
+	case TimeOrderWindowSpec, SortedWindowSpec, TimeAccumWindowSpec:
 		if len(state.arrival) == 0 {
 			return nil
 		}

@@ -154,6 +154,7 @@ type ResultBatch struct {
 	Old             []Result
 	Sequence        uint64
 	Time            time.Time
+	forced          bool
 	outputCountsSet bool
 	outputInserted  int64
 	outputRemoved   int64
@@ -4349,6 +4350,15 @@ func (s *Statement) dispatch(ctx context.Context, batch ResultBatch) error {
 }
 
 func (s *Statement) dispatchSync(ctx context.Context, batch ResultBatch) error {
+	if s.plan.query.selector == SelectRStream && len(batch.Old) > 0 && len(batch.New) == 0 {
+		// Remove-only (rstream) statements expose the outgoing/evicted rows
+		// as insert data: the listener's New channel carries the remove
+		// projection, mirroring Esper's rstream listener contract. Routing
+		// (routeResults) keeps consuming batch.Old so route targets and
+		// listeners observe the same remove semantics.
+		batch.New = append([]Result(nil), batch.Old...)
+		batch.Old = nil
+	}
 	s.mu.RLock()
 	listenerIDs := make([]uint64, 0, len(s.listeners))
 	for id := range s.listeners {
@@ -4441,6 +4451,7 @@ type windowRuntimeState struct {
 	arrival    []Event
 	started    bool
 	start      time.Time
+	scheduleAt time.Time
 	externalAt time.Time
 	keyed      map[string]storedEvent
 	keyOrder   []string
@@ -4901,6 +4912,9 @@ func windowRuntimeNearestSchedule(state *windowRuntimeState) (time.Time, bool) {
 	}
 	var nearest time.Time
 	found := false
+	if state.started && !state.scheduleAt.IsZero() {
+		nearest, found = earlierSchedule(nearest, found, state.scheduleAt)
+	}
 	for _, entry := range state.entries {
 		nearest, found = earlierSchedule(nearest, found, entry.expiresAt)
 	}
@@ -4942,6 +4956,9 @@ func coalesceStatementRuntimeSchedules(runtime *statementRuntime, at time.Time) 
 	if runtime == nil {
 		return
 	}
+	for _, state := range runtime.windows {
+		coalesceWindowSchedules(state, at)
+	}
 	if state := runtime.patternState; state != nil {
 		coalesceTime(&state.timerNext, at)
 		coalesceTime(&state.cronNext, at)
@@ -4962,6 +4979,26 @@ func coalesceStatementRuntimeSchedules(runtime *statementRuntime, at time.Time) 
 	}
 	for _, partition := range runtime.partitions {
 		coalesceStatementRuntimeSchedules(partition, at)
+	}
+}
+
+
+func coalesceWindowSchedules(state *windowRuntimeState, at time.Time) {
+	if state == nil {
+		return
+	}
+	coalesceTime(&state.scheduleAt, at)
+	for index := range state.entries {
+		coalesceTime(&state.entries[index].expiresAt, at)
+	}
+	for index := range state.pendingNew {
+		coalesceTime(&state.pendingNew[index].expiresAt, at)
+	}
+	for _, child := range state.children {
+		coalesceWindowSchedules(child, at)
+	}
+	for _, group := range state.groups {
+		coalesceWindowSchedules(group, at)
 	}
 }
 
@@ -5044,6 +5081,11 @@ func (r *statementRuntime) initializeAt(at time.Time) {
 			r.scheduleCron(r.query.output, at)
 		}
 	}
+	if err := r.seedInitialWindowSchedules(at); err != nil {
+		// Initialization must not fail after deployment; window schedule
+		// seeding only reads statically valid specs.
+		return
+	}
 	if r.query.pattern == nil || r.patternState == nil || r.query.pattern.root == nil {
 		return
 	}
@@ -5101,6 +5143,7 @@ type eventDelta struct {
 	historyByEvent  map[string][]Event
 	previousByEvent map[string][]Event
 	priorByEvent    map[string][]Event
+	forced          bool
 }
 
 func (s *Statement) process(ctx context.Context, now time.Time, event Event, variables map[string]Value) (ResultBatch, bool, error) {
@@ -5151,7 +5194,7 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			if err != nil {
 				return ResultBatch{}, false, err
 			}
-			return batch, !batch.empty(), nil
+			return batch, !batch.empty() || batch.forced, nil
 		}
 		batch, changed, err := partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
 		if changed && queryIteratorOnlyMethodSources(s.plan.query) {
@@ -5184,14 +5227,14 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		if dropped {
 			s.droppedEvent = true
 		}
-		return batch, !batch.empty(), nil
+		return batch, !batch.empty() || batch.forced, nil
 	}
 	if s.plan.query.trigger != nil {
 		batch, err := s.processTriggerRuntime(ctx, &s.runtime, now, event, variables)
 		if err != nil {
 			return ResultBatch{}, false, err
 		}
-		return batch, !batch.empty(), nil
+		return batch, !batch.empty() || batch.forced, nil
 	}
 	batch, changed, err := s.runtime.process(s.plan, event, now, variables)
 	if err != nil {
@@ -5585,7 +5628,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 			var err error
 			if s.plan.query.trigger != nil {
 				batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
-				partitionChanged = !batch.empty()
+				partitionChanged = !batch.empty() || batch.forced
 			} else {
 				batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
 			}
@@ -6236,7 +6279,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 			var partitionChanged bool
 			if s.plan.query.trigger != nil {
 				batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
-				partitionChanged = !batch.empty()
+				partitionChanged = !batch.empty() || batch.forced
 			} else {
 				batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
 			}
@@ -6347,7 +6390,7 @@ func (s *Statement) syncTemporalContextLocked(now time.Time) (ResultBatch, bool)
 			s.engine.retainContextPartitionLocked(s.plan.query.contextName, activeKey, partition)
 		}
 	}
-	if batch.empty() {
+	if batch.empty() && !batch.forced {
 		return ResultBatch{}, false
 	}
 	batch.Sequence = s.runtime.seq.Add(1)
@@ -6519,7 +6562,42 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 		return ResultBatch{}, false, err
 	}
 	batch = r.applyOutput(plan.query.output, batch, false, now, plan)
-	return batch, !batch.empty(), nil
+	return batch, !batch.empty() || batch.forced, nil
+}
+
+func (r *statementRuntime) seedInitialWindowSchedules(at time.Time) error {
+	if r == nil || r.query.input == nil {
+		return nil
+	}
+	var walk func(node *streamNode) error
+	walk = func(node *streamNode) error {
+		if node == nil {
+			return nil
+		}
+		if node.kind == streamWindow {
+			state := r.windows[node]
+			if state == nil {
+				state = &windowRuntimeState{}
+				r.windows[node] = state
+			}
+			switch window := node.window.(type) {
+			case TimeBatchWindowSpec:
+				if window.StartEager {
+					state.started = true
+					state.start = at
+					state.scheduleAt = timeBatchBoundary(window, state.start)
+				}
+			case TimeLengthBatchWindowSpec:
+				if window.StartEager {
+					state.started = true
+					state.start = timeLengthBatchDeadline(window, at)
+					state.scheduleAt = state.start
+				}
+			}
+		}
+		return walk(node.input)
+	}
+	return walk(r.query.input)
 }
 
 func (r *statementRuntime) context() context.Context {
@@ -6966,9 +7044,10 @@ func (s *Statement) expire(now time.Time, variables map[string]Value) (ResultBat
 			if patternChanged {
 				patternBatch.New = append(patternBatch.New, batch.New...)
 				patternBatch.Old = append(patternBatch.Old, batch.Old...)
-				if !batch.empty() {
+				if !batch.empty() || batch.forced {
 					patternBatch.Time = batch.Time
 				}
+				patternBatch.forced = patternBatch.forced || batch.forced
 				return patternBatch, true
 			}
 			return batch, changed
@@ -6982,15 +7061,17 @@ func (s *Statement) expire(now time.Time, variables map[string]Value) (ResultBat
 		if temporalChanged {
 			temporalBatch.New = append(temporalBatch.New, batch.New...)
 			temporalBatch.Old = append(temporalBatch.Old, batch.Old...)
-			if !batch.empty() {
+			if !batch.empty() || batch.forced {
 				temporalBatch.Time = batch.Time
 			}
+			temporalBatch.forced = temporalBatch.forced || batch.forced
 			return temporalBatch, true
 		}
 		return batch, changed
 	}
 	batch, _ := s.runtime.expireBatch(s.plan, now, variables)
-	return batch, !batch.empty()
+	changed := !batch.empty() || batch.forced
+	return batch, changed
 }
 
 func (s *Statement) expireContextSubqueriesLocked(now time.Time) {
@@ -7021,7 +7102,7 @@ func (s *Statement) expireContext(now time.Time, variables map[string]Value) (Re
 		batch.New = append(batch.New, partBatch.New...)
 		batch.Old = append(batch.Old, partBatch.Old...)
 	}
-	if batch.empty() {
+	if batch.empty() && !batch.forced {
 		return ResultBatch{}, false
 	}
 	batch.Sequence = s.runtime.seq.Add(1)
@@ -8171,13 +8252,13 @@ func (s *Statement) processNamedWindow(ctx context.Context, now time.Time, delta
 		if !result.empty() {
 			result.Sequence = s.runtime.seq.Add(1)
 		}
-		return result, !result.empty(), nil
+		return result, !result.empty() || result.forced, nil
 	}
 	batch, err := s.runtime.processNamedWindowDelta(s.plan, now, delta)
 	if err != nil {
 		return ResultBatch{}, false, err
 	}
-	return batch, !batch.empty(), nil
+	return batch, !batch.empty() || batch.forced, nil
 }
 
 func (r *statementRuntime) processNamedWindowDelta(plan Plan, now time.Time, delta NamedWindowDelta) (ResultBatch, error) {
@@ -9745,6 +9826,15 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 				result.historyByEvent[eventIdentity(event)] = append([]Event(nil), result.newEvents[:index+1]...)
 			}
 		}
+		if isLengthOrTimeBatchWindow(node.window) && len(result.newEvents) > 1 {
+			// LengthBatch/TimeLengthBatch/TimeBatch flush the whole batch as one
+			// new-data array; PREV/PRIOR resolve against the batch prefix like
+			// expression batch, so each row sees history through itself.
+			result.historyByEvent = make(map[string][]Event, len(result.newEvents))
+			for index, event := range result.newEvents {
+				result.historyByEvent[eventIdentity(event)] = append([]Event(nil), result.newEvents[:index+1]...)
+			}
+		}
 		if windowUsesPreviousAccess(node.window) {
 			result.previousByEvent = windowPreviousAccessByEvent(node.window, state)
 			if result.previousByEvent == nil {
@@ -9772,6 +9862,17 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		return result, nil
 	default:
 		return eventDelta{}, fmt.Errorf("esper: runtime encountered unknown stream node kind %d", node.kind)
+	}
+}
+
+func isLengthOrTimeBatchWindow(spec WindowSpec) bool {
+	switch window := spec.(type) {
+	case LengthBatchWindowSpec, TimeLengthBatchWindowSpec, TimeBatchWindowSpec:
+		return true
+	case ExternallyTimedWindowSpec:
+		return window.Batch
+	default:
+		return false
 	}
 }
 
@@ -9847,7 +9948,7 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 		}
 		result := eventDelta{}
 		for _, candidate := range inputDelta.oldEvents {
-			if windowUsesPreviousAccess(node.window) {
+			if windowUsesArrivalPrior(node.window) {
 				if history := windowPriorHistoryForEvent(node.window, state, candidate); history != nil {
 					if result.priorByEvent == nil {
 						result.priorByEvent = make(map[string][]Event)
@@ -10303,18 +10404,23 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		if !state.started {
 			state.started = true
 			state.start = now
+			state.scheduleAt = timeBatchBoundary(window, state.start)
 		}
 		state.pendingNew = append(state.pendingNew, stored)
 		return eventDelta{}, nil
 	case TimeLengthBatchWindowSpec:
 		if !state.started {
 			state.started = true
-			state.start = now
+			// Esper schedules the next callback at the current time plus the
+			// period whenever a batch is armed (including start_eager at
+			// deployment time); the schedule never stays anchored to the
+			// first event.
+			state.start = timeLengthBatchDeadline(window, now)
 		}
 		state.pendingNew = append(state.pendingNew, stored)
 		if len(state.pendingNew) >= window.Size {
 			result := flushPendingBatch(state)
-			state.start = now
+			state.start = timeLengthBatchDeadline(window, now)
 			return result, nil
 		}
 		return eventDelta{}, nil
@@ -10327,19 +10433,32 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		if window.Batch {
 			if !state.started {
 				state.started = true
-				state.start = externalAt
+				if window.ReferenceSet {
+					state.start = time.Unix(0, window.ReferenceMillis*int64(time.Millisecond)).UTC()
+					state.scheduleAt = nextExternallyTimedBoundary(state.start, externalAt, window)
+				} else {
+					state.start = externalAt
+					state.scheduleAt = externallyTimedBatchBoundary(window, state.start)
+				}
+			}
+			// Esper's ExternallyTimedBatchView checks the boundary before adding
+			// the arriving event: once the event timestamp passes the current
+			// boundary, the retained window flushes as new data (with the last
+			// batch as old) and the arriving event opens the next batch. The
+			// reference point (explicit or the first event) stays anchored; the
+			// boundary advances through reference + n*period until it passes the
+			// event timestamp.
+			if !externalAt.Before(state.scheduleAt) {
+				result = flushPendingBatch(state)
+				state.scheduleAt = nextExternallyTimedBoundary(state.scheduleAt, externalAt, window)
 			}
 			state.pendingNew = append(state.pendingNew, storedEvent{event: event, receivedAt: externalAt})
-			if !externalAt.Before(state.start.Add(window.Duration)) {
-				result = flushPendingBatch(state)
-				state.start = externalAt
-			}
 			state.externalAt = externalAt
 			return result, nil
 		}
 		kept := state.entries[:0]
 		for _, existing := range state.entries {
-			if existing.receivedAt.Add(window.Duration).After(externalAt) {
+			if externallyTimedWindowExpiry(window, existing.receivedAt).After(externalAt) {
 				kept = append(kept, existing)
 			} else {
 				result.oldEvents = append(result.oldEvents, existing.event)
@@ -10372,9 +10491,10 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 	case FirstTimeWindowSpec:
 		if !state.started {
 			state.started = true
-			state.start = now
+			state.start = r.initializedAt
+			state.scheduleAt = timeWindowDeadline(window.Duration, window.CalendarYears, window.CalendarMonths, window.CalendarDays, state.start)
 		}
-		if !now.Before(state.start.Add(window.Duration)) {
+		if !now.Before(state.scheduleAt) {
 			return eventDelta{}, nil
 		}
 		state.entries = append(state.entries, stored)
@@ -10384,8 +10504,18 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 			state.started = true
 			state.start = now
 		}
+		// Esper time_accum reschedules the whole-window callback at every
+		// arriving event: the newest event's deadline owns expiry.
+		state.start = now
+		state.scheduleAt = timeWindowDeadline(window.Duration, window.CalendarYears, window.CalendarMonths, window.CalendarDays, state.start)
 		state.entries = append(state.entries, stored)
-		return eventDelta{newEvents: []Event{event}}, nil
+		state.arrival = append(state.arrival, event)
+		return eventDelta{
+			newEvents: []Event{event},
+			priorByEvent: map[string][]Event{
+				eventIdentity(event): append([]Event(nil), state.arrival...),
+			},
+		}, nil
 	case ExpressionWindowSpec:
 		state.entries = append(state.entries, stored)
 		result := eventDelta{newEvents: []Event{event}}
@@ -10604,8 +10734,12 @@ func (r *statementRuntime) expire(now time.Time) eventDelta {
 	for _, node := range nodes {
 		state := r.windows[node]
 		delta := r.expireWindowState(node.window, state, now)
+		result.forced = result.forced || delta.forced
 		delta.history = windowHistory(node.window, state)
 		delta.historyByEvent = windowHistoryByEvent(node.window, state)
+		if len(delta.priorByEvent) == 0 && windowUsesArrivalPrior(node.window) {
+			delta.priorByEvent = windowPriorAccessByEvent(node.window, state)
+		}
 		if windowUsesPreviousAccess(node.window) {
 			delta.previousByEvent = windowPreviousAccessByEvent(node.window, state)
 			if delta.previousByEvent == nil {
@@ -10620,8 +10754,11 @@ func (r *statementRuntime) expire(now time.Time) eventDelta {
 			}
 		}
 		result = mergeDelta(result, delta)
-		if windowStateEmpty(state) {
+		if windowStateEmpty(state) && !delta.forced && !state.started {
 			delete(r.windows, node)
+		}
+		if _, isAccum := node.window.(TimeAccumWindowSpec); isAccum && len(delta.oldEvents) == 0 && len(delta.newEvents) == 0 && state.started {
+			result = mergeDelta(result, delta)
 		}
 	}
 	return result
@@ -10639,8 +10776,10 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 			if child == nil {
 				continue
 			}
-			result = mergeDelta(result, r.expireWindowState(window.Inner, child, now))
-			if windowStateEmpty(child) {
+			childDelta := r.expireWindowState(window.Inner, child, now)
+			result = mergeDelta(result, childDelta)
+			result.forced = result.forced || childDelta.forced
+			if windowStateEmpty(child) && !childDelta.forced {
 				delete(state.groups, key)
 				state.groupOrder = removeStringValue(state.groupOrder, key)
 			}
@@ -10648,12 +10787,16 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 		return result
 	}
 	if window, ok := spec.(CompositeWindowSpec); ok {
+		result := eventDelta{}
 		for index, childSpec := range window.Windows {
 			if index < len(state.children) {
-				r.expireWindowState(childSpec, state.children[index], now)
+				childDelta := r.expireWindowState(childSpec, state.children[index], now)
+				result.forced = result.forced || childDelta.forced
 			}
 		}
-		return reconcileCompositeWindow(state, window, now)
+		reconciled := reconcileCompositeWindow(state, window, now)
+		reconciled.forced = reconciled.forced || result.forced
+		return reconciled
 	}
 
 	var result eventDelta
@@ -10714,30 +10857,86 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 		// Esper TimeBatchView delivers a batch when the current batch or the
 		// previous batch holds events: an empty current batch still flushes the
 		// previous batch as old data once (no force-update, no reference point).
-		if state.started && !now.Before(state.start.Add(window.Duration)) && (len(state.pendingNew) > 0 || len(state.entries) > 0) {
-			result = mergeDelta(result, flushPendingBatch(state))
-			state.start = now
+		if state.started && !now.Before(state.scheduleAt) {
+			flush := flushPendingBatch(state)
+			result = mergeDelta(result, flush)
+			// The boundary schedule stays anchored: advance from the old
+			// reference, never re-anchor at the current time (deltaAddWReference).
+			state.start = advanceTimeBatchReference(state.start, window, now)
+			state.scheduleAt = timeBatchBoundary(window, state.start)
+			// Only keep the schedule armed while the flushed batch or the
+			// previous batch still holds events, or force-update is enabled;
+			// an all-empty callback does not post and does not reschedule
+			// (mirrors TimeBatchView.sendBatch).
+			if len(flush.oldEvents) > 0 || len(flush.newEvents) > 0 || window.ForceUpdate {
+				state.started = true
+				if window.ForceUpdate {
+					result.forced = true
+				}
+			} else {
+				state.started = false
+				state.scheduleAt = time.Time{}
+			}
 		}
 	case TimeLengthBatchWindowSpec:
-		if state.started && !now.Before(state.start.Add(window.Duration)) && len(state.pendingNew) > 0 {
-			result = mergeDelta(result, flushPendingBatch(state))
-			state.start = now
+		if state.started && !now.Before(state.start) {
+			// Java TimeLengthBatchView flushes the previous batch as old data
+			// and the pending batch as new data at every boundary; under
+			// force-update it also delivers the all-empty callback. The next
+			// callback re-anchors from the current time and only remains
+			// armed when the flush produced events (or force-update is on).
+			flush := flushPendingBatch(state)
+			result = mergeDelta(result, flush)
+			if len(flush.oldEvents) > 0 || len(flush.newEvents) > 0 || window.ForceUpdate {
+				state.start = timeLengthBatchDeadline(window, now)
+				state.scheduleAt = state.start
+			} else {
+				state.started = false
+				state.scheduleAt = time.Time{}
+			}
+			if window.ForceUpdate {
+				result.forced = true
+			}
 		}
 	case FirstTimeWindowSpec:
-		if state.started && !now.Before(state.start.Add(window.Duration)) {
-			for _, stored := range state.entries {
-				result.oldEvents = append(result.oldEvents, stored.event)
-			}
-			state.entries = nil
+		if state.started && !now.Before(timeWindowDeadline(window.Duration, window.CalendarYears, window.CalendarMonths, window.CalendarDays, state.start)) {
+			// The closing callback only flips the gate; retained events are
+			// never expelled from state.
+			state.started = false
+			state.scheduleAt = time.Time{}
 		}
 	case TimeAccumWindowSpec:
-		if state.started && !now.Before(state.start.Add(window.Duration)) {
+		if state.started && !now.Before(timeWindowDeadline(window.Duration, window.CalendarYears, window.CalendarMonths, window.CalendarDays, state.start)) {
 			for _, stored := range state.entries {
 				result.oldEvents = append(result.oldEvents, stored.event)
 			}
+			if len(result.oldEvents) > 0 {
+				if result.priorByEvent == nil {
+					result.priorByEvent = make(map[string][]Event)
+				}
+				addPriorHistories(result.priorByEvent, state.arrival, result.oldEvents)
+			}
+			removeArrivalEvents(&state.arrival, result.oldEvents)
 			state.entries = nil
 			state.started = false
+			state.scheduleAt = time.Time{}
 		}
+	case ExternallyTimedWindowSpec:
+		if window.Batch {
+			if state.started && !now.Before(state.scheduleAt) {
+				flush := flushPendingBatch(state)
+				result = mergeDelta(result, flush)
+				if len(flush.oldEvents) > 0 || len(flush.newEvents) > 0 {
+					state.start = advanceExternallyTimedBatchReference(state.start, window, now)
+					state.scheduleAt = externallyTimedBatchBoundary(window, state.start)
+				} else {
+					state.started = false
+					state.scheduleAt = time.Time{}
+				}
+			}
+		}
+		// The sliding form is insert-driven only; virtual time advancement
+		// does not expire rows for ext_timed.
 	case ExpressionWindowSpec:
 		var expiredCount int64
 		for len(state.entries) > 0 && !windowPredicate(window.Keep, state.entries, now, r.variables, expiredCount) {
@@ -10756,6 +10955,118 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 		}
 	}
 	return result
+}
+
+func timeWindowDeadline(duration time.Duration, years, months, days int, from time.Time) time.Time {
+	if years != 0 || months != 0 || days != 0 {
+		return from.AddDate(years, months, days)
+	}
+	return from.Add(duration)
+}
+
+func timeBatchBoundary(window TimeBatchWindowSpec, reference time.Time) time.Time {
+	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
+		return reference.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	}
+	return reference.Add(window.Duration)
+}
+
+func timeLengthBatchBoundary(window TimeLengthBatchWindowSpec, reference time.Time) time.Time {
+	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
+		return reference.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	}
+	return reference.Add(window.Duration)
+}
+
+func timeLengthBatchDeadline(window TimeLengthBatchWindowSpec, from time.Time) time.Time {
+	return timeLengthBatchBoundary(window, from)
+}
+
+// advanceTimeBatchReference advances a fixed anchored boundary schedule past
+// the current time, matching Esper's deltaAddWReference (boundaries stay at
+// reference + n*period and never re-anchor at now).
+func advanceTimeBatchReference(reference time.Time, window TimeBatchWindowSpec, now time.Time) time.Time {
+	period := window.Duration
+	years, months, days := window.CalendarYears, window.CalendarMonths, window.CalendarDays
+	for reference.Before(now) {
+		if years != 0 || months != 0 || days != 0 {
+			next := reference.AddDate(years, months, days)
+			if !next.After(reference) {
+				return reference.Add(period)
+			}
+			reference = next
+			continue
+		}
+		if period <= 0 {
+			return reference.Add(time.Second)
+		}
+		reference = reference.Add(period)
+	}
+	return reference
+}
+
+func advanceTimeLengthBatchReference(reference time.Time, window TimeLengthBatchWindowSpec, now time.Time) time.Time {
+	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
+		for reference.Before(now) {
+			next := reference.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+			if !next.After(reference) {
+				return reference.Add(window.Duration)
+			}
+			reference = next
+		}
+		return reference
+	}
+	for reference.Before(now) {
+		reference = reference.Add(window.Duration)
+	}
+	return reference
+}
+
+func externallyTimedWindowExpiry(window ExternallyTimedWindowSpec, timestamp time.Time) time.Time {
+	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
+		return timestamp.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	}
+	return timestamp.Add(window.Duration)
+}
+
+func externallyTimedBatchBoundary(window ExternallyTimedWindowSpec, reference time.Time) time.Time {
+	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
+		return reference.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	}
+	return reference.Add(window.Duration)
+}
+
+func nextExternallyTimedBoundary(reference, timestamp time.Time, window ExternallyTimedWindowSpec) time.Time {
+	boundary := externallyTimedBatchBoundary(window, reference)
+	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
+		for boundary.Before(timestamp) || boundary.Equal(timestamp) {
+			boundary = externallyTimedBatchBoundary(window, boundary)
+		}
+		return boundary
+	}
+	if window.Duration <= 0 {
+		return boundary
+	}
+	elapsed := timestamp.Sub(reference)
+	if elapsed <= 0 {
+		return boundary
+	}
+	steps := elapsed/window.Duration
+	if elapsed%window.Duration != 0 {
+		steps++
+	}
+	if steps == 0 {
+		return boundary
+	}
+	return reference.Add(window.Duration * time.Duration(steps))
+}
+
+func advanceExternallyTimedBatchReference(reference time.Time, window ExternallyTimedWindowSpec, now time.Time) time.Time {
+	boundary := externallyTimedBatchBoundary(window, reference)
+	for boundary.Before(now) || boundary.Equal(now) {
+		boundary = externallyTimedBatchBoundary(window, boundary)
+	}
+	return boundary
 }
 
 func windowStateEmpty(state *windowRuntimeState) bool {
@@ -13761,7 +14072,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		}
 	}
 
-	batch := ResultBatch{Time: now}
+	batch := ResultBatch{Time: now, forced: delta.forced}
 	batch.outputCountsSet = true
 	batch.outputInserted = int64(len(delta.newEvents))
 	batch.outputRemoved = int64(len(delta.oldEvents))
@@ -13853,6 +14164,18 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			delete(state.groups, key)
 		}
 	}
+	if delta.forced && len(newEntries) == 0 && len(oldEntries) == 0 && len(definition.groupBy) == 0 {
+		// force_update/start_eager boundaries deliver an empty aggregate row
+		// (Esper's assertPrice(null) contract): the aggregate evaluates over
+		// the empty group and every projection column is present.
+		values, visible := evaluateEmptyAggregateGroup(definition, now, r.variables)
+		if visible && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
+			newEntries = append(newEntries, aggregateResultEntry{
+				result: resultRow(newRow(plan.resultSchema, values)),
+				key:    "",
+			})
+		}
+	}
 	if len(plan.query.orderBy) > 0 {
 		orderAggregateResults(newEntries, plan.query.orderBy, definition, state.allEvents, state.allEverEvents, now, r.variables, false)
 		orderAggregateResults(oldEntries, plan.query.orderBy, definition, state.allEvents, state.allEverEvents, now, r.variables, true)
@@ -13865,7 +14188,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		batch.Old = append(batch.Old, entry.result)
 		batch.outputKeysOld = append(batch.outputKeysOld, entry.key)
 	}
-	if !batch.empty() {
+	if !batch.empty() || batch.forced {
 		if plan.query.distinct {
 			batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 		}
@@ -14339,7 +14662,7 @@ func evaluateAggregateExpression(expression Expr, ctx EvalContext) Value {
 }
 
 func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) ResultBatch {
-	batch := ResultBatch{Time: now}
+	batch := ResultBatch{Time: now, forced: delta.forced}
 	batch.outputCountsSet = true
 	batch.outputInserted = int64(len(delta.newEvents))
 	batch.outputRemoved = int64(len(delta.oldEvents))
@@ -14384,7 +14707,7 @@ func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) Res
 			batch.Old = applyResultWindow(batch.Old, plan.query)
 		}
 	}
-	if !batch.empty() {
+	if !batch.empty() || batch.forced {
 		batch.Sequence = r.seq.Add(1)
 	}
 	return batch

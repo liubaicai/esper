@@ -8,6 +8,7 @@ import (
 type viewUniqueMarketData struct {
 	Symbol string  `esper:"symbol"`
 	Price  float64 `esper:"price"`
+	Volume int64   `esper:"volume"`
 }
 
 // TestViewFirstUniqueSimpleMatchesEsper covers ViewFirstUniqueSimple:
