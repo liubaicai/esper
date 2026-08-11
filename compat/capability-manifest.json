@@ -791,7 +791,8 @@
         "PatternTimerScheduleJustPeriod",
         "PatternTimerScheduleDateWithPeriod",
         "PatternTimerScheduleUnlimitedRecurringPeriod",
-        "PatternObserverTimerScheduleTimeZoneEST"
+        "PatternObserverTimerScheduleTimeZoneEST",
+        "PatternGuardWhile"
       ],
       "goRefs": [
         "pattern.go",
@@ -805,7 +806,8 @@
         "pattern_observer_interval_parity_test.go",
         "pattern_observer_at_parity_test.go",
         "pattern_observer_schedule_parity_test.go",
-        "pattern_observer_schedule_multiform_parity_test.go"
+        "pattern_observer_schedule_multiform_parity_test.go",
+        "pattern_guardwhile_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -18369,6 +18371,43 @@
         "go-unit"
       ],
       "difference": "Go parity tests replay every Java timer:schedule form through the fluent API: ISO-8601 literals map to TimerScheduleISO (one-shot dates, P periods, R/Rn recurrences, full R/date/period forms with include-start), named parameters map to TimerScheduleWithPeriod with a typed PatternTimerScheduleSpec (StartAt, calendar+fixed PatternTimerPeriod, Repetitions with -1 for unlimited, IncludeStart). A zero Period with a StartAt is the one-shot date form and follows the same hasPeriod=false runtime path as the ISO date-only parse; a zero Period without a StartAt is rejected at Build like Java's 'Either the date or period parameter is required'. Past-dated recurrences skip already-due occurrences while counting them against bounded repetitions, and followed-by schedules evaluate dynamic ISO expressions per arming with the captured tag in scope (Concat/Func1 over tag fields). The timezone execution computes the local 9am date from CurrentTimestamp inside a GMT-4 zone."
+    },
+    {
+      "id": "case.pattern-guard-while",
+      "javaRuntimeIds": [
+        "java-runtime-aa6c31e987ec865a8cf2",
+        "java-runtime-bf4b4c7d66f189e40a73",
+        "java-runtime-8808f29a3bfdd475589f",
+        "java-runtime-4416cc3367e38623077a"
+      ],
+      "javaNames": [
+        "PatternGuardWhileSimple",
+        "PatternOp",
+        "PatternVariable",
+        "PatternInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternGuardWhile.java"
+      ],
+      "goTests": [
+        "TestPatternGuardWhileSimpleMatchesEsper",
+        "TestPatternGuardWhileOpMatchesEsper",
+        "TestPatternGuardWhileVariableMatchesEsper",
+        "TestPatternGuardWhileInvalidMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "guard",
+        "while",
+        "variables"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "The fluent counterpart of Esper's 'pattern while (expression)' guard is PatternStream.WhileGuard, an AST-level node with ExpressionGuard semantics: the guard inspects every match the guarded child reports - true passes, Boolean.FALSE quits the node permanently (guardQuit plus evaluateFalse to the parent, so a falsified root guard stops the whole pattern), and a null or absent result swallows the match without quitting. A pending definition-level Every materializes into the guarded AST child so '(every a=A) while (expr)' keeps the Java nesting. The pre-existing definition-level While remains a Go extension with clear-and-continue pre-filtering on raw events. Non-boolean literal guards are Go compile-time type errors via Expression[bool], the typed-API counterpart of Esper's boolean-guard parse error; unbound variable and field guards are rejected at Build. The SODA execution shares the EPL expectations and is replayed through the same fluent form."
     }
   ],
   "mappings": [
@@ -19591,14 +19630,18 @@
     {
       "capabilityId": "pattern.basic",
       "caseId": "case.pattern-observer-timer-schedule"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-guard-while"
     }
   ],
   "summary": {
-    "totalCases": 305,
+    "totalCases": 306,
     "totalCapabilities": 108,
-    "mappedCases": 287,
+    "mappedCases": 288,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1975
+    "disposedRuntimeIds": 1979
   }
 }

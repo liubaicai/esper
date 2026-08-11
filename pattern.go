@@ -24,6 +24,7 @@ const (
 	patternUntilNode
 	patternEveryNode
 	patternWithinNode
+	patternGuardWhileNode
 	patternTimerIntervalNode
 	patternTimerAtNode
 	patternTimerScheduleNode
@@ -54,6 +55,7 @@ type patternNode struct {
 	maximumExpr            Expr
 	everyKey               *exprNode
 	everyExpr              Expr
+	guardExpr              Expr
 	duration               time.Duration
 	durationExpr           Expr
 	calendar               *OutputCalendarPeriod
@@ -126,7 +128,7 @@ func lastPatternEvent(node *patternNode) *patternNode {
 			return event
 		}
 		return lastPatternEvent(node.child)
-	case patternNotNode, patternEveryNode, patternWithinNode:
+	case patternNotNode, patternEveryNode, patternWithinNode, patternGuardWhileNode:
 		return lastPatternEvent(node.child)
 	default:
 		return nil
@@ -188,6 +190,11 @@ func (n *patternNode) description() string {
 			return description + "," + n.child.description() + ")"
 		}
 		return "every(" + n.child.description() + ")"
+	case patternGuardWhileNode:
+		if n.guardExpr == nil {
+			return "while-guard(<nil>," + n.child.description() + ")"
+		}
+		return "while-guard(" + n.guardExpr.Description() + "," + n.child.description() + ")"
 	case patternWithinNode:
 		duration := patternWithinDurationDescription(n)
 		if n.maximum < 0 {
@@ -630,7 +637,7 @@ func (p PatternStream) Every() PatternStream {
 	}
 	if p.def.root != nil && !p.def.every && p.def.everyDistinct == nil {
 		switch p.def.root.kind {
-		case patternAndNode, patternOrNode, patternSequenceNode, patternMatchUntilNode, patternUntilNode, patternNotNode:
+		case patternAndNode, patternOrNode, patternSequenceNode, patternMatchUntilNode, patternUntilNode, patternNotNode, patternGuardWhileNode:
 			// every <compound>: Esper's every state node holds exactly one
 			// active child attempt and only spawns the next attempt when the
 			// current one completes or fails. A definition-level every would
@@ -696,7 +703,7 @@ func (p PatternStream) everyDistinctMaterialize(key Expr, expiry time.Duration, 
 	copyDefinition := *p.def
 	if p.def.root != nil && !p.def.every && p.def.everyDistinct == nil {
 		switch p.def.root.kind {
-		case patternAndNode, patternOrNode, patternSequenceNode, patternMatchUntilNode, patternUntilNode, patternNotNode, patternWithinNode:
+		case patternAndNode, patternOrNode, patternSequenceNode, patternMatchUntilNode, patternUntilNode, patternNotNode, patternWithinNode, patternGuardWhileNode:
 			copyDefinition.steps = nil
 			copyDefinition.root = &patternNode{
 				kind:                   patternEveryNode,
@@ -881,6 +888,47 @@ func (p PatternStream) While(guard Expression[bool]) PatternStream {
 	copyDefinition.guard = guard
 	copyDefinition.steps = append([]patternStep(nil), p.def.steps...)
 	copyDefinition.root = p.def.root
+	return PatternStream{env: p.env, def: &copyDefinition}
+}
+
+// WhileGuard applies an expression guard to the pattern, the fluent
+// counterpart of Esper's "pattern while (expression)" guard. The guard
+// inspects every match the guarded subexpression reports: a true result
+// passes the match through, a false result quits the guarded node
+// permanently (Esper's guardQuit, which also reports false to the parent),
+// and a null or absent result swallows the match without quitting. Unlike
+// While, which pre-filters raw input events at the definition level and
+// re-arms afterwards, WhileGuard evaluates against the completed match's
+// tags and follows ExpressionGuard semantics exactly. A pending
+// definition-level Every/EveryDistinct is materialized into the guarded AST
+// child so the guard wraps the repeating expression like the Java text form
+// "(every a=A) while (expression)".
+func (p PatternStream) WhileGuard(guard Expression[bool]) PatternStream {
+	if p.def == nil || p.def.root == nil {
+		return p
+	}
+	copyDefinition := *p.def
+	copyDefinition.steps = nil
+	copyDefinition.every = false
+	copyDefinition.everyDistinct = nil
+	copyDefinition.everyDistinctExpiry = 0
+	copyDefinition.everyDistinctExpirySet = false
+	child := p.def.root
+	if p.def.every || p.def.everyDistinct != nil {
+		child = &patternNode{
+			kind:                   patternEveryNode,
+			child:                  child,
+			everyExpr:              p.def.everyDistinct,
+			distinctExpiry:         p.def.everyDistinctExpiry,
+			distinctExpirySet:      p.def.everyDistinctExpirySet,
+			distinctExpiryCalendar: p.def.everyDistinctCalendar,
+		}
+	}
+	copyDefinition.root = &patternNode{
+		kind:      patternGuardWhileNode,
+		child:     child,
+		guardExpr: guard,
+	}
 	return PatternStream{env: p.env, def: &copyDefinition}
 }
 
@@ -1471,6 +1519,14 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 			if err := validatePatternDistinctKey(node.everyExpr, node.child); err != nil {
 				return err
 			}
+		}
+		return validatePatternNodeScope(node.child, seen, false)
+	case patternGuardWhileNode:
+		if node.guardExpr == nil {
+			return NewError(ErrorInvalidRule, "pattern while guard requires an expression")
+		}
+		if node.guardExpr.Type() != typeOf[bool]() {
+			return NewError(ErrorTypeMismatch, "pattern while guard expression must return bool")
 		}
 		return validatePatternNodeScope(node.child, seen, false)
 	case patternWithinNode:

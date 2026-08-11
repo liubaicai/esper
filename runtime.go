@@ -11161,7 +11161,7 @@ func newPatternProgress(node *patternNode) *patternProgress {
 		if node.right != nil {
 			progress.right = newPatternProgress(node.right)
 		}
-	case patternWithinNode:
+	case patternWithinNode, patternGuardWhileNode:
 		progress.child = newPatternProgress(node.child)
 	case patternUntilNode:
 		progress.child = newPatternProgress(node.child)
@@ -11210,7 +11210,7 @@ func patternCanStartWithoutEvent(node *patternNode) bool {
 		return patternCanStartWithoutEvent(node.left)
 	case patternAndNode, patternOrNode:
 		return patternCanStartWithoutEvent(node.left) || patternCanStartWithoutEvent(node.right)
-	case patternNotNode, patternEveryNode:
+	case patternNotNode, patternEveryNode, patternGuardWhileNode:
 		return patternCanStartWithoutEvent(node.child)
 	case patternMatchUntilNode:
 		return patternCanStartWithoutEvent(node.child) || patternCanStartWithoutEvent(node.right)
@@ -11289,7 +11289,7 @@ func armPatternProgressTimers(progress *patternProgress, at time.Time, variables
 		inheritPatternProgressTags(progress, progress.right)
 		armPatternProgressTimers(progress.left, at, variables)
 		armPatternProgressTimers(progress.right, at, variables)
-	case patternNotNode, patternEveryNode:
+	case patternNotNode, patternEveryNode, patternGuardWhileNode:
 		inheritPatternProgressTags(progress, progress.child)
 		armPatternProgressTimers(progress.child, at, variables)
 	case patternMatchUntilNode:
@@ -11733,6 +11733,8 @@ func patternProgressActive(progress *patternProgress) bool {
 		return progress.count > 0 || patternProgressActive(progress.child) || patternProgressActive(progress.right)
 	case patternEveryNode:
 		return progress.done || patternProgressActive(progress.child)
+	case patternGuardWhileNode:
+		return patternProgressActive(progress.child)
 	case patternWithinNode:
 		return progress.timerStarted && !progress.expired && !progress.done
 	case patternTimerIntervalNode, patternTimerAtNode, patternTimerScheduleNode, patternTimerCronNode:
@@ -11778,6 +11780,8 @@ func patternSatisfied(progress *patternProgress) bool {
 		return progress.done
 	case patternEveryNode:
 		return progress.done
+	case patternGuardWhileNode:
+		return patternSatisfied(progress.child)
 	case patternWithinNode:
 		if progress.expired {
 			return false
@@ -11882,6 +11886,11 @@ func patternCanContinueAfterMatch(progress *patternProgress) bool {
 			// whose every right leg keeps reporting stays resident inside the
 			// guard, exactly like EvalWithinStateNode forwarding isQuitted.
 			return patternCanContinueAfterMatch(progress.child)
+		case patternGuardWhileNode:
+			// An expression guard delegates survival to its child exactly
+			// like the timer guard: EvalGuardStateNode forwards the child's
+			// isQuitted, so an every leg inside keeps the guard resident.
+			return patternCanContinueAfterMatch(progress.child)
 		}
 	}
 	return false
@@ -11899,6 +11908,8 @@ func patternRepeatingLegAlive(progress *patternProgress) bool {
 	switch progress.node.kind {
 	case patternEveryNode:
 		return true
+	case patternGuardWhileNode:
+		return patternRepeatingLegAlive(progress.child)
 	case patternWithinNode:
 		if progress.done || progress.expired {
 			return false
@@ -11935,6 +11946,11 @@ func patternCompletionPermanent(progress *patternProgress) bool {
 		// A not node never quits on its own: it reports its begin-state match
 		// with isQuitted=false and only dies when the forbidden event arrives.
 		return false
+	case patternGuardWhileNode:
+		// An expression guard forwards its child's isQuitted: a completed
+		// filter child quits the guard with it, while an every child keeps
+		// reporting matches (Esper EvalGuardStateNode.evaluateTrue).
+		return patternCompletionPermanent(progress.child)
 	case patternWithinNode:
 		if patternWithinCanContinue(progress) {
 			return false
@@ -12324,6 +12340,31 @@ func patternSideFiredFresh(side *patternProgress, transition patternTransition, 
 	return trigger.isTimer && !patternSatisfied(side)
 }
 
+// inspectPatternWhileGuard evaluates a while-guard expression against a fresh
+// child match, mirroring ExpressionGuard.inspect: a true result passes the
+// match through, Boolean.FALSE quits the guard permanently, and a null or
+// non-boolean result swallows the match without quitting.
+func inspectPatternWhileGuard(guard Expr, match *patternProgress, trigger patternTrigger, variables map[string]Value) (bool, bool) {
+	if guard == nil || match == nil {
+		return false, false
+	}
+	value := guard.eval(EvalContext{
+		Event:     trigger.event,
+		Tags:      match.tags,
+		TagValues: match.tagValues,
+		Now:       trigger.now,
+		Variables: variables,
+	})
+	allowed, isBool := boolValue(value)
+	if !isBool {
+		return false, false
+	}
+	if allowed {
+		return true, false
+	}
+	return false, true
+}
+
 func advancePatternNode(progress *patternProgress, event Event, now time.Time, variables map[string]Value) []patternTransition {
 	return advancePatternNodeTrigger(progress, patternTrigger{event: event, now: now, consumptionLevel: -1}, variables)
 }
@@ -12649,6 +12690,55 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 				}
 				result = append(result, patternTransitionFrom(next, next.done && !next.expired, leftTransition, rightTransition))
 			}
+		}
+		return result
+
+	case patternGuardWhileNode:
+		next := clonePatternProgress(progress)
+		if next.expired {
+			// A falsified guard is permanently dead (Esper guardQuit).
+			return []patternTransition{{state: next, complete: false}}
+		}
+		childTransitions := advancePatternNodeTrigger(next.child, trigger, variables)
+		result := make([]patternTransition, 0, len(childTransitions))
+		for _, childTransition := range childTransitions {
+			candidate := clonePatternProgress(next)
+			candidate.child = childTransition.state
+			candidate.started = true
+			if childTransition.state != nil {
+				candidate.tags = clonePatternTags(childTransition.state.tags)
+				candidate.tagValues = clonePatternTagValues(childTransition.state.tagValues)
+			}
+			if childTransition.complete && patternSideFiredFresh(progress.child, childTransition, trigger) {
+				pass, falsified := inspectPatternWhileGuard(candidate.node.guardExpr, childTransition.state, trigger, variables)
+				if falsified {
+					// ExpressionGuard.inspect returned Boolean.FALSE: the
+					// guard quits permanently and reports false to its
+					// parent, taking the child down with it.
+					candidate.expired = true
+					candidate.child = nil
+					candidate.tags = nil
+					candidate.tagValues = nil
+					result = append(result, patternTransitionFrom(candidate, false, childTransition))
+					continue
+				}
+				if !pass {
+					// A null guard result swallows the match without
+					// quitting. A permanently completed child is gone in
+					// Esper as well (it reported isQuitted=true), so the
+					// swallowed captures must not linger in the guard.
+					candidate.tags = clonePatternTags(next.tags)
+					candidate.tagValues = clonePatternTagValues(next.tagValues)
+					if patternCompletionPermanent(childTransition.state) {
+						candidate.child = nil
+					}
+					result = append(result, patternTransitionFrom(candidate, false, childTransition))
+					continue
+				}
+			}
+			guardTransition := patternTransitionFrom(candidate, childTransition.complete, childTransition)
+			guardTransition.fireOnly = childTransition.fireOnly && childTransition.complete
+			result = append(result, guardTransition)
 		}
 		return result
 
@@ -13169,8 +13259,8 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				if transition.state == nil || (!transition.complete && !patternProgressActive(transition.state)) {
 					continue
 				}
-			if definition.everyDistinct != nil {
-				keyValue := definition.everyDistinct.eval(EvalContext{Event: event, Tags: transition.state.tags, TagValues: transition.state.tagValues, Now: now, Variables: r.variables})
+				if definition.everyDistinct != nil {
+					keyValue := definition.everyDistinct.eval(EvalContext{Event: event, Tags: transition.state.tags, TagValues: transition.state.tagValues, Now: now, Variables: r.variables})
 					key := encodeKey([]any{keyValue.State(), keyValue.Any()})
 					if _, exists := r.patternState.distinct[key]; exists {
 						continue

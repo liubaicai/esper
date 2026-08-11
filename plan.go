@@ -5201,6 +5201,13 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 			}
 		}
 		return e.validatePatternNodeFields(input, node.child, tagSources, requireTags)
+	case patternGuardWhileNode:
+		if node.guardExpr != nil {
+			if err := e.validateExprFields(input, node.guardExpr); err != nil {
+				return err
+			}
+		}
+		return e.validatePatternNodeFields(input, node.child, tagSources, requireTags)
 	case patternWithinNode:
 		if node.durationExpr != nil {
 			if err := e.validateExprFields(input, node.durationExpr); err != nil {
