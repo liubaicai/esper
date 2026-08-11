@@ -798,7 +798,10 @@
         "PatternDeadPattern",
         "PatternRepeatRouteEvent",
         "PatternStartStop",
-        "PatternUseResult"
+        "PatternUseResult",
+        "PatternOperatorFollowedByMax2Noprevent",
+        "PatternOperatorFollowedByMax2Prevent",
+        "PatternOperatorFollowedByMax4Prevent"
       ],
       "goRefs": [
         "pattern.go",
@@ -818,7 +821,8 @@
         "pattern_operatormix_parity_test.go",
         "pattern_repeatroute_parity_test.go",
         "pattern_startstop_parity_test.go",
-        "pattern_useresult_parity_test.go"
+        "pattern_useresult_parity_test.go",
+        "pattern_followed_by_max_pool_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -18627,6 +18631,49 @@
         "go-unit"
       ],
       "difference": "Tag-property correlation in followed-by filters replayed over the Java SupportBean_N/SupportBean_S0 event sets with exact match sequences. PatternFollowedByFilter drives 100 events with a fixed-seed PRNG (Java uses an unseeded Random) and asserts the same no-shared-userId invariant. The Java SupportFilterServiceHelper filter-count assertions in the RemoveConsider executions are engine-internal bookkeeping, recorded as a Go-style difference; the observable fire/no-fire matrix is asserted exactly."
+    },
+    {
+      "id": "case.pattern-followed-by-max-pool",
+      "javaRuntimeIds": [
+        "java-runtime-989402dc5619784265a1",
+        "java-runtime-c6d982061d67fbec7c79",
+        "java-runtime-7617aeba8a4a7a75c8cf",
+        "java-runtime-62bc3f954b56a8aa0143",
+        "java-runtime-f86fc3afbb0ac43de288"
+      ],
+      "javaNames": [
+        "PatternSinglePermFalseAndQuit",
+        "PatternOperatorFollowedByMaxInvalid",
+        "PatternOperatorFollowedByMax2Noprevent",
+        "PatternOperatorFollowedByMax2Prevent",
+        "PatternOperatorFollowedByMax4Prevent"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedByMax.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedByMax2Noprevent.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedByMax2Prevent.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternOperatorFollowedByMax4Prevent.java"
+      ],
+      "goTests": [
+        "TestPatternSinglePermFalseAndQuitMatchesEsper",
+        "TestPatternFollowedByMaxInvalidCasesMatchEsper",
+        "TestPatternFollowedByMaxPool2NopreventMatchesEsper",
+        "TestPatternFollowedByMaxPool2PreventMatchesEsper",
+        "TestPatternFollowedByMaxPool4PreventMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "followed-by-max",
+        "subexpression-pool",
+        "condition-handler"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Runtime-wide subexpression pool (WithPatternSubexpressionMax/WithPatternSubexpressionPreventStart) replays PatternSubexpressionPoolRuntimeSvcImpl accounting as a per-event delta against committed match state; per-statement counts in the overflow event match Java's ConditionPatternRuntimeSubexpressionMax exactly for the suite sequences. A completion that is synchronous with its spawn (a right side satisfied at start) fires before pool admission in Go, whereas Java rejects the spawn silently; no suite scenario exercises that combination. Context start/end pattern states are not charged to the pool."
     }
   ],
   "mappings": [
@@ -19877,14 +19924,18 @@
     {
       "capabilityId": "pattern.basic",
       "caseId": "case.pattern-use-result"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-followed-by-max-pool"
     }
   ],
   "summary": {
-    "totalCases": 312,
+    "totalCases": 313,
     "totalCapabilities": 108,
-    "mappedCases": 294,
+    "mappedCases": 295,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1998
+    "disposedRuntimeIds": 2003
   }
 }

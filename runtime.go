@@ -206,18 +206,20 @@ func (c *VirtualClock) Advance(at time.Time) error {
 }
 
 type engineConfig struct {
-	clock                    *VirtualClock
-	matchRecognize           MatchRecognizeRuntimeConfig
-	runtimeURI               string
-	services                 map[string]any
-	lockActivity             bool
-	runtimeMetricsConfigured bool
-	runtimeMetricsInterval   time.Duration
-	statementMetrics         *statementMetricsConfig
-	inboundPool              asyncPoolConfig
-	outboundPool             asyncPoolConfig
-	routePool                asyncPoolConfig
-	timerPool                asyncPoolConfig
+	clock                            *VirtualClock
+	matchRecognize                   MatchRecognizeRuntimeConfig
+	patternSubexpressionMax          int64
+	patternSubexpressionPreventStart bool
+	runtimeURI                       string
+	services                         map[string]any
+	lockActivity                     bool
+	runtimeMetricsConfigured         bool
+	runtimeMetricsInterval           time.Duration
+	statementMetrics                 *statementMetricsConfig
+	inboundPool                      asyncPoolConfig
+	outboundPool                     asyncPoolConfig
+	routePool                        asyncPoolConfig
+	timerPool                        asyncPoolConfig
 }
 
 type EngineOption func(*engineConfig)
@@ -273,6 +275,10 @@ type Engine struct {
 	pendingMatchRecognizeStateLimits   []MatchRecognizeStateLimitEvent
 	patternSubexpressionLimitListeners []PatternSubexpressionLimitListener
 	pendingPatternSubexpressionLimits  []PatternSubexpressionLimitEvent
+	patternSubexpressionMax            int64
+	patternSubexpressionPreventStart   bool
+	patternRuntimeLimitListeners       []PatternRuntimeSubexpressionLimitListener
+	pendingPatternRuntimeLimits        []PatternRuntimeSubexpressionLimitEvent
 	auditListeners                     map[uint64]AuditListener
 	nextAuditListenerID                uint64
 	pendingAuditRecords                []AuditRecord
@@ -327,6 +333,8 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 			MaxStates:    -1,
 			PreventStart: true,
 		},
+		patternSubexpressionMax:          -1,
+		patternSubexpressionPreventStart: true,
 	}
 	for _, option := range options {
 		if option != nil {
@@ -340,33 +348,35 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		cfg.runtimeURI = "default"
 	}
 	engine := &Engine{
-		env:                             env,
-		clock:                           cfg.clock,
-		runtimeURI:                      cfg.runtimeURI,
-		services:                        make(map[string]any, len(cfg.services)),
-		matchRecognizeStatePool:         newRowRecogStatePool(cfg.matchRecognize),
-		variables:                       make(map[string]Value),
-		contextVariables:                make(map[string]map[string]map[string]Value),
-		contextPartitionRefs:            make(map[string]map[string]int),
-		contextPartitionIDs:             make(map[string]map[string]int),
-		contextPartitionNextIDs:         make(map[string]int),
-		contextPartitionInstanceNextIDs: make(map[string]uint64),
-		contextPartitionDescriptors:     make(map[string]map[string]ContextPartitionDescriptor),
-		contextPartitionListeners:       make(map[string][]ContextPartitionStateListener),
-		auditListeners:                  make(map[uint64]AuditListener),
-		contextTableOwnership:           make(map[string]map[string]map[uint64]tableContextRowOwnership),
-		contextTemporalOrigins:          make(map[string]time.Time),
-		contextCreated:                  make(map[string]bool),
-		contextStatementRefs:            make(map[string]int),
-		variableChangeListeners:         make(map[string][]VariableChangeListener),
-		tables:                          make(map[string]*Table),
-		namedWindows:                    make(map[string]*NamedWindow),
-		statements:                      make(map[string]*Statement),
-		deployments:                     make(map[string]*Deployment),
-		resourceDependents:              make(map[deploymentResourceRef]map[string]struct{}),
-		activeProtectedModules:          make(map[string]string),
-		dataflows:                       make(map[*DataflowInstance]struct{}),
-		savedDataflowInstances:          make(map[string]*DataflowInstance),
+		env:                              env,
+		clock:                            cfg.clock,
+		runtimeURI:                       cfg.runtimeURI,
+		services:                         make(map[string]any, len(cfg.services)),
+		matchRecognizeStatePool:          newRowRecogStatePool(cfg.matchRecognize),
+		patternSubexpressionMax:          cfg.patternSubexpressionMax,
+		patternSubexpressionPreventStart: cfg.patternSubexpressionPreventStart,
+		variables:                        make(map[string]Value),
+		contextVariables:                 make(map[string]map[string]map[string]Value),
+		contextPartitionRefs:             make(map[string]map[string]int),
+		contextPartitionIDs:              make(map[string]map[string]int),
+		contextPartitionNextIDs:          make(map[string]int),
+		contextPartitionInstanceNextIDs:  make(map[string]uint64),
+		contextPartitionDescriptors:      make(map[string]map[string]ContextPartitionDescriptor),
+		contextPartitionListeners:        make(map[string][]ContextPartitionStateListener),
+		auditListeners:                   make(map[uint64]AuditListener),
+		contextTableOwnership:            make(map[string]map[string]map[uint64]tableContextRowOwnership),
+		contextTemporalOrigins:           make(map[string]time.Time),
+		contextCreated:                   make(map[string]bool),
+		contextStatementRefs:             make(map[string]int),
+		variableChangeListeners:          make(map[string][]VariableChangeListener),
+		tables:                           make(map[string]*Table),
+		namedWindows:                     make(map[string]*NamedWindow),
+		statements:                       make(map[string]*Statement),
+		deployments:                      make(map[string]*Deployment),
+		resourceDependents:               make(map[deploymentResourceRef]map[string]struct{}),
+		activeProtectedModules:           make(map[string]string),
+		dataflows:                        make(map[*DataflowInstance]struct{}),
+		savedDataflowInstances:           make(map[string]*DataflowInstance),
 	}
 	engine.inboundPool = newAsyncTaskPool(ThreadingInbound, cfg.inboundPool)
 	engine.outboundPool = newAsyncTaskPool(ThreadingOutbound, cfg.outboundPool)
@@ -5692,7 +5702,9 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 	nextActive := make([]patternMatch, 0, len(matches)+1)
 	terminal := false
 	completedAny := false
+	pool := newPatternPoolTracker(runtime, runtimeState)
 	for _, match := range matches {
+		pool.start(match)
 		transitions := advancePatternNodeTrigger(match.state, trigger, variables)
 		for _, transition := range transitions {
 			if transition.state == nil {
@@ -5709,7 +5721,7 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if transition.complete {
 				completedAny = true
 				completed = append(completed, candidate)
-				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
+				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition, pool) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternProgressTerminal(transition.state) {
@@ -5720,10 +5732,11 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if patternProgressTerminal(transition.state) {
 				terminal = true
 			}
-			if !transition.fireOnly && patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
+			if !transition.fireOnly && patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition, pool) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
+		pool.settle()
 	}
 	if startProgress != nil {
 		starts := advancePatternNodeTrigger(startProgress, trigger, variables)
@@ -5749,13 +5762,13 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 			if transition.complete {
 				completedAny = true
 				completed = append(completed, started)
-				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, started, definition) {
+				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, started, definition, pool) {
 					nextActive = append(nextActive, started)
 				}
 				if patternProgressTerminal(transition.state) {
 					terminal = true
 				}
-			} else if admitContextPatternMatch(runtime, phase, nextActive, started, definition) {
+			} else if admitContextPatternMatch(runtime, phase, nextActive, started, definition, pool) {
 				nextActive = append(nextActive, started)
 				if patternProgressTerminal(transition.state) {
 					terminal = true
@@ -5858,8 +5871,12 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 	completed := make([]patternMatch, 0)
 	nextActive := make([]patternMatch, 0, len(runtimeState.active))
 	terminal := false
+	pool := newPatternPoolTracker(runtime, runtimeState)
 	for _, match := range runtimeState.active {
+		pool.start(match)
 		if definition.within > 0 && !match.startedAt.Add(definition.within).After(now) {
+			// Within-expired branches release their pool charge.
+			pool.settle()
 			continue
 		}
 		transitions := advancePatternNodeTime(match.state, now, variables)
@@ -5877,7 +5894,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 			}
 			if transition.complete {
 				completed = append(completed, candidate)
-				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
+				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition, pool) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternProgressTerminal(transition.state) {
@@ -5889,7 +5906,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 					progress.tagValues = clonePatternTagValues(seedTagValues)
 					armPatternProgressTimers(progress, now, variables)
 					candidate := patternMatch{state: progress, startedAt: now, prearmed: patternCanStartWithoutEvent(definition.root)}
-					if patternProgressActive(progress) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
+					if patternProgressActive(progress) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition, pool) {
 						nextActive = append(nextActive, candidate)
 					}
 				}
@@ -5898,10 +5915,11 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 			if patternProgressTerminal(transition.state) {
 				terminal = true
 			}
-			if !transition.fireOnly && patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition) {
+			if !transition.fireOnly && patternProgressActive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition, pool) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
+		pool.settle()
 	}
 	runtimeState.active = nextActive
 	if terminal {
@@ -12034,13 +12052,19 @@ func patternMatchLimit(active []patternMatch, candidate patternMatch, definition
 	return false, &violations[0]
 }
 
-func (r *statementRuntime) admitPatternMatch(active []patternMatch, candidate patternMatch, definition *patternDefinition) bool {
-	return r.admitPatternMatchForContext(active, candidate, definition, "")
+func (r *statementRuntime) admitPatternMatch(active []patternMatch, candidate patternMatch, definition *patternDefinition, pool *patternPoolTracker) bool {
+	return r.admitPatternMatchForContext(active, candidate, definition, "", pool)
 }
 
-func (r *statementRuntime) admitPatternMatchForContext(active []patternMatch, candidate patternMatch, definition *patternDefinition, phase string) bool {
+func (r *statementRuntime) admitPatternMatchForContext(active []patternMatch, candidate patternMatch, definition *patternDefinition, phase string, pool *patternPoolTracker) bool {
 	allowed, violation := patternMatchLimit(active, candidate, definition)
-	if allowed || violation == nil || r == nil || r.engine == nil {
+	if allowed {
+		// The per-edge -[N]> limit passed; the runtime-wide subexpression
+		// pool (Esper's ConfigurationRuntimePatterns.maxSubexpressions)
+		// still decides whether the candidate may start.
+		return pool.admit(candidate)
+	}
+	if violation == nil || r == nil || r.engine == nil {
 		return allowed
 	}
 	deploymentID, statementName, _ := strings.Cut(r.rowRecogOwner, ":")
@@ -12065,11 +12089,11 @@ func (r *statementRuntime) admitPatternMatchForContext(active []patternMatch, ca
 	return false
 }
 
-func admitContextPatternMatch(runtime *statementRuntime, phase string, active []patternMatch, candidate patternMatch, definition *patternDefinition) bool {
+func admitContextPatternMatch(runtime *statementRuntime, phase string, active []patternMatch, candidate patternMatch, definition *patternDefinition, pool *patternPoolTracker) bool {
 	if runtime == nil {
 		return patternMatchWithinLimits(active, candidate, definition)
 	}
-	return runtime.admitPatternMatchForContext(active, candidate, definition, phase)
+	return runtime.admitPatternMatchForContext(active, candidate, definition, phase, pool)
 }
 
 type patternSequenceMaxCount struct {
@@ -13212,7 +13236,9 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 		nextActive := make([]patternMatch, 0, len(matches)+1)
 		terminal := false
 		completed := false
+		pool := newPatternPoolTracker(r, r.patternState)
 		for _, match := range matches {
+			pool.start(match)
 			transitions := advancePatternNodeTrigger(match.state, trigger, r.variables)
 			for _, transition := range transitions {
 				if transition.state == nil {
@@ -13231,7 +13257,8 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					if row, visible := r.evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 						batch.New = append(batch.New, resultRow(row))
 					}
-					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
+
+					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
 						nextActive = append(nextActive, candidate)
 					}
 					if patternWithinTerminal(transition.state) || patternCompletionPermanent(transition.state) {
@@ -13242,10 +13269,11 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				if patternProgressTerminal(transition.state) {
 					terminal = true
 				}
-				if !transition.fireOnly && patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
+				if !transition.fireOnly && patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
 					nextActive = append(nextActive, candidate)
 				}
 			}
+			pool.settle()
 		}
 
 		if startAllowed && !prearmedActive && !(definition.every && completed) && !(plan.query.discardPartialsOnMatch && completed) {
@@ -13279,13 +13307,13 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 					if row, visible := r.evaluatePatternMatch(definition, started, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, started) {
 						batch.New = append(batch.New, resultRow(row))
 					}
-					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, started, definition) {
+					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, started, definition, pool) {
 						nextActive = append(nextActive, started)
 					}
 					if patternWithinTerminal(transition.state) || patternCompletionPermanent(transition.state) {
 						terminal = true
 					}
-				} else if r.admitPatternMatch(nextActive, started, definition) {
+				} else if r.admitPatternMatch(nextActive, started, definition, pool) {
 					nextActive = append(nextActive, started)
 					if patternProgressTerminal(transition.state) {
 						terminal = true
@@ -13465,8 +13493,12 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 	nextActive := make([]patternMatch, 0, len(r.patternState.active))
 	terminal := false
 	completed := false
+	pool := newPatternPoolTracker(r, r.patternState)
 	for _, match := range r.patternState.active {
+		pool.start(match)
 		if definition.within > 0 && !match.startedAt.Add(definition.within).After(now) {
+			// Within-expired branches release their pool charge.
+			pool.settle()
 			continue
 		}
 		transitions := advancePatternNodeTime(match.state, now, r.variables)
@@ -13487,7 +13519,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 				if row, visible := r.evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 					batch.New = append(batch.New, resultRow(row))
 				}
-				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
+				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
 					nextActive = append(nextActive, candidate)
 				}
 				if patternWithinTerminal(transition.state) {
@@ -13497,7 +13529,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 					progress := newPatternProgress(definition.root)
 					armPatternProgressTimers(progress, now, r.variables)
 					candidate := patternMatch{state: progress, startedAt: now, prearmed: patternCanStartWithoutEvent(definition.root)}
-					if patternProgressActive(progress) && r.admitPatternMatch(nextActive, candidate, definition) {
+					if patternProgressActive(progress) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
 						nextActive = append(nextActive, candidate)
 					}
 				}
@@ -13506,10 +13538,11 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 			if patternWithinTerminal(transition.state) {
 				terminal = true
 			}
-			if !transition.fireOnly && patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition) {
+			if !transition.fireOnly && patternProgressActive(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
 				nextActive = append(nextActive, candidate)
 			}
 		}
+		pool.settle()
 	}
 	if plan.query.discardPartialsOnMatch && completed {
 		nextActive = nil
