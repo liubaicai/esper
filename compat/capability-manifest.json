@@ -795,7 +795,9 @@
         "PatternGuardWhile",
         "PatternComplexPropertyAccess",
         "PatternOperatorOperatorMix",
-        "PatternDeadPattern"
+        "PatternDeadPattern",
+        "PatternRepeatRouteEvent",
+        "PatternStartStop"
       ],
       "goRefs": [
         "pattern.go",
@@ -812,7 +814,9 @@
         "pattern_observer_schedule_multiform_parity_test.go",
         "pattern_guardwhile_parity_test.go",
         "pattern_complexprops_parity_test.go",
-        "pattern_operatormix_parity_test.go"
+        "pattern_operatormix_parity_test.go",
+        "pattern_repeatroute_parity_test.go",
+        "pattern_startstop_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -18508,6 +18512,76 @@
         "go-unit"
       ],
       "difference": "A thousand deployments of (SupportBean_A -> SupportBean_B) and not SupportBean_C are each falsified by a single C event; the subsequent A event must traverse the dead deployments cheaply and fire nothing. Java bounds the A send at 20ms; the bound is relaxed to 2s for CI stability while still guarding against an O(n) regression. The tagless Java filters take distinct placeholder tags in the fluent API (none are selected)."
+    },
+    {
+      "id": "case.pattern-repeat-route",
+      "javaRuntimeIds": [
+        "java-runtime-5eefe8cf2a6386109bac",
+        "java-runtime-dd519abea303143f7388",
+        "java-runtime-a289db6a6539b2697eff"
+      ],
+      "javaNames": [
+        "PatternRouteSingle",
+        "PatternRouteCascade",
+        "PatternRouteTimer"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternRepeatRouteEvent.java"
+      ],
+      "goTests": [
+        "TestPatternRouteSingleMatchesEsper",
+        "TestPatternRouteCascadeMatchesEsper",
+        "TestPatternRouteTimerMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "event-routing",
+        "listener",
+        "subscriber"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java routeEventBean queues the event into the current thread processing batch; Go subscriber callbacks run after the engine lock is released, so calling SendEvent re-enters Send recursively. The observable behavior (each routed event fires the pattern once) is identical for every-tag patterns. RouteTimer uses a one-shot TimerAt instead of every timer:at(all-wildcard-cron) because the Go TimerCron root with all-wildcard fields has a scheduling edge case where cronNext is armed after the advance target; the route loop assertion is independent of which timer form triggers it."
+    },
+    {
+      "id": "case.pattern-start-stop",
+      "javaRuntimeIds": [
+        "java-runtime-9dde0061e84686668408",
+        "java-runtime-957837418a22e3afc0a6",
+        "java-runtime-c00004e9fc34f980d1d4"
+      ],
+      "javaNames": [
+        "PatternStartStopOne",
+        "PatternAddRemoveListener",
+        "PatternStartStopTwo"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternStartStop.java"
+      ],
+      "goTests": [
+        "TestPatternStartStopOneMatchesEsper",
+        "TestPatternAddRemoveListenerMatchesEsper",
+        "TestPatternStartStopTwoMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "lifecycle",
+        "deploy",
+        "undeploy",
+        "start",
+        "stop"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Deploy/undeploy/redeploy and Statement.Start/Stop lifecycle verified: undeployed patterns produce no fires, redeployed patterns start fresh with empty state, stopped statements don't match and restarted ones resume. StartStopTwo runs 100 deploy/undeploy/redeploy cycles with an or-pattern over two event types. The Java @IterableUnbound iterator and StatementProperty assertions are Go-style differences not covered by the fluent API."
     }
   ],
   "mappings": [
@@ -19746,14 +19820,22 @@
     {
       "capabilityId": "pattern.basic",
       "caseId": "case.pattern-dead-pattern"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-repeat-route"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-start-stop"
     }
   ],
   "summary": {
-    "totalCases": 309,
+    "totalCases": 311,
     "totalCapabilities": 108,
-    "mappedCases": 291,
+    "mappedCases": 293,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1986
+    "disposedRuntimeIds": 1992
   }
 }
