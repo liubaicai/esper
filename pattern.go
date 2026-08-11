@@ -1574,6 +1574,9 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 			if node.durationExpr.Type() != typeOf[time.Duration]() {
 				return NewError(ErrorTypeMismatch, "timer interval duration expression must return time.Duration")
 			}
+			if expressionContainsSubquery(node.durationExpr) {
+				return NewError(ErrorInvalidRule, "subselects not allowed within pattern observer parameters, consider using a variable instead")
+			}
 		}
 		if node.calendar != nil {
 			durationForms++
@@ -1598,6 +1601,9 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		if node.scheduleExpr != nil {
 			if node.scheduleExpr.Type() != typeOf[string]() {
 				return NewError(ErrorTypeMismatch, "timer schedule ISO expression must return string")
+			}
+			if expressionContainsSubquery(node.scheduleExpr) {
+				return NewError(ErrorInvalidRule, "subselects not allowed within pattern observer parameters, consider using a variable instead")
 			}
 			if value := node.scheduleExpr.eval(EvalContext{}); value.IsPresent() {
 				iso, ok := value.Any().(string)
@@ -1645,6 +1651,13 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		if node.cron == nil {
 			return NewError(ErrorInvalidRule, "timer cron schedule is required")
 		}
+		for _, field := range []CronField{node.cron.Minute, node.cron.Hour, node.cron.DayOfMonth, node.cron.Month, node.cron.Weekday, node.cron.Second, node.cron.Millisecond, node.cron.Microsecond} {
+			for _, expression := range field.expressions() {
+				if expressionContainsSubquery(expression) {
+					return NewError(ErrorInvalidRule, "subselects not allowed within pattern observer parameters, consider using a variable instead")
+				}
+			}
+		}
 		if err := node.cron.validate(); err != nil {
 			return err
 		}
@@ -1652,6 +1665,34 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 		return NewError(ErrorInvalidRule, "unknown pattern expression kind")
 	}
 	return nil
+}
+
+// expressionContainsSubquery reports whether any descendant of the given
+// expression is a subquery evaluation. Java rejects subselects inside
+// pattern observer parameters ("Subselects are not allowed within pattern
+// observer parameters, please consider using a variable instead") while
+// allowing them in filter expressions; the fluent API applies the same
+// rule to timer interval, timer schedule and cron observer parameters.
+func expressionContainsSubquery(expression Expr) bool {
+	if expression == nil || expression.node() == nil {
+		return false
+	}
+	var walk func(node *exprNode) bool
+	walk = func(node *exprNode) bool {
+		if node == nil {
+			return false
+		}
+		if strings.HasPrefix(node.kind, "subquery-") {
+			return true
+		}
+		for _, child := range node.children {
+			if walk(child) {
+				return true
+			}
+		}
+		return false
+	}
+	return walk(expression.node())
 }
 
 func clonePatternTagSet(tags map[string]struct{}) map[string]struct{} {

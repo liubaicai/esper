@@ -803,7 +803,9 @@
         "PatternOperatorFollowedByMax2Prevent",
         "PatternOperatorFollowedByMax4Prevent",
         "PatternStartLoop",
-        "PatternSuperAndInterfaces"
+        "PatternSuperAndInterfaces",
+        "PatternInvalid",
+        "PatternExpressionText"
       ],
       "goRefs": [
         "pattern.go",
@@ -826,7 +828,9 @@
         "pattern_useresult_parity_test.go",
         "pattern_followed_by_max_pool_test.go",
         "pattern_startloop_parity_test.go",
-        "pattern_super_interfaces_parity_test.go"
+        "pattern_super_interfaces_parity_test.go",
+        "pattern_invalid_parity_test.go",
+        "pattern_expression_text_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -18732,9 +18736,68 @@
         "go-unit"
       ],
       "difference": "Java class hierarchies map to parented Map schemas (WithSchemaParent), with multi-parent dedup matching the interface diamond. Getter overrides (SupportOverrideOne/OneA/OneB) map to the effective most-derived property value stored per concrete record, since the shadowed base storage is unobservable through any Java getter; all 28 Java filter cases replay with exact match sets identified by concrete type name."
+    },
+    {
+      "id": "case.pattern-invalid",
+      "javaRuntimeIds": [
+        "java-runtime-6362b5b354305b18b707",
+        "java-runtime-68e95daa70604d06f62a",
+        "java-runtime-e53060fc0aef44313900"
+      ],
+      "javaNames": [
+        "PatternInvalidExpr",
+        "PatternStatementException",
+        "PatternUseResult"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternInvalid.java"
+      ],
+      "goTests": [
+        "TestPatternInvalidExprMatchesEsper",
+        "TestPatternInvalidStatementExceptionMatchesEsper",
+        "TestPatternInvalidUseResultMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "validation"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "The typed fluent API reports structural, type and scope errors at Build time and makes several EPL-surface invalidities unrepresentable at Go compile time: EPL text-syntax errors, timer:within as an observer root and timer:interval as a guard (Within is a guard combinator, TimerInterval an observer root), empty observer/guard parameter lists and non-duration guard parameters (within(\"s\")), and timer:at named parameters / single-parameter arity. The representable boundaries replay directly: the not-first followed-by compiles and deploys; subselects inside timer observer parameters are rejected (subselects not allowed within pattern observer parameters, consider using a variable instead) including cron field expressions; a numeric timezone parameter maps to the rejection of an unknown timezone name; and the single day-of-month + restricted weekday cron combination is rejected to match Java ScheduleSpecUtil (with the multi-value day-of-month form remaining valid like the resolved-set Java rule). A numeric range over a string field and a string bound over a numeric field are rejected as not compatible (no implicit String-to-numeric conversion); boolean range bounds stay rejected as not ordered."
+    },
+    {
+      "id": "case.pattern-expression-text",
+      "javaRuntimeIds": [
+        "java-runtime-b578d8864e3309bb4147"
+      ],
+      "javaNames": [
+        "PatternExpressionText"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternExpressionText.java"
+      ],
+      "goTests": [
+        "TestPatternExpressionTextOperatorsMatchesEsper",
+        "TestPatternExpressionTextTimersMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "object-model"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "The Java suite asserts AST-to-EPL text rendering (EvalRootForgeNode.toEPL). The fluent API builds the same ASTs directly, so each of the ~150 forms is asserted through the detached pattern model shape (Kind/children), a stable canonical description across two inspections, the operator-specific description markers (followed-by maximum -[N]>, match-until [min:max] bounds, within-max, consume levels, every-distinct expiry, timer-interval/at/within kinds), and a successful Build. Java text normalization cases (every (every b) renders as every every b, ESPER-339 every-precedence over repetition, until left-associativity) map to a single shared AST shape since the fluent builder carries no redundant parentheses. The canonical description is the Go typed pattern text (tag:predicate), not EPL; untagged filters and terminators take distinct placeholder tags that are never projected."
     }
-  ],
-  "mappings": [
+	],
+	"mappings": [
     {
       "capabilityId": "event.object-array",
       "caseId": "case.object-array-query-fields"
@@ -19993,15 +20056,23 @@
     },
     {
       "capabilityId": "pattern.basic",
-      "caseId": "case.pattern-super-interfaces"
+        "caseId": "case.pattern-super-interfaces"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-invalid"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-expression-text"
     }
-  ],
-  "summary": {
-    "totalCases": 315,
-    "totalCapabilities": 108,
-    "mappedCases": 297,
-    "partialCases": 1,
-    "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2005
-  }
+	],
+	"summary": {
+    "totalCases": 317,
+		"totalCapabilities": 108,
+    "mappedCases": 299,
+		"partialCases": 1,
+		"approvedDifferenceCases": 17,
+    "disposedRuntimeIds": 2009
+	}
 }

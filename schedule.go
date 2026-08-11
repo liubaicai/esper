@@ -283,6 +283,21 @@ func OutputAt(schedule CronSchedule, base ...OutputPolicy) OutputPolicy {
 	return policy
 }
 
+// staticSingleValue reports whether the field statically resolves to exactly
+// one concrete value: a single CronValues entry or a degenerate CronRange
+// whose bounds coincide. Expression and special forms are not statically
+// countable and report false.
+func (field CronField) staticSingleValue() bool {
+	switch field.kind {
+	case cronFieldValues:
+		return len(field.values) == 1
+	case cronFieldRange:
+		return field.start == field.end
+	default:
+		return false
+	}
+}
+
 func (field CronField) isWildcard() bool {
 	return field.kind == cronFieldWildcard
 }
@@ -578,6 +593,15 @@ func (schedule CronSchedule) validate() error {
 	}
 	if schedule.Weekday.special != cronSpecialNone && !schedule.DayOfMonth.isWildcard() {
 		return NewError(ErrorInvalidRule, "cron special weekday operator cannot be combined with a day-of-month field")
+	}
+	// Java ScheduleSpecUtil rejects a schedule whose day-of-month resolves to
+	// a single value while the day-of-week field is restricted ("Invalid
+	// combination between days of week and days of month fields for
+	// timer:at"). Multi-value, stepped, ranged and expression day-of-month
+	// fields remain combinable, matching the resolved-set semantics of the
+	// Java validator.
+	if schedule.DayOfMonth.staticSingleValue() && !schedule.Weekday.isWildcard() {
+		return NewError(ErrorInvalidRule, "cron single day-of-month value cannot be combined with a weekday field")
 	}
 	if schedule.TimeZone != "" {
 		if _, err := cronLocation(schedule.TimeZone); err != nil {

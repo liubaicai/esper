@@ -130,6 +130,8 @@ func patternNodeModel(node *patternNode) PatternNodeModel {
 		appendChild(node.right)
 	case patternNotNode, patternEveryNode, patternWithinNode:
 		appendChild(node.child)
+	case patternGuardWhileNode:
+		appendChild(node.child)
 	}
 	return model
 }
@@ -154,6 +156,8 @@ func publicPatternNodeKind(kind patternNodeKind) string {
 		return "every"
 	case patternWithinNode:
 		return "within"
+	case patternGuardWhileNode:
+		return "while-guard"
 	case patternTimerIntervalNode:
 		return "timer-interval"
 	case patternTimerAtNode:

@@ -141,6 +141,30 @@ func betweenExpression(kind string, value, lower, upper Expr, negate bool) Expre
 			break
 		}
 	}
+	if node.configurationError == "" {
+		// Esper rejects ranges whose operands belong to different comparison
+		// domains (for example a string field between numeric bounds, or a
+		// numeric field between string bounds) because no implicit conversion
+		// exists between them. Untyped and interface operands defer to the
+		// runtime evaluation, which yields false for incomparable values.
+		referenceDomain := ""
+		referenceType := ""
+		for _, operand := range []Expr{value, lower, upper} {
+			domain := betweenComparisonDomain(operand.Type())
+			if domain == "" {
+				continue
+			}
+			if referenceDomain == "" {
+				referenceDomain = domain
+				referenceType = mathTypeDescription(operand.Type())
+				continue
+			}
+			if domain != referenceDomain {
+				node.configurationError = fmt.Sprintf("%s operands are not compatible: %s and %s", kind, referenceType, mathTypeDescription(operand.Type()))
+				break
+			}
+		}
+	}
 	return typedExpr[bool]{n: node, fn: func(ctx EvalContext) Value {
 		if value == nil || lower == nil || upper == nil {
 			return Null()
@@ -169,6 +193,39 @@ func betweenExpression(kind string, value, lower, upper Expr, negate bool) Expre
 		}
 		return Present(matched)
 	}}
+}
+
+// betweenComparisonDomain classifies the static comparison domain of an
+// ordered range operand. Numeric operands (including big.Int and big.Rat)
+// share one domain and strings form the other; pointer chains unwrap to the
+// element domain. Untyped or interface operands return an empty domain and
+// defer compatibility to runtime evaluation.
+func betweenComparisonDomain(typ reflect.Type) string {
+	if typ == nil || typ == typeOf[any]() {
+		return ""
+	}
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+		if typ == nil {
+			return ""
+		}
+	}
+	if typ.Kind() == reflect.Interface {
+		return ""
+	}
+	if typ == typeOf[big.Int]() || typ == typeOf[big.Rat]() {
+		return "numeric"
+	}
+	switch typ.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return "numeric"
+	case reflect.String:
+		return "string"
+	default:
+		return ""
+	}
 }
 
 func inCollectionType(typ reflect.Type) bool {
