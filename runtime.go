@@ -14017,6 +14017,17 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	if definition == nil {
 		return ResultBatch{}, NewError(ErrorInvalidRule, "aggregate runtime has no definition")
 	}
+	if len(definition.groupBy) == 0 {
+		if keys := implicitAggregateGroupBy(definition.input); len(keys) > 0 {
+			// Esper's groupwin view partitions a child aggregate per view key.
+			// The fluent Aggregate chain keeps GroupWindow as a retention
+			// specification, so materialize those keys as an implicit runtime
+			// grouping dimension while leaving the public selection unchanged.
+			copyDefinition := *definition
+			copyDefinition.groupBy = keys
+			definition = &copyDefinition
+		}
+	}
 	if definition.where != nil {
 		delta.newEvents = filterAggregateEvents(delta.newEvents, definition.where, now, r.variables, r.engine)
 		delta.oldEvents = filterAggregateEvents(delta.oldEvents, definition.where, now, r.variables, r.engine)
@@ -14204,6 +14215,20 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		}
 	}
 	return batch, nil
+}
+
+func implicitAggregateGroupBy(input *streamNode) []Expr {
+	for node := input; node != nil; node = node.input {
+		if node.kind != streamWindow {
+			continue
+		}
+		grouped, ok := node.window.(GroupWindowSpec)
+		if !ok {
+			continue
+		}
+		return append([]Expr(nil), grouped.effectiveKeys()...)
+	}
+	return nil
 }
 
 func (r *statementRuntime) aggregateBatchSafely(delta eventDelta, plan Plan, now time.Time) (batch ResultBatch, err error) {

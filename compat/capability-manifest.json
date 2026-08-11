@@ -19487,6 +19487,111 @@
         "intersect"
       ],
       "status": "mapped"
+    },
+    {
+      "id": "case.view-group-matrix",
+      "javaRuntimeIds": [
+        "java-runtime-03ed11fd1e5c3a3d11c2",
+        "java-runtime-74e476ad16bf62d4a9e0",
+        "java-runtime-942d359f7bb1302684bb",
+        "java-runtime-7bd36b6fe5567b066794",
+        "java-runtime-842bde62118b9b8cae2d",
+        "java-runtime-806120fdd2130ab1f275",
+        "java-runtime-737a5f1ffd4c6a6c8924",
+        "java-runtime-639bc9b69621f3b6a417",
+        "java-runtime-76b2880d9b2620e7e903",
+        "java-runtime-68ef8076bc96595cbfd0",
+        "java-runtime-563f2c37fb66e3d067ca",
+        "java-runtime-d9833ceebeb7008c04ba"
+      ],
+      "javaStaticIds": [
+        "java-1eaa11c89e08defabf22"
+      ],
+      "javaNames": [
+        "ViewGroupStats",
+        "ViewGroupCorrel",
+        "ViewGroupLinest",
+        "ViewGroupTimeBatch",
+        "ViewGroupTimeAccum",
+        "ViewGroupTimeOrder",
+        "ViewGroupTimeLengthBatch",
+        "ViewGroupLengthWin",
+        "ViewGroupLengthBatch",
+        "ViewGroupTimeWin",
+        "ViewGroupExpressionGrouped",
+        "ViewGroupExpressionBatch"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
+      ],
+      "goTests": [
+        "TestViewGroupBatchAndAccumParity",
+        "TestViewGroupStatisticsCorrelationAndRegressionParity",
+        "TestGroupedTimeOrderWindowMatchesExpiryLifecycle",
+        "TestGroupWindowKeepsIndependentLengthState",
+        "TestGroupWindowExpiresEachPartitionOnVirtualTime",
+        "TestViewExpressionWindowGroupedAggregationParity",
+        "TestViewExpressionBatchGroupedAggregationParity"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "group-window",
+        "batch",
+        "aggregate",
+        "time"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go maps groupwin child retention through GroupWindow and exposes grouped derived statistics through fluent Aggregate; Java #uni/#correl/#linest view properties and EPL/SODA forms collapse to typed selection expressions. Group reclaim hints, performance thresholds, serde-only escaped property parsing, and full shared Java/Go trace remain outside this matrix."
+    },
+    {
+      "id": "case.view-intersect-matrix",
+      "javaRuntimeIds": [
+        "java-runtime-287c4340cac2789867f8",
+        "java-runtime-58fab77693358d91bdda",
+        "java-runtime-681a89d65892a46e95b5",
+        "java-runtime-3bc191e8be20f8dc5f76",
+        "java-runtime-dcff6b4d2d60a3cc0d6b",
+        "java-runtime-fe46d38d61a0dcd75865"
+      ],
+      "javaStaticIds": [
+        "java-099d757b97d6b93b2878"
+      ],
+      "javaNames": [
+        "ViewIntersectThreeUnique",
+        "ViewIntersectTwoUnique",
+        "ViewIntersectTimeWin",
+        "ViewIntersectTimeWinReversed",
+        "ViewIntersectTimeWinSODA",
+        "ViewIntersectTimeUniqueMultikey"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewIntersect.java"
+      ],
+      "goTests": [
+        "TestViewIntersectUniqueMatrixParity",
+        "TestViewIntersectTimeUniqueParity"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "intersect",
+        "unique",
+        "time",
+        "multikey"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go uses IntersectWindows with typed Unique/UniqueBy children; Java reversed declaration order and SODA compilation are represented by the same fluent runtime matrix, while Named Window, pattern, subselect and full trace variants remain separate."
     }
   ],
   "mappings": [
@@ -20821,14 +20926,22 @@
     {
       "capabilityId": "view.window-core",
       "caseId": "case.view-intersect-basic"
+    },
+    {
+      "capabilityId": "view.window-core",
+      "caseId": "case.view-group-matrix"
+    },
+    {
+      "capabilityId": "view.window-core",
+      "caseId": "case.view-intersect-matrix"
     }
   ],
   "summary": {
-    "totalCases": 333,
+    "totalCases": 335,
     "totalCapabilities": 108,
-    "mappedCases": 315,
+    "mappedCases": 317,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2076
+    "disposedRuntimeIds": 2094
   }
 }
