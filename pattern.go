@@ -343,7 +343,9 @@ type PatternTimerPeriod struct {
 // Repetitions value means one occurrence, a positive value bounds the number
 // of occurrences, and -1 means unlimited recurrence. IncludeStart controls
 // whether StartAt itself is an occurrence; it is useful for matching the
-// Java date/period and R/date/period forms precisely.
+// Java date/period and R/date/period forms precisely. A zero Period with a
+// StartAt is the one-shot date form (Esper timer:schedule(date: X)); a zero
+// Period without a StartAt is rejected during Build.
 type PatternTimerScheduleSpec struct {
 	StartAt      *time.Time
 	Period       PatternTimerPeriod
@@ -1559,7 +1561,18 @@ func validatePatternNodeScope(node *patternNode, seen map[string]struct{}, allow
 			if node.scheduleRepetitions < -1 {
 				return NewError(ErrorInvalidRule, "timer schedule repetitions must be -1 or non-negative")
 			}
-			return validatePatternTimerPeriod(*node.schedulePeriod)
+			period := *node.schedulePeriod
+			if period.Years == 0 && period.Months == 0 && period.Days == 0 && period.FixedDuration == 0 {
+				// Esper timer:schedule(date: X) is a one-shot without a
+				// period; mirror the ISO date-only form. A spec with
+				// neither date nor period is rejected like Java's
+				// "Either the date or period parameter is required".
+				if !node.scheduleAnchorSet {
+					return NewError(ErrorInvalidRule, "timer schedule requires a date or period parameter")
+				}
+				return nil
+			}
+			return validatePatternTimerPeriod(period)
 		}
 		if len(node.schedule) == 0 {
 			return NewError(ErrorInvalidRule, "timer schedule requires at least one time")

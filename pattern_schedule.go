@@ -109,11 +109,15 @@ func patternTimerScheduleSpecFromNode(node *patternNode, at time.Time, tags map[
 	if !node.scheduleRepetitionsSet {
 		repetitions = 1
 	}
+	period := *node.schedulePeriod
+	// A zero period with an anchor is the one-shot date form (Esper
+	// timer:schedule(date: X)), matching the ISO date-only parse.
+	hasPeriod := period.Years != 0 || period.Months != 0 || period.Days != 0 || period.FixedDuration != 0
 	return patternTimerScheduleSpec{
 		start:        node.scheduleAnchor,
 		hasStart:     node.scheduleAnchorSet,
-		period:       *node.schedulePeriod,
-		hasPeriod:    true,
+		period:       period,
+		hasPeriod:    hasPeriod,
 		repetitions:  repetitions,
 		includeStart: node.scheduleIncludeAnchor,
 	}, true

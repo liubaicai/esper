@@ -783,7 +783,15 @@
         "PatternAtWeekdaysPrepared",
         "PatternAtWeekdaysVariable",
         "PatternExpression",
-        "PatternEvery15thMonth"
+        "PatternEvery15thMonth",
+        "PatternTimerScheduleSimple",
+        "PatternObserverTimerScheduleMultiform",
+        "PatternTimerScheduleLimitedWDateAndPeriod",
+        "PatternTimerScheduleJustDate",
+        "PatternTimerScheduleJustPeriod",
+        "PatternTimerScheduleDateWithPeriod",
+        "PatternTimerScheduleUnlimitedRecurringPeriod",
+        "PatternObserverTimerScheduleTimeZoneEST"
       ],
       "goRefs": [
         "pattern.go",
@@ -795,7 +803,9 @@
         "pattern_consumption_test.go",
         "pattern_composite_parity_test.go",
         "pattern_observer_interval_parity_test.go",
-        "pattern_observer_at_parity_test.go"
+        "pattern_observer_at_parity_test.go",
+        "pattern_observer_schedule_parity_test.go",
+        "pattern_observer_schedule_multiform_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -18308,6 +18318,57 @@
         "go-unit"
       ],
       "difference": "Go parity tests replay the Java weekday sweep starting Sunday 2008-08-03 10:00 UTC and assert fires land exactly at 08:00 on Mon Aug 4 through Fri Aug 8: cron weekday values number Sunday=0 through Saturday=6 exactly like Esper's ScheduleSpec (7 accepted as a Sunday alias), so [1,2,3,4,5] is Monday..Friday. The fluent API composes the cron fields as a CronSchedule with CronValues/CronWildcard/CronEvery/CronValuesExpr; EPL inline arithmetic in cron fields maps to Subtract/Add over Literals inside CronValuesExpr, variables map to VariableRef, and ?::int substitution maps to 1-based ParameterAt with DeployWithPositionalParameters; the EPL every wrapper over a recurring cron observer is retained in the fluent shape and fires once per occurrence."
+    },
+    {
+      "id": "case.pattern-observer-timer-schedule",
+      "javaRuntimeIds": [
+        "java-runtime-c52eda0224d18ab81cbf",
+        "java-runtime-ddae9b797e199d406e71",
+        "java-runtime-6a227ce420b0d42b20e6",
+        "java-runtime-8834101741d65bd30d24",
+        "java-runtime-8d6a2f3f66b9cd55055d",
+        "java-runtime-15b8c1050cdf38920faa",
+        "java-runtime-232805a545085ead7a7e",
+        "java-runtime-c8ca9ff6aac4e4688d13"
+      ],
+      "javaNames": [
+        "PatternTimerScheduleSimple",
+        "PatternObserverTimerScheduleMultiform",
+        "PatternTimerScheduleLimitedWDateAndPeriod",
+        "PatternTimerScheduleJustDate",
+        "PatternTimerScheduleJustPeriod",
+        "PatternTimerScheduleDateWithPeriod",
+        "PatternTimerScheduleUnlimitedRecurringPeriod",
+        "PatternObserverTimerScheduleTimeZoneEST"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerSchedule.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerScheduleTimeZoneEST.java"
+      ],
+      "goTests": [
+        "TestPatternTimerScheduleSimpleMatchesEsper",
+        "TestPatternObserverTimerScheduleMultiformMatchesEsper",
+        "TestPatternTimerScheduleLimitedWDateAndPeriodMatchesEsper",
+        "TestPatternTimerScheduleJustDateMatchesEsper",
+        "TestPatternTimerScheduleJustPeriodMatchesEsper",
+        "TestPatternTimerScheduleDateWithPeriodMatchesEsper",
+        "TestPatternTimerScheduleUnlimitedRecurringPeriodMatchesEsper",
+        "TestPatternObserverTimerScheduleTimeZoneESTMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "pattern",
+        "observer",
+        "timer-schedule",
+        "iso-8601",
+        "timezone"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Go parity tests replay every Java timer:schedule form through the fluent API: ISO-8601 literals map to TimerScheduleISO (one-shot dates, P periods, R/Rn recurrences, full R/date/period forms with include-start), named parameters map to TimerScheduleWithPeriod with a typed PatternTimerScheduleSpec (StartAt, calendar+fixed PatternTimerPeriod, Repetitions with -1 for unlimited, IncludeStart). A zero Period with a StartAt is the one-shot date form and follows the same hasPeriod=false runtime path as the ISO date-only parse; a zero Period without a StartAt is rejected at Build like Java's 'Either the date or period parameter is required'. Past-dated recurrences skip already-due occurrences while counting them against bounded repetitions, and followed-by schedules evaluate dynamic ISO expressions per arming with the captured tag in scope (Concat/Func1 over tag fields). The timezone execution computes the local 9am date from CurrentTimestamp inside a GMT-4 zone."
     }
   ],
   "mappings": [
@@ -19526,14 +19587,18 @@
     {
       "capabilityId": "pattern.basic",
       "caseId": "case.pattern-observer-timer-at-cron"
+    },
+    {
+      "capabilityId": "pattern.basic",
+      "caseId": "case.pattern-observer-timer-schedule"
     }
   ],
   "summary": {
-    "totalCases": 304,
+    "totalCases": 305,
     "totalCapabilities": 108,
-    "mappedCases": 286,
+    "mappedCases": 287,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 1968
+    "disposedRuntimeIds": 1975
   }
 }
