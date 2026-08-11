@@ -2966,16 +2966,14 @@
         "expr_filter_where_clause_parity_test.go",
         "expr_filter_optimizable_parity_test.go",
         "expr_filter_pattern_enum_parity_test.go",
+        "expr_filter_remaining_parity_test.go",
+        "expr.go",
+        "plan.go",
         "expr_in_between.go"
       ],
       "phase": 2,
       "status": "mapped",
-      "remaining": [
-        "ExprFilterPromoteIndexToSetNotIn",
-        "ExprFilterShortCircuitEvalAndOverspecified",
-        "ExprFilterRewriteWhere",
-        "ExprFilterInvalid"
-      ]
+      "remaining": []
     },
     {
       "id": "pattern.operator-and-or",
@@ -17751,6 +17749,136 @@
       "difference": "Go uses a typed market-data struct and Multiply expression in place of Java SupportMarketDataBean and EPL arithmetic text"
     },
     {
+      "id": "case.expr-filter-promote-index-notin",
+      "javaRuntimeIds": [
+        "java-runtime-39eebf0e41dd88aaaaaf"
+      ],
+      "javaStaticIds": [
+        "java-1083159f911415128a8b"
+      ],
+      "javaNames": [
+        "ExprFilterPromoteIndexToSetNotIn"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterPromoteIndexToSetNotInMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "not-equals",
+        "null-handling"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Java filter-service index promotion to a set is an internal optimization; Go verifies the observable conjunction and null/non-matching behavior"
+    },
+    {
+      "id": "case.expr-filter-short-circuit",
+      "javaRuntimeIds": [
+        "java-runtime-bc80fe34fae969b3ca60"
+      ],
+      "javaStaticIds": [
+        "java-1083159f911415128a8b"
+      ],
+      "javaNames": [
+        "ExprFilterShortCircuitEvalAndOverspecified"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterShortCircuitEvalAndOverspecifiedMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "short-circuit",
+        "and"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go fluent And/Or preserve Esper three-valued logic with lazy right-side evaluation; instrumentation-exclusion flags have no Go instrumentation mode"
+    },
+    {
+      "id": "case.expr-filter-rewrite-where",
+      "javaRuntimeIds": [
+        "java-runtime-3f969e030272458375e0"
+      ],
+      "javaStaticIds": [
+        "java-1083159f911415128a8b"
+      ],
+      "javaNames": [
+        "ExprFilterRewriteWhere"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterRewriteWhereMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "where",
+        "named-window",
+        "string-method"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go expresses WHERE/filter movement as an explicit fluent Filter and uses typed StatementHint plus Func1 for the named-window trim predicate; no EPL rewrite text is required"
+    },
+    {
+      "id": "case.expr-filter-invalid",
+      "javaRuntimeIds": [
+        "java-runtime-daae7ff517fd0f812037"
+      ],
+      "javaStaticIds": [
+        "java-1083159f911415128a8b"
+      ],
+      "javaNames": [
+        "ExprFilterInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterExpressions.java"
+      ],
+      "goTests": [
+        "TestExprFilterInvalidMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "filter",
+        "invalid",
+        "diagnostics",
+        "pattern"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Non-boolean EPL filter text and Java class-literal diagnostics are rejected by Go's compile-time typed API; aggregate/previous-prior pattern filter boundaries and typed unknown-name diagnostics are validated at Build"
+    },
+    {
       "id": "case.view-firstunique",
       "javaRuntimeIds": [
         "java-runtime-539015b0941ce8fc7488",
@@ -20475,6 +20603,22 @@
       "caseId": "case.expr-filter-pattern-with-expr"
     },
     {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-promote-index-notin"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-short-circuit"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-rewrite-where"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-invalid"
+    },
+    {
       "capabilityId": "pattern.operator-and-or",
       "caseId": "case.pattern-operator-and-or-simple"
     },
@@ -20680,11 +20824,11 @@
     }
   ],
   "summary": {
-    "totalCases": 325,
+    "totalCases": 333,
     "totalCapabilities": 108,
-    "mappedCases": 307,
+    "mappedCases": 315,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2067
+    "disposedRuntimeIds": 2076
   }
 }

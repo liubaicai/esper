@@ -2170,11 +2170,41 @@ func compareExpression[T any](kind, symbol string, left, right Expression[T], pr
 }
 
 func And(left, right Expression[bool]) Expression[bool] {
-	return makeBinaryBool("and", "("+left.Description()+" and "+right.Description()+")", left, right, andValues)
+	return makeExpr[bool]("and", "("+left.Description()+" and "+right.Description()+")", []*exprNode{left.node(), right.node()}, func(ctx EvalContext) Value {
+		leftValue := left.eval(ctx)
+		leftBool, leftOK := boolValue(leftValue)
+		if leftOK && !leftBool {
+			return Present(false)
+		}
+		rightValue := right.eval(ctx)
+		rightBool, rightOK := boolValue(rightValue)
+		if rightOK && !rightBool {
+			return Present(false)
+		}
+		if leftOK && rightOK {
+			return Present(leftBool && rightBool)
+		}
+		return Null()
+	})
 }
 
 func Or(left, right Expression[bool]) Expression[bool] {
-	return makeBinaryBool("or", "("+left.Description()+" or "+right.Description()+")", left, right, orValues)
+	return makeExpr[bool]("or", "("+left.Description()+" or "+right.Description()+")", []*exprNode{left.node(), right.node()}, func(ctx EvalContext) Value {
+		leftValue := left.eval(ctx)
+		leftBool, leftOK := boolValue(leftValue)
+		if leftOK && leftBool {
+			return Present(true)
+		}
+		rightValue := right.eval(ctx)
+		rightBool, rightOK := boolValue(rightValue)
+		if rightOK && rightBool {
+			return Present(true)
+		}
+		if leftOK && rightOK {
+			return Present(leftBool || rightBool)
+		}
+		return Null()
+	})
 }
 
 func Not(value Expression[bool]) Expression[bool] {

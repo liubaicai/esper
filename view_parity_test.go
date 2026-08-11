@@ -407,16 +407,16 @@ func TestEPLOtherRStreamSelectorMatchesEsper(t *testing.T) {
 		t.Fatalf("rstream should not report inserts, got %d batches", len(batches))
 	}
 
-	// Send d - 'a' evicted, rstream reports 'a' via Old (Go models rstream
-	// removed events in batch.Old rather than listener newData)
+	// Send d - 'a' evicted, rstream reports 'a' as listener new data, matching
+	// Esper's rstream contract.
 	sendViewBean(t, engine, "d", 0)
 	if len(batches) != 1 {
 		t.Fatalf("rstream should report eviction, got %d batches", len(batches))
 	}
-	if len(batches[0].Old) != 1 {
-		t.Fatalf("rstream old rows = %d, want 1", len(batches[0].Old))
+	if len(batches[0].New) != 1 || len(batches[0].Old) != 0 {
+		t.Fatalf("rstream rows = %d new/%d old, want 1/0", len(batches[0].New), len(batches[0].Old))
 	}
-	if got := batches[0].Old[0].Get("theString").Any(); got != "a" {
-		t.Fatalf("rstream old theString=%v, want a (evicted)", got)
+	if got := batches[0].New[0].Get("theString").Any(); got != "a" {
+		t.Fatalf("rstream new theString=%v, want a (evicted)", got)
 	}
 }

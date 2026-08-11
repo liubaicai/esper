@@ -5151,7 +5151,10 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 		if eventInput == nil {
 			eventInput = input
 		}
-		return e.validatePatternExpressionFields(eventInput, node.predicate, tagSources, requireTags)
+		if err := e.validatePatternExpressionFields(eventInput, node.predicate, tagSources, requireTags); err != nil {
+			return err
+		}
+		return validatePatternFilterExpression(node.predicate)
 	case patternSequenceNode, patternAndNode, patternOrNode:
 		if node.kind == patternSequenceNode && node.sequenceMaxExpr != nil {
 			if err := e.validateExprFields(input, node.sequenceMaxExpr); err != nil {
@@ -5232,6 +5235,24 @@ func (e *Environment) validatePatternNodeFields(input *streamNode, node *pattern
 	default:
 		return NewError(ErrorInvalidRule, "unknown pattern expression kind")
 	}
+}
+
+// validatePatternFilterExpression enforces Esper's evaluation boundary for a
+// pattern event filter. Filters run against one incoming event and captured
+// tags, so aggregate state and view-relative previous/prior access have no
+// valid evaluation context. Keeping this check at the pattern node boundary
+// prevents a scalar wrapper from hiding either invalid expression family.
+func validatePatternFilterExpression(expression Expr) error {
+	if expression == nil || expression.node() == nil {
+		return NewError(ErrorInvalidRule, "pattern filter expression is required")
+	}
+	if expressionNodeContainsAggregate(expression.node()) {
+		return NewError(ErrorInvalidRule, "aggregation functions not allowed within filters")
+	}
+	if expressionContainsPreviousAccess(expression.node()) {
+		return NewError(ErrorInvalidRule, "previous or prior functions cannot be used in pattern filters")
+	}
+	return nil
 }
 
 func (e *Environment) validateSourceLess(selections []Selection) error {
