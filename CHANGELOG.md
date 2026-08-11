@@ -2,6 +2,8 @@
 
 ## 2026-08-12
 
+本轮关闭 ViewUnique suite（4 个 parity 测试）。SceneOne（单键 unique(symbol) 替换语义 + 快照）、SceneTwo（复合键 unique(symbol|feed)）、ExpressionParameter（unique(abs(intPrimitive)) 表达式参数）、TwoWindows（两独立 unique 窗口各自状态）。Coverage 2,067/4,140（49.93%）＃321 case 中 303 mapped / 1 partial / 17 approved-difference。本轮不需要 MySQL Docker。
+
 # 迁移进度 Changelog
 
 按切片记录 Esper 9.0.0 → Go 的迁移明细；[README](README.md) 只保留移植概况与大概进度。每完成一个切片在此追加记录，并同步 `compat/capability-manifest.json` 与 [实施规划](docs/esper-go-port-implementation-plan.md)。历史条目由 README 迁入，保持原始行文与顺序。

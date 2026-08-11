@@ -1,6 +1,8 @@
 # Esper 9.0.0 Go 全量移植规划实施文档
 
-> 最新补充：Draft 3.80（2026-08-12），ExprFilterExpressions 剩余可观测 execution关闭（OverInClause/StaticFunc/InstanceMethodWWildcard/NotEqualsConsolidate），新增 4 个 parity 测试。Coverage 2,067/4,140（49.93%）＃320 case 中 302 mapped / 1 partial / 17 approved-difference。下一步 ExprFilter 剩余、View Accum 系列。本轮不需要 MySQL Docker。
+> 最新补充：Draft 3.81（2026-08-12），ViewUnique suite 关闭（4 个 parity 测试）：单键/复合键/表达式参数/双窗口 unique 窗口。Coverage 2,067/4,140（49.93%）＃321 case 中 303 mapped。下一步 ViewGroup/Intersect/Union、ExprFilter 剩余。本轮不需要 MySQL Docker。
+>
+> 历史补充：Draft 3.80（2026-08-12），ExprFilterExpressions 剩余可观测 execution关闭（OverInClause/StaticFunc/InstanceMethodWWildcard/NotEqualsConsolidate），新增 4 个 parity 测试。Coverage 2,067/4,140（49.93%）＃320 case 中 302 mapped / 1 partial / 17 approved-difference。下一步 ExprFilter 剩余、View Accum 系列。本轮不需要 MySQL Docker。
 >
 > 历史补充：Draft 3.79（2026-08-12），ExprFilterOptimizable、ExprFilterInAndBetween 剩余、ExprFilterLargeThreading、ExprFilterWhereClauseNoDataWindowPerformance 关闭，覆盖 4 个 outerClass 级 runtime。新增 11 个 parity 测试（1 skip），表达 regexp OR、context OR、typeof、变量方法调用、IN/NOT IN 多值集合、OR 重写、部署时常量、多语句 IN 复用、pattern followed-by LIKE、100 语句 WHERE。Java filter service 内部索引与性能阈值为 Go-style 差异。新增 case.expr-filter-optimizable（mapped）。Coverage 2,067/4,140（49.93%）＃320 case 中 302 mapped / 1 partial / 17 approved-difference。下一步 ExprFilter 剩余、View Accum 系列。本轮不需要 MySQL Docker。
 >

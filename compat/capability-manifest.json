@@ -3090,7 +3090,11 @@
         "ViewTimeBatchMultirow",
         "ViewTimeBatchMultiBatch",
         "ViewTimeBatchNoRefPoint",
-        "ViewTimeBatchLonger"
+        "ViewTimeBatchLonger",
+        "ViewLastUniqueSceneOne",
+        "ViewLastUniqueSceneTwo",
+        "ViewUniqueExpressionParameter",
+        "ViewUniqueTwoWindows"
       ],
       "goRefs": [
         "view_expression_parity_test.go",
@@ -3098,7 +3102,8 @@
         "view_marketdata_parity_test.go",
         "view_parity_test.go",
         "view_timebatch_parity_test.go",
-        "view_timewin_parity_test.go"
+        "view_timewin_parity_test.go",
+        "view_unique_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -19095,6 +19100,33 @@
         "java-a977dd316de9d77c011c",
         "java-588b47c3c9d091cbd6a2"
       ]
+    },
+    {
+      "id": "case.view-unique-basic",
+      "javaStaticIds": [
+        "java-326264438c2814eef2eb"
+      ],
+      "javaNames": [
+        "ViewLastUniqueSceneOne",
+        "ViewLastUniqueSceneTwo",
+        "ViewUniqueExpressionParameter",
+        "ViewUniqueTwoWindows"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewUnique.java"
+      ],
+      "goTests": [
+        "TestViewUniqueSceneOneMatchesEsper",
+        "TestViewUniqueSceneTwoMatchesEsper",
+        "TestViewUniqueExpressionParameterMatchesEsper",
+        "TestViewUniqueTwoWindowsMatchesEsper"
+      ],
+      "tags": [
+        "correctness",
+        "view",
+        "unique"
+      ],
+      "status": "mapped"
     }
   ],
   "mappings": [
@@ -20377,12 +20409,16 @@
     {
       "capabilityId": "expr.filter-expressions",
       "caseId": "case.expr-filter-optimizable"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.view-unique-basic"
     }
   ],
   "summary": {
-    "totalCases": 320,
+    "totalCases": 321,
     "totalCapabilities": 108,
-    "mappedCases": 302,
+    "mappedCases": 303,
     "partialCases": 1,
     "approvedDifferenceCases": 17,
     "disposedRuntimeIds": 2067
