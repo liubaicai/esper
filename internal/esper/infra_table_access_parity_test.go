@@ -1871,6 +1871,342 @@ func TestInfraTableAccessGroupedMixedMethodAndAccessParity(t *testing.T) {
 	read("E2", int64(1), int64(1), int64(200), []infraTableGroupedMultiBean{e4})
 }
 
+// TestInfraTableAccessMultiStmtContributingParity mirrors Java
+// InfraTableAccessCore.InfraMultiStmtContributing. Each into-table aggregate
+// owns only the columns it contributes; a second matrix verifies that two
+// statements can add to the same sum column without overwriting one another.
+func TestInfraTableAccessMultiStmtContributingParity(t *testing.T) {
+	for _, grouped := range []bool{false, true} {
+		name := "ungrouped"
+		if grouped {
+			name = "grouped"
+		}
+		t.Run(name, func(t *testing.T) {
+			testInfraTableAccessMultiStmtDifferentAggregates(t, grouped)
+		})
+	}
+	t.Run("shared-aggregate", testInfraTableAccessMultiStmtSharedAggregate)
+}
+
+type infraTableContributingS0 struct {
+	ID  int64  `esper:"id"`
+	P00 string `esper:"p00"`
+}
+
+type infraTableContributingS1 struct {
+	ID  int64  `esper:"id"`
+	P10 string `esper:"p10"`
+}
+
+type infraTableContributingTrigger struct {
+	TheString string `esper:"theString"`
+}
+
+func testInfraTableAccessMultiStmtDifferentAggregates(t *testing.T, grouped bool) {
+	t.Helper()
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableContributingS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableContributingS1](env, "SupportBean_S1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableContributingTrigger](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	columns := []TableColumn{
+		OptionalTableColumnOf[int64]("s0sum"),
+		OptionalTableColumnOf[int64]("s0cnt"),
+		OptionalTableColumnOf[WindowAccessValue[infraTableContributingS0]]("s0win"),
+		OptionalTableColumnOf[int64]("s1sum"),
+		OptionalTableColumnOf[int64]("s1cnt"),
+		OptionalTableColumnOf[WindowAccessValue[infraTableContributingS1]]("s1win"),
+	}
+	if grouped {
+		columns = append([]TableColumn{PrimaryKeyColumn[string]("key")}, columns...)
+	}
+	if _, err := CreateTable(env, "varaggMSC", columns); err != nil {
+		t.Fatal(err)
+	}
+
+	s0ID := Field[infraTableContributingS0, int64]("id")
+	s0Key := Field[infraTableContributingS0, string]("p00")
+	s0Window := WindowAccessBy[infraTableContributingS0](EventValue[infraTableContributingS0]())
+	s1ID := Field[infraTableContributingS1, int64]("id")
+	s1Key := Field[infraTableContributingS1, string]("p10")
+	s1Window := WindowAccessBy[infraTableContributingS1](EventValue[infraTableContributingS1]())
+	var s0Plan, s1Plan Plan
+	var err error
+	s0Source := From[infraTableContributingS0](env, "SupportBean_S0").Window(LengthWindow(2))
+	s1Source := From[infraTableContributingS1](env, "SupportBean_S1").Window(LengthWindow(2))
+	if grouped {
+		s0Plan, err = env.Build(s0Source.GroupBy(s0Key).Select(
+			Alias("s0sum", Sum[int64](s0ID)),
+			Alias("s0cnt", CountAll()),
+			Alias("s0win", s0Window),
+		).IntoTable("varaggMSC", StatementName("s0-contributor")))
+	} else {
+		s0Plan, err = env.Build(s0Source.Aggregate(
+			Alias("s0sum", Sum[int64](s0ID)),
+			Alias("s0cnt", CountAll()),
+			Alias("s0win", s0Window),
+		).IntoTable("varaggMSC", StatementName("s0-contributor")))
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if grouped {
+		s1Plan, err = env.Build(s1Source.GroupBy(s1Key).Select(
+			Alias("s1sum", Sum[int64](s1ID)),
+			Alias("s1cnt", CountAll()),
+			Alias("s1win", s1Window),
+		).IntoTable("varaggMSC", StatementName("s1-contributor")))
+	} else {
+		s1Plan, err = env.Build(s1Source.Aggregate(
+			Alias("s1sum", Sum[int64](s1ID)),
+			Alias("s1cnt", CountAll()),
+			Alias("s1win", s1Window),
+		).IntoTable("varaggMSC", StatementName("s1-contributor")))
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	trigger := From[infraTableContributingTrigger](env, "SupportBean")
+	readSelections := []Selection{
+		Alias("s0sum", TableField[int64]("s0sum")),
+		Alias("s0cnt", TableField[int64]("s0cnt")),
+		Alias("s0win", TableField[WindowAccessValue[infraTableContributingS0]]("s0win")),
+		Alias("s1sum", TableField[int64]("s1sum")),
+		Alias("s1cnt", TableField[int64]("s1cnt")),
+		Alias("s1win", TableField[WindowAccessValue[infraTableContributingS1]]("s1win")),
+	}
+	var readPlan Plan
+	if grouped {
+		readPlan, err = env.Build(OnEvent(trigger).SelectFromTable("varaggMSC", []Expr{Field[infraTableContributingTrigger, string]("theString")}, readSelections...).Query(StatementName("msc-read")))
+	} else {
+		readPlan, err = env.Build(OnEvent(trigger).SelectFromTableWhere("varaggMSC", Literal(true), readSelections...).Query(StatementName("msc-read")))
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	contributors, err := engine.DeployPlans(context.Background(), []Plan{s0Plan, s1Plan})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var s0Rows, s1Rows []Row
+	for index, destination := range [](*[]Row){&s0Rows, &s1Rows} {
+		if _, err := contributors.Statements()[index].Subscribe(func(destination *[]Row) Listener {
+			return func(_ context.Context, batch ResultBatch) error {
+				for _, result := range batch.New {
+					row, ok := result.Row()
+					if !ok {
+						return fmt.Errorf("multi-statement contributor %d result is not a row: %#v", index, result)
+					}
+					*destination = append(*destination, row)
+				}
+				return nil
+			}
+		}(destination)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	deployment, err := engine.Deploy(context.Background(), readPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+	rows := make([]Row, 0)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("multi-statement table result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	assertRow := func(label, key string, want0, want1 any, want0Events, want1Events int) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), infraTableContributingTrigger{TheString: key}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) == 0 {
+			t.Fatalf("%s: table lookup produced no row", label)
+		}
+		row := rows[len(rows)-1]
+		if got := row.Get("s0sum").Any(); got != want0 {
+			t.Fatalf("%s: s0sum=%#v want %d", label, got, want0)
+		}
+		if got := row.Get("s1sum").Any(); got != want1 {
+			t.Fatalf("%s: s1sum=%#v want %d", label, got, want1)
+		}
+		if got := row.Get("s0cnt").Any(); got != int64(want0Events) {
+			t.Fatalf("%s: s0cnt=%#v want %d", label, got, want0Events)
+		}
+		if got := row.Get("s1cnt").Any(); got != int64(want1Events) {
+			t.Fatalf("%s: s1cnt=%#v want %d", label, got, want1Events)
+		}
+		if want0Events > 0 && len(s0Rows) == 0 || want1Events > 0 && len(s1Rows) == 0 {
+			t.Fatalf("%s: contributor listener rows = %d/%d", label, len(s0Rows), len(s1Rows))
+		}
+	}
+
+	e1 := infraTableContributingS1{ID: 10, P10: "G1"}
+	e2 := infraTableContributingS0{ID: 20, P00: "G1"}
+	e3 := infraTableContributingS1{ID: 11, P10: "G1"}
+	e4 := infraTableContributingS0{ID: 21, P00: "G1"}
+	e5 := infraTableContributingS1{ID: 12, P10: "G1"}
+	e6 := infraTableContributingS0{ID: 22, P00: "G1"}
+	for _, step := range []struct {
+		event          any
+		want0, want1   any
+		count0, count1 int
+	}{
+		{e1, nil, int64(10), 0, 1},
+		{e2, int64(20), int64(10), 1, 1},
+		{e3, int64(20), int64(21), 1, 2},
+		{e4, int64(41), int64(21), 2, 2},
+		{e5, int64(41), int64(23), 2, 2},
+		{e6, int64(43), int64(23), 2, 2},
+	} {
+		if err := engine.SendEvent(context.Background(), step.event); err != nil {
+			t.Fatal(err)
+		}
+		assertRow(fmt.Sprintf("after %#v", step.event), "G1", step.want0, step.want1, step.count0, step.count1)
+	}
+}
+
+type infraTableSharedS0 struct {
+	ID  int64  `esper:"id"`
+	P00 string `esper:"p00"`
+}
+
+type infraTableSharedS1 struct {
+	ID  int64  `esper:"id"`
+	P10 string `esper:"p10"`
+}
+
+func testInfraTableAccessMultiStmtSharedAggregate(t *testing.T) {
+	t.Helper()
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableSharedS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableSharedS1](env, "SupportBean_S1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableContributingTrigger](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "sharedagg", []TableColumn{TableColumnOf[int64]("total")}); err != nil {
+		t.Fatal(err)
+	}
+
+	s0Plan, err := env.Build(From[infraTableSharedS0](env, "SupportBean_S0").Aggregate(
+		Alias("c0", Field[infraTableSharedS0, string]("p00")),
+		Alias("total", Sum[int64](Field[infraTableSharedS0, int64]("id"))),
+	).IntoTable("sharedagg", StatementName("shared-s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s1Plan, err := env.Build(From[infraTableSharedS1](env, "SupportBean_S1").Aggregate(
+		Alias("c0", Field[infraTableSharedS1, string]("p10")),
+		Alias("total", Sum[int64](Field[infraTableSharedS1, int64]("id"))),
+	).IntoTable("sharedagg", StatementName("shared-s1")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	readPlan, err := env.Build(OnEvent(From[infraTableContributingTrigger](env, "SupportBean")).SelectFromTableWhere(
+		"sharedagg", Literal(true),
+		Alias("c0", Field[infraTableContributingTrigger, string]("theString")),
+		Alias("total", TableField[int64]("total")),
+	).Query(StatementName("shared-read")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	contributors, err := engine.DeployPlans(context.Background(), []Plan{s0Plan, s1Plan})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var s0Rows, s1Rows []Row
+	for index, destination := range []*[]Row{&s0Rows, &s1Rows} {
+		if _, err := contributors.Statements()[index].Subscribe(func(destination *[]Row) Listener {
+			return func(_ context.Context, batch ResultBatch) error {
+				for _, result := range batch.New {
+					row, ok := result.Row()
+					if !ok {
+						return fmt.Errorf("shared contributor %d result is not a row: %#v", index, result)
+					}
+					*destination = append(*destination, row)
+				}
+				return nil
+			}
+		}(destination)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	deployment, err := engine.Deploy(context.Background(), readPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("shared aggregate result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	assertTotal := func(key string, want int64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), infraTableContributingTrigger{TheString: key}); err != nil {
+			t.Fatal(err)
+		}
+		if len(s0Rows) == 0 && len(s1Rows) == 0 {
+			t.Fatalf("shared aggregate %s produced no contributor rows", key)
+		}
+		row := rows[len(rows)-1]
+		if row.Get("c0").Any() != key || row.Get("total").Any() != want {
+			t.Fatalf("shared aggregate lookup %s = %#v, want total %d", key, row.AsMap(), want)
+		}
+	}
+	if err := engine.SendEvent(context.Background(), infraTableSharedS0{ID: 10, P00: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	assertTotal("A", 10)
+	if last := s0Rows[len(s0Rows)-1]; last.Get("total").Any() != int64(10) {
+		t.Fatalf("shared s0 contributor after A = %#v, want total 10", last.AsMap())
+	}
+	if err := engine.SendEvent(context.Background(), infraTableSharedS1{ID: -5, P10: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	assertTotal("B", 5)
+	if last := s1Rows[len(s1Rows)-1]; last.Get("total").Any() != int64(5) {
+		t.Fatalf("shared s1 contributor after B = %#v, want total 5", last.AsMap())
+	}
+	if err := engine.SendEvent(context.Background(), infraTableSharedS0{ID: 2, P00: "C"}); err != nil {
+		t.Fatal(err)
+	}
+	assertTotal("C", 7)
+	if last := s0Rows[len(s0Rows)-1]; last.Get("total").Any() != int64(7) {
+		t.Fatalf("shared s0 contributor after C = %#v, want total 7", last.AsMap())
+	}
+}
+
 // TestInfraTableAccessSplitStreamParity mirrors Java
 // InfraTableAccessCore.InfraTableAccessCoreSplitStream. The table is populated
 // by a typed on-event mutation, then each split branch performs a typed table

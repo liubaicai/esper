@@ -719,6 +719,13 @@ func (t *Table) replaceInScope(ctx context.Context, scope string, rows []map[str
 			return WrapError(ErrorState, fmt.Sprintf("table replacement row %d", index), err)
 		}
 	}
+	for key, row := range replacement.rows {
+		if previous, exists := state.rows[key]; exists {
+			row.identity = previous.identity
+			row.scope = previous.scope
+			replacement.rows[key] = row
+		}
+	}
 	state.rows = replacement.rows
 	state.order = replacement.order
 	state.indexes = replacement.indexes

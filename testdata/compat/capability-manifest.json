@@ -20767,6 +20767,33 @@
       "difference": "Java sorted/window table columns and aggregate push are represented by typed WindowAccessValue/SortedAccessValue projections and explicit fluent table lookup; Java's EPL/SODA text and the remaining table metadata, index, context, join and invalid matrices remain open."
     },
     {
+      "id": "case.infra-table-access-multi-stmt-contributing",
+      "javaRuntimeIds": [
+        "java-runtime-7da3d0697bcb19fbb28f"
+      ],
+      "javaNames": [
+        "InfraMultiStmtContributing"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessMultiStmtContributingParity"
+      ],
+      "tags": [
+        "table",
+        "into-table",
+        "multi-statement",
+        "partial-column",
+        "shared-aggregate"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go IntoTable aggregate statements contribute disjoint table columns (s0sum/s0cnt/s0win vs s1sum/s1cnt/s1win) under both grouped and ungrouped tables; the runtime merges all active into-table contributors per row so one statement cannot erase another's columns. LengthWindow(2) enter/leave produces null/0 for uncontributed columns and correct sums after each event. A second matrix verifies two statements sharing the same sum column produce the Java trajectory 10 -> 5 -> 7, with the contributor listener also observing the merged table value."
+      ],
+      "difference": "Java's multi-statement into-table column contribution and shared sum semantics are represented by Go's runtime row-merge coordinator and additive column merge; Java's EPL/SODA text and the broader table metadata/index/context/join/invalid matrix remain open."
+    },
+    {
       "id": "case.infra-table-access-multikey-array-one",
       "javaRuntimeIds": [
         "java-runtime-ad82a78695c21c3397f0"
@@ -22282,14 +22309,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-order-of-aggregations"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-multi-stmt-contributing"
     }
   ],
   "summary": {
-    "totalCases": 364,
+    "totalCases": 365,
     "totalCapabilities": 110,
-    "mappedCases": 347,
+    "mappedCases": 348,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2214
+    "disposedRuntimeIds": 2215
   }
 }

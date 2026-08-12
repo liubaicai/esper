@@ -14398,7 +14398,17 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		batch.Sequence = r.seq.Add(1)
 	}
 	if plan.query.tableTarget != "" {
-		if err := r.persistAggregateTable(plan, now); err != nil {
+		moduleName, tableName := splitCatalogKey(plan.query.tableTarget)
+		table, ok := r.engine.ensureTableLockedInModule(moduleName, tableName)
+		if !ok || table == nil {
+			return ResultBatch{}, NewError(ErrorUnknownName, fmt.Sprintf("into-table target %q is not registered", plan.query.tableTarget))
+		}
+		materialized, err := r.aggregateTableRows(plan, table.Definition(), now)
+		if err != nil {
+			return ResultBatch{}, err
+		}
+		rewriteAggregateTableListenerResults(&batch, newEntries, oldEntries, materialized, plan, table.Definition(), now, r.variables)
+		if err := persistAggregateTableRows(plan, table, materialized, r); err != nil {
 			return ResultBatch{}, err
 		}
 	}
@@ -14479,40 +14489,9 @@ func (r *statementRuntime) persistAggregateTable(plan Plan, now time.Time) error
 	if definition == nil || r.aggregateState == nil {
 		return NewError(ErrorInvalidRule, "into-table aggregate state is not initialized")
 	}
-	keys := make([]string, 0, len(r.aggregateState.groups))
-	for key := range r.aggregateState.groups {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	rows := make([]map[string]any, 0, len(keys))
-	for _, key := range keys {
-		group := r.aggregateState.groups[key]
-		if group == nil || len(group.events) == 0 {
-			continue
-		}
-		values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
-		if !visible {
-			continue
-		}
-		row := make(map[string]any, len(definition.selections))
-		for index, selection := range definition.selections {
-			if index < len(values) {
-				row[selection.Name] = values[index].Any()
-			}
-		}
-		rows = append(rows, row)
-	}
-	if len(definition.groupBy) == 0 && len(rows) == 0 {
-		values, visible := evaluateEmptyAggregateGroup(definition, now, r.variables)
-		if visible {
-			row := make(map[string]any, len(definition.selections))
-			for index, selection := range definition.selections {
-				if index < len(values) {
-					row[selection.Name] = values[index].Any()
-				}
-			}
-			rows = append(rows, row)
-		}
+	rows, err := r.aggregateTableRows(plan, table.Definition(), now)
+	if err != nil {
+		return err
 	}
 	primaryKey := table.Definition().PrimaryKey()
 	sort.SliceStable(rows, func(left, right int) bool {
@@ -14532,6 +14511,316 @@ func (r *statementRuntime) persistAggregateTable(plan Plan, now time.Time) error
 		return WrapError(ErrorState, "into-table."+plan.query.tableTarget, err)
 	}
 	return nil
+}
+
+func persistAggregateTableRows(plan Plan, table *Table, rows []map[string]any, r *statementRuntime) error {
+	if r == nil || table == nil {
+		return NewError(ErrorDependency, "into-table aggregate has no table")
+	}
+	scope := ""
+	if r.partitionContextName != "" && r.partitionKey != "" {
+		scope = tableContextScope(r.partitionContextName, r.partitionKey)
+	}
+	if err := table.replaceInScope(r.context(), scope, rows); err != nil {
+		return WrapError(ErrorState, "into-table."+plan.query.tableTarget, err)
+	}
+	return nil
+}
+
+func rewriteAggregateTableListenerResults(batch *ResultBatch, newEntries, oldEntries []aggregateResultEntry, rows []map[string]any, plan Plan, tableDefinition TableDefinition, now time.Time, variables map[string]Value) {
+	if batch == nil || plan.query.aggregate == nil || len(rows) == 0 {
+		return
+	}
+	byKey := make(map[string]map[string]any, len(rows))
+	for _, row := range rows {
+		keyValues := make([]any, 0, len(tableDefinition.PrimaryKey()))
+		for _, name := range tableDefinition.PrimaryKey() {
+			keyValues = append(keyValues, row[name])
+		}
+		key := encodeKey(keyValues)
+		if len(keyValues) == 0 {
+			key = encodeKey([]any{"<all>"})
+		}
+		byKey[key] = row
+	}
+	rewrite := func(result Result, entry aggregateResultEntry) Result {
+		row, ok := result.Row()
+		if !ok {
+			return result
+		}
+		schema := row.Schema()
+		byName := make(map[string]int, len(schema.Fields()))
+		for index, field := range schema.Fields() {
+			byName[field.Name] = index
+		}
+		keyValues := make([]any, 0, len(tableDefinition.PrimaryKey()))
+		groupBy := plan.query.aggregate.groupBy
+		if len(groupBy) == 0 {
+			groupBy = implicitAggregateGroupBy(plan.query.aggregate.input)
+		}
+		if entry.group != nil && len(groupBy) > 0 {
+			for index := range tableDefinition.PrimaryKey() {
+				if index >= len(groupBy) {
+					break
+				}
+				keyValues = append(keyValues, groupBy[index].eval(EvalContext{Event: entry.group.current, Now: now, Variables: variables}).Any())
+			}
+		}
+		key := encodeKey(keyValues)
+		if len(keyValues) == 0 {
+			key = encodeKey([]any{"<all>"})
+		}
+		materialized := byKey[key]
+		if materialized == nil {
+			return result
+		}
+		values := append([]Value(nil), row.Values()...)
+		for _, column := range tableDefinition.Columns() {
+			if index, exists := byName[column.Name]; exists && index < len(values) {
+				values[index] = Present(materialized[column.Name])
+			}
+		}
+		return resultRow(newRow(schema, values))
+	}
+	for index, entry := range newEntries {
+		if index < len(batch.New) {
+			batch.New[index] = rewrite(batch.New[index], entry)
+		}
+	}
+	for index, entry := range oldEntries {
+		if index < len(batch.Old) {
+			batch.Old[index] = rewrite(batch.Old[index], entry)
+		}
+	}
+}
+
+// aggregateTableRows materializes the complete logical table row for one
+// into-table contribution. Multiple statements can own disjoint columns or
+// contribute to the same additive aggregate; recomputing the row from all
+// active statements prevents one statement from erasing another statement's
+// state.
+func (r *statementRuntime) aggregateTableRows(plan Plan, tableDefinition TableDefinition, now time.Time) ([]map[string]any, error) {
+	if r == nil || r.engine == nil || plan.query.aggregate == nil {
+		return nil, NewError(ErrorInvalidRule, "into-table aggregate definition is not initialized")
+	}
+	moduleName, tableName := splitCatalogKey(plan.query.tableTarget)
+	target := catalogKey(moduleName, tableName)
+	contributors := make([]*statementRuntime, 0)
+	for _, statement := range r.engine.sortedStatementsLocked() {
+		if statement == nil || statement.closed || statement.state != StatementStarted || statement.plan.query.aggregate == nil {
+			continue
+		}
+		candidateModule, candidateTable := splitCatalogKey(statement.plan.query.tableTarget)
+		if catalogKey(candidateModule, candidateTable) != target {
+			continue
+		}
+		if statement.plan.query.contextName != plan.query.contextName {
+			continue
+		}
+		candidate := &statement.runtime
+		if r.partitionContextName != "" {
+			candidate = statement.runtime.partitions[r.partitionKey]
+		}
+		if candidate == nil || candidate.aggregateState == nil {
+			continue
+		}
+		contributors = append(contributors, candidate)
+	}
+	currentPresent := false
+	for _, contributor := range contributors {
+		if contributor == r {
+			currentPresent = true
+			break
+		}
+	}
+	if !currentPresent {
+		contributors = append(contributors, r)
+	}
+
+	rowsByKey := make(map[string]map[string]any)
+	groupOrder := make([]string, 0)
+	for _, contributor := range contributors {
+		definition := contributor.query.aggregate
+		if definition == nil || contributor.aggregateState == nil {
+			continue
+		}
+		keys := make([]string, 0, len(contributor.aggregateState.groups))
+		for key := range contributor.aggregateState.groups {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			group := contributor.aggregateState.groups[key]
+			if group == nil || len(group.events) == 0 {
+				continue
+			}
+			values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, contributor.aggregateState.allEvents, contributor.aggregateState.allEverEvents, now, contributor.variables, group.pluginStates, group.multiPluginStates)
+			if !visible {
+				continue
+			}
+			rowKey, row := aggregateTableContributionRow(definition, tableDefinition, values, group, now, contributor.variables)
+			if _, exists := rowsByKey[rowKey]; !exists {
+				rowsByKey[rowKey] = row
+				groupOrder = append(groupOrder, rowKey)
+				continue
+			}
+			mergeAggregateTableContribution(rowsByKey[rowKey], row, definition, tableDefinition)
+		}
+	}
+	if len(rowsByKey) == 0 && len(plan.query.aggregate.groupBy) == 0 {
+		values, visible := evaluateEmptyAggregateGroup(plan.query.aggregate, now, r.variables)
+		if visible {
+			_, row := aggregateTableContributionRow(plan.query.aggregate, tableDefinition, values, nil, now, r.variables)
+			rowsByKey[encodeKey([]any{"<all>"})] = row
+			groupOrder = append(groupOrder, encodeKey([]any{"<all>"}))
+		}
+	}
+	rows := make([]map[string]any, 0, len(rowsByKey))
+	defaultCounts := aggregateTableCountDefaults(contributors, tableDefinition)
+	for _, key := range groupOrder {
+		if row := rowsByKey[key]; row != nil {
+			for name, value := range defaultCounts {
+				if _, exists := row[name]; !exists {
+					row[name] = value
+				}
+			}
+			for _, column := range tableDefinition.Columns() {
+				if _, exists := row[column.Name]; !exists {
+					row[column.Name] = nil
+				}
+			}
+			rows = append(rows, row)
+		}
+	}
+	return rows, nil
+}
+
+func aggregateTableCountDefaults(contributors []*statementRuntime, tableDefinition TableDefinition) map[string]any {
+	defaults := make(map[string]any)
+	columns := make(map[string]TableColumn, len(tableDefinition.Columns()))
+	for _, column := range tableDefinition.Columns() {
+		columns[column.Name] = column
+	}
+	for _, contributor := range contributors {
+		if contributor == nil || contributor.query.aggregate == nil {
+			continue
+		}
+		for _, selection := range contributor.query.aggregate.selections {
+			if selection.Expr == nil || selection.Expr.node() == nil || selection.Expr.node().kind != "count" {
+				continue
+			}
+			column, exists := columns[selection.Name]
+			if !exists {
+				continue
+			}
+			zero := reflect.New(column.Type).Elem()
+			switch zero.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				zero.SetInt(0)
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				zero.SetUint(0)
+			default:
+				defaults[selection.Name] = int64(0)
+				continue
+			}
+			defaults[selection.Name] = zero.Interface()
+		}
+	}
+	return defaults
+}
+
+func aggregateTableContributionRow(definition *aggregateDefinition, tableDefinition TableDefinition, values []Value, group *aggregateGroup, now time.Time, variables map[string]Value) (string, map[string]any) {
+	row := make(map[string]any, len(definition.selections)+len(definition.groupBy))
+	for index, selection := range definition.selections {
+		if index < len(values) {
+			for _, column := range tableDefinition.Columns() {
+				if column.Name == selection.Name {
+					row[selection.Name] = values[index].Any()
+					break
+				}
+			}
+		}
+	}
+	groupBy := definition.groupBy
+	if len(groupBy) == 0 {
+		groupBy = implicitAggregateGroupBy(definition.input)
+	}
+	if group != nil && len(groupBy) > 0 {
+		for index, name := range tableDefinition.PrimaryKey() {
+			if _, provided := row[name]; provided {
+				continue
+			}
+			if index >= len(groupBy) {
+				break
+			}
+			value := groupBy[index].eval(EvalContext{Event: group.current, Now: now, Variables: variables})
+			row[name] = value.Any()
+		}
+	}
+	keyValues := make([]any, 0, len(tableDefinition.PrimaryKey()))
+	for _, name := range tableDefinition.PrimaryKey() {
+		keyValues = append(keyValues, row[name])
+	}
+	if len(keyValues) == 0 {
+		return encodeKey([]any{"<all>"}), row
+	}
+	return encodeKey(keyValues), row
+}
+
+func mergeAggregateTableContribution(target, contribution map[string]any, definition *aggregateDefinition, tableDefinition TableDefinition) {
+	for _, column := range tableDefinition.Columns() {
+		value, exists := contribution[column.Name]
+		if !exists {
+			continue
+		}
+		if previous, already := target[column.Name]; already && isAdditiveAggregateColumn(definition, column.Name) {
+			if total, ok := addNumericValues(previous, value, column.Type); ok {
+				target[column.Name] = total
+				continue
+			}
+		}
+		target[column.Name] = value
+	}
+}
+
+func isAdditiveAggregateColumn(definition *aggregateDefinition, name string) bool {
+	if definition == nil {
+		return false
+	}
+	for _, selection := range definition.selections {
+		if selection.Name != name || selection.Expr == nil || selection.Expr.node() == nil {
+			continue
+		}
+		return selection.Expr.node().kind == "sum" || selection.Expr.node().kind == "count"
+	}
+	return false
+}
+
+func addNumericValues(left, right any, target reflect.Type) (any, bool) {
+	if left == nil {
+		return right, right != nil
+	}
+	if right == nil {
+		return left, true
+	}
+	leftValue, leftOK := numericValue(Present(left))
+	rightValue, rightOK := numericValue(Present(right))
+	if !leftOK || !rightOK || target == nil {
+		return nil, false
+	}
+	result := reflect.New(target).Elem()
+	sum := leftValue + rightValue
+	switch result.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		result.SetInt(int64(sum))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		result.SetUint(uint64(sum))
+	case reflect.Float32, reflect.Float64:
+		result.SetFloat(sum)
+	default:
+		return nil, false
+	}
+	return result.Interface(), true
 }
 
 func aggregateGroupingSetsForDefinition(definition *aggregateDefinition) [][]int {

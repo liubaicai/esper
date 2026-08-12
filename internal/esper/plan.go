@@ -4189,18 +4189,46 @@ func (e *Environment) validateIntoTable(query Query) error {
 	}
 	selected := make(map[string]struct{}, len(query.aggregate.selections))
 	for _, selection := range query.aggregate.selections {
-		selected[selection.Name] = struct{}{}
 		column, exists := columnByName[selection.Name]
 		if !exists {
-			return NewError(ErrorUnknownName, fmt.Sprintf("aggregate projection %q is not a column of table %q", selection.Name, query.tableTarget))
+			// An into-table aggregate may expose ordinary projections to its
+			// statement listener while contributing only the aliases that are
+			// actual table columns. This is the fluent equivalent of Java's
+			// select c0, sum(value) as total into table ... form.
+			continue
 		}
+		selected[selection.Name] = struct{}{}
 		if column.Type != nil && column.Type != typeOf[any]() && selection.Expr.Type() != nil &&
 			!column.Type.AssignableTo(selection.Expr.Type()) && !selection.Expr.Type().AssignableTo(column.Type) && !numericTypes(column.Type, selection.Expr.Type()) {
 			return NewError(ErrorTypeMismatch, fmt.Sprintf("into-table column %q expects %s, aggregate returns %s", selection.Name, column.Type, selection.Expr.Type()))
 		}
 	}
 	for _, column := range columns {
-		if column.PrimaryKey || !column.Optional {
+		if column.PrimaryKey {
+			if _, exists := selected[column.Name]; exists {
+				continue
+			}
+			// A grouped aggregate contributes its group key to a table primary
+			// key even when the key is not repeated in the selection list. The
+			// runtime derives the key from the corresponding group-by expression.
+			groupBy := append([]Expr(nil), query.aggregate.groupBy...)
+			if len(groupBy) == 0 {
+				groupBy = implicitAggregateGroupBy(query.aggregate.input)
+			}
+			primaryKey := definition.PrimaryKey()
+			columnIndex := -1
+			for index, name := range primaryKey {
+				if name == column.Name {
+					columnIndex = index
+					break
+				}
+			}
+			if columnIndex < 0 || columnIndex >= len(groupBy) {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("into-table projection must provide primary-key column %q or a matching group-by key", column.Name))
+			}
+			continue
+		}
+		if !column.Optional {
 			if _, exists := selected[column.Name]; !exists {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("into-table projection must provide required column %q", column.Name))
 			}
