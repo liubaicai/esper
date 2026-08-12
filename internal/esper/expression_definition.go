@@ -31,6 +31,8 @@ type ExpressionParameterSpec struct {
 // event.
 type expressionParameterBinding struct {
 	expression Expr
+	context    EvalContext
+	hasContext bool
 }
 
 // DefineExpression registers a named expression in the environment. Define
@@ -143,11 +145,20 @@ func ExpressionRef[T any](env *Environment, name string, arguments ...Expr) Expr
 			return castValue[T](definition.Expr.eval(ctx))
 		}
 		bindings := make(map[string]Value, len(arguments))
+		// A scalar declared expression evaluates its arguments in the lexical
+		// call-site scope, even when its body enters a correlated subquery. An
+		// aggregate declaration must remain lazy so Sum/Count can evaluate the
+		// argument once for each event in the aggregate group.
+		captureArgumentContext := !expressionNodeContainsAggregate(definition.Expr.node())
 		for index, argument := range arguments {
 			if argument == nil {
 				return Missing()
 			}
-			bindings[definition.Parameters[index].Name] = Present(expressionParameterBinding{expression: argument})
+			bindings[definition.Parameters[index].Name] = Present(expressionParameterBinding{
+				expression: argument,
+				context:    ctx,
+				hasContext: captureArgumentContext,
+			})
 		}
 		invocationContext := ctx
 		parameters := make(map[string]Value, len(ctx.Parameters)+len(bindings))
@@ -255,7 +266,11 @@ func evaluateExpressionParameterBinding(value Value, ctx EvalContext) Value {
 		if binding.expression == nil {
 			return Missing()
 		}
-		value = binding.expression.eval(ctx)
+		evaluation := ctx
+		if binding.hasContext {
+			evaluation = binding.context
+		}
+		value = binding.expression.eval(evaluation)
 	}
 	return Missing()
 }

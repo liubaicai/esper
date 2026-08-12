@@ -76,6 +76,318 @@ type infraTableArrayPairKey struct {
 	K2 []int
 }
 
+type infraTableExpressionBean struct {
+	TheString       string  `esper:"theString"`
+	IntPrimitive    int     `esper:"intPrimitive"`
+	LongPrimitive   int64   `esper:"longPrimitive"`
+	DoublePrimitive float64 `esper:"doublePrimitive"`
+	FloatPrimitive  float32 `esper:"floatPrimitive"`
+}
+
+type infraTableExpressionTrigger struct {
+	ID  int64  `esper:"id"`
+	P00 string `esper:"p00"`
+}
+
+type infraTableExpressionS1 struct {
+	ID int64 `esper:"id"`
+}
+
+// TestInfraTableAccessExpressionAliasAndDeclParity mirrors Java
+// InfraTableAccessCore.InfraExpressionAliasAndDecl. The Java execution uses
+// declared expressions in three positions: aggregate inputs for IntoTable,
+// direct table lookup, and a table lookup guarded by a lastevent subquery.
+// Go keeps each dependency in the analyzable fluent expression graph.
+func TestInfraTableAccessExpressionAliasAndDeclParity(t *testing.T) {
+	t.Run("aggregate-input", testInfraTableAccessExpressionAggregateInput)
+	t.Run("direct-table-access", testInfraTableAccessExpressionDirectTableAccess)
+	t.Run("lastevent-table-access", testInfraTableAccessExpressionLastEventTableAccess)
+}
+
+func testInfraTableAccessExpressionAggregateInput(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableExpressionBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableExpressionTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "varaggITFE", []TableColumn{
+		TableColumnOf[int]("sumi"),
+		TableColumnOf[float64]("sumd"),
+		TableColumnOf[float32]("sumf"),
+		TableColumnOf[int64]("suml"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	aggregateParam := ExpressionParam[Event]("a")
+	if err := DefineExpression[int](env, "sumi", Sum[int](Property[int](aggregateParam, "intPrimitive"))); err != nil {
+		t.Fatal(err)
+	}
+	if err := DefineExpression[float64](env, "sumd", Sum[float64](Field[infraTableExpressionBean, float64]("doublePrimitive"))); err != nil {
+		t.Fatal(err)
+	}
+	if err := DefineExpression[int64](env, "suml", Sum[int64](Field[infraTableExpressionBean, int64]("longPrimitive"))); err != nil {
+		t.Fatal(err)
+	}
+
+	source := From[infraTableExpressionBean](env, "SupportBean")
+	aggregatePlan, err := env.Build(source.Aggregate(
+		Alias("sumi", ExpressionRef[int](env, "sumi", EventValue[Event]())),
+		Alias("sumd", ExpressionRef[float64](env, "sumd")),
+		Alias("sumf", Sum[float32](Field[infraTableExpressionBean, float32]("floatPrimitive"))),
+		Alias("suml", ExpressionRef[int64](env, "suml")),
+	).IntoTable("varaggITFE", StatementName("table-expression-aggregate-input")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	readPlan, err := env.Build(
+		OnEvent(From[infraTableExpressionTrigger](env, "SupportBean_S0")).
+			SelectFromTableWhere("varaggITFE", Literal(true),
+				Alias("sumi", TableField[int]("sumi")),
+				Alias("sumd", TableField[float64]("sumd")),
+				Alias("sumf", TableField[float32]("sumf")),
+				Alias("suml", TableField[int64]("suml")),
+			).
+			Query(StatementName("table-expression-aggregate-read")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), readPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("declared table aggregate result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	for _, event := range []infraTableExpressionBean{{
+		TheString: "E1", IntPrimitive: 10, LongPrimitive: 100,
+		DoublePrimitive: 1000, FloatPrimitive: 10000,
+	}, {
+		TheString: "E1", IntPrimitive: 11, LongPrimitive: 101,
+		DoublePrimitive: 1001, FloatPrimitive: 10001,
+	}} {
+		if err := engine.SendEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
+		if err := engine.SendEvent(ctx, infraTableExpressionTrigger{ID: 1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 2 {
+		t.Fatalf("declared table aggregate rows = %d, want 2", len(rows))
+	}
+	want := [][4]any{
+		{10, float64(1000), float32(10000), int64(100)},
+		{21, float64(2001), float32(20001), int64(201)},
+	}
+	for index, expected := range want {
+		for column, name := range []string{"sumi", "sumd", "sumf", "suml"} {
+			if got := rows[index].Get(name).Any(); !reflect.DeepEqual(got, expected[column]) {
+				t.Fatalf("aggregate row %d %s = %#v, want %#v", index, name, got, expected[column])
+			}
+		}
+	}
+}
+
+func testInfraTableAccessExpressionDirectTableAccess(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableExpressionBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableExpressionTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "MyTableOne", []TableColumn{
+		PrimaryKeyColumn[string]("theString"),
+		TableColumnOf[int]("intPrimitive"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	key := ExpressionParam[string]("key")
+	lookup := SubqueryValue[int](FromTable(env, "MyTableOne"),
+		Field[any, int]("intPrimitive"),
+		Equal[string](Field[any, string]("theString"), key),
+	)
+	if err := DefineExpression[int](env, "getMyValue", lookup); err != nil {
+		t.Fatal(err)
+	}
+
+	insertPlan, err := env.Build(OnEvent(From[infraTableExpressionBean](env, "SupportBean")).InsertIntoTable(
+		"MyTableOne",
+		SetColumn("theString", Field[infraTableExpressionBean, string]("theString")),
+		SetColumn("intPrimitive", Field[infraTableExpressionBean, int]("intPrimitive")),
+	).Query(StatementName("table-expression-direct-populate")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	queryPlan, err := env.Build(Select(
+		From[infraTableExpressionTrigger](env, "SupportBean_S0"),
+		Alias("c0", ExpressionRef[int](env, "getMyValue", Field[infraTableExpressionTrigger, string]("p00"))),
+	).Query(StatementName("table-expression-direct-read")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), insertPlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), queryPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+	var values []Value
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("direct declared table result is not a row: %#v", result)
+			}
+			values = append(values, row.Get("c0"))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	for _, event := range []infraTableExpressionBean{
+		{TheString: "E1", IntPrimitive: 1},
+		{TheString: "E2", IntPrimitive: 2},
+	} {
+		if err := engine.SendEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := engine.SendEvent(ctx, infraTableExpressionTrigger{ID: 0, P00: "E2"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(values) != 1 || values[0].Any() != 2 {
+		t.Fatalf("direct declared table value = %#v, want 2", values)
+	}
+}
+
+func testInfraTableAccessExpressionLastEventTableAccess(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableExpressionBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableExpressionTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableExpressionS1](env, "SupportBean_S1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "MyTableTwo", []TableColumn{
+		PrimaryKeyColumn[string]("theString"),
+		TableColumnOf[int]("intPrimitive"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	key := ExpressionParam[string]("key")
+	lastEvent := From[infraTableExpressionS1](env, "SupportBean_S1").Window(LastEvent()).AsRecord()
+	lookup := SubqueryValue[int](FromTable(env, "MyTableTwo"),
+		Field[any, int]("intPrimitive"),
+		Equal[string](Field[any, string]("theString"), key),
+	)
+	declared := IfThenElse[int](
+		SubqueryExists(lastEvent, Literal(true)),
+		lookup,
+		NullLiteral[int](),
+	)
+	if err := DefineExpression[int](env, "getMyValue", declared); err != nil {
+		t.Fatal(err)
+	}
+
+	insertPlan, err := env.Build(OnEvent(From[infraTableExpressionBean](env, "SupportBean")).InsertIntoTable(
+		"MyTableTwo",
+		SetColumn("theString", Field[infraTableExpressionBean, string]("theString")),
+		SetColumn("intPrimitive", Field[infraTableExpressionBean, int]("intPrimitive")),
+	).Query(StatementName("table-expression-last-event-populate")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	queryPlan, err := env.Build(Select(
+		From[infraTableExpressionTrigger](env, "SupportBean_S0"),
+		Alias("c0", ExpressionRef[int](env, "getMyValue", Field[infraTableExpressionTrigger, string]("p00"))),
+	).Query(StatementName("table-expression-last-event-read")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), insertPlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), queryPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+	var values []Value
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("lastevent declared table result is not a row: %#v", result)
+			}
+			values = append(values, row.Get("c0"))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if err := engine.SendEvent(ctx, infraTableExpressionTrigger{ID: 0, P00: "E2"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(values) != 1 || !values[0].IsNull() {
+		t.Fatalf("lastevent declared value before S1 = %#v, want null", values)
+	}
+	if err := engine.SendEvent(ctx, infraTableExpressionS1{ID: 1000}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []infraTableExpressionBean{
+		{TheString: "E1", IntPrimitive: 1},
+		{TheString: "E2", IntPrimitive: 2},
+	} {
+		if err := engine.SendEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := engine.SendEvent(ctx, infraTableExpressionTrigger{ID: 0, P00: "E2"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(values) != 2 || values[1].Any() != 2 {
+		t.Fatalf("lastevent declared table values = %#v, want [null 2]", values)
+	}
+}
+
 // TestInfraTableAccessFilterBehaviorParity mirrors Java
 // InfraTableAccessCore.InfraFilterBehavior:
 //

@@ -20688,6 +20688,32 @@
       "difference": "Java's multiple insert-into syntax is represented by the explicit SplitAll/SplitIntoWhen fluent API and typed table subqueries; complete split-stream representation, ordering, context and invalid-rule matrices remain open."
     },
     {
+      "id": "case.infra-table-access-expression-alias-decl",
+      "javaRuntimeIds": [
+        "java-runtime-fc9d76e19bd726f24e20"
+      ],
+      "javaNames": [
+        "InfraExpressionAliasAndDecl"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessExpressionAliasAndDeclParity"
+      ],
+      "tags": [
+        "table",
+        "declared-expression",
+        "aggregate",
+        "subquery"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Three Go subtests cover declared aggregate expressions as IntoTable inputs, a parameterized declared expression reading a keyed table through SubqueryValue, and a declared expression gated by a LastEvent subquery before reading a second table. Runtime assertions verify 10/1000/10000/100, 21/2001/20001/201, and E2=2 with Null before the gate event."
+      ],
+      "difference": "Java alias-for declaration text is represented by immutable DefineExpression/ExpressionRef builders; the SupportBean_S1#lastevent table-access body is represented by explicit SubqueryExists(LastEvent()) gating plus SubqueryValue(FromTable(...)); the broader table metadata/index/context/join/invalid matrix remains open."
+    },
+    {
       "id": "case.infra-table-access-multikey-array-one",
       "javaRuntimeIds": [
         "java-runtime-ad82a78695c21c3397f0"
@@ -22142,6 +22168,10 @@
     },
     {
       "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-expression-alias-decl"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-filter"
     },
     {
@@ -22194,11 +22224,11 @@
     }
   ],
   "summary": {
-    "totalCases": 361,
+    "totalCases": 362,
     "totalCapabilities": 110,
-    "mappedCases": 344,
+    "mappedCases": 345,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2211
+    "disposedRuntimeIds": 2212
   }
 }
