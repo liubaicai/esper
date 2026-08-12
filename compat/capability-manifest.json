@@ -3070,7 +3070,8 @@
         "expr_enum_parity_test.go",
         "expr_enum_array_of_parity_test.go",
         "expr_enum_sequence_equal_parity_test.go",
-        "expr_enum_except_intersect_union_parity_test.go"
+        "expr_enum_except_intersect_union_parity_test.go",
+        "expr_enum_most_least_frequent_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3078,7 +3079,6 @@
         "ExprEnumDataSources suite",
         "ExprEnumDocSamples suite",
         "ExprEnumChained",
-        "ExprEnumMostLeastFrequent suite",
         "ExprEnumNested suite",
         "ExprEnumToMap suite",
         "ExprEnumAggregate suite",
@@ -9631,7 +9631,50 @@
         "java-junit",
         "go-unit"
       ],
-      "difference": "Go maps except/intersect/union to typed EnumExcept/EnumIntersect/EnumUnion over slices, matching Java removeAll/retainAll/concatenate semantics including null/empty right returning left unchanged and null left returning null. where(...).union(...) is composed from EnumWhere + EnumUnion, and intersect().countOf() filters use EnumCount. Go's typed nil slice fields in struct events expose as Present typed-nil rather than Null, so the null-items case is verified through direct NullLiteral evaluation. Java additionally validates event-type mismatches through EPL compilation and exposes event identity, schema inheritance and exact compiler error text."
+     "difference": "Go maps except/intersect/union to typed EnumExcept/EnumIntersect/EnumUnion over slices, matching Java removeAll/retainAll/concatenate semantics including null/empty right returning left unchanged and null left returning null. where(...).union(...) is composed from EnumWhere + EnumUnion, and intersect().countOf() filters use EnumCount. Go's typed nil slice fields in struct events expose as Present typed-nil rather than Null, so the null-items case is verified through direct NullLiteral evaluation. Java additionally validates event-type mismatches through EPL compilation and exposes event identity, schema inheritance and exact compiler error text."
+   },
+    {
+      "id": "case.expr-enum-most-least-frequent",
+      "javaRuntimeIds": [
+        "java-runtime-38e94f6fd4d76f47e3c9",
+        "java-runtime-908259350505041ad77f",
+        "java-runtime-f8eb35e32a52958b582c",
+        "java-runtime-69d6ef0a9793f94e9936"
+      ],
+      "javaNames": [
+        "ExprEnumMostLeastFreqEvents",
+        "ExprEnumMostLeastFreqScalarNoParam",
+        "ExprEnumMostLeastFreqScalar",
+        "ExprEnumMostLeastFrequentInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumMostLeastFrequent.java"
+      ],
+      "goTests": [
+        "TestExprEnumMostLeastFrequentScalarNoParamParity",
+        "TestExprEnumMostLeastFrequentScalarParity",
+        "TestExprEnumMostLeastFrequentEventsParity",
+        "TestExprEnumMostLeastFrequentMapParity",
+        "TestExprEnumMostLeastFrequentInvalidParity"
+      ],
+      "tags": [
+        "correctness",
+        "expression",
+        "enum",
+        "most-frequent",
+        "least-frequent",
+        "frequency",
+        "null",
+        "invalid"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
+      ],
+      "difference": "Go maps mostFrequent/leastFrequent to typed EnumMostFrequent/EnumLeastFrequent (no-param, returns element value) and EnumMostFrequentBy/EnumLeastFrequentBy (with selector, returns key value K matching Java's map-key result). Frequency counting preserves insertion order for tie-breaking, matching Java LinkedHashMap semantics. The By variants were corrected to return Expression[K] instead of Expression[T]. Java additionally rejects null-typed lambdas through EPL compilation and exposes exact compiler error text."
     },
     {
       "id": "case.expr-enum-aggregate",
@@ -21067,6 +21110,10 @@
     },
     {
       "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-most-least-frequent"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
       "caseId": "case.expr-enum-count-reverse"
     },
     {
@@ -21279,11 +21326,11 @@
     }
   ],
   "summary": {
-    "totalCases": 340,
+    "totalCases": 341,
     "totalCapabilities": 108,
-    "mappedCases": 321,
+    "mappedCases": 322,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2143
+    "disposedRuntimeIds": 2147
   }
 }

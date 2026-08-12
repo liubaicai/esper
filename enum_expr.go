@@ -1553,33 +1553,58 @@ func expressionDescription(expression Expr) string {
 	return expression.Description()
 }
 
-func enumFrequency[T any](kind string, values Expression[[]T], selector Expr, most, parameterRequired bool) Expression[T] {
-	return makeEnumExpr[T]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), values, parameterRequired, func(ctx EvalContext) Value {
+func enumFrequencyScalar[T comparable](kind string, values Expression[[]T], most bool) Expression[T] {
+	return makeEnumExpr[T]("enum-"+kind, enumDescription[T](kind, values, nil), enumExpressionChildren[T](values, nil), values, false, func(ctx EvalContext) Value {
+		items, input, ok := enumItems[T](values, ctx)
+		if !ok {
+			return input
+		}
+		frequencies := make(map[T]int, len(items))
+		for _, item := range items {
+			frequencies[item]++
+		}
+		if len(frequencies) == 0 {
+			return Null()
+		}
+		var selected T
+		bestCount := -1
+		for _, item := range items {
+			count := frequencies[item]
+			if bestCount == -1 || (most && count > bestCount) || (!most && count < bestCount) {
+				selected = item
+				bestCount = count
+			}
+		}
+		return Present(selected)
+	})
+}
+
+func enumFrequencyBy[T any, K comparable](kind string, values Expression[[]T], selector Expression[K], most bool) Expression[K] {
+	return makeEnumExpr[K]("enum-"+kind, enumDescription[T](kind, values, selector), enumExpressionChildren[T](values, selector), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
 		}
 		type frequency struct {
-			item  T
-			key   Value
+			key   K
 			count int
 		}
 		frequencies := make([]frequency, 0, len(items))
 		for index, item := range items {
-			key := Present(item)
-			if selector != nil {
-				key = selector.eval(enumElementContext(ctx, item, index, len(items)))
+			keyValue, err := As[K](selector.eval(enumElementContext(ctx, item, index, len(items))))
+			if err != nil {
+				return Null()
 			}
 			found := false
 			for frequencyIndex := range frequencies {
-				if frequencies[frequencyIndex].key.Equal(key) {
+				if frequencies[frequencyIndex].key == keyValue {
 					frequencies[frequencyIndex].count++
 					found = true
 					break
 				}
 			}
 			if !found {
-				frequencies = append(frequencies, frequency{item: item, key: key, count: 1})
+				frequencies = append(frequencies, frequency{key: keyValue, count: 1})
 			}
 		}
 		if len(frequencies) == 0 {
@@ -1591,24 +1616,24 @@ func enumFrequency[T any](kind string, values Expression[[]T], selector Expr, mo
 				selected = candidate
 			}
 		}
-		return Present(selected.item)
+		return Present(selected.key)
 	})
 }
 
 func EnumMostFrequent[T comparable](values Expression[[]T]) Expression[T] {
-	return enumFrequency[T]("most-frequent", values, nil, true, false)
+	return enumFrequencyScalar[T]("most-frequent", values, true)
 }
 
 func EnumLeastFrequent[T comparable](values Expression[[]T]) Expression[T] {
-	return enumFrequency[T]("least-frequent", values, nil, false, false)
+	return enumFrequencyScalar[T]("least-frequent", values, false)
 }
 
-func EnumMostFrequentBy[T any, K any](values Expression[[]T], selector Expression[K]) Expression[T] {
-	return enumFrequency[T]("most-frequent", values, selector, true, true)
+func EnumMostFrequentBy[T any, K comparable](values Expression[[]T], selector Expression[K]) Expression[K] {
+	return enumFrequencyBy[T, K]("most-frequent", values, selector, true)
 }
 
-func EnumLeastFrequentBy[T any, K any](values Expression[[]T], selector Expression[K]) Expression[T] {
-	return enumFrequency[T]("least-frequent", values, selector, false, true)
+func EnumLeastFrequentBy[T any, K comparable](values Expression[[]T], selector Expression[K]) Expression[K] {
+	return enumFrequencyBy[T, K]("least-frequent", values, selector, false)
 }
 
 func enumInputDescription[T any](values Expression[[]T]) string {

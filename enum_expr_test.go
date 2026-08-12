@@ -815,8 +815,8 @@ func TestEnumerableSetFoldGroupMapAndFrequencyMethods(t *testing.T) {
 	}
 	items := Literal([]enumExpressionItem{{ID: "A", Score: 1}, {ID: "B", Score: 2}, {ID: "C", Score: 1}})
 	score := EnumField[enumExpressionItem, int64]("score")
-	if got := EnumMostFrequentBy[enumExpressionItem, int64](items, score).eval(EvalContext{}); !got.Equal(Present(enumExpressionItem{ID: "A", Score: 1})) {
-		t.Fatalf("most-frequent-by = %v", got)
+	if got := EnumMostFrequentBy[enumExpressionItem, int64](items, score).eval(EvalContext{}); !got.Equal(Present(int64(1))) {
+		t.Fatalf("most-frequent-by = %v, want 1", got)
 	}
 }
 
