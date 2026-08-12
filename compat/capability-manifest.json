@@ -3073,7 +3073,8 @@
         "expr_enum_except_intersect_union_parity_test.go",
         "expr_enum_most_least_frequent_parity_test.go",
         "expr_enum_to_map_parity_test.go",
-        "expr_enum_aggregate_parity_test.go"
+        "expr_enum_aggregate_parity_test.go",
+        "expr_enum_group_by_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3081,8 +3082,7 @@
         "ExprEnumDataSources suite",
         "ExprEnumDocSamples suite",
         "ExprEnumChained",
-        "ExprEnumNested suite",
-        "ExprEnumGroupBy suite"
+        "ExprEnumNested suite"
       ]
     },
     {
@@ -10190,6 +10190,11 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumGroupBy.java"
       ],
       "goTests": [
+        "TestExprEnumGroupByOneParamScalarParity",
+        "TestExprEnumGroupByTwoParamScalarParity",
+        "TestExprEnumGroupByEventParity",
+        "TestExprEnumGroupByNullSelectorsParity",
+        "TestExprEnumGroupByInvalidParity",
         "TestEnumerableSetFoldGroupMapAndFrequencyMethods",
         "TestEnumerableBuildRejectsMissingRequiredExpressions"
       ],
@@ -10198,7 +10203,12 @@
         "expression",
         "enum",
         "group-by",
-        "generic"
+        "generic",
+        "linked-hash-map",
+        "index",
+        "size",
+        "null",
+        "invalid"
       ],
       "status": "mapped",
       "evidence": [
@@ -10206,7 +10216,7 @@
         "java-junit",
         "go-unit"
       ],
-      "difference": "Go adds EnumGroupBySelect with independent typed key/value selectors and preserves the one-selector EnumGroupBy original-item buckets; both retain input order and map null/missing selector values to the typed zero key/value. Java's full lambda arity/type metadata and exact null-key generic descriptors remain open."
+      "difference": "Go maps groupBy to typed EnumGroupBy[T,K] (one-selector, original-item buckets) and EnumGroupBySelect[T,K,V] (two-selector, typed value buckets), both preserving LinkedHashMap key first-seen order and bucket input order. Null selectors become the typed zero key/value; pointer/interface K/V retain Java null. Empty collection yields an empty map, null collection yields null. Build rejects missing collection/key/value selectors; Java mismatched-lambda-arity diagnostics are structurally impossible because both selectors share EnumElement/EnumIndex/EnumSize nodes. Java's full parameterized lambda arity/type metadata and exact null-key generic descriptors remain open."
     },
     {
       "id": "case.aggregate-dimensional",
@@ -21201,6 +21211,10 @@
     {
       "capabilityId": "expr.enum-collection-methods",
       "caseId": "case.expr-enum-select"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-groupby"
     },
     {
       "capabilityId": "view.basic-windows",

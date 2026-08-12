@@ -1455,9 +1455,9 @@ func EnumSequenceEqual[T any](left, right Expression[[]T]) Expression[bool] {
 	})
 }
 
-// EnumGroupBy groups original items by an analyzable key expression. A null
-// key maps to the zero value of K; callers that need to retain null distinctly
-// can use K=any.
+// EnumGroupBy groups original items by an analyzable key expression while
+// preserving input order within each bucket. A Null key becomes the zero value
+// of K; use a pointer or interface K to distinguish Null from a concrete zero.
 func EnumGroupBy[T any, K comparable](values Expression[[]T], key Expression[K]) Expression[map[K][]T] {
 	return makeEnumExpr[map[K][]T]("enum-group-by", enumDescription[T]("group-by", values, key), enumExpressionChildren[T](values, key), values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
@@ -1484,9 +1484,12 @@ func EnumGroupBy[T any, K comparable](values Expression[[]T], key Expression[K])
 	})
 }
 
-// EnumGroupBySelect groups selector values by a separate key selector. It is
-// the typed Go counterpart of Esper's two-lambda groupBy footprint; the
-// one-lambda EnumGroupBy form retains the original items in each bucket.
+// EnumGroupBySelect groups selector values by a separate key selector while
+// preserving input order within each bucket. It is the typed Go counterpart
+// of Esper's two-lambda groupBy footprint; the one-lambda EnumGroupBy form
+// retains original items. Null selectors become the zero value of K or V, so
+// pointer or interface result types should be used when Null must remain
+// distinguishable from a concrete zero.
 func EnumGroupBySelect[T any, K comparable, V any](values Expression[[]T], key Expression[K], selector Expression[V]) Expression[map[K][]V] {
 	children := enumExpressionChildren[T](values, key)
 	if selector != nil {

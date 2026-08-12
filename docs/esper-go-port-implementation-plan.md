@@ -1,3 +1,5 @@
+本轮关闭 Java `ExprEnumGroupBy` suite，并扩展已有 `case.expr-enum-groupby`。新增 `expr_enum_group_by_parity_test.go`，以 `EnumGroupBy[T,K]`（单 selector，原元素分桶）和 `EnumGroupBySelect[T,K,V]`（双 selector，typed value 分桶）覆盖标量/event 的 element-index-size 选择器、部署态 typed map 元数据、空/Null 输入、pointer/interface K/V 的 null key/value、序保留（LinkedHashMap key 首见序 + 桶内输入序）与 Build 缺失 collection/key/value 选择器 invalid。Java mismatched-lambda-arity EPL 诊断在 fluent API 下结构性不可能（两个 selector 共享 EnumElement/Index/Size 节点）；Java 的 parameterized lambda arity/type metadata 与精确 null-key generic descriptor 保持差异。enum_expr.go 注释补充 Null 契约。Java `TestSuiteExprEnum` 28/28 oracle 沿用本轮实跑结果。
+
 # Esper 9.0.0 Go 全量移植规划实施文档
 
 > 最新补充：Draft 3.88（2026-08-12），新增 `expr_define_basic_parity_test.go`，对照 Java `ExprDefineBasic` 的 6 个 execution（SimpleLiteral、NoParameterArithmetic、NoParameterVariable 含运行时变量变更、StaticMethodSingleParam、Invalid 参数数量校验）。参数化表达式与聚合、filter 上下文参数化、子查询/模式/case-new/split-stream 变体保留为后续切片。Coverage 2,108/4,140（50.92%），337 case 中 318 mapped / 2 partial / 17 approved-difference。本轮不需要 MySQL Docker。
