@@ -10319,11 +10319,58 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 				child = &windowRuntimeState{}
 				state.children[index] = child
 			}
-			if _, err := r.addToWindow(childSpec, child, event, now); err != nil {
+		if _, err := r.addToWindow(childSpec, child, event, now); err != nil {
 				return eventDelta{}, err
 			}
 		}
-		return reconcileCompositeWindow(state, window, now), nil
+		result := reconcileCompositeWindow(state, window, now)
+		// Keep child views in sync, mirroring Java Esper's
+		// IntersectDefaultView. Two categories of events must be
+		// forwarded as removals to every child:
+		//
+		// 1. Events that left the active intersection (result.oldEvents)
+		//    because a child replaced them — e.g. Unique(theString)
+		//    swapping E1@old for E1@new. The old event must leave every
+		//    child so FirstLength frees its slot.
+		//
+		// 2. The incoming event itself when it did not enter the
+		//    active intersection — e.g. FirstUnique(theString) silently
+		//    drops a duplicate while FirstLength(3) still accepts it.
+		//    Without removing the stale copy, the rejected event would
+		//    consume capacity and block later inserts.
+		//
+		// Batch windows (LengthBatch, TimeBatch …) defer events to
+		// pendingNew until flush, so the incoming event may legitimately
+		// be absent from the active set while a batch is accumulating.
+		// The anyPending guard skips cleanup in that case.
+		if window.Mode == IntersectWindowMode {
+			toClean := append([]Event(nil), result.oldEvents...)
+			if !containsEvent(state.entries, event) {
+				anyPending := false
+				for _, child := range state.children {
+					for _, st := range child.pendingNew {
+						if sameEvent(st.event, event) {
+							anyPending = true
+							break
+						}
+					}
+					if anyPending {
+						break
+					}
+				}
+				if !anyPending {
+					toClean = append(toClean, event)
+				}
+			}
+			for _, ev := range toClean {
+				for index, childSpec := range window.Windows {
+					if index < len(state.children) {
+						removeFromWindowState(childSpec, state.children[index], ev, now, r.variables)
+					}
+				}
+			}
+		}
+		return result, nil
 	case KeepAllWindowSpec:
 		state.entries = append(state.entries, stored)
 		return eventDelta{newEvents: []Event{event}}, nil
@@ -11280,6 +11327,9 @@ func windowIteratorEvents(spec WindowSpec, state *windowRuntimeState) []Event {
 	if state == nil {
 		return nil
 	}
+	if composite, ok := spec.(CompositeWindowSpec); ok {
+		return compositeIteratorEvents(composite, state)
+	}
 	if window, ok := spec.(GroupWindowSpec); ok {
 		keys := groupWindowOrder(state)
 		var result []Event
@@ -11297,6 +11347,55 @@ func windowIteratorEvents(spec WindowSpec, state *windowRuntimeState) []Event {
 		}
 	}
 	return windowHistory(spec, state)
+}
+
+func compositeIteratorEvents(spec CompositeWindowSpec, state *windowRuntimeState) []Event {
+	if state == nil || len(state.children) == 0 {
+		return nil
+	}
+	candidates := make(map[string]Event)
+	order := make([]string, 0)
+	presence := make(map[string]int)
+	for index, childSpec := range spec.Windows {
+		if index >= len(state.children) {
+			continue
+		}
+		seen := make(map[string]struct{})
+		for _, event := range windowIteratorEvents(childSpec, state.children[index]) {
+			key := eventIdentity(event)
+			if _, exists := candidates[key]; !exists {
+				candidates[key] = event
+				order = append(order, key)
+			}
+			if _, exists := seen[key]; !exists {
+				presence[key]++
+				seen[key] = struct{}{}
+			}
+		}
+	}
+	eligible := func(key string) bool {
+		if spec.Mode == UnionWindowMode {
+			return presence[key] > 0
+		}
+		return presence[key] == len(state.children)
+	}
+	result := make([]Event, 0, len(candidates))
+	seen := make(map[string]struct{}, len(candidates))
+	for _, stored := range state.entries {
+		key := eventIdentity(stored.event)
+		if eligible(key) {
+			result = append(result, stored.event)
+			seen[key] = struct{}{}
+		}
+	}
+	for _, key := range order {
+		if _, exists := seen[key]; exists || !eligible(key) {
+			continue
+		}
+		result = append(result, candidates[key])
+		seen[key] = struct{}{}
+	}
+	return result
 }
 
 func windowHistory(spec WindowSpec, state *windowRuntimeState) []Event {
