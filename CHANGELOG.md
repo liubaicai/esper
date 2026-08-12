@@ -1,3 +1,5 @@
+本轮收敛 ExprCorePrior 的 3 个 parity 执行：UnboundSceneTwo、BoundedMultiple、BoundedSingle。新增 expr_core_prior_parity_test.go，覆盖无窗口和 length(2) 窗口中 Prior(0/1) 的 arrival-order 语义，包括 old stream 在事件驱逐后的历史快照。runtime 新增共享 priorArrival 和 delta 级前缀快照，避免按事件复制 O(n^2) 历史，同时不覆盖 TimeOrder/Sorted 视图已有的专用 prior 快照。另外修正上一轮误新建 case.expr-core-previous 导致的重复 runtime/case 统计，将测试挂回原有 case.expr-core-previous-prior。Coverage 保持 2,127/4,140（51.38%），337 case 中 318 mapped / 2 partial / 17 approved-difference。
+
 本轮新增 ExprCorePreviousPrevStream parity（1 个测试）：prev(1, field) 在 length 窗口中访问上一个事件的属性，验证窗口滑动时 Prev 的相对位移语义。新增 expr_core_previous_parity_test.go。Time-batch prev、prevtail、prevwindow、prevcount 和 per-group 变体保留为后续。Coverage 2,128/4,140（51.40%）。
 
 本轮新增 ExprCoreInBetween parity（5 个测试）：数值 IN 带算术表达式候选和 null 传播（InNumeric）、字符串 IN/not-IN（InStringExpr）、数值 Between/not-Between（BetweenNumericExpr）、字符串 Between（BetweenStringExpr）、半开/半闭区间（InRange，BetweenRangeOf 四种括号形态）。新增 expr_core_in_between_parity_test.go。集合/数组/map 展开、BigInt/BigDec、boolean IN 和 numeric-coercion 跨类型候选依赖更深集成，保留为后续。SODA OM 变体登记为 approved difference。Coverage 2,127/4,140（51.38%）。

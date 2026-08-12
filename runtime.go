@@ -4480,6 +4480,13 @@ type statementRuntime struct {
 	outputState              *outputRuntimeState
 	distinctCounts           map[string]int
 	namedWindowArrival       []Event
+	// priorArrival retains the logical input arrival order used by Esper's
+	// prior() expression. Unlike Prev, Prior is not limited to the current
+	// view's retained entries: a length(2) view can still evaluate prior(2,
+	// value) for the third event against the first event. Old-stream snapshots
+	// are reconstructed from the prefix ending at the leaving event, avoiding
+	// a per-event copy of the entire history.
+	priorArrival             []Event
 	partitions               map[string]*statementRuntime
 	partitionContextName     string
 	partitionKey             string
@@ -6555,6 +6562,9 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 		delta, insertErr := r.insert(plan.query.input, event, now)
 		err = insertErr
 		if err == nil {
+			if queryUsesPriorAccess(plan.query) {
+				r.trackPriorArrival(&delta)
+			}
 			batch = r.batch(delta, plan, now)
 		}
 	}
@@ -6563,6 +6573,38 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 	}
 	batch = r.applyOutput(plan.query.output, batch, false, now, plan)
 	return batch, !batch.empty() || batch.forced, nil
+}
+
+// trackPriorArrival records the arrival-order snapshot required by Prior.
+// Prior is distinct from Prev: a bounded view may evict an event while a
+// later row still asks for prior(2, value), and Esper resolves that lookup
+// against the stream's arrival history. The delta carries the prefix needed
+// by the current new/old rows, while priorArrival itself remains one shared
+// arrival-order slice.
+func (r *statementRuntime) trackPriorArrival(delta *eventDelta) {
+	if r == nil || delta == nil {
+		return
+	}
+	if delta.priorByEvent == nil {
+		delta.priorByEvent = make(map[string][]Event)
+	}
+	for _, event := range delta.newEvents {
+		r.priorArrival = append(r.priorArrival, event)
+		history := append([]Event(nil), r.priorArrival...)
+		identity := eventIdentity(event)
+		if _, exists := delta.priorByEvent[identity]; !exists {
+			delta.priorByEvent[identity] = history
+		}
+	}
+	for _, event := range delta.oldEvents {
+		identity := eventIdentity(event)
+		if _, exists := delta.priorByEvent[identity]; exists {
+			continue
+		}
+		if history := arrivalHistoryThrough(r.priorArrival, event); history != nil {
+			delta.priorByEvent[identity] = history
+		}
+	}
 }
 
 func (r *statementRuntime) seedInitialWindowSchedules(at time.Time) error {
@@ -8348,6 +8390,54 @@ func queryUsesPreviousAccess(query Query) bool {
 	for _, selection := range query.selections {
 		if selection.Expr != nil && expressionContainsPreviousAccess(selection.Expr.node()) {
 			return true
+		}
+	}
+	return false
+}
+
+func queryUsesPriorAccess(query Query) bool {
+	for _, selection := range query.selections {
+		if selection.Expr != nil && expressionContainsPriorAccess(selection.Expr.node()) {
+			return true
+		}
+	}
+	return false
+}
+
+func expressionContainsPriorAccess(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if strings.HasPrefix(node.kind, "prior") {
+		return true
+	}
+	for _, child := range node.children {
+		if expressionContainsPriorAccess(child) {
+			return true
+		}
+	}
+	if node.subquery != nil {
+		if node.subquery.predicate != nil && expressionContainsPriorAccess(node.subquery.predicate.node()) {
+			return true
+		}
+		if node.subquery.projection != nil && expressionContainsPriorAccess(node.subquery.projection.node()) {
+			return true
+		}
+		for _, selection := range node.subquery.columns {
+			if selection.Expr != nil && expressionContainsPriorAccess(selection.Expr.node()) {
+				return true
+			}
+		}
+		if node.subquery.groupBy != nil && expressionContainsPriorAccess(node.subquery.groupBy.node()) {
+			return true
+		}
+		if node.subquery.having != nil && expressionContainsPriorAccess(node.subquery.having.node()) {
+			return true
+		}
+		for _, order := range node.subquery.orderBy {
+			if order.Expression != nil && expressionContainsPriorAccess(order.Expression.node()) {
+				return true
+			}
 		}
 	}
 	return false
