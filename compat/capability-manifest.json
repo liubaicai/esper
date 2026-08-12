@@ -441,7 +441,12 @@
         "EPLOtherUnaryMinus",
         "ExprCoreCaseSyntax1WithElse",
         "ExprCoreCaseSyntax1Branches3",
-        "ExprCoreCaseSyntax2"
+        "ExprCoreCaseSyntax2",
+        "ExprCoreInNumeric",
+        "ExprCoreInStringExpr",
+        "ExprCoreBetweenNumericExpr",
+        "ExprCoreBetweenStringExpr",
+        "ExprCoreInRange"
       ],
       "goRefs": [
         "expr_case.go",
@@ -495,7 +500,8 @@
         "subquery.go",
         "plan.go",
         "epl_other_unary_minus_parity_test.go",
-        "expr_core_case_parity_test.go"
+        "expr_core_case_parity_test.go",
+        "expr_core_in_between_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -8885,7 +8891,12 @@
         "java-runtime-9dde0931132c3355e4bf",
         "java-runtime-31934462edbc04c83973",
         "java-runtime-029a09d61c8a59f25954",
-        "java-runtime-db56599dcf5be364d97b"
+        "java-runtime-db56599dcf5be364d97b",
+        "java-runtime-791d833152f1266fa139",
+        "java-runtime-ffe28bce1e8e2a0dc4a0",
+        "java-runtime-1145ffc38eea9ce1624e",
+        "java-runtime-143c2fcf5bb1e4e6aa4a",
+        "java-runtime-31934462edbc04c83973"
       ],
       "javaNames": [
         "ExprCoreInNumeric",
@@ -8909,7 +8920,12 @@
         "ExprCoreBetweenNumericCoercionLong",
         "ExprCoreInRange",
         "ExprCoreBetweenNumericCoercionDouble",
-        "ExprCoreInBetweenInvalid"
+        "ExprCoreInBetweenInvalid",
+        "ExprCoreInNumeric",
+        "ExprCoreInStringExpr",
+        "ExprCoreBetweenNumericExpr",
+        "ExprCoreBetweenStringExpr",
+        "ExprCoreInRange"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreInBetween.java"
@@ -8917,7 +8933,12 @@
       "goTests": [
         "TestInBetweenExpressionsMatchJavaCollectionNumericBigNumberAndNullSemantics",
         "TestInBetweenExpressionsBuildLiveProjectionAndPlanIdentity",
-        "TestInBetweenExpressionsRejectInvalidBuilders"
+        "TestInBetweenExpressionsRejectInvalidBuilders",
+        "TestExprCoreInNumericParity",
+        "TestExprCoreInStringExprParity",
+        "TestExprCoreBetweenNumericExprParity",
+        "TestExprCoreBetweenStringExprParity",
+        "TestExprCoreInRangeParity"
       ],
       "tags": [
         "correctness",
@@ -21107,6 +21128,6 @@
     "mappedCases": 318,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2122
+    "disposedRuntimeIds": 2127
   }
 }

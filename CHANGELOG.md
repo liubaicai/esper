@@ -1,3 +1,5 @@
+本轮新增 ExprCoreInBetween parity（5 个测试）：数值 IN 带算术表达式候选和 null 传播（InNumeric）、字符串 IN/not-IN（InStringExpr）、数值 Between/not-Between（BetweenNumericExpr）、字符串 Between（BetweenStringExpr）、半开/半闭区间（InRange，BetweenRangeOf 四种括号形态）。新增 expr_core_in_between_parity_test.go。集合/数组/map 展开、BigInt/BigDec、boolean IN 和 numeric-coercion 跨类型候选依赖更深集成，保留为后续。SODA OM 变体登记为 approved difference。Coverage 2,127/4,140（51.38%）。
+
 本轮新增 ExprCoreCase parity（3 个测试）：搜索 CASE 带 ELSE（Syntax1WithElse）、多分支无 ELSE（Syntax1Branches3，不匹配时返回 null）、简单 CASE 带混合数值类型强制（Syntax2，跨 int/long/float/double 匹配和运算）。新增 expr_core_case_parity_test.go，覆盖 CaseWhen/CaseValue 两种语法和 Null 默认语义。SODA OM/Compile 变体和 StringsNBranches 类型转换矩阵登记为 approved difference。Coverage 2,122/4,140（51.26%）。
 
 本轮新增 EVE 用例（ExprDefineValueParameterEVE），关闭二路 Cartesian 上下文中以 JoinEventValue 传递两侧事件作为声明表达式参数的 parity。支持不同事件类型的事件参数在声明表达式 body 中交叉访问属性。Coverage 2,119/4,140（51.18%）。
