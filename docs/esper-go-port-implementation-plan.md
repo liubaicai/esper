@@ -1,3 +1,5 @@
+本轮关闭 Java `ExprEnumDocSamples` suite（10 个 runtime），新增 `case.expr-enum-doc-samples` 和 `expr_enum_doc_samples_parity_test.go`。覆盖 ExprEnumScalarArray（全面标量数组 enum 方法验证，element/index/size lambda 变体）和 ExprEnumHowToUse（链式 where + 复合谓词 + 嵌套属性路径）。其余 8 个执行需子查询/命名窗口/访问聚合/prev窗口/UDF集合/声明表达式数据源，保持开放。Java `TestSuiteExprEnum` 28/28 oracle 沿用本轮实跑结果。
+
 本轮关闭 Java `ExprEnumNested` suite，新增 `case.expr-enum-nested` 和 `expr_enum_nested_parity_test.go`。覆盖三个执行：不相关嵌套（EnumMinOf 在 EnumWhere 谓词内调用同一集合）、min-by-where（EnumMinBy 返回最年轻者作为谓词比较值）、嵌套 anyOf（内层集合来自外层元素属性）。第四个执行 ExprEnumCorrelated 需从内层谓词引用外层元素（x.p00），Go 的 EnumElement 始终返回最内层上下文值，声明式外层元素引用保持开放。Java `TestSuiteExprEnum` 28/28 oracle 沿用本轮实跑结果。
 
 本轮关闭 Java `ExprEnumChained` suite，新增 `case.expr-enum-chained` 和 `expr_enum_chained_parity_test.go`。Go 以表达式嵌套实现链式调用：`EnumWhere` 输出 `Expression[[]T]` 直接作为 `EnumMinOf` 输入，对应 Java `sales.where(x => x.cost > 1000).min(y => y.buyer.age)`；嵌套属性路径 `buyer.age` 通过 getPropertyPath 解析。覆盖直接求值与 Build/Deploy 部署态 typed 元数据、事件求值及空结果 Null 返回。Java `TestSuiteExprEnum` 28/28 oracle 沿用本轮实跑结果。

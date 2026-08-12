@@ -3076,13 +3076,13 @@
         "expr_enum_aggregate_parity_test.go",
         "expr_enum_group_by_parity_test.go",
         "expr_enum_chained_parity_test.go",
-        "expr_enum_nested_parity_test.go"
+        "expr_enum_nested_parity_test.go",
+        "expr_enum_doc_samples_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
       "remaining": [
-        "ExprEnumDataSources suite",
-        "ExprEnumDocSamples suite"
+        "ExprEnumDataSources suite"
       ]
     },
     {
@@ -10287,6 +10287,55 @@
         "go-unit"
       ],
       "difference": "Go covers uncorrelated nested enum methods (EnumMinOf/EnumMinBy inside EnumWhere predicate) and nested EnumAnyOf (inner collection from outer element property). The ExprEnumCorrelated execution requires referencing the outer lambda element (x.p00) from inside an inner EnumFirstOf predicate; Go's EnumElement always returns the innermost enum-context value, so declarative outer-element correlation is not yet supported and remains open. Java's EPL lambda parameter naming, correlated-cache behavior and exact compiler diagnostics also remain fluent API differences."
+    },
+    {
+      "id": "case.expr-enum-doc-samples",
+      "javaRuntimeIds": [
+        "java-runtime-47506649d111d77b297f",
+        "java-runtime-ab1b4869371e94f94cbf",
+        "java-runtime-385eff1ed2a658d97cc5",
+        "java-runtime-41005ef10624c5d74430",
+        "java-runtime-dee5baa9c10cef004f1d",
+        "java-runtime-bc4d4a86bdfe4bcb1c2b",
+        "java-runtime-cd34814a4a9ba8aba168",
+        "java-runtime-e3309b27c3a28e99e6c3",
+        "java-runtime-532c1879b5d1d9909c57",
+        "java-runtime-251521fab2bfbda03c36"
+      ],
+      "javaNames": [
+        "ExprEnumExpressions",
+        "ExprEnumHowToUse",
+        "ExprEnumSubquery",
+        "ExprEnumNamedWindow",
+        "ExprEnumAccessAggWindow",
+        "ExprEnumPrevWindow",
+        "ExprEnumProperties",
+        "ExprEnumUDFSingleRow",
+        "ExprEnumScalarArray",
+        "ExprEnumDeclared"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDocSamples.java"
+      ],
+      "goTests": [
+        "TestExprEnumDocSamplesScalarArrayParity",
+        "TestExprEnumDocSamplesChainedWhereParity"
+      ],
+      "tags": [
+        "correctness",
+        "expression",
+        "enum",
+        "doc-samples",
+        "scalar-array",
+        "chained-where"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-junit",
+        "go-unit"
+      ],
+      "difference": "Go covers ExprEnumScalarArray (comprehensive scalar-array enum methods with element/index/size lambda variants) and ExprEnumHowToUse (chained .where().where() with nested property paths). ExprEnumExpressions is a compile-only smoke test. ExprEnumSubquery, ExprEnumNamedWindow, ExprEnumAccessAggWindow, ExprEnumPrevWindow, ExprEnumProperties, ExprEnumUDFSingleRow and ExprEnumDeclared require subquery, named-window, access-aggregation, prev-window, UDF-collection, and declared-expression data sources that remain open in the fluent API. Java's EPL syntax, in-clause collection membership, and exact schema/render assertions also remain fluent API differences."
     },
     {
       "id": "case.aggregate-dimensional",
@@ -21295,6 +21344,10 @@
       "caseId": "case.expr-enum-nested"
     },
     {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-doc-samples"
+    },
+    {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-basic-windows"
     },
@@ -21484,11 +21537,11 @@
     }
   ],
   "summary": {
-    "totalCases": 344,
+    "totalCases": 345,
     "totalCapabilities": 108,
-    "mappedCases": 325,
+    "mappedCases": 326,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2157
+    "disposedRuntimeIds": 2167
   }
 }
