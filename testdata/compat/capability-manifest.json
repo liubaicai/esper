@@ -20421,6 +20421,32 @@
         "Go fluent aggregate IntoTable materializes an unkeyed count(*) row; a normal event Filter reads the current table row through SubqueryValue(FromTable(...)) and matches exactly counts 1 and 2 before rejecting 3 and stale 1."
       ],
       "difference": "The Java top-level table accessor syntax is represented by a typed FromTable scalar subquery in Go; remaining InfraTableAccessCore table access, method/access columns, join, split-stream and array-key executions remain open."
+    },
+    {
+      "id": "case.infra-table-access-ungrouped-window-sum",
+      "javaRuntimeIds": [
+        "java-runtime-a7bd4b1a3580754c28cf"
+      ],
+      "javaNames": [
+        "InfraTableAccessCoreUnGroupedWindowAndSum"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessUngroupedWindowAndSumParity"
+      ],
+      "tags": [
+        "table",
+        "into-table",
+        "window-access",
+        "sum"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go fluent LengthWindow(2) + WindowAccessBy + Sum materializes a single unkeyed table row; SelectFromTableWhere reads insertion-ordered window values and running totals after each trigger."
+      ],
+      "difference": "Java object-array MyEvent and top-level table accessor are represented by typed Go struct events and an explicit table trigger projection; grouped, method/access, context and array-key table cases remain open."
     }
   ],
   "mappings": [
@@ -21827,14 +21853,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-filter"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-ungrouped-window-sum"
     }
   ],
   "summary": {
-    "totalCases": 349,
+    "totalCases": 350,
     "totalCapabilities": 110,
-    "mappedCases": 332,
+    "mappedCases": 333,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2199
+    "disposedRuntimeIds": 2200
   }
 }
