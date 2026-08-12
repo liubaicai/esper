@@ -20,6 +20,7 @@
 
 # Esper 9.0.0 Go 全量移植规划实施文档
 
+> 最新补充：Draft 3.92（2026-08-12），继续关闭 Java `InfraTableAccessCore.InfraIntegerIndexedPropertyLookAlike` execution（`java-runtime-77d523200118fdbae252`），新增 `TestInfraTableAccessIntegerIndexedPropertyLookAlikeParity`。Go 以 `GroupBy(intPrimitive)` + `WindowAccessBy(EventValue)` + `IntoTable` 物化整数主键表行，再用 `SelectFromTable` 的显式 typed primary-key lookup 对照 `varaggIIP[1]` 的整行、窗口列、`last(*)` 和倒数第二项访问；SODA 由 immutable fluent Plan 表达。剩余 table method/access、context、join、split-stream 和 array-key execution 继续开放。Coverage 2,201/4,140（53.2%），351 case 中 334 mapped / 0 partial / 17 approved-difference。本轮不需要 MySQL Docker。
 > 最新补充：Draft 3.91（2026-08-12），完成根包实现拆分。根目录由 486 个 Go 文件降为三个公共 facade 文件；实现和白盒测试迁入 `internal/esper`。生成器与 Go 类型系统 API 门禁保证迁移前后 2,564 条公开对象/方法签名一致，capability 的 416 条 Go 引用同步到新路径。本轮无 Esper 行为变更。
 >
 > 最新补充：Draft 3.90（2026-08-12），完成 Go 项目结构收敛。公共根包与连接器导入路径保持不变；私有命令/对账实现迁入 `internal`，固定兼容资产迁入 `testdata/compat`，新增持续结构门禁、Makefile、忽略规则、目录说明和 ADR-015，并清除覆盖率/日志产物。本轮无 Esper 行为变更。

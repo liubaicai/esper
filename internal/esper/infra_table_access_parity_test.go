@@ -22,6 +22,16 @@ type infraTableWindowTrigger struct {
 	ID int64 `esper:"id"`
 }
 
+type infraTableIndexedBean struct {
+	TheString     string `esper:"theString"`
+	IntPrimitive  int64  `esper:"intPrimitive"`
+	LongPrimitive int64  `esper:"longPrimitive"`
+}
+
+type infraTableIndexedTrigger struct {
+	ID int64 `esper:"id"`
+}
+
 // TestInfraTableAccessFilterBehaviorParity mirrors Java
 // InfraTableAccessCore.InfraFilterBehavior:
 //
@@ -234,4 +244,121 @@ func TestInfraTableAccessUngroupedWindowAndSumParity(t *testing.T) {
 	sendAndRead(10, 0, []int64{10}, 10)
 	sendAndRead(20, 1, []int64{10, 20}, 30)
 	sendAndRead(30, 2, []int64{20, 30}, 50)
+}
+
+// TestInfraTableAccessIntegerIndexedPropertyLookAlikeParity mirrors Java
+// InfraTableAccessCore.InfraIntegerIndexedPropertyLookAlike. The Java
+// varaggIIP[1] table access is expressed as an explicit typed primary-key
+// lookup in the Go trigger chain; the remaining projections keep the row,
+// access value and indexed window navigation visible in the plan.
+func TestInfraTableAccessIntegerIndexedPropertyLookAlikeParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableIndexedBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableIndexedTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "varaggIIP", []TableColumn{
+		PrimaryKeyColumn[int64]("key"),
+		TableColumnOf[WindowAccessValue[infraTableIndexedBean]]("myevents"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	key := Field[infraTableIndexedBean, int64]("intPrimitive")
+	window := WindowAccessBy[infraTableIndexedBean](EventValue[infraTableIndexedBean]())
+	aggregatePlan, err := env.Build(
+		From[infraTableIndexedBean](env, "SupportBean").
+			Window(LengthWindow(3)).
+			GroupBy(key).
+			Select(
+				Alias("key", key),
+				Alias("myevents", window),
+			).
+			IntoTable("varaggIIP", StatementName("varagg-iip")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableField := TableField[WindowAccessValue[infraTableIndexedBean]]("myevents")
+	values := Method[[]infraTableIndexedBean](tableField, "Values")
+	triggerPlan, err := env.Build(
+		OnEvent(From[infraTableIndexedTrigger](env, "SupportBean_S0")).
+			SelectFromTable("varaggIIP", []Expr{Literal[int64](1)},
+				Alias("c0", EventValue[Event]()),
+				Alias("c1", tableField),
+				Alias("c2", Method[infraTableIndexedBean](tableField, "Last")),
+				Alias("c3", ArrayAt[infraTableIndexedBean](values, Subtract[int64](ArraySize(values), Literal[int64](2)))),
+			).
+			Query(StatementName("read-varagg-iip")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), triggerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("integer-indexed table result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	e1 := infraTableIndexedBean{TheString: "E1", IntPrimitive: 1, LongPrimitive: 10}
+	e2 := infraTableIndexedBean{TheString: "E2", IntPrimitive: 1, LongPrimitive: 20}
+	ctx := context.Background()
+	if err := engine.SendEvent(ctx, e1); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(ctx, e2); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(ctx, infraTableIndexedTrigger{ID: 0}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("integer-indexed table result count = %d, want 1", len(rows))
+	}
+
+	row := rows[0]
+	c0, ok := row.Get("c0").Any().(Event)
+	if !ok {
+		t.Fatalf("c0 type = %T, want Event", row.Get("c0").Any())
+	}
+	c0Access, ok := c0.Get("myevents").Any().(WindowAccessValue[infraTableIndexedBean])
+	if !ok {
+		t.Fatalf("c0.myevents type = %T", c0.Get("myevents").Any())
+	}
+	c1, ok := row.Get("c1").Any().(WindowAccessValue[infraTableIndexedBean])
+	if !ok {
+		t.Fatalf("c1 type = %T", row.Get("c1").Any())
+	}
+	for name, access := range map[string]WindowAccessValue[infraTableIndexedBean]{"c0.myevents": c0Access, "c1": c1} {
+		got := access.Values()
+		if len(got) != 2 || got[0] != e1 || got[1] != e2 {
+			t.Fatalf("%s = %#v, want [%#v %#v]", name, got, e1, e2)
+		}
+	}
+	if got, ok := row.Get("c2").Any().(infraTableIndexedBean); !ok || got != e2 {
+		t.Fatalf("c2 = %#v, want %#v", row.Get("c2").Any(), e2)
+	}
+	if got, ok := row.Get("c3").Any().(infraTableIndexedBean); !ok || got != e1 {
+		t.Fatalf("c3 = %#v, want %#v", row.Get("c3").Any(), e1)
+	}
 }

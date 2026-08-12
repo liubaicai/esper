@@ -940,7 +940,8 @@
         "InfraTableOnUpdate",
         "InfraNamedWindowOnMerge",
         "InfraNWTableOnDelete",
-        "InfraNWTableOnMerge"
+        "InfraNWTableOnMerge",
+        "InfraTableAccessCore"
       ],
       "goRefs": [
         "internal/esper/trigger.go",
@@ -950,7 +951,8 @@
         "internal/esper/trigger_namedwindow_merge_test.go",
         "internal/esper/schema.go",
         "internal/esper/state.go",
-        "internal/esper/plan.go"
+        "internal/esper/plan.go",
+        "internal/esper/infra_table_access_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -20447,6 +20449,32 @@
         "Go fluent LengthWindow(2) + WindowAccessBy + Sum materializes a single unkeyed table row; SelectFromTableWhere reads insertion-ordered window values and running totals after each trigger."
       ],
       "difference": "Java object-array MyEvent and top-level table accessor are represented by typed Go struct events and an explicit table trigger projection; grouped, method/access, context and array-key table cases remain open."
+    },
+    {
+      "id": "case.infra-table-access-integer-indexed-property",
+      "javaRuntimeIds": [
+        "java-runtime-77d523200118fdbae252"
+      ],
+      "javaNames": [
+        "InfraIntegerIndexedPropertyLookAlike"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessIntegerIndexedPropertyLookAlikeParity"
+      ],
+      "tags": [
+        "table",
+        "primary-key",
+        "window-access",
+        "indexed-property"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go fluent GroupBy(intPrimitive) + IntoTable materializes the key-1 WindowAccessValue; SelectFromTable performs the typed primary-key lookup and verifies the row, insertion-ordered window, last event and offset-one event."
+      ],
+      "difference": "Java varaggIIP[1] and SODA deployment are represented by an explicit typed primary-key lookup and immutable fluent Plan; Java's remaining table access, method/access, context, join, split-stream and array-key executions remain open."
     }
   ],
   "mappings": [
@@ -21857,14 +21885,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-ungrouped-window-sum"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-integer-indexed-property"
     }
   ],
   "summary": {
-    "totalCases": 350,
+    "totalCases": 351,
     "totalCapabilities": 110,
-    "mappedCases": 333,
+    "mappedCases": 334,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2200
+    "disposedRuntimeIds": 2201
   }
 }
