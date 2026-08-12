@@ -3383,6 +3383,28 @@
         "expression/inlined-class variable mutation",
         "nullable *int field dereference in trigger assignment expressions"
       ]
+    },
+    {
+      "id": "resultset.orderby-simple",
+      "domain": "resultset",
+      "level": "G",
+      "summary": "ORDER BY on result sets: ascending, descending, multiple keys with tie-break, expression sort keys and invalid-field diagnostics",
+      "javaRefs": [
+        "ResultSetOrderBySimple"
+      ],
+      "goRefs": [
+        "internal/esper/resultset_orderby_parity_test.go",
+        "internal/esper/stream.go"
+      ],
+      "phase": 2,
+      "status": "mapped",
+      "remaining": [
+        "output-rate-limited batch delivery with ORDER BY (output every N events)",
+        "ORDER BY on join result sets",
+        "SODA object-model ORDER BY path",
+        "wildcard projection with ORDER BY",
+        "ORDER BY on Named Window FAF snapshot"
+      ]
     }
   ],
   "cases": [
@@ -20310,6 +20332,69 @@
         "8 of 18 EPLVariablesOnSet runtimes mapped: simple boolean flip with dependent select, ordered no-dup and dup batch assignments, trigger-stream filter gating, numeric coercion (int to float32/float64/int64), OR-filtered multi-variable trigger with dependent select, deploy-order select, and build-time invalid diagnostics"
       ],
       "difference": "nullable Integer boxed column uses a plain Go int (Go value model; the nullable *int trigger-expression dereference is tracked separately); SODA object-model, subquery, array-index and inlined-class executions remain open"
+    },
+    {
+      "id": "case.resultset-orderby-simple",
+      "javaRuntimeIds": [
+        "java-runtime-091c77bae73759b7cb3e",
+        "java-runtime-0a7a2ff59087a96fe0e1",
+        "java-runtime-178a1d0412982958a3cc",
+        "java-runtime-1c3d57ae9e8d4bca739f",
+        "java-runtime-2524d06789dd35e36c8e",
+        "java-runtime-4a0adaff4741914b9ad1",
+        "java-runtime-4aaec5e95dbea839ece3",
+        "java-runtime-53aea47cdd71b80fdbb9",
+        "java-runtime-6c1c5e581115d83acac7",
+        "java-runtime-6de2b14776f97a0a69b2",
+        "java-runtime-92e69b0657b10a656fdc",
+        "java-runtime-9455a5a72c84baa7bdc2",
+        "java-runtime-9668909b2b2f00769dab",
+        "java-runtime-b0f39fb300a33fa7ddbf",
+        "java-runtime-bbc3ab446f26d0f99488",
+        "java-runtime-d530652f60616c332431",
+        "java-runtime-df8ea61ff025609ce309",
+        "java-runtime-fc69777a3bedc3ad6c52"
+      ],
+      "javaNames": [
+        "ResultSetAcrossJoin",
+        "ResultSetAliases",
+        "ResultSetAliasesSimple",
+        "ResultSetDescending",
+        "ResultSetDescendingOM",
+        "ResultSetExpressions",
+        "ResultSetExpressionsJoin",
+        "ResultSetInvalid",
+        "ResultSetIterator",
+        "ResultSetMultiDelivery",
+        "ResultSetMultipleKeys",
+        "ResultSetMultipleKeysJoin",
+        "ResultSetNoOutputClauseJoin",
+        "ResultSetNoOutputClauseView",
+        "ResultSetSimple",
+        "ResultSetSimpleJoin",
+        "ResultSetWildcard",
+        "ResultSetWildcardJoin"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySimple.java"
+      ],
+      "goTests": [
+        "TestResultSetOrderByAscendingParity",
+        "TestResultSetOrderByDescendingParity",
+        "TestResultSetOrderByMultipleKeysParity",
+        "TestResultSetOrderByExpressionParity",
+        "TestResultSetOrderByInvalidParity"
+      ],
+      "tags": [
+        "orderby",
+        "resultset",
+        "sort"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "5 Go parity tests covering aggregate GroupBy + ORDER BY ascending/descending/multi-key-tiebreak/expression-key and unknown-field build-time rejection"
+      ],
+      "difference": "Go tests use LengthBatch + GroupBy aggregate path (output rate limiting not yet ported); join, wildcard and FAF ORDER BY paths remain open"
     }
   ],
   "mappings": [
@@ -21708,14 +21793,18 @@
     {
       "capabilityId": "epl.variable-onset",
       "caseId": "case.epl-variable-onset-basic"
+    },
+    {
+      "capabilityId": "resultset.orderby-simple",
+      "caseId": "case.resultset-orderby-simple"
     }
   ],
   "summary": {
-    "totalCases": 347,
-    "totalCapabilities": 109,
-    "mappedCases": 330,
+    "totalCases": 348,
+    "totalCapabilities": 110,
+    "mappedCases": 331,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2180
+    "disposedRuntimeIds": 2198
   }
 }
