@@ -352,3 +352,86 @@ func TestExprDefineAliasForGlobalAliasParity(t *testing.T) {
 		t.Fatalf("global alias: results after intPrimitive=1 = %v, want [2]", results)
 	}
 }
+
+
+// S1-like struct for join-based declared expression parity.
+type valueParamS1 struct {
+	ID  int    `esper:"id"`
+	P10 string `esper:"p10"`
+}
+
+// ExprDefineValueParameterEVE (ordinal 6). Java:
+//   expression cc { (e1,v,e2) -> e1.p00 || v || e2.p10}
+//   select cc(e2, 'x', e1) as c0 from SupportBean_S1#lastevent as e1, SupportBean_S0#lastevent as e2
+// A two-way Cartesian join of lastevent windows passes events from both sides
+// as declared-expression arguments via JoinEventValue.
+func TestExprDefineValueParameterEVEParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[valueParamS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[valueParamS1](env, "SupportBean_S1"); err != nil {
+		t.Fatal(err)
+	}
+	e1Param := ExpressionParam[valueParamS0]("e1")
+	vParam := ExpressionParam[string]("v")
+	e2Param := ExpressionParam[valueParamS1]("e2")
+	body := Concat(
+		Property[string](e1Param, "p00"),
+		vParam,
+		Property[string](e2Param, "p10"),
+	)
+	if err := env.DefineExpression("cc", body); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	left := From[valueParamS1](env, "SupportBean_S1").Window(LastEvent())
+	right := From[valueParamS0](env, "SupportBean_S0").Window(LastEvent())
+	joined := Join(left, right)
+	plan, err := env.Build(joined.Select(SelectFrom(0, "c0", ExpressionRef[string](env, "cc",
+		JoinEventValue[valueParamS0](1),
+		Literal("x"),
+		JoinEventValue[valueParamS1](0),
+	))).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dep, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = dep.Undeploy(context.Background()) }()
+	var results []string
+	_, _ = dep.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, r := range batch.New {
+			s, _ := As[string](r.Get("c0"))
+			results = append(results, s)
+		}
+		return nil
+	})
+	if err := engine.SendEvent(context.Background(), valueParamS0{ID: 1, P00: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("EVE: results after S0 only = %v, want empty", results)
+	}
+	if err := engine.SendEvent(context.Background(), valueParamS1{ID: 2, P10: "1"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 || results[0] != "Ax1" {
+		t.Fatalf("EVE: result[0] = %v, want Ax1", results)
+	}
+	if err := engine.SendEvent(context.Background(), valueParamS1{ID: 2, P10: "2"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 2 || results[1] != "Ax2" {
+		t.Fatalf("EVE: result[1] = %v, want Ax2", results)
+	}
+	if err := engine.SendEvent(context.Background(), valueParamS0{ID: 1, P00: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 3 || results[2] != "Bx2" {
+		t.Fatalf("EVE: result[2] = %v, want Bx2", results)
+	}
+}
