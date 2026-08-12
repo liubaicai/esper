@@ -5236,6 +5236,9 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		return batch, !batch.empty() || batch.forced, nil
 	}
 	if s.plan.query.trigger != nil {
+		if !statementAcceptsEvent(s.plan.query, event) {
+			return ResultBatch{}, false, nil
+		}
 		batch, err := s.processTriggerRuntime(ctx, &s.runtime, now, event, variables)
 		if err != nil {
 			return ResultBatch{}, false, err
@@ -6536,6 +6539,9 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 			delta, insertErr := r.insert(plan.query.aggregate.input, event, now)
 			err = insertErr
 			if err == nil {
+				if len(delta.newEvents) == 0 && len(delta.oldEvents) == 0 && !delta.forced {
+					return ResultBatch{}, false, nil
+				}
 				batch, err = r.aggregateBatchSafely(delta, plan, now)
 			}
 		}

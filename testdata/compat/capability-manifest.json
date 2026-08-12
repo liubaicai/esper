@@ -20843,6 +20843,88 @@
         "Go PrimaryKeyColumn[[]int] on k1 and k2 forms one composite slice identity; SelectFromTable returns 10, 30, 20 for ([1,2],[1,2]), ([1,2],[1,1]), ([1,3],[1,1]), returns Null for ([1,2],[1,2,2]), and typed SubqueryValues projects all three key pairs independent of ordering."
       ],
       "difference": "Java's two int[primitive] table keys and MyTable.keys() syntax are represented by typed Go slice columns, SelectFromTable lookups and an explicit infraTableArrayPairKey projection; the broader table index, metadata and invalid-rule matrix remains open."
+    },
+    {
+      "id": "case.infra-table-access-subquery",
+      "javaRuntimeIds": [
+        "java-runtime-0ce6b391952f2fb495c5"
+      ],
+      "javaNames": [
+        "InfraSubquery"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessSubqueryParity"
+      ],
+      "tags": [
+        "table",
+        "subquery",
+        "into-table",
+        "count",
+        "correlated"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go declared-expression keyed table lookup is driven by a scalar subquery over SupportBean_S0#lastevent, matching Java (select subquery_var_agg[p00].total from SupportBean_S0#lastevent) from SupportBean_S1. Into-table count(*) grouped by theString yields 1 then 2 as more SupportBean events arrive for the same key."
+      ],
+      "difference": "Java's EPL subquery syntax and lastevent view are represented by Go's typed scalar subquery over LastEvent plus an ExpressionRef table lookup; other Subquery/table metadata/invalid matrices remain open."
+    },
+    {
+      "id": "case.infra-table-access-on-merge-expressions",
+      "javaRuntimeIds": [
+        "java-runtime-e750fb3883fd94b1edd3"
+      ],
+      "javaNames": [
+        "InfraOnMergeExpressions"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessOnMergeExpressionsParity"
+      ],
+      "tags": [
+        "table",
+        "merge",
+        "on-merge",
+        "table-field",
+        "into-table"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go MergeIntoTableWhen evaluates a TableField(total) > 0 matched-branch condition against the selected table row, then updates the optional value column. SelectFromTable reads the merged value as 1. Trigger statements are now gated by input event type and empty aggregate deltas do not re-materialize into-table rows, preventing unrelated S1 events from erasing merge results."
+      ],
+      "difference": "Java's merge EPL and the remaining OnMerge/table trigger metadata/invalid matrices remain open; Go exposes ordered fluent TableMergeClause branches."
+    },
+    {
+      "id": "case.infra-table-access-named-window-faf",
+      "javaRuntimeIds": [
+        "java-runtime-072f7acbf2fd102a24c1"
+      ],
+      "javaNames": [
+        "InfraNamedWindowAndFireAndForget"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessNamedWindowAndFireAndForgetParity"
+      ],
+      "tags": [
+        "table",
+        "named-window",
+        "fire-and-forget",
+        "faf",
+        "into-table",
+        "sum"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go length(2) named window feeds an into-table sum. Fire-and-forget select/delete/update/insert correlate the table aggregate with NamedWindowField target values: select returns 10, delete removes the matching row, update sets doublePrimitive=100, and insert materializes (A,20) using the table sum."
+      ],
+      "difference": "Java's FAF EPL text and the broader FAF index/parameter/context matrix remain open; Go uses OnDemand fluent mutation chains and scalar table subqueries."
     }
   ],
   "mappings": [
@@ -22313,14 +22395,26 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-multi-stmt-contributing"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-subquery"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-on-merge-expressions"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-named-window-faf"
     }
   ],
   "summary": {
-    "totalCases": 365,
+    "totalCases": 368,
     "totalCapabilities": 110,
-    "mappedCases": 348,
+    "mappedCases": 351,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2215
+    "disposedRuntimeIds": 2218
   }
 }

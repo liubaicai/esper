@@ -94,6 +94,36 @@ type infraTableExpressionS1 struct {
 	ID int64 `esper:"id"`
 }
 
+type infraTableSubqBean struct {
+	TheString    string `esper:"theString"`
+	IntPrimitive int64  `esper:"intPrimitive"`
+}
+
+type infraTableSubqS0 struct {
+	ID  int64  `esper:"id"`
+	P00 string `esper:"p00"`
+}
+
+type infraTableSubqS1 struct {
+	ID int64 `esper:"id"`
+}
+
+type infraTableOnMergeS0 struct {
+	ID  int64  `esper:"id"`
+	P00 string `esper:"p00"`
+}
+
+type infraTableOnMergeS1 struct {
+	ID  int64  `esper:"id"`
+	P10 string `esper:"p10"`
+}
+
+type infraTableNWFAFBean struct {
+	TheString       string  `esper:"theString"`
+	IntPrimitive    int64   `esper:"intPrimitive"`
+	DoublePrimitive float64 `esper:"doublePrimitive"`
+}
+
 // TestInfraTableAccessUngroupedContextParity mirrors Java
 // InfraTableAccessCore.InfraUngroupedWContext. The same context is entered by
 // two event types with different key properties; the table has one unkeyed
@@ -2642,5 +2672,352 @@ func TestInfraTableAccessMultikeyArrayTwoArrayKeyParity(t *testing.T) {
 		if !found {
 			t.Fatalf("two-array keys contains unexpected pair %v: %#v", got, gotKeys)
 		}
+	}
+}
+
+// TestInfraTableAccessSubqueryParity mirrors Java
+// InfraTableAccessCore.InfraSubquery. A scalar subquery reads the current
+// table row selected by the last SupportBean_S0 event's p00 property. The
+// table aggregate is fed by an into-table count(*) grouped by theString, so
+// each subsequent SupportBean for the same key increments the observed total.
+func TestInfraTableAccessSubqueryParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableSubqBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableSubqS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableSubqS1](env, "SupportBean_S1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "subquery_var_agg", []TableColumn{
+		PrimaryKeyColumn[string]("key"),
+		TableColumnOf[int64]("total"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Java: select (select subquery_var_agg[p00].total from SupportBean_S0#lastevent) as c0
+	//       from SupportBean_S1
+	// The Go form keeps the same correlation visible: read the last S0 event's
+	// p00, then pass it to a declared keyed table lookup.
+	key := ExpressionParam[string]("key")
+	lookup := SubqueryValue[int64](FromTable(env, "subquery_var_agg"),
+		Field[any, int64]("total"),
+		Equal[string](Field[any, string]("key"), key),
+	)
+	if err := DefineExpression[int64](env, "getSubqueryTableTotal", lookup); err != nil {
+		t.Fatal(err)
+	}
+
+	s0LastKey := SubqueryValue[string](
+		From[infraTableSubqS0](env, "SupportBean_S0").Window(LastEvent()).AsRecord(),
+		Field[infraTableSubqS0, string]("p00"),
+	)
+	queryPlan, err := env.Build(Select(
+		From[infraTableSubqS1](env, "SupportBean_S1"),
+		Alias("c0", ExpressionRef[int64](env, "getSubqueryTableTotal", s0LastKey)),
+	).Query(StatementName("table-subquery-read")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	aggregatePlan, err := env.Build(
+		From[infraTableSubqBean](env, "SupportBean").
+			GroupBy(Field[infraTableSubqBean, string]("theString")).
+			Select(
+				Alias("key", Field[infraTableSubqBean, string]("theString")),
+				Alias("total", CountAll()),
+			).
+			IntoTable("subquery_var_agg", StatementName("table-subquery-aggregate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), queryPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+	var values []Value
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("subquery table result is not a row: %#v", result)
+			}
+			values = append(values, row.Get("c0"))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	if err := engine.SendEvent(ctx, infraTableSubqBean{TheString: "E1", IntPrimitive: -1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(ctx, infraTableSubqS0{ID: 0, P00: "E1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(ctx, infraTableSubqS1{ID: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(values) != 1 || values[0].Any() != int64(1) {
+		t.Fatalf("subquery first table value = %#v, want 1", values)
+	}
+
+	if err := engine.SendEvent(ctx, infraTableSubqBean{TheString: "E1", IntPrimitive: -1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(ctx, infraTableSubqS1{ID: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(values) != 2 || values[1].Any() != int64(2) {
+		t.Fatalf("subquery second table value = %#v, want 2", values)
+	}
+}
+
+// TestInfraTableAccessOnMergeExpressionsParity mirrors Java
+// InfraTableAccessCore.InfraOnMergeExpressions. An on-merge statement matches
+// by key and uses a table-field predicate in the matched branch. The condition
+// must see the aggregate row selected by the incoming key, not the stream
+// event.
+func TestInfraTableAccessOnMergeExpressionsParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableSubqBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableOnMergeS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableOnMergeS1](env, "SupportBean_S1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "the_table", []TableColumn{
+		PrimaryKeyColumn[string]("key"),
+		TableColumnOf[int64]("total"),
+		OptionalTableColumnOf[int64]("value"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	aggregatePlan, err := env.Build(
+		From[infraTableSubqBean](env, "SupportBean").
+			GroupBy(Field[infraTableSubqBean, string]("theString")).
+			Select(
+				Alias("key", Field[infraTableSubqBean, string]("theString")),
+				Alias("total", CountAll()),
+			).
+			IntoTable("the_table", StatementName("table-merge-aggregate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mergePlan, err := env.Build(
+		OnEvent(From[infraTableOnMergeS0](env, "SupportBean_S0")).
+			MergeIntoTableWhen("the_table", []Expr{Field[infraTableOnMergeS0, string]("p00")},
+				WhenMatched(
+					Greater[int64](TableField[int64]("total"), Literal[int64](0)),
+					SetColumn("value", Literal[int64](1)),
+				),
+			).
+			Query(StatementName("table-merge-expression")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	queryPlan, err := env.Build(
+		OnEvent(From[infraTableOnMergeS1](env, "SupportBean_S1")).
+			SelectFromTable("the_table", []Expr{Field[infraTableOnMergeS1, string]("p10")},
+				Alias("c0", TableField[int64]("value")),
+			).
+			Query(StatementName("table-merge-read")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), mergePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), queryPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+	var values []Value
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("merge expression table result is not a row: %#v", result)
+			}
+			values = append(values, row.Get("c0"))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	if err := engine.SendEvent(ctx, infraTableSubqBean{TheString: "E1", IntPrimitive: -1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(ctx, infraTableOnMergeS0{ID: 0, P00: "E1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(ctx, infraTableOnMergeS1{ID: 0, P10: "E1"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(values) != 1 || values[0].Any() != int64(1) {
+		t.Fatalf("merge expression value = %#v, want 1", values)
+	}
+}
+
+// TestInfraTableAccessNamedWindowAndFireAndForgetParity mirrors Java
+// InfraTableAccessCore.InfraNamedWindowAndFireAndForget. A length(2) named
+// window feeds an into-table sum. Fire-and-forget select/delete/update/insert
+// operations then read and mutate the window using the table aggregate as a
+// correlated expression.
+func TestInfraTableAccessNamedWindowAndFireAndForgetParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableNWFAFBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	schema, ok := env.Schema("SupportBean")
+	if !ok {
+		t.Fatal("named window FAF SupportBean schema is missing")
+	}
+	if _, err := CreateNamedWindow(env, "MyWindow", schema, NamedWindowRetention(LengthWindow(2))); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "varaggNWFAF", []TableColumn{
+		TableColumnOf[int64]("total"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	insertPlan, err := env.Build(
+		OnEvent(From[infraTableNWFAFBean](env, "SupportBean")).
+			InsertIntoNamedWindow("MyWindow", CopyMatchingFields()).
+			Query(StatementName("named-window-faf-populate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	aggregatePlan, err := env.Build(
+		FromNamedWindow(env, "MyWindow").
+			Aggregate(Alias("total", Sum[int64](Field[any, int64]("intPrimitive")))).
+			IntoTable("varaggNWFAF", StatementName("named-window-faf-aggregate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableTotal := SubqueryValue[int64](
+		FromTable(env, "varaggNWFAF"),
+		Field[any, int64]("total"),
+	)
+	fafSelectPlan, err := env.Build(
+		FromNamedWindow(env, "MyWindow").
+			Select(Alias("c0", tableTotal)).
+			Query(StatementName("named-window-faf-select")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fafDeletePlan, err := env.Build(
+		FromNamedWindow(env, "MyWindow").OnDemand().
+			DeleteWhere(Equal[int64](tableTotal, NamedWindowField[int64]("intPrimitive"))),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fafUpdatePlan, err := env.Build(
+		FromNamedWindow(env, "MyWindow").OnDemand().
+			UpdateWhere(
+				Equal[int64](tableTotal, NamedWindowField[int64]("intPrimitive")),
+				SetColumn("doublePrimitive", Literal[float64](100)),
+			),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fafInsertPlan, err := env.Build(
+		FromNamedWindow(env, "MyWindow").OnDemand().
+			Insert(
+				SetColumn("theString", Literal("A")),
+				SetColumn("intPrimitive", tableTotal),
+			),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), insertPlan); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	ctx := context.Background()
+	if err := engine.SendEvent(ctx, infraTableNWFAFBean{TheString: "E1", IntPrimitive: 10}); err != nil {
+		t.Fatal(err)
+	}
+
+	selectResult, err := engine.ExecuteFireAndForget(ctx, fafSelectPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(selectResult.Results()) != 1 || selectResult.Results()[0].Get("c0").Any() != int64(10) {
+		t.Fatalf("named window FAF select = %#v, want c0=10", selectResult.Results())
+	}
+
+	deleteResult, err := engine.ExecuteFireAndForget(ctx, fafDeletePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(deleteResult.Results()) != 1 {
+		t.Fatalf("named window FAF delete rows = %#v, want 1", deleteResult.Results())
+	}
+
+	if err := engine.SendEvent(ctx, infraTableNWFAFBean{TheString: "E2", IntPrimitive: 20}); err != nil {
+		t.Fatal(err)
+	}
+
+	updateResult, err := engine.ExecuteFireAndForget(ctx, fafUpdatePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(updateResult.Results()) != 1 || updateResult.Results()[0].Get("doublePrimitive").Any() != float64(100) {
+		t.Fatalf("named window FAF update = %#v, want doublePrimitive=100", updateResult.Results())
+	}
+
+	insertResult, err := engine.ExecuteFireAndForget(ctx, fafInsertPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(insertResult.Results()) != 1 {
+		t.Fatalf("named window FAF insert rows = %#v, want 1", insertResult.Results())
+	}
+	row := insertResult.Results()[0]
+	if row.Get("theString").Any() != "A" || row.Get("intPrimitive").Any() != int64(20) {
+		t.Fatalf("named window FAF insert = %#v, want theString=A intPrimitive=20", row)
 	}
 }
