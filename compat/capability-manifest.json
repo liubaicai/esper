@@ -446,7 +446,8 @@
         "ExprCoreInStringExpr",
         "ExprCoreBetweenNumericExpr",
         "ExprCoreBetweenStringExpr",
-        "ExprCoreInRange"
+        "ExprCoreInRange",
+        "ExprCorePreviousPrevStream"
       ],
       "goRefs": [
         "expr_case.go",
@@ -501,7 +502,8 @@
         "plan.go",
         "epl_other_unary_minus_parity_test.go",
         "expr_core_case_parity_test.go",
-        "expr_core_in_between_parity_test.go"
+        "expr_core_in_between_parity_test.go",
+        "expr_core_previous_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -19770,6 +19772,35 @@
         "go-unit"
       ],
       "difference": "Go covers simple literal, arithmetic, variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, parameterized declared expressions evaluated in the where/filter clause, and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip and the textual 'alias for' variant are approved differences (Go uses an immutable fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. The pattern correlated-filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) and the aggregation/subquery/case-new/split-stream variants remain future work."
+    },
+    {
+      "id": "case.expr-core-previous",
+      "javaRuntimeIds": [
+        "java-runtime-5d4447f08b240ba27ccf"
+      ],
+      "javaStaticIds": [],
+      "javaNames": [
+        "ExprCorePreviousPrevStream"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCorePrevious.java"
+      ],
+      "goTests": [
+        "TestExprCorePreviousPrevStreamParity"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "previous",
+        "expression"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go covers prev(1, field) relative-to-current access in a length window. Time-batch prev, prevtail, prevwindow (as []Event), prevcount and per-group variants remain future work."
     }
   ],
   "mappings": [
@@ -21120,14 +21151,18 @@
     {
       "capabilityId": "expr.declared",
       "caseId": "case.expr-define-basic"
+    },
+    {
+      "capabilityId": "expr.core",
+      "caseId": "case.expr-core-previous"
     }
   ],
   "summary": {
-    "totalCases": 337,
+    "totalCases": 338,
     "totalCapabilities": 108,
-    "mappedCases": 318,
+    "mappedCases": 319,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2127
+    "disposedRuntimeIds": 2128
   }
 }
