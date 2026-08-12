@@ -93,6 +93,131 @@ type infraTableExpressionS1 struct {
 	ID int64 `esper:"id"`
 }
 
+// TestInfraTableAccessUngroupedContextParity mirrors Java
+// InfraTableAccessCore.InfraUngroupedWContext. The same context is entered by
+// two event types with different key properties; the table has one unkeyed
+// aggregate row per context partition.
+func TestInfraTableAccessUngroupedContextParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableGroupedSingleBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableGroupedTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+
+	current := EventValue[Event]()
+	contextKey := CaseWhen[string](
+		Equal[string](TypeName(current), Literal("SupportBean")),
+		Property[string](current, "theString"),
+	).When(
+		Equal[string](TypeName(current), Literal("SupportBean_S0")),
+		Property[string](current, "p00"),
+	).Else(NullLiteral[string]())
+	if _, err := CreateKeyContext(env, "partitioned-by-string", contextKey); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "varTotalUG", []TableColumn{
+		TableColumnOf[int64]("total"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	aggregatePlan, err := env.Build(
+		From[infraTableGroupedSingleBean](env, "SupportBean").
+			Aggregate(Alias("total", Sum[int64](Field[infraTableGroupedSingleBean, int64]("intPrimitive")))).
+			IntoTable("varTotalUG", StatementName("table-context-aggregate"), WithContext("partitioned-by-string")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	readPlan, err := env.Build(
+		OnEvent(From[infraTableGroupedTrigger](env, "SupportBean_S0")).
+			SelectFromTableWhere("varTotalUG", Literal(true),
+				Alias("c0", Field[infraTableGroupedTrigger, string]("p00")),
+				Alias("c1", TableField[int64]("total")),
+			).
+			Query(StatementName("table-context-read"), WithContext("partitioned-by-string")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), readPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("context table read result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	assertPartitionTotal := func(key string, total int64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), infraTableGroupedTrigger{P00: key}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) == 0 {
+			t.Fatalf("context table read for %q produced no row", key)
+		}
+		row := rows[len(rows)-1]
+		if row.Get("c0").Any() != key || row.Get("c1").Any() != total {
+			t.Fatalf("context table partition %q = %#v, want total %d", key, row.AsMap(), total)
+		}
+	}
+
+	sendBean := func(key string, value int64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), infraTableGroupedSingleBean{TheString: key, IntPrimitive: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendBean("A", 10)
+	assertPartitionTotal("A", 10)
+	sendBean("A", 11)
+	assertPartitionTotal("A", 21)
+	sendBean("B", 20)
+	assertPartitionTotal("A", 21)
+	sendBean("B", 21)
+	assertPartitionTotal("B", 41)
+	sendBean("C", 30)
+	assertPartitionTotal("A", 21)
+	sendBean("D", 40)
+	assertPartitionTotal("C", 30)
+
+	for _, expected := range []struct {
+		key   string
+		total int64
+	}{
+		{key: "A", total: 21},
+		{key: "B", total: 41},
+		{key: "C", total: 30},
+		{key: "D", total: 40},
+		{key: "A", total: 21},
+	} {
+		assertPartitionTotal(expected.key, expected.total)
+	}
+
+	if got := deployment.Statements()[0].ContextPartitionCount(); got != 4 {
+		t.Fatalf("context table read partitions = %d, want 4", got)
+	}
+}
+
 // TestInfraTableAccessExpressionAliasAndDeclParity mirrors Java
 // InfraTableAccessCore.InfraExpressionAliasAndDecl. The Java execution uses
 // declared expressions in three positions: aggregate inputs for IntoTable,

@@ -20714,6 +20714,32 @@
       "difference": "Java alias-for declaration text is represented by immutable DefineExpression/ExpressionRef builders; the SupportBean_S1#lastevent table-access body is represented by explicit SubqueryExists(LastEvent()) gating plus SubqueryValue(FromTable(...)); the broader table metadata/index/context/join/invalid matrix remains open."
     },
     {
+      "id": "case.infra-table-access-ungrouped-context",
+      "javaRuntimeIds": [
+        "java-runtime-3974da9ea932ebaa8481"
+      ],
+      "javaNames": [
+        "InfraUngroupedWContext"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessUngroupedContextParity"
+      ],
+      "tags": [
+        "table",
+        "context",
+        "aggregate",
+        "partition"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go CreateKeyContext maps SupportBean.theString and SupportBean_S0.p00 through a typed analyzable CaseWhen key; Context-scoped IntoTable and SelectFromTableWhere preserve partition-local unkeyed sums A=21, B=41, C=30, D=40 and four active partitions."
+      ],
+      "difference": "Java source-specific context partition clauses are represented by one explicit typed key expression using TypeName(EventValue) and CaseWhen; the broader context/table metadata, index, join and invalid matrix remains open."
+    },
+    {
       "id": "case.infra-table-access-multikey-array-one",
       "javaRuntimeIds": [
         "java-runtime-ad82a78695c21c3397f0"
@@ -22172,6 +22198,10 @@
     },
     {
       "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-ungrouped-context"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-filter"
     },
     {
@@ -22224,11 +22254,11 @@
     }
   ],
   "summary": {
-    "totalCases": 362,
+    "totalCases": 363,
     "totalCapabilities": 110,
-    "mappedCases": 345,
+    "mappedCases": 346,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2212
+    "disposedRuntimeIds": 2213
   }
 }
