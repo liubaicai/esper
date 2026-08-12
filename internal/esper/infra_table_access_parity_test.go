@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -215,6 +216,207 @@ func TestInfraTableAccessUngroupedContextParity(t *testing.T) {
 
 	if got := deployment.Statements()[0].ContextPartitionCount(); got != 4 {
 		t.Fatalf("context table read partitions = %d, want 4", got)
+	}
+}
+
+// TestInfraTableAccessOrderOfAggregationsAndPushParity mirrors Java
+// InfraTableAccessCore.InfraOrderOfAggregationsAndPush. The aggregate row
+// contains scalar, insertion-ordered window and sorted access columns; both
+// the aggregate push and a later typed table read must observe one coherent
+// length-window snapshot after each event.
+func TestInfraTableAccessOrderOfAggregationsAndPushParity(t *testing.T) {
+	for _, grouped := range []bool{false, true} {
+		name := "ungrouped"
+		if grouped {
+			name = "grouped"
+		}
+		t.Run(name, func(t *testing.T) {
+			testInfraTableAccessOrderOfAggregationsAndPush(t, grouped)
+		})
+	}
+}
+
+func testInfraTableAccessOrderOfAggregationsAndPush(t *testing.T, grouped bool) {
+	t.Helper()
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableGroupedMultiBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableGroupedTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+
+	columns := make([]TableColumn, 0, 5)
+	if grouped {
+		columns = append(columns, PrimaryKeyColumn[string]("key"))
+	}
+	columns = append(columns,
+		TableColumnOf[int64]("sumint"),
+		TableColumnOf[int64]("sumlong"),
+		TableColumnOf[WindowAccessValue[infraTableGroupedMultiBean]]("mywindow"),
+		TableColumnOf[SortedAccessValue[int64, infraTableGroupedMultiBean]]("mysort"),
+	)
+	if _, err := CreateTable(env, "varaggOOA", columns); err != nil {
+		t.Fatal(err)
+	}
+
+	input := From[infraTableGroupedMultiBean](env, "SupportBean").Window(LengthWindow(2))
+	key := Field[infraTableGroupedMultiBean, string]("theString")
+	intValue := Field[infraTableGroupedMultiBean, int64]("intPrimitive")
+	longValue := Field[infraTableGroupedMultiBean, int64]("longPrimitive")
+	window := WindowAccessBy[infraTableGroupedMultiBean](EventValue[infraTableGroupedMultiBean]())
+	sorted := SortedAccessBy[infraTableGroupedMultiBean, int64](EventValue[infraTableGroupedMultiBean](), intValue)
+	selections := []Selection{
+		Alias("sumint", Sum[int64](intValue)),
+		Alias("sumlong", Sum[int64](longValue)),
+		Alias("mywindow", window),
+		Alias("mysort", sorted),
+	}
+	var aggregatePlan Plan
+	var err error
+	if grouped {
+		aggregatePlan, err = env.Build(input.GroupBy(key).Select(
+			append([]Selection{Alias("key", key)}, selections...)...,
+		).IntoTable("varaggOOA", StatementName("order-of-aggregations-grouped")))
+	} else {
+		aggregatePlan, err = env.Build(input.Aggregate(selections...).IntoTable(
+			"varaggOOA", StatementName("order-of-aggregations-ungrouped"),
+		))
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableWindow := TableField[WindowAccessValue[infraTableGroupedMultiBean]]("mywindow")
+	tableSorted := TableField[SortedAccessValue[int64, infraTableGroupedMultiBean]]("mysort")
+	readSelections := []Selection{
+		Alias("c0", TableField[int64]("sumint")),
+		Alias("c1", TableField[int64]("sumlong")),
+		Alias("c2", Method[[]infraTableGroupedMultiBean](tableWindow, "Values")),
+		Alias("c3", Method[[]infraTableGroupedMultiBean](tableSorted, "Values")),
+	}
+	var readPlan Plan
+	if grouped {
+		readPlan, err = env.Build(OnEvent(From[infraTableGroupedTrigger](env, "SupportBean_S0")).
+			SelectFromTable("varaggOOA", []Expr{Field[infraTableGroupedTrigger, string]("p00")}, readSelections...).
+			Query(StatementName("order-of-aggregations-read-grouped")))
+	} else {
+		readPlan, err = env.Build(OnEvent(From[infraTableGroupedTrigger](env, "SupportBean_S0")).
+			SelectFromTableWhere("varaggOOA", Literal(true), readSelections...).
+			Query(StatementName("order-of-aggregations-read-ungrouped")))
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resultSchema, ok := readPlan.ResultSchema()
+	if !ok {
+		t.Fatal("order-of-aggregations table read has no result schema")
+	}
+	for name, want := range map[string]reflect.Type{
+		"c0": reflect.TypeOf(int64(0)),
+		"c1": reflect.TypeOf(int64(0)),
+		"c2": reflect.TypeOf([]infraTableGroupedMultiBean{}),
+		"c3": reflect.TypeOf([]infraTableGroupedMultiBean{}),
+	} {
+		got, exists := resultSchema.PropertyType(name)
+		if !exists || got != want {
+			t.Fatalf("order-of-aggregations result schema %s = %v, want %v", name, got, want)
+		}
+	}
+
+	engine := NewEngine(env)
+	aggregateDeployment, err := engine.Deploy(context.Background(), aggregatePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	readDeployment, err := engine.Deploy(context.Background(), readPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	var aggregateRows []Row
+	if _, err := aggregateDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("order-of-aggregations push result is not a row: %#v", result)
+			}
+			aggregateRows = append(aggregateRows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var readRows []Row
+	if _, err := readDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("order-of-aggregations table read is not a row: %#v", result)
+			}
+			readRows = append(readRows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	assertSnapshot := func(label string, expectedSumInt, expectedSumLong int64, expectedWindow, expectedSorted []infraTableGroupedMultiBean) {
+		t.Helper()
+		if len(aggregateRows) == 0 {
+			t.Fatalf("%s: aggregate push produced no row", label)
+		}
+		aggregate := aggregateRows[len(aggregateRows)-1]
+		if aggregate.Get("sumint").Any() != expectedSumInt || aggregate.Get("sumlong").Any() != expectedSumLong {
+			t.Fatalf("%s: aggregate scalar row = %#v, want %d/%d", label, aggregate.AsMap(), expectedSumInt, expectedSumLong)
+		}
+		windowValue, ok := aggregate.Get("mywindow").Any().(WindowAccessValue[infraTableGroupedMultiBean])
+		if !ok || !reflect.DeepEqual(windowValue.Values(), expectedWindow) {
+			t.Fatalf("%s: aggregate window = %#v, want %#v", label, aggregate.Get("mywindow").Any(), expectedWindow)
+		}
+		sortedValue, ok := aggregate.Get("mysort").Any().(SortedAccessValue[int64, infraTableGroupedMultiBean])
+		if !ok || !reflect.DeepEqual(sortedValue.Values(), expectedSorted) {
+			t.Fatalf("%s: aggregate sorted = %#v, want %#v", label, aggregate.Get("mysort").Any(), expectedSorted)
+		}
+		if len(readRows) == 0 {
+			t.Fatalf("%s: table read produced no row", label)
+		}
+		read := readRows[len(readRows)-1]
+		if read.Get("c0").Any() != expectedSumInt || read.Get("c1").Any() != expectedSumLong {
+			t.Fatalf("%s: table scalar row = %#v, want %d/%d", label, read.AsMap(), expectedSumInt, expectedSumLong)
+		}
+		for name, want := range map[string][]infraTableGroupedMultiBean{"c2": expectedWindow, "c3": expectedSorted} {
+			got, ok := read.Get(name).Any().([]infraTableGroupedMultiBean)
+			if !ok || !reflect.DeepEqual(got, want) {
+				t.Fatalf("%s: table %s = %#v, want %#v", label, name, read.Get(name).Any(), want)
+			}
+		}
+	}
+
+	ctx := context.Background()
+	e1 := infraTableGroupedMultiBean{TheString: "E1", IntPrimitive: 10, LongPrimitive: 100}
+	e2 := infraTableGroupedMultiBean{TheString: "E1", IntPrimitive: 5, LongPrimitive: 50}
+	e3 := infraTableGroupedMultiBean{TheString: "E1", IntPrimitive: 12, LongPrimitive: 120}
+	for index, event := range []struct {
+		value   infraTableGroupedMultiBean
+		sumInt  int64
+		sumLong int64
+		window  []infraTableGroupedMultiBean
+		sorted  []infraTableGroupedMultiBean
+	}{
+		{value: e1, sumInt: 10, sumLong: 100, window: []infraTableGroupedMultiBean{e1}, sorted: []infraTableGroupedMultiBean{e1}},
+		{value: e2, sumInt: 15, sumLong: 150, window: []infraTableGroupedMultiBean{e1, e2}, sorted: []infraTableGroupedMultiBean{e2, e1}},
+		{value: e3, sumInt: 17, sumLong: 170, window: []infraTableGroupedMultiBean{e2, e3}, sorted: []infraTableGroupedMultiBean{e2, e3}},
+	} {
+		if err := engine.SendEvent(ctx, event.value); err != nil {
+			t.Fatal(err)
+		}
+		if err := engine.SendEvent(ctx, infraTableGroupedTrigger{ID: int64(index), P00: "E1"}); err != nil {
+			t.Fatal(err)
+		}
+		assertSnapshot(fmt.Sprintf("after event %d", index+1), event.sumInt, event.sumLong, event.window, event.sorted)
 	}
 }
 

@@ -20740,6 +20740,33 @@
       "difference": "Java source-specific context partition clauses are represented by one explicit typed key expression using TypeName(EventValue) and CaseWhen; the broader context/table metadata, index, join and invalid matrix remains open."
     },
     {
+      "id": "case.infra-table-access-order-of-aggregations",
+      "javaRuntimeIds": [
+        "java-runtime-0ea11b70b83cd854744a"
+      ],
+      "javaNames": [
+        "InfraOrderOfAggregationsAndPush"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessOrderOfAggregationsAndPushParity"
+      ],
+      "tags": [
+        "table",
+        "aggregate",
+        "window-access",
+        "sorted-access",
+        "push"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go LengthWindow(2) + IntoTable materializes sum(int), sum(long), WindowAccessBy and SortedAccessBy columns in one aggregate statement; aggregate push and typed table lookup both observe 10/100, 15/150, and 17/170 with window [E1,E2] then [E2,E3] and sorted [E2,E1] then [E2,E3], for both grouped and ungrouped tables."
+      ],
+      "difference": "Java sorted/window table columns and aggregate push are represented by typed WindowAccessValue/SortedAccessValue projections and explicit fluent table lookup; Java's EPL/SODA text and the remaining table metadata, index, context, join and invalid matrices remain open."
+    },
+    {
       "id": "case.infra-table-access-multikey-array-one",
       "javaRuntimeIds": [
         "java-runtime-ad82a78695c21c3397f0"
@@ -22251,14 +22278,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-multikey-array-two"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-order-of-aggregations"
     }
   ],
   "summary": {
-    "totalCases": 363,
+    "totalCases": 364,
     "totalCapabilities": 110,
-    "mappedCases": 346,
+    "mappedCases": 347,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2213
+    "disposedRuntimeIds": 2214
   }
 }
