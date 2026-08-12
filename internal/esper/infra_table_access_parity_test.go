@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"reflect"
 	"testing"
 )
 
@@ -361,4 +362,114 @@ func TestInfraTableAccessIntegerIndexedPropertyLookAlikeParity(t *testing.T) {
 	if got, ok := row.Get("c3").Any().(infraTableIndexedBean); !ok || got != e1 {
 		t.Fatalf("c3 = %#v, want %#v", row.Get("c3").Any(), e1)
 	}
+}
+
+// TestInfraTableAccessTopLevelReadUngroupedParity mirrors Java
+// InfraTableAccessCore.InfraTopLevelReadUnGrouped. The top-level table row is
+// represented as an explicit Go map projection, while the object-array event
+// remains a schema-bound Event inside the window access value.
+func TestInfraTableAccessTopLevelReadUngroupedParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterObjectArray(env, "MyEventOATLRU", []FieldSpec{
+		FieldDef("c0", reflect.TypeOf(int64(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableWindowTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "windowAndTotalTLRUG", []TableColumn{
+		TableColumnOf[WindowAccessValue[Event]]("thewindow"),
+		TableColumnOf[int64]("thetotal"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	window := WindowAccessBy[Event](EventValue[Event]())
+	aggregatePlan, err := env.Build(
+		FromAny(env, "MyEventOATLRU").
+			Window(LengthWindow(2)).
+			Aggregate(
+				Alias("thewindow", window),
+				Alias("thetotal", Sum[int64](Field[any, int64]("c0"))),
+			).
+			IntoTable("windowAndTotalTLRUG", StatementName("tlrug-aggregate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableWindow := TableField[WindowAccessValue[Event]]("thewindow")
+	rowProjection := StructOf(
+		Alias("thewindow", Method[[]Event](tableWindow, "Values")),
+		Alias("thetotal", TableField[int64]("thetotal")),
+	)
+	triggerPlan, err := env.Build(
+		OnEvent(From[infraTableWindowTrigger](env, "SupportBean_S0")).
+			SelectFromTableWhere("windowAndTotalTLRUG", Literal(true), Alias("val0", rowProjection)).
+			Query(StatementName("tlrug-read")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), triggerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("top-level table result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	sendAndRead := func(value, triggerID int64, wantValues []int64, wantTotal int64) {
+		t.Helper()
+		if err := engine.SendObjectArray(ctx, "MyEventOATLRU", []any{value}); err != nil {
+			t.Fatal(err)
+		}
+		if err := engine.SendEvent(ctx, infraTableWindowTrigger{ID: triggerID}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) == 0 {
+			t.Fatal("top-level table trigger produced no row")
+		}
+		row := rows[len(rows)-1]
+		val0, ok := row.Get("val0").Any().(map[string]any)
+		if !ok {
+			t.Fatalf("val0 type = %T", row.Get("val0").Any())
+		}
+		if got := val0["thetotal"]; got != wantTotal {
+			t.Fatalf("top-level table total after %d = %#v, want %d", value, got, wantTotal)
+		}
+		events, ok := val0["thewindow"].([]Event)
+		if !ok {
+			t.Fatalf("top-level table window type = %T", val0["thewindow"])
+		}
+		if len(events) != len(wantValues) {
+			t.Fatalf("top-level table window after %d = %d events, want %d", value, len(events), len(wantValues))
+		}
+		for index, want := range wantValues {
+			if got := events[index].Get("c0").Any(); got != want {
+				t.Fatalf("top-level table window after %d index %d = %#v, want %d", value, index, got, want)
+			}
+		}
+	}
+
+	sendAndRead(10, 0, []int64{10}, 10)
+	sendAndRead(20, 1, []int64{10, 20}, 30)
+	sendAndRead(30, 2, []int64{20, 30}, 50)
 }
