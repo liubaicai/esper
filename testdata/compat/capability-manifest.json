@@ -3361,6 +3361,28 @@
         "Esper discards partial matches selectively by shared events; the fluent runtime drops all in-progress instances on a completing event, which is observably identical across the suite scenarios but coarser for unrelated overlapping branches",
         "unknown pattern-level annotations and discard/suppress in EPL joins, context declarations and on-actions are EPL-parser concerns; the fluent surface rejects the policies on non-pattern queries and with context/joins/actions at Build"
       ]
+    },
+    {
+      "id": "epl.variable-onset",
+      "domain": "variable",
+      "level": "G",
+      "summary": "On-set variable triggers: event-driven atomic batch assignment with ordered cross-references, numeric coercion, trigger-stream filters and dependent-statement visibility",
+      "javaRefs": [
+        "EPLVariablesOnSet"
+      ],
+      "goRefs": [
+        "internal/esper/variable_onset_parity_test.go",
+        "internal/esper/trigger.go",
+        "internal/esper/variable.go"
+      ],
+      "phase": 1,
+      "status": "mapped",
+      "remaining": [
+        "subquery and multikey-array on-set assignments",
+        "array element index assignment (dbls[intPrimitive] = v)",
+        "expression/inlined-class variable mutation",
+        "nullable *int field dereference in trigger assignment expressions"
+      ]
     }
   ],
   "cases": [
@@ -20242,6 +20264,52 @@
         "go-unit"
       ],
       "difference": "Go covers simple literal, aggregate-without-access definitions (sumA/sumB/countC), declared expressions used as aggregate inputs (lambda1/lambda2), window access aggregation (wb), variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, the correlated pattern filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) via PatternEvent, parameterized declared expressions evaluated in the where/filter clause, and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip and the textual 'alias for' variant are approved differences (Go uses an immutable fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. The separate ExprDefineOneParameterLambdaReturn execution, scalar-return, annotation-order, sequence/nested, case-new, subquery and split-stream variants remain future work."
+    },
+    {
+      "id": "case.epl-variable-onset-basic",
+      "javaRuntimeIds": [
+        "java-runtime-4d17a2ee72e2f62f484f",
+        "java-runtime-a1c711b411766252f401",
+        "java-runtime-e7b63e853b22431a1ef3",
+        "java-runtime-52902bb58deb8ee9f48b",
+        "java-runtime-ce691b2f1d8368144c89",
+        "java-runtime-275279390f721078251a",
+        "java-runtime-78f23a1b470f6bd625c4",
+        "java-runtime-c2b1d3116ed43d68d679"
+      ],
+      "javaNames": [
+        "EPLVariableOnSetSimple",
+        "EPLVariableOnSetAssignmentOrderNoDup",
+        "EPLVariableOnSetAssignmentOrderDup",
+        "EPLVariableOnSetWithFilter",
+        "EPLVariableOnSetCoercion",
+        "EPLVariableOnSetRuntimeOrderMultiple",
+        "EPLVariableOnSetWDeploy",
+        "EPLVariableOnSetInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesOnSet.java"
+      ],
+      "goTests": [
+        "TestVariableOnSetSimpleParity",
+        "TestVariableOnSetAssignmentOrderNoDupParity",
+        "TestVariableOnSetAssignmentOrderDupParity",
+        "TestVariableOnSetWithFilterParity",
+        "TestVariableOnSetCoercionParity",
+        "TestVariableOnSetRuntimeOrderMultipleParity",
+        "TestVariableOnSetWDeployParity",
+        "TestVariableOnSetInvalidParity"
+      ],
+      "tags": [
+        "variable",
+        "on-set",
+        "trigger"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "8 of 18 EPLVariablesOnSet runtimes mapped: simple boolean flip with dependent select, ordered no-dup and dup batch assignments, trigger-stream filter gating, numeric coercion (int to float32/float64/int64), OR-filtered multi-variable trigger with dependent select, deploy-order select, and build-time invalid diagnostics"
+      ],
+      "difference": "nullable Integer boxed column uses a plain Go int (Go value model; the nullable *int trigger-expression dereference is tracked separately); SODA object-model, subquery, array-index and inlined-class executions remain open"
     }
   ],
   "mappings": [
@@ -21636,14 +21704,18 @@
     {
       "capabilityId": "expr.declared",
       "caseId": "case.expr-define-basic"
+    },
+    {
+      "capabilityId": "epl.variable-onset",
+      "caseId": "case.epl-variable-onset-basic"
     }
   ],
   "summary": {
-    "totalCases": 346,
-    "totalCapabilities": 108,
-    "mappedCases": 329,
+    "totalCases": 347,
+    "totalCapabilities": 109,
+    "mappedCases": 330,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2198
+    "disposedRuntimeIds": 2180
   }
 }
