@@ -35,9 +35,11 @@ func TestExprDefineSimpleTwoModuleParity(t *testing.T) {
 }
 
 // ExprDefineWildcardAndPattern (ordinal 6), non-join form. Java:
-//   expression abc { x => intPrimitive }
-//   expression def { (x, y) => x.intPrimitive * y.intPrimitive }
-//   select abc(*) as c0, def(*, *) as c1 from SupportBean
+//
+//	expression abc { x => intPrimitive }
+//	expression def { (x, y) => x.intPrimitive * y.intPrimitive }
+//	select abc(*) as c0, def(*, *) as c1 from SupportBean
+//
 // The "*" wildcard passes the current event as every positional argument; Go
 // uses EventValue for the same effect. intPrimitive=2 yields c0=2, c1=4.
 func TestExprDefineWildcardNonJoinParity(t *testing.T) {
@@ -74,8 +76,52 @@ func TestExprDefineWildcardNonJoinParity(t *testing.T) {
 	}
 }
 
+// TestExprDefineWildcardPatternParity covers the correlated pattern half of
+// ExprDefineWildcardAndPattern. The declared expression reads the captured
+// event passed from tag a, while the b-filter reads the current event.
+func TestExprDefineWildcardPatternParity(t *testing.T) {
+	env, engine := defineBasicEnv(t)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	eventParam := ExpressionParam[Event]("x")
+	if err := env.DefineExpression("abc", Multiply[int](Property[int](eventParam, "intPrimitive"), Literal(2))); err != nil {
+		t.Fatal(err)
+	}
+
+	source := From[defineBasicBean](env, "SupportBean")
+	pattern := PatternFrom(source, "a", Equal[string](Field[defineBasicBean, string]("theString"), Literal("E1"))).FollowedBy("b", Equal[int](
+		Field[defineBasicBean, int]("intPrimitive"),
+		ExpressionRef[int](env, "abc", PatternEvent("a")),
+	))
+	plan, err := env.Build(pattern.Select(
+		Alias("a", TagField[string]("a", "theString")),
+		Alias("b", TagField[string]("b", "theString")),
+	).Query(StatementName("define-wildcard-pattern")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deployment.Undeploy(context.Background()) }()
+	rows := collectDotRows(t, deployment)
+
+	if err := engine.SendEvent(context.Background(), defineBasicBean{TheString: "E1", IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), defineBasicBean{TheString: "E2", IntPrimitive: 4}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*rows) != 1 || (*rows)[0].Get("a").Any() != "E1" || (*rows)[0].Get("b").Any() != "E2" {
+		t.Fatalf("wildcard pattern rows = %#v, want a=E1 b=E2", *rows)
+	}
+}
+
 // ExprDefineWhereClauseExpression (ordinal 12), no-alias form. Java:
-//   expression one {x=>x.boolPrimitive} select * from SupportBean as sb where one(sb)
+//
+//	expression one {x=>x.boolPrimitive} select * from SupportBean as sb where one(sb)
+//
 // A parameterized declared expression is evaluated in the where/filter clause
 // against the current event. boolPrimitive=false suppresses output; true emits.
 // The "alias for" variant is an approved difference (Go has no textual alias).
@@ -115,11 +161,13 @@ func TestExprDefineWhereClauseExpressionParity(t *testing.T) {
 }
 
 // ExprDefineEventTypeAndSODA (ordinal 23), declared-expression form. Java:
-//   expression fZero {10}
-//   expression fOne {x => x.intPrimitive}
-//   expression fTwo {(x,y) => x.intPrimitive+y.intPrimitive}
-//   expression fThree {(x,y) => x.intPrimitive+100}
-//   select fZero(), fOne(t), fTwo(t,t), fThree(t,t) from SupportBean as t
+//
+//	expression fZero {10}
+//	expression fOne {x => x.intPrimitive}
+//	expression fTwo {(x,y) => x.intPrimitive+y.intPrimitive}
+//	expression fThree {(x,y) => x.intPrimitive+100}
+//	select fZero(), fOne(t), fTwo(t,t), fThree(t,t) from SupportBean as t
+//
 // intPrimitive=11 yields 10, 11, 22, 111. The SODA EPStatementObjectModel
 // round-trip and the "alias for" variant are approved differences (Go uses an
 // immutable fluent Plan rather than a text/model parser). fThree declares a
@@ -178,4 +226,3 @@ func TestExprDefineEventTypeAndSODAParity(t *testing.T) {
 		t.Fatalf("fThree = %v, want [111]", fThree)
 	}
 }
-

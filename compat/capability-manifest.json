@@ -20215,6 +20215,7 @@
         "TestExprDefineTooManyArgumentsParity",
         "TestExprDefineSimpleTwoModuleParity",
         "TestExprDefineWildcardNonJoinParity",
+        "TestExprDefineWildcardPatternParity",
         "TestExprDefineWhereClauseExpressionParity",
         "TestExprDefineEventTypeAndSODAParity"
       ],
@@ -20224,13 +20225,13 @@
         "define",
         "expression"
       ],
-      "status": "partial",
+      "status": "mapped",
       "evidence": [
         "java-runtime-inventory",
         "java-source",
         "go-unit"
       ],
-      "difference": "Go covers simple literal, arithmetic, variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, parameterized declared expressions evaluated in the where/filter clause, and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip and the textual 'alias for' variant are approved differences (Go uses an immutable fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. The pattern correlated-filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) and the aggregation/subquery/case-new/split-stream variants remain future work."
+      "difference": "Go covers simple literal, arithmetic, variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, the correlated pattern filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) via PatternEvent, parameterized declared expressions evaluated in the where/filter clause, and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip and the textual 'alias for' variant are approved differences (Go uses an immutable fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. Aggregation, subquery, case-new and split-stream variants remain future work."
     }
   ],
   "mappings": [
@@ -21630,8 +21631,8 @@
   "summary": {
     "totalCases": 346,
     "totalCapabilities": 108,
-    "mappedCases": 328,
-    "partialCases": 1,
+    "mappedCases": 329,
+    "partialCases": 0,
     "approvedDifferenceCases": 17,
     "disposedRuntimeIds": 2195
   }
