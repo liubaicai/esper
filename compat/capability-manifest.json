@@ -3077,13 +3077,12 @@
         "expr_enum_group_by_parity_test.go",
         "expr_enum_chained_parity_test.go",
         "expr_enum_nested_parity_test.go",
-        "expr_enum_doc_samples_parity_test.go"
+        "expr_enum_doc_samples_parity_test.go",
+        "expr_enum_data_sources_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
-      "remaining": [
-        "ExprEnumDataSources suite"
-      ]
+      "remaining": []
     },
     {
       "id": "view.basic-windows",
@@ -10336,6 +10335,88 @@
         "go-unit"
       ],
       "difference": "Go covers ExprEnumScalarArray (comprehensive scalar-array enum methods with element/index/size lambda variants) and ExprEnumHowToUse (chained .where().where() with nested property paths). ExprEnumExpressions is a compile-only smoke test. ExprEnumSubquery, ExprEnumNamedWindow, ExprEnumAccessAggWindow, ExprEnumPrevWindow, ExprEnumProperties, ExprEnumUDFSingleRow and ExprEnumDeclared require subquery, named-window, access-aggregation, prev-window, UDF-collection, and declared-expression data sources that remain open in the fluent API. Java's EPL syntax, in-clause collection membership, and exact schema/render assertions also remain fluent API differences."
+    },
+    {
+      "id": "case.expr-enum-data-sources",
+      "javaRuntimeIds": [
+        "java-runtime-78c501b09f91cbc02732",
+        "java-runtime-2b9f3c7bb37749b78f11",
+        "java-runtime-2e8efdc595f11cc75932",
+        "java-runtime-a51165e388dc4e68113c",
+        "java-runtime-765c632bda67638d9ba2",
+        "java-runtime-af8d0c456940430a3ccd",
+        "java-runtime-4407a3aec9ef6d4397d3",
+        "java-runtime-593882729c2f6b4c34ad",
+        "java-runtime-9df2083c2bf7ff4916fe",
+        "java-runtime-e7a7bf9208b7263939cb",
+        "java-runtime-1cb9b928361d501cdfc4",
+        "java-runtime-e0708453fd00a206d99f",
+        "java-runtime-c9553567dad0064e7203",
+        "java-runtime-1c7de138e99352988956",
+        "java-runtime-d18c44fd7ccbff392b76",
+        "java-runtime-5160be85b646e4b6e37b",
+        "java-runtime-a6d3d86841e5c87e1180",
+        "java-runtime-d976aa0d24304f4cbd55",
+        "java-runtime-9d281f0b76c9c8134c85",
+        "java-runtime-9bf377cca901a34eee9f",
+        "java-runtime-8c8383d3eb753dcfb3f1",
+        "java-runtime-e0d3581c9c4998ded49e",
+        "java-runtime-731301323e7651fe0106",
+        "java-runtime-c4a6473c3c64c9ecd7a7",
+        "java-runtime-b90d60fbe574473052f9",
+        "java-runtime-bc692d08bd9dd9931fe7",
+        "java-runtime-8b1f0fe01f71bf14bf6d"
+      ],
+      "javaNames": [
+        "ExprEnumProperty",
+        "ExprEnumSubstitutionParameter",
+        "ExprEnumEnumObject",
+        "ExprEnumSortedMaxMinBy",
+        "ExprEnumJoin",
+        "ExprEnumPrevWindowSorted",
+        "ExprEnumNamedWindow",
+        "ExprEnumSubselect",
+        "ExprEnumAccessAggregation",
+        "ExprEnumPrevFuncs",
+        "ExprEnumUDFStaticMethod",
+        "ExprEnumPropertySchema",
+        "ExprEnumPropertyInsertIntoAtEventBean",
+        "ExprEnumPatternInsertIntoAtEventBean",
+        "ExprEnumPatternFilter",
+        "ExprEnumVariable",
+        "ExprEnumTableRow",
+        "ExprEnumMatchRecognizeDefine",
+        "ExprEnumMatchRecognizeMeasures",
+        "ExprEnumCast",
+        "ExprEnumPropertyGenericComponentType",
+        "ExprEnumUDFStaticMethodGeneric",
+        "ExprEnumSubqueryGenericComponentType",
+        "ExprEnumBeanWithMap",
+        "ExprEnumContextPropUnnested",
+        "ExprEnumContextPropNested"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumDataSources.java"
+      ],
+      "goTests": [
+        "TestExprEnumDataSourcesPropertyParity",
+        "TestExprEnumDataSourcesSumOfArrayParity"
+      ],
+      "tags": [
+        "correctness",
+        "expression",
+        "enum",
+        "data-sources",
+        "property",
+        "array"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-junit",
+        "go-unit"
+      ],
+      "difference": "Go covers ExprEnumProperty (allOf on event-property collection) and array-property sumOf through Build/Deploy. The remaining 25 executions require features not yet ported: subqueries, named windows, access aggregation (window/prevwindow), prev/prior functions, pattern filters, context properties (nested/unnested), match recognize, table rows, variables, substitution parameters, generic component types, UDF static methods returning collections, and map/insert-into/at-event-bean patterns. Java's EPL data-source syntax, schema/render assertions, and method-invocation chain diagnostics remain fluent API differences."
     },
     {
       "id": "case.aggregate-dimensional",
@@ -21348,6 +21429,10 @@
       "caseId": "case.expr-enum-doc-samples"
     },
     {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-data-sources"
+    },
+    {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-basic-windows"
     },
@@ -21537,11 +21622,11 @@
     }
   ],
   "summary": {
-    "totalCases": 345,
+    "totalCases": 346,
     "totalCapabilities": 108,
-    "mappedCases": 326,
+    "mappedCases": 327,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2167
+    "disposedRuntimeIds": 2194
   }
 }

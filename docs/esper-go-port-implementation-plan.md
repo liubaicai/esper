@@ -1,3 +1,5 @@
+本轮关闭 Java `ExprEnumDataSources` suite（27 个 runtime），新增 `case.expr-enum-data-sources` 和 `expr_enum_data_sources_parity_test.go`。覆盖 ExprEnumProperty（事件属性集合上的 allOf）和数组属性 sumOf 的 Build/Deploy 路径。其余 25 个执行需子查询/命名窗口/访问聚合/prev函数/模式过滤/上下文属性/match-recognize/表行/变量等未移植特性，保持开放。此轮完成后 `expr.enum-collection-methods` 能力 remaining 清单全部清空，该能力所有 case 均已登记。Java `TestSuiteExprEnum` 28/28 oracle 沿用本轮实跑结果。
+
 本轮关闭 Java `ExprEnumDocSamples` suite（10 个 runtime），新增 `case.expr-enum-doc-samples` 和 `expr_enum_doc_samples_parity_test.go`。覆盖 ExprEnumScalarArray（全面标量数组 enum 方法验证，element/index/size lambda 变体）和 ExprEnumHowToUse（链式 where + 复合谓词 + 嵌套属性路径）。其余 8 个执行需子查询/命名窗口/访问聚合/prev窗口/UDF集合/声明表达式数据源，保持开放。Java `TestSuiteExprEnum` 28/28 oracle 沿用本轮实跑结果。
 
 本轮关闭 Java `ExprEnumNested` suite，新增 `case.expr-enum-nested` 和 `expr_enum_nested_parity_test.go`。覆盖三个执行：不相关嵌套（EnumMinOf 在 EnumWhere 谓词内调用同一集合）、min-by-where（EnumMinBy 返回最年轻者作为谓词比较值）、嵌套 anyOf（内层集合来自外层元素属性）。第四个执行 ExprEnumCorrelated 需从内层谓词引用外层元素（x.p00），Go 的 EnumElement 始终返回最内层上下文值，声明式外层元素引用保持开放。Java `TestSuiteExprEnum` 28/28 oracle 沿用本轮实跑结果。
