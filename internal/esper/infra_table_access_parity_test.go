@@ -62,6 +62,20 @@ type infraTableArrayKeyEvent struct {
 
 type infraTableArrayKeyTrigger struct{}
 
+type infraTableArrayPairEvent struct {
+	ID     string `esper:"id"`
+	IntOne []int  `esper:"intOne"`
+	IntTwo []int  `esper:"intTwo"`
+	Value  int64  `esper:"value"`
+}
+
+type infraTableArrayPairTrigger struct{}
+
+type infraTableArrayPairKey struct {
+	K1 []int
+	K2 []int
+}
+
 // TestInfraTableAccessFilterBehaviorParity mirrors Java
 // InfraTableAccessCore.InfraFilterBehavior:
 //
@@ -1353,6 +1367,181 @@ func TestInfraTableAccessMultikeyArrayOneArrayKeyParity(t *testing.T) {
 		}
 		if !found {
 			t.Fatalf("single-array keys contains unexpected key %v: %#v", got, gotKeys)
+		}
+	}
+}
+
+// TestInfraTableAccessMultikeyArrayTwoArrayKeyParity mirrors Java
+// InfraTableAccessCore.InfraTableAccessMultikeyWArrayTwoArrayKey. Two slice
+// primary-key columns form one composite identity: changing either array
+// selects a different table row, while a later insert with the same pair
+// replaces only that pair.
+func TestInfraTableAccessMultikeyArrayTwoArrayKeyParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableArrayPairEvent](env, "SupportEventWithManyArray"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableArrayPairTrigger](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "MyTable", []TableColumn{
+		PrimaryKeyColumn[[]int]("k1"),
+		PrimaryKeyColumn[[]int]("k2"),
+		TableColumnOf[int64]("value"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	source := From[infraTableArrayPairEvent](env, "SupportEventWithManyArray")
+	insertPlan, err := env.Build(
+		OnEvent(source.Filter(Equal[string](
+			Field[infraTableArrayPairEvent, string]("id"),
+			Literal("I"),
+		))).InsertIntoTable("MyTable",
+			SetColumn("k1", Field[infraTableArrayPairEvent, []int]("intOne")),
+			SetColumn("k2", Field[infraTableArrayPairEvent, []int]("intTwo")),
+			SetColumn("value", Field[infraTableArrayPairEvent, int64]("value")),
+		).Query(StatementName("table-array-pair-populate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	queryPlan, err := env.Build(
+		OnEvent(source.Filter(Equal[string](
+			Field[infraTableArrayPairEvent, string]("id"),
+			Literal("Q"),
+		))).SelectFromTable("MyTable", []Expr{
+			Field[infraTableArrayPairEvent, []int]("intOne"),
+			Field[infraTableArrayPairEvent, []int]("intTwo"),
+		}, Alias("c0", TableField[int64]("value"))).
+			Query(StatementName("table-array-pair-read")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keys := SubqueryValues[infraTableArrayPairKey](
+		FromTable(env, "MyTable"),
+		Func2[[]int, []int, infraTableArrayPairKey]("table-key-pair", func(first, second []int) infraTableArrayPairKey {
+			return infraTableArrayPairKey{K1: first, K2: second}
+		}, Field[any, []int]("k1"), Field[any, []int]("k2")),
+	)
+	keysPlan, err := env.Build(
+		Select(From[infraTableArrayPairTrigger](env, "SupportBean"), Alias("keys", keys)).
+			Query(StatementName("table-array-pair-keys")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), insertPlan); err != nil {
+		t.Fatal(err)
+	}
+	queryDeployment, err := engine.Deploy(context.Background(), queryPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keysDeployment, err := engine.Deploy(context.Background(), keysPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var values []Value
+	if _, err := queryDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("two-array table lookup result is not a row: %#v", result)
+			}
+			values = append(values, row.Get("c0"))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	var keySnapshots [][]infraTableArrayPairKey
+	if _, err := keysDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("two-array keys result is not a row: %#v", result)
+			}
+			got, ok := row.Get("keys").Any().([]infraTableArrayPairKey)
+			if !ok {
+				t.Fatalf("two-array keys type = %T, want []infraTableArrayPairKey", row.Get("keys").Any())
+			}
+			keySnapshots = append(keySnapshots, got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	for _, event := range []infraTableArrayPairEvent{
+		{ID: "I", IntOne: []int{1, 2}, IntTwo: []int{1, 2}, Value: 10},
+		{ID: "I", IntOne: []int{1, 3}, IntTwo: []int{1, 1}, Value: 20},
+		{ID: "I", IntOne: []int{1, 2}, IntTwo: []int{1, 1}, Value: 30},
+	} {
+		if err := engine.SendEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	query := func(first, second []int, want any) {
+		t.Helper()
+		if err := engine.SendEvent(ctx, infraTableArrayPairEvent{ID: "Q", IntOne: first, IntTwo: second}); err != nil {
+			t.Fatal(err)
+		}
+		if len(values) == 0 {
+			t.Fatal("two-array table lookup produced no row")
+		}
+		got := values[len(values)-1]
+		if want == nil {
+			if !got.IsNull() {
+				t.Fatalf("two-array lookup %v/%v = %#v, want null", first, second, got)
+			}
+			return
+		}
+		if got.Any() != want {
+			t.Fatalf("two-array lookup %v/%v = %#v, want %v", first, second, got.Any(), want)
+		}
+	}
+	query([]int{1, 2}, []int{1, 2}, int64(10))
+	query([]int{1, 2}, []int{1, 1}, int64(30))
+	query([]int{1, 3}, []int{1, 1}, int64(20))
+	query([]int{1, 2}, []int{1, 2, 2}, nil)
+
+	if err := engine.SendEvent(ctx, infraTableArrayPairTrigger{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(keySnapshots) != 1 {
+		t.Fatalf("two-array keys snapshots = %d, want 1", len(keySnapshots))
+	}
+	wantKeys := []infraTableArrayPairKey{
+		{K1: []int{1, 2}, K2: []int{1, 2}},
+		{K1: []int{1, 3}, K2: []int{1, 1}},
+		{K1: []int{1, 2}, K2: []int{1, 1}},
+	}
+	gotKeys := keySnapshots[0]
+	if len(gotKeys) != len(wantKeys) {
+		t.Fatalf("two-array keys = %#v, want %#v", gotKeys, wantKeys)
+	}
+	used := make([]bool, len(wantKeys))
+	for _, got := range gotKeys {
+		found := false
+		for index, want := range wantKeys {
+			if !used[index] && reflect.DeepEqual(got, want) {
+				used[index] = true
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("two-array keys contains unexpected pair %v: %#v", got, gotKeys)
 		}
 	}
 }

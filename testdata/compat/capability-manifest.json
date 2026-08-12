@@ -20422,7 +20422,7 @@
       "evidence": [
         "Go fluent aggregate IntoTable materializes an unkeyed count(*) row; a normal event Filter reads the current table row through SubqueryValue(FromTable(...)) and matches exactly counts 1 and 2 before rejecting 3 and stale 1."
       ],
-      "difference": "The Java top-level table accessor syntax is represented by a typed FromTable scalar subquery in Go; remaining InfraTableAccessCore table access, method/access columns, join, split-stream and array-key executions remain open."
+      "difference": "The Java top-level table accessor syntax is represented by a typed FromTable scalar subquery in Go; remaining InfraTableAccessCore table access, method/access columns, join and split-stream executions remain open."
     },
     {
       "id": "case.infra-table-access-ungrouped-window-sum",
@@ -20448,7 +20448,7 @@
       "evidence": [
         "Go fluent LengthWindow(2) + WindowAccessBy + Sum materializes a single unkeyed table row; SelectFromTableWhere reads insertion-ordered window values and running totals after each trigger."
       ],
-      "difference": "Java object-array MyEvent and top-level table accessor are represented by typed Go struct events and an explicit table trigger projection; grouped, method/access, context and array-key table cases remain open."
+      "difference": "Java object-array MyEvent and top-level table accessor are represented by typed Go struct events and an explicit table trigger projection; grouped, method/access, context and remaining table cases remain open."
     },
     {
       "id": "case.infra-table-access-integer-indexed-property",
@@ -20474,7 +20474,7 @@
       "evidence": [
         "Go fluent GroupBy(intPrimitive) + IntoTable materializes the key-1 WindowAccessValue; SelectFromTable performs the typed primary-key lookup and verifies the row, insertion-ordered window, last event and offset-one event."
       ],
-      "difference": "Java varaggIIP[1] and SODA deployment are represented by an explicit typed primary-key lookup and immutable fluent Plan; Java's remaining table access, method/access, context, join, split-stream and array-key executions remain open."
+      "difference": "Java varaggIIP[1] and SODA deployment are represented by an explicit typed primary-key lookup and immutable fluent Plan; Java's remaining table access, method/access, context, join and split-stream executions remain open."
     },
     {
       "id": "case.infra-table-access-top-level-read-ungrouped",
@@ -20500,7 +20500,7 @@
       "evidence": [
         "Go RegisterObjectArray + LengthWindow(2) + WindowAccessBy + Sum materializes an ungrouped table row; SelectFromTableWhere returns a StructOf map with the window events and running total after each object-array input."
       ],
-      "difference": "Java's top-level table row and typable AggBean output are represented by an explicit Go map projection and schema-bound Event values; grouped, named output, method/access, context, join, split-stream and array-key table executions remain open."
+      "difference": "Java's top-level table row and typable AggBean output are represented by an explicit Go map projection and schema-bound Event values; grouped, named output, method/access, context, join, split-stream and remaining table executions remain open."
     },
     {
       "id": "case.infra-table-access-top-level-read-grouped-two-keys",
@@ -20526,7 +20526,7 @@
       "evidence": [
         "Go RegisterObjectArray + GroupBy(c0,c1) + LengthWindow(2) + IntoTable maintains independent two-key rows; SelectFromTable verifies G1 eviction as null and G2's [20,20],500 snapshot after the global window advances."
       ],
-      "difference": "Java's typable fragment and SODA forms are represented by a StructOf map and immutable fluent Plan; grouped table method/access, context, named output, join, split-stream and array-key matrices remain open."
+      "difference": "Java's typable fragment and SODA forms are represented by a StructOf map and immutable fluent Plan; grouped table method/access, context, named output, join, split-stream and remaining table matrices remain open."
     },
     {
       "id": "case.infra-table-access-grouped-single-key",
@@ -20552,7 +20552,7 @@
       "evidence": [
         "Go GroupBy(theString) + IntoTable maintains running sums for A/B/C/D; SelectFromTable uses the trigger key and OuterField projection to match Java's A=21, B=41, C=30, D=40 trajectory and preserves a null value for missing Z."
       ],
-      "difference": "Java top-level table member access is represented by SelectFromTable with explicit OuterField/TableField scope; SODA, context, method/access, join, split-stream and array-key matrices remain open."
+      "difference": "Java top-level table member access is represented by SelectFromTable with explicit OuterField/TableField scope; SODA, context, method/access, join and split-stream matrices remain open."
     },
     {
       "id": "case.infra-table-access-grouped-two-keys",
@@ -20579,7 +20579,7 @@
       "evidence": [
         "Go GroupBy(theString,intPrimitive) + IntoTable maintains a two-column primary-key aggregate; SelectFromTable evaluates both trigger keys and preserves present-null values for missing key combinations."
       ],
-      "difference": "Java top-level table member access is represented by SelectFromTable with explicit trigger/table scopes; SODA, context, method/access, join, split-stream and array-key matrices remain open."
+      "difference": "Java top-level table member access is represented by SelectFromTable with explicit trigger/table scopes; SODA, context, method/access, join and split-stream matrices remain open."
     },
     {
       "id": "case.infra-table-access-grouped-three-keys",
@@ -20633,7 +20633,7 @@
       "evidence": [
         "Go GroupBy(theString) + LengthWindow(3) + IntoTable materializes count(*), count-distinct(intPrimitive), WindowAccessBy values and sum(longPrimitive); SelectFromTable reads all four columns and verifies missing-key Null semantics and a newly created group."
       ],
-      "difference": "Java table method/access syntax is represented by typed WindowAccessValue and Method/TableField projections in the fluent Go API; context, split-stream, array-key and remaining table execution matrices remain open."
+      "difference": "Java table method/access syntax is represented by typed WindowAccessValue and Method/TableField projections in the fluent Go API; context, split-stream and remaining table execution matrices remain open."
     },
     {
       "id": "case.infra-table-access-split-stream",
@@ -20684,7 +20684,33 @@
       "evidence": [
         "Go PrimaryKeyColumn[[]int] and OnEvent(...).InsertIntoTable preserve slice-content identity; SelectFromTable returns 10, 30, 20 for [1,2], [1,2,1], [2,1], returns Null for [1,2,2], and SubqueryValues(FromTable(...)) exposes all three keys independent of ordering."
       ],
-      "difference": "Java's int[primitive] table key and MyTable.keys() syntax are represented by typed Go slice columns, SelectFromTable lookups and a typed SubqueryValues projection; the two-array-key execution and full table index/metadata matrix remain open."
+      "difference": "Java's int[primitive] table key and MyTable.keys() syntax are represented by typed Go slice columns, SelectFromTable lookups and a typed SubqueryValues projection; the broader table index, metadata and invalid-rule matrix remains open."
+    },
+    {
+      "id": "case.infra-table-access-multikey-array-two",
+      "javaRuntimeIds": [
+        "java-runtime-4d9fa5fa8f6b26584af4"
+      ],
+      "javaNames": [
+        "InfraTableAccessMultikeyWArrayTwoArrayKey"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessMultikeyArrayTwoArrayKeyParity"
+      ],
+      "tags": [
+        "table",
+        "primary-key",
+        "multi-key",
+        "array-key"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go PrimaryKeyColumn[[]int] on k1 and k2 forms one composite slice identity; SelectFromTable returns 10, 30, 20 for ([1,2],[1,2]), ([1,2],[1,1]), ([1,3],[1,1]), returns Null for ([1,2],[1,2,2]), and typed SubqueryValues projects all three key pairs independent of ordering."
+      ],
+      "difference": "Java's two int[primitive] table keys and MyTable.keys() syntax are represented by typed Go slice columns, SelectFromTable lookups and an explicit infraTableArrayPairKey projection; the broader table index, metadata and invalid-rule matrix remains open."
     }
   ],
   "mappings": [
@@ -22131,14 +22157,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-multikey-array-one"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-multikey-array-two"
     }
   ],
   "summary": {
-    "totalCases": 359,
+    "totalCases": 360,
     "totalCapabilities": 110,
-    "mappedCases": 342,
+    "mappedCases": 343,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2209
+    "disposedRuntimeIds": 2210
   }
 }
