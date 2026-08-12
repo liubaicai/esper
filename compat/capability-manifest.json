@@ -3072,7 +3072,8 @@
         "expr_enum_sequence_equal_parity_test.go",
         "expr_enum_except_intersect_union_parity_test.go",
         "expr_enum_most_least_frequent_parity_test.go",
-        "expr_enum_to_map_parity_test.go"
+        "expr_enum_to_map_parity_test.go",
+        "expr_enum_aggregate_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3081,7 +3082,6 @@
         "ExprEnumDocSamples suite",
         "ExprEnumChained",
         "ExprEnumNested suite",
-        "ExprEnumAggregate suite",
         "ExprEnumGroupBy suite"
       ]
     },
@@ -9720,11 +9720,15 @@
     {
       "id": "case.expr-enum-aggregate",
       "javaRuntimeIds": [
+        "java-runtime-75bb3246d51a76094715",
         "java-runtime-261031703bf2144ad372",
+        "java-runtime-fa123072246c404b1f66",
         "java-runtime-0df0665028286b839c88"
       ],
       "javaNames": [
+        "ExprEnumAggregateEvents",
         "ExprEnumAggregateScalar",
+        "ExprEnumAggregateInvalid",
         "ExprEnumSelectFromEventsWithNew"
       ],
       "javaSourceFiles": [
@@ -9732,6 +9736,9 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumSelectFrom.java"
       ],
       "goTests": [
+        "TestExprEnumAggregateScalarParity",
+        "TestExprEnumAggregateEventParity",
+        "TestExprEnumAggregateInvalidParity",
         "TestEnumerableNumericMethodsAndPlanIntegration",
         "TestEnumerableEventElementsAndOrdering",
         "TestEnumerableSupportsExactBigNumbersAndArrayCollections",
@@ -9741,13 +9748,23 @@
       "tags": [
         "correctness",
         "expression",
-        "enum"
+        "enum",
+        "aggregate",
+        "fold",
+        "initialization-expression",
+        "index",
+        "size",
+        "null",
+        "invalid"
       ],
       "status": "mapped",
       "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
         "go-unit"
       ],
-      "difference": "Go now adds EnumSelectMap for multi-column Go-native anonymous rows, including EnumIndex/EnumSize-aware selectors, null/empty collection preservation and duplicate/nil column Build validation. Java still exposes richer parameterized anonymous-row metadata, broader source representations and exact lambda/type diagnostics."
+      "difference": "Go maps aggregate to typed EnumAggregate[T,R] with initialization and accumulator expressions both present in the AST. The fold is ordered and exposes EnumAccumulator/EnumElement/EnumIndex/EnumSize, evaluates initialization per invocation, returns it for empty input, propagates Null input, and retains a Null accumulator result. Build rejects missing/null-typed initialization and missing operands; incompatible accumulator result types are rejected earlier by Go generics instead of Java's EPL conversion diagnostic. The same case retains EnumSelectMap evidence for multi-column Go-native anonymous rows. Java still exposes richer parameterized anonymous-row metadata, EPL lambda/type diagnostics and exact compiler text."
     },
     {
       "id": "case.expr-enum-sources",
@@ -21159,6 +21176,10 @@
     },
     {
       "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-aggregate"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
       "caseId": "case.expr-enum-count-reverse"
     },
     {
@@ -21376,6 +21397,6 @@
     "mappedCases": 323,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2150
+    "disposedRuntimeIds": 2152
   }
 }

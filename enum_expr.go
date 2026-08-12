@@ -1309,19 +1309,31 @@ func enumAverageExactOf[T any, K EnumNumeric](values Expression[[]T], selector E
 	})
 }
 
-// EnumAggregate folds an ordered collection from left to right. The
-// accumulator expression can use EnumAccumulator, EnumElement, EnumIndex and
-// EnumSize, so the entire fold remains visible in the AST.
-func EnumAggregate[T any, R any](values Expression[[]T], initial R, accumulator Expression[R]) Expression[R] {
-	return makeEnumExpr[R]("enum-aggregate", enumDescription[T]("aggregate", values, accumulator), enumExpressionChildren[T](values, accumulator), values, true, func(ctx EvalContext) Value {
+// EnumAggregate folds an ordered collection from left to right. The initial
+// value and accumulator are expressions so field/parameter dependencies and
+// Plan identity remain visible in the AST. The accumulator can use
+// EnumAccumulator, EnumElement, EnumIndex and EnumSize.
+func EnumAggregate[T any, R any](values Expression[[]T], initial Expression[R], accumulator Expression[R]) Expression[R] {
+	children := make([]*exprNode, 0, 3)
+	if values != nil {
+		children = append(children, values.node())
+	}
+	if initial != nil {
+		children = append(children, initial.node())
+	}
+	if accumulator != nil {
+		children = append(children, accumulator.node())
+	}
+	description := fmt.Sprintf("aggregate(%s,%s,%s)", enumInputDescription[T](values), expressionDescription(initial), expressionDescription(accumulator))
+	expression := makeEnumExpr[R]("enum-aggregate", description, children, values, true, func(ctx EvalContext) Value {
 		items, input, ok := enumItems[T](values, ctx)
 		if !ok {
 			return input
 		}
-		if accumulator == nil {
+		if initial == nil || accumulator == nil {
 			return Null()
 		}
-		result := Present(initial)
+		result := initial.eval(ctx)
 		for index, item := range items {
 			nested := enumElementContext(ctx, item, index, len(items))
 			nested.enumAccumulatorActive = true
@@ -1340,6 +1352,17 @@ func EnumAggregate[T any, R any](values Expression[[]T], initial R, accumulator 
 		}
 		return result
 	})
+	switch {
+	case values == nil:
+		expression.node().enumInvalidReason = `enumeration method "aggregate" requires a collection expression`
+	case initial == nil:
+		expression.node().enumInvalidReason = `enumeration method "aggregate" requires an initialization expression`
+	case initial.node().kind == "null":
+		expression.node().enumInvalidReason = `enumeration method "aggregate" initialization expression cannot be null-typed`
+	case accumulator == nil:
+		expression.node().enumInvalidReason = `enumeration method "aggregate" requires an accumulator expression`
+	}
+	return expression
 }
 
 func EnumExcept[T any](left, right Expression[[]T]) Expression[[]T] {

@@ -254,7 +254,7 @@ func TestEnumerableMetadataMirrorsJavaFootprints(t *testing.T) {
 		t.Fatalf("sum metadata = %#v", sumMetadata)
 	}
 
-	aggregateMetadata, ok := EnumerationMetadata(EnumAggregate[int64, int64](Literal([]int64{1}), int64(0), Add[int64](EnumAccumulator[int64](), EnumElement[int64]())))
+	aggregateMetadata, ok := EnumerationMetadata(EnumAggregate[int64, int64](Literal([]int64{1}), Literal(int64(0)), Add[int64](EnumAccumulator[int64](), EnumElement[int64]())))
 	if !ok || len(aggregateMetadata.Footprints) != 3 {
 		t.Fatalf("aggregate metadata = %#v", aggregateMetadata)
 	}
@@ -338,7 +338,7 @@ func TestEnumerableMetadataCoversAllGoEnumerationConstructors(t *testing.T) {
 		{"average", EnumAverage[int64](numbers), "average", EnumInputScalarNumeric, []int{0, 1, 2, 3}, -1},
 		{"average-of", EnumAverageOf[enumExpressionItem, int64](items, score), "average", EnumInputScalarNumeric, []int{0, 1, 2, 3}, -1},
 		{"average-exact", EnumAverageExact[int64](numbers), "average-exact", EnumInputScalarNumeric, []int{0, 1, 2, 3}, -1},
-		{"aggregate", EnumAggregate[int64, int64](numbers, int64(0), Add[int64](EnumAccumulator[int64](), EnumElement[int64]())), "aggregate", EnumInputAny, []int{2, 3, 4}, 2},
+		{"aggregate", EnumAggregate[int64, int64](numbers, Literal(int64(0)), Add[int64](EnumAccumulator[int64](), EnumElement[int64]())), "aggregate", EnumInputAny, []int{2, 3, 4}, 2},
 		{"except", EnumExcept[int64](numbers, Literal([]int64{2})), "except", EnumInputAny, []int{0}, 1},
 		{"intersect", EnumIntersect[int64](numbers, Literal([]int64{2})), "intersect", EnumInputAny, []int{0}, 1},
 		{"union", EnumUnion[int64](numbers, Literal([]int64{2})), "union", EnumInputAny, []int{0}, 1},
@@ -779,7 +779,7 @@ func TestEnumerableSetFoldGroupMapAndFrequencyMethods(t *testing.T) {
 	}
 
 	accumulator := Add[int64](EnumAccumulator[int64](), EnumElement[int64]())
-	if got := EnumAggregate[int64, int64](Literal([]int64{1, 2, 3}), int64(0), accumulator).eval(EvalContext{}); !got.Equal(Present(int64(6))) {
+	if got := EnumAggregate[int64, int64](Literal([]int64{1, 2, 3}), Literal(int64(0)), accumulator).eval(EvalContext{}); !got.Equal(Present(int64(6))) {
 		t.Fatalf("aggregate = %v", got)
 	}
 
