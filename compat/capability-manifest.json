@@ -510,13 +510,19 @@
       "summary": "Named expression definitions and typed references with inferred value/event-parameter substitution and dependency validation",
       "javaRefs": [
         "EPLSubselectAggregatedMultirowAndColumn",
-        "EPLOtherCreateExpression"
+        "EPLOtherCreateExpression",
+        "ExprDefineExpressionSimpleTwoModule",
+        "ExprDefineWildcardAndPattern",
+        "ExprDefineWhereClauseExpression",
+        "ExprDefineEventTypeAndSODA"
       ],
       "goRefs": [
         "expression_definition.go",
         "expression_definition_test.go",
         "expr.go",
-        "plan.go"
+        "plan.go",
+        "expr_define_basic_parity_test.go",
+        "expr_define_remaining_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -19653,7 +19659,11 @@
         "java-runtime-9625470fc1836fb0c00e",
         "java-runtime-bced839940f423ec402e",
         "java-runtime-d5a97ec9ef06043d8b0c",
-        "java-runtime-287bb162ff3da40a5022"
+        "java-runtime-287bb162ff3da40a5022",
+        "java-runtime-8cdefa5efaf1807544ea",
+        "java-runtime-ec281643c21c6b7c233b",
+        "java-runtime-b25d665129e8a07b727a",
+        "java-runtime-cfaeb7a5e5e4d365ba70"
       ],
       "javaStaticIds": [],
       "javaNames": [
@@ -19662,7 +19672,11 @@
         "ExprDefineNoParameterArithmetic",
         "ExprDefineNoParameterVariable",
         "ExprDefineStaticMethodSingleParam",
-        "ExprDefineInvalid"
+        "ExprDefineInvalid",
+        "ExprDefineExpressionSimpleTwoModule",
+        "ExprDefineWildcardAndPattern",
+        "ExprDefineWhereClauseExpression",
+        "ExprDefineEventTypeAndSODA"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineBasic.java"
@@ -19673,7 +19687,11 @@
         "TestExprDefineNoParameterVariableParity",
         "TestExprDefineStaticMethodSingleParamParity",
         "TestExprDefineParameterCountMismatchParity",
-        "TestExprDefineTooManyArgumentsParity"
+        "TestExprDefineTooManyArgumentsParity",
+        "TestExprDefineSimpleTwoModuleParity",
+        "TestExprDefineWildcardNonJoinParity",
+        "TestExprDefineWhereClauseExpressionParity",
+        "TestExprDefineEventTypeAndSODAParity"
       ],
       "tags": [
         "correctness",
@@ -19687,7 +19705,7 @@
         "java-source",
         "go-unit"
       ],
-      "difference": "Go covers simple literal, arithmetic, variable-driven and passthrough expression definitions, plus parameter-count mismatch validation. Parameterized expressions with aggregation (sumA(t)), filter-context parameterized expressions, subquery-backed definitions, pattern/wildcard, case-new multi-return and split-stream variants require deeper engine integration and remain future work."
+      "difference": "Go covers simple literal, arithmetic, variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, parameterized declared expressions evaluated in the where/filter clause, and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip and the textual 'alias for' variant are approved differences (Go uses an immutable fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. The pattern correlated-filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) and the aggregation/subquery/case-new/split-stream variants remain future work."
     }
   ],
   "mappings": [
@@ -21030,6 +21048,14 @@
     {
       "capabilityId": "view.window-core",
       "caseId": "case.view-intersect-matrix"
+    },
+    {
+      "capabilityId": "view.window-core",
+      "caseId": "case.view-intersect-remaining"
+    },
+    {
+      "capabilityId": "expr.declared",
+      "caseId": "case.expr-define-basic"
     }
   ],
   "summary": {
@@ -21038,6 +21064,6 @@
     "mappedCases": 318,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2108
+    "disposedRuntimeIds": 2112
   }
 }
