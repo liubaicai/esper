@@ -514,7 +514,13 @@
         "ExprDefineExpressionSimpleTwoModule",
         "ExprDefineWildcardAndPattern",
         "ExprDefineWhereClauseExpression",
-        "ExprDefineEventTypeAndSODA"
+        "ExprDefineEventTypeAndSODA",
+        "ExprDefineValueParameterVV",
+        "ExprDefineValueParameterVVV",
+        "ExprDefineValueParameterVEV",
+        "ExprDefineValueParameterVariable",
+        "ExprDefineNestedAlias",
+        "ExprDefineGlobalAliasAndSODA"
       ],
       "goRefs": [
         "expression_definition.go",
@@ -522,7 +528,8 @@
         "expr.go",
         "plan.go",
         "expr_define_basic_parity_test.go",
-        "expr_define_remaining_parity_test.go"
+        "expr_define_remaining_parity_test.go",
+        "expr_define_value_alias_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -7995,7 +8002,13 @@
         "java-runtime-f99da8bbca4256d388b7",
         "java-runtime-9159bf72b2622a56931f",
         "java-runtime-58539b9c66bae857d0e6",
-        "java-runtime-97b23e465870d3b1d72d"
+        "java-runtime-97b23e465870d3b1d72d",
+        "java-runtime-16bbae8008a6ccbe2e0d",
+        "java-runtime-b72a2c9015e992ed406e",
+        "java-runtime-a2299a0de6e1672048d4",
+        "java-runtime-5ef4f7751dc9aab61cfd",
+        "java-runtime-ca40fcc0a694e46ab204",
+        "java-runtime-dda46fd8c29bd76ab764"
       ],
       "javaNames": [
         "EPLSubselectMultirowGroupedUncorrelatedIteratorAndExpressionDef",
@@ -8008,12 +8021,19 @@
         "ExprDefineEventParamPatternMap",
         "ExprDefineEventParamSubqueryMap",
         "ExprDefineEventParamContextProperty",
-        "ExprDefineEventParamSubqueryMapWithWhere"
+        "ExprDefineEventParamSubqueryMapWithWhere",
+        "ExprDefineValueParameterVV",
+        "ExprDefineValueParameterVVV",
+        "ExprDefineValueParameterVEV",
+        "ExprDefineValueParameterVariable",
+        "ExprDefineNestedAlias",
+        "ExprDefineGlobalAliasAndSODA"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedMultirowAndColumn.java",
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineValueParameter.java",
-        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineEventParameterNonStream.java"
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineEventParameterNonStream.java",
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineAliasFor.java"
       ],
       "goTests": [
         "TestNamedExpressionReferenceEvaluatesAndEntersPlanIdentity",
@@ -8031,7 +8051,13 @@
         "TestParameterizedNamedExpressionReferenceSupportsMultirowSubqueryValues",
         "TestParameterizedNamedExpressionReferenceSupportsContextInitiatingEventValues",
         "TestParameterizedNamedExpressionReferenceSupportsMapSubqueryWhereAndCardinality",
-        "TestSubqueryGroupedSnapshotExposesIteratorView"
+        "TestSubqueryGroupedSnapshotExposesIteratorView",
+        "TestExprDefineValueParameterVVParity",
+        "TestExprDefineValueParameterVVVParity",
+        "TestExprDefineValueParameterVEVParity",
+        "TestExprDefineValueParameterVariableParity",
+        "TestExprDefineAliasForNestedAliasParity",
+        "TestExprDefineAliasForGlobalAliasParity"
       ],
       "tags": [
         "correctness",
@@ -21064,6 +21090,6 @@
     "mappedCases": 318,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2112
+    "disposedRuntimeIds": 2118
   }
 }
