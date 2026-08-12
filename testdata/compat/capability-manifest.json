@@ -20395,6 +20395,32 @@
         "5 Go parity tests covering aggregate GroupBy + ORDER BY ascending/descending/multi-key-tiebreak/expression-key and unknown-field build-time rejection"
       ],
       "difference": "Go tests use LengthBatch + GroupBy aggregate path (output rate limiting not yet ported); join, wildcard and FAF ORDER BY paths remain open"
+    },
+    {
+      "id": "case.infra-table-access-filter",
+      "javaRuntimeIds": [
+        "java-runtime-5894b6a5e7a8fceca257"
+      ],
+      "javaNames": [
+        "InfraFilterBehavior"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessFilterBehaviorParity"
+      ],
+      "tags": [
+        "table",
+        "into-table",
+        "filter",
+        "aggregate"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go fluent aggregate IntoTable materializes an unkeyed count(*) row; a normal event Filter reads the current table row through SubqueryValue(FromTable(...)) and matches exactly counts 1 and 2 before rejecting 3 and stale 1."
+      ],
+      "difference": "The Java top-level table accessor syntax is represented by a typed FromTable scalar subquery in Go; remaining InfraTableAccessCore table access, method/access columns, join, split-stream and array-key executions remain open."
     }
   ],
   "mappings": [
@@ -21797,14 +21823,18 @@
     {
       "capabilityId": "resultset.orderby-simple",
       "caseId": "case.resultset-orderby-simple"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-filter"
     }
   ],
   "summary": {
-    "totalCases": 348,
+    "totalCases": 349,
     "totalCapabilities": 110,
-    "mappedCases": 331,
+    "mappedCases": 332,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2198
+    "disposedRuntimeIds": 2199
   }
 }
