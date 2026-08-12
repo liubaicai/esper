@@ -1803,7 +1803,7 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 		}
 		expressionType := expressionFieldType(expression.node(), name)
 		if expressionType != nil && field.Type != nil && field.Type != typeOf[any]() {
-			if !field.Type.AssignableTo(expressionType) && !expressionType.AssignableTo(field.Type) && !numericTypes(field.Type, expressionType) {
+			if !fieldExpressionTypesCompatible(field.Type, expressionType) {
 				return fmt.Errorf("esper: field %q has type %s, expression expects %s", name, field.Type, expressionType)
 			}
 		}
@@ -1824,7 +1824,7 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 		}
 		expressionType := expressionFieldType(node, reference.name)
 		if expressionType != nil && field.Type != nil && field.Type != typeOf[any]() {
-			if !field.Type.AssignableTo(expressionType) && !expressionType.AssignableTo(field.Type) && !numericTypes(field.Type, expressionType) {
+			if !fieldExpressionTypesCompatible(field.Type, expressionType) {
 				return fmt.Errorf("esper: contained ancestor field %q has type %s, expression expects %s", reference.name, field.Type, expressionType)
 			}
 		}
@@ -2445,7 +2445,7 @@ func (e *Environment) validateTriggerTargetExpression(input *streamNode, targetS
 		}
 		expressionType := expressionTargetFieldType(expression.node(), targetKind, name)
 		if expressionType != nil && field.Type != nil && field.Type != typeOf[any]() {
-			if !field.Type.AssignableTo(expressionType) && !expressionType.AssignableTo(field.Type) && !numericTypes(field.Type, expressionType) {
+			if !fieldExpressionTypesCompatible(field.Type, expressionType) {
 				return fmt.Errorf("target field %q has type %s, expression expects %s", name, field.Type, expressionType)
 			}
 		}
@@ -3268,6 +3268,29 @@ func expressionVariableType(node *exprNode, variableName string) reflect.Type {
 
 func numericTypes(left, right reflect.Type) bool {
 	return isNumericType(left) && isNumericType(right)
+}
+
+// fieldExpressionTypesCompatible reports whether a schema field of fieldType
+// can back an expression of expressionType. The schema dereferences pointer
+// fields at runtime (a *int field yields int or Null), so a pointer element
+// type is also tested against the expression type.
+func fieldExpressionTypesCompatible(fieldType, expressionType reflect.Type) bool {
+	if fieldType == nil || expressionType == nil || fieldType == typeOf[any]() {
+		return true
+	}
+	if fieldType.AssignableTo(expressionType) || expressionType.AssignableTo(fieldType) {
+		return true
+	}
+	if numericTypes(fieldType, expressionType) {
+		return true
+	}
+	if fieldType.Kind() == reflect.Pointer {
+		elem := fieldType.Elem()
+		if elem.AssignableTo(expressionType) || expressionType.AssignableTo(elem) || numericTypes(elem, expressionType) {
+			return true
+		}
+	}
+	return false
 }
 
 func isNumericType(typ reflect.Type) bool {

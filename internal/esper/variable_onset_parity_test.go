@@ -20,6 +20,14 @@ type onSetVarS0 struct {
 	P01 string `esper:"p01"`
 }
 
+// onSetVarBeanBox mirrors SupportBean with a nullable (pointer) intBoxed
+// column for tests that need to distinguish null from zero.
+type onSetVarBeanBox struct {
+	TheString    string `esper:"theString"`
+	IntPrimitive int    `esper:"intPrimitive"`
+	IntBoxed     *int   `esper:"intBoxed"`
+}
+
 type onSetVarA struct {
 	ID string `esper:"id"`
 }
@@ -338,30 +346,33 @@ func TestVariableOnSetCoercionParity(t *testing.T) {
 
 // TestVariableOnSetRuntimeOrderMultipleParity mirrors
 // EPLVariableOnSetRuntimeOrderMultiple: an OR-filtered trigger updates nullable
-// variables and a later select observes the latest values. The Java suite uses
-// a nullable Integer boxed column; the Go value model uses a plain int here
-// (the nullable *int path in trigger expressions is tracked separately), so
-// the first trigger observes 0 where Java observes null.
+// variables and a later select observes the latest values. The nullable boxed
+// column uses *int so null propagation matches the Java Integer semantics.
 func TestVariableOnSetRuntimeOrderMultipleParity(t *testing.T) {
 	env := NewEnvironment()
-	registerOnSetVarTypes(t, env)
+	if _, err := RegisterStruct[onSetVarBeanBox](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
 	if err := env.RegisterVariable("var1ROM", nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.RegisterVariable("var2ROM", 1); err != nil {
+	if err := env.RegisterVariable("var2ROM", nil); err != nil {
 		t.Fatal(err)
 	}
-	triggerPlan, err := env.Build(OnEvent(From[onSetVarBean](env, "SupportBean").Filter(
-		Or(StartsWith(Field[onSetVarBean, string]("theString"), Literal("S")),
-			StartsWith(Field[onSetVarBean, string]("theString"), Literal("B"))),
+	triggerPlan, err := env.Build(OnEvent(From[onSetVarBeanBox](env, "SupportBean").Filter(
+		Or(StartsWith(Field[onSetVarBeanBox, string]("theString"), Literal("S")),
+			StartsWith(Field[onSetVarBeanBox, string]("theString"), Literal("B"))),
 	)).SetVariables(
-		SetVariableExpr("var1ROM", Field[onSetVarBean, int]("intPrimitive")),
-		SetVariableExpr("var2ROM", Field[onSetVarBean, int]("intBoxed")),
+		SetVariableExpr("var1ROM", Field[onSetVarBeanBox, int]("intPrimitive")),
+		SetVariableExpr("var2ROM", Field[onSetVarBeanBox, int]("intBoxed")),
 	).Query(StatementName("set")))
 	if err != nil {
 		t.Fatal(err)
 	}
 	engine := NewEngine(env)
+	if err := engine.SetVariable(context.Background(), "var2ROM", 1); err != nil {
+		t.Fatal(err)
+	}
 	deployment := mustDeployOnSetVar(t, engine, triggerPlan)
 	batches := subscribeOnSetVarCapture(t, deployment.Statements()[0])
 	if v, _ := engine.GetVariable("var1ROM"); v.State() != ValueNull {
@@ -371,27 +382,27 @@ func TestVariableOnSetRuntimeOrderMultipleParity(t *testing.T) {
 		t.Fatalf("initial var2ROM = %v, want 1", v)
 	}
 	ctx := context.Background()
-	sendTrigger := func(theString string, primitive, boxed, want1, want2 int) {
+	sendTrigger := func(theString string, primitive int, boxed *int, want1, want2 any) {
 		t.Helper()
 		*batches = (*batches)[:0]
-		if err := engine.SendEvent(ctx, onSetVarBean{TheString: theString, IntPrimitive: primitive, IntBoxed: boxed}); err != nil {
+		if err := engine.SendEvent(ctx, onSetVarBeanBox{TheString: theString, IntPrimitive: primitive, IntBoxed: boxed}); err != nil {
 			t.Fatal(err)
 		}
 		row := lastOnSetVarRow(t, *batches)
-		if row.Get("var1ROM").Any() != want1 || row.Get("var2ROM").Any() != want2 {
+		if !onSetVarEquals(row.Get("var1ROM"), want1) || !onSetVarEquals(row.Get("var2ROM"), want2) {
 			t.Fatalf("%s got {%v,%v}, want {%v,%v}", theString, row.Get("var1ROM"), row.Get("var2ROM"), want1, want2)
 		}
 	}
-	sendTrigger("S1", 3, 0, 3, 0)
-	sendTrigger("S1", -1, -2, -1, -2)
+	sendTrigger("S1", 3, nil, 3, nil)
+	sendTrigger("S1", -1, onSetVarIntPtr(-2), -1, -2)
 
-	selectPlan, err := env.Build(Select(From[onSetVarBean](env, "SupportBean").Filter(
-		Or(StartsWith(Field[onSetVarBean, string]("theString"), Literal("E")),
-			StartsWith(Field[onSetVarBean, string]("theString"), Literal("B"))),
+	selectPlan, err := env.Build(Select(From[onSetVarBeanBox](env, "SupportBean").Filter(
+		Or(StartsWith(Field[onSetVarBeanBox, string]("theString"), Literal("E")),
+			StartsWith(Field[onSetVarBeanBox, string]("theString"), Literal("B"))),
 	),
 		Alias("v1", VariableRef[int]("var1ROM")),
 		Alias("v2", VariableRef[int]("var2ROM")),
-		Alias("s", Field[onSetVarBean, string]("theString")),
+		Alias("s", Field[onSetVarBeanBox, string]("theString")),
 	).Query(StatementName("s0")))
 	if err != nil {
 		t.Fatal(err)
@@ -400,7 +411,7 @@ func TestVariableOnSetRuntimeOrderMultipleParity(t *testing.T) {
 	selectBatches := subscribeOnSetVarCapture(t, selectDeployment.Statements()[0])
 	sendSelect := func(theString string, want1, want2 int) {
 		t.Helper()
-		if err := engine.SendEvent(ctx, onSetVarBean{TheString: theString, IntPrimitive: 1}); err != nil {
+		if err := engine.SendEvent(ctx, onSetVarBeanBox{TheString: theString, IntPrimitive: 1}); err != nil {
 			t.Fatal(err)
 		}
 		row := lastOnSetVarRow(t, *selectBatches)
@@ -410,9 +421,18 @@ func TestVariableOnSetRuntimeOrderMultipleParity(t *testing.T) {
 		}
 	}
 	sendSelect("E1", -1, -2)
-	sendTrigger("S1", 11, 12, 11, 12)
+	sendTrigger("S1", 11, onSetVarIntPtr(12), 11, 12)
 	sendSelect("E2", 11, 12)
 }
+
+func onSetVarEquals(v Value, want any) bool {
+	if want == nil {
+		return v.State() == ValueNull
+	}
+	return v.Any() == want
+}
+
+func onSetVarIntPtr(v int) *int { return &v }
 
 // TestVariableOnSetWDeployParity mirrors EPLVariableOnSetWDeploy: a select
 // referencing a variable is deployed first, then an on-set trigger updates it.

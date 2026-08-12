@@ -58,6 +58,14 @@ func (v VariableDefinition) validate(value any) error {
 }
 
 func (v VariableDefinition) coerce(value any) (any, error) {
+	// Dereference pointer values so a nullable *int field assigned to a
+	// variable is stored as the underlying value. A nil pointer is null.
+	if ptr := reflect.ValueOf(value); ptr.Kind() == reflect.Pointer {
+		if ptr.IsNil() {
+			return nil, nil
+		}
+		value = ptr.Elem().Interface()
+	}
 	if v.typ == nil || v.typ == typeOf[any]() || value == nil {
 		return value, nil
 	}

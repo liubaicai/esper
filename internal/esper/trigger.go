@@ -1388,7 +1388,7 @@ func (e *Environment) validateVariableTriggerAssignments(definition *triggerDefi
 			return fmt.Errorf("variable assignment %q: %w", assignment.Name, err)
 		}
 		if expressionType := assignment.Expr.Type(); variableDefinition.typ != nil && variableDefinition.typ != typeOf[any]() && expressionType != nil && expressionType != typeOf[any]() {
-			if !variableDefinition.typ.AssignableTo(expressionType) && !expressionType.AssignableTo(variableDefinition.typ) && !numericTypes(variableDefinition.typ, expressionType) {
+			if !fieldExpressionTypesCompatible(variableDefinition.typ, expressionType) {
 				return NewError(ErrorTypeMismatch, fmt.Sprintf("variable %q has type %s, assignment expression has type %s", assignment.Name, variableDefinition.typ, expressionType))
 			}
 		}
