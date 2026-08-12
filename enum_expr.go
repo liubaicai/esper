@@ -1356,9 +1356,9 @@ func EnumUnion[T any](left, right Expression[[]T]) Expression[[]T] {
 		if !leftOK {
 			return leftValue
 		}
-		rightItems, rightValue, rightOK := enumItems[T](right, ctx)
-		if !rightOK {
-			return rightValue
+		rightItems, _, rightOK := enumItems[T](right, ctx)
+		if !rightOK || len(rightItems) == 0 {
+			return Present(leftItems)
 		}
 		result := make([]T, 0, len(leftItems)+len(rightItems))
 		result = append(result, leftItems...)
@@ -1373,9 +1373,9 @@ func enumSetOperation[T any](kind string, left, right Expression[[]T], keep func
 		if !leftOK {
 			return leftValue
 		}
-		rightItems, rightValue, rightOK := enumItems[T](right, ctx)
-		if !rightOK {
-			return rightValue
+		rightItems, _, rightOK := enumItems[T](right, ctx)
+		if !rightOK || len(rightItems) == 0 || len(leftItems) == 0 {
+			return Present(leftItems)
 		}
 		result := make([]T, 0, len(leftItems))
 		for _, item := range leftItems {

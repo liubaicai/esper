@@ -3069,14 +3069,14 @@
       "goRefs": [
         "expr_enum_parity_test.go",
         "expr_enum_array_of_parity_test.go",
-        "expr_enum_sequence_equal_parity_test.go"
+        "expr_enum_sequence_equal_parity_test.go",
+        "expr_enum_except_intersect_union_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
       "remaining": [
         "ExprEnumDataSources suite",
         "ExprEnumDocSamples suite",
-        "ExprEnumExceptIntersectUnion suite",
         "ExprEnumChained",
         "ExprEnumMostLeastFrequent suite",
         "ExprEnumNested suite",
@@ -9581,7 +9581,57 @@
         "java-junit",
         "go-unit"
       ],
-      "difference": "Go maps sequenceEqual to typed EnumSequenceEqual over slices, preserving ordered element comparison, empty collections, Null input and Null elements; selectFrom(...).sequenceEqual(...) is composed from EnumSelect projections. Go uses explicit generic collection types and fluent Build diagnostics, while Java additionally validates event-collection inputs through EPL and exposes Java generic/representation metadata and exact compiler error text."
+     "difference": "Go maps sequenceEqual to typed EnumSequenceEqual over slices, preserving ordered element comparison, empty collections, Null input and Null elements; selectFrom(...).sequenceEqual(...) is composed from EnumSelect projections. Go uses explicit generic collection types and fluent Build diagnostics, while Java additionally validates event-collection inputs through EPL and exposes Java generic/representation metadata and exact compiler error text."
+   },
+    {
+      "id": "case.expr-enum-except-intersect-union",
+      "javaRuntimeIds": [
+        "java-runtime-dbbd40603151c83c7418",
+        "java-runtime-7b37d6c7fb8a58a57ca3",
+        "java-runtime-1a00a5f0e8df77ec7531",
+        "java-runtime-6a9ab2ac64d1669a66a8",
+        "java-runtime-010da3764d30b1f092dd",
+        "java-runtime-4fa8ccf18d946037535f",
+        "java-runtime-caef0f72a4c6076cc2cb"
+      ],
+      "javaNames": [
+        "ExprEnumStringArrayIntersection",
+        "ExprEnumSetLogicWithContained",
+        "ExprEnumSetLogicWithScalar",
+        "ExprEnumInheritance",
+        "ExprEnumInvalid",
+        "ExprEnumSetLogicWithEvents",
+        "ExprEnumUnionWhere"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumExceptIntersectUnion.java"
+      ],
+      "goTests": [
+        "TestExprEnumExceptIntersectUnionScalarParity",
+        "TestExprEnumExceptIntersectUnionContainedParity",
+        "TestExprEnumExceptIntersectUnionStringArrayIntersectionParity",
+        "TestExprEnumUnionWhereParity",
+        "TestExprEnumExceptIntersectUnionInvalidParity"
+      ],
+      "tags": [
+        "correctness",
+        "expression",
+        "enum",
+        "except",
+        "intersect",
+        "union",
+        "set",
+        "null",
+        "invalid"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
+      ],
+      "difference": "Go maps except/intersect/union to typed EnumExcept/EnumIntersect/EnumUnion over slices, matching Java removeAll/retainAll/concatenate semantics including null/empty right returning left unchanged and null left returning null. where(...).union(...) is composed from EnumWhere + EnumUnion, and intersect().countOf() filters use EnumCount. Go's typed nil slice fields in struct events expose as Present typed-nil rather than Null, so the null-items case is verified through direct NullLiteral evaluation. Java additionally validates event-type mismatches through EPL compilation and exposes event identity, schema inheritance and exact compiler error text."
     },
     {
       "id": "case.expr-enum-aggregate",
@@ -21013,6 +21063,10 @@
     },
     {
       "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-except-intersect-union"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
       "caseId": "case.expr-enum-count-reverse"
     },
     {
@@ -21225,11 +21279,11 @@
     }
   ],
   "summary": {
-    "totalCases": 339,
+    "totalCases": 340,
     "totalCapabilities": 108,
-    "mappedCases": 320,
+    "mappedCases": 321,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2136
+    "disposedRuntimeIds": 2143
   }
 }
