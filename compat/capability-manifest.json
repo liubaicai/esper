@@ -3067,12 +3067,12 @@
         "ExprEnumSelectFromEventsPlain"
       ],
       "goRefs": [
-        "expr_enum_parity_test.go"
+        "expr_enum_parity_test.go",
+        "expr_enum_array_of_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
       "remaining": [
-        "ExprEnumArrayOf suite",
         "ExprEnumDataSources suite",
         "ExprEnumDocSamples suite",
         "ExprEnumExceptIntersectUnion suite",
@@ -9495,6 +9495,54 @@
         "go-unit"
       ],
       "difference": "Go maps the invocation/context contract to explicit typed ScriptProvider callbacks, preserving Value states, EvalContext, dialect metadata, provider-local attribute read/write state, contained expansion and Null-on-provider-error behavior; nil argument nodes are retained for Build-time arity diagnostics and script metadata enters Plan canonical identity. It intentionally does not embed JavaScript, MVEL or a JVM runtime. Java configuration/disable behavior, dialect/parser/compiler diagnostics, event-return and generic metadata, sandbox/timeout/resource policy, UDF/Pattern/Context/Dataflow/FAF combinations and complete trace parity remain open under expr.script."
+    },
+    {
+      "id": "case.expr-enum-array-of",
+      "javaRuntimeIds": [
+        "java-runtime-b5cf990f0a397e0efd5e",
+        "java-runtime-142c80367447b40bc2c0",
+        "java-runtime-6d999dff687e7dced681",
+        "java-runtime-77b58a9733ab61549dc2",
+        "java-runtime-1ec58160ca43484199c3",
+        "java-runtime-7aeab15b7eadfffbc64b"
+      ],
+      "javaNames": [
+        "ExprEnumArrayOfWSelectFromScalar",
+        "ExprEnumArrayOfWSelectFromScalarWIndex",
+        "ExprEnumArrayOfWSelectFromEvent",
+        "ExprEnumArrayOfEvents",
+        "ExprEnumArrayOfScalar",
+        "ExprArrayOfInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumArrayOf.java"
+      ],
+      "goTests": [
+        "TestExprEnumArrayOfScalarParity",
+        "TestExprEnumArrayOfEventsParity",
+        "TestExprEnumArrayOfSelectFromParity",
+        "TestExprEnumArrayOfStatementProjectionParity",
+        "TestExprEnumArrayOfInvalidParity"
+      ],
+      "tags": [
+        "correctness",
+        "expression",
+        "enum",
+        "array-of",
+        "select-from",
+        "index",
+        "size",
+        "null",
+        "invalid"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
+      ],
+      "difference": "Go maps arrayOf to typed EnumArrayOf/EnumArrayOfSelect over slices. EnumElement, EnumIndex and EnumSize are explicit typed expression nodes; selectFrom(...).arrayOf() is composed from EnumSelect and EnumArrayOf, preserving order, empty collections and null input. Java array component descriptors, null-typed lambda inference, broader representation-backed sources and exact invalid diagnostics remain partial."
     },
     {
       "id": "case.expr-enum-aggregate",
@@ -20918,6 +20966,10 @@
     },
     {
       "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-array-of"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
       "caseId": "case.expr-enum-count-reverse"
     },
     {
@@ -21130,11 +21182,11 @@
     }
   ],
   "summary": {
-    "totalCases": 337,
+    "totalCases": 338,
     "totalCapabilities": 108,
-    "mappedCases": 318,
+    "mappedCases": 319,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2127
+    "disposedRuntimeIds": 2133
   }
 }
