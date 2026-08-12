@@ -20425,6 +20425,32 @@
       "difference": "The Java top-level table accessor syntax is represented by a typed FromTable scalar subquery in Go; remaining InfraTableAccessCore table access, method/access columns, join and split-stream executions remain open."
     },
     {
+      "id": "case.infra-table-access-expression-rendering-unnamed",
+      "javaRuntimeIds": [
+        "java-runtime-4e6eba40e475800f57e1"
+      ],
+      "javaNames": [
+        "InfraExprSelectClauseRenderingUnnamedCol"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessExprSelectClauseRenderingUnnamedColParity"
+      ],
+      "tags": [
+        "table",
+        "select",
+        "window-access",
+        "result-schema"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go explicit fluent aliases cover the Java unnamed table-expression projection matrix: typed key collection, WindowAccess values, complete table-row StructOf map, last event and EnumTake(1) collection; Plan.ResultSchema and runtime assertions verify the corresponding Go types and values."
+      ],
+      "difference": "Java expression-rendered column names are replaced by explicit Go aliases, and Java Object[]/SupportBean[]/Collection metadata is represented by typed Go slices and structs; the broader table metadata and invalid-rule matrix remains open."
+    },
+    {
       "id": "case.infra-table-access-ungrouped-window-sum",
       "javaRuntimeIds": [
         "java-runtime-a7bd4b1a3580754c28cf"
@@ -22120,6 +22146,10 @@
     },
     {
       "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-expression-rendering-unnamed"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-ungrouped-window-sum"
     },
     {
@@ -22164,11 +22194,11 @@
     }
   ],
   "summary": {
-    "totalCases": 360,
+    "totalCases": 361,
     "totalCapabilities": 110,
-    "mappedCases": 343,
+    "mappedCases": 344,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2210
+    "disposedRuntimeIds": 2211
   }
 }

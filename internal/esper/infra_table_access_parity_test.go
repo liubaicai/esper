@@ -188,6 +188,130 @@ func TestInfraTableAccessFilterBehaviorParity(t *testing.T) {
 	}
 }
 
+// TestInfraTableAccessExprSelectClauseRenderingUnnamedColParity mirrors Java
+// InfraTableAccessCore.InfraExprSelectClauseRenderingUnnamedCol. The Java
+// statement intentionally relies on expression-rendered column names; the Go
+// fluent form gives each projection an explicit alias while preserving the
+// same five result types and table-access operations.
+func TestInfraTableAccessExprSelectClauseRenderingUnnamedColParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableGroupedSingleBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableGroupedTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "varaggESC", []TableColumn{
+		PrimaryKeyColumn[string]("key"),
+		TableColumnOf[WindowAccessValue[infraTableGroupedSingleBean]]("theEvents"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	groupKey := Field[infraTableGroupedSingleBean, string]("theString")
+	aggregatePlan, err := env.Build(
+		From[infraTableGroupedSingleBean](env, "SupportBean").
+			Window(KeepAll()).
+			GroupBy(groupKey).
+			Select(
+				Alias("key", groupKey),
+				Alias("theEvents", WindowAccessBy[infraTableGroupedSingleBean](EventValue[infraTableGroupedSingleBean]())),
+			).
+			IntoTable("varaggESC", StatementName("table-access-expression-rendering-populate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableEvents := TableField[WindowAccessValue[infraTableGroupedSingleBean]]("theEvents")
+	events := Method[[]infraTableGroupedSingleBean](tableEvents, "Values")
+	row := StructOf(
+		Alias("key", TableField[string]("key")),
+		Alias("theEvents", events),
+	)
+	keys := SubqueryValues[string](FromTable(env, "varaggESC"), Field[any, string]("key"))
+	plan, err := env.Build(
+		OnEvent(From[infraTableGroupedTrigger](env, "SupportBean_S0")).
+			SelectFromTable("varaggESC", []Expr{Field[infraTableGroupedTrigger, string]("p00")},
+				Alias("keys", keys),
+				Alias("theEvents", events),
+				Alias("row", row),
+				Alias("last", Method[infraTableGroupedSingleBean](tableEvents, "Last")),
+				Alias("takeOne", EnumTake[infraTableGroupedSingleBean](events, 1)),
+			).
+			Query(StatementName("table-access-expression-rendering")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	schema, ok := plan.ResultSchema()
+	if !ok {
+		t.Fatal("table expression-rendering plan has no result schema")
+	}
+	wantTypes := map[string]reflect.Type{
+		"keys":      reflect.TypeOf([]string{}),
+		"theEvents": reflect.TypeOf([]infraTableGroupedSingleBean{}),
+		"row":       reflect.TypeOf(map[string]any{}),
+		"last":      reflect.TypeOf(infraTableGroupedSingleBean{}),
+		"takeOne":   reflect.TypeOf([]infraTableGroupedSingleBean{}),
+	}
+	for name, want := range wantTypes {
+		got, exists := schema.PropertyType(name)
+		if !exists || got != want {
+			t.Fatalf("table expression-rendering schema %s = %v, want %v", name, got, want)
+		}
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("table expression-rendering result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	input := infraTableGroupedSingleBean{TheString: "E1", IntPrimitive: 10}
+	if err := engine.SendEvent(context.Background(), input); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), infraTableGroupedTrigger{P00: "E1"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("table expression-rendering rows = %d, want 1", len(rows))
+	}
+	if got := rows[0].Get("keys").Any(); !reflect.DeepEqual(got, []string{"E1"}) {
+		t.Fatalf("table expression-rendering keys = %#v, want [E1]", got)
+	}
+	if got := rows[0].Get("theEvents").Any(); !reflect.DeepEqual(got, []infraTableGroupedSingleBean{input}) {
+		t.Fatalf("table expression-rendering events = %#v, want [%#v]", got, input)
+	}
+	rowValue, ok := rows[0].Get("row").Any().(map[string]any)
+	if !ok || !reflect.DeepEqual(rowValue["key"], "E1") || !reflect.DeepEqual(rowValue["theEvents"], []infraTableGroupedSingleBean{input}) {
+		t.Fatalf("table expression-rendering row = %#v", rows[0].Get("row").Any())
+	}
+	if got := rows[0].Get("last").Any(); !reflect.DeepEqual(got, input) {
+		t.Fatalf("table expression-rendering last = %#v, want %#v", got, input)
+	}
+	if got := rows[0].Get("takeOne").Any(); !reflect.DeepEqual(got, []infraTableGroupedSingleBean{input}) {
+		t.Fatalf("table expression-rendering take-one = %#v, want [%#v]", got, input)
+	}
+}
+
 // TestInfraTableAccessUngroupedWindowAndSumParity mirrors Java
 // InfraTableAccessCoreUnGroupedWindowAndSum. The table has one unkeyed row
 // containing both a length-window access value and a running sum; a trigger
