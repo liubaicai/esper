@@ -16,7 +16,8 @@
       ],
       "goRefs": [
         "internal/esper/schema.go",
-        "internal/esper/object_array_test.go"
+        "internal/esper/object_array_test.go",
+        "internal/esper/infra_table_access_dot_method_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -504,7 +505,8 @@
         "internal/esper/expr_core_case_parity_test.go",
         "internal/esper/expr_core_in_between_parity_test.go",
         "internal/esper/expr_core_previous_parity_test.go",
-        "internal/esper/expr_core_prior_parity_test.go"
+        "internal/esper/expr_core_prior_parity_test.go",
+        "internal/esper/infra_table_access_dot_method_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -683,7 +685,8 @@
         "internal/esper/table_sink.go",
         "internal/esper/aggregate_test.go",
         "internal/esper/join_test.go",
-        "internal/esper/infra_table_access_aggregation_state_parity_test.go"
+        "internal/esper/infra_table_access_aggregation_state_parity_test.go",
+        "internal/esper/infra_table_access_dot_method_parity_test.go"
       ],
       "phase": 3,
       "status": "partial",
@@ -954,7 +957,8 @@
         "internal/esper/state.go",
         "internal/esper/plan.go",
         "internal/esper/infra_table_access_parity_test.go",
-        "internal/esper/infra_table_access_aggregation_state_parity_test.go"
+        "internal/esper/infra_table_access_aggregation_state_parity_test.go",
+        "internal/esper/infra_table_access_dot_method_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -2807,7 +2811,9 @@
       ],
       "goRefs": [
         "internal/esper/expr.go",
-        "internal/esper/client_extend_udf_parity_test.go"
+        "internal/esper/client_extend_udf_parity_test.go",
+        "internal/esper/infra_table_access_dot_method_parity_test.go",
+        "internal/esper/datetime_plugin.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -2827,7 +2833,8 @@
       ],
       "goRefs": [
         "internal/esper/expr.go",
-        "internal/esper/client_extend_udf_parity_test.go"
+        "internal/esper/client_extend_udf_parity_test.go",
+        "internal/esper/datetime_plugin.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -2845,7 +2852,8 @@
       ],
       "goRefs": [
         "internal/esper/expr.go",
-        "internal/esper/client_extend_udf_parity_test.go"
+        "internal/esper/client_extend_udf_parity_test.go",
+        "internal/esper/datetime_plugin.go"
       ],
       "phase": 2,
       "status": "approved-difference",
@@ -3084,7 +3092,8 @@
         "internal/esper/expr_enum_nested_parity_test.go",
         "internal/esper/expr_enum_doc_samples_parity_test.go",
         "internal/esper/expr_enum_data_sources_parity_test.go",
-        "internal/esper/expr_enum_select_from_events_parity_test.go"
+        "internal/esper/expr_enum_select_from_events_parity_test.go",
+        "internal/esper/infra_table_access_dot_method_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -20972,6 +20981,42 @@
         "Go length(2) named window feeds an into-table sum. Fire-and-forget select/delete/update/insert correlate the table aggregate with NamedWindowField target values: select returns 10, delete removes the matching row, update sets doublePrimitive=100, and insert materializes (A,20) using the table sum."
       ],
       "difference": "Java's FAF EPL text and the broader FAF index/parameter/context matrix remain open; Go uses OnDemand fluent mutation chains and scalar table subqueries."
+    },
+    {
+      "id": "case.infra-table-access-dot-method",
+      "javaRuntimeIds": [
+        "java-runtime-424cdec4be1343dbbbce",
+        "java-runtime-1627be767322a03dead4",
+        "java-runtime-8553a882ce2329d4459b"
+      ],
+      "javaNames": [
+        "InfraPlainPropDatetimeAndEnumerationAndMethod",
+        "InfraAggDatetimeAndEnumerationAndMethod",
+        "InfraNestedDotMethod"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessDotMethod.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessDotMethodPlainPropertyParity",
+        "TestInfraTableAccessDotMethodAggregationParity",
+        "TestInfraTableAccessDotMethodNestedParity"
+      ],
+      "tags": [
+        "table",
+        "dot-method",
+        "datetime",
+        "enum",
+        "nested",
+        "into-table"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go expresses all three Java dot-method table shapes through analyzable fluent builders. InfraPlainPropDatetimeAndEnumerationAndMethod merges a PopulateEvent object array into a table with datetime, JavaBean-style method, bean-array, Event and Event[] columns; the trigger projection registers getMinuteOfHour as a DateTimePlugin and composes Method(GetMyProperty), EnumTakeLast(1), Property(Event,p0) and EnumSelect(Event, NestedField(p0)), returning 55/x/one-bean/p0value/[0_p0,1_p0] for grouped and ungrouped tables. InfraAggDatetimeAndEnumerationAndMethod stores LastEver(long) and WindowAccessBy(EventValue) in a time(10s) table and reads the registered after(150L) plugin plus EnumCount(Values), returning false/1 then true/2. InfraNestedDotMethod stores a length(2) full-event window and composes last bean intPrimitive, EnumCount(Values) and EnumTake(EnumSelect(Values,intPrimitive),1), returning 10/1/[10], 20/2/[10] and 30/2/[20] after eviction for grouped and ungrouped tables.",
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java's EPL dot chains (getMinuteOfHour, getMyProperty, takeLast, selectFrom, after and countOf) are represented by typed Method/Property chains, enumeration combinators and registered date-time plugins; Java SODA variants map to immutable fluent Plans. The nested multivalue Java execution combines only the observed last/window projections, while Go covers the same window and scalar-enum results without the extra first(*) projection used by its sibling suite."
     }
   ],
   "mappings": [
@@ -22470,14 +22515,38 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-aggregation-state"
+    },
+    {
+      "capabilityId": "event.object-array",
+      "caseId": "case.infra-table-access-dot-method"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.infra-table-access-dot-method"
+    },
+    {
+      "capabilityId": "client.extend.single-row-function",
+      "caseId": "case.infra-table-access-dot-method"
+    },
+    {
+      "capabilityId": "resultset.aggregate-access",
+      "caseId": "case.infra-table-access-dot-method"
+    },
+    {
+      "capabilityId": "expr.core",
+      "caseId": "case.infra-table-access-dot-method"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-dot-method"
     }
   ],
   "summary": {
-    "totalCases": 369,
+    "totalCases": 370,
     "totalCapabilities": 110,
-    "mappedCases": 352,
+    "mappedCases": 353,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2225
+    "disposedRuntimeIds": 2228
   }
 }

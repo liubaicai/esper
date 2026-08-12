@@ -103,7 +103,11 @@ type DateTimePluginFactoryContext struct {
 	InputType   reflect.Type
 	ResultType  reflect.Type
 	Environment *Environment
-	Evaluation  EvalContext
+	// Arguments contains the statically declared expression types. It is the
+	// Go-native equivalent of Esper's date-time method parameter model and is
+	// useful to factories that need to distinguish registered operation modes.
+	Arguments  []reflect.Type
+	Evaluation EvalContext
 }
 
 // DateTimePluginOps is the Go-native equivalent of Esper's date-time method
@@ -447,6 +451,7 @@ func evaluateDateTimePlugin[R any](ctx EvalContext, node *exprNode, input Expr, 
 		InputType:   input.Type(),
 		ResultType:  node.typ,
 		Environment: node.dateTimePluginEnvironment,
+		Arguments:   dateTimePluginArgumentTypes(arguments),
 		Evaluation:  ctx,
 	})
 	if ops == nil {
@@ -474,6 +479,16 @@ func evaluateDateTimePlugin[R any](ctx EvalContext, node *exprNode, input Expr, 
 		return Null()
 	}
 	return result
+}
+
+func dateTimePluginArgumentTypes(arguments []DateTimePluginArgument) []reflect.Type {
+	types := make([]reflect.Type, len(arguments))
+	for index, argument := range arguments {
+		if argument.expression != nil {
+			types[index] = argument.expression.Type()
+		}
+	}
+	return types
 }
 
 func dateTimePluginOperations(factory dateTimePluginFactory, context DateTimePluginFactoryContext) (operations DateTimePluginOps) {
