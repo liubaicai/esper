@@ -1,3 +1,5 @@
+本轮关闭 Java ExprEnumSelectFromEventsPlain 的 1 个 execution，新增 expr_enum_select_from_events_parity_test.go。测试以 typed struct 和 map event source 对照 selectFrom(x => id) 与 Null selector，覆盖非空/空/Null collection 及 Build/Deploy []string 结果元数据。Go struct 的 typed-nil slice 是 present empty；map-backed nil field 保留 Java Null collection。其余 selectFrom execution 的 index/size lambda、anonymous map row 和 scalar collection matrix 保持后续差异。
+
 本轮关闭 Java `ExprEnumDataSources` suite（27 个 runtime），新增 `case.expr-enum-data-sources` 和 `expr_enum_data_sources_parity_test.go`。覆盖 ExprEnumProperty（事件属性集合上的 allOf）和数组属性 sumOf 的 Build/Deploy 路径。其余 25 个执行需子查询/命名窗口/访问聚合/prev函数/模式过滤/上下文属性/match-recognize/表行/变量等未移植特性，保持开放。此轮完成后 `expr.enum-collection-methods` 能力 remaining 清单全部清空，该能力所有 case 均已登记。Java `TestSuiteExprEnum` 28/28 oracle 沿用本轮实跑结果。
 
 本轮关闭 Java `ExprEnumDocSamples` suite（10 个 runtime），新增 `case.expr-enum-doc-samples` 和 `expr_enum_doc_samples_parity_test.go`。覆盖 ExprEnumScalarArray（全面标量数组 enum 方法验证，element/index/size lambda 变体）和 ExprEnumHowToUse（链式 where + 复合谓词 + 嵌套属性路径）。其余 8 个执行需子查询/命名窗口/访问聚合/prev窗口/UDF集合/声明表达式数据源，保持开放。Java `TestSuiteExprEnum` 28/28 oracle 沿用本轮实跑结果。

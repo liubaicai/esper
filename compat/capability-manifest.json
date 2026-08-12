@@ -3078,7 +3078,8 @@
         "expr_enum_chained_parity_test.go",
         "expr_enum_nested_parity_test.go",
         "expr_enum_doc_samples_parity_test.go",
-        "expr_enum_data_sources_parity_test.go"
+        "expr_enum_data_sources_parity_test.go",
+        "expr_enum_select_from_events_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -17934,7 +17935,9 @@
     },
     {
       "id": "case.expr-enum-select",
-      "javaRuntimeIds": [],
+      "javaRuntimeIds": [
+        "java-runtime-441b659d5cbe29a22653"
+      ],
       "javaNames": [
         "ExprEnumSelectFromEventsPlain"
       ],
@@ -17942,7 +17945,8 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumSelectFrom.java"
       ],
       "goTests": [
-        "TestExprEnumSelectMatchesEsper"
+        "TestExprEnumSelectMatchesEsper",
+        "TestExprEnumSelectFromEventsPlainParity"
       ],
       "tags": [
         "correctness",
@@ -17951,12 +17955,14 @@
         "select",
         "projection"
       ],
-      "status": "partial",
+      "status": "mapped",
       "evidence": [
         "java-runtime-inventory",
+        "java-source",
+        "java-junit",
         "go-unit"
       ],
-      "difference": ""
+      "difference": "Go covers ExprEnumSelectFromEventsPlain through typed struct and map event sources: element property projection, Null selector, empty collection and Null collection behavior, plus []string result metadata in Build/Deploy. Struct-backed typed-nil slices remain present empty values under Go's value model; map-backed nil fields preserve Java Null collection semantics. The remaining Java selectFrom executions (event index/size, event new-object map rows, scalar plain and scalar index/size) retain separate anonymous-row/generic metadata and lambda-arity differences."
     },
     {
       "id": "case.view-basic-windows",
@@ -21624,9 +21630,9 @@
   "summary": {
     "totalCases": 346,
     "totalCapabilities": 108,
-    "mappedCases": 327,
-    "partialCases": 2,
+    "mappedCases": 328,
+    "partialCases": 1,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2194
+    "disposedRuntimeIds": 2195
   }
 }
