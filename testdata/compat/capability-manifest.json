@@ -682,7 +682,8 @@
         "internal/esper/faf.go",
         "internal/esper/table_sink.go",
         "internal/esper/aggregate_test.go",
-        "internal/esper/join_test.go"
+        "internal/esper/join_test.go",
+        "internal/esper/infra_table_access_aggregation_state_parity_test.go"
       ],
       "phase": 3,
       "status": "partial",
@@ -952,7 +953,8 @@
         "internal/esper/schema.go",
         "internal/esper/state.go",
         "internal/esper/plan.go",
-        "internal/esper/infra_table_access_parity_test.go"
+        "internal/esper/infra_table_access_parity_test.go",
+        "internal/esper/infra_table_access_aggregation_state_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -20899,6 +20901,51 @@
       "difference": "Java's merge EPL and the remaining OnMerge/table trigger metadata/invalid matrices remain open; Go exposes ordered fluent TableMergeClause branches."
     },
     {
+      "id": "case.infra-table-access-aggregation-state",
+      "javaRuntimeIds": [
+        "java-runtime-adeaa6f7e20e89094874",
+        "java-runtime-8be393c0561dac7f38a5",
+        "java-runtime-006357a511e142d96acf",
+        "java-runtime-830b8c3905185ddc7d36",
+        "java-runtime-4a35b3fcf802f9d9d4d4",
+        "java-runtime-54cab05b8877a80696b5",
+        "java-runtime-ae22654eb28bddb62d15"
+      ],
+      "javaNames": [
+        "InfraAccessAggShare",
+        "InfraTableAccessGroupedMixed",
+        "InfraTableAccessGroupedThreeKey",
+        "InfraNestedMultivalueAccess{grouped=false, soda=false}",
+        "InfraNestedMultivalueAccess{grouped=true, soda=false}",
+        "InfraNestedMultivalueAccess{grouped=false, soda=true}",
+        "InfraNestedMultivalueAccess{grouped=true, soda=true}"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessAggregationState.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessAggregationStateGroupedThreeKeyParity",
+        "TestInfraTableAccessAggregationStateGroupedMixedParity",
+        "TestInfraTableAccessAggregationStateAggShareParity",
+        "TestInfraTableAccessAggregationStateNestedMultivalueAccessParity"
+      ],
+      "tags": [
+        "table",
+        "aggregation-state",
+        "into-table",
+        "window-access",
+        "group-by",
+        "count-distinct"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go materializes Java's three aggregation-state table shapes with typed table columns and reads them through on-trigger table projections. InfraTableAccessGroupedThreeKey groups string/int/long keys and returns sum(double)/count(*) 1000/1 then 2001/2 using the literal third key 100L. InfraTableAccessGroupedMixed keeps count, count-distinct, full-event window access and sum in one grouped length(3) row: E1 reads 3/2/[E1,E1,E1]/303, missing E2 is null, and E2 materializes 1/1/[E2]/200. InfraAccessAggShare stores an unkeyed time(10s) window access value shared by a second reader after each input event. InfraNestedMultivalueAccess covers grouped and ungrouped tables with full-event and scalar-int length(2) windows, projecting both window values at E1/E2 and after E3 eviction.",
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java's window(*)/last(*)/first(*) aggregate-access syntax and SODA variants are represented by WindowAccessValue plus explicit Value/First/Last projections; the four nested executions are run as grouped/soda subtests against two structurally equivalent Go table shapes. Java object-array SupportBean metadata remains represented by typed Go structs, and the broader table aggregate-access metadata/context/join/index matrix remains open."
+    },
+    {
       "id": "case.infra-table-access-named-window-faf",
       "javaRuntimeIds": [
         "java-runtime-072f7acbf2fd102a24c1"
@@ -22407,14 +22454,30 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-named-window-faf"
+    },
+    {
+      "capabilityId": "resultset.aggregate-access",
+      "caseId": "case.infra-table-access-aggregation-state"
+    },
+    {
+      "capabilityId": "resultset.aggregate-group-by",
+      "caseId": "case.infra-table-access-aggregation-state"
+    },
+    {
+      "capabilityId": "view.basic-windows",
+      "caseId": "case.infra-table-access-aggregation-state"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-aggregation-state"
     }
   ],
   "summary": {
-    "totalCases": 368,
+    "totalCases": 369,
     "totalCapabilities": 110,
-    "mappedCases": 351,
+    "mappedCases": 352,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2218
+    "disposedRuntimeIds": 2225
   }
 }
