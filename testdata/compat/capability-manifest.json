@@ -20607,6 +20607,33 @@
         "Go GroupBy(theString,intPrimitive,longPrimitive) + IntoTable maintains a three-column primary-key aggregate; SelectFromTable evaluates two trigger keys plus the literal third key and verifies sum(doublePrimitive) and count(*)."
       ],
       "difference": "Java top-level table member access is represented by SelectFromTable with explicit trigger/table scopes; SODA, context, method/access, join, split-stream and array-key matrices remain open."
+    },
+    {
+      "id": "case.infra-table-access-grouped-mixed-method-access",
+      "javaRuntimeIds": [
+        "java-runtime-a9a1edf4356631165beb"
+      ],
+      "javaNames": [
+        "InfraGroupedMixedMethodAndAccess"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessGroupedMixedMethodAndAccessParity"
+      ],
+      "tags": [
+        "table",
+        "grouped-aggregate",
+        "primary-key",
+        "count-distinct",
+        "window-access"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go GroupBy(theString) + LengthWindow(3) + IntoTable materializes count(*), count-distinct(intPrimitive), WindowAccessBy values and sum(longPrimitive); SelectFromTable reads all four columns and verifies missing-key Null semantics and a newly created group."
+      ],
+      "difference": "Java table method/access syntax is represented by typed WindowAccessValue and Method/TableField projections in the fluent Go API; context, split-stream, array-key and remaining table execution matrices remain open."
     }
   ],
   "mappings": [
@@ -22041,14 +22068,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-grouped-three-keys"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-grouped-mixed-method-access"
     }
   ],
   "summary": {
-    "totalCases": 356,
+    "totalCases": 357,
     "totalCapabilities": 110,
-    "mappedCases": 339,
+    "mappedCases": 340,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2206
+    "disposedRuntimeIds": 2207
   }
 }

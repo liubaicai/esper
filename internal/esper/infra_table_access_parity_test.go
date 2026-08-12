@@ -942,3 +942,142 @@ func TestInfraTableAccessGroupedThreeKeyNoContextParity(t *testing.T) {
 	}
 	read("E1", 10, 2001, 2)
 }
+
+// TestInfraTableAccessGroupedMixedMethodAndAccessParity mirrors Java
+// InfraTableAccessCore.InfraGroupedMixedMethodAndAccess. The grouped table
+// keeps scalar aggregates and an insertion-ordered window access value in the
+// same row, allowing a typed table lookup to read both ordinary aggregate
+// columns and access-aggregate state.
+func TestInfraTableAccessGroupedMixedMethodAndAccessParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableGroupedMultiBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableGroupedTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "varMyAgg", []TableColumn{
+		PrimaryKeyColumn[string]("key"),
+		TableColumnOf[int64]("c0"),
+		TableColumnOf[int64]("c1"),
+		TableColumnOf[WindowAccessValue[infraTableGroupedMultiBean]]("c2"),
+		TableColumnOf[int64]("c3"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	groupKey := Field[infraTableGroupedMultiBean, string]("theString")
+	intValue := Field[infraTableGroupedMultiBean, int64]("intPrimitive")
+	longValue := Field[infraTableGroupedMultiBean, int64]("longPrimitive")
+	window := WindowAccessBy[infraTableGroupedMultiBean](EventValue[infraTableGroupedMultiBean]())
+	aggregatePlan, err := env.Build(
+		From[infraTableGroupedMultiBean](env, "SupportBean").
+			Window(LengthWindow(3)).
+			GroupBy(groupKey).
+			Select(
+				Alias("key", groupKey),
+				Alias("c0", CountAll()),
+				Alias("c1", CountDistinct[int64](intValue)),
+				Alias("c2", window),
+				Alias("c3", Sum[int64](longValue)),
+			).
+			IntoTable("varMyAgg", StatementName("grouped-mixed-aggregate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	triggerKey := Field[infraTableGroupedTrigger, string]("p00")
+	triggerPlan, err := env.Build(
+		OnEvent(From[infraTableGroupedTrigger](env, "SupportBean_S0")).
+			SelectFromTable("varMyAgg", []Expr{triggerKey},
+				Alias("c0", TableField[int64]("c0")),
+				Alias("c1", TableField[int64]("c1")),
+				Alias("c2", TableField[WindowAccessValue[infraTableGroupedMultiBean]]("c2")),
+				Alias("c3", TableField[int64]("c3")),
+			).
+			Query(StatementName("grouped-mixed-read")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resultSchema, ok := triggerPlan.ResultSchema()
+	if !ok {
+		t.Fatal("grouped mixed table read has no result schema")
+	}
+	for name, want := range map[string]reflect.Type{
+		"c0": reflect.TypeOf(int64(0)),
+		"c1": reflect.TypeOf(int64(0)),
+		"c2": reflect.TypeOf(WindowAccessValue[infraTableGroupedMultiBean]{}),
+		"c3": reflect.TypeOf(int64(0)),
+	} {
+		got, exists := resultSchema.PropertyType(name)
+		if !exists || got != want {
+			t.Fatalf("grouped mixed result schema %s = %v, want %v", name, got, want)
+		}
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), triggerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("grouped mixed result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	read := func(key string, wantCount, wantDistinct, wantSum any, wantValues []infraTableGroupedMultiBean) {
+		t.Helper()
+		if err := engine.SendEvent(ctx, infraTableGroupedTrigger{P00: key}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) == 0 {
+			t.Fatal("grouped mixed lookup produced no row")
+		}
+		row := rows[len(rows)-1]
+		if row.Get("c0").Any() != wantCount || row.Get("c1").Any() != wantDistinct || row.Get("c3").Any() != wantSum {
+			t.Fatalf("grouped mixed lookup %s = %#v, want count/distinct/sum %v/%v/%v", key, row.AsMap(), wantCount, wantDistinct, wantSum)
+		}
+		if wantValues == nil {
+			if row.Get("c2").State() != ValueNull {
+				t.Fatalf("grouped mixed missing access value %s = %#v, want null", key, row.Get("c2"))
+			}
+			return
+		}
+		access, ok := row.Get("c2").Any().(WindowAccessValue[infraTableGroupedMultiBean])
+		if !ok || !reflect.DeepEqual(access.Values(), wantValues) {
+			t.Fatalf("grouped mixed window %s = %#v, want %#v", key, row.Get("c2").Any(), wantValues)
+		}
+	}
+
+	e1 := infraTableGroupedMultiBean{TheString: "E1", IntPrimitive: 10, LongPrimitive: 100}
+	e2 := infraTableGroupedMultiBean{TheString: "E1", IntPrimitive: 11, LongPrimitive: 101}
+	e3 := infraTableGroupedMultiBean{TheString: "E1", IntPrimitive: 10, LongPrimitive: 102}
+	for _, event := range []infraTableGroupedMultiBean{e1, e2, e3} {
+		if err := engine.SendEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read("E1", int64(3), int64(2), int64(303), []infraTableGroupedMultiBean{e1, e2, e3})
+	read("E2", nil, nil, nil, nil)
+
+	e4 := infraTableGroupedMultiBean{TheString: "E2", IntPrimitive: 20, LongPrimitive: 200}
+	if err := engine.SendEvent(ctx, e4); err != nil {
+		t.Fatal(err)
+	}
+	read("E2", int64(1), int64(1), int64(200), []infraTableGroupedMultiBean{e4})
+}
