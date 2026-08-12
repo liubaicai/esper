@@ -50,6 +50,10 @@ type infraTableGroupedMultiBean struct {
 	DoublePrimitive float64 `esper:"doublePrimitive"`
 }
 
+type infraTableSplitTrigger struct {
+	ID int64 `esper:"id"`
+}
+
 // TestInfraTableAccessFilterBehaviorParity mirrors Java
 // InfraTableAccessCore.InfraFilterBehavior:
 //
@@ -1080,4 +1084,102 @@ func TestInfraTableAccessGroupedMixedMethodAndAccessParity(t *testing.T) {
 		t.Fatal(err)
 	}
 	read("E2", int64(1), int64(1), int64(200), []infraTableGroupedMultiBean{e4})
+}
+
+// TestInfraTableAccessSplitStreamParity mirrors Java
+// InfraTableAccessCore.InfraTableAccessCoreSplitStream. The table is populated
+// by a typed on-event mutation, then each split branch performs a typed table
+// subquery and routes its projection to the same output event stream.
+func TestInfraTableAccessSplitStreamParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableGroupedSingleBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableSplitTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "MyTable", []TableColumn{
+		PrimaryKeyColumn[string]("k1"),
+		TableColumnOf[int64]("c1"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "AStream", []FieldSpec{
+		FieldDef("c0", reflect.TypeOf(int64(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	support := From[infraTableGroupedSingleBean](env, "SupportBean")
+	insertPlan, err := env.Build(OnEvent(support).InsertIntoTable("MyTable",
+		SetColumn("k1", Field[infraTableGroupedSingleBean, string]("theString")),
+		SetColumn("c1", Field[infraTableGroupedSingleBean, int64]("intPrimitive")),
+	).Query(StatementName("table-split-populate")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lookup := func(key string) Expression[int64] {
+		return SubqueryValue[int64](
+			FromTable(env, "MyTable"),
+			Field[any, int64]("c1"),
+			Equal[string](Field[any, string]("k1"), Literal(key)),
+		)
+	}
+	trigger := From[infraTableSplitTrigger](env, "SupportBean_S0")
+	triggerID := Field[infraTableSplitTrigger, int64]("id")
+	splitPlan, err := env.Build(OnEvent(trigger).SplitAll(
+		SplitIntoWhen(Equal[int64](triggerID, Literal[int64](1)), "AStream", Alias("c0", lookup("A"))),
+		SplitIntoWhen(Equal[int64](triggerID, Literal[int64](2)), "AStream", Alias("c0", lookup("B"))),
+	).Query(StatementName("table-access-split-stream")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromAny(env, "AStream").Query(StatementName("table-access-split-consumer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), insertPlan); err != nil {
+		t.Fatal(err)
+	}
+	consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), splitPlan); err != nil {
+		t.Fatal(err)
+	}
+	var values []int64
+	if _, err := consumerDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			event, ok := result.Event()
+			if !ok {
+				t.Fatalf("split-stream result is not an event: %#v", result)
+			}
+			values = append(values, event.Get("c0").Any().(int64))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	for _, event := range []infraTableGroupedSingleBean{
+		{TheString: "A", IntPrimitive: 10},
+		{TheString: "B", IntPrimitive: 20},
+	} {
+		if err := engine.SendEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, id := range []int64{1, 2, 3} {
+		if err := engine.SendEvent(ctx, infraTableSplitTrigger{ID: id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !reflect.DeepEqual(values, []int64{10, 20}) {
+		t.Fatalf("table split-stream values = %#v, want [10 20]", values)
+	}
 }

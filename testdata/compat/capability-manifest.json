@@ -20634,6 +20634,32 @@
         "Go GroupBy(theString) + LengthWindow(3) + IntoTable materializes count(*), count-distinct(intPrimitive), WindowAccessBy values and sum(longPrimitive); SelectFromTable reads all four columns and verifies missing-key Null semantics and a newly created group."
       ],
       "difference": "Java table method/access syntax is represented by typed WindowAccessValue and Method/TableField projections in the fluent Go API; context, split-stream, array-key and remaining table execution matrices remain open."
+    },
+    {
+      "id": "case.infra-table-access-split-stream",
+      "javaRuntimeIds": [
+        "java-runtime-c2dd9e27bd44b4ce932b"
+      ],
+      "javaNames": [
+        "InfraTableAccessCoreSplitStream"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessSplitStreamParity"
+      ],
+      "tags": [
+        "table",
+        "split-stream",
+        "primary-key",
+        "route"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go OnEvent table mutation populates MyTable, then SplitAll evaluates two conditional branches with typed SubqueryValue lookups and routes A/B projections to AStream; id=3 produces no branch output."
+      ],
+      "difference": "Java's multiple insert-into syntax is represented by the explicit SplitAll/SplitIntoWhen fluent API and typed table subqueries; complete split-stream representation, ordering, context and invalid-rule matrices remain open."
     }
   ],
   "mappings": [
@@ -22072,14 +22098,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-grouped-mixed-method-access"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-split-stream"
     }
   ],
   "summary": {
-    "totalCases": 357,
+    "totalCases": 358,
     "totalCapabilities": 110,
-    "mappedCases": 340,
+    "mappedCases": 341,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2207
+    "disposedRuntimeIds": 2208
   }
 }
