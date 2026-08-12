@@ -438,7 +438,10 @@
         "ExprCoreInstanceOf",
         "ExprCoreExists",
         "ExprCoreTypeOf",
-        "EPLOtherUnaryMinus"
+        "EPLOtherUnaryMinus",
+        "ExprCoreCaseSyntax1WithElse",
+        "ExprCoreCaseSyntax1Branches3",
+        "ExprCoreCaseSyntax2"
       ],
       "goRefs": [
         "expr_case.go",
@@ -491,7 +494,8 @@
         "stream.go",
         "subquery.go",
         "plan.go",
-        "epl_other_unary_minus_parity_test.go"
+        "epl_other_unary_minus_parity_test.go",
+        "expr_core_case_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -7929,7 +7933,10 @@
         "java-runtime-2e1724deff45bf4e415b",
         "java-runtime-cc6d316134776bd925de",
         "java-runtime-28f013fdebb8e529c1bc",
-        "java-runtime-69ed44c556ec0b754fa0"
+        "java-runtime-69ed44c556ec0b754fa0",
+        "java-runtime-e9ae8d32b9f6155877ef",
+        "java-runtime-725a9999f48d69d792a2",
+        "java-runtime-0f635579498bb6de3a4c"
       ],
       "javaNames": [
         "ExprCoreCaseSyntax1Sum",
@@ -7955,7 +7962,10 @@
         "ExprCoreCaseSyntax2NoAsName",
         "ExprCoreCaseWithArrayResult",
         "ExprCoreCaseWithTypeParameterizedProperty",
-        "ExprCoreCaseWithTypeParameterizedPropertyInvalid"
+        "ExprCoreCaseWithTypeParameterizedPropertyInvalid",
+        "ExprCoreCaseSyntax1WithElse",
+        "ExprCoreCaseSyntax1Branches3",
+        "ExprCoreCaseSyntax2"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCase.java",
@@ -7965,7 +7975,10 @@
         "TestCaseExpressionsMatchJavaNullAndShortCircuitSemantics",
         "TestCaseExpressionsBuildFluentQueriesAndPlanIdentity",
         "TestCaseExpressionsPreserveAggregateContext",
-        "TestCaseExpressionsRejectInvalidBuildersAtBuild"
+        "TestCaseExpressionsRejectInvalidBuildersAtBuild",
+        "TestExprCoreCaseSyntax1WithElseParity",
+        "TestExprCoreCaseSyntax1Branches3Parity",
+        "TestExprCoreCaseSyntax2Parity"
       ],
       "tags": [
         "correctness",
@@ -21094,6 +21107,6 @@
     "mappedCases": 318,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2119
+    "disposedRuntimeIds": 2122
   }
 }

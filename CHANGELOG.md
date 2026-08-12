@@ -1,3 +1,5 @@
+本轮新增 ExprCoreCase parity（3 个测试）：搜索 CASE 带 ELSE（Syntax1WithElse）、多分支无 ELSE（Syntax1Branches3，不匹配时返回 null）、简单 CASE 带混合数值类型强制（Syntax2，跨 int/long/float/double 匹配和运算）。新增 expr_core_case_parity_test.go，覆盖 CaseWhen/CaseValue 两种语法和 Null 默认语义。SODA OM/Compile 变体和 StringsNBranches 类型转换矩阵登记为 approved difference。Coverage 2,122/4,140（51.26%）。
+
 本轮新增 EVE 用例（ExprDefineValueParameterEVE），关闭二路 Cartesian 上下文中以 JoinEventValue 传递两侧事件作为声明表达式参数的 parity。支持不同事件类型的事件参数在声明表达式 body 中交叉访问属性。Coverage 2,119/4,140（51.18%）。
 
 本轮扩展 `expr.declared` 能力：关闭 `ExprDefineValueParameter` 的 4 个 execution（VV/VVV/VEV/Variable）和 `ExprDefineAliasFor` 的 2 个 execution（NestedAlias/GlobalAliasAndSODA），新增 `expr_define_value_alias_parity_test.go`（6 个 parity 测试）。覆盖二/三值参数字符串拼接（Concat 的 Null 传播对齐 Java || 语义）、值-事件-值混合参数、MaxOf 标量函数 + 变量参数（运行时变量变更驱动输出变化）、零参声明表达式嵌套引用（F3=F1+F2）、零参声明表达式在 filter 子句求值。Java *string 字段的 null 传播需要 Go 指针类型 field 推断更深集成，本轮以非 null 字符串字段验证核心参数传递语义，null 传播保留为后续。SODA EPStatementObjectModel 往返登记为 approved difference。Coverage 2,118/4,140（51.16%），337 case 中 318 mapped / 2 partial / 17 approved-difference。本轮不需要 MySQL Docker。
