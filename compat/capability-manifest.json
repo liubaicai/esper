@@ -3071,7 +3071,8 @@
         "expr_enum_array_of_parity_test.go",
         "expr_enum_sequence_equal_parity_test.go",
         "expr_enum_except_intersect_union_parity_test.go",
-        "expr_enum_most_least_frequent_parity_test.go"
+        "expr_enum_most_least_frequent_parity_test.go",
+        "expr_enum_to_map_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3080,7 +3081,6 @@
         "ExprEnumDocSamples suite",
         "ExprEnumChained",
         "ExprEnumNested suite",
-        "ExprEnumToMap suite",
         "ExprEnumAggregate suite",
         "ExprEnumGroupBy suite"
       ]
@@ -9675,6 +9675,47 @@
         "go-unit"
       ],
       "difference": "Go maps mostFrequent/leastFrequent to typed EnumMostFrequent/EnumLeastFrequent (no-param, returns element value) and EnumMostFrequentBy/EnumLeastFrequentBy (with selector, returns key value K matching Java's map-key result). Frequency counting preserves insertion order for tie-breaking, matching Java LinkedHashMap semantics. The By variants were corrected to return Expression[K] instead of Expression[T]. Java additionally rejects null-typed lambdas through EPL compilation and exposes exact compiler error text."
+    },
+    {
+      "id": "case.expr-enum-to-map",
+      "javaRuntimeIds": [
+        "java-runtime-22e09a8b5c4efe49487c",
+        "java-runtime-da9695ca2295bca92161",
+        "java-runtime-5f45d28e380ca72c32ff"
+      ],
+      "javaNames": [
+        "ExprEnumToMapEvent",
+        "ExprEnumToMapScalar",
+        "ExprEnumToMapInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumToMap.java"
+      ],
+      "goTests": [
+        "TestExprEnumToMapScalarParity",
+        "TestExprEnumToMapEventParity",
+        "TestExprEnumToMapNullKeyValueParity",
+        "TestExprEnumToMapInvalidParity"
+      ],
+      "tags": [
+        "correctness",
+        "expression",
+        "enum",
+        "to-map",
+        "index",
+        "size",
+        "null",
+        "duplicate-key",
+        "invalid"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
+      ],
+      "difference": "Go maps toMap to typed EnumToMap[T,K,V] over slices, with element/index/size context shared by explicit key and value selectors. Later duplicate keys replace earlier values exactly like Java HashMap.put; Null input returns Null and empty input returns an empty map. Pointer or interface K/V types preserve Java null keys and values, while concrete Go K/V types intentionally materialize their zero value. Java additionally diagnoses mismatched key/value lambda arities through EPL syntax; Go's fluent selectors share one explicit EnumElement/EnumIndex/EnumSize context and reject missing selector expressions instead. Exact EPL compiler text and Java parameterized Map metadata remain differences."
     },
     {
       "id": "case.expr-enum-aggregate",
@@ -21114,6 +21155,10 @@
     },
     {
       "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-to-map"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
       "caseId": "case.expr-enum-count-reverse"
     },
     {
@@ -21326,11 +21371,11 @@
     }
   ],
   "summary": {
-    "totalCases": 341,
+    "totalCases": 342,
     "totalCapabilities": 108,
-    "mappedCases": 322,
+    "mappedCases": 323,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2147
+    "disposedRuntimeIds": 2150
   }
 }

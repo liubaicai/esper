@@ -1506,6 +1506,8 @@ func EnumGroupBySelect[T any, K comparable, V any](values Expression[[]T], key E
 
 // EnumToMap maps each item to a key/value pair. Later items replace earlier
 // values for the same key, matching the Java enumeration method contract.
+// Null selectors become the zero value of K or V; use pointer or interface
+// result types when Null must remain distinguishable from a concrete zero.
 func EnumToMap[T any, K comparable, V any](values Expression[[]T], key Expression[K], value Expression[V]) Expression[map[K]V] {
 	children := enumExpressionChildren[T](values, key)
 	if value != nil {
