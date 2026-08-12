@@ -38,6 +38,11 @@ type infraTableGroupedTrigger struct {
 	P00 string `esper:"p00"`
 }
 
+type infraTableGroupedSingleBean struct {
+	TheString    string `esper:"theString"`
+	IntPrimitive int64  `esper:"intPrimitive"`
+}
+
 // TestInfraTableAccessFilterBehaviorParity mirrors Java
 // InfraTableAccessCore.InfraFilterBehavior:
 //
@@ -610,4 +615,125 @@ func TestInfraTableAccessTopLevelReadGroupedTwoKeysParity(t *testing.T) {
 	missing := read([]any{int64(20), "G2", int64(300)}, 10, "G1")
 	assertGroup(missing, nil, nil)
 	assertGroup(read(nil, 20, "G2"), []int64{20, 20}, int64(500))
+}
+
+// TestInfraTableAccessGroupedSingleKeyNoContextParity mirrors Java
+// InfraTableAccessCore.InfraGroupedSingleKeyNoContext. The table's grouped
+// aggregate is addressed by one typed primary-key expression. The final Z
+// lookup also fixes the present-but-null behavior for a missing key.
+func TestInfraTableAccessGroupedSingleKeyNoContextParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableGroupedSingleBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableGroupedTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "varTotalG1K", []TableColumn{
+		PrimaryKeyColumn[string]("key"),
+		TableColumnOf[int64]("total"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	key := Field[infraTableGroupedSingleBean, string]("theString")
+	aggregatePlan, err := env.Build(
+		From[infraTableGroupedSingleBean](env, "SupportBean").
+			GroupBy(key).
+			Select(
+				Alias("key", key),
+				Alias("total", Sum[int64](Field[infraTableGroupedSingleBean, int64]("intPrimitive"))),
+			).
+			IntoTable("varTotalG1K", StatementName("grouped-single-aggregate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	triggerKey := Field[infraTableGroupedTrigger, string]("p00")
+	triggerPlan, err := env.Build(
+		OnEvent(From[infraTableGroupedTrigger](env, "SupportBean_S0")).
+			SelectFromTable("varTotalG1K", []Expr{triggerKey},
+				Alias("c0", OuterField[string]("p00")),
+				Alias("c1", TableField[int64]("total")),
+			).
+			Query(StatementName("grouped-single-read")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), triggerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("grouped single-key result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	sendAndAssert := func(name string, value int64, wantTotal any) {
+		t.Helper()
+		if err := engine.SendEvent(ctx, infraTableGroupedSingleBean{TheString: name, IntPrimitive: value}); err != nil {
+			t.Fatal(err)
+		}
+		if err := engine.SendEvent(ctx, infraTableGroupedTrigger{P00: name}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) == 0 {
+			t.Fatal("grouped single-key trigger produced no row")
+		}
+		row := rows[len(rows)-1]
+		if row.Get("c0").Any() != name || row.Get("c1").Any() != wantTotal {
+			t.Fatalf("grouped single-key result for %s = %#v, want total %#v", name, row.AsMap(), wantTotal)
+		}
+	}
+	sendAndRead := func(name string, wantTotal any) {
+		t.Helper()
+		if err := engine.SendEvent(ctx, infraTableGroupedTrigger{P00: name}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) == 0 {
+			t.Fatal("grouped single-key lookup produced no row")
+		}
+		row := rows[len(rows)-1]
+		if row.Get("c0").Any() != name || row.Get("c1").Any() != wantTotal {
+			t.Fatalf("grouped single-key lookup for %s = %#v, want total %#v", name, row.AsMap(), wantTotal)
+		}
+	}
+
+	sendAndAssert("A", 10, int64(10))
+	sendAndAssert("A", 11, int64(21))
+	if err := engine.SendEvent(ctx, infraTableGroupedSingleBean{TheString: "B", IntPrimitive: 20}); err != nil {
+		t.Fatal(err)
+	}
+	sendAndRead("A", int64(21))
+	if err := engine.SendEvent(ctx, infraTableGroupedSingleBean{TheString: "B", IntPrimitive: 21}); err != nil {
+		t.Fatal(err)
+	}
+	sendAndRead("B", int64(41))
+	if err := engine.SendEvent(ctx, infraTableGroupedSingleBean{TheString: "C", IntPrimitive: 30}); err != nil {
+		t.Fatal(err)
+	}
+	sendAndRead("A", int64(21))
+	if err := engine.SendEvent(ctx, infraTableGroupedSingleBean{TheString: "D", IntPrimitive: 40}); err != nil {
+		t.Fatal(err)
+	}
+	sendAndRead("C", int64(30))
+	sendAndRead("D", int64(40))
+	sendAndRead("Z", nil)
 }

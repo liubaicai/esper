@@ -20527,6 +20527,32 @@
         "Go RegisterObjectArray + GroupBy(c0,c1) + LengthWindow(2) + IntoTable maintains independent two-key rows; SelectFromTable verifies G1 eviction as null and G2's [20,20],500 snapshot after the global window advances."
       ],
       "difference": "Java's typable fragment and SODA forms are represented by a StructOf map and immutable fluent Plan; grouped table method/access, context, named output, join, split-stream and array-key matrices remain open."
+    },
+    {
+      "id": "case.infra-table-access-grouped-single-key",
+      "javaRuntimeIds": [
+        "java-runtime-0ff723605b504e101395"
+      ],
+      "javaNames": [
+        "InfraGroupedSingleKeyNoContext"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessGroupedSingleKeyNoContextParity"
+      ],
+      "tags": [
+        "table",
+        "grouped-aggregate",
+        "primary-key",
+        "outer-scope"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go GroupBy(theString) + IntoTable maintains running sums for A/B/C/D; SelectFromTable uses the trigger key and OuterField projection to match Java's A=21, B=41, C=30, D=40 trajectory and preserves a null value for missing Z."
+      ],
+      "difference": "Java top-level table member access is represented by SelectFromTable with explicit OuterField/TableField scope; SODA and the remaining two/three-key, context, method/access, join, split-stream and array-key matrices remain open."
     }
   ],
   "mappings": [
@@ -21949,14 +21975,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-top-level-read-grouped-two-keys"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-grouped-single-key"
     }
   ],
   "summary": {
-    "totalCases": 353,
+    "totalCases": 354,
     "totalCapabilities": 110,
-    "mappedCases": 336,
+    "mappedCases": 337,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2203
+    "disposedRuntimeIds": 2204
   }
 }
