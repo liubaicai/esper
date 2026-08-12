@@ -3074,14 +3074,14 @@
         "expr_enum_most_least_frequent_parity_test.go",
         "expr_enum_to_map_parity_test.go",
         "expr_enum_aggregate_parity_test.go",
-        "expr_enum_group_by_parity_test.go"
+        "expr_enum_group_by_parity_test.go",
+        "expr_enum_chained_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
       "remaining": [
         "ExprEnumDataSources suite",
         "ExprEnumDocSamples suite",
-        "ExprEnumChained",
         "ExprEnumNested suite"
       ]
     },
@@ -10217,6 +10217,37 @@
         "go-unit"
       ],
       "difference": "Go maps groupBy to typed EnumGroupBy[T,K] (one-selector, original-item buckets) and EnumGroupBySelect[T,K,V] (two-selector, typed value buckets), both preserving LinkedHashMap key first-seen order and bucket input order. Null selectors become the typed zero key/value; pointer/interface K/V retain Java null. Empty collection yields an empty map, null collection yields null. Build rejects missing collection/key/value selectors; Java mismatched-lambda-arity diagnostics are structurally impossible because both selectors share EnumElement/EnumIndex/EnumSize nodes. Java's full parameterized lambda arity/type metadata and exact null-key generic descriptors remain open."
+    },
+    {
+      "id": "case.expr-enum-chained",
+      "javaRuntimeIds": [
+        "java-runtime-2785cd9e5561454a063a"
+      ],
+      "javaNames": [
+        "ExprEnumChained"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumChained.java"
+      ],
+      "goTests": [
+        "TestExprEnumChainedScalarParity",
+        "TestExprEnumChainedEventParity"
+      ],
+      "tags": [
+        "correctness",
+        "expression",
+        "enum",
+        "chained",
+        "where",
+        "min"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-junit",
+        "go-unit"
+      ],
+      "difference": "Go composes chained enum methods by nesting expressions: EnumWhere feeds its Expression[[]T] output directly into EnumMinOf, matching Java's dot-chain semantics. Nested property paths (buyer.age) resolve through getPropertyPath. Java's EPL chain syntax, lambda parameter naming and exact chain-validation diagnostics remain fluent API differences."
     },
     {
       "id": "case.aggregate-dimensional",
@@ -21217,6 +21248,10 @@
       "caseId": "case.expr-enum-groupby"
     },
     {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-chained"
+    },
+    {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-basic-windows"
     },
@@ -21406,11 +21441,11 @@
     }
   ],
   "summary": {
-    "totalCases": 342,
+    "totalCases": 343,
     "totalCapabilities": 108,
-    "mappedCases": 323,
+    "mappedCases": 324,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2152
+    "disposedRuntimeIds": 2153
   }
 }
