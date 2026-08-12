@@ -18,6 +18,7 @@
 | ADR-012 | JSON/XML/XSD/XPath/Avro 实现与安全边界 | Prototype | 基础 JSON、严格基础 XML 和 Avro JSON datum 已有；XML 外部实体/XSD/XPath、二进制 Avro、Serde、Schema bomb 和版本矩阵未完成 |
 | ADR-013 | API SemVer、Plan/State 格式版本和升级矩阵 | Proposed | Plan schema 已独立版本化；需补 State、向前/向后读写/拒绝测试 |
 | ADR-014 | 资源配额、非可信输入、连接器与扩展威胁模型 | Proposed | 规划文档有控制项；需形成 threat model、默认配额和滥用/压力测试 |
+| ADR-015 | Go 项目目录和包边界 | Accepted | `ADR-015-project-layout.md`；根公共包、公开连接器、`internal` 私有实现和 `testdata` 资产边界已落地 |
 
 ## 维护规则
 

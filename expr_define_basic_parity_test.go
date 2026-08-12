@@ -7,10 +7,10 @@ import (
 
 // Support bean for ExprDefineBasic parity tests.
 type defineBasicBean struct {
-	TheString     string   `esper:"theString"`
-	IntPrimitive  int      `esper:"intPrimitive"`
-	IntBoxed      *int     `esper:"intBoxed"`
-	BoolPrimitive bool     `esper:"boolPrimitive"`
+	TheString     string `esper:"theString"`
+	IntPrimitive  int    `esper:"intPrimitive"`
+	IntBoxed      *int   `esper:"intBoxed"`
+	BoolPrimitive bool   `esper:"boolPrimitive"`
 }
 
 func defineBasicEnv(t *testing.T) (*Environment, *Engine) {
@@ -168,6 +168,7 @@ func TestExprDefineNoParameterVariableParity(t *testing.T) {
 		t.Fatalf("variable after set: v1=%d v2=%d v3=%d, want 3 30 90", v1[1], v2[1], v3[1])
 	}
 }
+
 // ExprDefineStaticMethodSingleParam (ordinal 26).
 func TestExprDefineStaticMethodSingleParamParity(t *testing.T) {
 	env, engine := defineBasicEnv(t)

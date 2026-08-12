@@ -6,10 +6,10 @@ import (
 )
 
 type filterInBetweenBean struct {
-	TheString    string  `esper:"theString"`
-	IntPrimitive int     `esper:"intPrimitive"`
-	IntBoxed     *int    `esper:"intBoxed"`
-	LongBoxed    *int64  `esper:"longBoxed"`
+	TheString     string `esper:"theString"`
+	IntPrimitive  int    `esper:"intPrimitive"`
+	IntBoxed      *int   `esper:"intBoxed"`
+	LongBoxed     *int64 `esper:"longBoxed"`
 	BoolPrimitive bool   `esper:"boolPrimitive"`
 }
 
@@ -52,7 +52,6 @@ func subscribeInBetween(t *testing.T, deployment *Deployment, stmtName string) f
 		return result
 	}
 }
-
 
 // TestExprFilterInExprStringRelationalMatchesEsper covers string relational
 // comparisons in the filter, matching ExprFilterInExpr's string comparison

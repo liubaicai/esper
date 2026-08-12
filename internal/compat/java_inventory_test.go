@@ -2,6 +2,7 @@ package compat
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -20,7 +21,7 @@ func TestLoadJavaExecutionInventory(t *testing.T) {
 }
 
 func TestCheckedInJavaExecutionInventory(t *testing.T) {
-	file, err := os.Open("java-execution-inventory.jsonl")
+	file, err := os.Open(filepath.Join("..", "..", "testdata", "compat", "java-execution-inventory.jsonl"))
 	if err != nil {
 		t.Fatal(err)
 	}

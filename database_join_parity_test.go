@@ -51,6 +51,7 @@ var dbJoinAllFieldNames = []string{
 	"mybigint", "myint", "myvarchar", "mychar",
 	"mybool", "mynumeric", "mydecimal", "mydouble", "myreal",
 }
+
 type dbJoinSQLResult struct {
 	columns []string
 	rows    [][]driver.Value

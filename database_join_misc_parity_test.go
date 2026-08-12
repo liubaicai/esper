@@ -316,10 +316,10 @@ func TestDatabase3StreamOuterJoinMatchesJava(t *testing.T) {
 			OnSourcesEqual(2, Field[map[string]any, int]("myint"),
 				1, Field[dbJoinMiscBeanTwo, int]("IntPrimitiveTwo"))).
 		Select(
-		SelectFrom(0, "theString", Field[dbJoinSupportBean, string]("theString")),
-		SelectFrom(1, "stringTwo", Field[dbJoinMiscBeanTwo, string]("StringTwo")),
-		SelectFrom(2, "myint", Field[map[string]any, int]("myint")),
-	).Query(StatementName("s0-3stream-outer"))
+			SelectFrom(0, "theString", Field[dbJoinSupportBean, string]("theString")),
+			SelectFrom(1, "stringTwo", Field[dbJoinMiscBeanTwo, string]("StringTwo")),
+			SelectFrom(2, "myint", Field[map[string]any, int]("myint")),
+		).Query(StatementName("s0-3stream-outer"))
 
 	plan, err := env.Build(query)
 	if err != nil {

@@ -11,9 +11,11 @@ type prevS0Bean struct {
 }
 
 // ExprCorePreviousPrevStream (ordinal 2). Java:
-//   select prev(1, s0) as result, prevtail(0, s0) as tailresult,
-//     prevwindow(s0) as windowresult, prevcount(s0) as countresult
-//   from SupportBean_S0#length(2) as s0
+//
+//	select prev(1, s0) as result, prevtail(0, s0) as tailresult,
+//	  prevwindow(s0) as windowresult, prevcount(s0) as countresult
+//	from SupportBean_S0#length(2) as s0
+//
 // length(2) keeps the last 2 events. prev(1,s0) is the event before current.
 // prevtail(0,s0) is the oldest event. prevwindow(s0) is all events newest-first.
 // prevcount(s0) is the count. In Go, Prev reads field values relative to

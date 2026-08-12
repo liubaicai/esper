@@ -1,9 +1,9 @@
 {
   "version": "esper-capabilities/v1",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
-  "staticManifest": "compat/static-manifest.json",
-  "executionInventory": "compat/java-execution-inventory.jsonl",
-  "sourceTestManifest": "compat/source-test-manifest.json",
+  "staticManifest": "testdata/compat/static-manifest.json",
+  "executionInventory": "testdata/compat/java-execution-inventory.jsonl",
+  "sourceTestManifest": "testdata/compat/source-test-manifest.json",
   "capabilities": [
     {
       "id": "event.object-array",

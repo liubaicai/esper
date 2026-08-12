@@ -1,0 +1,19 @@
+# Go build and test outputs
+/bin/
+/dist/
+*.test
+*.out
+*.prof
+coverage*
+
+# Runtime diagnostics and local logs
+*.log
+
+# Local environment and editor state
+.env
+.env.*
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

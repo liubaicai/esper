@@ -44,7 +44,7 @@
 - 分支：codex/faf-index
 - 工作树：3 个未提交文件
   - README.md：覆盖率数字更新。
-  - compat/capability-manifest.json：新增 fromclausemethod 基础 parity 映射。
+  - testdata/compat/capability-manifest.json：新增 fromclausemethod 基础 parity 映射。
   - fromclausemethod_parity_test.go：新增 TestFromClauseMethodOneStreamTwoHistJoinedKeepallParity。
 - 最新已提交：68bd238fb docs(manifest): register fromclausemethod basic parity case and update coverage (1397/4136 = 33.78%)
 
@@ -88,8 +88,8 @@
 
 1. 阅读 Java 测试和对应 runtime，确认行为预言。
 2. 用 Go 链式 API 构造等价规则，编写 _parity_test.go 对照测试。
-3. 将 Java runtime ID 登记到 compat/capability-manifest.json 的对应 case。
-4. 运行门禁：go vet ./...、go test ./...、go test -race ./...、go test ./compat/...。
+3. 将 Java runtime ID 登记到 testdata/compat/capability-manifest.json 的对应 case。
+4. 运行门禁：go vet ./...、go test ./...、go test -race ./...、go test ./internal/compat/...。
 5. 提交并推送 origin/codex/faf-index；更新 README 覆盖率。
 6. 不宣称“全量完成”，只更新覆盖率与 capability 状态。
 
@@ -103,10 +103,10 @@
 
 ### 3.3 代码与清单管理
 
-- 所有 Java runtime 清单在 compat/java-execution-inventory.jsonl。
-- 静态候选清单在 compat/static-manifest.json（目前几乎为空）。
-- 非 Regression 源资产在 compat/source-test-manifest.json（目前几乎为空）。
-- Capability/case 映射在 compat/capability-manifest.json。
+- 所有 Java runtime 清单在 testdata/compat/java-execution-inventory.jsonl。
+- 静态候选清单在 testdata/compat/static-manifest.json（目前几乎为空）。
+- 非 Regression 源资产在 testdata/compat/source-test-manifest.json（目前几乎为空）。
+- Capability/case 映射在 testdata/compat/capability-manifest.json。
 - README.md 维护覆盖率数字与本轮增量说明。
 
 ## 4. 阶段与里程碑
@@ -269,7 +269,7 @@
     go vet ./...
     go test ./... -count=1 -timeout 180s
     go test -race ./...
-    go test ./compat/... -count=1
+    go test ./internal/compat/... -count=1
 
 质量标准：
 

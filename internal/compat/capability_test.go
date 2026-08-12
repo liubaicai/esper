@@ -2,12 +2,13 @@ package compat
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestCapabilityManifestArtifactValidates(t *testing.T) {
-	file, err := os.Open("capability-manifest.json")
+	file, err := os.Open(filepath.Join("..", "..", "testdata", "compat", "capability-manifest.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

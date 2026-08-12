@@ -622,7 +622,6 @@ func TestUpdateIStreamListenerDeliveryMultiupdateMixedParity(t *testing.T) {
 	assertTriple("s0 E4 (final assignment)", s0.newResults[0], "E", 4, "e")
 }
 
-
 // TestUpdateIStreamInsertIntoWBeanWhereParity mirrors the full
 // EPLOtherUpdateInsertIntoWBeanWhere matrix: two updates with where clauses
 // chained on one insert-into stream, an update deployed after the consumer

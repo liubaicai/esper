@@ -7,8 +7,8 @@ import (
 
 // caseParityMarketData mirrors SupportMarketDataBean (symbol, volume).
 type caseParityMarketData struct {
-	Symbol string `esper:"symbol"`
-	Volume int64  `esper:"volume"`
+	Symbol string  `esper:"symbol"`
+	Volume int64   `esper:"volume"`
 	Price  float64 `esper:"price"`
 }
 
@@ -60,8 +60,10 @@ func subscribeF64(dep *Deployment, field string, collect *[]float64) {
 }
 
 // ExprCoreCaseSyntax1WithElse (ordinal 3). Java:
-//   select case when symbol='DELL' then volume*3 else volume end as p1
-//   from SupportMarketDataBean#length(3)
+//
+//	select case when symbol='DELL' then volume*3 else volume end as p1
+//	from SupportMarketDataBean#length(3)
+//
 // When symbol != DELL, return volume (else). When DELL, return volume*3.
 func TestExprCoreCaseSyntax1WithElseParity(t *testing.T) {
 	env, engine := caseEnv(t)
@@ -93,10 +95,12 @@ func TestExprCoreCaseSyntax1WithElseParity(t *testing.T) {
 }
 
 // ExprCoreCaseSyntax1Branches3 (ordinal 6). Java:
-//   case when (symbol='GE') then volume
-//     when (symbol='DELL') then volume / 2.0
-//     when (symbol='MSFT') then volume / 3.0
-//   end
+//
+//	case when (symbol='GE') then volume
+//	  when (symbol='DELL') then volume / 2.0
+//	  when (symbol='MSFT') then volume / 3.0
+//	end
+//
 // No ELSE clause; unmatched symbol yields null.
 func TestExprCoreCaseSyntax1Branches3Parity(t *testing.T) {
 	env, engine := caseEnv(t)
@@ -152,11 +156,13 @@ func TestExprCoreCaseSyntax1Branches3Parity(t *testing.T) {
 }
 
 // ExprCoreCaseSyntax2 (ordinal 7). Java:
-//   case intPrimitive
-//     when longPrimitive then (intPrimitive + longPrimitive)
-//     when doublePrimitive then intPrimitive * doublePrimitive
-//     when floatPrimitive then floatPrimitive / doublePrimitive
-//     else (intPrimitive + longPrimitive + floatPrimitive + doublePrimitive) end
+//
+//	case intPrimitive
+//	  when longPrimitive then (intPrimitive + longPrimitive)
+//	  when doublePrimitive then intPrimitive * doublePrimitive
+//	  when floatPrimitive then floatPrimitive / doublePrimitive
+//	  else (intPrimitive + longPrimitive + floatPrimitive + doublePrimitive) end
+//
 // The result type is Double due to mixed-numeric branches.
 func TestExprCoreCaseSyntax2Parity(t *testing.T) {
 	env, engine := caseEnv(t)

@@ -6,9 +6,9 @@ import (
 )
 
 type viewParityBean struct {
-	TheString    string `esper:"theString"`
-	IntPrimitive int    `esper:"intPrimitive"`
-	LongPrimitive int64 `esper:"longPrimitive"`
+	TheString     string `esper:"theString"`
+	IntPrimitive  int    `esper:"intPrimitive"`
+	LongPrimitive int64  `esper:"longPrimitive"`
 }
 
 func newViewParityEnv(t *testing.T) (*Environment, *Engine) {

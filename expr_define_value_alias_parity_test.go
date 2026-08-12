@@ -43,7 +43,8 @@ func subscribeString(dep *Deployment, field string, collect *[]*string) {
 }
 
 // ExprDefineValueParameterVV (ordinal 1). Java:
-//   expression cc { (v1, v2) -> v1 || v2} select cc(p00, p01) as c0 from SupportBean_S0
+//
+//	expression cc { (v1, v2) -> v1 || v2} select cc(p00, p01) as c0 from SupportBean_S0
 func TestExprDefineValueParameterVVParity(t *testing.T) {
 	env, engine := valueParamEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -68,8 +69,8 @@ func TestExprDefineValueParameterVVParity(t *testing.T) {
 	defer func() { _ = dep.Undeploy(context.Background()) }()
 	var results []*string
 	subscribeString(dep, "c0", &results)
-// Go uses plain string fields; Java null-propagation through *string requires
-// deeper pointer-type field inference and is noted as a remaining difference.
+	// Go uses plain string fields; Java null-propagation through *string requires
+	// deeper pointer-type field inference and is noted as a remaining difference.
 	cases := []struct{ p00, p01, want string }{
 		{"A", "B", "AB"},
 		{"C", "D", "CD"},
@@ -90,7 +91,8 @@ func TestExprDefineValueParameterVVParity(t *testing.T) {
 }
 
 // ExprDefineValueParameterVVV (ordinal 2). Java:
-//   expression cc { (v1, v2, v3) -> v1 || v2 || v3} select cc(p00, p01, p02) as c0 from SupportBean_S0
+//
+//	expression cc { (v1, v2, v3) -> v1 || v2 || v3} select cc(p00, p01, p02) as c0 from SupportBean_S0
 func TestExprDefineValueParameterVVVParity(t *testing.T) {
 	env, engine := valueParamEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -139,8 +141,9 @@ func TestExprDefineValueParameterVVVParity(t *testing.T) {
 }
 
 // ExprDefineValueParameterVEV (ordinal 4). Java:
-//   expression cc { (v1,e,v2) -> v1 || e.p01 || v2}
-//   select cc(p00, e, p02) as c0 from SupportBean_S0 as e
+//
+//	expression cc { (v1,e,v2) -> v1 || e.p01 || v2}
+//	select cc(p00, e, p02) as c0 from SupportBean_S0 as e
 func TestExprDefineValueParameterVEVParity(t *testing.T) {
 	env, engine := valueParamEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -191,9 +194,11 @@ func TestExprDefineValueParameterVEVParity(t *testing.T) {
 }
 
 // ExprDefineValueParameterVariable (ordinal 10). Java:
-//   create variable double C=1.2; create variable double D=1.5;
-//   create expression E {(V1,V2)=>max(V1,V2)}
-//   select E(value1,value2) as c0, E(value1,C) as c1, E(C,D) as c2 from A
+//
+//	create variable double C=1.2; create variable double D=1.5;
+//	create expression E {(V1,V2)=>max(V1,V2)}
+//	select E(value1,value2) as c0, E(value1,C) as c1, E(C,D) as c2 from A
+//
 // After runtime variable set D=1.1, the c2 column changes from max(1.2,1.5)=1.5 to max(1.2,1.1)=1.2.
 func TestExprDefineValueParameterVariableParity(t *testing.T) {
 	env := NewEnvironment()
@@ -274,10 +279,12 @@ func TestExprDefineValueParameterVariableParity(t *testing.T) {
 }
 
 // ExprDefineNestedAlias (AliasFor ordinal 2). Java:
-//   create expression F1 alias for {10}
-//   create expression F2 alias for {20}
-//   create expression F3 alias for {F1+F2}
-//   select F3 as c0 from SupportBean → 30
+//
+//	create expression F1 alias for {10}
+//	create expression F2 alias for {20}
+//	create expression F3 alias for {F1+F2}
+//	select F3 as c0 from SupportBean → 30
+//
 // In Go, zero-parameter DefineExpression expressions can reference each other
 // through ExpressionRef, exactly mirroring Java "alias for" composition.
 func TestExprDefineAliasForNestedAliasParity(t *testing.T) {
@@ -311,9 +318,11 @@ func TestExprDefineAliasForNestedAliasParity(t *testing.T) {
 }
 
 // ExprDefineGlobalAliasAndSODA (AliasFor ordinal 4). Java:
-//   create expression myaliastwo alias for {2}
-//   create expression myalias alias for {1}
-//   select myaliastwo from SupportBean(intPrimitive = myalias)
+//
+//	create expression myaliastwo alias for {2}
+//	create expression myalias alias for {1}
+//	select myaliastwo from SupportBean(intPrimitive = myalias)
+//
 // When intPrimitive=0 → no output; when intPrimitive=1 → myaliastwo=2.
 // In Go, zero-parameter DefineExpression in a filter clause + projection.
 // SODA EPStatementObjectModel round-trip is an approved difference.
@@ -353,7 +362,6 @@ func TestExprDefineAliasForGlobalAliasParity(t *testing.T) {
 	}
 }
 
-
 // S1-like struct for join-based declared expression parity.
 type valueParamS1 struct {
 	ID  int    `esper:"id"`
@@ -361,8 +369,10 @@ type valueParamS1 struct {
 }
 
 // ExprDefineValueParameterEVE (ordinal 6). Java:
-//   expression cc { (e1,v,e2) -> e1.p00 || v || e2.p10}
-//   select cc(e2, 'x', e1) as c0 from SupportBean_S1#lastevent as e1, SupportBean_S0#lastevent as e2
+//
+//	expression cc { (e1,v,e2) -> e1.p00 || v || e2.p10}
+//	select cc(e2, 'x', e1) as c0 from SupportBean_S1#lastevent as e1, SupportBean_S0#lastevent as e2
+//
 // A two-way Cartesian join of lastevent windows passes events from both sides
 // as declared-expression arguments via JoinEventValue.
 func TestExprDefineValueParameterEVEParity(t *testing.T) {

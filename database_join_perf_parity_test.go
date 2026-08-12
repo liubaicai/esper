@@ -394,7 +394,6 @@ func TestDatabaseNoJoinIteratePerfMatchesJava(t *testing.T) {
 	}
 }
 
-
 func TestDatabaseQueryResultCacheMatchesJava(t *testing.T) {
 	// Java EPLDatabaseQueryResultCache: LRU cache for SQL results driven by
 	// SupportBean_S0.id. Correctness port (timing assertions dropped).

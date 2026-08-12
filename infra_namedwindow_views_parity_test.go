@@ -182,15 +182,15 @@ func nwViewsSnapshot(t *testing.T, window *NamedWindow) [][]any {
 // optional irstream consumer and on-delete trigger used across the
 // InfraNamedWindowViews parity tests.
 type nwViewsHarness struct {
-	env       *Environment
-	engine    *Engine
-	window    *NamedWindow
-	bean      func(string, int64)
-	beanInt   func(string, int)
-	market    func(string)
-	advance   func(millis int64)
-	create    *nwViewsProbe
-	consumer  *nwViewsProbe
+	env      *Environment
+	engine   *Engine
+	window   *NamedWindow
+	bean     func(string, int64)
+	beanInt  func(string, int)
+	market   func(string)
+	advance  func(millis int64)
+	create   *nwViewsProbe
+	consumer *nwViewsProbe
 }
 
 func newNWViewsHarness(t *testing.T, windowName string, retention WindowSpec, valueField string, withConsumer bool, engineOptions ...EngineOption) *nwViewsHarness {
@@ -2915,7 +2915,9 @@ func TestInfraNWViewsLateConsumerJoinParity(t *testing.T) {
 	}
 	s2 := &nwViewsProbe{}
 	nwViewsSubscribeResults(t, s2Deployment.Statements()[0], []string{"key", "value", "symbol"}, s2)
-	s2Snapshot := func() [][]any { return nwViewsStatementSnapshot(t, s2Deployment.Statements()[0], "key", "value", "symbol") }
+	s2Snapshot := func() [][]any {
+		return nwViewsStatementSnapshot(t, s2Deployment.Statements()[0], "key", "value", "symbol")
+	}
 	nwViewsAssertNotInvoked(t, s2, "s2")
 	nwViewsAssertRows(t, "s2 iterator", s2Snapshot(), [][]any{{"E1", int64(1), nil}, {"E2", int64(1), nil}})
 
@@ -3172,7 +3174,9 @@ func TestInfraNWViewsSelectGroupedViewLateStartVariableIterateParity(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	s0Snapshot := func() [][]any { return nwViewsStatementSnapshot(t, s0Deployment.Statements()[0], "theString", "intPrimitive", "avgLong", "cntBool") }
+	s0Snapshot := func() [][]any {
+		return nwViewsStatementSnapshot(t, s0Deployment.Statements()[0], "theString", "intPrimitive", "avgLong", "cntBool")
+	}
 
 	setVariable("c0")
 	nwViewsAssertRows(t, "s0 iterator c0", s0Snapshot(), [][]any{

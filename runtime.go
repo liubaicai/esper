@@ -4989,7 +4989,6 @@ func coalesceStatementRuntimeSchedules(runtime *statementRuntime, at time.Time) 
 	}
 }
 
-
 func coalesceWindowSchedules(state *windowRuntimeState, at time.Time) {
 	if state == nil {
 		return
@@ -10409,7 +10408,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 				child = &windowRuntimeState{}
 				state.children[index] = child
 			}
-		if _, err := r.addToWindow(childSpec, child, event, now); err != nil {
+			if _, err := r.addToWindow(childSpec, child, event, now); err != nil {
 				return eventDelta{}, err
 			}
 		}
@@ -11188,7 +11187,7 @@ func nextExternallyTimedBoundary(reference, timestamp time.Time, window External
 	if elapsed <= 0 {
 		return boundary
 	}
-	steps := elapsed/window.Duration
+	steps := elapsed / window.Duration
 	if elapsed%window.Duration != 0 {
 		steps++
 	}

@@ -7,15 +7,15 @@ import (
 
 // inBetweenBean mirrors SupportBean with nullable fields for IN/Between tests.
 type inBetweenBean struct {
-	TheString   string   `esper:"theString"`
-	IntPrimitive int      `esper:"intPrimitive"`
-	IntBoxed     *int     `esper:"intBoxed"`
-	DoubleBoxed  float64 `esper:"doubleBoxed"`
-	ShortBoxed   *int16   `esper:"shortBoxed"`
-	LongBoxed    *int64   `esper:"longBoxed"`
-	FloatBoxed   *float32 `esper:"floatBoxed"`
-	DoublePrimitive float64 `esper:"doublePrimitive"`
-	BoolBoxed    *bool    `esper:"boolBoxed"`
+	TheString       string   `esper:"theString"`
+	IntPrimitive    int      `esper:"intPrimitive"`
+	IntBoxed        *int     `esper:"intBoxed"`
+	DoubleBoxed     float64  `esper:"doubleBoxed"`
+	ShortBoxed      *int16   `esper:"shortBoxed"`
+	LongBoxed       *int64   `esper:"longBoxed"`
+	FloatBoxed      *float32 `esper:"floatBoxed"`
+	DoublePrimitive float64  `esper:"doublePrimitive"`
+	BoolBoxed       *bool    `esper:"boolBoxed"`
 }
 
 func inBetweenEnv(t *testing.T) (*Environment, *Engine) {
@@ -49,7 +49,9 @@ func subscribeBoolPtr(dep *Deployment, field string, collect *[]*bool) {
 }
 
 // ExprCoreInNumeric (ordinal 0). Java:
-//   doubleBoxed in (1.1d, 7/3.5, 2*6/3, 0)
+//
+//	doubleBoxed in (1.1d, 7/3.5, 2*6/3, 0)
+//
 // Tests numeric IN with arithmetic-expression candidates and null propagation.
 func TestExprCoreInNumericParity(t *testing.T) {
 	env, engine := inBetweenEnv(t)
@@ -104,9 +106,10 @@ func TestExprCoreInNumericParity(t *testing.T) {
 }
 
 // ExprCoreInStringExpr (ordinal 11). Java:
-//   theString in ('a', 'b', 'c')
-//   theString in ('a', null)
-//   theString not in ('a', 'b', 'c')
+//
+//	theString in ('a', 'b', 'c')
+//	theString in ('a', null)
+//	theString not in ('a', 'b', 'c')
 func TestExprCoreInStringExprParity(t *testing.T) {
 	env, engine := inBetweenEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -148,8 +151,10 @@ func TestExprCoreInStringExprParity(t *testing.T) {
 }
 
 // ExprCoreBetweenNumericExpr (ordinal 14). Java:
-//   doubleBoxed between 1.1 and 15
-//   doubleBoxed not between 1.1 and 15
+//
+//	doubleBoxed between 1.1 and 15
+//	doubleBoxed not between 1.1 and 15
+//
 // Null value or null bound yields false.
 func TestExprCoreBetweenNumericExprParity(t *testing.T) {
 	env, engine := inBetweenEnv(t)
@@ -184,9 +189,9 @@ func TestExprCoreBetweenNumericExprParity(t *testing.T) {
 		return nil
 	})
 	cases := []struct {
-		val            float64
-		wantBtwn       bool
-		wantNotBtwn    bool
+		val         float64
+		wantBtwn    bool
+		wantNotBtwn bool
 	}{
 		{1.0, false, true},
 		{1.1, true, false},
@@ -209,8 +214,9 @@ func TestExprCoreBetweenNumericExprParity(t *testing.T) {
 }
 
 // ExprCoreBetweenStringExpr (ordinal 13). Java:
-//   theString between 'a0' and 'b9'
-//   theString not between 'a0' and 'b9'
+//
+//	theString between 'a0' and 'b9'
+//	theString not between 'a0' and 'b9'
 func TestExprCoreBetweenStringExprParity(t *testing.T) {
 	env, engine := inBetweenEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -261,10 +267,11 @@ func TestExprCoreBetweenStringExprParity(t *testing.T) {
 }
 
 // ExprCoreInRange (ordinal 19). Java:
-//   intPrimitive in [2:4]   -- closed range
-//   intPrimitive in (2:4)   -- open range
-//   intPrimitive in [2:4)   -- half-open
-//   intPrimitive in (2:4]   -- half-closed
+//
+//	intPrimitive in [2:4]   -- closed range
+//	intPrimitive in (2:4)   -- open range
+//	intPrimitive in [2:4)   -- half-open
+//	intPrimitive in (2:4]   -- half-closed
 func TestExprCoreInRangeParity(t *testing.T) {
 	env, engine := inBetweenEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -315,4 +322,4 @@ func TestExprCoreInRangeParity(t *testing.T) {
 	}
 }
 
-func boolPtr(v bool) *bool      { return &v }
+func boolPtr(v bool) *bool { return &v }

@@ -14,7 +14,6 @@ type insertPatternS1 struct {
 	ID int `esper:"id"`
 }
 
-
 // TestInsertIntoFromPatternMatchesEsper covers EPLInsertIntoPropsWildcard:
 // insert pattern match results into a new stream, then consume from it.
 func TestInsertIntoFromPatternMatchesEsper(t *testing.T) {

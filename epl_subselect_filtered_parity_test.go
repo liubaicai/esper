@@ -35,11 +35,11 @@ type subselectFilteredS3 struct {
 // subselectFilteredBean mirrors SupportBean (theString, intPrimitive and the
 // boxed numeric properties used by the coercion scenarios).
 type subselectFilteredBean struct {
-	TheString     string  `esper:"theString"`
-	IntPrimitive  int     `esper:"intPrimitive"`
-	IntBoxed      int     `esper:"intBoxed"`
-	LongBoxed     int64   `esper:"longBoxed"`
-	DoubleBoxed   float64 `esper:"doubleBoxed"`
+	TheString    string  `esper:"theString"`
+	IntPrimitive int     `esper:"intPrimitive"`
+	IntBoxed     int     `esper:"intBoxed"`
+	LongBoxed    int64   `esper:"longBoxed"`
+	DoubleBoxed  float64 `esper:"doubleBoxed"`
 }
 
 // subselectFilteredMarketData mirrors SupportMarketDataBean (symbol, price, volume).
@@ -76,10 +76,22 @@ func newSubselectFilteredEnvironment(t *testing.T) *Environment {
 		func() error { _, err := RegisterStruct[subselectFilteredS2](env, "SupportBean_S2"); return err },
 		func() error { _, err := RegisterStruct[subselectFilteredS3](env, "SupportBean_S3"); return err },
 		func() error { _, err := RegisterStruct[subselectFilteredBean](env, "SupportBean"); return err },
-		func() error { _, err := RegisterStruct[subselectFilteredMarketData](env, "SupportMarketDataBean"); return err },
-		func() error { _, err := RegisterStruct[fcmEventWithManyArray](env, "SupportEventWithManyArray"); return err },
-		func() error { _, err := RegisterStruct[rowRecogMultikeyArrayEvent](env, "SupportEventWithIntArray"); return err },
-		func() error { _, err := RegisterStruct[subselectFilteredSensorEvent](env, "SupportSensorEvent"); return err },
+		func() error {
+			_, err := RegisterStruct[subselectFilteredMarketData](env, "SupportMarketDataBean")
+			return err
+		},
+		func() error {
+			_, err := RegisterStruct[fcmEventWithManyArray](env, "SupportEventWithManyArray")
+			return err
+		},
+		func() error {
+			_, err := RegisterStruct[rowRecogMultikeyArrayEvent](env, "SupportEventWithIntArray")
+			return err
+		},
+		func() error {
+			_, err := RegisterStruct[subselectFilteredSensorEvent](env, "SupportSensorEvent")
+			return err
+		},
 	}
 	for _, register := range registrations {
 		if err := register(); err != nil {
@@ -751,7 +763,7 @@ func TestSubselectFilteredMultikeyWArrayCompositeParity(t *testing.T) {
 	assertIntArray("IA2", []int{1, 2}, 250, "MA4")
 	assertIntArray("IA3", []int{1, 2}, 0, nil)
 	assertIntArray("IA4", []int{1}, 299, "MA3")
-		assertIntArray("IA5", []int{1, 2}, 500, nil)
+	assertIntArray("IA5", []int{1, 2}, 500, nil)
 }
 
 // subselectFilteredSensorEvent mirrors SupportSensorEvent.
@@ -919,7 +931,6 @@ func TestSubselectFilteredSubselectMixMaxParity(t *testing.T) {
 	assertHighLow(70, 65)
 }
 
-
 // TestSubselectFilteredSelectWhereJoined2StreamsParity mirrors
 // EPLSubselectSelectWhereJoined2Streams: the subquery correlates to both
 // streams of the outer two-stream join.
@@ -1074,11 +1085,11 @@ func TestSubselectFilteredSelectWhereJoined3SceneTwoParity(t *testing.T) {
 func subselectFilteredSendCoercionBean(t *testing.T, engine *Engine, theString string, intPrimitive, intBoxed int, longBoxed int64, doubleBoxed float64) {
 	t.Helper()
 	sendSubselectFiltered(t, engine, subselectFilteredBean{
-		TheString:     theString,
-		IntPrimitive:  intPrimitive,
-		IntBoxed:      intBoxed,
-		LongBoxed:     longBoxed,
-		DoubleBoxed:   doubleBoxed,
+		TheString:    theString,
+		IntPrimitive: intPrimitive,
+		IntBoxed:     intBoxed,
+		LongBoxed:    longBoxed,
+		DoubleBoxed:  doubleBoxed,
 	})
 }
 
