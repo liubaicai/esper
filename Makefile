@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := check
 
-.PHONY: check check-layout fmt test test-race vet
+.PHONY: check check-layout fmt generate test test-race vet
 
 check: check-layout vet test
 
@@ -9,6 +9,9 @@ check-layout:
 
 fmt:
 	gofmt -w $$(find . -name '*.go' -not -path './vendor/*')
+
+generate:
+	go generate .
 
 vet:
 	go vet ./...

@@ -8,7 +8,8 @@ import (
 )
 
 func TestCapabilityManifestArtifactValidates(t *testing.T) {
-	file, err := os.Open(filepath.Join("..", "..", "testdata", "compat", "capability-manifest.json"))
+	repositoryRoot := filepath.Join("..", "..")
+	file, err := os.Open(filepath.Join(repositoryRoot, "testdata", "compat", "capability-manifest.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -19,6 +20,13 @@ func TestCapabilityManifestArtifactValidates(t *testing.T) {
 	}
 	if len(manifest.Capabilities) < 10 || len(manifest.Cases) < 10 || len(manifest.Mappings) < 10 {
 		t.Fatalf("manifest is too small to be a useful traceability artifact: %#v", manifest)
+	}
+	for _, capability := range manifest.Capabilities {
+		for _, reference := range capability.GoRefs {
+			if _, err := os.Stat(filepath.Join(repositoryRoot, filepath.FromSlash(reference))); err != nil {
+				t.Errorf("capability %q goRef %q: %v", capability.ID, reference, err)
+			}
+		}
 	}
 }
 

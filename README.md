@@ -2,7 +2,7 @@
 
 Esper 9.0.0 的 Go 移植正在按 [实施规划](docs/esper-go-port-implementation-plan.md) 进行。规则使用可分析的 Go 链式 Builder 构造，核心路径不接受 EPL 字符串。示例位于 `examples/stage1`。
 
-仓库采用公共根包、公开 `connectors` 子包、私有 `internal` 实现和 `testdata` 固定资产的 Go Modules 布局；详细边界和开发入口见 [项目目录结构](docs/project-layout.md)。
+仓库采用公共根 facade、公开 `connectors` 子包、私有 `internal/esper` 实现和 `testdata` 固定资产的 Go Modules 布局。根目录只保留包文档、生成 facade 和外部 API 测试；详细边界和开发入口见 [项目目录结构](docs/project-layout.md)。
 
 ## 移植概况
 

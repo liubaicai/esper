@@ -15,8 +15,8 @@
         "EventObjectArrayEventNested"
       ],
       "goRefs": [
-        "schema.go",
-        "object_array_test.go"
+        "internal/esper/schema.go",
+        "internal/esper/object_array_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -36,14 +36,14 @@
         "EPLDataflowBeaconFields"
       ],
       "goRefs": [
-        "avro.go",
-        "schema.go",
-        "runtime.go",
-        "dataflow.go",
-        "avro_test.go",
-        "insert_recast_test.go",
-        "dataflow_beacon_event_test.go",
-        "dataflow_representation_test.go"
+        "internal/esper/avro.go",
+        "internal/esper/schema.go",
+        "internal/esper/runtime.go",
+        "internal/esper/dataflow.go",
+        "internal/esper/avro_test.go",
+        "internal/esper/insert_recast_test.go",
+        "internal/esper/dataflow_beacon_event_test.go",
+        "internal/esper/dataflow_representation_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -71,11 +71,11 @@
         "EventBeanPublicAccessors"
       ],
       "goRefs": [
-        "schema.go",
-        "expr.go",
-        "event_render.go",
-        "schema_test.go",
-        "event_render_test.go"
+        "internal/esper/schema.go",
+        "internal/esper/expr.go",
+        "internal/esper/event_render.go",
+        "internal/esper/schema_test.go",
+        "internal/esper/event_render_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -104,18 +104,18 @@
         "InfraNamedWindowContainedEvent"
       ],
       "goRefs": [
-        "stream.go",
-        "plan.go",
-        "runtime.go",
-        "faf.go",
-        "trigger.go",
-        "subquery.go",
-        "contained_test.go",
-        "contained_unidirectional_test.go",
-        "contained_split_event_test.go",
-        "contained_split_representation_test.go",
-        "contained_split_chain_test.go",
-        "contained_split_sequence_test.go"
+        "internal/esper/stream.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/faf.go",
+        "internal/esper/trigger.go",
+        "internal/esper/subquery.go",
+        "internal/esper/contained_test.go",
+        "internal/esper/contained_unidirectional_test.go",
+        "internal/esper/contained_split_event_test.go",
+        "internal/esper/contained_split_representation_test.go",
+        "internal/esper/contained_split_chain_test.go",
+        "internal/esper/contained_split_sequence_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -145,21 +145,21 @@
         "EventJsonVisibility"
       ],
       "goRefs": [
-        "schema.go",
-        "event_render.go",
-        "runtime.go",
-        "json_sender.go",
-        "json_adapter.go",
-        "schema_test.go",
-        "json_underlying_test.go",
-        "json_scalar_types.go",
-        "json_scalar_parity_test.go",
-        "json_class_parity_test.go",
-        "json_core_parity_test.go",
-        "json_provided_underlying_test.go",
-        "json_sender_adapter_test.go",
-        "json_doc_visibility_test.go",
-        "json_nested_fragment_test.go"
+        "internal/esper/schema.go",
+        "internal/esper/event_render.go",
+        "internal/esper/runtime.go",
+        "internal/esper/json_sender.go",
+        "internal/esper/json_adapter.go",
+        "internal/esper/schema_test.go",
+        "internal/esper/json_underlying_test.go",
+        "internal/esper/json_scalar_types.go",
+        "internal/esper/json_scalar_parity_test.go",
+        "internal/esper/json_class_parity_test.go",
+        "internal/esper/json_core_parity_test.go",
+        "internal/esper/json_provided_underlying_test.go",
+        "internal/esper/json_sender_adapter_test.go",
+        "internal/esper/json_doc_visibility_test.go",
+        "internal/esper/json_nested_fragment_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -184,8 +184,8 @@
         "EventXMLSchemaPropertyDynamicDOMGetter"
       ],
       "goRefs": [
-        "schema.go",
-        "schema_test.go"
+        "internal/esper/schema.go",
+        "internal/esper/schema_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -209,11 +209,11 @@
         "EventJsonInherits"
       ],
       "goRefs": [
-        "schema.go",
-        "plan.go",
-        "runtime.go",
-        "schema_test.go",
-        "inheritance_runtime_test.go"
+        "internal/esper/schema.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/schema_test.go",
+        "internal/esper/inheritance_runtime_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -234,10 +234,10 @@
         "TestSuiteView"
       ],
       "goRefs": [
-        "stream.go",
-        "expr.go",
-        "runtime.go",
-        "aggregate_test.go"
+        "internal/esper/stream.go",
+        "internal/esper/expr.go",
+        "internal/esper/runtime.go",
+        "internal/esper/aggregate_test.go"
       ],
       "phase": 2,
       "status": "partial",
@@ -263,14 +263,14 @@
         "ViewSortedPrev"
       ],
       "goRefs": [
-        "composite_window_test.go",
-        "group_window_test.go",
-        "plan.go",
-        "runtime.go",
-        "stream.go",
-        "view_expression_parity_test.go",
-        "view_sort_parity_test.go",
-        "view_test.go"
+        "internal/esper/composite_window_test.go",
+        "internal/esper/group_window_test.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/stream.go",
+        "internal/esper/view_expression_parity_test.go",
+        "internal/esper/view_sort_parity_test.go",
+        "internal/esper/view_test.go"
       ],
       "phase": 2,
       "status": "partial",
@@ -288,15 +288,15 @@
         "EventVariantStream"
       ],
       "goRefs": [
-        "schema.go",
-        "plan.go",
-        "runtime.go",
-        "trigger.go",
-        "dataflow.go",
-        "variant_test.go",
-        "variant_inheritance_test.go",
-        "variant_interface_test.go",
-        "variant_parity_test.go"
+        "internal/esper/schema.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/trigger.go",
+        "internal/esper/dataflow.go",
+        "internal/esper/variant_test.go",
+        "internal/esper/variant_inheritance_test.go",
+        "internal/esper/variant_interface_test.go",
+        "internal/esper/variant_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -315,9 +315,9 @@
         "EPLInsertIntoPopulateEventTypeColumnBean"
       ],
       "goRefs": [
-        "stream.go",
-        "runtime.go",
-        "route_test.go"
+        "internal/esper/stream.go",
+        "internal/esper/runtime.go",
+        "internal/esper/route_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -342,23 +342,23 @@
         "InfraNWTableFAFResolve"
       ],
       "goRefs": [
-        "faf.go",
-        "index_runtime.go",
-        "stream.go",
-        "plan.go",
-        "runtime.go",
-        "state.go",
-        "subquery.go",
-        "module.go",
-        "index_plan.go",
-        "faf_mutation_test.go",
-        "faf_multirow_test.go",
-        "faf_substitution_params_test.go",
-        "faf_subquery_parity_test.go",
-        "faf_subquery_index_parity_test.go",
-        "faf_resolve_parity_test.go",
-        "faf_index_parity_test.go",
-        "infra_nwtable_faf_parity_test.go"
+        "internal/esper/faf.go",
+        "internal/esper/index_runtime.go",
+        "internal/esper/stream.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/state.go",
+        "internal/esper/subquery.go",
+        "internal/esper/module.go",
+        "internal/esper/index_plan.go",
+        "internal/esper/faf_mutation_test.go",
+        "internal/esper/faf_multirow_test.go",
+        "internal/esper/faf_substitution_params_test.go",
+        "internal/esper/faf_subquery_parity_test.go",
+        "internal/esper/faf_subquery_index_parity_test.go",
+        "internal/esper/faf_resolve_parity_test.go",
+        "internal/esper/faf_index_parity_test.go",
+        "internal/esper/infra_nwtable_faf_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -384,13 +384,13 @@
         "ExprEnumExceptIntersectUnion"
       ],
       "goRefs": [
-        "enum_expr.go",
-        "enum_expr_test.go",
-        "expr.go",
-        "enum_select_from_test.go",
-        "enum_table_source_test.go",
-        "enum_access_aggregate_source_test.go",
-        "enum_method_nested_source_test.go"
+        "internal/esper/enum_expr.go",
+        "internal/esper/enum_expr_test.go",
+        "internal/esper/expr.go",
+        "internal/esper/enum_select_from_test.go",
+        "internal/esper/enum_table_source_test.go",
+        "internal/esper/enum_access_aggregate_source_test.go",
+        "internal/esper/enum_method_nested_source_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -450,61 +450,61 @@
         "ExprCorePreviousPrevStream"
       ],
       "goRefs": [
-        "expr_case.go",
-        "expr_case_test.go",
-        "expr_coalesce_test.go",
-        "expr_logic_test.go",
-        "expr_math.go",
-        "expr_math_test.go",
-        "expr_decimal.go",
-        "expr_decimal_test.go",
-        "expr_exact_minmax.go",
-        "expr_big_number_test.go",
-        "expr_minmax.go",
-        "expr_minmax_test.go",
-        "expr_relop.go",
-        "expr_relop_test.go",
-        "expr_equals.go",
-        "expr_equals_test.go",
-        "expr_event_identity.go",
-        "expr_event_identity_test.go",
-        "expr_struct.go",
-        "expr_struct_test.go",
-        "expr_construct.go",
-        "expr_construct_test.go",
-        "expr_duck_test.go",
-        "expr_dot_test.go",
-        "expr_previous_dynamic.go",
-        "expr_previous_dynamic_test.go",
-        "expr_array.go",
-        "expr_array_test.go",
-        "expr_like.go",
-        "expr_like_test.go",
-        "expr_cast.go",
-        "expr_cast_test.go",
-        "expr_concat.go",
-        "expr_concat_test.go",
-        "expr_in_between.go",
-        "expr_in_between_test.go",
-        "expr_quantifier.go",
-        "expr_quantifier_test.go",
-        "expr_instanceof_test.go",
-        "expr_exists_test.go",
-        "expr_type_name_test.go",
-        "expr_current_timestamp_test.go",
-        "expr_evaluation_context.go",
-        "expr_evaluation_context_test.go",
-        "expr.go",
-        "enum_expr.go",
-        "runtime.go",
-        "stream.go",
-        "subquery.go",
-        "plan.go",
-        "epl_other_unary_minus_parity_test.go",
-        "expr_core_case_parity_test.go",
-        "expr_core_in_between_parity_test.go",
-        "expr_core_previous_parity_test.go",
-        "expr_core_prior_parity_test.go"
+        "internal/esper/expr_case.go",
+        "internal/esper/expr_case_test.go",
+        "internal/esper/expr_coalesce_test.go",
+        "internal/esper/expr_logic_test.go",
+        "internal/esper/expr_math.go",
+        "internal/esper/expr_math_test.go",
+        "internal/esper/expr_decimal.go",
+        "internal/esper/expr_decimal_test.go",
+        "internal/esper/expr_exact_minmax.go",
+        "internal/esper/expr_big_number_test.go",
+        "internal/esper/expr_minmax.go",
+        "internal/esper/expr_minmax_test.go",
+        "internal/esper/expr_relop.go",
+        "internal/esper/expr_relop_test.go",
+        "internal/esper/expr_equals.go",
+        "internal/esper/expr_equals_test.go",
+        "internal/esper/expr_event_identity.go",
+        "internal/esper/expr_event_identity_test.go",
+        "internal/esper/expr_struct.go",
+        "internal/esper/expr_struct_test.go",
+        "internal/esper/expr_construct.go",
+        "internal/esper/expr_construct_test.go",
+        "internal/esper/expr_duck_test.go",
+        "internal/esper/expr_dot_test.go",
+        "internal/esper/expr_previous_dynamic.go",
+        "internal/esper/expr_previous_dynamic_test.go",
+        "internal/esper/expr_array.go",
+        "internal/esper/expr_array_test.go",
+        "internal/esper/expr_like.go",
+        "internal/esper/expr_like_test.go",
+        "internal/esper/expr_cast.go",
+        "internal/esper/expr_cast_test.go",
+        "internal/esper/expr_concat.go",
+        "internal/esper/expr_concat_test.go",
+        "internal/esper/expr_in_between.go",
+        "internal/esper/expr_in_between_test.go",
+        "internal/esper/expr_quantifier.go",
+        "internal/esper/expr_quantifier_test.go",
+        "internal/esper/expr_instanceof_test.go",
+        "internal/esper/expr_exists_test.go",
+        "internal/esper/expr_type_name_test.go",
+        "internal/esper/expr_current_timestamp_test.go",
+        "internal/esper/expr_evaluation_context.go",
+        "internal/esper/expr_evaluation_context_test.go",
+        "internal/esper/expr.go",
+        "internal/esper/enum_expr.go",
+        "internal/esper/runtime.go",
+        "internal/esper/stream.go",
+        "internal/esper/subquery.go",
+        "internal/esper/plan.go",
+        "internal/esper/epl_other_unary_minus_parity_test.go",
+        "internal/esper/expr_core_case_parity_test.go",
+        "internal/esper/expr_core_in_between_parity_test.go",
+        "internal/esper/expr_core_previous_parity_test.go",
+        "internal/esper/expr_core_prior_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -537,14 +537,14 @@
         "ExprDefineValueParameterEVE"
       ],
       "goRefs": [
-        "expression_definition.go",
-        "expression_definition_test.go",
-        "expr.go",
-        "plan.go",
-        "expr_define_basic_parity_test.go",
-        "expr_define_remaining_parity_test.go",
-        "expr_define_value_alias_parity_test.go",
-        "expr_define_aggregation_parity_test.go"
+        "internal/esper/expression_definition.go",
+        "internal/esper/expression_definition_test.go",
+        "internal/esper/expr.go",
+        "internal/esper/plan.go",
+        "internal/esper/expr_define_basic_parity_test.go",
+        "internal/esper/expr_define_remaining_parity_test.go",
+        "internal/esper/expr_define_value_alias_parity_test.go",
+        "internal/esper/expr_define_aggregation_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -570,11 +570,11 @@
         "EPLContainedScriptContextValue"
       ],
       "goRefs": [
-        "script.go",
-        "script_test.go",
-        "expr.go",
-        "plan.go",
-        "stream.go"
+        "internal/esper/script.go",
+        "internal/esper/script_test.go",
+        "internal/esper/expr.go",
+        "internal/esper/plan.go",
+        "internal/esper/stream.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -597,11 +597,11 @@
         "ResultSetOutputLimitRowPerGroupRollup"
       ],
       "goRefs": [
-        "stream.go",
-        "expr.go",
-        "plan.go",
-        "runtime.go",
-        "aggregate_test.go"
+        "internal/esper/stream.go",
+        "internal/esper/expr.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/aggregate_test.go"
       ],
       "phase": 3,
       "status": "partial",
@@ -623,11 +623,11 @@
         "ResultSetAggregateFilteredWMathContext"
       ],
       "goRefs": [
-        "expr.go",
-        "plan.go",
-        "aggregate_test.go",
-        "aggregate_filtered_java_trace_test.go",
-        "aggregate_exact_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/plan.go",
+        "internal/esper/aggregate_test.go",
+        "internal/esper/aggregate_filtered_java_trace_test.go",
+        "internal/esper/aggregate_exact_test.go"
       ],
       "phase": 3,
       "status": "partial",
@@ -647,10 +647,10 @@
         "ResultSetAggregateFiltered"
       ],
       "goRefs": [
-        "expr.go",
-        "runtime.go",
-        "aggregate_test.go",
-        "aggregate_ever_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/runtime.go",
+        "internal/esper/aggregate_test.go",
+        "internal/esper/aggregate_ever_test.go"
       ],
       "phase": 3,
       "status": "partial",
@@ -674,15 +674,15 @@
         "ResultSetQueryTypeRollupHavingAndOrderBy"
       ],
       "goRefs": [
-        "expr.go",
-        "plan.go",
-        "runtime.go",
-        "stream.go",
-        "state.go",
-        "faf.go",
-        "table_sink.go",
-        "aggregate_test.go",
-        "join_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/stream.go",
+        "internal/esper/state.go",
+        "internal/esper/faf.go",
+        "internal/esper/table_sink.go",
+        "internal/esper/aggregate_test.go",
+        "internal/esper/join_test.go"
       ],
       "phase": 3,
       "status": "partial",
@@ -701,11 +701,11 @@
         "ResultSetQueryTypeLocalGroupBy"
       ],
       "goRefs": [
-        "expr.go",
-        "plan.go",
-        "runtime.go",
-        "aggregate_test.go",
-        "aggregate_local_group_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/aggregate_test.go",
+        "internal/esper/aggregate_local_group_test.go"
       ],
       "phase": 3,
       "status": "partial",
@@ -724,9 +724,9 @@
         "ResultSetOutputLimitCrontabWhen"
       ],
       "goRefs": [
-        "schedule.go",
-        "schedule_test.go",
-        "schedule_special_test.go"
+        "internal/esper/schedule.go",
+        "internal/esper/schedule_test.go",
+        "internal/esper/schedule_special_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -747,10 +747,10 @@
         "ResultSetOutputLimitRowForAll"
       ],
       "goRefs": [
-        "stream.go",
-        "runtime.go",
-        "output_test.go",
-        "snapshot_test.go"
+        "internal/esper/stream.go",
+        "internal/esper/runtime.go",
+        "internal/esper/output_test.go",
+        "internal/esper/snapshot_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -772,14 +772,14 @@
         "ResultSetOutputLimitRowForAll"
       ],
       "goRefs": [
-        "stream.go",
-        "runtime.go",
-        "output_test.go",
-        "output_first_having_test.go",
-        "output_last_after_test.go",
-        "output_group_policy_test.go",
-        "output_row_matrix_test.go",
-        "snapshot_test.go"
+        "internal/esper/stream.go",
+        "internal/esper/runtime.go",
+        "internal/esper/output_test.go",
+        "internal/esper/output_first_having_test.go",
+        "internal/esper/output_last_after_test.go",
+        "internal/esper/output_group_policy_test.go",
+        "internal/esper/output_row_matrix_test.go",
+        "internal/esper/snapshot_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -837,29 +837,29 @@
         "PatternExpressionText"
       ],
       "goRefs": [
-        "pattern.go",
-        "pattern_limit.go",
-        "pattern_test.go",
-        "pattern_guard_observer_matrix_test.go",
-        "pattern_followed_by_max_test.go",
-        "pattern_followed_by_max_listener_test.go",
-        "pattern_consumption_test.go",
-        "pattern_composite_parity_test.go",
-        "pattern_observer_interval_parity_test.go",
-        "pattern_observer_at_parity_test.go",
-        "pattern_observer_schedule_parity_test.go",
-        "pattern_observer_schedule_multiform_parity_test.go",
-        "pattern_guardwhile_parity_test.go",
-        "pattern_complexprops_parity_test.go",
-        "pattern_operatormix_parity_test.go",
-        "pattern_repeatroute_parity_test.go",
-        "pattern_startstop_parity_test.go",
-        "pattern_useresult_parity_test.go",
-        "pattern_followed_by_max_pool_test.go",
-        "pattern_startloop_parity_test.go",
-        "pattern_super_interfaces_parity_test.go",
-        "pattern_invalid_parity_test.go",
-        "pattern_expression_text_parity_test.go"
+        "internal/esper/pattern.go",
+        "internal/esper/pattern_limit.go",
+        "internal/esper/pattern_test.go",
+        "internal/esper/pattern_guard_observer_matrix_test.go",
+        "internal/esper/pattern_followed_by_max_test.go",
+        "internal/esper/pattern_followed_by_max_listener_test.go",
+        "internal/esper/pattern_consumption_test.go",
+        "internal/esper/pattern_composite_parity_test.go",
+        "internal/esper/pattern_observer_interval_parity_test.go",
+        "internal/esper/pattern_observer_at_parity_test.go",
+        "internal/esper/pattern_observer_schedule_parity_test.go",
+        "internal/esper/pattern_observer_schedule_multiform_parity_test.go",
+        "internal/esper/pattern_guardwhile_parity_test.go",
+        "internal/esper/pattern_complexprops_parity_test.go",
+        "internal/esper/pattern_operatormix_parity_test.go",
+        "internal/esper/pattern_repeatroute_parity_test.go",
+        "internal/esper/pattern_startstop_parity_test.go",
+        "internal/esper/pattern_useresult_parity_test.go",
+        "internal/esper/pattern_followed_by_max_pool_test.go",
+        "internal/esper/pattern_startloop_parity_test.go",
+        "internal/esper/pattern_super_interfaces_parity_test.go",
+        "internal/esper/pattern_invalid_parity_test.go",
+        "internal/esper/pattern_expression_text_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -880,11 +880,11 @@
         "PatternObserverTimerSchedule"
       ],
       "goRefs": [
-        "pattern.go",
-        "pattern_test.go",
-        "pattern_schedule.go",
-        "pattern_schedule_test.go",
-        "schedule_special_test.go"
+        "internal/esper/pattern.go",
+        "internal/esper/pattern_test.go",
+        "internal/esper/pattern_schedule.go",
+        "internal/esper/pattern_schedule_test.go",
+        "internal/esper/schedule_special_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -904,20 +904,20 @@
         "EPLFromClauseMethod"
       ],
       "goRefs": [
-        "faf.go",
-        "historical.go",
-        "historical_test.go",
-        "method_provider.go",
-        "method_provider_test.go",
-        "method_source_test.go",
-        "method_source_join_test.go",
-        "method_source_dependency_test.go",
-        "method_source_context_test.go",
-        "plan.go",
-        "runtime.go",
-        "sql_sink.go",
-        "sql_sink_test.go",
-        "stream.go"
+        "internal/esper/faf.go",
+        "internal/esper/historical.go",
+        "internal/esper/historical_test.go",
+        "internal/esper/method_provider.go",
+        "internal/esper/method_provider_test.go",
+        "internal/esper/method_source_test.go",
+        "internal/esper/method_source_join_test.go",
+        "internal/esper/method_source_dependency_test.go",
+        "internal/esper/method_source_context_test.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/sql_sink.go",
+        "internal/esper/sql_sink_test.go",
+        "internal/esper/stream.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -943,14 +943,14 @@
         "InfraNWTableOnMerge"
       ],
       "goRefs": [
-        "trigger.go",
-        "trigger_test.go",
-        "trigger_merge_representation_test.go",
-        "trigger_infra_insert_other_stream_test.go",
-        "trigger_namedwindow_merge_test.go",
-        "schema.go",
-        "state.go",
-        "plan.go"
+        "internal/esper/trigger.go",
+        "internal/esper/trigger_test.go",
+        "internal/esper/trigger_merge_representation_test.go",
+        "internal/esper/trigger_infra_insert_other_stream_test.go",
+        "internal/esper/trigger_namedwindow_merge_test.go",
+        "internal/esper/schema.go",
+        "internal/esper/state.go",
+        "internal/esper/plan.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -978,9 +978,9 @@
         "ContextInitTermWithDistinct"
       ],
       "goRefs": [
-        "context.go",
-        "context_selector.go",
-        "context_test.go"
+        "internal/esper/context.go",
+        "internal/esper/context_selector.go",
+        "internal/esper/context_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -1002,30 +1002,30 @@
         "EPLDataflowOpSelect"
       ],
       "goRefs": [
-        "dataflow.go",
-        "dataflow_test.go",
-        "dataflow_pattern_test.go",
-        "dataflow_port_inference_test.go",
-        "dataflow_select_test.go",
-        "dataflow_select_iterate_test.go",
-        "dataflow_select_event_test.go",
-        "dataflow_join_test.go",
-        "dataflow_join_outer_test.go",
-        "dataflow_join_order_test.go",
-        "dataflow_join_condition_test.go",
-        "dataflow_join_captive_test.go",
-        "dataflow_join_window_test.go",
-        "dataflow_select_join_representation_test.go",
-        "dataflow_representation_test.go",
-        "dataflow_saved_test.go",
-        "dataflow_reentrant_test.go",
-        "dataflow_subquery_test.go",
-        "dataflow_typed_ports_test.go",
-        "dataflow_source_test.go",
-        "dataflow_stats_test.go",
-        "dataflow_options_test.go",
-        "dataflow_filter_ports_test.go",
-        "dataflow_source_filter_test.go"
+        "internal/esper/dataflow.go",
+        "internal/esper/dataflow_test.go",
+        "internal/esper/dataflow_pattern_test.go",
+        "internal/esper/dataflow_port_inference_test.go",
+        "internal/esper/dataflow_select_test.go",
+        "internal/esper/dataflow_select_iterate_test.go",
+        "internal/esper/dataflow_select_event_test.go",
+        "internal/esper/dataflow_join_test.go",
+        "internal/esper/dataflow_join_outer_test.go",
+        "internal/esper/dataflow_join_order_test.go",
+        "internal/esper/dataflow_join_condition_test.go",
+        "internal/esper/dataflow_join_captive_test.go",
+        "internal/esper/dataflow_join_window_test.go",
+        "internal/esper/dataflow_select_join_representation_test.go",
+        "internal/esper/dataflow_representation_test.go",
+        "internal/esper/dataflow_saved_test.go",
+        "internal/esper/dataflow_reentrant_test.go",
+        "internal/esper/dataflow_subquery_test.go",
+        "internal/esper/dataflow_typed_ports_test.go",
+        "internal/esper/dataflow_source_test.go",
+        "internal/esper/dataflow_stats_test.go",
+        "internal/esper/dataflow_options_test.go",
+        "internal/esper/dataflow_filter_ports_test.go",
+        "internal/esper/dataflow_source_filter_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -1080,40 +1080,40 @@
         "EPLJoinCoercion"
       ],
       "goRefs": [
-        "stream.go",
-        "plan.go",
-        "runtime.go",
-        "value.go",
-        "expr.go",
-        "pattern_join.go",
-        "join_test.go",
-        "join_where_test.go",
-        "join_chain_test.go",
-        "subquery_join_test.go",
-        "join_aggregate_context_test.go",
-        "join_pattern_test.go",
-        "join_multikey_range_test.go",
-        "join_property_test.go",
-        "join_representation_test.go",
-        "join_unique_index_test.go",
-        "join_select_test.go",
-        "join_coercion_test.go",
-        "join_inherit_test.go",
-        "join_no_table_test.go",
-        "join_derived_view_test.go",
-        "join_in_keyword_test.go",
-        "join_20_stream_test.go",
-        "join_outer_four_stream_test.go",
-        "join_outer_six_stream_test.go",
-        "join_outer_var_test.go",
-        "join_outer_mixed_test.go",
-        "join_outer_chain_four_test.go",
-        "join_outer_full_three_test.go",
-        "join_unidirectional_test.go",
-        "join_unidirectional_outer_test.go",
-        "join_unidirectional_parity_test.go",
-        "join_performance_test.go",
-        "expr_test.go"
+        "internal/esper/stream.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/value.go",
+        "internal/esper/expr.go",
+        "internal/esper/pattern_join.go",
+        "internal/esper/join_test.go",
+        "internal/esper/join_where_test.go",
+        "internal/esper/join_chain_test.go",
+        "internal/esper/subquery_join_test.go",
+        "internal/esper/join_aggregate_context_test.go",
+        "internal/esper/join_pattern_test.go",
+        "internal/esper/join_multikey_range_test.go",
+        "internal/esper/join_property_test.go",
+        "internal/esper/join_representation_test.go",
+        "internal/esper/join_unique_index_test.go",
+        "internal/esper/join_select_test.go",
+        "internal/esper/join_coercion_test.go",
+        "internal/esper/join_inherit_test.go",
+        "internal/esper/join_no_table_test.go",
+        "internal/esper/join_derived_view_test.go",
+        "internal/esper/join_in_keyword_test.go",
+        "internal/esper/join_20_stream_test.go",
+        "internal/esper/join_outer_four_stream_test.go",
+        "internal/esper/join_outer_six_stream_test.go",
+        "internal/esper/join_outer_var_test.go",
+        "internal/esper/join_outer_mixed_test.go",
+        "internal/esper/join_outer_chain_four_test.go",
+        "internal/esper/join_outer_full_three_test.go",
+        "internal/esper/join_unidirectional_test.go",
+        "internal/esper/join_unidirectional_outer_test.go",
+        "internal/esper/join_unidirectional_parity_test.go",
+        "internal/esper/join_performance_test.go",
+        "internal/esper/expr_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -1134,21 +1134,21 @@
         "EPLSubselectAggregatedMultirowAndColumn"
       ],
       "goRefs": [
-        "subquery.go",
-        "subquery_test.go",
-        "subquery_multirow_test.go",
-        "subquery_metadata_test.go",
-        "subquery_group_bucket_test.go",
-        "subquery_join_test.go",
-        "join_where_test.go",
-        "subquery_enum_chain_test.go",
-        "pattern_subquery_test.go",
-        "pattern_subquery_filter_variants_test.go",
-        "pattern_subquery_invalid_test.go",
-        "state.go",
-        "plan.go",
-        "runtime.go",
-        "faf.go"
+        "internal/esper/subquery.go",
+        "internal/esper/subquery_test.go",
+        "internal/esper/subquery_multirow_test.go",
+        "internal/esper/subquery_metadata_test.go",
+        "internal/esper/subquery_group_bucket_test.go",
+        "internal/esper/subquery_join_test.go",
+        "internal/esper/join_where_test.go",
+        "internal/esper/subquery_enum_chain_test.go",
+        "internal/esper/pattern_subquery_test.go",
+        "internal/esper/pattern_subquery_filter_variants_test.go",
+        "internal/esper/pattern_subquery_invalid_test.go",
+        "internal/esper/state.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/faf.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -1198,37 +1198,37 @@
         "ConditionMatchRecognizeStatesMax"
       ],
       "goRefs": [
-        "rowrecog.go",
-        "rowrecog_pool.go",
-        "expr.go",
-        "plan.go",
-        "runtime.go",
-        "rowrecog_test.go",
-        "rowrecog_invalid_test.go",
-        "rowrecog_datawin_test.go",
-        "rowrecog_delete_test.go",
-        "rowrecog_after_test.go",
-        "rowrecog_interval_test.go",
-        "rowrecog_interval_resolution_test.go",
-        "rowrecog_interval_terminated_test.go",
-        "rowrecog_iterate_only_test.go",
-        "rowrecog_array_access_test.go",
-        "rowrecog_aggregation_test.go",
-        "rowrecog_repetition_test.go",
-        "rowrecog_presence_test.go",
-        "rowrecog_greedyness_test.go",
-        "rowrecog_dataset_test.go",
-        "rowrecog_regex_test.go",
-        "rowrecog_variant_test.go",
-        "rowrecog_financialw_test.go",
-        "rowrecog_multikey_test.go",
-        "rowrecog_prev_test.go",
-        "rowrecog_tagprev_test.go",
-        "rowrecog_unbound_test.go",
-        "rowrecog_perf_test.go",
-        "rowrecog_pool_test.go",
-        "rowrecog_nfa.go",
-        "rowrecog_nfa_state_pool_test.go"
+        "internal/esper/rowrecog.go",
+        "internal/esper/rowrecog_pool.go",
+        "internal/esper/expr.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/rowrecog_test.go",
+        "internal/esper/rowrecog_invalid_test.go",
+        "internal/esper/rowrecog_datawin_test.go",
+        "internal/esper/rowrecog_delete_test.go",
+        "internal/esper/rowrecog_after_test.go",
+        "internal/esper/rowrecog_interval_test.go",
+        "internal/esper/rowrecog_interval_resolution_test.go",
+        "internal/esper/rowrecog_interval_terminated_test.go",
+        "internal/esper/rowrecog_iterate_only_test.go",
+        "internal/esper/rowrecog_array_access_test.go",
+        "internal/esper/rowrecog_aggregation_test.go",
+        "internal/esper/rowrecog_repetition_test.go",
+        "internal/esper/rowrecog_presence_test.go",
+        "internal/esper/rowrecog_greedyness_test.go",
+        "internal/esper/rowrecog_dataset_test.go",
+        "internal/esper/rowrecog_regex_test.go",
+        "internal/esper/rowrecog_variant_test.go",
+        "internal/esper/rowrecog_financialw_test.go",
+        "internal/esper/rowrecog_multikey_test.go",
+        "internal/esper/rowrecog_prev_test.go",
+        "internal/esper/rowrecog_tagprev_test.go",
+        "internal/esper/rowrecog_unbound_test.go",
+        "internal/esper/rowrecog_perf_test.go",
+        "internal/esper/rowrecog_pool_test.go",
+        "internal/esper/rowrecog_nfa.go",
+        "internal/esper/rowrecog_nfa_state_pool_test.go"
       ],
       "phase": 5,
       "status": "partial",
@@ -1359,19 +1359,19 @@
       "id": "epl.fromclausemethod",
       "summary": "Method-backed historical streams (method source) with array/object/single return, overloaded resolution, multiple representations and join/FAF usage",
       "goRefs": [
-        "method_provider.go",
-        "method_provider_test.go",
-        "method_source_test.go",
-        "method_source_join_test.go",
-        "fromclausemethod_parity_test.go",
-        "fromclausemethod_outer_parity_test.go",
-        "fromclausemethod_historical_join_parity_test.go",
-        "fromclausemethod_witharg_parity_test.go",
-        "fromclausemethod_eventbean_parity_test.go",
-        "fromclausemethod_cache_parity_test.go",
-        "fromclausemethod_multikey_parity_test.go",
-        "fromclausemethod_variable_parity_test.go",
-        "fromclausemethod_joinperf_parity_test.go"
+        "internal/esper/method_provider.go",
+        "internal/esper/method_provider_test.go",
+        "internal/esper/method_source_test.go",
+        "internal/esper/method_source_join_test.go",
+        "internal/esper/fromclausemethod_parity_test.go",
+        "internal/esper/fromclausemethod_outer_parity_test.go",
+        "internal/esper/fromclausemethod_historical_join_parity_test.go",
+        "internal/esper/fromclausemethod_witharg_parity_test.go",
+        "internal/esper/fromclausemethod_eventbean_parity_test.go",
+        "internal/esper/fromclausemethod_cache_parity_test.go",
+        "internal/esper/fromclausemethod_multikey_parity_test.go",
+        "internal/esper/fromclausemethod_variable_parity_test.go",
+        "internal/esper/fromclausemethod_joinperf_parity_test.go"
       ],
       "phase": 2,
       "remaining": [
@@ -1499,8 +1499,8 @@
         "EPLOtherDistinct"
       ],
       "goRefs": [
-        "runtime.go",
-        "epl_other_distinct_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/epl_other_distinct_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1518,10 +1518,10 @@
         "EPLSubselectFiltered"
       ],
       "goRefs": [
-        "subquery.go",
-        "plan.go",
-        "expr.go",
-        "epl_subselect_filtered_parity_test.go"
+        "internal/esper/subquery.go",
+        "internal/esper/plan.go",
+        "internal/esper/expr.go",
+        "internal/esper/epl_subselect_filtered_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1538,10 +1538,10 @@
         "EPLSubselectUnfiltered"
       ],
       "goRefs": [
-        "subquery.go",
-        "plan.go",
-        "expr.go",
-        "epl_subselect_unfiltered_parity_test.go"
+        "internal/esper/subquery.go",
+        "internal/esper/plan.go",
+        "internal/esper/expr.go",
+        "internal/esper/epl_subselect_unfiltered_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1558,9 +1558,9 @@
         "InfraNamedWindowViews"
       ],
       "goRefs": [
-        "state.go",
-        "trigger.go",
-        "infra_namedwindow_views_parity_test.go"
+        "internal/esper/state.go",
+        "internal/esper/trigger.go",
+        "internal/esper/infra_namedwindow_views_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1577,11 +1577,11 @@
         "EPLOtherUpdateIStream"
       ],
       "goRefs": [
-        "runtime.go",
-        "plan.go",
-        "stream.go",
-        "schema.go",
-        "epl_other_update_istream_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/plan.go",
+        "internal/esper/stream.go",
+        "internal/esper/schema.go",
+        "internal/esper/epl_other_update_istream_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -1599,11 +1599,11 @@
         "EPLOtherSplitStream"
       ],
       "goRefs": [
-        "split_stream.go",
-        "trigger.go",
-        "runtime.go",
-        "plan.go",
-        "epl_other_split_stream_parity_test.go"
+        "internal/esper/split_stream.go",
+        "internal/esper/trigger.go",
+        "internal/esper/runtime.go",
+        "internal/esper/plan.go",
+        "internal/esper/epl_other_split_stream_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1626,10 +1626,10 @@
         "ClientBasicSelectClause"
       ],
       "goRefs": [
-        "stream.go",
-        "runtime.go",
-        "pattern.go",
-        "client_basic_parity_test.go"
+        "internal/esper/stream.go",
+        "internal/esper/runtime.go",
+        "internal/esper/pattern.go",
+        "internal/esper/client_basic_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1647,8 +1647,8 @@
         "ClientRuntimeEPStatement"
       ],
       "goRefs": [
-        "runtime.go",
-        "client_runtime_epstatement_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/client_runtime_epstatement_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1666,8 +1666,8 @@
         "ClientRuntimeUnmatchedListener"
       ],
       "goRefs": [
-        "runtime.go",
-        "client_runtime_unmatched_listener_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/client_runtime_unmatched_listener_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1684,9 +1684,9 @@
         "ClientRuntimeListener"
       ],
       "goRefs": [
-        "runtime.go",
-        "schema.go",
-        "client_runtime_listener_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/schema.go",
+        "internal/esper/client_runtime_listener_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1703,8 +1703,8 @@
         "ClientRuntimeTimeControl"
       ],
       "goRefs": [
-        "runtime.go",
-        "client_runtime_time_control_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/client_runtime_time_control_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1722,9 +1722,9 @@
         "ClientRuntimeExceptionHandler"
       ],
       "goRefs": [
-        "expr.go",
-        "runtime.go",
-        "client_runtime_exception_handler_parity_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_runtime_exception_handler_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1742,12 +1742,12 @@
         "ClientRuntimeItself"
       ],
       "goRefs": [
-        "runtime.go",
-        "runtime_management.go",
-        "schema.go",
-        "plan.go",
-        "faf.go",
-        "client_runtime_itself_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/runtime_management.go",
+        "internal/esper/schema.go",
+        "internal/esper/plan.go",
+        "internal/esper/faf.go",
+        "internal/esper/client_runtime_itself_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1765,9 +1765,9 @@
         "ClientRuntimeLockLogging"
       ],
       "goRefs": [
-        "runtime.go",
-        "runtime_lock_activity.go",
-        "client_runtime_lock_logging_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/runtime_lock_activity.go",
+        "internal/esper/client_runtime_lock_logging_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1785,13 +1785,13 @@
         "ClientRuntimePriorityAndDropInstructions"
       ],
       "goRefs": [
-        "stream.go",
-        "plan.go",
-        "runtime.go",
-        "pattern.go",
-        "trigger.go",
-        "rowrecog.go",
-        "client_runtime_priority_drop_parity_test.go"
+        "internal/esper/stream.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/pattern.go",
+        "internal/esper/trigger.go",
+        "internal/esper/rowrecog.go",
+        "internal/esper/client_runtime_priority_drop_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1810,8 +1810,8 @@
         "ClientRuntimeRuntimeProvider"
       ],
       "goRefs": [
-        "runtime_management.go",
-        "client_runtime_runtime_provider_parity_test.go"
+        "internal/esper/runtime_management.go",
+        "internal/esper/client_runtime_runtime_provider_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1830,11 +1830,11 @@
         "ClientRuntimeSolutionPatternPortScan"
       ],
       "goRefs": [
-        "stream.go",
-        "state.go",
-        "pattern.go",
-        "runtime.go",
-        "client_runtime_port_scan_parity_test.go"
+        "internal/esper/stream.go",
+        "internal/esper/state.go",
+        "internal/esper/pattern.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_runtime_port_scan_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1853,12 +1853,12 @@
         "ClientRuntimeStatementAnnotation"
       ],
       "goRefs": [
-        "statement_metadata.go",
-        "stream.go",
-        "schema.go",
-        "plan.go",
-        "runtime.go",
-        "client_runtime_statement_annotation_parity_test.go"
+        "internal/esper/statement_metadata.go",
+        "internal/esper/stream.go",
+        "internal/esper/schema.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_runtime_statement_annotation_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1878,10 +1878,10 @@
         "ClientRuntimeStatementName"
       ],
       "goRefs": [
-        "runtime.go",
-        "dataflow.go",
-        "runtime_test.go",
-        "client_runtime_statement_name_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/dataflow.go",
+        "internal/esper/runtime_test.go",
+        "internal/esper/client_runtime_statement_name_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1902,12 +1902,12 @@
         "ClientRuntimeSubscriberDisallowed"
       ],
       "goRefs": [
-        "subscriber.go",
-        "runtime.go",
-        "stream.go",
-        "plan.go",
-        "trigger.go",
-        "client_runtime_subscriber_parity_test.go"
+        "internal/esper/subscriber.go",
+        "internal/esper/runtime.go",
+        "internal/esper/stream.go",
+        "internal/esper/plan.go",
+        "internal/esper/trigger.go",
+        "internal/esper/client_runtime_subscriber_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1930,9 +1930,9 @@
         "ClientRuntimeThreadedConfigTimer"
       ],
       "goRefs": [
-        "threading.go",
-        "runtime.go",
-        "client_runtime_threading_parity_test.go"
+        "internal/esper/threading.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_runtime_threading_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1953,10 +1953,10 @@
         "ClientMultitenancyIndex"
       ],
       "goRefs": [
-        "runtime.go",
-        "stream.go",
-        "index_plan.go",
-        "client_multitenancy_insert_index_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/stream.go",
+        "internal/esper/index_plan.go",
+        "internal/esper/client_multitenancy_insert_index_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -1980,11 +1980,11 @@
         "ClientMultitenancyProtectedExpr"
       ],
       "goRefs": [
-        "module.go",
-        "plan.go",
-        "runtime.go",
-        "trigger.go",
-        "client_multitenancy_protected_parity_test.go"
+        "internal/esper/module.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/trigger.go",
+        "internal/esper/client_multitenancy_protected_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2007,11 +2007,11 @@
         "EventTypeBusModifier"
       ],
       "goRefs": [
-        "module.go",
-        "schema.go",
-        "plan.go",
-        "runtime.go",
-        "client_compile_visibility_parity_test.go"
+        "internal/esper/module.go",
+        "internal/esper/schema.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_compile_visibility_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2034,10 +2034,10 @@
         "EPDeploySubstitutionParameterException"
       ],
       "goRefs": [
-        "expr.go",
-        "plan.go",
-        "runtime.go",
-        "client_compile_substitution_params_parity_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_compile_substitution_params_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2062,9 +2062,9 @@
         "EPCompiledManifest"
       ],
       "goRefs": [
-        "plan.go",
-        "runtime.go",
-        "client_compile_options_output_parity_test.go"
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_compile_options_output_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2087,9 +2087,9 @@
         "DependencyGraph"
       ],
       "goRefs": [
-        "module.go",
-        "module_order.go",
-        "client_compile_module_uses_parity_test.go"
+        "internal/esper/module.go",
+        "internal/esper/module_order.go",
+        "internal/esper/client_compile_module_uses_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2116,9 +2116,9 @@
         "ClientCompileModuleEPLModuleText"
       ],
       "goRefs": [
-        "module.go",
-        "runtime.go",
-        "client_compile_module_parity_test.go"
+        "internal/esper/module.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_compile_module_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2141,10 +2141,10 @@
         "EPCompiled"
       ],
       "goRefs": [
-        "runtime_path.go",
-        "module.go",
-        "runtime.go",
-        "client_compile_engine_path_parity_test.go"
+        "internal/esper/runtime_path.go",
+        "internal/esper/module.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_compile_engine_path_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2167,9 +2167,9 @@
         "ModuleProvider"
       ],
       "goRefs": [
-        "compile_path_cache.go",
-        "module.go",
-        "client_compile_path_cache_parity_test.go"
+        "internal/esper/compile_path_cache.go",
+        "internal/esper/module.go",
+        "internal/esper/client_compile_path_cache_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2192,9 +2192,9 @@
         "ExprTimePeriod"
       ],
       "goRefs": [
-        "expression_compiler.go",
-        "plan.go",
-        "client_compile_spi_parity_test.go"
+        "internal/esper/expression_compiler.go",
+        "internal/esper/plan.go",
+        "internal/esper/client_compile_spi_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2216,10 +2216,10 @@
         "ClassForNameProvider"
       ],
       "goRefs": [
-        "event_type_auto_name.go",
-        "schema.go",
-        "plan.go",
-        "client_compile_event_type_auto_name_parity_test.go"
+        "internal/esper/event_type_auto_name.go",
+        "internal/esper/schema.go",
+        "internal/esper/plan.go",
+        "internal/esper/client_compile_event_type_auto_name_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2241,9 +2241,9 @@
         "CompilerHook"
       ],
       "goRefs": [
-        "compiler_provider.go",
-        "plan.go",
-        "client_compile_tool_compiler_parity_test.go"
+        "internal/esper/compiler_provider.go",
+        "internal/esper/plan.go",
+        "internal/esper/client_compile_tool_compiler_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2266,10 +2266,10 @@
         "EPStatementObjectModel"
       ],
       "goRefs": [
-        "syntax_validation.go",
-        "plan.go",
-        "stream.go",
-        "client_compile_syntax_validate_parity_test.go"
+        "internal/esper/syntax_validation.go",
+        "internal/esper/plan.go",
+        "internal/esper/stream.go",
+        "internal/esper/client_compile_syntax_validate_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2291,9 +2291,9 @@
         "EPCompileExceptionItem"
       ],
       "goRefs": [
-        "compile_batch.go",
-        "plan.go",
-        "client_compile_exception_items_parity_test.go"
+        "internal/esper/compile_batch.go",
+        "internal/esper/plan.go",
+        "internal/esper/client_compile_exception_items_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2316,10 +2316,10 @@
         "PatternExpr"
       ],
       "goRefs": [
-        "statement_model.go",
-        "stream.go",
-        "plan.go",
-        "client_compile_statement_object_model_parity_test.go"
+        "internal/esper/statement_model.go",
+        "internal/esper/stream.go",
+        "internal/esper/plan.go",
+        "internal/esper/client_compile_statement_object_model_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2350,16 +2350,16 @@
         "ClientCompileLargeTableAggregationEnterLeaveAccessAgg"
       ],
       "goRefs": [
-        "expr.go",
-        "stream.go",
-        "plan.go",
-        "trigger.go",
-        "client_compile_large_parity_test.go",
-        "client_compile_large_wconfig_substitution_parity_test.go",
-        "client_compile_large_wconfig_select_parity_test.go",
-        "client_compile_large_wconfig_schema_insert_parity_test.go",
-        "client_compile_large_wconfig_aggregation_parity_test.go",
-        "client_compile_large_wconfig_table_parity_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/stream.go",
+        "internal/esper/plan.go",
+        "internal/esper/trigger.go",
+        "internal/esper/client_compile_large_parity_test.go",
+        "internal/esper/client_compile_large_wconfig_substitution_parity_test.go",
+        "internal/esper/client_compile_large_wconfig_select_parity_test.go",
+        "internal/esper/client_compile_large_wconfig_schema_insert_parity_test.go",
+        "internal/esper/client_compile_large_wconfig_aggregation_parity_test.go",
+        "internal/esper/client_compile_large_wconfig_table_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2384,12 +2384,12 @@
         "EPDeployDeploymentVersionException"
       ],
       "goRefs": [
-        "plan.go",
-        "plan_artifact.go",
-        "plan_compatibility.go",
-        "runtime.go",
-        "faf.go",
-        "client_deploy_version_parity_test.go"
+        "internal/esper/plan.go",
+        "internal/esper/plan_artifact.go",
+        "internal/esper/plan_compatibility.go",
+        "internal/esper/runtime.go",
+        "internal/esper/faf.go",
+        "internal/esper/client_deploy_version_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2412,10 +2412,10 @@
         "StatementUserObjectRuntimeContext"
       ],
       "goRefs": [
-        "runtime.go",
-        "statement_metadata.go",
-        "expr_evaluation_context.go",
-        "client_deploy_statement_options_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/statement_metadata.go",
+        "internal/esper/expr_evaluation_context.go",
+        "internal/esper/client_deploy_statement_options_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2437,9 +2437,9 @@
         "ClassLoader"
       ],
       "goRefs": [
-        "plan.go",
-        "runtime.go",
-        "client_deploy_statement_options_parity_test.go"
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_deploy_statement_options_parity_test.go"
       ],
       "phase": 0,
       "status": "approved-difference",
@@ -2462,10 +2462,10 @@
         "EPDeploymentService"
       ],
       "goRefs": [
-        "plan.go",
-        "runtime.go",
-        "runtime_path.go",
-        "client_deploy_result_management_parity_test.go"
+        "internal/esper/plan.go",
+        "internal/esper/runtime.go",
+        "internal/esper/runtime_path.go",
+        "internal/esper/client_deploy_result_management_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2488,9 +2488,9 @@
         "DeployerRollout"
       ],
       "goRefs": [
-        "deployment_rollout.go",
-        "runtime.go",
-        "client_deploy_rollout_parity_test.go"
+        "internal/esper/deployment_rollout.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_deploy_rollout_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2512,9 +2512,9 @@
         "DeploymentStateEventUndeployed"
       ],
       "goRefs": [
-        "deployment_rollout.go",
-        "runtime.go",
-        "client_deploy_rollout_parity_test.go"
+        "internal/esper/deployment_rollout.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_deploy_rollout_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2547,10 +2547,10 @@
         "EPUndeployPreconditionException"
       ],
       "goRefs": [
-        "runtime.go",
-        "deployment_resources.go",
-        "deployment_rollout.go",
-        "client_deploy_undeploy_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/deployment_resources.go",
+        "internal/esper/deployment_rollout.go",
+        "internal/esper/client_deploy_undeploy_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2570,7 +2570,7 @@
         "InstrumentationHelper"
       ],
       "goRefs": [
-        "client_instrument_instrumentation_parity_test.go"
+        "internal/esper/client_instrument_instrumentation_parity_test.go"
       ],
       "phase": 0,
       "status": "approved-difference",
@@ -2590,9 +2590,9 @@
         "MetricExecEngine"
       ],
       "goRefs": [
-        "metrics.go",
-        "runtime.go",
-        "client_instrument_runtime_metrics_parity_test.go"
+        "internal/esper/metrics.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_instrument_runtime_metrics_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2617,10 +2617,10 @@
         "MetricExecStatement"
       ],
       "goRefs": [
-        "metrics.go",
-        "metrics_cpu_linux.go",
-        "runtime.go",
-        "client_instrument_statement_metrics_parity_test.go"
+        "internal/esper/metrics.go",
+        "internal/esper/metrics_cpu_linux.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_instrument_statement_metrics_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2644,11 +2644,11 @@
         "AuditEnum"
       ],
       "goRefs": [
-        "audit.go",
-        "statement_metadata.go",
-        "runtime.go",
-        "dataflow.go",
-        "client_instrument_audit_parity_test.go"
+        "internal/esper/audit.go",
+        "internal/esper/statement_metadata.go",
+        "internal/esper/runtime.go",
+        "internal/esper/dataflow.go",
+        "internal/esper/client_instrument_audit_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2682,10 +2682,10 @@
         "EPDeployPreconditionException"
       ],
       "goRefs": [
-        "deployment_resources.go",
-        "deployment_rollout.go",
-        "module.go",
-        "client_deploy_precondition_dependency_parity_test.go"
+        "internal/esper/deployment_resources.go",
+        "internal/esper/deployment_rollout.go",
+        "internal/esper/module.go",
+        "internal/esper/client_deploy_precondition_dependency_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2716,14 +2716,14 @@
         "EPDeployPreconditionException"
       ],
       "goRefs": [
-        "registration_duplicate.go",
-        "module.go",
-        "plan.go",
-        "state.go",
-        "context.go",
-        "script.go",
-        "expression_definition.go",
-        "client_deploy_precondition_duplicate_parity_test.go"
+        "internal/esper/registration_duplicate.go",
+        "internal/esper/module.go",
+        "internal/esper/plan.go",
+        "internal/esper/state.go",
+        "internal/esper/context.go",
+        "internal/esper/script.go",
+        "internal/esper/expression_definition.go",
+        "internal/esper/client_deploy_precondition_duplicate_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2751,10 +2751,10 @@
         "EPObjectType"
       ],
       "goRefs": [
-        "deployment_dependencies.go",
-        "deployment_resources.go",
-        "runtime.go",
-        "client_deploy_list_dependencies_parity_test.go"
+        "internal/esper/deployment_dependencies.go",
+        "internal/esper/deployment_resources.go",
+        "internal/esper/runtime.go",
+        "internal/esper/client_deploy_list_dependencies_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2778,10 +2778,10 @@
         "ClientDeployRedefinitionVariables"
       ],
       "goRefs": [
-        "runtime.go",
-        "module.go",
-        "state.go",
-        "client_deploy_redefinition_parity_test.go"
+        "internal/esper/runtime.go",
+        "internal/esper/module.go",
+        "internal/esper/state.go",
+        "internal/esper/client_deploy_redefinition_parity_test.go"
       ],
       "phase": 1,
       "status": "mapped",
@@ -2802,8 +2802,8 @@
         "EPLMethodInvocationContext"
       ],
       "goRefs": [
-        "expr.go",
-        "client_extend_udf_parity_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/client_extend_udf_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -2822,8 +2822,8 @@
         "SupportSingleRowFunction"
       ],
       "goRefs": [
-        "expr.go",
-        "client_extend_udf_parity_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/client_extend_udf_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -2840,8 +2840,8 @@
         "ClientExtendUDFReturnTypeIsEvents"
       ],
       "goRefs": [
-        "expr.go",
-        "client_extend_udf_parity_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/client_extend_udf_parity_test.go"
       ],
       "phase": 2,
       "status": "approved-difference",
@@ -2860,8 +2860,8 @@
         "ClassProvided"
       ],
       "goRefs": [
-        "expr.go",
-        "client_extend_udf_parity_test.go"
+        "internal/esper/expr.go",
+        "internal/esper/client_extend_udf_parity_test.go"
       ],
       "phase": 8,
       "status": "approved-difference",
@@ -2879,8 +2879,8 @@
         "SupportPluginLoader"
       ],
       "goRefs": [
-        "module.go",
-        "client_extend_udf_parity_test.go"
+        "internal/esper/module.go",
+        "internal/esper/client_extend_udf_parity_test.go"
       ],
       "phase": 8,
       "status": "approved-difference",
@@ -2899,8 +2899,8 @@
         "GuardForge"
       ],
       "goRefs": [
-        "extension_registration.go",
-        "client_extend_plugin_parity_test.go"
+        "internal/esper/extension_registration.go",
+        "internal/esper/client_extend_plugin_parity_test.go"
       ],
       "phase": 5,
       "status": "mapped",
@@ -2919,8 +2919,8 @@
         "SupportTrendSpotterView"
       ],
       "goRefs": [
-        "extension_registration.go",
-        "client_extend_plugin_parity_test.go"
+        "internal/esper/extension_registration.go",
+        "internal/esper/client_extend_plugin_parity_test.go"
       ],
       "phase": 5,
       "status": "mapped",
@@ -2939,8 +2939,8 @@
         "SupportVirtualDW"
       ],
       "goRefs": [
-        "extension_registration.go",
-        "client_extend_plugin_parity_test.go"
+        "internal/esper/extension_registration.go",
+        "internal/esper/client_extend_plugin_parity_test.go"
       ],
       "phase": 6,
       "status": "approved-difference",
@@ -2989,15 +2989,15 @@
         "ExprFilterNotEqualsConsolidate"
       ],
       "goRefs": [
-        "expr_filter_expressions_parity_test.go",
-        "expr_filter_in_and_between_parity_test.go",
-        "expr_filter_where_clause_parity_test.go",
-        "expr_filter_optimizable_parity_test.go",
-        "expr_filter_pattern_enum_parity_test.go",
-        "expr_filter_remaining_parity_test.go",
-        "expr.go",
-        "plan.go",
-        "expr_in_between.go"
+        "internal/esper/expr_filter_expressions_parity_test.go",
+        "internal/esper/expr_filter_in_and_between_parity_test.go",
+        "internal/esper/expr_filter_where_clause_parity_test.go",
+        "internal/esper/expr_filter_optimizable_parity_test.go",
+        "internal/esper/expr_filter_pattern_enum_parity_test.go",
+        "internal/esper/expr_filter_remaining_parity_test.go",
+        "internal/esper/expr.go",
+        "internal/esper/plan.go",
+        "internal/esper/expr_in_between.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3018,9 +3018,9 @@
         "PatternOperatorOrWHarness"
       ],
       "goRefs": [
-        "pattern_operator_parity_test.go",
-        "pattern_and_or_parity_test.go",
-        "runtime.go"
+        "internal/esper/pattern_operator_parity_test.go",
+        "internal/esper/pattern_and_or_parity_test.go",
+        "internal/esper/runtime.go"
       ],
       "phase": 3,
       "status": "mapped",
@@ -3068,19 +3068,19 @@
         "ExprEnumSelectFromEventsPlain"
       ],
       "goRefs": [
-        "expr_enum_parity_test.go",
-        "expr_enum_array_of_parity_test.go",
-        "expr_enum_sequence_equal_parity_test.go",
-        "expr_enum_except_intersect_union_parity_test.go",
-        "expr_enum_most_least_frequent_parity_test.go",
-        "expr_enum_to_map_parity_test.go",
-        "expr_enum_aggregate_parity_test.go",
-        "expr_enum_group_by_parity_test.go",
-        "expr_enum_chained_parity_test.go",
-        "expr_enum_nested_parity_test.go",
-        "expr_enum_doc_samples_parity_test.go",
-        "expr_enum_data_sources_parity_test.go",
-        "expr_enum_select_from_events_parity_test.go"
+        "internal/esper/expr_enum_parity_test.go",
+        "internal/esper/expr_enum_array_of_parity_test.go",
+        "internal/esper/expr_enum_sequence_equal_parity_test.go",
+        "internal/esper/expr_enum_except_intersect_union_parity_test.go",
+        "internal/esper/expr_enum_most_least_frequent_parity_test.go",
+        "internal/esper/expr_enum_to_map_parity_test.go",
+        "internal/esper/expr_enum_aggregate_parity_test.go",
+        "internal/esper/expr_enum_group_by_parity_test.go",
+        "internal/esper/expr_enum_chained_parity_test.go",
+        "internal/esper/expr_enum_nested_parity_test.go",
+        "internal/esper/expr_enum_doc_samples_parity_test.go",
+        "internal/esper/expr_enum_data_sources_parity_test.go",
+        "internal/esper/expr_enum_select_from_events_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3124,15 +3124,15 @@
         "ViewUnionSceneOne"
       ],
       "goRefs": [
-        "view_expression_parity_test.go",
-        "view_firstunique_parity_test.go",
-        "view_marketdata_parity_test.go",
-        "view_parity_test.go",
-        "view_timebatch_parity_test.go",
-        "view_timewin_parity_test.go",
-        "view_unique_parity_test.go",
-        "view_length_batch_parity_test.go",
-        "view_union_parity_test.go"
+        "internal/esper/view_expression_parity_test.go",
+        "internal/esper/view_firstunique_parity_test.go",
+        "internal/esper/view_marketdata_parity_test.go",
+        "internal/esper/view_parity_test.go",
+        "internal/esper/view_timebatch_parity_test.go",
+        "internal/esper/view_timewin_parity_test.go",
+        "internal/esper/view_unique_parity_test.go",
+        "internal/esper/view_length_batch_parity_test.go",
+        "internal/esper/view_union_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3154,7 +3154,7 @@
         "ResultSetAggregateMinNoGroupHaving"
       ],
       "goRefs": [
-        "resultset_aggregate_parity_test.go"
+        "internal/esper/resultset_aggregate_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3180,7 +3180,7 @@
         "EPLOtherIStreamRStreamConfigSelectorRStream"
       ],
       "goRefs": [
-        "view_parity_test.go"
+        "internal/esper/view_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3198,7 +3198,7 @@
         "EPLInsertIntoPropsWildcard"
       ],
       "goRefs": [
-        "insert_pattern_parity_test.go"
+        "internal/esper/insert_pattern_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -3230,9 +3230,9 @@
         "PatternNotWithEvery"
       ],
       "goRefs": [
-        "pattern_not_parity_test.go",
-        "runtime.go",
-        "pattern.go"
+        "internal/esper/pattern_not_parity_test.go",
+        "internal/esper/runtime.go",
+        "internal/esper/pattern.go"
       ],
       "phase": 3,
       "status": "mapped",
@@ -3260,9 +3260,9 @@
         "PatternFollowedOrPermFalse"
       ],
       "goRefs": [
-        "pattern_followedby_parity_test.go",
-        "runtime.go",
-        "pattern.go"
+        "internal/esper/pattern_followedby_parity_test.go",
+        "internal/esper/runtime.go",
+        "internal/esper/pattern.go"
       ],
       "phase": 3,
       "status": "mapped",
@@ -3294,9 +3294,9 @@
         "PatternEveryDistinctMultikeyWArray"
       ],
       "goRefs": [
-        "pattern_everydistinct_parity_test.go",
-        "pattern.go",
-        "runtime.go"
+        "internal/esper/pattern_everydistinct_parity_test.go",
+        "internal/esper/pattern.go",
+        "internal/esper/runtime.go"
       ],
       "phase": 3,
       "status": "mapped",
@@ -3320,9 +3320,9 @@
         "PatternInvalid"
       ],
       "goRefs": [
-        "pattern_matchuntil_parity_test.go",
-        "pattern.go",
-        "runtime.go"
+        "internal/esper/pattern_matchuntil_parity_test.go",
+        "internal/esper/pattern.go",
+        "internal/esper/runtime.go"
       ],
       "phase": 3,
       "status": "mapped",
@@ -3349,10 +3349,10 @@
         "PatternInvalid"
       ],
       "goRefs": [
-        "pattern_consuming_parity_test.go",
-        "pattern_consumption_test.go",
-        "runtime.go",
-        "plan.go"
+        "internal/esper/pattern_consuming_parity_test.go",
+        "internal/esper/pattern_consumption_test.go",
+        "internal/esper/runtime.go",
+        "internal/esper/plan.go"
       ],
       "phase": 3,
       "status": "mapped",
@@ -9582,8 +9582,8 @@
         "java-junit",
         "go-unit"
       ],
-     "difference": "Go maps sequenceEqual to typed EnumSequenceEqual over slices, preserving ordered element comparison, empty collections, Null input and Null elements; selectFrom(...).sequenceEqual(...) is composed from EnumSelect projections. Go uses explicit generic collection types and fluent Build diagnostics, while Java additionally validates event-collection inputs through EPL and exposes Java generic/representation metadata and exact compiler error text."
-   },
+      "difference": "Go maps sequenceEqual to typed EnumSequenceEqual over slices, preserving ordered element comparison, empty collections, Null input and Null elements; selectFrom(...).sequenceEqual(...) is composed from EnumSelect projections. Go uses explicit generic collection types and fluent Build diagnostics, while Java additionally validates event-collection inputs through EPL and exposes Java generic/representation metadata and exact compiler error text."
+    },
     {
       "id": "case.expr-enum-except-intersect-union",
       "javaRuntimeIds": [
@@ -9632,8 +9632,8 @@
         "java-junit",
         "go-unit"
       ],
-     "difference": "Go maps except/intersect/union to typed EnumExcept/EnumIntersect/EnumUnion over slices, matching Java removeAll/retainAll/concatenate semantics including null/empty right returning left unchanged and null left returning null. where(...).union(...) is composed from EnumWhere + EnumUnion, and intersect().countOf() filters use EnumCount. Go's typed nil slice fields in struct events expose as Present typed-nil rather than Null, so the null-items case is verified through direct NullLiteral evaluation. Java additionally validates event-type mismatches through EPL compilation and exposes event identity, schema inheritance and exact compiler error text."
-   },
+      "difference": "Go maps except/intersect/union to typed EnumExcept/EnumIntersect/EnumUnion over slices, matching Java removeAll/retainAll/concatenate semantics including null/empty right returning left unchanged and null left returning null. where(...).union(...) is composed from EnumWhere + EnumUnion, and intersect().countOf() filters use EnumCount. Go's typed nil slice fields in struct events expose as Present typed-nil rather than Null, so the null-items case is verified through direct NullLiteral evaluation. Java additionally validates event-type mismatches through EPL compilation and exposes event identity, schema inheritance and exact compiler error text."
+    },
     {
       "id": "case.expr-enum-most-least-frequent",
       "javaRuntimeIds": [

@@ -1,3 +1,5 @@
+本轮继续完成根包拆分：根目录从 486 个 Go 文件收敛到 `doc.go`、`facade_generated.go`、`facade_test.go` 三个文件；90 个实现文件和 395 个白盒/parity 测试迁入 `internal/esper` 并使用 `package esper`。AST 生成器维护类型别名、常量和顶层函数转发，Go 类型系统快照校验迁移前后 2,564 条公开对象/方法签名完全一致。结构门禁新增根文件数量、内部包名、facade 漂移、public/internal API 等价和 capability `goRefs` 存在性检查；416 条 Go 证据路径已同步。本轮不改变 Esper 行为或公共导入路径。
+
 本轮完成 Go 项目结构收敛：公共根包 `github.com/liubaicai/esper` 与公开 `connectors` 保持稳定；仓库专用对账代码迁入 `internal/compat`，版本化兼容资产迁入 `testdata/compat`，命令实现迁入 `internal/app`，`cmd` 只保留薄入口。新增 ADR-015、`docs/project-layout.md`、`.gitignore`、`Makefile` 与 `scripts/check-layout.sh`，清理 coverage/log 生成物，并将既有 Go 源统一为 `gofmt` 格式。该结构选择遵循 project-layout 对公共库的适用规则，不创建会改变现有导入路径的 `pkg/esper`。本轮只改变仓库边界和开发工具组织，不改变 Esper 运行时行为。
 
 本轮继续关闭 Java `ExprDefineBasic` 的 3 个 execution：`ExprDefineAggregationNoAccess`、`ExprDefineAggregatedResult`、`ExprDefineAggregationAccess`，新增 `expr_define_aggregation_parity_test.go`。Go 以 `Sum`/`CountAll`、声明表达式作为聚合输入和 `WindowAccessBy` + filtered access 表达 `sumA/sumB/countC`、`lambda1/lambda2` 与 `window(*).where(...)`，逐事件对照 Java 结果和空窗口集合语义。修复声明表达式参数在 aggregate group 内的求值边界：调用参数保留为惰性可分析表达式，避免整个声明绑定到代表事件；窗口访问的空 `Values()` 返回 present 的非 nil 空切片，匹配 Esper 空 collection。`case.expr-define-basic` 继续保持 mapped。Coverage 2,198/4,140（53.1%），346 case 中 329 mapped / 0 partial / 17 approved-difference。`OneParameterLambdaReturn`、ScalarReturn、AnnotationOrder、SequenceAndNested、CaseNew、Subquery 和 SplitStream 仍待后续切片。本轮不需要 MySQL Docker。
@@ -18,6 +20,8 @@
 
 # Esper 9.0.0 Go 全量移植规划实施文档
 
+> 最新补充：Draft 3.91（2026-08-12），完成根包实现拆分。根目录由 486 个 Go 文件降为三个公共 facade 文件；实现和白盒测试迁入 `internal/esper`。生成器与 Go 类型系统 API 门禁保证迁移前后 2,564 条公开对象/方法签名一致，capability 的 416 条 Go 引用同步到新路径。本轮无 Esper 行为变更。
+>
 > 最新补充：Draft 3.90（2026-08-12），完成 Go 项目结构收敛。公共根包与连接器导入路径保持不变；私有命令/对账实现迁入 `internal`，固定兼容资产迁入 `testdata/compat`，新增持续结构门禁、Makefile、忽略规则、目录说明和 ADR-015，并清除覆盖率/日志产物。本轮无 Esper 行为变更。
 >
 > 最新补充：Draft 3.89（2026-08-12），继续关闭 `ExprDefineBasic` 的 3 个聚合 execution（AggregationNoAccess、AggregatedResult、AggregationAccess），新增 `expr_define_aggregation_parity_test.go`。声明表达式调用参数改为 aggregate group 内惰性求值，窗口访问空 `Values()` 保留 present 空集合；`OneParameterLambdaReturn` 仍待后续切片。Coverage 2,198/4,140（53.1%），346 case 中 329 mapped / 0 partial / 17 approved-difference。本轮不需要 MySQL Docker。
