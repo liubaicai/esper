@@ -54,6 +54,14 @@ type infraTableSplitTrigger struct {
 	ID int64 `esper:"id"`
 }
 
+type infraTableArrayKeyEvent struct {
+	ID     string `esper:"id"`
+	IntOne []int  `esper:"intOne"`
+	Value  int64  `esper:"value"`
+}
+
+type infraTableArrayKeyTrigger struct{}
+
 // TestInfraTableAccessFilterBehaviorParity mirrors Java
 // InfraTableAccessCore.InfraFilterBehavior:
 //
@@ -1181,5 +1189,170 @@ func TestInfraTableAccessSplitStreamParity(t *testing.T) {
 	}
 	if !reflect.DeepEqual(values, []int64{10, 20}) {
 		t.Fatalf("table split-stream values = %#v, want [10 20]", values)
+	}
+}
+
+// TestInfraTableAccessMultikeyArrayOneArrayKeyParity mirrors Java
+// InfraTableAccessCore.InfraTableAccessMultikeyWArrayOneArrayKey. A slice
+// primary key is evaluated by contents, so distinct array values occupy
+// independent rows and a later lookup can retrieve the matching value.
+func TestInfraTableAccessMultikeyArrayOneArrayKeyParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableArrayKeyEvent](env, "SupportEventWithManyArray"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableArrayKeyTrigger](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "MyTable", []TableColumn{
+		PrimaryKeyColumn[[]int]("k"),
+		TableColumnOf[int64]("value"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	source := From[infraTableArrayKeyEvent](env, "SupportEventWithManyArray")
+	insertPlan, err := env.Build(
+		OnEvent(source.Filter(Equal[string](
+			Field[infraTableArrayKeyEvent, string]("id"),
+			Literal("I"),
+		))).InsertIntoTable("MyTable",
+			SetColumn("k", Field[infraTableArrayKeyEvent, []int]("intOne")),
+			SetColumn("value", Field[infraTableArrayKeyEvent, int64]("value")),
+		).Query(StatementName("table-array-key-populate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	queryPlan, err := env.Build(
+		OnEvent(source.Filter(Equal[string](
+			Field[infraTableArrayKeyEvent, string]("id"),
+			Literal("Q"),
+		))).SelectFromTable("MyTable", []Expr{
+			Field[infraTableArrayKeyEvent, []int]("intOne"),
+		}, Alias("c0", TableField[int64]("value"))).
+			Query(StatementName("table-array-key-read")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keys := SubqueryValues[[]int](
+		FromTable(env, "MyTable"),
+		Field[any, []int]("k"),
+	)
+	keysPlan, err := env.Build(
+		Select(From[infraTableArrayKeyTrigger](env, "SupportBean"), Alias("keys", keys)).
+			Query(StatementName("table-array-key-keys")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), insertPlan); err != nil {
+		t.Fatal(err)
+	}
+	queryDeployment, err := engine.Deploy(context.Background(), queryPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keysDeployment, err := engine.Deploy(context.Background(), keysPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var values []Value
+	if _, err := queryDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("single-array table lookup result is not a row: %#v", result)
+			}
+			values = append(values, row.Get("c0"))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	var keySnapshots [][][]int
+	if _, err := keysDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("single-array keys result is not a row: %#v", result)
+			}
+			got, ok := row.Get("keys").Any().([][]int)
+			if !ok {
+				t.Fatalf("single-array keys type = %T, want [][]int", row.Get("keys").Any())
+			}
+			keySnapshots = append(keySnapshots, got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	for _, event := range []infraTableArrayKeyEvent{
+		{ID: "I", IntOne: []int{1, 2}, Value: 10},
+		{ID: "I", IntOne: []int{2, 1}, Value: 20},
+		{ID: "I", IntOne: []int{1, 2, 1}, Value: 30},
+	} {
+		if err := engine.SendEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	query := func(key []int, want any) {
+		t.Helper()
+		if err := engine.SendEvent(ctx, infraTableArrayKeyEvent{ID: "Q", IntOne: key}); err != nil {
+			t.Fatal(err)
+		}
+		if len(values) == 0 {
+			t.Fatal("single-array table lookup produced no row")
+		}
+		got := values[len(values)-1]
+		if want == nil {
+			if !got.IsNull() {
+				t.Fatalf("single-array lookup %v = %#v, want null", key, got)
+			}
+			return
+		}
+		if got.Any() != want {
+			t.Fatalf("single-array lookup %v = %#v, want %v", key, got.Any(), want)
+		}
+	}
+	query([]int{1, 2}, int64(10))
+	query([]int{1, 2, 1}, int64(30))
+	query([]int{2, 1}, int64(20))
+	query([]int{1, 2, 2}, nil)
+
+	if err := engine.SendEvent(ctx, infraTableArrayKeyTrigger{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(keySnapshots) != 1 {
+		t.Fatalf("single-array keys snapshots = %d, want 1", len(keySnapshots))
+	}
+	wantKeys := [][]int{{1, 2}, {2, 1}, {1, 2, 1}}
+	gotKeys := keySnapshots[0]
+	if len(gotKeys) != len(wantKeys) {
+		t.Fatalf("single-array keys = %#v, want %#v", gotKeys, wantKeys)
+	}
+	used := make([]bool, len(wantKeys))
+	for _, got := range gotKeys {
+		found := false
+		for index, want := range wantKeys {
+			if !used[index] && reflect.DeepEqual(got, want) {
+				used[index] = true
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("single-array keys contains unexpected key %v: %#v", got, gotKeys)
+		}
 	}
 }
