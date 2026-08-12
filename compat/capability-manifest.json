@@ -19644,6 +19644,50 @@
         "go-unit"
       ],
       "difference": "Go uses IntersectWindows/UnionWindows fluent API with FirstLength, FirstUnique, LengthBatch, Unique, SortWindow and GroupWindow children. Child view synchronisation matches Esper IntersectDefaultView forwarding removals to every child. Named Window, Pattern, and Subselect variants remain separate."
+    },
+    {
+      "id": "case.expr-define-basic",
+      "javaRuntimeIds": [
+        "java-runtime-1d400e3572302c3bfe2e",
+        "java-runtime-2db77a0f128f3dded88c",
+        "java-runtime-9625470fc1836fb0c00e",
+        "java-runtime-bced839940f423ec402e",
+        "java-runtime-d5a97ec9ef06043d8b0c",
+        "java-runtime-287bb162ff3da40a5022"
+      ],
+      "javaStaticIds": [],
+      "javaNames": [
+        "ExprDefineExpressionSimpleSameStmt",
+        "ExprDefineExpressionSimpleSameModule",
+        "ExprDefineNoParameterArithmetic",
+        "ExprDefineNoParameterVariable",
+        "ExprDefineStaticMethodSingleParam",
+        "ExprDefineInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineBasic.java"
+      ],
+      "goTests": [
+        "TestExprDefineSimpleLiteralParity",
+        "TestExprDefineNoParameterArithmeticParity",
+        "TestExprDefineNoParameterVariableParity",
+        "TestExprDefineStaticMethodSingleParamParity",
+        "TestExprDefineParameterCountMismatchParity",
+        "TestExprDefineTooManyArgumentsParity"
+      ],
+      "tags": [
+        "correctness",
+        "expr",
+        "define",
+        "expression"
+      ],
+      "status": "partial",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "go-unit"
+      ],
+      "difference": "Go covers simple literal, arithmetic, variable-driven and passthrough expression definitions, plus parameter-count mismatch validation. Parameterized expressions with aggregation (sumA(t)), filter-context parameterized expressions, subquery-backed definitions, pattern/wildcard, case-new multi-return and split-stream variants require deeper engine integration and remain future work."
     }
   ],
   "mappings": [
@@ -20989,11 +21033,11 @@
     }
   ],
   "summary": {
-    "totalCases": 336,
+    "totalCases": 337,
     "totalCapabilities": 108,
     "mappedCases": 318,
-    "partialCases": 1,
+    "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2102
+    "disposedRuntimeIds": 2108
   }
 }
