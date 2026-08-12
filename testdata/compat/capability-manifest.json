@@ -20501,6 +20501,32 @@
         "Go RegisterObjectArray + LengthWindow(2) + WindowAccessBy + Sum materializes an ungrouped table row; SelectFromTableWhere returns a StructOf map with the window events and running total after each object-array input."
       ],
       "difference": "Java's top-level table row and typable AggBean output are represented by an explicit Go map projection and schema-bound Event values; grouped, named output, method/access, context, join, split-stream and array-key table executions remain open."
+    },
+    {
+      "id": "case.infra-table-access-top-level-read-grouped-two-keys",
+      "javaRuntimeIds": [
+        "java-runtime-7e7f078ff379d781e502"
+      ],
+      "javaNames": [
+        "InfraTopLevelReadGrouped2Keys"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessTopLevelReadGroupedTwoKeysParity"
+      ],
+      "tags": [
+        "table",
+        "object-array",
+        "primary-key",
+        "grouped-window-access"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go RegisterObjectArray + GroupBy(c0,c1) + LengthWindow(2) + IntoTable maintains independent two-key rows; SelectFromTable verifies G1 eviction as null and G2's [20,20],500 snapshot after the global window advances."
+      ],
+      "difference": "Java's typable fragment and SODA forms are represented by a StructOf map and immutable fluent Plan; grouped table method/access, context, named output, join, split-stream and array-key matrices remain open."
     }
   ],
   "mappings": [
@@ -21919,14 +21945,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-top-level-read-ungrouped"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-top-level-read-grouped-two-keys"
     }
   ],
   "summary": {
-    "totalCases": 352,
+    "totalCases": 353,
     "totalCapabilities": 110,
-    "mappedCases": 335,
+    "mappedCases": 336,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2202
+    "disposedRuntimeIds": 2203
   }
 }

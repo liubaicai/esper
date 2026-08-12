@@ -33,6 +33,11 @@ type infraTableIndexedTrigger struct {
 	ID int64 `esper:"id"`
 }
 
+type infraTableGroupedTrigger struct {
+	ID  int64  `esper:"id"`
+	P00 string `esper:"p00"`
+}
+
 // TestInfraTableAccessFilterBehaviorParity mirrors Java
 // InfraTableAccessCore.InfraFilterBehavior:
 //
@@ -472,4 +477,137 @@ func TestInfraTableAccessTopLevelReadUngroupedParity(t *testing.T) {
 	sendAndRead(10, 0, []int64{10}, 10)
 	sendAndRead(20, 1, []int64{10, 20}, 30)
 	sendAndRead(30, 2, []int64{20, 30}, 50)
+}
+
+// TestInfraTableAccessTopLevelReadGroupedTwoKeysParity mirrors Java
+// InfraTableAccessCore.InfraTopLevelReadGrouped2Keys. The two primary-key
+// columns are looked up explicitly and a missing group is represented by the
+// same present-but-null map fields used by the ungrouped table projection.
+func TestInfraTableAccessTopLevelReadGroupedTwoKeysParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterObjectArray(env, "MyEventOA", []FieldSpec{
+		FieldDef("c0", reflect.TypeOf(int64(0))),
+		FieldDef("c1", reflect.TypeOf("")),
+		FieldDef("c2", reflect.TypeOf(int64(0))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableGroupedTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "windowAndTotalTLP2K", []TableColumn{
+		PrimaryKeyColumn[int64]("keyi"),
+		PrimaryKeyColumn[string]("keys"),
+		TableColumnOf[WindowAccessValue[Event]]("thewindow"),
+		TableColumnOf[int64]("thetotal"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	keyInt := Field[any, int64]("c0")
+	keyString := Field[any, string]("c1")
+	window := WindowAccessBy[Event](EventValue[Event]())
+	aggregatePlan, err := env.Build(
+		FromAny(env, "MyEventOA").
+			Window(LengthWindow(2)).
+			GroupBy(keyInt, keyString).
+			Select(
+				Alias("keyi", keyInt),
+				Alias("keys", keyString),
+				Alias("thewindow", window),
+				Alias("thetotal", Sum[int64](Field[any, int64]("c2"))),
+			).
+			IntoTable("windowAndTotalTLP2K", StatementName("tlp2k-aggregate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableWindow := TableField[WindowAccessValue[Event]]("thewindow")
+	rowProjection := StructOf(
+		Alias("thewindow", Method[[]Event](tableWindow, "Values")),
+		Alias("thetotal", TableField[int64]("thetotal")),
+	)
+	triggerPlan, err := env.Build(
+		OnEvent(From[infraTableGroupedTrigger](env, "SupportBean_S0")).
+			SelectFromTable("windowAndTotalTLP2K", []Expr{
+				Field[infraTableGroupedTrigger, int64]("id"),
+				Field[infraTableGroupedTrigger, string]("p00"),
+			}, Alias("val0", rowProjection)).
+			Query(StatementName("tlp2k-read")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), triggerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("grouped top-level table result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	read := func(event []any, id int64, key string) map[string]any {
+		t.Helper()
+		if event != nil {
+			if err := engine.SendObjectArray(ctx, "MyEventOA", event); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := engine.SendEvent(ctx, infraTableGroupedTrigger{ID: id, P00: key}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) == 0 {
+			t.Fatal("grouped top-level table trigger produced no row")
+		}
+		value := rows[len(rows)-1].Get("val0").Any()
+		projected, ok := value.(map[string]any)
+		if !ok {
+			t.Fatalf("grouped val0 type = %T", value)
+		}
+		return projected
+	}
+	assertGroup := func(projected map[string]any, wantValues []int64, wantTotal any) {
+		t.Helper()
+		if projected["thetotal"] != wantTotal {
+			t.Fatalf("grouped table total = %#v, want %#v", projected["thetotal"], wantTotal)
+		}
+		events, ok := projected["thewindow"].([]Event)
+		if wantValues == nil {
+			if projected["thewindow"] != nil {
+				t.Fatalf("missing grouped table window = %#v, want nil", projected["thewindow"])
+			}
+			return
+		}
+		if !ok || len(events) != len(wantValues) {
+			t.Fatalf("grouped table window = %#v, want %d events", projected["thewindow"], len(wantValues))
+		}
+		for index, want := range wantValues {
+			if got := events[index].Get("c0").Any(); got != want {
+				t.Fatalf("grouped table window index %d = %#v, want %d", index, got, want)
+			}
+		}
+	}
+
+	assertGroup(read([]any{int64(10), "G1", int64(100)}, 10, "G1"), []int64{10}, int64(100))
+	assertGroup(read([]any{int64(20), "G2", int64(200)}, 20, "G2"), []int64{20}, int64(200))
+	missing := read([]any{int64(20), "G2", int64(300)}, 10, "G1")
+	assertGroup(missing, nil, nil)
+	assertGroup(read(nil, 20, "G2"), []int64{20, 20}, int64(500))
 }
