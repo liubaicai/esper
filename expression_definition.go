@@ -24,6 +24,15 @@ type ExpressionParameterSpec struct {
 	Type reflect.Type
 }
 
+// expressionParameterBinding keeps a named-expression call argument lazy.
+// Aggregate expressions evaluate their input expression once for every event
+// in the current group; evaluating the argument before entering that loop
+// would incorrectly bind the whole declaration to the call's representative
+// event.
+type expressionParameterBinding struct {
+	expression Expr
+}
+
 // DefineExpression registers a named expression in the environment. Define
 // expressions before creating ExpressionRef nodes so their dependency tree
 // can be captured in the plan during Build. Definitions are immutable after
@@ -138,7 +147,7 @@ func ExpressionRef[T any](env *Environment, name string, arguments ...Expr) Expr
 			if argument == nil {
 				return Missing()
 			}
-			bindings[definition.Parameters[index].Name] = argument.eval(ctx)
+			bindings[definition.Parameters[index].Name] = Present(expressionParameterBinding{expression: argument})
 		}
 		invocationContext := ctx
 		parameters := make(map[string]Value, len(ctx.Parameters)+len(bindings))
@@ -235,4 +244,18 @@ func expressionTypesCompatible(expected, actual reflect.Type) bool {
 		return true
 	}
 	return expected == actual || expected.AssignableTo(actual) || actual.AssignableTo(expected) || numericTypes(expected, actual)
+}
+
+func evaluateExpressionParameterBinding(value Value, ctx EvalContext) Value {
+	for depth := 0; depth < 32; depth++ {
+		binding, ok := value.Any().(expressionParameterBinding)
+		if !ok {
+			return value
+		}
+		if binding.expression == nil {
+			return Missing()
+		}
+		value = binding.expression.eval(ctx)
+	}
+	return Missing()
 }

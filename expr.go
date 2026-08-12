@@ -1649,7 +1649,7 @@ func ExpressionParam[T any](name string) Expression[T] {
 		if !ok {
 			return Missing()
 		}
-		return value
+		return evaluateExpressionParameterBinding(value, ctx)
 	}}
 }
 
@@ -5835,7 +5835,14 @@ type WindowAccessValue[V any] struct {
 	values []V
 }
 
-func (w WindowAccessValue[V]) Values() []V { return append([]V(nil), w.values...) }
+func (w WindowAccessValue[V]) Values() []V {
+	// Keep an empty access result as a present, non-nil slice. A typed nil
+	// slice would be converted to Null by the expression value model, while
+	// Esper's window(*) access returns an empty collection for zero matches.
+	values := make([]V, len(w.values))
+	copy(values, w.values)
+	return values
+}
 func (w WindowAccessValue[V]) CountEvents() int64 {
 	return int64(len(w.values))
 }

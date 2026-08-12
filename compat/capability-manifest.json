@@ -543,7 +543,8 @@
         "plan.go",
         "expr_define_basic_parity_test.go",
         "expr_define_remaining_parity_test.go",
-        "expr_define_value_alias_parity_test.go"
+        "expr_define_value_alias_parity_test.go",
+        "expr_define_aggregation_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -20181,6 +20182,9 @@
       "javaRuntimeIds": [
         "java-runtime-1d400e3572302c3bfe2e",
         "java-runtime-2db77a0f128f3dded88c",
+        "java-runtime-03ab2c0581ef51053798",
+        "java-runtime-c4d3a7edb4ddabf9b0f7",
+        "java-runtime-712e9bb9390056e8a639",
         "java-runtime-9625470fc1836fb0c00e",
         "java-runtime-bced839940f423ec402e",
         "java-runtime-d5a97ec9ef06043d8b0c",
@@ -20194,6 +20198,9 @@
       "javaNames": [
         "ExprDefineExpressionSimpleSameStmt",
         "ExprDefineExpressionSimpleSameModule",
+        "ExprDefineAggregationNoAccess",
+        "ExprDefineAggregatedResult",
+        "ExprDefineAggregationAccess",
         "ExprDefineNoParameterArithmetic",
         "ExprDefineNoParameterVariable",
         "ExprDefineStaticMethodSingleParam",
@@ -20208,6 +20215,9 @@
       ],
       "goTests": [
         "TestExprDefineSimpleLiteralParity",
+        "TestExprDefineAggregationNoAccessParity",
+        "TestExprDefineAggregatedResultParity",
+        "TestExprDefineAggregationAccessParity",
         "TestExprDefineNoParameterArithmeticParity",
         "TestExprDefineNoParameterVariableParity",
         "TestExprDefineStaticMethodSingleParamParity",
@@ -20231,7 +20241,7 @@
         "java-source",
         "go-unit"
       ],
-      "difference": "Go covers simple literal, arithmetic, variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, the correlated pattern filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) via PatternEvent, parameterized declared expressions evaluated in the where/filter clause, and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip and the textual 'alias for' variant are approved differences (Go uses an immutable fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. Aggregation, subquery, case-new and split-stream variants remain future work."
+      "difference": "Go covers simple literal, aggregate-without-access definitions (sumA/sumB/countC), declared expressions used as aggregate inputs (lambda1/lambda2), window access aggregation (wb), variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, the correlated pattern filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) via PatternEvent, parameterized declared expressions evaluated in the where/filter clause, and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip and the textual 'alias for' variant are approved differences (Go uses an immutable fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. The separate ExprDefineOneParameterLambdaReturn execution, scalar-return, annotation-order, sequence/nested, case-new, subquery and split-stream variants remain future work."
     }
   ],
   "mappings": [
@@ -21634,6 +21644,6 @@
     "mappedCases": 329,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2195
+    "disposedRuntimeIds": 2198
   }
 }
