@@ -20552,7 +20552,61 @@
       "evidence": [
         "Go GroupBy(theString) + IntoTable maintains running sums for A/B/C/D; SelectFromTable uses the trigger key and OuterField projection to match Java's A=21, B=41, C=30, D=40 trajectory and preserves a null value for missing Z."
       ],
-      "difference": "Java top-level table member access is represented by SelectFromTable with explicit OuterField/TableField scope; SODA and the remaining two/three-key, context, method/access, join, split-stream and array-key matrices remain open."
+      "difference": "Java top-level table member access is represented by SelectFromTable with explicit OuterField/TableField scope; SODA, context, method/access, join, split-stream and array-key matrices remain open."
+    },
+    {
+      "id": "case.infra-table-access-grouped-two-keys",
+      "javaRuntimeIds": [
+        "java-runtime-3ad6a5913e413b86733e"
+      ],
+      "javaNames": [
+        "InfraGroupedTwoKeyNoContext"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessGroupedTwoKeyNoContextParity"
+      ],
+      "tags": [
+        "table",
+        "grouped-aggregate",
+        "primary-key",
+        "multi-key",
+        "outer-scope"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go GroupBy(theString,intPrimitive) + IntoTable maintains a two-column primary-key aggregate; SelectFromTable evaluates both trigger keys and preserves present-null values for missing key combinations."
+      ],
+      "difference": "Java top-level table member access is represented by SelectFromTable with explicit trigger/table scopes; SODA, context, method/access, join, split-stream and array-key matrices remain open."
+    },
+    {
+      "id": "case.infra-table-access-grouped-three-keys",
+      "javaRuntimeIds": [
+        "java-runtime-c8146c4631693746bd0f"
+      ],
+      "javaNames": [
+        "InfraGroupedThreeKeyNoContext"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableAccessCore.java"
+      ],
+      "goTests": [
+        "TestInfraTableAccessGroupedThreeKeyNoContextParity"
+      ],
+      "tags": [
+        "table",
+        "grouped-aggregate",
+        "primary-key",
+        "multi-key",
+        "outer-scope"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go GroupBy(theString,intPrimitive,longPrimitive) + IntoTable maintains a three-column primary-key aggregate; SelectFromTable evaluates two trigger keys plus the literal third key and verifies sum(doublePrimitive) and count(*)."
+      ],
+      "difference": "Java top-level table member access is represented by SelectFromTable with explicit trigger/table scopes; SODA, context, method/access, join, split-stream and array-key matrices remain open."
     }
   ],
   "mappings": [
@@ -21979,14 +22033,22 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-grouped-single-key"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-grouped-two-keys"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-access-grouped-three-keys"
     }
   ],
   "summary": {
-    "totalCases": 354,
+    "totalCases": 356,
     "totalCapabilities": 110,
-    "mappedCases": 337,
+    "mappedCases": 339,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2204
+    "disposedRuntimeIds": 2206
   }
 }

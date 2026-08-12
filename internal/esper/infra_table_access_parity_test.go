@@ -43,6 +43,13 @@ type infraTableGroupedSingleBean struct {
 	IntPrimitive int64  `esper:"intPrimitive"`
 }
 
+type infraTableGroupedMultiBean struct {
+	TheString       string  `esper:"theString"`
+	IntPrimitive    int64   `esper:"intPrimitive"`
+	LongPrimitive   int64   `esper:"longPrimitive"`
+	DoublePrimitive float64 `esper:"doublePrimitive"`
+}
+
 // TestInfraTableAccessFilterBehaviorParity mirrors Java
 // InfraTableAccessCore.InfraFilterBehavior:
 //
@@ -736,4 +743,202 @@ func TestInfraTableAccessGroupedSingleKeyNoContextParity(t *testing.T) {
 	sendAndRead("C", int64(30))
 	sendAndRead("D", int64(40))
 	sendAndRead("Z", nil)
+}
+
+// TestInfraTableAccessGroupedTwoKeyNoContextParity mirrors Java
+// InfraTableAccessCore.InfraGroupedTwoKeyNoContext. Both primary-key
+// expressions are evaluated from the trigger event and missing combinations
+// retain the table selector's present-null projection semantics.
+func TestInfraTableAccessGroupedTwoKeyNoContextParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableGroupedMultiBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableGroupedTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "varTotalG2K", []TableColumn{
+		PrimaryKeyColumn[string]("key0"),
+		PrimaryKeyColumn[int64]("key1"),
+		TableColumnOf[int64]("total"),
+		TableColumnOf[int64]("cnt"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	groupString := Field[infraTableGroupedMultiBean, string]("theString")
+	groupInt := Field[infraTableGroupedMultiBean, int64]("intPrimitive")
+	aggregatePlan, err := env.Build(
+		From[infraTableGroupedMultiBean](env, "SupportBean").
+			GroupBy(groupString, groupInt).
+			Select(
+				Alias("key0", groupString),
+				Alias("key1", groupInt),
+				Alias("total", Sum[int64](Field[infraTableGroupedMultiBean, int64]("longPrimitive"))),
+				Alias("cnt", CountAll()),
+			).
+			IntoTable("varTotalG2K", StatementName("grouped-two-aggregate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	triggerString := Field[infraTableGroupedTrigger, string]("p00")
+	triggerInt := Field[infraTableGroupedTrigger, int64]("id")
+	triggerPlan, err := env.Build(
+		OnEvent(From[infraTableGroupedTrigger](env, "SupportBean_S0")).
+			SelectFromTable("varTotalG2K", []Expr{triggerString, triggerInt},
+				Alias("c0", TableField[int64]("total")),
+				Alias("c1", TableField[int64]("cnt")),
+			).
+			Query(StatementName("grouped-two-read")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), triggerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("grouped two-key result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	read := func(key string, id int64, wantTotal, wantCount any) {
+		t.Helper()
+		if err := engine.SendEvent(ctx, infraTableGroupedTrigger{P00: key, ID: id}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) == 0 {
+			t.Fatal("grouped two-key lookup produced no row")
+		}
+		row := rows[len(rows)-1]
+		if row.Get("c0").Any() != wantTotal || row.Get("c1").Any() != wantCount {
+			t.Fatalf("grouped two-key lookup %s/%d = %#v, want %v/%v", key, id, row.AsMap(), wantTotal, wantCount)
+		}
+	}
+
+	if err := engine.SendEvent(ctx, infraTableGroupedMultiBean{TheString: "E1", IntPrimitive: 10, LongPrimitive: 100}); err != nil {
+		t.Fatal(err)
+	}
+	read("E1", 10, int64(100), int64(1))
+	read("E1", 0, nil, nil)
+	read("E2", 10, nil, nil)
+}
+
+// TestInfraTableAccessGroupedThreeKeyNoContextParity mirrors Java
+// InfraTableAccessCore.InfraGroupedThreeKeyNoContext. The third key is a
+// literal in the trigger lookup, matching the Java 100L access expression.
+func TestInfraTableAccessGroupedThreeKeyNoContextParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[infraTableGroupedMultiBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[infraTableGroupedTrigger](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateTable(env, "varTotalG3K", []TableColumn{
+		PrimaryKeyColumn[string]("key0"),
+		PrimaryKeyColumn[int64]("key1"),
+		PrimaryKeyColumn[int64]("key2"),
+		TableColumnOf[float64]("total"),
+		TableColumnOf[int64]("cnt"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	groupString := Field[infraTableGroupedMultiBean, string]("theString")
+	groupInt := Field[infraTableGroupedMultiBean, int64]("intPrimitive")
+	groupLong := Field[infraTableGroupedMultiBean, int64]("longPrimitive")
+	aggregatePlan, err := env.Build(
+		From[infraTableGroupedMultiBean](env, "SupportBean").
+			GroupBy(groupString, groupInt, groupLong).
+			Select(
+				Alias("key0", groupString),
+				Alias("key1", groupInt),
+				Alias("key2", groupLong),
+				Alias("total", Sum[float64](Field[infraTableGroupedMultiBean, float64]("doublePrimitive"))),
+				Alias("cnt", CountAll()),
+			).
+			IntoTable("varTotalG3K", StatementName("grouped-three-aggregate")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	triggerString := Field[infraTableGroupedTrigger, string]("p00")
+	triggerInt := Field[infraTableGroupedTrigger, int64]("id")
+	triggerPlan, err := env.Build(
+		OnEvent(From[infraTableGroupedTrigger](env, "SupportBean_S0")).
+			SelectFromTable("varTotalG3K", []Expr{triggerString, triggerInt, Literal[int64](100)},
+				Alias("c0", TableField[float64]("total")),
+				Alias("c1", TableField[int64]("cnt")),
+			).
+			Query(StatementName("grouped-three-read")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), aggregatePlan); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), triggerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("grouped three-key result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	read := func(key string, id int64, wantTotal float64, wantCount int64) {
+		t.Helper()
+		if err := engine.SendEvent(ctx, infraTableGroupedTrigger{P00: key, ID: id}); err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) == 0 {
+			t.Fatal("grouped three-key lookup produced no row")
+		}
+		row := rows[len(rows)-1]
+		if row.Get("c0").Any() != wantTotal || row.Get("c1").Any() != wantCount {
+			t.Fatalf("grouped three-key lookup %s/%d = %#v, want %v/%v", key, id, row.AsMap(), wantTotal, wantCount)
+		}
+	}
+
+	if err := engine.SendEvent(ctx, infraTableGroupedMultiBean{TheString: "E1", IntPrimitive: 10, LongPrimitive: 100, DoublePrimitive: 1000}); err != nil {
+		t.Fatal(err)
+	}
+	read("E1", 10, 1000, 1)
+	if err := engine.SendEvent(ctx, infraTableGroupedMultiBean{TheString: "E1", IntPrimitive: 10, LongPrimitive: 100, DoublePrimitive: 1001}); err != nil {
+		t.Fatal(err)
+	}
+	read("E1", 10, 2001, 2)
 }
