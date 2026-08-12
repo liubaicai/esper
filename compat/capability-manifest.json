@@ -3075,14 +3075,14 @@
         "expr_enum_to_map_parity_test.go",
         "expr_enum_aggregate_parity_test.go",
         "expr_enum_group_by_parity_test.go",
-        "expr_enum_chained_parity_test.go"
+        "expr_enum_chained_parity_test.go",
+        "expr_enum_nested_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
       "remaining": [
         "ExprEnumDataSources suite",
-        "ExprEnumDocSamples suite",
-        "ExprEnumNested suite"
+        "ExprEnumDocSamples suite"
       ]
     },
     {
@@ -10248,6 +10248,45 @@
         "go-unit"
       ],
       "difference": "Go composes chained enum methods by nesting expressions: EnumWhere feeds its Expression[[]T] output directly into EnumMinOf, matching Java's dot-chain semantics. Nested property paths (buyer.age) resolve through getPropertyPath. Java's EPL chain syntax, lambda parameter naming and exact chain-validation diagnostics remain fluent API differences."
+    },
+    {
+      "id": "case.expr-enum-nested",
+      "javaRuntimeIds": [
+        "java-runtime-aa709c39535a0c856e5e",
+        "java-runtime-b39bc0c98a135b86c145",
+        "java-runtime-898354478b76eab4ff08",
+        "java-runtime-61315bf5ad9bca751b32"
+      ],
+      "javaNames": [
+        "ExprEnumEquivalentToMinByUncorrelated",
+        "ExprEnumMinByWhere",
+        "ExprEnumCorrelated",
+        "ExprEnumAnyOf"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/enummethod/ExprEnumNested.java"
+      ],
+      "goTests": [
+        "TestExprEnumNestedMinByUncorrelatedParity",
+        "TestExprEnumNestedMinByWhereParity",
+        "TestExprEnumNestedAnyOfParity"
+      ],
+      "tags": [
+        "correctness",
+        "expression",
+        "enum",
+        "nested",
+        "correlated",
+        "any-of",
+        "min-by"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-junit",
+        "go-unit"
+      ],
+      "difference": "Go covers uncorrelated nested enum methods (EnumMinOf/EnumMinBy inside EnumWhere predicate) and nested EnumAnyOf (inner collection from outer element property). The ExprEnumCorrelated execution requires referencing the outer lambda element (x.p00) from inside an inner EnumFirstOf predicate; Go's EnumElement always returns the innermost enum-context value, so declarative outer-element correlation is not yet supported and remains open. Java's EPL lambda parameter naming, correlated-cache behavior and exact compiler diagnostics also remain fluent API differences."
     },
     {
       "id": "case.aggregate-dimensional",
@@ -21252,6 +21291,10 @@
       "caseId": "case.expr-enum-chained"
     },
     {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.expr-enum-nested"
+    },
+    {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-basic-windows"
     },
@@ -21441,11 +21484,11 @@
     }
   ],
   "summary": {
-    "totalCases": 343,
+    "totalCases": 344,
     "totalCapabilities": 108,
-    "mappedCases": 324,
+    "mappedCases": 325,
     "partialCases": 2,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2153
+    "disposedRuntimeIds": 2157
   }
 }
