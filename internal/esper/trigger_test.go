@@ -267,10 +267,10 @@ func TestTableTriggerEmitsMutationNewAndOldStreams(t *testing.T) {
 	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(*deleteBatches) != 1 || len((*deleteBatches)[0].New) != 0 || len((*deleteBatches)[0].Old) != 1 {
+	if len(*deleteBatches) != 1 || len((*deleteBatches)[0].New) != 1 || len((*deleteBatches)[0].Old) != 0 {
 		t.Fatalf("delete mutation batch = %#v", *deleteBatches)
 	}
-	assertPrice((*deleteBatches)[0].Old[0], 2)
+	assertPrice((*deleteBatches)[0].New[0], 2)
 	if err := engine.Undeploy(context.Background(), deleteDeployment.ID()); err != nil {
 		t.Fatal(err)
 	}
@@ -290,11 +290,11 @@ func TestTableTriggerEmitsMutationNewAndOldStreams(t *testing.T) {
 	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "ignored"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(*deleteAllBatches) != 1 || len((*deleteAllBatches)[0].New) != 0 || len((*deleteAllBatches)[0].Old) != 2 {
+	if len(*deleteAllBatches) != 1 || len((*deleteAllBatches)[0].New) != 2 || len((*deleteAllBatches)[0].Old) != 0 {
 		t.Fatalf("delete-all mutation batch = %#v", *deleteAllBatches)
 	}
-	assertPrice((*deleteAllBatches)[0].Old[0], 3)
-	assertPrice((*deleteAllBatches)[0].Old[1], 4)
+	assertPrice((*deleteAllBatches)[0].New[0], 3)
+	assertPrice((*deleteAllBatches)[0].New[1], 4)
 }
 
 func TestTablePredicateTriggerMutatesEveryMatchingRow(t *testing.T) {
@@ -344,7 +344,7 @@ func TestTablePredicateTriggerMutatesEveryMatchingRow(t *testing.T) {
 	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: 5}); err != nil {
 		t.Fatal(err)
 	}
-	if len(deleteBatches) != 1 || len(deleteBatches[0].Old) != 2 || len(deleteBatches[0].New) != 0 {
+	if len(deleteBatches) != 1 || len(deleteBatches[0].New) != 2 || len(deleteBatches[0].Old) != 0 {
 		t.Fatalf("predicate delete batch = %#v", deleteBatches)
 	}
 	if _, found, err := table.Get(context.Background(), "A"); err != nil || found {
@@ -998,8 +998,8 @@ func TestTableMergeWithoutPrimaryKeyUsesExistingRowAsMatch(t *testing.T) {
 	if err := engine.SendEvent(context.Background(), triggerTestReset{ID: "clear"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(deleteBatches) != 1 || len(deleteBatches[0].Old) != 1 || len(deleteBatches[0].New) != 0 ||
-		deleteBatches[0].Old[0].Get("symbol").Any() != "xE1x" {
+	if len(deleteBatches) != 1 || len(deleteBatches[0].New) != 1 || len(deleteBatches[0].Old) != 0 ||
+		deleteBatches[0].New[0].Get("symbol").Any() != "xE1x" {
 		t.Fatalf("no-key delete-all batch = %#v", deleteBatches)
 	}
 	if err := deleteDeployment.Undeploy(context.Background()); err != nil {

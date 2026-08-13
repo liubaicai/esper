@@ -1560,7 +1560,14 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 			if convertErr != nil {
 				return convertErr
 			}
-			result.Old = append(result.Old, oldResults...)
+			if definition.action == triggerDeleteTable || definition.action == triggerDeleteAllTable {
+				// Esper on-delete statements publish deleted table rows as
+				// new data. Merge-delete remains an old-data transition because
+				// its action kind is triggerMergeTable.
+				result.New = append(result.New, oldResults...)
+			} else {
+				result.Old = append(result.Old, oldResults...)
+			}
 			result.New = append(result.New, newResults...)
 		}
 		return nil

@@ -507,7 +507,8 @@
         "internal/esper/expr_core_previous_parity_test.go",
         "internal/esper/expr_core_prior_parity_test.go",
         "internal/esper/infra_table_access_dot_method_parity_test.go",
-        "internal/esper/infra_table_on_merge_parity_test.go"
+        "internal/esper/infra_table_on_merge_parity_test.go",
+        "internal/esper/infra_table_on_delete_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -1153,6 +1154,7 @@
         "internal/esper/subquery_join_test.go",
         "internal/esper/join_where_test.go",
         "internal/esper/subquery_enum_chain_test.go",
+        "internal/esper/infra_table_on_delete_parity_test.go",
         "internal/esper/pattern_subquery_test.go",
         "internal/esper/pattern_subquery_filter_variants_test.go",
         "internal/esper/pattern_subquery_invalid_test.go",
@@ -21071,6 +21073,40 @@
         "go-unit"
       ],
       "difference": "Java's EPL/SODA construction is represented by immutable fluent Plans. Java int/Integer/Double[] values map to explicit int64 and pointer-valued slices, while output values, row lifecycle, action priority and merge branch behavior follow the Java trace."
+    },
+    {
+      "id": "case.infra-table-on-delete",
+      "javaRuntimeIds": [
+        "java-runtime-9cf94d05aeb979e11ed6",
+        "java-runtime-9a8a6dde31923ba9d824"
+      ],
+      "javaNames": [
+        "InfraDeleteFlow",
+        "InfraDeleteSecondaryIndexUpd"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableOnDelete.java"
+      ],
+      "goTests": [
+        "TestInfraTableOnDeleteFlowParity",
+        "TestInfraTableOnDeleteSecondaryIndexUpdateParity"
+      ],
+      "tags": [
+        "table",
+        "on-delete",
+        "delete-all",
+        "secondary-index",
+        "subquery-sum",
+        "into-table"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go maps InfraDeleteFlow with grouped into-table sums, typed keyed lookups, filtered single-row delete and delete-all. The delete listeners receive removed table rows as new data exactly like Java: G1/10 for the keyed delete and G2/20 for delete-all, while later lookups return present Null values.",
+        "Go maps InfraDeleteSecondaryIndexUpd with a declared MyIdx hash index and a correlated aggregate table subquery. The E1/E2/E3 sums follow 6/8/null, 6/10/77, 2/10/77 and 2/7/77 across aggregate updates and two composite-key deletes.",
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java create-index deployment is represented by the immutable SecondaryIndex table option, and Java on-trigger select sum(thesum) is represented by SubqueryValueWithOptions over Sum with SubqueryUseIndex. EPL text construction is outside the fluent Go API boundary."
     }
   ],
   "mappings": [
@@ -22609,14 +22645,22 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-on-merge"
+    },
+    {
+      "capabilityId": "query.subquery-basic",
+      "caseId": "case.infra-table-on-delete"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-on-delete"
     }
   ],
   "summary": {
-    "totalCases": 371,
+    "totalCases": 372,
     "totalCapabilities": 110,
-    "mappedCases": 354,
+    "mappedCases": 355,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2235
+    "disposedRuntimeIds": 2237
   }
 }
