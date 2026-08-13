@@ -2644,6 +2644,7 @@ func (e *Engine) deployPreparedRequestsLocked(ctx context.Context, requests []de
 	}
 	for _, statement := range deployment.statements {
 		e.materializePreallocatedHashContextLocked(statement)
+		e.materializeCategoryContextLocked(statement)
 	}
 	contextEvents := e.takeContextEventsLocked()
 	auditRecords, auditListeners := e.takeAuditDispatchLocked()
@@ -2685,6 +2686,45 @@ func (e *Engine) materializePreallocatedHashContextLocked(statement *Statement) 
 		partitionRuntime.partitionID = e.allocateContextPartitionIDLocked(statement.plan.query.contextName, partitionKey)
 		partitionRuntime.contextProperties = definition.contextPropertyValues(Event{}, now, statement.runtime.variables, partitionRuntime.partitionID)
 		partitionRuntime.contextProperties["hash"] = Present(int64(bucket))
+		partitionRuntime.variables = partitionRuntime.withContextProperties(statement.runtime.variables)
+		partitionRuntime.initializeAt(now)
+		partition := ptrStatementRuntime(partitionRuntime)
+		statement.runtime.partitions[partitionKey] = partition
+		e.retainContextPartitionLocked(statement.plan.query.contextName, partitionKey, partition)
+	}
+}
+
+// materializeCategoryContextLocked creates the fixed category runtimes used
+// by a flat category context. Esper materializes one agent instance per
+// declared category when the first statement is deployed, before any matching
+// event arrives; snapshots therefore expose all categories immediately.
+func (e *Engine) materializeCategoryContextLocked(statement *Statement) {
+	if e == nil || e.env == nil || statement == nil || statement.plan.query.contextName == "" {
+		return
+	}
+	definition, ok := e.env.Context(statement.plan.query.contextName)
+	if !ok || definition.parent != nil || definition.kind != ContextCategorySegmented || len(definition.categories) == 0 {
+		return
+	}
+	if statement.runtime.partitions == nil {
+		statement.runtime.partitions = make(map[string]*statementRuntime)
+	}
+	now := e.clock.Now()
+	for _, category := range definition.categories {
+		partitionKey := "category:" + category.name
+		if _, exists := statement.runtime.partitions[partitionKey]; exists {
+			continue
+		}
+		query := statement.runtime.query
+		query.contextName = ""
+		partitionRuntime := newStatementRuntime(query)
+		partitionRuntime.engine = e
+		partitionRuntime.rowRecogOwner = statement.runtime.rowRecogOwner
+		partitionRuntime.partitionContextName = statement.plan.query.contextName
+		partitionRuntime.partitionKey = partitionKey
+		partitionRuntime.partitionID = e.allocateContextPartitionIDLocked(statement.plan.query.contextName, partitionKey)
+		partitionRuntime.contextProperties = definition.contextPropertyValues(Event{}, now, statement.runtime.variables, partitionRuntime.partitionID)
+		partitionRuntime.contextProperties["label"] = Present(category.name)
 		partitionRuntime.variables = partitionRuntime.withContextProperties(statement.runtime.variables)
 		partitionRuntime.initializeAt(now)
 		partition := ptrStatementRuntime(partitionRuntime)

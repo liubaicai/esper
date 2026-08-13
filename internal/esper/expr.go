@@ -36,6 +36,7 @@ type exprNode struct {
 	typ                             reflect.Type
 	description                     string
 	fieldName                       string
+	fieldSourceType                 reflect.Type
 	literalValue                    any
 	initialTarget                   bool
 	tagName                         string
@@ -423,7 +424,7 @@ func Field[T, V any](name string) Expression[V] {
 	if strings.TrimSpace(name) == "" {
 		return makeExpr[V]("field", "<invalid-field>", nil, func(EvalContext) Value { return Missing() })
 	}
-	node := &exprNode{kind: "field", typ: typeOf[V](), description: name, fieldName: name}
+	node := &exprNode{kind: "field", typ: typeOf[V](), description: name, fieldName: name, fieldSourceType: typeOf[T]()}
 	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
 		if ctx.groupingValues != nil {
 			if value, ok := ctx.groupingValues[groupingNodeKey(node, name)]; ok {

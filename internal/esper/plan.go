@@ -583,6 +583,11 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 		if !ok {
 			return Plan{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", query.contextName))
 		}
+		if definition.kind == ContextCategorySegmented && query.join == nil && (query.aggregate == nil || query.aggregate.join == nil) && query.input != nil {
+			if err := e.validateCategoryContextEventType(definition, query.input); err != nil {
+				return Plan{}, WrapError(ErrorInvalidRule, "context", err)
+			}
+		}
 		if query.output.Termination != OutputNoTermination && definition.kind != ContextInitiatedTerminated && !definition.isTemporal() {
 			return Plan{}, NewError(ErrorInvalidRule, "context-termination output requires an initiated or temporal context")
 		}
@@ -1361,6 +1366,57 @@ func (e *Environment) validateContext(definition ContextDefinition, node *stream
 		return fmt.Errorf("unknown context kind %d", definition.kind)
 	}
 	return nil
+}
+
+// validateCategoryContextEventType mirrors Esper's category-context stream
+// restriction: a flat statement must consume at least one of the event types
+// referenced by the category declarations. Typed fluent predicates carry
+// their source Go type through Field[T,V], allowing mismatched but
+// field-compatible event types to be rejected before deployment.
+func (e *Environment) validateCategoryContextEventType(definition ContextDefinition, node *streamNode) error {
+	if e == nil || definition.kind != ContextCategorySegmented || node == nil {
+		return nil
+	}
+	source, err := sourceNode(node)
+	if err != nil {
+		return nil
+	}
+	schema, err := e.sourceSchema(source)
+	if err != nil {
+		return nil
+	}
+	statementType := schema.GoType()
+	if statementType == nil || statementType == typeOf[any]() {
+		return nil
+	}
+	categoryTypes := make(map[reflect.Type]struct{})
+	for _, category := range definition.categories {
+		collectExpressionFieldSourceTypes(category.predicate.node(), categoryTypes)
+	}
+	if len(categoryTypes) == 0 {
+		return nil
+	}
+	for categoryType := range categoryTypes {
+		if categoryType == statementType || categoryType.AssignableTo(statementType) || statementType.AssignableTo(categoryType) {
+			return nil
+		}
+	}
+	return fmt.Errorf("category context %q requires that any of the event types that are listed in the category context also appear in any of the filter expressions of the statement", definition.name)
+}
+
+func collectExpressionFieldSourceTypes(node *exprNode, types map[reflect.Type]struct{}) {
+	if node == nil {
+		return
+	}
+	if node.kind == "field" && node.fieldSourceType != nil && node.fieldSourceType != typeOf[any]() {
+		types[node.fieldSourceType] = struct{}{}
+	}
+	for _, child := range node.children {
+		collectExpressionFieldSourceTypes(child, types)
+	}
+	if node.expressionBody != nil {
+		collectExpressionFieldSourceTypes(node.expressionBody, types)
+	}
 }
 
 func (e *Environment) validateContextPattern(definition *patternDefinition, label string) error {
