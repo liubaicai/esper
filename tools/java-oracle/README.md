@@ -72,6 +72,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/filter-window-aggregate-output.json`、`testdata/parity/filter-window-aggregate-output.evidence.json`；当前差异数为 0。
 
+## Join-length-window oracle
+
+第三个代表性场景使用 `JoinScenarioOracle.java`（runner：`run-join.sh`）。它注册 Map 事件类型 `OrderEvent(orderId, price)` 与 `PaymentEvent(orderId, amount)`，双跑 `from OrderEvent#length(3) as o, PaymentEvent#length(3) as p where o.orderId = p.orderId order by o.orderId asc, p.amount asc` 以及同语句的 `output every 2 events` 变体，并输出同一 `esper-parity/v1` trace。Java 语义要点：非聚合 join 的 `statement.iterator()` 在带事件数输出策略时仍返回实时 join 状态（pending 行可见），而 listener 输出按 `output every 2 events` 缓冲到两个 accepted 行后以 ORDER BY 顺序整批交付；Go 的 `snapshotJoinBatch` 已按实时状态实现。场景覆盖同键多匹配（O1 的 10/20/40）、length(3) 窗口淘汰边界（O2/5 淘汰 O1/10）和 ORDER BY 多键排序。
+
+```sh
+./tools/java-oracle/run-join.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/join-length-window.json \
+  --output /tmp/join-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode join-length-window-diff \
+  -scenario testdata/parity/join-length-window.json \
+  -java-trace /tmp/join-java.json \
+  -evidence /tmp/join.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/join-length-window.json`、`testdata/parity/join-length-window.evidence.json`；当前差异数为 0，覆盖 `EPLJoinJoinWInnerKeywordWOOnClause` 与 `EPLJoinJoinNoWhereClause` 两个 Java runtime。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

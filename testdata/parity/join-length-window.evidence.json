@@ -1,0 +1,631 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-4aa869a9f1905a65ab3a",
+    "java-runtime-7885da47c76db1ebb5f7"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLJoinNoWhereClause.java"
+  ],
+  "javaExecutions": [
+    "EPLJoinJoinWInnerKeywordWOOnClause",
+    "EPLJoinJoinNoWhereClause"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "join-length-window",
+    "steps": [
+      {
+        "op": "case",
+        "case": "plain"
+      },
+      {
+        "op": "send",
+        "eventType": "OrderEvent",
+        "payload": {
+          "orderId": "O1",
+          "price": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "PaymentEvent",
+        "payload": {
+          "orderId": "O1",
+          "amount": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "OrderEvent",
+        "payload": {
+          "orderId": "O2",
+          "price": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "PaymentEvent",
+        "payload": {
+          "orderId": "O1",
+          "amount": 20
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "PaymentEvent",
+        "payload": {
+          "orderId": "O1",
+          "amount": 40
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "OrderEvent",
+        "payload": {
+          "orderId": "O3",
+          "price": 30
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "PaymentEvent",
+        "payload": {
+          "orderId": "O2",
+          "amount": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "every-2"
+      },
+      {
+        "op": "send",
+        "eventType": "OrderEvent",
+        "payload": {
+          "orderId": "O1",
+          "price": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "PaymentEvent",
+        "payload": {
+          "orderId": "O1",
+          "amount": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "OrderEvent",
+        "payload": {
+          "orderId": "O2",
+          "price": 20
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "PaymentEvent",
+        "payload": {
+          "orderId": "O1",
+          "amount": 20
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "PaymentEvent",
+        "payload": {
+          "orderId": "O2",
+          "amount": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "join-length-window",
+    "records": [
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 40,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 5,
+              "orderId": "O2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 40,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 5,
+              "orderId": "O2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-2",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "every-2",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-2",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-2",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-2",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 5,
+              "orderId": "O2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "join-length-window",
+    "records": [
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 40,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 5,
+              "orderId": "O2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 40,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 5,
+              "orderId": "O2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-2",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "every-2",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-2",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-2",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-2",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 10,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 20,
+              "orderId": "O1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "amount": 5,
+              "orderId": "O2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

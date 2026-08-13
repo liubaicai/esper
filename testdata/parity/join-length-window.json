@@ -1,0 +1,138 @@
+{
+  "version": "esper-parity/v1",
+  "id": "join-length-window",
+  "steps": [
+    {
+      "op": "case",
+      "case": "plain"
+    },
+    {
+      "op": "send",
+      "eventType": "OrderEvent",
+      "payload": {
+        "orderId": "O1",
+        "price": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "PaymentEvent",
+      "payload": {
+        "orderId": "O1",
+        "amount": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "OrderEvent",
+      "payload": {
+        "orderId": "O2",
+        "price": 20
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "PaymentEvent",
+      "payload": {
+        "orderId": "O1",
+        "amount": 20
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "PaymentEvent",
+      "payload": {
+        "orderId": "O1",
+        "amount": 40
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "OrderEvent",
+      "payload": {
+        "orderId": "O3",
+        "price": 30
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "PaymentEvent",
+      "payload": {
+        "orderId": "O2",
+        "amount": 5
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "every-2"
+    },
+    {
+      "op": "send",
+      "eventType": "OrderEvent",
+      "payload": {
+        "orderId": "O1",
+        "price": 10
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "PaymentEvent",
+      "payload": {
+        "orderId": "O1",
+        "amount": 10
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "OrderEvent",
+      "payload": {
+        "orderId": "O2",
+        "price": 20
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "PaymentEvent",
+      "payload": {
+        "orderId": "O1",
+        "amount": 20
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "PaymentEvent",
+      "payload": {
+        "orderId": "O2",
+        "amount": 5
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    }
+  ]
+}
