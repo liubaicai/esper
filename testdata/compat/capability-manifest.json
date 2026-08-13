@@ -509,7 +509,8 @@
         "internal/esper/infra_table_access_dot_method_parity_test.go",
         "internal/esper/infra_table_on_merge_parity_test.go",
         "internal/esper/infra_table_on_delete_parity_test.go",
-        "internal/esper/infra_table_on_select_parity_test.go"
+        "internal/esper/infra_table_on_select_parity_test.go",
+        "internal/esper/infra_table_on_update_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -21137,6 +21138,46 @@
         "go-unit"
       ],
       "difference": "Java on-trigger table select EPL is represented by typed SelectFromTableWhere. Predicate scans intentionally emit no row for a missing match, distinct from SelectFromTable primary-key lookup which projects an all-Null row for a missing key."
+    },
+    {
+      "id": "case.infra-table-on-update",
+      "javaRuntimeIds": [
+        "java-runtime-3707b3fa08171bbd791c",
+        "java-runtime-9420bad8282ede1aee44",
+        "java-runtime-7b24e71bc468a8387275",
+        "java-runtime-6ab14c5afe7489f35b3b"
+      ],
+      "javaNames": [
+        "InfraTableOnUpdateTwoKey",
+        "InfraTableOnUpdateMultikeyWArrayOneArray",
+        "InfraTableOnUpdateMultikeyWArrayTwoArray",
+        "InfraTableOnUpdateMultikeyWArrayTwoArrayNonGetter"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableOnUpdate.java"
+      ],
+      "goTests": [
+        "TestInfraTableOnUpdateTwoKeyParity",
+        "TestInfraTableOnUpdateArrayKeysParity",
+        "TestInfraTableOnUpdateArrayKeysConstructedParity"
+      ],
+      "tags": [
+        "table",
+        "on-update",
+        "composite-key",
+        "array-key",
+        "construct",
+        "old-new-stream"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go maps the two-key update from (G1,10,p0=1) to p0=2 and emits the exact old/new table rows through the update listener.",
+        "Go maps single-array and two-array primary-key updates by slice content, retaining exactly [1,2]=11, [1,2,3]=21, [1]=31 and the corresponding two-array tuples while missing arrays remain no-ops.",
+        "The non-getter execution constructs both []int keys from SupportBean_S0 string properties inside the expression tree with Construct(parse-int-array), then reaches the same 11/21/31 final rows.",
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java primitive int[] keys map to Go []int content keys. Java's compile-only sb.setLongPrimitive(10) assignment is represented by a typed Construct factory that returns a copied composite column with LongPrimitive=10; Go does not expose hidden side-effect setter syntax."
     }
   ],
   "mappings": [
@@ -22687,14 +22728,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-on-select"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-on-update"
     }
   ],
   "summary": {
-    "totalCases": 373,
+    "totalCases": 374,
     "totalCapabilities": 110,
-    "mappedCases": 356,
+    "mappedCases": 357,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2238
+    "disposedRuntimeIds": 2242
   }
 }
