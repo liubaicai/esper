@@ -8100,7 +8100,9 @@
         "java-runtime-dda46fd8c29bd76ab764",
         "java-runtime-48adf1b192d34a116b2c",
         "java-runtime-75a73d1d58ebd22f79a1",
-        "java-runtime-d5797eaa543684206b0c"
+        "java-runtime-d5797eaa543684206b0c",
+        "java-runtime-2626fc42b586909c263e",
+        "java-runtime-1e59e97457b03ad30658"
       ],
       "javaNames": [
         "EPLSubselectMultirowGroupedUncorrelatedIteratorAndExpressionDef",
@@ -8122,7 +8124,9 @@
         "ExprDefineGlobalAliasAndSODA",
         "ExprDefineValueParameterEVE",
         "ExprDefineContextPartition",
-        "ExprDefineDocSamples"
+        "ExprDefineDocSamples",
+        "ExprDefineAliasAggregation",
+        "ExprDefineInvalid"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedMultirowAndColumn.java",
@@ -8155,7 +8159,9 @@
         "TestExprDefineAliasForGlobalAliasParity",
         "TestExprDefineValueParameterEVEParity",
         "TestExprDefineAliasForContextPartitionParity",
-        "TestExprDefineDocSamplesParity"
+        "TestExprDefineDocSamplesParity",
+        "TestExprDefineAliasForAliasAggregationParity",
+        "TestExprDefineAliasForInvalidParity"
       ],
       "tags": [
         "correctness",
@@ -8175,7 +8181,7 @@
         "java-junit",
         "go-unit"
       ],
-      "difference": "Go exposes typed DefineExpression[T] plus ExpressionParam[T]/variadic ExpressionRef[T] nodes instead of EPL create-expression syntax. Value and typed Event parameters substitute at runtime while preserving the caller event, Join tuple, Pattern capture, Context initiating/pattern event, multi-row LastEvent/length-window subquery, variables, prepared parameters, aggregate state and Engine snapshot; nested calls, inferred declaration order, arity/type diagnostics and parameter metadata in Plan canonical/hash are covered. Map-backed Event parameters now cover Pattern, LastEvent-subquery and keep-all+where+NullOnMultiple cardinality cases. The ExprDefineAliasFor documentation samples are also covered through typed empty dynamic schemas, zero-parameter constant/aggregate declarations, aggregate Having and Build/Deploy validation; the Java execution intentionally sends no events. A zero-parameter alias predicate is also covered inside a one-shot @now/ten-minute context, represented by explicit typed timer-pattern lifecycle boundaries. The grouped multi-row slice compares `getGroups()`/`take(10)`-shaped immutable results with `Statement.Snapshot` and listener state. Textual `alias for` is an approved parser difference; overload/module visibility, lifecycle replacement and the complete Java iterator/cardinality/fragment trace remain open."
+      "difference": "Go exposes typed DefineExpression[T] plus ExpressionParam[T]/variadic ExpressionRef[T] nodes instead of EPL create-expression syntax. Value and typed Event parameters substitute at runtime while preserving the caller event, Join tuple, Pattern capture, Context initiating/pattern event, multi-row LastEvent/length-window subquery, variables, prepared parameters, aggregate state and Engine snapshot; nested calls, inferred declaration order, arity/type diagnostics and parameter metadata in Plan canonical/hash are covered. Map-backed Event parameters now cover Pattern, LastEvent-subquery and keep-all+where+NullOnMultiple cardinality cases. The ExprDefineAliasFor documentation samples are also covered through typed empty dynamic schemas, zero-parameter constant/aggregate declarations, aggregate Having and Build/Deploy validation; the Java execution intentionally sends no events. The declared aggregate-alias execution is covered with an implicit ungrouped typed Aggregate plan, and invalid declaration field/arity boundaries are covered by Build diagnostics. A zero-parameter alias predicate is also covered inside a one-shot @now/ten-minute context, represented by explicit typed timer-pattern lifecycle boundaries. The grouped multi-row slice compares `getGroups()`/`take(10)`-shaped immutable results with `Statement.Snapshot` and listener state. Textual `alias for`, script bodies, and exact Java parser diagnostics are approved differences; overload/module visibility, lifecycle replacement and the complete Java iterator/cardinality/fragment trace remain open."
     },
     {
       "id": "case.expr-core-bitwise",
