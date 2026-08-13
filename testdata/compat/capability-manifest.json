@@ -508,7 +508,8 @@
         "internal/esper/expr_core_prior_parity_test.go",
         "internal/esper/infra_table_access_dot_method_parity_test.go",
         "internal/esper/infra_table_on_merge_parity_test.go",
-        "internal/esper/infra_table_on_delete_parity_test.go"
+        "internal/esper/infra_table_on_delete_parity_test.go",
+        "internal/esper/infra_table_on_select_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -21107,6 +21108,35 @@
         "go-unit"
       ],
       "difference": "Java create-index deployment is represented by the immutable SecondaryIndex table option, and Java on-trigger select sum(thesum) is represented by SubqueryValueWithOptions over Sum with SubqueryUseIndex. EPL text construction is outside the fluent Go API boundary."
+    },
+    {
+      "id": "case.infra-table-on-select",
+      "javaRuntimeIds": [
+        "java-runtime-ac669611d4655fffc6c2"
+      ],
+      "javaNames": [
+        "InfraTableOnSelect"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableOnSelect.java"
+      ],
+      "goTests": [
+        "TestInfraTableOnSelectParity"
+      ],
+      "tags": [
+        "table",
+        "on-select",
+        "into-table",
+        "group-by",
+        "predicate-scan"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go maps the complete on-select trace with predicate-based SelectFromTableWhere readers. Missing G1/G2 keys produce no listener invocation; grouped into-table sums then produce G1=100 and G2=200, and a second SupportBean_S1 reader observes G2=500 after another 300 contribution.",
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java on-trigger table select EPL is represented by typed SelectFromTableWhere. Predicate scans intentionally emit no row for a missing match, distinct from SelectFromTable primary-key lookup which projects an all-Null row for a missing key."
     }
   ],
   "mappings": [
@@ -22653,14 +22683,18 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-on-delete"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-on-select"
     }
   ],
   "summary": {
-    "totalCases": 372,
+    "totalCases": 373,
     "totalCapabilities": 110,
-    "mappedCases": 355,
+    "mappedCases": 356,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2237
+    "disposedRuntimeIds": 2238
   }
 }
