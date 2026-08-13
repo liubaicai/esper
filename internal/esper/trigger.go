@@ -524,7 +524,8 @@ func (s TriggerStream[T]) SetVariables(assignments ...VariableAssignmentExpr) Tr
 }
 
 // SelectFromTable performs a primary-key lookup when the trigger arrives and
-// emits the requested table projection as a Row result.
+// emits the requested table projection as a Row result. For a table without
+// primary-key columns, pass nil keys to read its single logical row.
 func (s TriggerStream[T]) SelectFromTable(table string, keys []Expr, selections ...Selection) TriggerQuery {
 	return TriggerQuery{
 		env: s.env,
@@ -884,7 +885,7 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 				return NewError(ErrorInvalidRule, "table predicate select cannot also provide primary-key expressions")
 			}
 		} else {
-			if len(definition.keys) != len(table.primaryKey) || len(definition.keys) == 0 {
+			if len(definition.keys) != len(table.primaryKey) {
 				return fmt.Errorf("table select requires one key expression for each primary-key column")
 			}
 			for index, expression := range definition.keys {
@@ -2298,6 +2299,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if err != nil || definition.target == triggerTargetNamedWindow || definition.action == triggerSetVariables || runtime == nil {
 			return
 		}
+		suppressDeletedAggregateTableRows(engine, definition, mutation, runtime, now, variables)
 		if ownershipErr := engine.recordLiveTableContextMutationLocked(runtime, definition, mutation, event, now, variables); ownershipErr != nil {
 			mutation = tableMutationResult{}
 			err = ownershipErr
@@ -2518,6 +2520,67 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		return mutation, nil
 	default:
 		return tableMutationResult{}, NewError(ErrorInvalidRule, "unknown trigger action")
+	}
+}
+
+// suppressDeletedAggregateTableRows keeps an external table delete from being
+// undone by the next unrelated into-table contributor. The aggregate state is
+// retained; aggregateBatch clears the marker when that logical group changes.
+func suppressDeletedAggregateTableRows(engine *Engine, definition *triggerDefinition, mutation tableMutationResult, triggerRuntime *statementRuntime, now time.Time, variables map[string]Value) {
+	if engine == nil || definition == nil || len(mutation.oldRows) == 0 {
+		return
+	}
+	table := engine.tables[catalogKey(definition.moduleName, definition.table)]
+	if table == nil {
+		return
+	}
+	tableDefinition := table.Definition()
+	deleted := make(map[string]struct{}, len(mutation.oldRows))
+	for _, row := range mutation.oldRows {
+		deleted[encodeKey(tableRowKeys(tableDefinition, row))] = struct{}{}
+	}
+	for _, row := range mutation.newRows {
+		delete(deleted, encodeKey(tableRowKeys(tableDefinition, row)))
+	}
+	if len(deleted) == 0 {
+		return
+	}
+	target := catalogKey(definition.moduleName, definition.table)
+	for _, statement := range engine.sortedStatementsLocked() {
+		if statement == nil || statement.closed || statement.state != StatementStarted || statement.plan.query.aggregate == nil {
+			continue
+		}
+		moduleName, tableName := splitCatalogKey(statement.plan.query.tableTarget)
+		if catalogKey(moduleName, tableName) != target {
+			continue
+		}
+		candidate := &statement.runtime
+		if statement.plan.query.contextName != "" {
+			if triggerRuntime == nil || triggerRuntime.partitionKey == "" || triggerRuntime.partitionContextName != statement.plan.query.contextName {
+				continue
+			}
+			candidate = statement.runtime.partitions[triggerRuntime.partitionKey]
+		}
+		if candidate == nil || candidate.aggregateState == nil {
+			continue
+		}
+		candidateVariables := candidate.variables
+		if candidateVariables == nil {
+			candidateVariables = variables
+		}
+		for _, group := range candidate.aggregateState.groups {
+			if group == nil {
+				continue
+			}
+			_, contribution := aggregateTableContributionRow(statement.plan.query.aggregate, tableDefinition, nil, group, now, candidateVariables)
+			keys := make([]any, 0, len(tableDefinition.PrimaryKey()))
+			for _, name := range tableDefinition.PrimaryKey() {
+				keys = append(keys, contribution[name])
+			}
+			if _, removed := deleted[encodeKey(keys)]; removed {
+				group.tableSuppressed = true
+			}
+		}
 	}
 }
 

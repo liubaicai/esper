@@ -552,11 +552,61 @@ func EventValue[T any]() Expression[T] {
 			return Null()
 		}
 		value, ok := underlying.(T)
-		if !ok {
-			return Missing()
+		if ok {
+			return Present(value)
 		}
-		return Present(value)
+		if ctx.Event.Schema().goType == nil {
+			if materialized, err := materializeEventValueAs[T](ctx.Event); err == nil {
+				return Present(materialized)
+			}
+		}
+		return Missing()
 	})
+}
+
+// materializeEventValueAs maps a map-backed event onto T. This is the
+// window(*) counterpart of SendRecord's typed materialization: an aggregate
+// may retain map-represented events (matching Esper map event types) while a
+// typed WindowAccessBy projection still expects the corresponding Go struct.
+func materializeEventValueAs[T any](event Event) (T, error) {
+	var zero T
+	targetType := typeOf[T]()
+	target := targetType
+	pointer := false
+	if target != nil && target.Kind() == reflect.Pointer {
+		pointer = true
+		target = target.Elem()
+	}
+	if target == nil || target.Kind() != reflect.Struct {
+		return zero, fmt.Errorf("esper: EventValue target %s is not a struct or struct pointer", targetType)
+	}
+	schema := event.Schema()
+	if schema.goType != nil {
+		return zero, fmt.Errorf("esper: EventValue cannot materialize %s from typed event %s", typeOf[T](), schema.Name())
+	}
+	targetValue := reflect.New(target).Elem()
+	value, ok := event.Underlying().(map[string]any)
+	if !ok {
+		return zero, fmt.Errorf("esper: EventValue map materialization expects map[string]any, got %T", event.Underlying())
+	}
+	for _, field := range schema.Fields() {
+		if field.Type == nil {
+			continue
+		}
+		item, exists := value[field.Name]
+		if !exists || item == nil {
+			continue
+		}
+		if err := setStructField(targetValue, field.Name, item, schema.resolution); err != nil {
+			return zero, err
+		}
+	}
+	materialized := targetValue
+	if pointer {
+		materialized = reflect.New(target)
+		materialized.Elem().Set(targetValue)
+	}
+	return materialized.Interface().(T), nil
 }
 
 // OuterField reads a property from the event of the enclosing statement while
@@ -970,14 +1020,20 @@ func targetFieldWithScope[V any](kind, description, name string, initial bool) E
 	}
 	node := &exprNode{kind: kind, typ: typeOf[V](), description: description, fieldName: name, initialTarget: initial}
 	return typedExpr[V]{n: node, fn: func(ctx EvalContext) Value {
-		group := ctx.Group
-		if node.initialTarget && len(ctx.InitialGroup) > 0 {
-			group = ctx.InitialGroup
+		// A target-row expression may be evaluated while the active row scope
+		// has been switched to the triggering event (for example a no-key
+		// table's matched merge assignments). The InitialGroup retains the
+		// actual target row in that case and must win over the working Group.
+		if len(ctx.InitialGroup) > 0 && (node.initialTarget || len(ctx.Group) == 0) {
+			return ctx.InitialGroup[0].Get(name)
 		}
-		if len(group) == 0 {
-			return Missing()
+		if len(ctx.Group) > 0 {
+			return ctx.Group[0].Get(name)
 		}
-		return group[0].Get(name)
+		if len(ctx.InitialGroup) > 0 {
+			return ctx.InitialGroup[0].Get(name)
+		}
+		return Missing()
 	}}
 }
 

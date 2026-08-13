@@ -49,6 +49,35 @@ func TestCoreExpressionOperators(t *testing.T) {
 	}
 }
 
+type mapEventValueTarget struct {
+	Name  string `esper:"name"`
+	Count int64  `esper:"count"`
+}
+
+func TestEventValueMaterializesMapEventAsStructAndPointer(t *testing.T) {
+	env := NewEnvironment()
+	schema, err := RegisterMap(env, "MapEventValue", []FieldSpec{
+		FieldDef("name", typeOf[string]()),
+		FieldDef("count", typeOf[int64]()),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	event, err := newEvent(schema, map[string]any{"name": "E1", "count": int64(10)}, time.Unix(0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := mapEventValueTarget{Name: "E1", Count: 10}
+	if got := EventValue[mapEventValueTarget]().eval(EvalContext{Event: event}); !got.Equal(Present(want)) {
+		t.Fatalf("map event as struct = %#v, want %#v", got, want)
+	}
+	got := EventValue[*mapEventValueTarget]().eval(EvalContext{Event: event})
+	pointer, ok := got.Any().(*mapEventValueTarget)
+	if !ok || pointer == nil || *pointer != want {
+		t.Fatalf("map event as struct pointer = %#v, want %#v", got, &want)
+	}
+}
+
 func TestExpressionNumericEqualityCoercion(t *testing.T) {
 	if got := EqualValues(Present(int(100)), Present(int64(100))); !got.Equal(Present(true)) {
 		t.Fatalf("integral equality coercion = %v", got)

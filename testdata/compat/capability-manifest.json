@@ -506,7 +506,8 @@
         "internal/esper/expr_core_in_between_parity_test.go",
         "internal/esper/expr_core_previous_parity_test.go",
         "internal/esper/expr_core_prior_parity_test.go",
-        "internal/esper/infra_table_access_dot_method_parity_test.go"
+        "internal/esper/infra_table_access_dot_method_parity_test.go",
+        "internal/esper/infra_table_on_merge_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -686,7 +687,8 @@
         "internal/esper/aggregate_test.go",
         "internal/esper/join_test.go",
         "internal/esper/infra_table_access_aggregation_state_parity_test.go",
-        "internal/esper/infra_table_access_dot_method_parity_test.go"
+        "internal/esper/infra_table_access_dot_method_parity_test.go",
+        "internal/esper/infra_table_on_merge_parity_test.go"
       ],
       "phase": 3,
       "status": "partial",
@@ -958,7 +960,8 @@
         "internal/esper/plan.go",
         "internal/esper/infra_table_access_parity_test.go",
         "internal/esper/infra_table_access_aggregation_state_parity_test.go",
-        "internal/esper/infra_table_access_dot_method_parity_test.go"
+        "internal/esper/infra_table_access_dot_method_parity_test.go",
+        "internal/esper/infra_table_on_merge_parity_test.go"
       ],
       "phase": 1,
       "status": "partial",
@@ -3093,7 +3096,8 @@
         "internal/esper/expr_enum_doc_samples_parity_test.go",
         "internal/esper/expr_enum_data_sources_parity_test.go",
         "internal/esper/expr_enum_select_from_events_parity_test.go",
-        "internal/esper/infra_table_access_dot_method_parity_test.go"
+        "internal/esper/infra_table_access_dot_method_parity_test.go",
+        "internal/esper/infra_table_on_merge_parity_test.go"
       ],
       "phase": 2,
       "status": "mapped",
@@ -21017,6 +21021,56 @@
         "go-unit"
       ],
       "difference": "Java's EPL dot chains (getMinuteOfHour, getMyProperty, takeLast, selectFrom, after and countOf) are represented by typed Method/Property chains, enumeration combinators and registered date-time plugins; Java SODA variants map to immutable fluent Plans. The nested multivalue Java execution combines only the observed last/window projections, while Go covers the same window and scalar-enum results without the extra first(*) projection used by its sibling suite."
+    },
+    {
+      "id": "case.infra-table-on-merge",
+      "javaRuntimeIds": [
+        "java-runtime-48ba18f297dd069c74d9",
+        "java-runtime-49524e9ef38f8b08adc7",
+        "java-runtime-2a02f77e480f81975509",
+        "java-runtime-0fa6913f29edd8f2ff93",
+        "java-runtime-3a62ed92a60234e52358",
+        "java-runtime-d55724d6554101d11c03",
+        "java-runtime-899f6e519045456c7e92"
+      ],
+      "javaNames": [
+        "InfraTableOnMergeSimple",
+        "InfraOnMergePlainPropsAnyKeyed",
+        "InfraMergeWhereWithMethodRead",
+        "InfraMergeSelectWithAggReadAndEnum",
+        "InfraMergeTwoTables",
+        "InfraTableEMACompute",
+        "InfraTableArrayAssignmentBoxed"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableOnMerge.java"
+      ],
+      "goTests": [
+        "TestInfraTableOnMergeSimpleParity",
+        "TestInfraOnMergePlainPropsAnyKeyedParity",
+        "TestInfraMergeWhereWithMethodReadParity",
+        "TestInfraMergeSelectWithAggReadAndEnumParity",
+        "TestInfraMergeTwoTablesParity",
+        "TestInfraTableEMAComputeParity",
+        "TestInfraTableArrayAssignmentBoxedParity"
+      ],
+      "tags": [
+        "table",
+        "merge",
+        "into-table",
+        "last-event",
+        "side-stream",
+        "enum",
+        "array-assignment"
+      ],
+      "status": "mapped",
+      "evidence": [
+        "Go maps all seven InfraTableOnMerge executions with analyzable fluent plans. The suite covers keyed insert/update, single-key/two-key/ungrouped insert-update-delete shapes with concurrent into-table aggregate columns, LastEvent grouped count rows deleted by a table predicate, aggregate window/eventset reads and takeLast(1) side-stream output, ordered inserts into two tables, the eight-event EMA burn/recursive trace, and boxed array element assignment.",
+        "The runtime preserves trigger-owned plain columns while recomputing aggregate-owned columns, retains empty grouped LastEvent rows with count(*) zero, and materializes map-backed events into typed EventValue structs for access aggregation.",
+        "java-runtime-inventory",
+        "go-unit"
+      ],
+      "difference": "Java's EPL/SODA construction is represented by immutable fluent Plans. Java int/Integer/Double[] values map to explicit int64 and pointer-valued slices, while output values, row lifecycle, action priority and merge branch behavior follow the Java trace."
     }
   ],
   "mappings": [
@@ -22539,14 +22593,30 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-table-access-dot-method"
+    },
+    {
+      "capabilityId": "expr.core",
+      "caseId": "case.infra-table-on-merge"
+    },
+    {
+      "capabilityId": "expr.enum-collection-methods",
+      "caseId": "case.infra-table-on-merge"
+    },
+    {
+      "capabilityId": "resultset.aggregate-access",
+      "caseId": "case.infra-table-on-merge"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-table-on-merge"
     }
   ],
   "summary": {
-    "totalCases": 370,
+    "totalCases": 371,
     "totalCapabilities": 110,
-    "mappedCases": 353,
+    "mappedCases": 354,
     "partialCases": 0,
     "approvedDifferenceCases": 17,
-    "disposedRuntimeIds": 2228
+    "disposedRuntimeIds": 2235
   }
 }

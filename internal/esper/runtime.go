@@ -4541,6 +4541,7 @@ type aggregateGroup struct {
 	leaving           bool
 	previous          []Value
 	emitted           bool
+	tableSuppressed   bool
 }
 
 type aggregateResultEntry struct {
@@ -7720,7 +7721,7 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 	}
 	for _, key := range keys {
 		group := r.aggregateState.groups[key]
-		if group == nil || (len(group.events) == 0 && !aggregateDefinitionUsesEver(definition)) {
+		if group == nil || (len(group.events) == 0 && !aggregateDefinitionUsesEver(definition) && !aggregateDefinitionRetainsEmptyGroups(definition)) {
 			continue
 		}
 		if aggregateDefinitionIsRowForEvent(definition) && len(group.events) > 0 {
@@ -14252,6 +14253,11 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			}
 			state.groups[key] = group
 		}
+		// A table trigger may delete an aggregate-backed materialized row
+		// without discarding its aggregation history. The next contribution
+		// change for this group makes the row eligible for materialization
+		// again, matching Esper's into-table ownership lifecycle.
+		group.tableSuppressed = false
 		group.current = event
 		return key
 	}
@@ -14315,7 +14321,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				group.previous = nil
 				group.emitted = false
 			}
-			if len(group.events) == 0 && !aggregateDefinitionUsesEver(definition) {
+			if len(group.events) == 0 && !aggregateDefinitionUsesEver(definition) && !aggregateDefinitionRetainsEmptyGroups(definition) {
 				for _, pluginState := range group.multiPluginStates {
 					if pluginState != nil {
 						pluginState.clear()
@@ -14360,7 +14366,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			group.previous = nil
 			group.emitted = false
 		}
-		if len(group.events) == 0 && !aggregateDefinitionUsesEver(definition) {
+		if len(group.events) == 0 && !aggregateDefinitionUsesEver(definition) && !aggregateDefinitionRetainsEmptyGroups(definition) {
 			for _, pluginState := range group.multiPluginStates {
 				if pluginState != nil {
 					pluginState.clear()
@@ -14499,6 +14505,7 @@ func (r *statementRuntime) persistAggregateTable(plan Plan, now time.Time) error
 	if err != nil {
 		return err
 	}
+	rows = materializeAggregateTableRows(r, plan, table, rows, "")
 	primaryKey := table.Definition().PrimaryKey()
 	sort.SliceStable(rows, func(left, right int) bool {
 		leftValues := make([]any, 0, len(primaryKey))
@@ -14527,10 +14534,79 @@ func persistAggregateTableRows(plan Plan, table *Table, rows []map[string]any, r
 	if r.partitionContextName != "" && r.partitionKey != "" {
 		scope = tableContextScope(r.partitionContextName, r.partitionKey)
 	}
+	rows = materializeAggregateTableRows(r, plan, table, rows, scope)
 	if err := table.replaceInScope(r.context(), scope, rows); err != nil {
 		return WrapError(ErrorState, "into-table."+plan.query.tableTarget, err)
 	}
 	return nil
+}
+
+// materializeAggregateTableRows applies the ownership rules Esper uses when
+// several statements contribute columns to one table. Columns selected by any
+// active into-table aggregate are replaced by the recomputed aggregate row;
+// columns owned by plain table triggers (for example an on-merge p0 column)
+// are carried over from the current table snapshot and never wiped by another
+// statement's aggregate replacement.
+func materializeAggregateTableRows(r *statementRuntime, plan Plan, table *Table, rows []map[string]any, scope string) []map[string]any {
+	if r == nil || r.engine == nil || table == nil || len(rows) == 0 {
+		return rows
+	}
+	engine := r.engine
+	owned := make(map[string]struct{})
+	targetModule, targetName := splitCatalogKey(plan.query.tableTarget)
+	target := catalogKey(targetModule, targetName)
+	for _, statement := range engine.sortedStatementsLocked() {
+		if statement == nil || statement.closed || statement.state != StatementStarted || statement.plan.query.aggregate == nil {
+			continue
+		}
+		candidateModule, candidateTable := splitCatalogKey(statement.plan.query.tableTarget)
+		if catalogKey(candidateModule, candidateTable) != target || statement.plan.query.contextName != plan.query.contextName {
+			continue
+		}
+		for _, selection := range statement.plan.query.aggregate.selections {
+			owned[selection.Name] = struct{}{}
+		}
+	}
+	if plan.query.aggregate != nil {
+		for _, selection := range plan.query.aggregate.selections {
+			owned[selection.Name] = struct{}{}
+		}
+	}
+	if len(owned) == 0 {
+		return rows
+	}
+	ctx := r.context()
+	existing, err := table.snapshotInScope(ctx, scope)
+	if err != nil {
+		return rows
+	}
+	definition := table.Definition()
+	primaryKey := definition.PrimaryKey()
+	byKey := make(map[string]TableRow, len(existing))
+	for _, row := range existing {
+		values := make([]any, 0, len(primaryKey))
+		for _, column := range primaryKey {
+			values = append(values, row.Get(column).Any())
+		}
+		byKey[encodeKey(values)] = row
+	}
+	for _, row := range rows {
+		keyValues := make([]any, 0, len(primaryKey))
+		for _, column := range primaryKey {
+			keyValues = append(keyValues, row[column])
+		}
+		previous, exists := byKey[encodeKey(keyValues)]
+		if !exists {
+			continue
+		}
+		for _, column := range definition.Columns() {
+			if _, aggregateOwned := owned[column.Name]; aggregateOwned {
+				continue
+			}
+			row[column.Name] = previous.Get(column.Name).Any()
+		}
+	}
+	return rows
 }
 
 func rewriteAggregateTableListenerResults(batch *ResultBatch, newEntries, oldEntries []aggregateResultEntry, rows []map[string]any, plan Plan, tableDefinition TableDefinition, now time.Time, variables map[string]Value) {
@@ -14657,7 +14733,7 @@ func (r *statementRuntime) aggregateTableRows(plan Plan, tableDefinition TableDe
 		sort.Strings(keys)
 		for _, key := range keys {
 			group := contributor.aggregateState.groups[key]
-			if group == nil || len(group.events) == 0 {
+			if group == nil || group.tableSuppressed || (len(group.events) == 0 && !aggregateDefinitionRetainsEmptyGroups(definition)) {
 				continue
 			}
 			values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, contributor.aggregateState.allEvents, contributor.aggregateState.allEverEvents, now, contributor.variables, group.pluginStates, group.multiPluginStates)
@@ -15081,6 +15157,21 @@ func aggregateDefinitionUsesEver(definition *aggregateDefinition) bool {
 		}
 	}
 	return expressionTreeContainsEver(definition.having)
+}
+
+// aggregateDefinitionRetainsEmptyGroups models the grouped LastEvent view.
+// Replacing the last event removes the old group's event but Esper keeps the
+// group row with count(*) equal to zero until a table mutation removes it.
+func aggregateDefinitionRetainsEmptyGroups(definition *aggregateDefinition) bool {
+	if definition == nil || len(definition.groupBy) == 0 {
+		return false
+	}
+	for node := definition.input; node != nil; node = node.input {
+		if _, ok := node.window.(LastEventWindowSpec); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // aggregateDefinitionIsRowForEvent identifies Esper's ungrouped

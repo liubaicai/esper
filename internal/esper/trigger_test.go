@@ -2038,6 +2038,50 @@ func TestTableSelectTriggerEmitsProjectedRow(t *testing.T) {
 	}
 }
 
+func TestTableSelectTriggerNoKeyEmptyTableEmitsNullRow(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.RegisterTable("current-position", []TableColumn{
+		OptionalTableColumnOf[string]("symbol"),
+		OptionalTableColumnOf[float64]("price"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(OnEvent(From[runtimeTestTrade](env, "Trade")).SelectFromTable("current-position", nil,
+		Alias("symbol", TableField[string]("symbol")),
+		Alias("price", TableField[float64]("price")),
+	).Query(StatementName("on-select-no-key")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("no-key table select result is not a row")
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || !rows[0].Get("symbol").IsNull() || !rows[0].Get("price").IsNull() {
+		t.Fatalf("no-key table select rows = %#v, want one all-null row", rows)
+	}
+}
+
 func TestTablePredicateSelectProjectsMatchingSnapshotRows(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
