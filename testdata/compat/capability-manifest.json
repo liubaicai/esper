@@ -20261,7 +20261,8 @@
         "java-runtime-268b6a11030b69b72a4f",
         "java-runtime-624a42b2506706e92ccc",
         "java-runtime-c3444853bf2d3242e4fd",
-        "java-runtime-4eb413bcc8f6bd676d07"
+        "java-runtime-4eb413bcc8f6bd676d07",
+        "java-runtime-d37dc4b973ae7065db56"
       ],
       "javaStaticIds": [],
       "javaNames": [
@@ -20280,7 +20281,8 @@
         "ExprDefineEventTypeAndSODA",
         "ExprDefineScalarReturn",
         "ExprDefineAnnotationOrder",
-        "ExprDefineCaseNewMultiReturnNoElse"
+        "ExprDefineCaseNewMultiReturnNoElse",
+        "ExprDefineSequenceAndNested"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineBasic.java"
@@ -20303,7 +20305,8 @@
         "TestExprDefineOneParameterLambdaReturnParity",
         "TestExprDefineScalarReturnParity",
         "TestExprDefineAnnotationOrderParity",
-        "TestExprDefineCaseNewMultiReturnNoElseParity"
+        "TestExprDefineCaseNewMultiReturnNoElseParity",
+        "TestExprDefineSequenceAndNestedParity"
       ],
       "tags": [
         "correctness",
@@ -20317,7 +20320,7 @@
         "java-source",
         "go-unit"
       ],
-      "difference": "Go covers simple literal, aggregate-without-access definitions (sumA/sumB/countC), declared expressions used as aggregate inputs (lambda1/lambda2), window access aggregation (wb), scalar-return collection composition (scalarfilter) and on-select CASE/CAST predicate use, map-valued CASE-without-ELSE declarations routed through an intermediate stream, statement-name metadata independent of declaration/source builder order, variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, the correlated pattern filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) via PatternEvent, parameterized declared expressions evaluated in the where/filter clause, one-parameter lambda-return collection composition (one/two), and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip and textual annotation placement/'alias for' variants are approved differences (Go uses immutable typed query options and a fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. The separate sequence/nested, subquery and split-stream variants remain future work."
+      "difference": "Go covers simple literal, aggregate-without-access definitions (sumA/sumB/countC), declared expressions used as aggregate inputs (lambda1/lambda2), window access aggregation (wb), scalar-return collection composition (scalarfilter) and on-select CASE/CAST predicate use, map-valued CASE-without-ELSE declarations routed through an intermediate stream, correlated named-window collection declarations chained through take-last/select/sequence-equal with typed EXPRDEF audit, statement-name metadata independent of declaration/source builder order, variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, the correlated pattern filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) via PatternEvent, parameterized declared expressions evaluated in the where/filter clause, one-parameter lambda-return collection composition (one/two), and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip and textual annotation placement/'alias for' variants are approved differences (Go uses immutable typed query options and a fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. The separate subquery and split-stream variants remain future work."
     },
     {
       "id": "case.epl-variable-onset-basic",
