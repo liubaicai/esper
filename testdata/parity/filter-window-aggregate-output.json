@@ -63,12 +63,20 @@
       }
     },
     {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
       "op": "send",
       "eventType": "Trade",
       "payload": {
         "symbol": "B",
         "price": 12
       }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
     },
     {
       "op": "send",
@@ -79,12 +87,20 @@
       }
     },
     {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
       "op": "send",
       "eventType": "Trade",
       "payload": {
         "symbol": "B",
         "price": 14
       }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
     }
   ]
 }

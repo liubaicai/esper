@@ -4919,6 +4919,11 @@ type outputRuntimeState struct {
 	insertTotal       int64
 	removeTotal       int64
 	lastOutputAt      time.Time
+	// lastOutputGroupRows retains the last emitted row per group for default
+	// count/time output policies (output every N/time). Esper's statement
+	// iterator for those policies reads the last output rather than live
+	// aggregate state; pending deltas stay invisible until the next output.
+	lastOutputGroupRows map[string]Result
 }
 
 func earlierSchedule(current time.Time, found bool, candidate time.Time) (time.Time, bool) {
@@ -7413,6 +7418,8 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			} else {
 				r.outputState.pending.New = append(r.outputState.pending.New, batch.New...)
 				r.outputState.pending.Old = append(r.outputState.pending.Old, batch.Old...)
+				r.outputState.pending.outputKeysNew = append(r.outputState.pending.outputKeysNew, batch.outputKeysNew...)
+				r.outputState.pending.outputKeysOld = append(r.outputState.pending.outputKeysOld, batch.outputKeysOld...)
 				r.outputState.pending.Time = batch.Time
 			}
 			r.outputState.pendingCount += len(batch.New) + len(batch.Old)
@@ -7426,6 +7433,9 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		if len(plans) > 0 && plans[0].query.distinct {
 			result.New = distinctSnapshotResults(result.New)
 			result.Old = distinctSnapshotResults(result.Old)
+		}
+		if len(plans) > 0 {
+			r.recordOutputGroupRows(plans[0], result)
 		}
 		return r.finishOutput(policy, result, now, plans...)
 	case OutputEveryTimePolicy:
@@ -7461,6 +7471,9 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		r.outputState.pending = nil
 		r.outputState.pendingCount = 0
 		r.advanceOutputSchedule(policy, now)
+		if len(plans) > 0 {
+			r.recordOutputGroupRows(plans[0], result)
+		}
 		return r.finishOutput(policy, result, now, plans...)
 	default:
 		return r.finishOutput(policy, batch, now, plans...)
@@ -7777,7 +7790,104 @@ func (r *statementRuntime) snapshotAggregateBatch(plan Plan, now time.Time) Resu
 	if r != nil && plan.query.aggregate != nil && plan.query.aggregate.join == nil && containsTableSource(plan.query.input, nil) {
 		return r.snapshotAggregateFromTable(plan, now)
 	}
+	if r != nil && plan.query.aggregate != nil && outputLimitedGroupedIterator(plan.query.output) && len(aggregateGroupingSetsForDefinition(plan.query.aggregate)) == 1 {
+		return r.snapshotOutputLimitedAggregateBatch(plan, now)
+	}
 	return r.snapshotAggregateStateBatch(plan, now)
+}
+
+// outputLimitedGroupedIterator reports whether Esper's statement iterator for
+// this output policy is backed by the rows emitted at the last output rather
+// than the live aggregate state. Default count/time output views
+// (OutputProcessViewConditionDefault) expose the last emitted per-group rows
+// through statement.iterator(); pending deltas stay invisible. Snapshot
+// policies and explicit output-all/first/last policies keep their own views
+// and are not routed here until separately differential-verified.
+func outputLimitedGroupedIterator(policy OutputPolicy) bool {
+	switch policy.Kind {
+	case OutputEveryPolicy, OutputEveryTimePolicy:
+		return !policy.Snapshot
+	default:
+		return false
+	}
+}
+
+// recordOutputGroupRows captures, per group, the last row of the output batch
+// just emitted for a default count/time output policy. Java's
+// ResultSetProcessorGroupedOutputAllGroupReps retains one representative row
+// per group and updates it at each output; the statement iterator reads that
+// retained state (walking the current filtered source for group presence and
+// order), which is what this map models for Snapshot.
+func (r *statementRuntime) recordOutputGroupRows(plan Plan, batch ResultBatch) {
+	if r == nil || r.outputState == nil || batch.empty() || plan.query.aggregate == nil || len(plan.query.aggregate.groupBy) == 0 {
+		return
+	}
+	if r.outputState.lastOutputGroupRows == nil {
+		r.outputState.lastOutputGroupRows = make(map[string]Result)
+	}
+	rows := r.outputState.lastOutputGroupRows
+	for index, result := range batch.New {
+		key := outputGroupKey(batch.outputKeysNew, index)
+		rows[key] = result
+	}
+}
+
+func (r *statementRuntime) removeOutputGroupRow(key string) {
+	if r == nil || r.outputState == nil || r.outputState.lastOutputGroupRows == nil {
+		return
+	}
+	delete(r.outputState.lastOutputGroupRows, key)
+}
+
+// snapshotOutputLimitedAggregateBatch implements Esper's iterator contract for
+// grouped aggregate statements with a default count/time output policy: the
+// iterator walks the current filtered source in order and returns one row per
+// group with the values from the last output. Groups that were never emitted
+// (or that appeared after the last output) project their group key with null
+// aggregates. Java's OutputProcessViewConditionDefault iterator walks the
+// parent view and reads the per-group rows retained by the output process;
+// this mirrors that behavior without changing listener delivery.
+func (r *statementRuntime) snapshotOutputLimitedAggregateBatch(plan Plan, now time.Time) ResultBatch {
+	result := ResultBatch{Time: now}
+	if r == nil || r.outputState == nil || plan.query.aggregate == nil || len(plan.query.aggregate.groupBy) == 0 || r.aggregateState == nil {
+		return result
+	}
+	definition := plan.query.aggregate
+	events := r.currentStreamEvents(plan.query.input, now)
+	if len(events) == 0 {
+		return result
+	}
+	groupingSet := allGroupingSetIndices(len(definition.groupBy))
+	seen := make(map[string]struct{}, len(events))
+	for _, event := range events {
+		key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		if row, exists := r.outputState.lastOutputGroupRows[key]; exists {
+			result.New = append(result.New, row)
+			result.outputKeysNew = append(result.outputKeysNew, key)
+			continue
+		}
+		current := event
+		var pluginStates map[*exprNode]aggregatePluginState
+		var multiPluginStates map[string]aggregateMultiPluginState
+		if group := r.aggregateState.groups[key]; group != nil {
+			if group.current.Schema().Name() != "" {
+				current = group.current
+			}
+			pluginStates = group.pluginStates
+			multiPluginStates = group.multiPluginStates
+		}
+		values, visible := evaluateAggregateGroup(definition, nil, nil, nil, false, groupingSet, current, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, pluginStates, multiPluginStates)
+		if !visible {
+			continue
+		}
+		result.New = append(result.New, resultRow(newRow(plan.resultSchema, values)))
+		result.outputKeysNew = append(result.outputKeysNew, key)
+	}
+	return result
 }
 
 func (r *statementRuntime) snapshotAggregateFromTable(plan Plan, now time.Time) ResultBatch {
@@ -8298,6 +8408,8 @@ func (r *statementRuntime) appendPending(batch ResultBatch) {
 	} else {
 		r.outputState.pending.New = append(r.outputState.pending.New, batch.New...)
 		r.outputState.pending.Old = append(r.outputState.pending.Old, batch.Old...)
+		r.outputState.pending.outputKeysNew = append(r.outputState.pending.outputKeysNew, batch.outputKeysNew...)
+		r.outputState.pending.outputKeysOld = append(r.outputState.pending.outputKeysOld, batch.outputKeysOld...)
 		r.outputState.pending.Time = batch.Time
 	}
 	r.outputState.pendingCount += len(batch.New) + len(batch.Old)
@@ -8314,6 +8426,8 @@ func (r *statementRuntime) appendCronPending(batch ResultBatch) {
 	}
 	r.outputState.cronPending.New = append(r.outputState.cronPending.New, batch.New...)
 	r.outputState.cronPending.Old = append(r.outputState.cronPending.Old, batch.Old...)
+	r.outputState.cronPending.outputKeysNew = append(r.outputState.cronPending.outputKeysNew, batch.outputKeysNew...)
+	r.outputState.cronPending.outputKeysOld = append(r.outputState.cronPending.outputKeysOld, batch.outputKeysOld...)
 	r.outputState.cronPending.Time = batch.Time
 }
 
@@ -14465,6 +14579,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 					}
 				}
 				delete(state.groups, key)
+				r.removeOutputGroupRow(key)
 			}
 			continue
 		}
@@ -14510,6 +14625,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				}
 			}
 			delete(state.groups, key)
+			r.removeOutputGroupRow(key)
 		}
 	}
 	if delta.forced && len(newEntries) == 0 && len(oldEntries) == 0 && len(definition.groupBy) == 0 {

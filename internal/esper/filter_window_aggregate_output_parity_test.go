@@ -131,15 +131,53 @@ func TestFilterWindowAggregateOutputListenerOrderMatchesJava(t *testing.T) {
 
 	every3 := build(t, true)
 	every3Batches := collect(t, every3)
-	for _, event := range []filterWindowAggregateOutputTrade{
+	snapshotRows := func(t *testing.T) []map[string]any {
+		t.Helper()
+		snapshot, err := every3.SnapshotWithSelector(context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows := make([]map[string]any, 0, len(snapshot.Batch.New))
+		for _, result := range snapshot.Batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("every-3 snapshot is not a row: %#v", result)
+			}
+			fields := map[string]any{"symbol": row.Get("symbol").Any()}
+			if value := row.Get("total"); value.IsNull() {
+				fields["total"] = map[string]any{"state": "null"}
+			} else {
+				fields["total"] = value.Any()
+			}
+			rows = append(rows, fields)
+		}
+		return rows
+	}
+	every3Events := []filterWindowAggregateOutputTrade{
 		{Symbol: "A", Price: 11},
 		{Symbol: "B", Price: 12},
 		{Symbol: "A", Price: 13},
 		{Symbol: "B", Price: 14},
-	} {
+	}
+	// Esper's iterator for `output every N events` grouped aggregates reads
+	// the last emitted per-group rows and walks the current filtered window
+	// for presence and order: before the first output every group projects
+	// null aggregates, after an output the values freeze at that output until
+	// the next one, and pending deltas stay invisible.
+	every3Snapshots := [][]map[string]any{
+		{{"symbol": "A", "total": map[string]any{"state": "null"}}},
+		{
+			{"symbol": "A", "total": map[string]any{"state": "null"}},
+			{"symbol": "B", "total": map[string]any{"state": "null"}},
+		},
+		{{"symbol": "B", "total": float64(12)}, {"symbol": "A", "total": float64(13)}},
+		{{"symbol": "A", "total": float64(13)}, {"symbol": "B", "total": float64(12)}},
+	}
+	for index, event := range every3Events {
 		if err := engine.SendEvent(context.Background(), event); err != nil {
 			t.Fatal(err)
 		}
+		assertBatch(t, snapshotRows(t), every3Snapshots[index]...)
 	}
 	if len(*every3Batches) != 1 {
 		t.Fatalf("every-3 batches = %#v", *every3Batches)

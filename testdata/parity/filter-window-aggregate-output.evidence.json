@@ -80,12 +80,20 @@
         }
       },
       {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
         "op": "send",
         "eventType": "Trade",
         "payload": {
           "symbol": "B",
           "price": 12
         }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
       },
       {
         "op": "send",
@@ -96,12 +104,20 @@
         }
       },
       {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
         "op": "send",
         "eventType": "Trade",
         "payload": {
           "symbol": "B",
           "price": 14
         }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
       }
     ]
   },
@@ -216,6 +232,51 @@
       },
       {
         "case": "every-3",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-3",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-3",
         "operation": "listener",
         "statement": "s0",
         "sequence": 1,
@@ -240,6 +301,52 @@
             "fields": {
               "symbol": "A",
               "total": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-3",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-3",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": 12
             }
           }
         ]
@@ -357,6 +464,51 @@
       },
       {
         "case": "every-3",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-3",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-3",
         "operation": "listener",
         "statement": "s0",
         "sequence": 1,
@@ -381,6 +533,52 @@
             "fields": {
               "symbol": "A",
               "total": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-3",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-3",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": 12
             }
           }
         ]

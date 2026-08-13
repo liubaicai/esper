@@ -58,7 +58,7 @@ pwsh -File .\tools\java-oracle\run-context-hash.ps1 `
 
 ## Filter-window-aggregate oracle
 
-第二个代表性场景使用 `FilterWindowAggregateScenarioOracle.java`（runner：`run-filter-window-aggregate.sh`）。它用 Map 事件类型 `Trade`（symbol/price）双跑 `from Trade#length(2) where price > 10 group by symbol` 与 `output every 3 events` 两个 execution，并输出同一 `esper-parity/v1` trace。Java 语义要点：where 过滤发生在 length 窗口之后（被过滤事件仍淘汰窗口事件），istream 分组聚合批次中新事件组排在淘汰重算组之前；这两点已由 Go 实现复现。带事件数输出策略的 statement，Java `iterator()` 返回上次已发射的每组最新行（pending 不可见），Go 暂返回实时状态，作为 remaining 记录，因此 every-3 case 不包含 snapshot 步骤。
+第二个代表性场景使用 `FilterWindowAggregateScenarioOracle.java`（runner：`run-filter-window-aggregate.sh`）。它用 Map 事件类型 `Trade`（symbol/price）双跑 `from Trade#length(2) where price > 10 group by symbol` 与 `output every 3 events` 两个 execution，并输出同一 `esper-parity/v1` trace。Java 语义要点：where 过滤发生在 length 窗口之后（被过滤事件仍淘汰窗口事件），istream 分组聚合批次中新事件组排在淘汰重算组之前；这两点已由 Go 实现复现。带事件数输出策略的 statement，Java `iterator()` 返回上次已发射的每组最新行（pending 更新不可见，尚未输出过的组投影 null 聚合值），Go 已按同一契约实现（`lastOutputGroupRows` + 输出受限快照路径），every-3 case 包含 4 个 snapshot 步骤（首事件后、第二事件后、首次输出后、pending 事件后）且差分一致。
 
 ```sh
 ./tools/java-oracle/run-filter-window-aggregate.sh   --esper-root /root/app/esper   --scenario testdata/parity/filter-window-aggregate-output.json   --output /tmp/fwa-java.json   --skip-build
