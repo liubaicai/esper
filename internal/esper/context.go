@@ -1,10 +1,16 @@
 package esper
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"hash/fnv"
+	"math"
+	"reflect"
 	"strings"
 	"time"
+	"unicode/utf16"
 )
 
 type ContextKind uint8
@@ -18,6 +24,34 @@ const (
 	ContextDailyTime
 	ContextCronTime
 )
+
+// HashAlgorithm selects the deterministic hash contract used by a hash
+// context. The legacy constructor keeps FNV-1a for source compatibility;
+// CRC32 and JavaHashCode provide the built-in Esper hash functions.
+type HashAlgorithm uint8
+
+const (
+	HashAlgorithmFNV1a HashAlgorithm = iota
+	HashAlgorithmCRC32
+	HashAlgorithmJavaHashCode
+)
+
+func (a HashAlgorithm) valid() bool {
+	return a == HashAlgorithmFNV1a || a == HashAlgorithmCRC32 || a == HashAlgorithmJavaHashCode
+}
+
+func (a HashAlgorithm) String() string {
+	switch a {
+	case HashAlgorithmFNV1a:
+		return "fnv1a"
+	case HashAlgorithmCRC32:
+		return "crc32"
+	case HashAlgorithmJavaHashCode:
+		return "java-hash-code"
+	default:
+		return "unknown"
+	}
+}
 
 // TimeOfDay is a local wall-clock time used by recurring daily contexts.
 // The date and location come from the Engine virtual clock; only the clock
@@ -98,6 +132,7 @@ type ContextDefinition struct {
 	keys                 []Expr
 	partitions           int
 	preallocate          bool
+	hashAlgorithm        HashAlgorithm
 	categories           []ContextCategory
 	start                Expression[bool]
 	end                  Expression[bool]
@@ -159,7 +194,14 @@ func NewHashContext(name string, key Expr, partitions int) (ContextDefinition, e
 // NewHashContextBy declares a hash-partitioned context over a key tuple.
 // The single-key NewHashContext form remains available for the common case.
 func NewHashContextBy(name string, partitions int, keys ...Expr) (ContextDefinition, error) {
-	return newHashContext(name, partitions, false, keys...)
+	return newHashContextWithAlgorithm(name, HashAlgorithmFNV1a, partitions, false, keys...)
+}
+
+// NewHashContextWithAlgorithm declares a lazy hash context using an explicit
+// deterministic hash algorithm. Use HashAlgorithmCRC32 or
+// HashAlgorithmJavaHashCode when matching Esper's built-in context functions.
+func NewHashContextWithAlgorithm(name string, algorithm HashAlgorithm, partitions int, keys ...Expr) (ContextDefinition, error) {
+	return newHashContextWithAlgorithm(name, algorithm, partitions, false, keys...)
 }
 
 // NewPreallocatedHashContext declares a hash-partitioned context whose
@@ -171,10 +213,16 @@ func NewPreallocatedHashContext(name string, key Expr, partitions int) (ContextD
 // NewPreallocatedHashContextBy is the multi-key form of
 // NewPreallocatedHashContext.
 func NewPreallocatedHashContextBy(name string, partitions int, keys ...Expr) (ContextDefinition, error) {
-	return newHashContext(name, partitions, true, keys...)
+	return newHashContextWithAlgorithm(name, HashAlgorithmFNV1a, partitions, true, keys...)
 }
 
-func newHashContext(name string, partitions int, preallocate bool, keys ...Expr) (ContextDefinition, error) {
+// NewPreallocatedHashContextWithAlgorithm declares a preallocated hash
+// context using an explicit deterministic hash algorithm.
+func NewPreallocatedHashContextWithAlgorithm(name string, algorithm HashAlgorithm, partitions int, keys ...Expr) (ContextDefinition, error) {
+	return newHashContextWithAlgorithm(name, algorithm, partitions, true, keys...)
+}
+
+func newHashContextWithAlgorithm(name string, algorithm HashAlgorithm, partitions int, preallocate bool, keys ...Expr) (ContextDefinition, error) {
 	if strings.TrimSpace(name) == "" {
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "context name is required")
 	}
@@ -184,7 +232,10 @@ func newHashContext(name string, partitions int, preallocate bool, keys ...Expr)
 	if partitions <= 0 {
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "hash context partitions must be positive")
 	}
-	return ContextDefinition{name: name, kind: ContextHashSegmented, key: keys[0], keys: copyContextKeys(keys), partitions: partitions, preallocate: preallocate}, nil
+	if !algorithm.valid() {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("unknown hash algorithm %d", algorithm))
+	}
+	return ContextDefinition{name: name, kind: ContextHashSegmented, key: keys[0], keys: copyContextKeys(keys), partitions: partitions, preallocate: preallocate, hashAlgorithm: algorithm}, nil
 }
 
 func NewCategoryContext(name string, categories ...ContextCategory) (ContextDefinition, error) {
@@ -607,12 +658,18 @@ func NewNestedContext(name string, parent ContextDefinition, child ContextDefini
 	return childCopy, nil
 }
 
-func (d ContextDefinition) Name() string               { return d.name }
-func (d ContextDefinition) Key() Expr                  { return d.key }
-func (d ContextDefinition) Keys() []Expr               { return copyContextKeys(d.contextKeys()) }
-func (d ContextDefinition) Kind() ContextKind          { return d.kind }
-func (d ContextDefinition) Partitions() int            { return d.partitions }
-func (d ContextDefinition) Preallocate() bool          { return d.preallocate }
+func (d ContextDefinition) Name() string      { return d.name }
+func (d ContextDefinition) Key() Expr         { return d.key }
+func (d ContextDefinition) Keys() []Expr      { return copyContextKeys(d.contextKeys()) }
+func (d ContextDefinition) Kind() ContextKind { return d.kind }
+func (d ContextDefinition) Partitions() int   { return d.partitions }
+func (d ContextDefinition) Preallocate() bool { return d.preallocate }
+func (d ContextDefinition) HashAlgorithm() HashAlgorithm {
+	if d.kind != ContextHashSegmented {
+		return HashAlgorithmFNV1a
+	}
+	return d.hashAlgorithm
+}
 func (d ContextDefinition) InitiatedDistinct() bool    { return d.initiatedDistinct }
 func (d ContextDefinition) InitiatedOverlapping() bool { return d.initiatedOverlapping }
 func (d ContextDefinition) HasTermination() bool       { return d.end != nil || d.endPattern != nil }
@@ -641,6 +698,9 @@ func (d ContextDefinition) localDescription() string {
 		description := fmt.Sprintf("hash(%s,%d)", keyDescription, d.partitions)
 		if d.preallocate {
 			description += ",preallocate"
+		}
+		if d.hashAlgorithm != HashAlgorithmFNV1a {
+			description += "," + d.hashAlgorithm.String()
 		}
 		return description
 	case ContextCategorySegmented:
@@ -841,11 +901,243 @@ func (d ContextDefinition) contextPropertyValues(event Event, now time.Time, var
 			}
 		}
 	case ContextHashSegmented:
-		hasher := fnv.New32a()
-		_, _ = hasher.Write([]byte(encodeKey(d.evaluatedKeyValues(event, now, variables))))
-		properties["hash"] = Present(int64(int32(hasher.Sum32())))
+		properties["hash"] = Present(int64(d.hashBucket(event, now, variables)))
 	}
 	return properties
+}
+
+func (d ContextDefinition) hashBucket(event Event, now time.Time, variables map[string]Value) int {
+	if d.partitions <= 0 {
+		return 0
+	}
+	results := d.evaluatedKeyResults(event, now, variables)
+	var hash uint32
+	switch d.hashAlgorithm {
+	case HashAlgorithmCRC32:
+		if len(results) == 1 {
+			if value, ok := hashStringValue(results[0]); ok {
+				hash = crc32.ChecksumIEEE([]byte(value))
+				return int(hash % uint32(d.partitions))
+			}
+		}
+		hash = crc32.ChecksumIEEE(javaSerializedHashValues(results))
+		return int(hash % uint32(d.partitions))
+	case HashAlgorithmJavaHashCode:
+		var combined int32
+		for _, result := range results {
+			if result.IsPresent() {
+				combined = int32(uint32(combined)*31 + uint32(javaHashCode(result.Any())))
+			}
+		}
+		value := int64(combined)
+		if value < 0 {
+			value = -value
+		}
+		return int(value % int64(d.partitions))
+	default:
+		hasher := fnv.New32a()
+		_, _ = hasher.Write([]byte(encodeKey(d.evaluatedKeyValues(event, now, variables))))
+		return int(hasher.Sum32() % uint32(d.partitions))
+	}
+}
+
+func hashStringValue(value Value) (string, bool) {
+	if !value.IsPresent() {
+		return "", false
+	}
+	underlying := value.Any()
+	if underlying == nil {
+		return "", false
+	}
+	if text, ok := underlying.(string); ok {
+		return text, true
+	}
+	reflected := reflect.ValueOf(underlying)
+	if reflected.IsValid() && reflected.Kind() == reflect.Pointer && !reflected.IsNil() {
+		if text, ok := reflected.Elem().Interface().(string); ok {
+			return text, true
+		}
+	}
+	return "", false
+}
+
+func javaSerializedHashValues(values []Value) []byte {
+	var output bytes.Buffer
+	for _, value := range values {
+		if !value.IsPresent() {
+			continue
+		}
+		appendJavaSerializedValue(&output, value.Any())
+	}
+	return output.Bytes()
+}
+
+func appendJavaSerializedValue(output *bytes.Buffer, value any) {
+	if value == nil {
+		return
+	}
+	reflected := reflect.ValueOf(value)
+	for reflected.IsValid() && reflected.Kind() == reflect.Interface {
+		if reflected.IsNil() {
+			return
+		}
+		reflected = reflected.Elem()
+	}
+	if reflected.IsValid() && reflected.Kind() == reflect.Pointer {
+		if reflected.IsNil() {
+			return
+		}
+		appendJavaSerializedValue(output, reflected.Elem().Interface())
+		return
+	}
+	switch value := value.(type) {
+	case string:
+		appendJavaUTF(output, value)
+	case bool:
+		_ = output.WriteByte(boolByte(value))
+	case int:
+		writeJavaInt(output, int64(int32(value)))
+	case int32:
+		writeJavaInt(output, int64(value))
+	case int64:
+		writeJavaLong(output, value)
+	case int8:
+		_ = output.WriteByte(byte(value))
+	case int16:
+		var encoded [2]byte
+		binary.BigEndian.PutUint16(encoded[:], uint16(value))
+		_, _ = output.Write(encoded[:])
+	case uint:
+		writeJavaInt(output, int64(int32(value)))
+	case uint32:
+		writeJavaInt(output, int64(int32(value)))
+	case uint64:
+		writeJavaLong(output, int64(value))
+	case uint8:
+		_ = output.WriteByte(byte(value))
+	case uint16:
+		var encoded [2]byte
+		binary.BigEndian.PutUint16(encoded[:], uint16(value))
+		_, _ = output.Write(encoded[:])
+	case float32:
+		var encoded [4]byte
+		binary.BigEndian.PutUint32(encoded[:], math.Float32bits(value))
+		_, _ = output.Write(encoded[:])
+	case float64:
+		var encoded [8]byte
+		binary.BigEndian.PutUint64(encoded[:], math.Float64bits(value))
+		_, _ = output.Write(encoded[:])
+	default:
+		// Java's fallback is ObjectOutputStream. Go values without a matching
+		// scalar serializer have no portable JVM serialization contract, so
+		// retain a deterministic representation for the typed API.
+		_, _ = output.WriteString(fmt.Sprintf("%T:%#v", value, value))
+	}
+}
+
+func writeJavaInt(output *bytes.Buffer, value int64) {
+	var encoded [4]byte
+	binary.BigEndian.PutUint32(encoded[:], uint32(int32(value)))
+	_, _ = output.Write(encoded[:])
+}
+
+func writeJavaLong(output *bytes.Buffer, value int64) {
+	var encoded [8]byte
+	binary.BigEndian.PutUint64(encoded[:], uint64(value))
+	_, _ = output.Write(encoded[:])
+}
+
+func boolByte(value bool) byte {
+	if value {
+		return 1
+	}
+	return 0
+}
+
+func appendJavaUTF(output *bytes.Buffer, value string) {
+	encoded := make([]byte, 0, len(value)+2)
+	for _, unit := range utf16.Encode([]rune(value)) {
+		switch {
+		case unit == 0:
+			// DataOutputStream.writeUTF uses modified UTF-8, where NUL is
+			// represented by the two-byte sequence C0 80.
+			encoded = append(encoded, 0xc0, 0x80)
+		case unit >= 1 && unit <= 0x7f:
+			encoded = append(encoded, byte(unit))
+		case unit <= 0x7ff:
+			encoded = append(encoded, byte(0xc0|unit>>6), byte(0x80|unit&0x3f))
+		default:
+			encoded = append(encoded, byte(0xe0|unit>>12), byte(0x80|(unit>>6)&0x3f), byte(0x80|unit&0x3f))
+		}
+	}
+	var length [2]byte
+	binary.BigEndian.PutUint16(length[:], uint16(len(encoded)))
+	_, _ = output.Write(length[:])
+	_, _ = output.Write(encoded)
+}
+
+func javaHashCode(value any) int32 {
+	if value == nil {
+		return 0
+	}
+	reflected := reflect.ValueOf(value)
+	for reflected.IsValid() && (reflected.Kind() == reflect.Interface || reflected.Kind() == reflect.Pointer) {
+		if reflected.IsNil() {
+			return 0
+		}
+		reflected = reflected.Elem()
+	}
+	if !reflected.IsValid() {
+		return 0
+	}
+	value = reflected.Interface()
+	switch value := value.(type) {
+	case string:
+		var hash uint32
+		for _, unit := range utf16.Encode([]rune(value)) {
+			hash = hash*31 + uint32(unit)
+		}
+		return int32(hash)
+	case bool:
+		if value {
+			return 1231
+		}
+		return 1237
+	case int:
+		return int32(value)
+	case int8:
+		return int32(value)
+	case int16:
+		return int32(value)
+	case int32:
+		return value
+	case int64:
+		return int32(uint64(value) ^ uint64(value)>>32)
+	case uint:
+		return int32(value)
+	case uint8:
+		return int32(value)
+	case uint16:
+		return int32(value)
+	case uint32:
+		return int32(value)
+	case uint64:
+		return int32(value ^ value>>32)
+	case float32:
+		bits := math.Float32bits(value)
+		if math.IsNaN(float64(value)) {
+			bits = 0x7fc00000
+		}
+		return int32(bits ^ bits>>16)
+	case float64:
+		bits := math.Float64bits(value)
+		if math.IsNaN(value) {
+			bits = 0x7ff8000000000000
+		}
+		return int32(bits ^ bits>>32)
+	default:
+		return int32(crc32.ChecksumIEEE([]byte(fmt.Sprintf("%T:%#v", value, value))))
+	}
 }
 
 func (d ContextDefinition) partition(event Event, now time.Time, variables map[string]Value) (string, bool, error) {
@@ -875,9 +1167,7 @@ func (d ContextDefinition) partitionLocal(event Event, now time.Time, variables 
 		}
 		return "", false, nil
 	case ContextHashSegmented:
-		hasher := fnv.New32a()
-		_, _ = hasher.Write([]byte(encodeKey(d.evaluatedKeyValues(event, now, variables))))
-		return fmt.Sprintf("hash:%d", hasher.Sum32()%uint32(d.partitions)), true, nil
+		return fmt.Sprintf("hash:%d", d.hashBucket(event, now, variables)), true, nil
 	case ContextKeySegmented:
 		return encodeKey(d.evaluatedKeyValues(event, now, variables)), true, nil
 	case ContextInitiatedTerminated:
@@ -922,6 +1212,19 @@ func CreateHashContextBy(env *Environment, name string, partitions int, keys ...
 	return env.registerContextDefinition(definition)
 }
 
+// CreateHashContextWithAlgorithm registers a lazy hash context using an
+// explicit deterministic hash algorithm.
+func CreateHashContextWithAlgorithm(env *Environment, name string, algorithm HashAlgorithm, partitions int, keys ...Expr) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewHashContextWithAlgorithm(name, algorithm, partitions, keys...)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	return env.registerContextDefinition(definition)
+}
+
 func CreatePreallocatedHashContext(env *Environment, name string, key Expr, partitions int) (ContextDefinition, error) {
 	return CreatePreallocatedHashContextBy(env, name, partitions, key)
 }
@@ -931,6 +1234,19 @@ func CreatePreallocatedHashContextBy(env *Environment, name string, partitions i
 		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
 	definition, err := NewPreallocatedHashContextBy(name, partitions, keys...)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	return env.registerContextDefinition(definition)
+}
+
+// CreatePreallocatedHashContextWithAlgorithm registers a preallocated hash
+// context using an explicit deterministic hash algorithm.
+func CreatePreallocatedHashContextWithAlgorithm(env *Environment, name string, algorithm HashAlgorithm, partitions int, keys ...Expr) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewPreallocatedHashContextWithAlgorithm(name, algorithm, partitions, keys...)
 	if err != nil {
 		return ContextDefinition{}, err
 	}

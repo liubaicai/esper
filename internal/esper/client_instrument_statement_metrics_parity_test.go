@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"regexp"
+	"runtime"
 	"sort"
 	"testing"
 	"time"
@@ -74,6 +75,34 @@ func requireMetricNames(t *testing.T, metrics []StatementMetric, want ...string)
 	}
 }
 
+func takeMetricCPUTime(target int64) bool {
+	if target <= 0 {
+		return true
+	}
+	start := statementMetricsCPUTime()
+	var value uint64 = 1
+	if start == 0 {
+		deadline := time.Now().Add(time.Duration(target))
+		for time.Now().Before(deadline) {
+			value = value*1664525 + 1013904223
+		}
+	} else {
+		deadline := start + time.Duration(target)
+		for statementMetricsCPUTime() < deadline {
+			value = value*1664525 + 1013904223
+		}
+	}
+	runtime.KeepAlive(value)
+	return true
+}
+
+func takeMetricWallTime(milliseconds int64) bool {
+	if milliseconds > 0 {
+		time.Sleep(time.Duration(milliseconds) * time.Millisecond)
+	}
+	return true
+}
+
 func TestClientInstrumentMetricsReportingStmtMetricsParity(t *testing.T) {
 	origin := time.Unix(0, 0).UTC()
 	env := newClientInstrumentMetricEnv(t)
@@ -95,18 +124,27 @@ func TestClientInstrumentMetricsReportingStmtMetricsParity(t *testing.T) {
 	}
 
 	intField := Field[clientInstrumentMetricBean, int]("intPrimitive")
+	longField := Field[clientInstrumentMetricBean, int64]("longPrimitive")
 	definitions := []struct {
-		name  string
-		value int
+		name     string
+		value    int
+		workload int64
+		cpuWork  bool
 	}{
-		{name: "cpuStmtOne", value: 1},
-		{name: "cpuStmtTwo", value: 2},
-		{name: "wallStmtThree", value: 3},
-		{name: "wallStmtFour", value: 4},
+		{name: "cpuStmtOne", value: 1, workload: int64(80 * time.Millisecond), cpuWork: true},
+		{name: "cpuStmtTwo", value: 2, workload: int64(50 * time.Millisecond), cpuWork: true},
+		{name: "wallStmtThree", value: 3, workload: 200},
+		{name: "wallStmtFour", value: 4, workload: 400},
 	}
 	deployments := make([]*Deployment, 0, len(definitions))
 	for _, definition := range definitions {
-		plan := buildClientInstrumentMetricPlan(t, env, definition.name, Equal[int](intField, Literal(definition.value)))
+		predicate := Equal[int](intField, Literal(definition.value))
+		if definition.cpuWork {
+			predicate = And(predicate, Func1[int64, bool]("takeCPUTime", takeMetricCPUTime, longField))
+		} else {
+			predicate = And(predicate, Func1[int64, bool]("takeWallTime", takeMetricWallTime, longField))
+		}
+		plan := buildClientInstrumentMetricPlan(t, env, definition.name, predicate)
 		deployment, _ := deployClientInstrumentMetricStatement(t, engine, plan, true)
 		deployments = append(deployments, deployment)
 	}
@@ -121,8 +159,8 @@ func TestClientInstrumentMetricsReportingStmtMetricsParity(t *testing.T) {
 	}
 	defer func() { _ = subscription.Close() }()
 
-	for index := 1; index <= 4; index++ {
-		if err := engine.SendEvent(context.Background(), clientInstrumentMetricBean{TheString: "E", IntPrimitive: index}); err != nil {
+	for _, definition := range definitions {
+		if err := engine.SendEvent(context.Background(), clientInstrumentMetricBean{TheString: "E", IntPrimitive: definition.value, LongPrimitive: definition.workload}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -137,6 +175,17 @@ func TestClientInstrumentMetricsReportingStmtMetricsParity(t *testing.T) {
 	for _, metric := range groups[1].Metrics {
 		if metric.RuntimeURI != "default" || metric.NumInput != 1 || metric.NumOutputIStream != 1 || metric.NumOutputRStream != 0 || metric.WallTime <= 0 {
 			t.Fatalf("current statement metric = %#v", metric)
+		}
+		if metric.StatementName == "cpuStmtOne" || metric.StatementName == "cpuStmtTwo" {
+			if statementMetricsCPUTime() > 0 && metric.CPUTime <= 0 {
+				t.Fatalf("CPU statement metric did not record CPU time = %#v", metric)
+			}
+		}
+		if metric.StatementName == "wallStmtThree" && metric.WallTime+50*time.Millisecond < 200*time.Millisecond {
+			t.Fatalf("wallStmtThree metric did not record workload time = %#v", metric)
+		}
+		if metric.StatementName == "wallStmtFour" && metric.WallTime+50*time.Millisecond < 400*time.Millisecond {
+			t.Fatalf("wallStmtFour metric did not record workload time = %#v", metric)
 		}
 	}
 	runtimeMetric, err := engine.CurrentRuntimeMetric(context.Background())
@@ -161,8 +210,8 @@ func TestClientInstrumentMetricsReportingStmtMetricsParity(t *testing.T) {
 	}
 	reported = nil
 
-	for index := 1; index <= 4; index++ {
-		if err := engine.SendEvent(context.Background(), clientInstrumentMetricBean{TheString: "E", IntPrimitive: index}); err != nil {
+	for _, definition := range definitions {
+		if err := engine.SendEvent(context.Background(), clientInstrumentMetricBean{TheString: "E", IntPrimitive: definition.value, LongPrimitive: definition.workload}); err != nil {
 			t.Fatal(err)
 		}
 	}

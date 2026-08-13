@@ -1756,7 +1756,21 @@ func (s *Statement) snapshotLocked(now time.Time, variables map[string]Value, se
 		for key := range s.runtime.partitions {
 			partitionKeys = append(partitionKeys, key)
 		}
-		sort.Strings(partitionKeys)
+		sort.Slice(partitionKeys, func(i, j int) bool {
+			leftKey, rightKey := partitionKeys[i], partitionKeys[j]
+			left, right := s.runtime.partitions[leftKey], s.runtime.partitions[rightKey]
+			leftID, rightID := 0, 0
+			if left != nil {
+				leftID = left.partitionID
+			}
+			if right != nil {
+				rightID = right.partitionID
+			}
+			if leftID != rightID {
+				return leftID < rightID
+			}
+			return leftKey < rightKey
+		})
 		for _, key := range partitionKeys {
 			partition := s.runtime.partitions[key]
 			if partition == nil {
@@ -12799,7 +12813,24 @@ func patternPredicateMatches(node *patternNode, progress *patternProgress, event
 	if node == nil || node.predicate == nil {
 		return false
 	}
-	ctx := EvalContext{Event: event, Tags: progress.tags, TagValues: progress.tagValues, Now: now, Variables: variables}
+	// Esper binds an event-pattern filter's alias while evaluating its filter
+	// expression. Use a temporary snapshot so predicates such as
+	// `myEquals(a.value, b.value)` can see both the previously captured `a`
+	// event and the current candidate `b` event without mutating the pending
+	// pattern state before the predicate succeeds.
+	tags := clonePatternTags(progress.tags)
+	tagValues := clonePatternTagValues(progress.tagValues)
+	if node.tag != "" {
+		if tags == nil {
+			tags = make(map[string]Event)
+		}
+		if tagValues == nil {
+			tagValues = make(map[string][]Event)
+		}
+		tags[node.tag] = event
+		tagValues[node.tag] = append(tagValues[node.tag], event)
+	}
+	ctx := EvalContext{Event: event, Tags: tags, TagValues: tagValues, Now: now, Variables: variables}
 	value := node.predicate.eval(ctx)
 	ok, isBool := boolValue(value)
 	return isBool && ok
@@ -14325,12 +14356,30 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	affected := make([]string, 0)
 	seen := make(map[string]struct{})
 	groupingSets := aggregateGroupingSetsForDefinition(definition)
+	orderAffected := func(events []Event) {
+		for _, event := range events {
+			for _, groupingSet := range groupingSets {
+				key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
+				if _, exists := seen[key]; !exists {
+					seen[key] = struct{}{}
+					affected = append(affected, key)
+				}
+			}
+		}
+	}
+	// Esper's istream result set lists the incoming event's group before
+	// groups whose rows changed only because a window eviction removed an old
+	// event; the irstream/remove path lists eviction-affected groups first.
+	// Java's ResultSetOutputLimitAggregateGrouped traces exercise both forms.
+	if plan.query.selector == SelectIStream {
+		orderAffected(delta.newEvents)
+		orderAffected(delta.oldEvents)
+	} else {
+		orderAffected(delta.oldEvents)
+		orderAffected(delta.newEvents)
+	}
 	markAffected := func(event Event, groupingSet []int) string {
 		key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
-		if _, exists := seen[key]; !exists {
-			seen[key] = struct{}{}
-			affected = append(affected, key)
-		}
 		group := state.groups[key]
 		if group == nil {
 			group = &aggregateGroup{
@@ -15130,7 +15179,7 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 			current = everEvents[0]
 		}
 	}
-	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), IsLeaving: leaving, Engine: aggregateEngineFromVariables(variables), Now: now, Variables: variables, aggregatePluginStates: pluginStates, aggregateMultiPluginStates: multiPluginStates, aggregateEvaluation: true}
+	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), History: append([]Event(nil), events...), IsLeaving: leaving, Engine: aggregateEngineFromVariables(variables), Now: now, Variables: variables, aggregatePluginStates: pluginStates, aggregateMultiPluginStates: multiPluginStates, aggregateEvaluation: true}
 	if len(definition.groupBy) > 0 {
 		groupingEvent := current
 		if groupingEvent.Schema().Name() == "" {

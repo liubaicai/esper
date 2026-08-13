@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,10 @@ type Scenario struct {
 
 type Step struct {
 	Op        string          `json:"op"`
+	Case      string          `json:"case,omitempty"`
+	Statement string          `json:"statement,omitempty"`
+	Selector  string          `json:"selector,omitempty"`
+	Hashes    []int64         `json:"hashes,omitempty"`
 	EventType string          `json:"eventType,omitempty"`
 	At        string          `json:"at,omitempty"`
 	Payload   json.RawMessage `json:"payload,omitempty"`
@@ -53,6 +58,10 @@ func (s Scenario) Validate() error {
 	}
 	for i, step := range s.Steps {
 		switch step.Op {
+		case "case":
+			if strings.TrimSpace(step.Case) == "" {
+				return fmt.Errorf("compat: step %d case has no case", i)
+			}
 		case "send":
 			if strings.TrimSpace(step.EventType) == "" {
 				return fmt.Errorf("compat: step %d send has no eventType", i)
@@ -63,6 +72,24 @@ func (s Scenario) Validate() error {
 		case "advance-time":
 			if _, err := time.Parse(time.RFC3339Nano, step.At); err != nil {
 				return fmt.Errorf("compat: step %d invalid time %q: %w", i, step.At, err)
+			}
+		case "snapshot", "snapshot-selector":
+			if strings.TrimSpace(step.Statement) == "" {
+				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
+			}
+			if step.Op == "snapshot-selector" {
+				if strings.TrimSpace(step.Selector) == "" {
+					return fmt.Errorf("compat: step %d snapshot-selector has no selector", i)
+				}
+				switch step.Selector {
+				case "all":
+				case "hashes":
+					if len(step.Hashes) == 0 {
+						return fmt.Errorf("compat: step %d hash selector has no hashes", i)
+					}
+				default:
+					return fmt.Errorf("compat: step %d has unsupported selector %q", i, step.Selector)
+				}
 			}
 		default:
 			return fmt.Errorf("compat: step %d has unsupported op %q", i, step.Op)
@@ -78,11 +105,20 @@ type Trace struct {
 }
 
 type TraceRecord struct {
-	Statement string         `json:"statement"`
-	Sequence  uint64         `json:"sequence"`
-	Time      string         `json:"time"`
-	New       []ResultRecord `json:"new,omitempty"`
-	Old       []ResultRecord `json:"old,omitempty"`
+	Case       string            `json:"case,omitempty"`
+	Operation  string            `json:"operation"`
+	Statement  string            `json:"statement"`
+	Sequence   uint64            `json:"sequence"`
+	Time       string            `json:"time"`
+	New        []ResultRecord    `json:"new,omitempty"`
+	Old        []ResultRecord    `json:"old,omitempty"`
+	Partitions []PartitionRecord `json:"partitions,omitempty"`
+}
+
+type PartitionRecord struct {
+	ID         int            `json:"id"`
+	Key        string         `json:"key"`
+	Properties map[string]any `json:"properties"`
 }
 
 type ResultRecord struct {
@@ -107,7 +143,7 @@ func Replay(ctx context.Context, engine *esper.Engine, statement *esper.Statemen
 	trace := Trace{Version: ScenarioVersion, ID: scenario.ID}
 	var mu sync.Mutex
 	_, err := statement.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
-		record := TraceRecord{Statement: statement.Name(), Sequence: batch.Sequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
+		record := TraceRecord{Operation: "listener", Statement: statement.Name(), Sequence: batch.Sequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
 		record.New = normalizeResults(batch.New)
 		record.Old = normalizeResults(batch.Old)
 		mu.Lock()
@@ -121,6 +157,69 @@ func Replay(ctx context.Context, engine *esper.Engine, statement *esper.Statemen
 	for _, step := range scenario.Steps {
 		if err := contextErr(ctx); err != nil {
 			return trace, err
+		}
+		switch step.Op {
+		case "case":
+			continue
+		case "send":
+			if decode == nil {
+				return trace, fmt.Errorf("compat: no payload decoder for send step")
+			}
+			payload, err := decode(step)
+			if err != nil {
+				return trace, err
+			}
+			if err := engine.Send(ctx, step.EventType, payload); err != nil {
+				return trace, err
+			}
+		case "advance-time":
+			at, _ := time.Parse(time.RFC3339Nano, step.At)
+			if err := engine.AdvanceTime(ctx, at); err != nil {
+				return trace, err
+			}
+		case "snapshot", "snapshot-selector":
+			return trace, fmt.Errorf("compat: Replay snapshot requires a statement resolver; use ReplayWithStatements")
+		}
+	}
+	return trace, nil
+}
+
+// ReplayWithStatements is the parity replay entry point for scenarios that
+// contain multiple named cases and explicit iterator/snapshot actions.
+type StatementResolver func(name string) (*esper.Statement, error)
+
+func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *esper.Statement, scenario Scenario, decode DecodePayload, resolve StatementResolver) (Trace, error) {
+	if err := scenario.Validate(); err != nil {
+		return Trace{}, err
+	}
+	if engine == nil || statement == nil {
+		return Trace{}, fmt.Errorf("compat: engine and statement are required")
+	}
+	trace := Trace{Version: ScenarioVersion, ID: scenario.ID}
+	caseName := ""
+	appendBatch := func(caseName, operation string, current *esper.Statement, batch esper.ResultBatch, selector esper.ContextPartitionSelector) {
+		record := TraceRecord{Case: caseName, Operation: operation, Statement: current.Name(), Sequence: batch.Sequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
+		record.New = normalizeResults(batch.New)
+		record.Old = normalizeResults(batch.Old)
+		record.Partitions = normalizePartitions(current.ContextPartitionsWith(selector))
+		trace.Records = append(trace.Records, record)
+	}
+	if _, err := statement.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+		appendBatch(caseName, "listener", statement, batch, nil)
+		return nil
+	}); err != nil {
+		return Trace{}, err
+	}
+	for _, step := range scenario.Steps {
+		if err := contextErr(ctx); err != nil {
+			return trace, err
+		}
+		if step.Op == "case" {
+			caseName = step.Case
+			continue
+		}
+		if step.Case != "" && step.Case != caseName {
+			continue
 		}
 		switch step.Op {
 		case "send":
@@ -139,6 +238,32 @@ func Replay(ctx context.Context, engine *esper.Engine, statement *esper.Statemen
 			if err := engine.AdvanceTime(ctx, at); err != nil {
 				return trace, err
 			}
+		case "snapshot", "snapshot-selector":
+			current := statement
+			if resolve != nil {
+				resolved, err := resolve(step.Statement)
+				if err != nil {
+					return trace, err
+				}
+				current = resolved
+			} else if step.Statement != statement.Name() {
+				return trace, fmt.Errorf("compat: statement %q cannot be resolved", step.Statement)
+			}
+			var selector esper.ContextPartitionSelector
+			if step.Op == "snapshot-selector" {
+				switch step.Selector {
+				case "all":
+					selector = esper.ContextPartitionSelectorAll{}
+				case "hashes":
+					selector = esper.SelectContextPartitionHashes(step.Hashes...)
+				}
+			}
+			result, err := current.SnapshotWithSelector(ctx, selector)
+			if err != nil {
+				return trace, err
+			}
+			batch := result.Batch
+			appendBatch(caseName, step.Op, current, batch, selector)
 		}
 	}
 	return trace, nil
@@ -167,6 +292,50 @@ func normalizeResults(results []esper.Result) []ResultRecord {
 		}
 	}
 	return normalized
+}
+
+// NormalizeResults exposes the protocol normalizer to host-specific runners.
+func NormalizeResults(results []esper.Result) []ResultRecord {
+	return normalizeResults(results)
+}
+
+func normalizePartitions(descriptors []esper.ContextPartitionDescriptor) []PartitionRecord {
+	if len(descriptors) == 0 {
+		return nil
+	}
+	result := make([]PartitionRecord, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		properties := make(map[string]any)
+		if hash, ok := descriptor.Property("hash"); ok {
+			properties["hash"] = normalizeValue(hash)
+		}
+		result = append(result, PartitionRecord{ID: descriptor.ID, Key: descriptor.Key, Properties: properties})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].ID != result[j].ID {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].Key < result[j].Key
+	})
+	return result
+}
+
+// NormalizePartitions exposes the stable descriptor projection to host-specific
+// runners. The protocol intentionally includes only fields shared by the Java
+// and Go context administration APIs.
+func NormalizePartitions(descriptors []esper.ContextPartitionDescriptor) []PartitionRecord {
+	return normalizePartitions(descriptors)
+}
+
+func normalizeMap(values map[string]any) map[string]any {
+	if values == nil {
+		return nil
+	}
+	result := make(map[string]any, len(values))
+	for key, value := range values {
+		result[key] = value
+	}
+	return result
 }
 
 func normalizeValue(value esper.Value) any {

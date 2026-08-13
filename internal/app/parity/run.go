@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	esper "github.com/liubaicai/esper"
 	"github.com/liubaicai/esper/internal/compat"
@@ -23,6 +24,13 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate or filter-window-aggregate-diff")
+	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
+	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
+	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
+	javaRuntimeIDs := flags.String("java-runtime-ids", "", "comma-separated Java runtime IDs")
+	javaSourceFiles := flags.String("java-source-files", "", "comma-separated Java source files")
+	javaExecutions := flags.String("java-executions", "", "comma-separated Java execution names")
 	if err := flags.Parse(args); err == flag.ErrHelp {
 		return 0
 	} else if err != nil {
@@ -36,6 +44,41 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	scenario, err := compat.LoadScenario(file)
 	if err != nil {
 		return fail(stderr, err)
+	}
+	if *mode == "context-hash" || *mode == "context-hash-diff" {
+		trace, err := runContextHashScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-hash-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, contextHashJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, []string{contextHashJavaSource}),
+				splitMetadata(*javaExecutions, contextHashJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "filter-window-aggregate" || *mode == "filter-window-aggregate-diff" {
+		trace, err := runFilterWindowAggregateScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "filter-window-aggregate-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, filterWindowAggregateJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, filterWindowAggregateJavaSources),
+				splitMetadata(*javaExecutions, filterWindowAggregateJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode != "stage1" {
+		return fail(stderr, fmt.Errorf("unsupported parity mode %q", *mode))
 	}
 
 	env := esper.NewEnvironment()
@@ -70,6 +113,52 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return fail(stderr, err)
 	}
 	return 0
+}
+
+// runDifferentialMode loads the Java trace, builds canonical differential
+// evidence and writes it. It returns 1 when the normalized traces differ.
+func runDifferentialMode(stdout, stderr io.Writer, javaTracePath, evidencePath, javaCommit string, runtimeIDs, sourceFiles, executions []string, scenario compat.Scenario, goTrace compat.Trace) int {
+	if javaTracePath == "" {
+		return fail(stderr, fmt.Errorf("Java trace path is required for differential mode"))
+	}
+	file, err := os.Open(javaTracePath)
+	if err != nil {
+		return fail(stderr, err)
+	}
+	javaTrace, loadErr := compat.LoadTrace(file)
+	closeErr := file.Close()
+	if loadErr != nil {
+		return fail(stderr, loadErr)
+	}
+	if closeErr != nil {
+		return fail(stderr, closeErr)
+	}
+	evidence, err := compat.NewDifferentialEvidence(javaCommit, runtimeIDs, sourceFiles, executions, scenario, javaTrace, goTrace)
+	if err != nil {
+		return fail(stderr, err)
+	}
+	if err := writeJSON(stdout, evidencePath, evidence); err != nil {
+		return fail(stderr, err)
+	}
+	if len(evidence.Differences) != 0 {
+		return 1
+	}
+	return 0
+}
+
+func writeJSON(stdout io.Writer, path string, value any) error {
+	if path == "" {
+		return json.NewEncoder(stdout).Encode(value)
+	}
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
 }
 
 func fail(stderr io.Writer, err error) int {

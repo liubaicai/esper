@@ -937,6 +937,12 @@ func CreateHashContextBy(env *Environment, name string, partitions int, keys ...
 	return internalengine.CreateHashContextBy(env, name, partitions, keys...)
 }
 
+// CreateHashContextWithAlgorithm registers a lazy hash context using an
+// explicit deterministic hash algorithm.
+func CreateHashContextWithAlgorithm(env *Environment, name string, algorithm HashAlgorithm, partitions int, keys ...Expr) (ContextDefinition, error) {
+	return internalengine.CreateHashContextWithAlgorithm(env, name, algorithm, partitions, keys...)
+}
+
 // CreateInitiatedContext registers a non-overlapping initiated context with
 // no automatic termination condition.
 func CreateInitiatedContext(env *Environment, name string, key Expr, start Expression[bool]) (ContextDefinition, error) {
@@ -1033,6 +1039,12 @@ func CreatePreallocatedHashContext(env *Environment, name string, key Expr, part
 
 func CreatePreallocatedHashContextBy(env *Environment, name string, partitions int, keys ...Expr) (ContextDefinition, error) {
 	return internalengine.CreatePreallocatedHashContextBy(env, name, partitions, keys...)
+}
+
+// CreatePreallocatedHashContextWithAlgorithm registers a preallocated hash
+// context using an explicit deterministic hash algorithm.
+func CreatePreallocatedHashContextWithAlgorithm(env *Environment, name string, algorithm HashAlgorithm, partitions int, keys ...Expr) (ContextDefinition, error) {
+	return internalengine.CreatePreallocatedHashContextWithAlgorithm(env, name, algorithm, partitions, keys...)
 }
 
 func CreateTable(env *Environment, name string, columns []TableColumn, options ...TableOption) (TableDefinition, error) {
@@ -2857,6 +2869,17 @@ func GroupingSet(keys ...Expr) []Expr {
 // CustomPatternGuardFactory.
 type GuardFunc = internalengine.GuardFunc
 
+// HashAlgorithm selects the deterministic hash contract used by a hash
+// context. The legacy constructor keeps FNV-1a for source compatibility;
+// CRC32 and JavaHashCode provide the built-in Esper hash functions.
+type HashAlgorithm = internalengine.HashAlgorithm
+
+const HashAlgorithmCRC32 = internalengine.HashAlgorithmCRC32
+
+const HashAlgorithmFNV1a = internalengine.HashAlgorithmFNV1a
+
+const HashAlgorithmJavaHashCode = internalengine.HashAlgorithmJavaHashCode
+
 const HintDisableOutputLimitOptimization = internalengine.HintDisableOutputLimitOptimization
 
 const HintDisableReclaimGroup = internalengine.HintDisableReclaimGroup
@@ -3891,6 +3914,13 @@ func NewHashContextBy(name string, partitions int, keys ...Expr) (ContextDefinit
 	return internalengine.NewHashContextBy(name, partitions, keys...)
 }
 
+// NewHashContextWithAlgorithm declares a lazy hash context using an explicit
+// deterministic hash algorithm. Use HashAlgorithmCRC32 or
+// HashAlgorithmJavaHashCode when matching Esper's built-in context functions.
+func NewHashContextWithAlgorithm(name string, algorithm HashAlgorithm, partitions int, keys ...Expr) (ContextDefinition, error) {
+	return internalengine.NewHashContextWithAlgorithm(name, algorithm, partitions, keys...)
+}
+
 // NewInitiatedContext declares a non-overlapping initiated context without an
 // automatic termination condition. A key can be active once and remains
 // active until the statement/context is undeployed.
@@ -4057,6 +4087,12 @@ func NewPreallocatedHashContext(name string, key Expr, partitions int) (ContextD
 // NewPreallocatedHashContext.
 func NewPreallocatedHashContextBy(name string, partitions int, keys ...Expr) (ContextDefinition, error) {
 	return internalengine.NewPreallocatedHashContextBy(name, partitions, keys...)
+}
+
+// NewPreallocatedHashContextWithAlgorithm declares a preallocated hash
+// context using an explicit deterministic hash algorithm.
+func NewPreallocatedHashContextWithAlgorithm(name string, algorithm HashAlgorithm, partitions int, keys ...Expr) (ContextDefinition, error) {
+	return internalengine.NewPreallocatedHashContextWithAlgorithm(name, algorithm, partitions, keys...)
 }
 
 // NewSQLHistoricalPlaceholderRewriter returns a reusable statement rewriter

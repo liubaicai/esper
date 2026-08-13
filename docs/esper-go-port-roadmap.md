@@ -37,32 +37,32 @@
 - “Flink DataStream 风格”仅指规则构造体验：类型化流、具名算子、链式组合和显式 sink。不表示首版要复制 Flink 的分布式集群运行时、并行度、watermark/checkpoint/savepoint、作业恢复或 exactly-once 语义；除非 Esper 9.0.0 本身有对应可观察契约。
 - 范围严格限定为固定 commit 中已检入的开源 Esper 9.0.0 模块、公共契约、回归场景、单元测试、EsperIO 和示例。NEsper、EsperHA 及商业/企业能力不在本次完成条件内。
 
-## 2. 当前状态（截至 2026-08-08）
+## 2. 当前状态（截至 2026-08-13）
 
 ### 2.1 代码与分支
 
-- 分支：codex/faf-index
-- 工作树：3 个未提交文件
-  - README.md：覆盖率数字更新。
-  - testdata/compat/capability-manifest.json：新增 fromclausemethod 基础 parity 映射。
-  - fromclausemethod_parity_test.go：新增 TestFromClauseMethodOneStreamTwoHistJoinedKeepallParity。
-- 最新已提交：68bd238fb docs(manifest): register fromclausemethod basic parity case and update coverage (1397/4136 = 33.78%)
+- 分支：`master`
+- 工作树：包含既有未提交的实现、测试、Manifest v2 和 parity evidence 修改；未提交状态不视为发布完成。
+- 最新已提交：`a4485cd45`（Close ContextKeySegmented parity）
 
 ### 2.2 对账清单
 
 | 维度 | 数值 |
 | --- | --- |
-| Capability | 36 个 |
-| Case | 192 个 |
-| Case mapped | 185 个 |
-| Case partial | 3 个 |
-| Case approved-difference | 4 个 |
-| Java inventory runtime | 4,136 个 |
-| 已建立 runtime 关联 | 1,396 条（提交前）/ 1,408 条（提交未提交变更后） |
-| 唯一已覆盖 runtime | 1,370 个（提交前）/ 1,398 个（提交未提交变更后） |
-| 覆盖率 | 33.13%（提交前）/ 33.80%（提交未提交变更后） |
+| Capability | 110 个 |
+| Case | 376 个 |
+| Case implemented | 357 个 |
+| Case differential-verified | 2 个（6 个 runtime） |
+| Case intentionally-different | 17 个 |
+| Java inventory runtime | 4,136 个 `status=ok` runtime |
+| Runtime 关联 | 2,346 条 |
+| 唯一已关联 runtime | 2,280 个 |
+| 未关联 runtime | 1,856 个 |
+| 关联覆盖率 | 55.1% |
+| Representative scenario | 2/2 通过 |
+| NFR | 0 个已验证 |
 
-> 覆盖率 = 唯一已覆盖 Java runtime / 全部可执行 Java runtime。它表示“已建立 Java/Go 对账证据”的进度，不是“Go 已通过 parity”的比例，也不代表 Esper 全量移植完成。
+> 覆盖率 = 唯一已关联 Java runtime / inventory 中 `status=ok` runtime。它表示“已建立 Java runtime 对账/处置证据”的进度，不是“Go 已通过 parity”的比例。Manifest v2 的 `implemented` 只表示 Go 实现和测试登记，只有 `differential-verified` 才有已保存的 Java/Go trace 差分证据。
 
 ### 2.3 已通过的垂直切片（已映射 capability 示例）
 
@@ -90,7 +90,7 @@
 2. 用 Go 链式 API 构造等价规则，编写 _parity_test.go 对照测试。
 3. 将 Java runtime ID 登记到 testdata/compat/capability-manifest.json 的对应 case。
 4. 运行门禁：go vet ./...、go test ./...、go test -race ./...、go test ./internal/compat/...。
-5. 提交并推送 origin/codex/faf-index；更新 README 覆盖率。
+5. 更新 README、Manifest v2 和证据文件，保持统计由机器可读清单推导。
 6. 不宣称“全量完成”，只更新覆盖率与 capability 状态。
 
 ### 3.2 测试对账原则
@@ -117,19 +117,19 @@
 
 ### 4.2 Phase 1 — 核心能力闭合（进行中）
 
-目标：把现有 partial 与未覆盖的“核心查询能力”补齐，使覆盖率接近 60%。
+目标：把现有 implemented 但尚未差分验证的核心查询能力补齐，使差分证据覆盖面接近 60%。
 
 重点领域：
 
-- fromclausemethod 剩余 50 runtime / 8 个 class。
-- subselect 剩余 142 runtime / 18 个 class。
+- epl 剩余 533 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- infra 剩余 317 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合高级特性（filtered、math-context、访问聚合、rollup 组合）。
 - context 分区 selector、嵌套、生命周期、事务边界。
 - infra 表/命名窗口剩余 mutation/merge/transaction 场景。
 - expression 剩余类型、函数、脚本、枚举集合高级组合。
-- client 域编译器/路径/异常/大用例（244 runtime）。
-- multithread 并发测试（56 runtime）。
+- event、expr、resultset、context、view 和 rowrecog 的未关联 runtime 按当前清单继续拆分。
+- multithread 并发测试仍有 56 个未关联 runtime。
 
 ### 4.3 Phase 2 — 高级模式与连接器
 
@@ -158,16 +158,10 @@
 
 ### 5.1 P0 — 立即完成
 
-1. 提交并推送当前未提交变更（fromclausemethod 新增 parity）。
-2. 关闭 fromclausemethod 剩余 50 runtime：
-   - EPLFromClauseMethod（15）
-   - EPLFromClauseMethodNStream（11）
-   - EPLFromClauseMethodOuterNStream（7）
-   - EPLFromClauseMethodVariable（6）
-   - EPLFromClauseMethodMultikeyWArray（5）
-   - EPLFromClauseMethodJoinPerformance（4）
-   - EPLFromClauseMethodCacheExpiry（1）
-   - EPLFromClauseMethodCacheLRU（1）
+1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
+2. 扩展 Java/Go persisted differential evidence；当前已有 2 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`）。
+3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
+4. 启动外部服务 fixture 后重新执行 Kafka、RabbitMQ 和 MySQL 门控测试；未启动时保持显式 skip。
 
 ### 5.2 P1 — 下一批高价值切片
 
@@ -175,15 +169,13 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 701 | subselect 142、insertinto 105、spatial 60、variable 53、fromclausemethod 50、database 37、dataflow 23 |
-| infra | 419 | nwtable 148、namedwindow 140、tbl 131 |
-| expr | 364 | 待按子包细分 |
-| resultset | 313 | 聚合、输出、排序、分组 |
-| client | 244 | 编译器、路径、异常、大用例 |
-| context | 184 | 分区 selector、嵌套、生命周期 |
-| view | 176 | 视图高级组合 |
-| event | 170 | 事件表示/Serde 完整矩阵 |
-| pattern | 106 | 复杂模式 |
+| epl | 533 | subselect、insertinto、database、dataflow、方法源 |
+| infra | 317 | 表、Named Window、mutation、transaction |
+| resultset | 293 | 聚合、输出、排序、分组 |
+| expr | 219 | 表达式函数、类型、脚本、枚举集合 |
+| context | 166 | Context 分区、嵌套、生命周期 |
+| view | 70 | 视图高级组合 |
+| event | 170 | 事件表示和 Serde 完整矩阵 |
 | multithread | 56 | 并发回归 |
 | rowrecog | 34 | Match Recognize |
 
@@ -191,7 +183,7 @@
 
 - 将 epl/expr/resultset 等粗粒度 capability 拆分为更细 case，便于追踪。
 - 填充 static-manifest.json 与 source-test-manifest.json。
-- 对 partial/approved-difference case 写出书面差异理由。
+- 对 intentionally-different case 写出并维护书面差异理由。
 
 ### 5.4 P3 — 验收与工程化
 
@@ -208,15 +200,13 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 701 | 最大缺口，集中在 subselect/insertinto/spatial/variable/fromclausemethod/database |
-| infra | 419 | 表/命名窗口高级 mutation/merge/transaction |
-| expr | 364 | 表达式函数、类型、脚本、枚举集合 |
-| resultset | 313 | 聚合、输出、排序、分组 |
-| client | 244 | 编译器/客户端契约 |
-| context | 184 | Context 分区、嵌套、生命周期 |
-| view | 176 | 视图高级组合 |
-| event | 170 | 事件表示/Serde 完整矩阵 |
-| pattern | 106 | 复杂模式 |
+| epl | 533 | subselect、insertinto、database、dataflow、方法源 |
+| infra | 317 | 表、Named Window、mutation、transaction |
+| resultset | 293 | 聚合、输出、排序、分组 |
+| expr | 219 | 表达式函数、类型、脚本、枚举集合 |
+| event | 170 | 事件表示和 Serde 完整矩阵 |
+| context | 166 | Context 分区、嵌套、生命周期 |
+| view | 70 | 视图高级组合 |
 | multithread | 56 | 并发回归 |
 | rowrecog | 34 | Match Recognize |
 
@@ -225,9 +215,8 @@
 - static-manifest.json 目前几乎为空，需要把静态/编译期候选登记进去。
 - source-test-manifest.json 目前几乎为空，需要把非 Regression 源资产（单元测试、集成测试）登记进去。
 - epl/expr/resultset 等 capability 拆分过粗，需要继续细分为可验收的 case。
-- approved-difference 的 4 个 case 需要书面差异理由和测试证据。
-- partial 的 3 个 case 需要明确剩余项关闭计划。
-- 当前未覆盖的 2,767 个 runtime 中，需要识别哪些属于“平台/语言无关核心语义”，哪些属于“JVM 特有机制”或“性能阈值”，分别标记为 mapped/approved-difference/out-of-scope。
+- 17 个 intentionally-different case 需要保持书面差异理由和测试证据。
+- 当前未关联的 1,856 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
 
 ### 6.3 能力与边界遗漏
 
@@ -235,32 +224,27 @@
 - Context Table ownership：live insert 的首次 ownership 注册已部分实现，但更广 Context Table live mutation 组合、aggregate-into-table、跨 context row ownership 仍待补充。
 - 索引高级语义：FullOuter、右保留或非相邻链式 outer、unidirectional、OR、UDF、Null/Missing、复杂动态表达式、超大多流 probe 安全回退仍待补充。
 - EsperIO 完整矩阵：Kafka 高级 group/rebalance/plugin、AMQP Java serialization/高级重连、JVM JMS provider/session/transaction、完整 Dataflow connector 集成仍计划中。
-- Avro/JSON/Serde 完整矩阵：Avro binary codec、union/logical/fixed/enum、schema evolution、XML namespace/XSD、完整 dynamic strict-lax 仍 partial。
+- Avro/JSON/Serde 完整矩阵：Avro binary codec、union/logical/fixed/enum、schema evolution、XML namespace/XSD、完整 dynamic strict-lax 仍未完整。
 - Pattern/Match Recognize 高级语义：Pattern guard/observer、复杂 NFA、consumption、Match Recognize prev/interval/after/聚合/窗口删除仍待补充。
-- Client 域：编译器路径、异常、大用例、模块可见性、class-loader 行为仍基本未映射。
-- Multithread：并发回归 56 runtime 尚未开始映射。
+- Client 域：runtime 关联已建立，但编译器路径、异常、大用例、模块可见性、class-loader 行为的差分证据仍不足。
+- Multithread：仍有 56 个 runtime 未建立关联。
 - Performance/timing：不追求 parity，但需要建立 Go 侧性能基准，避免回归。
 
 ## 7. 基础设施与依赖
 
 ### 7.1 已具备
 
-- Java 17（C:\\Program Files\\Microsoft\\jdk-17.0.20.8-hotspot）
-- Maven 3.9.16（C:\\Users\\baicai\\AppData\\Local\\UniGetUI\\Chocolatey\\lib\\maven\\apache-maven-3.9.16）
-- Go 1.25.5（本机）
-- Docker 环境（可选，用于 MySQL 集成测试）
-- Java Esper 9.0.0 源码：D:\\Code\\soc\\esper
-- Go 项目：D:\\Code\\soc\\bigsoc-esper
+- Java 17、Maven 3.9 和 Go 工具链（当前 Linux 工作区已验证）。
+- Docker 环境（可选，用于 MySQL、Kafka、RabbitMQ 集成测试）。
+- Java Esper 9.0.0 源码：`/root/app/esper`（runner 会校验固定 commit）。
+- Go 项目：`/root/app/bigsoc-esper`。
 
 ### 7.2 按需使用
 
-- MySQL 8.0：通过 Docker 启动，用于 SQL 历史源、SQL FAF、esperio-db 等测试。
+- MySQL 8.0、Kafka 3.8.1、RabbitMQ：通过 Docker 启动，用于 SQL/DB 和 connector 集成测试；fixture、ready 检查、环境变量和测试命令见 [外部服务集成](integration/external-services.md)。
 - Maven：运行 Java 回归测试以生成预言输出，例如：
       mvn -pl regression-run '-Dtest=TestSuiteInfraNWTable' '-DfailIfNoTests=false' '-Dgpg.skip=true' test
-- Docker 启动示例：
-      docker run -d --name esper-java-mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=test mysql:8.0
-  然后设置环境变量：
-      ESPER_MYSQL_DSN='root:password@tcp(127.0.0.1:3306)/test?parseTime=true&charset=utf8mb4'
+- Java ContextHash runner 的 Linux 命令、Windows PowerShell 变体和 trace 差分命令见 [Java oracle runner](../tools/java-oracle/README.md)。
 
 ## 8. 门禁与质量标准
 

@@ -194,7 +194,6 @@ func (checkServiceProvider) Check() bool { return true }
 // ExprFilterPatternUDFFilterOptimizable: a pattern followed-by filter compares
 // BigDecimal values through a UDF (myCustomBigDecimalEquals).
 func TestExprFilterPatternUDFBigDecimalMatchesEsper(t *testing.T) {
-	t.Skip("pending pattern followed-by UDF diagnosis; covered by existing pattern TagField tests")
 	env := newFilterOptimizableEnv(t)
 	engine := NewEngine(env)
 	defer func() { _ = engine.Close(context.Background()) }()

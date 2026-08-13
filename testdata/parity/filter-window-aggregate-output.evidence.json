@@ -1,0 +1,392 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-dc2ac7e7293a204aa102",
+    "java-runtime-d7e3f4e3457216b42c0b",
+    "java-runtime-a02b2a7f648b50c0eeb3"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAggregateGrouped.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitSimple.java"
+  ],
+  "javaExecutions": [
+    "ResultSetNoOutputClauseView",
+    "ResultSetNoJoinAll",
+    "ResultSetSimpleNoJoinAll"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "filter-window-aggregate-output",
+    "steps": [
+      {
+        "op": "case",
+        "case": "plain"
+      },
+      {
+        "op": "send",
+        "eventType": "Trade",
+        "payload": {
+          "symbol": "A",
+          "price": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Trade",
+        "payload": {
+          "symbol": "A",
+          "price": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Trade",
+        "payload": {
+          "symbol": "B",
+          "price": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Trade",
+        "payload": {
+          "symbol": "A",
+          "price": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Trade",
+        "payload": {
+          "symbol": "B",
+          "price": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "every-3"
+      },
+      {
+        "op": "send",
+        "eventType": "Trade",
+        "payload": {
+          "symbol": "A",
+          "price": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Trade",
+        "payload": {
+          "symbol": "B",
+          "price": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Trade",
+        "payload": {
+          "symbol": "A",
+          "price": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Trade",
+        "payload": {
+          "symbol": "B",
+          "price": 14
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "filter-window-aggregate-output",
+    "records": [
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 23
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-3",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 13
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "filter-window-aggregate-output",
+    "records": [
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 23
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "plain",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "every-3",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "B",
+              "total": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "A",
+              "total": 13
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

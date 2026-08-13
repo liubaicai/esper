@@ -14,20 +14,23 @@ Esper 9.0.0 的 Go 移植正在按 [实施规划](docs/esper-go-port-implementat
 
 ## 大概进度
 
-当前 capability 对账进度为：Java inventory 的 4,140 个可执行 runtime 中，manifest 已建立 2,275 条 runtime 处置记录（distinct runtime-id），约 55.0%；374 个 capability case 中 357 个标为 mapped、0 个 partial、17 个 approved-difference。55.0% 是"已建立 Java runtime 对账/处置证据"的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
+当前 capability 对账进度为：固定 Java commit 的 inventory 中有 4,136 个 `status=ok` runtime，manifest 记录 2,346 条关联，覆盖 2,280 个唯一 runtime（55.1%），尚有 1,856 个 runtime 未建立关联；376 个 case 中 357 个为 `implemented`、2 个为 `differential-verified`、17 个为 `intentionally-different`。另有 2 个代表性场景已通过 Java/Go 差分验证（`context-hash-segmented`、`filter-window-aggregate-output`），NFR 尚未验证。这里的 55.1% 是"已建立 Java runtime 对账/处置证据"的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
 
 Java 基线的静态回归候选清单在 testdata/compat/static-manifest.json，运行态 execution 清单在 testdata/compat/java-execution-inventory.jsonl，非 Regression 的源资产盘点在 testdata/compat/source-test-manifest.json，首批 capability/case 映射在 testdata/compat/capability-manifest.json；这些清单都不是全量 Go 映射完成或 Java/Go 行为差分通过的证明。
 
 ## 运行测试
 
 ```text
-go test ./...
-go test -race ./...
+go test ./... -count=1
+go test -race ./... -count=1
+go vet ./...
+./scripts/check-layout.sh
+git diff --check
 ```
 
-启用本地 MySQL Docker 集成测试（可选）：
+外部服务集成测试（可选）的 Docker fixture、ready 检查、环境变量和精确测试命令见 [外部服务集成](docs/integration/external-services.md)。例如 MySQL：
 
-```powershell
-$env:ESPER_MYSQL_DSN='root:password@tcp(127.0.0.1:3306)/test?parseTime=true&charset=utf8mb4'
-go test ./... -run '^Test(SQLHistoricalProvider|SQLSink|SQLHistoricalFireAndForget|DBConnector)MySQLDocker$' -count=1
+```sh
+ESPER_MYSQL_DSN='root:password@tcp(127.0.0.1:3306)/test?parseTime=true&charset=utf8mb4' \
+  go test ./connectors/db ./internal/esper -run 'MySQLDocker$' -count=1
 ```

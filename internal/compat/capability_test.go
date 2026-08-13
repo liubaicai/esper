@@ -18,6 +18,18 @@ func TestCapabilityManifestArtifactValidates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	inventoryFile, err := os.Open(filepath.Join(repositoryRoot, filepath.FromSlash(manifest.ExecutionInventory)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer inventoryFile.Close()
+	inventory, err := LoadJavaExecutionInventory(inventoryFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manifest.ValidateAgainstJavaInventory(inventory); err != nil {
+		t.Fatal(err)
+	}
 	if len(manifest.Capabilities) < 10 || len(manifest.Cases) < 10 || len(manifest.Mappings) < 10 {
 		t.Fatalf("manifest is too small to be a useful traceability artifact: %#v", manifest)
 	}
@@ -35,10 +47,12 @@ func TestCapabilityManifestRejectsUnknownAndDuplicateMappings(t *testing.T) {
 		Version:    CapabilityManifestVersion,
 		JavaCommit: "java",
 		Capabilities: []CapabilityRecord{{
-			ID: "cap-a", Level: "S", Phase: 1, Status: "prototype",
+			ID: "cap-a", Level: "S", Phase: 1, Status: VerificationImplemented,
+			Verification: []string{VerificationInventoried, VerificationImplemented},
 		}},
 		Cases: []CapabilityCase{{
-			ID: "case-a", JavaRuntimeIDs: []string{"runtime-a"}, Status: "mapped",
+			ID: "case-a", JavaRuntimeIDs: []string{"runtime-a"}, Status: VerificationImplemented,
+			Verification: []string{VerificationInventoried, VerificationImplemented},
 		}},
 		Mappings: []CapabilityMapping{{CapabilityID: "cap-a", CaseID: "case-a"}},
 	}
@@ -57,17 +71,21 @@ func TestCapabilityManifestRejectsMappedCaseWithoutCapabilityMapping(t *testing.
 		Version:    CapabilityManifestVersion,
 		JavaCommit: "java",
 		Capabilities: []CapabilityRecord{{
-			ID: "cap-a", Level: "S", Phase: 1, Status: "prototype",
+			ID: "cap-a", Level: "S", Phase: 1, Status: VerificationImplemented,
+			Verification: []string{VerificationInventoried, VerificationImplemented},
 		}},
 		Cases: []CapabilityCase{{
-			ID: "case-a", JavaRuntimeIDs: []string{"runtime-a"}, Status: "mapped",
+			ID: "case-a", JavaRuntimeIDs: []string{"runtime-a"}, Status: VerificationImplemented,
+			Verification: []string{VerificationInventoried, VerificationImplemented},
 		}},
 	}
 	if err := manifest.Validate(); err == nil || !strings.Contains(err.Error(), "has no capability mapping") {
 		t.Fatalf("missing capability mapping error = %v", err)
 	}
-	manifest.Cases[0].Status = "unmapped"
-	manifest.Capabilities[0].Status = "planned"
+	manifest.Cases[0].Status = VerificationInventoried
+	manifest.Cases[0].Verification = []string{VerificationInventoried}
+	manifest.Capabilities[0].Status = VerificationInventoried
+	manifest.Capabilities[0].Verification = []string{VerificationInventoried}
 	if err := manifest.Validate(); err != nil {
 		t.Fatalf("explicitly unmapped case under a planned capability should not require a mapping: %v", err)
 	}
@@ -78,10 +96,12 @@ func TestCapabilityManifestAcceptsPartialCaseWithCapabilityMapping(t *testing.T)
 		Version:    CapabilityManifestVersion,
 		JavaCommit: "java",
 		Capabilities: []CapabilityRecord{{
-			ID: "cap-a", Level: "S", Phase: 1, Status: "partial",
+			ID: "cap-a", Level: "S", Phase: 1, Status: VerificationInventoried,
+			Verification: []string{VerificationInventoried},
 		}},
 		Cases: []CapabilityCase{{
-			ID: "case-a", JavaRuntimeIDs: []string{"runtime-a"}, Status: "partial",
+			ID: "case-a", JavaRuntimeIDs: []string{"runtime-a"}, Status: VerificationInventoried,
+			Verification: []string{VerificationInventoried},
 		}},
 		Mappings: []CapabilityMapping{{CapabilityID: "cap-a", CaseID: "case-a"}},
 	}
@@ -95,10 +115,12 @@ func TestCapabilityManifestRejectsStaticJavaIDInRuntimeReferences(t *testing.T) 
 		Version:    CapabilityManifestVersion,
 		JavaCommit: "java",
 		Capabilities: []CapabilityRecord{{
-			ID: "cap-a", Level: "S", Phase: 1, Status: "prototype",
+			ID: "cap-a", Level: "S", Phase: 1, Status: VerificationImplemented,
+			Verification: []string{VerificationInventoried, VerificationImplemented},
 		}},
 		Cases: []CapabilityCase{{
-			ID: "case-a", JavaRuntimeIDs: []string{"java-static-a"}, Status: "mapped",
+			ID: "case-a", JavaRuntimeIDs: []string{"java-static-a"}, Status: VerificationImplemented,
+			Verification: []string{VerificationInventoried, VerificationImplemented},
 		}},
 		Mappings: []CapabilityMapping{{CapabilityID: "cap-a", CaseID: "case-a"}},
 	}
@@ -112,13 +134,15 @@ func TestCapabilityManifestRejectsNonPlannedCapabilityWithoutCaseMapping(t *test
 		Version:    CapabilityManifestVersion,
 		JavaCommit: "java",
 		Capabilities: []CapabilityRecord{{
-			ID: "cap-a", Level: "S", Phase: 1, Status: "partial",
+			ID: "cap-a", Level: "S", Phase: 1, Status: VerificationImplemented,
+			Verification: []string{VerificationInventoried, VerificationImplemented},
 		}},
 	}
 	if err := manifest.Validate(); err == nil || !strings.Contains(err.Error(), "has no case mapping") {
 		t.Fatalf("missing case mapping error = %v", err)
 	}
-	manifest.Capabilities[0].Status = "planned"
+	manifest.Capabilities[0].Status = VerificationInventoried
+	manifest.Capabilities[0].Verification = []string{VerificationInventoried}
 	if err := manifest.Validate(); err != nil {
 		t.Fatalf("planned capability should not require a case mapping: %v", err)
 	}

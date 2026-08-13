@@ -1,0 +1,31 @@
+{
+  "version": "esper-parity/v1",
+  "id": "context-hash-segmented",
+  "steps": [
+    {"op": "case", "case": "no-preallocate"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 11}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 12}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 14}},
+    {"op": "case", "case": "many-arg-crc32"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 20}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 21}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1000, "p00": "S0"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 22}},
+    {"op": "case", "case": "many-arg-hash-code"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 20}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 21}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1000, "p00": "S0"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 22}},
+    {"op": "case", "case": "partition-selection"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 2}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 100}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 101}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 3}},
+    {"op": "snapshot", "statement": "s0"},
+    {"op": "snapshot-selector", "statement": "s0", "selector": "hashes", "hashes": [15]},
+    {"op": "snapshot-selector", "statement": "s0", "selector": "hashes", "hashes": [1, 9, 5]}
+  ]
+}

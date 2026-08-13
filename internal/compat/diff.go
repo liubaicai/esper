@@ -21,6 +21,12 @@ type TraceDifference struct {
 // boundaries, sequence numbers and new/old stream order are observable CEP
 // behavior, not formatting details.
 func DiffTraces(expected, actual Trace) []TraceDifference {
+	if canonical, err := CanonicalTrace(expected); err == nil {
+		expected = canonical
+	}
+	if canonical, err := CanonicalTrace(actual); err == nil {
+		actual = canonical
+	}
 	differences := make([]TraceDifference, 0)
 	compareValue := func(path string, want, got any) {
 		if !reflect.DeepEqual(want, got) {
@@ -38,11 +44,14 @@ func DiffTraces(expected, actual Trace) []TraceDifference {
 		want := expected.Records[index]
 		got := actual.Records[index]
 		prefix := fmt.Sprintf("records[%d]", index)
+		compareValue(prefix+".case", want.Case, got.Case)
+		compareValue(prefix+".operation", want.Operation, got.Operation)
 		compareValue(prefix+".statement", want.Statement, got.Statement)
 		compareValue(prefix+".sequence", want.Sequence, got.Sequence)
 		compareValue(prefix+".time", want.Time, got.Time)
 		compareResults(&differences, prefix+".new", want.New, got.New)
 		compareResults(&differences, prefix+".old", want.Old, got.Old)
+		comparePartitions(&differences, prefix+".partitions", want.Partitions, got.Partitions)
 	}
 	return differences
 }
@@ -60,6 +69,22 @@ func compareResults(differences *[]TraceDifference, path string, expected, actua
 		compareTraceValue(differences, prefix+".kind", want.Kind, got.Kind)
 		compareTraceValue(differences, prefix+".type", want.Type, got.Type)
 		compareTraceValue(differences, prefix+".fields", want.Fields, got.Fields)
+	}
+}
+
+func comparePartitions(differences *[]TraceDifference, path string, expected, actual []PartitionRecord) {
+	compareTraceValue(differences, path+".length", len(expected), len(actual))
+	limit := len(expected)
+	if len(actual) < limit {
+		limit = len(actual)
+	}
+	for index := 0; index < limit; index++ {
+		want := expected[index]
+		got := actual[index]
+		prefix := fmt.Sprintf("%s[%d]", path, index)
+		compareTraceValue(differences, prefix+".id", want.ID, got.ID)
+		compareTraceValue(differences, prefix+".key", want.Key, got.Key)
+		compareTraceValue(differences, prefix+".properties", want.Properties, got.Properties)
 	}
 }
 
