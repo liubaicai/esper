@@ -2642,6 +2642,9 @@ func (e *Engine) deployPreparedRequestsLocked(ctx context.Context, requests []de
 			_, _ = statement.syncTemporalContextLocked(e.clock.Now())
 		}
 	}
+	for _, statement := range deployment.statements {
+		e.materializePreallocatedHashContextLocked(statement)
+	}
 	contextEvents := e.takeContextEventsLocked()
 	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	return deploymentActivation{
@@ -2650,6 +2653,44 @@ func (e *Engine) deployPreparedRequestsLocked(ctx context.Context, requests []de
 		auditRecords:   auditRecords,
 		auditListeners: auditListeners,
 	}, nil
+}
+
+// materializePreallocatedHashContextLocked creates the fixed bucket runtimes
+// used by an explicitly preallocated flat hash context. The engine owns the
+// shared partition identity while each statement keeps its own query state.
+func (e *Engine) materializePreallocatedHashContextLocked(statement *Statement) {
+	if e == nil || e.env == nil || statement == nil || statement.plan.query.contextName == "" {
+		return
+	}
+	definition, ok := e.env.Context(statement.plan.query.contextName)
+	if !ok || definition.parent != nil || definition.kind != ContextHashSegmented || !definition.preallocate || definition.partitions <= 0 {
+		return
+	}
+	if statement.runtime.partitions == nil {
+		statement.runtime.partitions = make(map[string]*statementRuntime)
+	}
+	now := e.clock.Now()
+	for bucket := 0; bucket < definition.partitions; bucket++ {
+		partitionKey := fmt.Sprintf("hash:%d", bucket)
+		if _, exists := statement.runtime.partitions[partitionKey]; exists {
+			continue
+		}
+		query := statement.runtime.query
+		query.contextName = ""
+		partitionRuntime := newStatementRuntime(query)
+		partitionRuntime.engine = e
+		partitionRuntime.rowRecogOwner = statement.runtime.rowRecogOwner
+		partitionRuntime.partitionContextName = statement.plan.query.contextName
+		partitionRuntime.partitionKey = partitionKey
+		partitionRuntime.partitionID = e.allocateContextPartitionIDLocked(statement.plan.query.contextName, partitionKey)
+		partitionRuntime.contextProperties = definition.contextPropertyValues(Event{}, now, statement.runtime.variables, partitionRuntime.partitionID)
+		partitionRuntime.contextProperties["hash"] = Present(int64(bucket))
+		partitionRuntime.variables = partitionRuntime.withContextProperties(statement.runtime.variables)
+		partitionRuntime.initializeAt(now)
+		partition := ptrStatementRuntime(partitionRuntime)
+		statement.runtime.partitions[partitionKey] = partition
+		e.retainContextPartitionLocked(statement.plan.query.contextName, partitionKey, partition)
+	}
 }
 
 func (e *Engine) dispatchDeploymentActivation(ctx context.Context, activation deploymentActivation, rolloutItemIndex int) error {

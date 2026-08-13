@@ -1027,6 +1027,14 @@ func CreatePeriodicContext(env *Environment, name string, startAfter, activeFor 
 	return internalengine.CreatePeriodicContext(env, name, startAfter, activeFor)
 }
 
+func CreatePreallocatedHashContext(env *Environment, name string, key Expr, partitions int) (ContextDefinition, error) {
+	return internalengine.CreatePreallocatedHashContext(env, name, key, partitions)
+}
+
+func CreatePreallocatedHashContextBy(env *Environment, name string, partitions int, keys ...Expr) (ContextDefinition, error) {
+	return internalengine.CreatePreallocatedHashContextBy(env, name, partitions, keys...)
+}
+
 func CreateTable(env *Environment, name string, columns []TableColumn, options ...TableOption) (TableDefinition, error) {
 	return internalengine.CreateTable(env, name, columns, options...)
 }
@@ -4037,6 +4045,18 @@ func NewPatternInitiatedTerminatedContext(name string, start, end PatternStream)
 // NewPeriodicContext is an expressive alias for NewTimePeriodContext.
 func NewPeriodicContext(name string, startAfter, activeFor time.Duration) (ContextDefinition, error) {
 	return internalengine.NewPeriodicContext(name, startAfter, activeFor)
+}
+
+// NewPreallocatedHashContext declares a hash-partitioned context whose
+// buckets are materialized when the first context statement is deployed.
+func NewPreallocatedHashContext(name string, key Expr, partitions int) (ContextDefinition, error) {
+	return internalengine.NewPreallocatedHashContext(name, key, partitions)
+}
+
+// NewPreallocatedHashContextBy is the multi-key form of
+// NewPreallocatedHashContext.
+func NewPreallocatedHashContextBy(name string, partitions int, keys ...Expr) (ContextDefinition, error) {
+	return internalengine.NewPreallocatedHashContextBy(name, partitions, keys...)
 }
 
 // NewSQLHistoricalPlaceholderRewriter returns a reusable statement rewriter

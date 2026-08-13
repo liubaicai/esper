@@ -97,6 +97,7 @@ type ContextDefinition struct {
 	key                  Expr
 	keys                 []Expr
 	partitions           int
+	preallocate          bool
 	categories           []ContextCategory
 	start                Expression[bool]
 	end                  Expression[bool]
@@ -158,6 +159,22 @@ func NewHashContext(name string, key Expr, partitions int) (ContextDefinition, e
 // NewHashContextBy declares a hash-partitioned context over a key tuple.
 // The single-key NewHashContext form remains available for the common case.
 func NewHashContextBy(name string, partitions int, keys ...Expr) (ContextDefinition, error) {
+	return newHashContext(name, partitions, false, keys...)
+}
+
+// NewPreallocatedHashContext declares a hash-partitioned context whose
+// buckets are materialized when the first context statement is deployed.
+func NewPreallocatedHashContext(name string, key Expr, partitions int) (ContextDefinition, error) {
+	return NewPreallocatedHashContextBy(name, partitions, key)
+}
+
+// NewPreallocatedHashContextBy is the multi-key form of
+// NewPreallocatedHashContext.
+func NewPreallocatedHashContextBy(name string, partitions int, keys ...Expr) (ContextDefinition, error) {
+	return newHashContext(name, partitions, true, keys...)
+}
+
+func newHashContext(name string, partitions int, preallocate bool, keys ...Expr) (ContextDefinition, error) {
 	if strings.TrimSpace(name) == "" {
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "context name is required")
 	}
@@ -167,7 +184,7 @@ func NewHashContextBy(name string, partitions int, keys ...Expr) (ContextDefinit
 	if partitions <= 0 {
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "hash context partitions must be positive")
 	}
-	return ContextDefinition{name: name, kind: ContextHashSegmented, key: keys[0], keys: copyContextKeys(keys), partitions: partitions}, nil
+	return ContextDefinition{name: name, kind: ContextHashSegmented, key: keys[0], keys: copyContextKeys(keys), partitions: partitions, preallocate: preallocate}, nil
 }
 
 func NewCategoryContext(name string, categories ...ContextCategory) (ContextDefinition, error) {
@@ -595,6 +612,7 @@ func (d ContextDefinition) Key() Expr                  { return d.key }
 func (d ContextDefinition) Keys() []Expr               { return copyContextKeys(d.contextKeys()) }
 func (d ContextDefinition) Kind() ContextKind          { return d.kind }
 func (d ContextDefinition) Partitions() int            { return d.partitions }
+func (d ContextDefinition) Preallocate() bool          { return d.preallocate }
 func (d ContextDefinition) InitiatedDistinct() bool    { return d.initiatedDistinct }
 func (d ContextDefinition) InitiatedOverlapping() bool { return d.initiatedOverlapping }
 func (d ContextDefinition) HasTermination() bool       { return d.end != nil || d.endPattern != nil }
@@ -620,7 +638,11 @@ func (d ContextDefinition) localDescription() string {
 	keyDescription := d.keyDescription()
 	switch d.kind {
 	case ContextHashSegmented:
-		return fmt.Sprintf("hash(%s,%d)", keyDescription, d.partitions)
+		description := fmt.Sprintf("hash(%s,%d)", keyDescription, d.partitions)
+		if d.preallocate {
+			description += ",preallocate"
+		}
+		return description
 	case ContextCategorySegmented:
 		parts := make([]string, 0, len(d.categories))
 		for _, category := range d.categories {
@@ -894,6 +916,21 @@ func CreateHashContextBy(env *Environment, name string, partitions int, keys ...
 		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
 	definition, err := NewHashContextBy(name, partitions, keys...)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	return env.registerContextDefinition(definition)
+}
+
+func CreatePreallocatedHashContext(env *Environment, name string, key Expr, partitions int) (ContextDefinition, error) {
+	return CreatePreallocatedHashContextBy(env, name, partitions, key)
+}
+
+func CreatePreallocatedHashContextBy(env *Environment, name string, partitions int, keys ...Expr) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewPreallocatedHashContextBy(name, partitions, keys...)
 	if err != nil {
 		return ContextDefinition{}, err
 	}

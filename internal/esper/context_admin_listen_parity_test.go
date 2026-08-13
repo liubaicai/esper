@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -16,6 +17,10 @@ type contextAdminListenEnd struct {
 
 type contextAdminListenQuery struct {
 	ID int `esper:"id"`
+}
+
+type contextAdminListenHashBean struct {
+	TheString string `esper:"theString"`
 }
 
 // TestContextAdminListenInitTermParity covers ContextAdminListenInitTerm.
@@ -124,5 +129,112 @@ func TestContextAdminListenInitTermParity(t *testing.T) {
 	}
 	if len(listener.destroyed) != 1 || listener.destroyed[0].ContextName != "MyContext" {
 		t.Fatalf("context-destroyed event = %#v", listener.destroyed)
+	}
+}
+
+// TestContextAdminListenHashParity covers the preallocated hash bucket
+// lifecycle used by ContextAdminListenHash.
+func TestContextAdminListenHashParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[contextAdminListenHashBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	definition, err := CreatePreallocatedHashContext(
+		env,
+		"MyContext",
+		Field[contextAdminListenHashBean, string]("theString"),
+		2,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !definition.Preallocate() {
+		t.Fatal("hash context is not marked for preallocation")
+	}
+
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	listener := &contextStateTestListener{}
+	if err := engine.AddContextStateListener(listener); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AddContextPartitionStateListener("MyContext", listener); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := listener.sequence, []string{"created"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("context replay sequence = %#v, want %#v", got, want)
+	}
+
+	plan, err := env.Build(From[contextAdminListenHashBean](env, "SupportBean").Query(
+		StatementName("s0"),
+		WithContext("MyContext"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statement := deployment.Statements()[0]
+	if got, want := listener.sequence, []string{"created", "statement-added", "activated", "partition-allocated", "partition-allocated"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("hash activation sequence = %#v, want %#v", got, want)
+	}
+	if got, want := statement.ContextPartitionKeys(), []string{"hash:0", "hash:1"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("preallocated statement partitions = %#v, want %#v", got, want)
+	}
+	if len(listener.allocated) != 2 {
+		t.Fatalf("hash allocation events = %#v", listener.allocated)
+	}
+	for bucket, event := range listener.allocated {
+		wantKey := fmt.Sprintf("hash:%d", bucket)
+		if event.ContextName != "MyContext" || event.Key != wantKey || event.PartitionID != bucket || event.Descriptor.ID != bucket || event.Descriptor.Key != wantKey {
+			t.Fatalf("hash allocation identity[%d] = %#v", bucket, event)
+		}
+		hash, ok := event.Descriptor.Property("hash")
+		if !ok || hash.State() != ValuePresent || hash.Any() != int64(bucket) {
+			t.Fatalf("hash allocation descriptor[%d] hash = %#v, present=%v", bucket, hash, ok)
+		}
+		name, ok := event.Descriptor.Property("name")
+		if !ok || name.Any() != "MyContext" {
+			t.Fatalf("hash allocation descriptor[%d] name = %#v, present=%v", bucket, name, ok)
+		}
+		id, ok := event.Descriptor.Property("id")
+		if !ok || id.Any() != bucket {
+			t.Fatalf("hash allocation descriptor[%d] id = %#v, present=%v", bucket, id, ok)
+		}
+	}
+	descriptors, err := engine.ContextPartitionDescriptors("MyContext", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(descriptors) != 2 || descriptors[0].ID != 0 || descriptors[1].ID != 1 {
+		t.Fatalf("engine hash descriptors = %#v", descriptors)
+	}
+
+	if err := deployment.Undeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := listener.sequence, []string{"created", "statement-added", "activated", "partition-allocated", "partition-allocated", "statement-removed", "partition-deallocated", "partition-deallocated", "deactivated"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("hash teardown sequence = %#v, want %#v", got, want)
+	}
+	if len(listener.deallocated) != 2 {
+		t.Fatalf("hash deallocation events = %#v", listener.deallocated)
+	}
+	for bucket, event := range listener.deallocated {
+		wantKey := fmt.Sprintf("hash:%d", bucket)
+		if event.Key != wantKey || event.PartitionID != bucket || event.Descriptor.ID != bucket {
+			t.Fatalf("hash deallocation identity[%d] = %#v", bucket, event)
+		}
+	}
+
+	if err := engine.DestroyContext(context.Background(), "MyContext"); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := listener.sequence, []string{"created", "statement-added", "activated", "partition-allocated", "partition-allocated", "statement-removed", "partition-deallocated", "partition-deallocated", "deactivated", "destroyed"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("hash context teardown sequence = %#v, want %#v", got, want)
+	}
+	if len(listener.destroyed) != 1 || listener.destroyed[0].ContextName != "MyContext" {
+		t.Fatalf("hash context-destroyed event = %#v", listener.destroyed)
 	}
 }
