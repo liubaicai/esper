@@ -5345,12 +5345,19 @@ func (s *Statement) acceptContextSubqueryEventLocked(event Event, now time.Time,
 	if s == nil || s.engine == nil || len(s.runtime.partitions) == 0 {
 		return nil
 	}
+	// Every context partition is created from the same statement plan. If the
+	// event cannot reach any event-stream subquery in that plan, skip the
+	// partition walk entirely; sparse contexts otherwise turn unrelated events
+	// into an O(partitions) dispatch cost.
+	if s.runtime.subqueryRegistry == nil || !s.runtime.subqueryRegistry.acceptsEvent(event) {
+		return nil
+	}
 	for _, partition := range s.runtime.partitions {
 		if partition == nil {
 			continue
 		}
 		partition.ensureSubqueryRegistry(s.engine)
-		if partition.subqueryRegistry == nil {
+		if partition.subqueryRegistry == nil || !partition.subqueryRegistry.acceptsEvent(event) {
 			continue
 		}
 		partitionVariables := s.contextPartitionVariables(partition, variables)

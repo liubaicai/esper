@@ -165,6 +165,26 @@ func (r *subqueryRuntimeRegistry) accept(event Event, now time.Time, variables m
 	return nil
 }
 
+// acceptsEvent lets Context statements avoid constructing a partition-local
+// variable map when none of their event-stream subqueries can consume the
+// incoming event. This matters for sparse contexts with many lazy partitions:
+// an unrelated event must not turn a linear dispatch into an O(partitions)
+// clone loop before accept can reject it.
+func (r *subqueryRuntimeRegistry) acceptsEvent(event Event) bool {
+	if r == nil {
+		return false
+	}
+	for _, state := range r.states {
+		if state == nil || state.definition == nil || state.runtime == nil {
+			continue
+		}
+		if sourceNodeAcceptsEvent(r.env, state.definition.source, event) {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *subqueryRuntimeRegistry) expire(now time.Time) {
 	if r == nil {
 		return
