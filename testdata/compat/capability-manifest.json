@@ -20265,7 +20265,8 @@
         "java-runtime-d37dc4b973ae7065db56",
         "java-runtime-b6d1dd679fbc5d92b9ab",
         "java-runtime-fe4b7fd6f2db94e45f24",
-        "java-runtime-ffaf4fe96407b8a530b1"
+        "java-runtime-ffaf4fe96407b8a530b1",
+        "java-runtime-477cfc2759bb2ec10309"
       ],
       "javaStaticIds": [],
       "javaNames": [
@@ -20288,7 +20289,8 @@
         "ExprDefineSequenceAndNested",
         "ExprDefineSubqueryMultiresult",
         "ExprDefineSubqueryCross",
-        "ExprDefineSubqueryJoinSameField"
+        "ExprDefineSubqueryJoinSameField",
+        "ExprDefineSubqueryCorrelated"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/define/ExprDefineBasic.java"
@@ -20315,7 +20317,8 @@
         "TestExprDefineSequenceAndNestedParity",
         "TestExprDefineSubqueryMultiresultParity",
         "TestExprDefineSubqueryCrossParity",
-        "TestExprDefineSubqueryJoinSameFieldParity"
+        "TestExprDefineSubqueryJoinSameFieldParity",
+        "TestExprDefineSubqueryCorrelatedParity"
       ],
       "tags": [
         "correctness",
@@ -20329,7 +20332,7 @@
         "java-source",
         "go-unit"
       ],
-      "difference": "Go covers simple literal, aggregate-without-access definitions (sumA/sumB/countC), declared expressions used as aggregate inputs (lambda1/lambda2), window access aggregation (wb), scalar-return collection composition (scalarfilter) and on-select CASE/CAST predicate use, map-valued CASE-without-ELSE declarations routed through an intermediate stream, correlated named-window collection declarations chained through take-last/select/sequence-equal with typed EXPRDEF audit, scalar and multi-column row-valued aggregate subquery declarations (maxi/mini/subq), two-event-parameter cross-stream declared subqueries via JoinEventValue, one Event-parameter same-field subquery reused across source-indexed join events, statement-name metadata independent of declaration/source builder order, variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, the correlated pattern filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) via PatternEvent, parameterized declared expressions evaluated in the where/filter clause, one-parameter lambda-return collection composition (one/two), and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip, textual annotation placement, unqualified ambiguous join-property lookup, and 'alias for' variants are approved differences (Go uses source-indexed immutable typed query options and a fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. The separate correlated, uncorrelated, named-window, nested subquery and split-stream variants remain future work."
+      "difference": "Go covers simple literal, aggregate-without-access definitions (sumA/sumB/countC), declared expressions used as aggregate inputs (lambda1/lambda2), window access aggregation (wb), scalar-return collection composition (scalarfilter) and on-select CASE/CAST predicate use, map-valued CASE-without-ELSE declarations routed through an intermediate stream, correlated named-window collection declarations chained through take-last/select/sequence-equal with typed EXPRDEF audit, scalar and multi-column row-valued aggregate subquery declarations (maxi/mini/subq), two-event-parameter cross-stream declared subqueries via JoinEventValue, one Event-parameter same-field subquery reused across source-indexed join events, correlated outer-event scalar subqueries with null-on-multiple cardinality, statement-name metadata independent of declaration/source builder order, variable-driven and passthrough expression definitions, parameter-count mismatch validation, cross-module (@public) visibility of declared expressions, wildcard positional arguments (abc(*) / def(*,*)) via EventValue, the correlated pattern filter form of WildcardAndPattern (b=SupportBean(intPrimitive = abc(a))) via PatternEvent, parameterized declared expressions evaluated in the where/filter clause, one-parameter lambda-return collection composition (one/two), and zero/one/two-parameter declared expressions with arithmetic (fZero/fOne/fTwo/fThree). The SODA EPStatementObjectModel round-trip, textual annotation placement, unqualified ambiguous join-property lookup, and 'alias for' variants are approved differences (Go uses source-indexed immutable typed query options and a fluent Plan, not a text/model parser); fThree declares a second parameter the body never reads, which Go's body-inferred arity does not represent while the observable scalar result is identical. The separate uncorrelated, named-window, nested subquery and split-stream variants remain future work."
     },
     {
       "id": "case.epl-variable-onset-basic",
