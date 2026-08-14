@@ -392,6 +392,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/unidirectional-aggregate-join.json`、`testdata/parity/unidirectional-aggregate-join.evidence.json`；当前差异数为 0，覆盖 `EPLJoin2TableJoinGrouped`。
 
+## Output-first-having oracle
+
+第十九个代表性场景使用 `OutputFirstHavingScenarioOracle.java`（runner：`run-output-first-having.sh`）。它注册 Map 事件类型 `SupportBean(doublePrimitive)`，双跑两个 execution：`select doublePrimitive from SupportBean having doublePrimitive > 1 output first every 2 events`（events case）与 `select sum(doublePrimitive) as val0 from SupportBean#length(5) having sum(doublePrimitive) > 100 output first every 2 seconds`（time case，虚拟时钟）。Java 语义要点：HAVING 未命中事件不进入 first-every 事件计数；time case 在 2.999s/4.999s 边界不输出，3s/5s 后下一个可见事件输出。Go 用 `Aggregate(...).Having(...)` + `OutputFirstEveryEvents`/`OutputFirstEveryTime` 链式 API 复现同一语义。
+
+```sh
+./tools/java-oracle/run-output-first-having.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/output-first-having.json \
+  --output /tmp/output-first-having-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode output-first-having-diff \
+  -scenario testdata/parity/output-first-having.json \
+  -java-trace /tmp/output-first-having-java.json \
+  -evidence /tmp/output-first-having.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/output-first-having.json`、`testdata/parity/output-first-having.evidence.json`；当前差异数为 0，覆盖 `ResultSetHavingNoAvgOutputFirstEvents` 与 `ResultSetHavingNoAvgOutputFirstMinutes`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

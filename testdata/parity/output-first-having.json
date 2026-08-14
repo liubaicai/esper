@@ -1,0 +1,171 @@
+{
+  "version": "esper-parity/v1",
+  "id": "output-first-having",
+  "steps": [
+    {
+      "op": "case",
+      "case": "events"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 9
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 2
+      }
+    },
+    {
+      "op": "case",
+      "case": "time"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 80
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 11
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 1
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:02.999Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 1
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:03Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 100
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:04.999Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 0
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:05Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doublePrimitive": 0
+      }
+    }
+  ]
+}
