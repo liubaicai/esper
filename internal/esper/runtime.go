@@ -6469,11 +6469,13 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 	var changed bool
 	if accepts {
 		for _, partitionKey := range processKeys {
-			if terminating[partitionKey] && s.plan.query.output.Termination != OutputNoTermination {
+			if definition.parent == nil && terminating[partitionKey] && s.plan.query.output.Termination != OutputNoTermination {
 				// An end event closes the context before it enters the
 				// statement's data window. A termination snapshot therefore
 				// observes the state before this event, matching Esper's
-				// same-event termination behavior.
+				// same-event termination behavior for top-level contexts.
+				// Nested initiated children process the termination event
+				// before the snapshot, matching Java's nested behavior.
 				continue
 			}
 			partition := s.runtime.partitions[partitionKey]

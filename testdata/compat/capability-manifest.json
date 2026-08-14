@@ -24541,7 +24541,7 @@
         "multi-props/init-term/end-event nested combinations",
         "full Java differential trace for the covered ContextNested executions"
       ],
-      "difference": "Go covers non-temporal nested contexts with CreateNestedContext over key/category/hash children: three-level key partition isolation with context property paths, category-over-key/hash routing, nested selectors, and duplicate child-name rejection. Temporal, initiated/pattern and iterator-targeted nested lifecycles remain open."
+      "difference": "Go covers non-temporal nested contexts with CreateNestedContext over key/category/hash children: three-level key partition isolation with context property paths, category-over-key/hash routing, nested selectors, duplicate child-name rejection, and keyed-parent over initiated-terminated child termination (PartitionedOverPatternInitiated includes its termination event in aggregate state). Temporal, remaining initiated/pattern and iterator-targeted nested lifecycles remain open."
     },
     {
       "id": "case.inventory.resultset-output-limit-aggregate-grouped",
