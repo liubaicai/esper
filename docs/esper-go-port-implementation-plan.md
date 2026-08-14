@@ -1,3 +1,5 @@
+> 最新补充：Draft 4.66（2026-08-14），新增第二十三个 Java/Go 双跑代表性场景 `resultset-row-per-group-simple`，对照 `ResultSetQueryTypeRowPerGroup.ResultSetQueryTypeRowPerGroupSimple`（`java-runtime-d7060e63eda2baaf87f5`），并把该 runtime 从 inventoried 提升为 differential-verified。场景用 unbound SupportBean `group by theString` + sum/min/max 投影双跑 9 条 insert 记录；差分 0 differences。Manifest 更新为 410 case、2,715 条关联、23 个 differential-verified、33 个 differential runtime、23 个 representative-verified、23/23 场景通过。
+
 > 最新补充：Draft 4.65（2026-08-14），再登记五个高风险 Java 类的 108 个未关联 runtime 为 inventoried-only case：`ContextKeySegmentedWInitTermPrioritized`（23）、`EPLInsertInto`（20）、`ExprFilterOptimizableConditionNegateConfirm`（26）、`InfraNWTableCreateIndex`（22）、`EPLDatabaseJoin`（17）。只记录 inventory 证据，不宣称 Go 实现或差分。Manifest 更新为 409 case、2,715 条关联、2,630 个唯一 runtime（63.6%）、未关联 1,506 个。
 
 > 最新补充：Draft 4.64（2026-08-14），再登记五个高风险 Java 类的 90 个未关联 runtime 为 inventoried-only case：`EPLOtherStaticFunctions`（24）、`InfraNamedWindowTypes`（18）、`ResultSetQueryTypeRowPerGroup`（18）、`ViewUnion`（15）、`ViewTimeWin`（15）。只记录 inventory 证据，不宣称 Go 实现或差分。Manifest 更新为 404 case、2,607 条关联、2,522 个唯一 runtime（61.0%）、未关联 1,614 个。

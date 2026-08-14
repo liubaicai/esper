@@ -472,6 +472,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/resultset-grouped-time-window.json`、`testdata/parity/resultset-grouped-time-window.evidence.json`；当前差异数为 0，覆盖 `ResultSet1NoneNoHavingNoJoin` 与 `ResultSet3NoneHavingNoJoin`。
 
+## Resultset-row-per-group-simple oracle
+
+第二十三个代表性场景使用 `ResultSetRowPerGroupSimpleScenarioOracle.java`（runner：`run-resultset-row-per-group-simple.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)`，双跑 `select theString as c0, sum(intPrimitive) as c1, min(intPrimitive) as c2, max(intPrimitive) as c3 from SupportBean group by theString`：E1/E2/E3 的 9 条 insert 记录，覆盖 sum/min/max 随组更新的轨迹。Go 用 `GroupBy` + `Sum/Min/Max` 链式 API 复现同一语义。
+
+```sh
+./tools/java-oracle/run-resultset-row-per-group-simple.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/resultset-row-per-group-simple.json \
+  --output /tmp/resultset-row-per-group-simple-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode resultset-row-per-group-simple-diff \
+  -scenario testdata/parity/resultset-row-per-group-simple.json \
+  -java-trace /tmp/resultset-row-per-group-simple-java.json \
+  -evidence /tmp/resultset-row-per-group-simple.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/resultset-row-per-group-simple.json`、`testdata/parity/resultset-row-per-group-simple.evidence.json`；当前差异数为 0，覆盖 `ResultSetQueryTypeRowPerGroupSimple`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

@@ -924,7 +924,9 @@
         "internal/esper/output_first_having_parity_test.go",
         "internal/app/parity/output_first_having.go",
         "internal/esper/resultset_grouped_time_window_parity_test.go",
-        "internal/app/parity/resultset_grouped_time_window.go"
+        "internal/app/parity/resultset_grouped_time_window.go",
+        "internal/esper/resultset_row_per_group_simple_parity_test.go",
+        "internal/app/parity/resultset_row_per_group_simple.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -3800,14 +3802,16 @@
         "java-runtime-3e89e6297511b7dfe531",
         "java-runtime-52135d56e04dfb024bfe",
         "java-runtime-9061246c4c67a2c25364",
-        "java-runtime-11c5505c0b19dd86671c"
+        "java-runtime-11c5505c0b19dd86671c",
+        "java-runtime-d7060e63eda2baaf87f5"
       ],
       "representativeScenarioIds": [
         "output-policy-iterator",
         "high-cardinality-context",
         "rollup-output-every",
         "output-first-having",
-        "resultset-grouped-time-window"
+        "resultset-grouped-time-window",
+        "resultset-row-per-group-simple"
       ]
     },
     {
@@ -25042,7 +25046,6 @@
     {
       "id": "case.inventory.resultset-query-type-row-per-group",
       "javaRuntimeIds": [
-        "java-runtime-d7060e63eda2baaf87f5",
         "java-runtime-0037ed05579dea40c912",
         "java-runtime-1113d49de26486ab3e11",
         "java-runtime-f835309ee6d6febe3bde",
@@ -25062,7 +25065,6 @@
         "java-runtime-51b001e0e6965fb7746e"
       ],
       "javaNames": [
-        "ResultSetQueryTypeRowPerGroupSimple",
         "ResultSetQueryTypeRowPerGroupSumOneView",
         "ResultSetQueryTypeRowPerGroupSumJoin",
         "ResultSetQueryTypeCriteriaByDotMethod",
@@ -25554,6 +25556,53 @@
       ],
       "remaining": [
         "Go implementation and differential verification not yet established; inventory only"
+      ]
+    },
+    {
+      "id": "case.resultset-row-per-group-simple",
+      "javaRuntimeIds": [
+        "java-runtime-d7060e63eda2baaf87f5"
+      ],
+      "javaNames": [
+        "ResultSetQueryTypeRowPerGroupSimple"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowPerGroup.java"
+      ],
+      "goTests": [
+        "TestResultSetRowPerGroupSimpleParity",
+        "TestRunResultSetRowPerGroupSimpleDiffWritesPassingEvidence",
+        "TestRunResultSetRowPerGroupSimpleDiffRejectsTraceMutations"
+      ],
+      "tags": [
+        "correctness",
+        "resultset",
+        "row-per-group",
+        "aggregate",
+        "group-by",
+        "differential",
+        "representative"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-d7060e63eda2baaf87f5"
+      ],
+      "representativeScenarioIds": [
+        "resultset-row-per-group-simple"
       ]
     }
   ],
@@ -27237,17 +27286,21 @@
     {
       "capabilityId": "view.window-core",
       "caseId": "case.resultset-grouped-time-window"
+    },
+    {
+      "capabilityId": "resultset.aggregate-group-by",
+      "caseId": "case.resultset-row-per-group-simple"
     }
   ],
   "summary": {
-    "totalCases": 409,
+    "totalCases": 410,
     "totalCapabilities": 110,
-    "inventoriedCases": 409,
-    "implementedCases": 393,
-    "differentialVerifiedCases": 22,
-    "differentialVerifiedRuntimeIds": 32,
+    "inventoriedCases": 410,
+    "implementedCases": 394,
+    "differentialVerifiedCases": 23,
+    "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 17,
-    "representativeVerifiedCases": 22,
+    "representativeVerifiedCases": 23,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
@@ -27259,8 +27312,8 @@
     "referencedJavaRuntimeIds": 2630,
     "totalJavaRuntimeIds": 4136,
     "unreferencedJavaRuntimeIds": 1506,
-    "representativeScenarioTotal": 22,
-    "representativeScenarioPassing": 22,
+    "representativeScenarioTotal": 23,
+    "representativeScenarioPassing": 23,
     "currentFailures": [],
     "currentSkips": [
       "internal/esper.TestStressSyntheticMediumLoad: ESPER_STRESS is unset; run ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$' -count=1",
@@ -27273,10 +27326,10 @@
       "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
     ],
     "risks": [
-      "Twenty-two representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-two listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin runtimes are differential-verified.",
-      "The 22-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "345 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ResultSetQueryTypeIterator, EPLOtherStaticFunctions, InfraNamedWindowTypes, ResultSetQueryTypeRowPerGroup, ViewUnion, ViewTimeWin, ContextKeySegmentedWInitTermPrioritized, EPLInsertInto, ExprFilterOptimizableConditionNegateConfirm, InfraNWTableCreateIndex and EPLDatabaseJoin have no Go implementation or differential evidence yet.",
+      "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
+      "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
+      "344 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ResultSetQueryTypeIterator, EPLOtherStaticFunctions, InfraNamedWindowTypes, ResultSetQueryTypeRowPerGroup, ViewUnion, ViewTimeWin, ContextKeySegmentedWInitTermPrioritized, EPLInsertInto, ExprFilterOptimizableConditionNegateConfirm, InfraNWTableCreateIndex and EPLDatabaseJoin have no Go implementation or differential evidence yet.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
