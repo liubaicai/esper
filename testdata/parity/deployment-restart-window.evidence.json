@@ -1,0 +1,265 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-4ae08580480e15494fea"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLJoinStartStop.java"
+  ],
+  "javaExecutions": [
+    "EPLJoinStartStopSceneOne"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "deployment-restart-window",
+    "steps": [
+      {
+        "op": "case",
+        "case": "first"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CSCO",
+          "volume": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "second"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 20
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CSCO",
+          "volume": 30
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "third"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 50
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CSCO",
+          "volume": 50
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "deployment-restart-window",
+    "records": [
+      {
+        "case": "first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0volume": 10,
+              "s1volume": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "first",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0volume": 10,
+              "s1volume": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "second",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "second",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "third",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0volume": 50,
+              "s1volume": 50
+            }
+          }
+        ]
+      },
+      {
+        "case": "third",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0volume": 50,
+              "s1volume": 50
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "deployment-restart-window",
+    "records": [
+      {
+        "case": "first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0volume": 10,
+              "s1volume": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "first",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0volume": 10,
+              "s1volume": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "second",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "second",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "third",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0volume": 50,
+              "s1volume": 50
+            }
+          }
+        ]
+      },
+      {
+        "case": "third",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0volume": 50,
+              "s1volume": 50
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

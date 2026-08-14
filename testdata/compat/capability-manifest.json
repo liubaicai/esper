@@ -1333,7 +1333,9 @@
         "internal/esper/join_performance_test.go",
         "internal/esper/expr_test.go",
         "internal/esper/join_length_window_output_parity_test.go",
-        "internal/app/parity/join.go"
+        "internal/app/parity/join.go",
+        "internal/esper/deployment_restart_parity_test.go",
+        "internal/app/parity/deployment_restart.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -1350,10 +1352,12 @@
       ],
       "differentialVerifiedRuntimeIds": [
         "java-runtime-4aa869a9f1905a65ab3a",
-        "java-runtime-7885da47c76db1ebb5f7"
+        "java-runtime-7885da47c76db1ebb5f7",
+        "java-runtime-4ae08580480e15494fea"
       ],
       "representativeScenarioIds": [
-        "join-length-window"
+        "join-length-window",
+        "deployment-restart-window"
       ]
     },
     {
@@ -23780,6 +23784,55 @@
       "representativeScenarioIds": [
         "context-output-termination"
       ]
+    },
+    {
+      "id": "case.deployment-restart-window",
+      "javaRuntimeIds": [
+        "java-runtime-4ae08580480e15494fea"
+      ],
+      "javaNames": [
+        "EPLJoinStartStopSceneOne"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/join/EPLJoinStartStop.java"
+      ],
+      "goTests": [
+        "TestDeploymentRestartResetsJoinStateParity",
+        "TestRunDeploymentRestartDiffWritesPassingEvidence",
+        "TestRunDeploymentRestartDiffRejectsTraceMutations"
+      ],
+      "tags": [
+        "correctness",
+        "deployment",
+        "restart",
+        "undeploy",
+        "redeploy",
+        "join",
+        "window",
+        "differential",
+        "representative"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-4ae08580480e15494fea"
+      ],
+      "representativeScenarioIds": [
+        "deployment-restart-window"
+      ]
     }
   ],
   "mappings": [
@@ -25390,17 +25443,21 @@
     {
       "capabilityId": "output.core",
       "caseId": "case.context-output-termination"
+    },
+    {
+      "capabilityId": "join.basic",
+      "caseId": "case.deployment-restart-window"
     }
   ],
   "summary": {
-    "totalCases": 381,
+    "totalCases": 382,
     "totalCapabilities": 110,
-    "inventoriedCases": 381,
-    "implementedCases": 381,
-    "differentialVerifiedCases": 10,
-    "differentialVerifiedRuntimeIds": 17,
+    "inventoriedCases": 382,
+    "implementedCases": 382,
+    "differentialVerifiedCases": 11,
+    "differentialVerifiedRuntimeIds": 18,
     "intentionallyDifferentCases": 17,
-    "representativeVerifiedCases": 10,
+    "representativeVerifiedCases": 11,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
@@ -25408,12 +25465,12 @@
     "intentionallyDifferentCapabilities": 6,
     "representativeVerifiedCapabilities": 9,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2355,
+    "runtimeAssociationCount": 2356,
     "referencedJavaRuntimeIds": 2282,
     "totalJavaRuntimeIds": 4136,
     "unreferencedJavaRuntimeIds": 1854,
-    "representativeScenarioTotal": 10,
-    "representativeScenarioPassing": 10,
+    "representativeScenarioTotal": 11,
+    "representativeScenarioPassing": 11,
     "currentFailures": [],
     "currentSkips": [
       "connectors/kafka.TestKafkaDockerRoundTrip: ESPER_KAFKA_BROKERS is unset; run the Kafka fixture from docs/integration/external-services.md",
@@ -25425,8 +25482,8 @@
       "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
     ],
     "risks": [
-      "Ten representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset records contain broad implemented subsets; only the seventeen listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated runtimes are differential-verified.",
+      "Eleven representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset records contain broad implemented subsets; only the eighteen listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne runtimes are differential-verified.",
       "No 20-scenario representative suite, stress load, fuzz/property suite, or Java-vs-Go performance baseline is complete.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
     ],

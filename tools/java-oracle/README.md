@@ -232,6 +232,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/context-output-termination.json`、`testdata/parity/context-output-termination.evidence.json`；当前差异数为 0，覆盖 `ContextInitTermOutputSnapshotWhenTerminated`。
 
+## Deployment-restart-window oracle
+
+第十一个代表性场景使用 `DeploymentRestartScenarioOracle.java`（runner：`run-deployment-restart.sh`）。它注册 Map 事件类型 `SupportMarketDataBean(symbol, volume)`，双跑 `SupportMarketDataBean(symbol='IBM')#length(3) s0, SupportMarketDataBean(symbol='CSCO')#length(3) s1 where s0.volume=s1.volume` 的三个 case：每个 case 都是一个全新 deployment（undeploy/redeploy 边界），分别覆盖匹配、不匹配、再次匹配；这证明 length(3) join 状态在重启后彻底重置。
+
+```sh
+./tools/java-oracle/run-deployment-restart.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/deployment-restart-window.json \
+  --output /tmp/deployment-restart-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode deployment-restart-diff \
+  -scenario testdata/parity/deployment-restart-window.json \
+  -java-trace /tmp/deployment-restart-java.json \
+  -evidence /tmp/deployment-restart.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/deployment-restart-window.json`、`testdata/parity/deployment-restart-window.evidence.json`；当前差异数为 0，覆盖 `EPLJoinStartStopSceneOne`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

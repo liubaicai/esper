@@ -1,0 +1,82 @@
+{
+  "version": "esper-parity/v1",
+  "id": "deployment-restart-window",
+  "steps": [
+    {
+      "op": "case",
+      "case": "first"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CSCO",
+        "volume": 10
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "second"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 20
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CSCO",
+        "volume": 30
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "third"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 50
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CSCO",
+        "volume": 50
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    }
+  ]
+}

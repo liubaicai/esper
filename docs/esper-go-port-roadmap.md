@@ -50,16 +50,16 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 个 |
-| Case | 381 个 |
+| Case | 382 个 |
 | Case implemented | 354 个 |
-| Case differential-verified | 10 个（17 个 runtime） |
+| Case differential-verified | 11 个（18 个 runtime） |
 | Case intentionally-different | 17 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
-| Runtime 关联 | 2,355 条 |
+| Runtime 关联 | 2,356 条 |
 | 唯一已关联 runtime | 2,282 个 |
 | 未关联 runtime | 1,854 个 |
 | 关联覆盖率 | 55.1% |
-| Representative scenario | 10/10 通过 |
+| Representative scenario | 11/11 通过 |
 | NFR | 0 个已验证 |
 
 > 覆盖率 = 唯一已关联 Java runtime / inventory 中 `status=ok` runtime。它表示“已建立 Java runtime 对账/处置证据”的进度，不是“Go 已通过 parity”的比例。Manifest v2 的 `implemented` 只表示 Go 实现和测试登记，只有 `differential-verified` 才有已保存的 Java/Go trace 差分证据。
@@ -159,7 +159,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 Java/Go persisted differential evidence；当前已有 10 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`）。
+2. 扩展 Java/Go persisted differential evidence；当前已有 11 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`）。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 启动外部服务 fixture 后重新执行 Kafka、RabbitMQ 和 MySQL 门控测试；未启动时保持显式 skip。
 
