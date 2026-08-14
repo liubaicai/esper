@@ -34,7 +34,7 @@ func TestDataflowEventBusSinkReentersAnotherSource(t *testing.T) {
 	}
 	defer instance.Cancel(context.Background())
 
-	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "reentered"}); err != nil {
+	if err := engine.Send(context.Background(), "Trade", runtimeTestTrade{Symbol: "reentered"}); err != nil {
 		t.Fatal(err)
 	}
 	outputs := instance.Outputs()

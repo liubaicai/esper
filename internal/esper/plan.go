@@ -29,7 +29,7 @@ type Environment struct {
 	// Environment API without exposing mutable AST state to callers.
 	buildMu               sync.Mutex
 	schemas               map[string]Schema
-	typeToName            map[reflect.Type]string
+	typeToName            map[reflect.Type][]string
 	variables             map[string]VariableDefinition
 	aggregatePlugins      map[string]aggregatePluginDefinition
 	aggregateMultiPlugins map[string]aggregateMultiPluginDefinition
@@ -50,7 +50,7 @@ type Environment struct {
 func NewEnvironment() *Environment {
 	return &Environment{
 		schemas:               make(map[string]Schema),
-		typeToName:            make(map[reflect.Type]string),
+		typeToName:            make(map[reflect.Type][]string),
 		variables:             make(map[string]VariableDefinition),
 		aggregatePlugins:      make(map[string]aggregatePluginDefinition),
 		aggregateMultiPlugins: make(map[string]aggregateMultiPluginDefinition),
@@ -90,9 +90,30 @@ func (e *Environment) RegisterSchema(schema Schema) error {
 	}
 	e.schemas[schema.Name()] = schema
 	if schema.GoType() != nil {
-		e.typeToName[schema.GoType()] = schema.Name()
+		typ := schema.GoType()
+		names := e.typeToName[typ]
+		for _, existing := range names {
+			if existing == schema.Name() {
+				return nil
+			}
+		}
+		e.typeToName[typ] = append(names, schema.Name())
 	}
 	return nil
+}
+
+// typeNames returns the registered schema names for a Go struct type in
+// registration order. A Go type may be registered under several names (for
+// example the same bean shape used as both a source and an insert-into
+// target); type-based SendEvent is ambiguous in that case and callers must
+// use the name-based Engine.Send form.
+func (e *Environment) typeNames(typ reflect.Type) []string {
+	if e == nil || typ == nil {
+		return nil
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return append([]string(nil), e.typeToName[typ]...)
 }
 
 func (e *Environment) Schema(name string) (Schema, bool) {
@@ -2583,16 +2604,18 @@ func (e *Environment) schemaForGoType(typ reflect.Type) (Schema, bool) {
 	if e == nil || typ == nil {
 		return Schema{}, false
 	}
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	for _, schema := range e.schemas {
-		if schema.GoType() == typ {
+	names := e.typeNames(typ)
+	for _, name := range names {
+		schema, ok := e.schemas[name]
+		if ok && schema.GoType() == typ {
 			return schema, true
 		}
 	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 	for _, schema := range e.schemas {
 		goType := schema.GoType()
-		if goType != nil && (typ.AssignableTo(goType) || goType.AssignableTo(typ)) {
+		if goType != nil && goType != typ && (typ.AssignableTo(goType) || goType.AssignableTo(typ)) {
 			return schema, true
 		}
 	}

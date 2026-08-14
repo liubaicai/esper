@@ -390,7 +390,8 @@
       "goRefs": [
         "internal/esper/stream.go",
         "internal/esper/runtime.go",
-        "internal/esper/route_test.go"
+        "internal/esper/route_test.go",
+        "internal/esper/epl_insert_into_parity_test.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -3148,17 +3149,18 @@
         "internal/esper/client_instrument_statement_metrics_parity_test.go"
       ],
       "phase": 1,
-      "status": "implemented",
+      "status": "intentionally-different",
       "remaining": [
         "metric delivery uses typed Engine listeners and group snapshots instead of registering StatementMetric as an ordinary event stream",
-        "Linux reports process CPU time because goroutines can migrate between OS threads; other platforms return zero when no portable process CPU clock is available",
         "Named Window declarations are environment-owned metric entries with deploymentId environment instead of Java create-window deployment statements",
         "full instrumentation accounting for every internal schedule/filter callback beyond the mapped executions remains part of broader runtime observability work"
       ],
       "verification": [
         "inventoried",
-        "implemented"
-      ]
+        "implemented",
+        "intentionally-different"
+      ],
+      "difference": "Approved intentional difference: Java samples current-thread CPU time via ThreadMXBean for statement CPUTime; Go samples process CPU time on Linux (getrusage) because goroutines may migrate between OS threads, and returns explicit zero on platforms without a portable sampler. WallTime and all counters retain the Java reporting-period contract. See case.client-instrument-statement-metrics for the full rationale, impact scope, alternative and automated test evidence."
     },
     {
       "id": "client.instrument.audit",
@@ -18664,16 +18666,17 @@
         "enable-disable",
         "lifecycle"
       ],
-      "status": "implemented",
+      "status": "intentionally-different",
       "evidence": [
         "java-runtime-inventory",
         "java-source",
         "go-unit"
       ],
-      "difference": "Go configures statement metrics with typed StatementMetricsGroup options and delivers immutable StatementMetric values through removable management listeners plus CurrentStatementMetricGroups snapshots. Ordered SQL-LIKE/regexp include-exclude rules, first-match grouping, reportInactive, 6s/7s/8s and dynamically changed intervals, per-statement enable-disable, global schedule pause/resume, reset-on-report, undeploy removal and Named Window input accounting reproduce the five Java executions. Metric listeners are not ordinary statements, so they do not recursively report themselves after application undeploy. Named Window declarations are environment-owned metrics using deploymentId environment; this represents Java create-window statement A/W accounting without introducing EPL declarations. Linux CPUTime uses process CPU time because goroutines may migrate OS threads; non-Linux builds expose zero when no portable sampler exists. WallTime, input, insert-stream and remove-stream counters retain the Java reporting-period contract.",
+      "difference": "Approved intentional difference for CPUTime sampling. Java behavior: StatementMetricRepository and EPEventServiceImpl sample ThreadMXBean.getCurrentThreadCpuTime() around each statement dispatch, so CPUTime is current-thread CPU time (zero when the JVM platform does not expose a current-thread CPU clock). Go behavior: metrics_cpu_linux.go samples process CPU time (getrusage RUSAGE_SELF, user+system) because a goroutine may migrate between OS threads; metrics_cpu_other.go returns zero on platforms without a portable sampler. Reason: Go does not expose a portable per-goroutine CPU clock, and process CPU is the closest stable analogue; both choices are explicit build-tagged contracts. Impact: CPUTime magnitudes are not directly comparable to Java's per-thread values (on Linux Go includes other-thread CPU), and non-Linux builds report zero; WallTime, NumInput, NumOutputIStream/NumOutputRStream and reporting-period semantics remain comparable and verified. Alternative: per-thread sampling via cgo RUSAGE_THREAD would still not follow goroutine migration and adds cgo portability cost, so process CPU was chosen. Test evidence: TestClientInstrumentMetricsReportingStmtMetricsParity asserts positive CPUTime for cpuStmtOne/cpuStmtTwo when the platform sampler is available, positive WallTime for wallStmtThree/wallStmtFour, and exact counters; the build-tagged samplers are exercised by the full suite on each platform.",
       "verification": [
         "inventoried",
-        "implemented"
+        "implemented",
+        "intentionally-different"
       ]
     },
     {
@@ -25334,20 +25337,56 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertInto.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "epl",
-        "insert-into"
+        "insert-into",
+        "route",
+        "wildcard",
+        "null-type",
+        "representation",
+        "map",
+        "object-array",
+        "json",
+        "avro",
+        "remove-stream",
+        "join",
+        "pattern",
+        "type-mismatch",
+        "ambiguous-type"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
       ],
-      "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+      "goTests": [
+        "TestEPLInsertIntoStaggeredWithWildcardParity",
+        "TestEPLInsertIntoNullTypeParity",
+        "TestEPLInsertIntoMultiBeanToMultiParity",
+        "TestEPLInsertIntoProvidePartialColsParity",
+        "TestEPLInsertIntoRStreamOMToStmtParity",
+        "TestEPLInsertIntoNamedColsOMToStmtParity",
+        "TestEPLInsertIntoNamedColsEPLToOMStmtParity",
+        "TestEPLInsertIntoNamedColsSimpleParity",
+        "TestEPLInsertIntoNamedColsStatelessParity",
+        "TestEPLInsertIntoNamedColsWildcardParity",
+        "TestEPLInsertIntoNamedColsJoinWildcardParity",
+        "TestEPLInsertIntoUnnamedSimpleParity",
+        "TestEPLInsertIntoUnnamedWildcardParity",
+        "TestEPLInsertIntoTypeMismatchInvalidParity",
+        "TestEPLInsertIntoEventRepresentationsSimpleParity",
+        "TestEPLInsertIntoLenientPropCountParity",
+        "TestEPLInsertIntoPatternRequiresProjectionParity",
+        "TestEPLInsertIntoWildcardRecastBeanIdentityDifference",
+        "TestSendEventAmbiguousGoTypeParity"
+      ],
+      "difference": "Go implements the Java EPLInsertInto executions with the typed fluent route chain (InsertInto/WithRemoveStreamOnly), requiring explicit shared target schema registration and explicit projections instead of Java wildcard/column-list text rules. Coverage: wildcard-chained three-statement routes in one batch and separate deployments; null-typed properties; multi-event array columns; partial-column targets with explicit nulls; remove-stream-only routing through length windows; named/unnamed delta+product projections feeding time(60) min/max aggregate consumers; wildcard event identity preservation; join wildcard projection; type-conflict rejection on a shared target; the typed requirement that pattern insert-into uses an explicit projection; Map/ObjectArray/JSON/Avro/JSON-class-provided representation routing; and lenient partial property counts across MAP/OBJECTARRAY/JSON/AVRO. Runtime changes: the same Go struct may be registered under several event-type names (source and insert-into target), so type-based SendEvent returns an explicit ambiguity error and callers use name-based Engine.Send; ungrouped aggregate results emit on pure time-expiry removal batches to match the Java ungrouped time-window contract; numeric projection values are coerced to the target schema type across representations. Java wildcard syntax, SODA object-model round-trips and the invalid 'wildcard with explicit column list' shape are unrepresentable in the typed API and are documented as accepted API differences. Java TestSuiteEPLInsertInto 15/15 and TestSuiteEPLInsertIntoWConfig 2/2 pass at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c; these executions are implemented but not yet differential-verified."
     },
     {
       "id": "case.inventory.expr-filter-optimizable-condition-negate-confirm",
@@ -27290,22 +27329,26 @@
     {
       "capabilityId": "resultset.aggregate-group-by",
       "caseId": "case.resultset-row-per-group-simple"
+    },
+    {
+      "capabilityId": "query.insert-into-route",
+      "caseId": "case.inventory.epl-insert-into"
     }
   ],
   "summary": {
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 394,
+    "implementedCases": 395,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
-    "intentionallyDifferentCases": 17,
+    "intentionallyDifferentCases": 18,
     "representativeVerifiedCases": 23,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
     "differentialVerifiedCapabilities": 11,
-    "intentionallyDifferentCapabilities": 6,
+    "intentionallyDifferentCapabilities": 7,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
     "runtimeAssociationCount": 2715,
@@ -27329,15 +27372,15 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "344 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ResultSetQueryTypeIterator, EPLOtherStaticFunctions, InfraNamedWindowTypes, ResultSetQueryTypeRowPerGroup, ViewUnion, ViewTimeWin, ContextKeySegmentedWInitTermPrioritized, EPLInsertInto, ExprFilterOptimizableConditionNegateConfirm, InfraNWTableCreateIndex and EPLDatabaseJoin have no Go implementation or differential evidence yet.",
+      "324 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ResultSetQueryTypeIterator, EPLOtherStaticFunctions, InfraNamedWindowTypes, ResultSetQueryTypeRowPerGroup, ViewUnion, ViewTimeWin, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm, InfraNWTableCreateIndex and EPLDatabaseJoin have no Go implementation or differential evidence yet; EPLInsertInto's 20 executions were implemented in this slice (not yet differential-verified).",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
-      "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
+      "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."
     ],
-  "quality": {
-    "race": "passed",
-    "docker": "mysql/kafka/rabbitmq round-trip tests passed 2026-08-14; environment-gated in normal go test",
-    "stress": "baseline-captured 2026-08-14; improved 42.6s->18.45s after lazy historyByEvent; throughput ~660 events/s, further NFR work open",
+    "quality": {
+      "race": "passed",
+      "docker": "mysql/kafka/rabbitmq round-trip tests passed 2026-08-14; environment-gated in normal go test",
+      "stress": "baseline-captured 2026-08-14; improved 42.6s->18.45s after lazy historyByEvent; throughput ~660 events/s, further NFR work open",
       "performance": "partial; targeted statement-metrics workload only"
     }
   }

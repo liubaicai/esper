@@ -37,13 +37,14 @@
 - “Flink DataStream 风格”仅指规则构造体验：类型化流、具名算子、链式组合和显式 sink。不表示首版要复制 Flink 的分布式集群运行时、并行度、watermark/checkpoint/savepoint、作业恢复或 exactly-once 语义；除非 Esper 9.0.0 本身有对应可观察契约。
 - 范围严格限定为固定 commit 中已检入的开源 Esper 9.0.0 模块、公共契约、回归场景、单元测试、EsperIO 和示例。NEsper、EsperHA 及商业/企业能力不在本次完成条件内。
 
-## 2. 当前状态（截至 2026-08-13）
+## 2. 当前状态（截至 2026-08-14）
 
 ### 2.1 代码与分支
 
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
-- 最新已提交：`178b454c7`（Add resultset-row-per-group-simple representative parity scenario）
+- 最近切片：EPLInsertInto 20 个 execution 提升为 implemented，statement metrics CPU 采样差异登记为 approved intentional difference（2026-08-14）。
+- 最新已提交：见本文件最后的提交记录。
 
 ### 2.2 对账清单
 
@@ -51,10 +52,10 @@
 | --- | --- |
 | Capability | 110 个 |
 | Case | 410 个 |
-| Case implemented | 354 个 |
+| Case implemented（verification） | 395 个（其中 23 个 differential-verified、18 个 intentionally-different） |
 | Case differential-verified | 23 个（33 个 runtime） |
-| Case intentionally-different | 17 个 |
-| Case inventoried | 16 个 |
+| Case intentionally-different | 18 个 |
+| Case inventoried-only | 15 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
 | Runtime 关联 | 2,715 条 |
 | 唯一已关联 runtime | 2,630 个 |

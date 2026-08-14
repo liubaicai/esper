@@ -1588,7 +1588,7 @@ func TestUpdateIStreamCopyMethodParity(t *testing.T) {
 	updateIStreamDeployOne(t, engine, updatePlan)
 	_, s0 := updateIStreamDeployOne(t, engine, s0Plan)
 
-	if err := engine.SendEvent(context.Background(), updateIStreamCopyMethodBean{ValOne: "1", ValTwo: "2"}); err != nil {
+	if err := engine.Send(context.Background(), "SupportBeanCopyMethod", updateIStreamCopyMethodBean{ValOne: "1", ValTwo: "2"}); err != nil {
 		t.Fatal(err)
 	}
 	if len(s0.newResults) != 1 {

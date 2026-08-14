@@ -3969,12 +3969,11 @@ func (d *DataflowInstance) materializeDataflowEvent(value any) (Event, error) {
 	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	d.engine.env.mu.RLock()
-	eventType, ok := d.engine.env.typeToName[typ]
-	d.engine.env.mu.RUnlock()
-	if !ok {
+	names := d.engine.env.typeNames(typ)
+	if len(names) == 0 {
 		return Event{}, NewError(ErrorUnknownName, fmt.Sprintf("no registered event type for Go type %s", typ))
 	}
+	eventType := names[0]
 	schema, ok := d.engine.env.Schema(eventType)
 	if !ok {
 		return Event{}, NewError(ErrorUnknownName, fmt.Sprintf("event type %q is not registered", eventType))

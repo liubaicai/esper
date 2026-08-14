@@ -142,7 +142,7 @@ func TestEventBusDataflowSinkRoutesToRegisteredEventType(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "routed", Price: 3}); err != nil {
+	if err := engine.Send(context.Background(), "Trade", runtimeTestTrade{Symbol: "routed", Price: 3}); err != nil {
 		t.Fatal(err)
 	}
 	if observed != 1 {

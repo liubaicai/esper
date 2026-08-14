@@ -56,7 +56,7 @@ func TestExprFilterWhereClauseSimpleMatchesEsper(t *testing.T) {
 	}
 
 	// Send IBM - should not match WHERE
-	if err := engine.SendEvent(context.Background(), whereClauseBean{Symbol: "IBM"}); err != nil {
+	if err := engine.Send(context.Background(), "SupportMarketDataBean", whereClauseBean{Symbol: "IBM"}); err != nil {
 		t.Fatal(err)
 	}
 	if invoked {
@@ -65,7 +65,7 @@ func TestExprFilterWhereClauseSimpleMatchesEsper(t *testing.T) {
 
 	// Send CSCO - should match
 	invoked = false
-	if err := engine.SendEvent(context.Background(), whereClauseBean{Symbol: "CSCO"}); err != nil {
+	if err := engine.Send(context.Background(), "SupportMarketDataBean", whereClauseBean{Symbol: "CSCO"}); err != nil {
 		t.Fatal(err)
 	}
 	if !invoked {
@@ -74,7 +74,7 @@ func TestExprFilterWhereClauseSimpleMatchesEsper(t *testing.T) {
 
 	// Send IBM again - should not match
 	invoked = false
-	if err := engine.SendEvent(context.Background(), whereClauseBean{Symbol: "IBM"}); err != nil {
+	if err := engine.Send(context.Background(), "SupportMarketDataBean", whereClauseBean{Symbol: "IBM"}); err != nil {
 		t.Fatal(err)
 	}
 	if invoked {
@@ -83,7 +83,7 @@ func TestExprFilterWhereClauseSimpleMatchesEsper(t *testing.T) {
 
 	// Send CSCO again - should match
 	invoked = false
-	if err := engine.SendEvent(context.Background(), whereClauseBean{Symbol: "CSCO"}); err != nil {
+	if err := engine.Send(context.Background(), "SupportMarketDataBean", whereClauseBean{Symbol: "CSCO"}); err != nil {
 		t.Fatal(err)
 	}
 	if !invoked {

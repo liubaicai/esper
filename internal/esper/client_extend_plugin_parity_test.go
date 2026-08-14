@@ -169,7 +169,7 @@ func TestClientExtendViewMatchesEsper(t *testing.T) {
 	}
 	send := func(price float64) {
 		t.Helper()
-		if err := engine.SendEvent(context.Background(), clientExtendPluginEvent{Price: price}); err != nil {
+		if err := engine.Send(context.Background(), "SupportMarketDataBean", clientExtendPluginEvent{Price: price}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -249,7 +249,7 @@ func TestClientExtendVirtualDataWindowDisposition(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = insertDep
-	if err := engine.SendEvent(context.Background(), clientExtendPluginEvent{TheString: "E1", IntPrimitive: 100}); err != nil {
+	if err := engine.Send(context.Background(), "SupportBean", clientExtendPluginEvent{TheString: "E1", IntPrimitive: 100}); err != nil {
 		t.Fatal(err)
 	}
 }

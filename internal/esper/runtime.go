@@ -3677,12 +3677,16 @@ func (e *Engine) SendEvent(ctx context.Context, underlying any) error {
 	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	e.env.mu.RLock()
-	name, ok := e.env.typeToName[typ]
-	e.env.mu.RUnlock()
-	if !ok {
+	names := e.env.typeNames(typ)
+	if len(names) == 0 {
 		return NewError(ErrorUnknownName, fmt.Sprintf("no registered event type for Go type %s", typ))
 	}
+	if len(names) > 1 {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf(
+			"Go type %s is registered as event types %s; use Engine.Send with an explicit event type",
+			typ, strings.Join(names, ", ")))
+	}
+	name := names[0]
 	return e.Send(ctx, name, underlying)
 }
 
@@ -4410,6 +4414,14 @@ func projectMapToSchema(target Schema, values map[string]any) (any, error) {
 	result := make(map[string]any, len(target.fields)+len(values))
 	for _, field := range target.fields {
 		if value, ok := values[field.Name]; ok {
+			if field.Type != nil && field.Type != typeOf[any]() && value != nil {
+				valueType := reflect.TypeOf(value)
+				if valueType != nil && !valueType.AssignableTo(field.Type) && numericTypes(field.Type, valueType) {
+					if converted, err := assignReflectValue(field.Type, value); err == nil {
+						value = converted.Interface()
+					}
+				}
+			}
 			result[field.Name] = value
 		} else {
 			result[field.Name] = nil
@@ -14606,6 +14618,15 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	// insert batch (e.g. a window eviction caused by a new event) or when an
 	// output/forced boundary explicitly requests current state.
 	emitNew := delta.hadInput || delta.forced || len(delta.newEvents) > 0
+	if len(definition.groupBy) == 0 && len(delta.oldEvents) > 0 {
+		// Ungrouped aggregate result sets post the current row whenever a
+		// removal changes the aggregate state, including pure time-expiry
+		// batches with no incoming event (Java EPLInsertInto ungrouped
+		// min/max over a time window asserts an update at the expiry
+		// boundary). Grouped istream result sets keep the suppress-pure-expiry
+		// contract exercised by the grouped time-window differential scenario.
+		emitNew = true
+	}
 	affected := make([]string, 0)
 	seen := make(map[string]struct{})
 	groupingSets := aggregateGroupingSetsForDefinition(definition)
