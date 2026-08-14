@@ -272,6 +272,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/high-cardinality-context.json`、`testdata/parity/high-cardinality-context.evidence.json`；当前差异数为 0，覆盖 `ContextKeySegmentedLargeNumberPartitions`（缩减版）。
 
+## Time-window-long-running oracle
+
+第十三个代表性场景使用 `TimeWindowScenarioOracle.java`（runner：`run-time-window.sh`）。它注册 Map 事件类型 `SupportBean(theString, longBoxed)` 与 `SupportMarketDataBean(symbol)`，双跑 `create window MyWindowTW#time(10 sec)`、insert、`select irstream key, value from MyWindowTW` 与 on-delete：虚拟时钟 1s/5s/10s 进入 E1/E2/E3，11s 淘汰 E1，E4 进入，delete 删除 E2，20s 淘汰 E3，快照只剩 E4，再 delete E4 后快照为空。
+
+```sh
+./tools/java-oracle/run-time-window.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/time-window-long-running.json \
+  --output /tmp/time-window-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode time-window-diff \
+  -scenario testdata/parity/time-window-long-running.json \
+  -java-trace /tmp/time-window-java.json \
+  -evidence /tmp/time-window.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/time-window-long-running.json`、`testdata/parity/time-window-long-running.evidence.json`；当前差异数为 0，覆盖 `InfraTimeWindow`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

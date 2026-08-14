@@ -7828,7 +7828,7 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 	}
 	events := r.currentStreamEvents(plan.query.input, now)
 	if len(events) == 0 {
-		return ResultBatch{}
+		return ResultBatch{Time: now}
 	}
 	result := ResultBatch{Time: now}
 	history := append([]Event(nil), events...)

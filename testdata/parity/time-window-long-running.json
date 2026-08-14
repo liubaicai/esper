@@ -1,0 +1,88 @@
+{
+  "version": "esper-parity/v1",
+  "id": "time-window-long-running",
+  "steps": [
+    {
+      "op": "case",
+      "case": "time-window"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "longBoxed": 1
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:05Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "longBoxed": 2
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:10Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "longBoxed": 3
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:10.999Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:11Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E4",
+        "longBoxed": 4
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "E2"
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:20Z"
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "E4"
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    }
+  ]
+}
