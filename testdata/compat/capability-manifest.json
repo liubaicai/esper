@@ -1201,7 +1201,9 @@
         "internal/esper/context_output_termination_parity_test.go",
         "internal/app/parity/context_output.go",
         "internal/esper/high_cardinality_context_parity_test.go",
-        "internal/app/parity/high_cardinality.go"
+        "internal/app/parity/high_cardinality.go",
+        "internal/esper/context_keyed_subquery_parity_test.go",
+        "internal/app/parity/context_keyed_subquery.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -1222,12 +1224,14 @@
         "java-runtime-5d429404e8e55f30567a",
         "java-runtime-c5406f66fdd34533bcb2",
         "java-runtime-4b19317271be7df8b569",
-        "java-runtime-bd4672ec90862ee08790"
+        "java-runtime-bd4672ec90862ee08790",
+        "java-runtime-9aa54450b89fbc94ab73"
       ],
       "representativeScenarioIds": [
         "context-hash-segmented",
         "context-output-termination",
-        "high-cardinality-context"
+        "high-cardinality-context",
+        "context-keyed-subquery"
       ]
     },
     {
@@ -1427,7 +1431,9 @@
         "internal/esper/runtime.go",
         "internal/esper/faf.go",
         "internal/esper/subquery_length_window_parity_test.go",
-        "internal/app/parity/subquery_length_window.go"
+        "internal/app/parity/subquery_length_window.go",
+        "internal/esper/context_keyed_subquery_parity_test.go",
+        "internal/app/parity/context_keyed_subquery.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -1445,10 +1451,12 @@
         "representative-verified"
       ],
       "differentialVerifiedRuntimeIds": [
-        "java-runtime-60f4742e4d330725c1e5"
+        "java-runtime-60f4742e4d330725c1e5",
+        "java-runtime-9aa54450b89fbc94ab73"
       ],
       "representativeScenarioIds": [
-        "subquery-length-window"
+        "subquery-length-window",
+        "context-keyed-subquery"
       ]
     },
     {
@@ -24280,6 +24288,53 @@
       "representativeScenarioIds": [
         "output-first-having"
       ]
+    },
+    {
+      "id": "case.context-keyed-subquery",
+      "javaRuntimeIds": [
+        "java-runtime-9aa54450b89fbc94ab73"
+      ],
+      "javaNames": [
+        "ContextKeySegmentedSubqueryFiltered"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+      ],
+      "goTests": [
+        "TestContextKeyedSubqueryParity",
+        "TestRunContextKeyedSubqueryDiffWritesPassingEvidence",
+        "TestRunContextKeyedSubqueryDiffRejectsTraceMutations"
+      ],
+      "tags": [
+        "correctness",
+        "context",
+        "subquery",
+        "partition",
+        "last-event",
+        "differential",
+        "representative"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-9aa54450b89fbc94ab73"
+      ],
+      "representativeScenarioIds": [
+        "context-keyed-subquery"
+      ]
     }
   ],
   "mappings": [
@@ -25942,17 +25997,25 @@
     {
       "capabilityId": "resultset.aggregate-group-by",
       "caseId": "case.output-first-having-events-time"
+    },
+    {
+      "capabilityId": "context.partition",
+      "caseId": "case.context-keyed-subquery"
+    },
+    {
+      "capabilityId": "query.subquery-basic",
+      "caseId": "case.context-keyed-subquery"
     }
   ],
   "summary": {
-    "totalCases": 390,
+    "totalCases": 391,
     "totalCapabilities": 110,
-    "inventoriedCases": 390,
-    "implementedCases": 390,
-    "differentialVerifiedCases": 19,
-    "differentialVerifiedRuntimeIds": 27,
+    "inventoriedCases": 391,
+    "implementedCases": 391,
+    "differentialVerifiedCases": 20,
+    "differentialVerifiedRuntimeIds": 28,
     "intentionallyDifferentCases": 17,
-    "representativeVerifiedCases": 19,
+    "representativeVerifiedCases": 20,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
@@ -25960,12 +26023,12 @@
     "intentionallyDifferentCapabilities": 6,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2365,
+    "runtimeAssociationCount": 2366,
     "referencedJavaRuntimeIds": 2283,
     "totalJavaRuntimeIds": 4136,
     "unreferencedJavaRuntimeIds": 1853,
-    "representativeScenarioTotal": 19,
-    "representativeScenarioPassing": 19,
+    "representativeScenarioTotal": 20,
+    "representativeScenarioPassing": 20,
     "currentFailures": [],
     "currentSkips": [
       "connectors/kafka.TestKafkaDockerRoundTrip: ESPER_KAFKA_BROKERS is unset; run the Kafka fixture from docs/integration/external-services.md",
@@ -25977,8 +26040,8 @@
       "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
     ],
     "risks": [
-      "Nineteen representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the twenty-seven listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes runtimes are differential-verified.",
+      "Twenty representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the twenty-eight listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered runtimes are differential-verified.",
       "No 20-scenario representative suite, stress load, fuzz/property suite, or Java-vs-Go performance baseline is complete.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
     ],

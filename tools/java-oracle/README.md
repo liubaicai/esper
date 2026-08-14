@@ -412,6 +412,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/output-first-having.json`、`testdata/parity/output-first-having.evidence.json`；当前差异数为 0，覆盖 `ResultSetHavingNoAvgOutputFirstEvents` 与 `ResultSetHavingNoAvgOutputFirstMinutes`。
 
+## Context-keyed-subquery oracle
+
+第二十个代表性场景使用 `ContextKeyedSubqueryScenarioOracle.java`（runner：`run-context-keyed-subquery.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)` 与 `SupportBean_S0(id, p00)`，双跑 `create context SegmentedByString partition by theString from SupportBean` + `context SegmentedByString select theString, intPrimitive, (select p00 from SupportBean_S0#lastevent as s0 where sb.intPrimitive = s0.id) as val0 from SupportBean as sb`。Java 语义要点：每个 keyed 分区拥有独立的 #lastevent 子查询注册表，新建分区看不到创建前的 inner 事件；Go 用 `CreateKeyContext` + `WithContext` + correlated `SubqueryValue`/`LastEvent` 复现同一语义。
+
+```sh
+./tools/java-oracle/run-context-keyed-subquery.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/context-keyed-subquery.json \
+  --output /tmp/context-keyed-subquery-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode context-keyed-subquery-diff \
+  -scenario testdata/parity/context-keyed-subquery.json \
+  -java-trace /tmp/context-keyed-subquery-java.json \
+  -evidence /tmp/context-keyed-subquery.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/context-keyed-subquery.json`、`testdata/parity/context-keyed-subquery.evidence.json`；当前差异数为 0，覆盖 `ContextKeySegmentedSubqueryFiltered`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

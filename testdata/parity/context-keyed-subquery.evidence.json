@@ -1,0 +1,325 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-9aa54450b89fbc94ab73"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+  ],
+  "javaExecutions": [
+    "ContextKeySegmentedSubqueryFiltered"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-keyed-subquery",
+    "steps": [
+      {
+        "op": "case",
+        "case": "keyed-subquery"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "s1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "s2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "s3"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G3",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 10
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-keyed-subquery",
+    "records": [
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G1",
+              "val0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G1",
+              "val0": "s2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G2",
+              "val0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G2",
+              "val0": "s3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G3",
+              "val0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G1",
+              "val0": "s3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-keyed-subquery",
+    "records": [
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G1",
+              "val0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G1",
+              "val0": "s2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G2",
+              "val0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G2",
+              "val0": "s3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G3",
+              "val0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "G1",
+              "val0": "s3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

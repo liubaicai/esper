@@ -1,0 +1,82 @@
+{
+  "version": "esper-parity/v1",
+  "id": "context-keyed-subquery",
+  "steps": [
+    {
+      "op": "case",
+      "case": "keyed-subquery"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 10,
+        "p00": "s1"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 10,
+        "p00": "s2"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G2",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 10,
+        "p00": "s3"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G2",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G3",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G1",
+        "intPrimitive": 10
+      }
+    }
+  ]
+}
