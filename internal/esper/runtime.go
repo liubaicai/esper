@@ -4678,6 +4678,7 @@ type patternRuntimeState struct {
 	active                 []patternMatch
 	patternStopped         bool
 	emittedEvents          []Event
+	iterableRows           []Result
 	distinct               map[string]struct{}
 	distinctAt             map[string]time.Time
 	timerStarted           bool
@@ -7488,6 +7489,13 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			result := ResultBatch{}
 			if len(plans) > 0 {
 				result = r.snapshotBatch(plans[0], now)
+				// Esper's output-snapshot listener delivers groups in group
+				// creation order (Java's output process view), while the
+				// statement iterator orders groups by the first retained
+				// event's window position. Restore group order here.
+				if r.aggregateState != nil && len(result.New) > 1 && len(result.outputKeysNew) == len(result.New) {
+					sortResultsByGroupOrder(r.aggregateState.groupOrder, result.outputKeysNew, result.New)
+				}
 			}
 			if result.empty() {
 				return ResultBatch{}
@@ -7561,6 +7569,36 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 	default:
 		return r.finishOutput(policy, batch, now, plans...)
 	}
+}
+
+func sortResultsByGroupOrder(order []string, keys []string, results []Result) {
+	index := make(map[string]int, len(order))
+	for position, key := range order {
+		index[key] = position
+	}
+	combined := make([]int, len(results))
+	for position := range combined {
+		combined[position] = position
+	}
+	sort.SliceStable(combined, func(left, right int) bool {
+		leftIndex, leftOK := index[keys[combined[left]]]
+		rightIndex, rightOK := index[keys[combined[right]]]
+		if !leftOK {
+			leftIndex = len(order)
+		}
+		if !rightOK {
+			rightIndex = len(order)
+		}
+		return leftIndex < rightIndex
+	})
+	reorderedKeys := make([]string, len(keys))
+	reorderedResults := make([]Result, len(results))
+	for position, original := range combined {
+		reorderedKeys[position] = keys[original]
+		reorderedResults[position] = results[original]
+	}
+	copy(keys, reorderedKeys)
+	copy(results, reorderedResults)
 }
 
 func (r *statementRuntime) applyFirstEveryEvents(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
@@ -8126,19 +8164,21 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 	}
 	sort.Strings(keys[orderedLen:])
 	entries := make([]aggregateResultEntry, 0, len(keys))
-	if len(keys) == 0 && len(definition.groupBy) == 0 {
+	if len(keys) == 0 && len(definition.groupBy) == 0 && !aggregateDefinitionSnapshotRowForEvent(definition) {
 		values, visible := evaluateEmptyAggregateGroup(definition, now, r.variables)
 		if visible {
 			entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: "<all>"})
 		}
 	}
-	for _, key := range keys {
-		group := r.aggregateState.groups[key]
-		if group == nil || (len(group.events) == 0 && !aggregateDefinitionUsesEver(definition) && !aggregateDefinitionRetainsEmptyGroups(definition)) {
-			continue
-		}
-		if aggregateDefinitionIsRowForEvent(definition) && len(group.events) > 0 {
-			for _, current := range group.events {
+	if aggregateDefinitionSnapshotRowForEvent(definition) {
+		groupingSets := aggregateGroupingSetsForDefinition(definition)
+		if len(groupingSets) == 1 {
+			for _, current := range r.aggregateState.allEvents {
+				key := aggregateGroupKey(definition.groupBy, groupingSets[0], current, now, r.variables)
+				group := r.aggregateState.groups[key]
+				if group == nil {
+					continue
+				}
 				values, visible := evaluateAggregateGroup(
 					definition,
 					group.events,
@@ -8158,27 +8198,57 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 					entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), group: group, key: key})
 				}
 			}
-			continue
 		}
-		values, visible := evaluateAggregateGroup(
-			definition,
-			group.events,
-			group.everEvents,
-			nil,
-			false,
-			group.groupingSet,
-			group.current,
-			r.aggregateState.allEvents,
-			r.aggregateState.allEverEvents,
-			now,
-			r.variables,
-			group.pluginStates,
-			group.multiPluginStates,
-		)
-		if !visible {
-			continue
+	} else {
+		for _, key := range keys {
+			group := r.aggregateState.groups[key]
+			if group == nil || (len(group.events) == 0 && !aggregateDefinitionUsesEver(definition) && !aggregateDefinitionRetainsEmptyGroups(definition)) {
+				continue
+			}
+			values, visible := evaluateAggregateGroup(
+				definition,
+				group.events,
+				group.everEvents,
+				nil,
+				false,
+				group.groupingSet,
+				group.current,
+				r.aggregateState.allEvents,
+				r.aggregateState.allEverEvents,
+				now,
+				r.variables,
+				group.pluginStates,
+				group.multiPluginStates,
+			)
+			if !visible {
+				continue
+			}
+			entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), group: group, key: key})
 		}
-		entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), group: group, key: key})
+		// Java's grouped aggregate iterator orders groups by the first
+		// retained event's position in the source window, not by group
+		// creation order; groups without retained events keep creation order.
+		firstIndex := make(map[string]int, len(entries))
+		groupingSets := aggregateGroupingSetsForDefinition(definition)
+		if len(groupingSets) == 1 {
+			for index, event := range r.aggregateState.allEvents {
+				key := aggregateGroupKey(definition.groupBy, groupingSets[0], event, now, r.variables)
+				if _, exists := firstIndex[key]; !exists {
+					firstIndex[key] = index
+				}
+			}
+		}
+		sort.SliceStable(entries, func(left, right int) bool {
+			leftIndex, leftOK := firstIndex[entries[left].key]
+			rightIndex, rightOK := firstIndex[entries[right].key]
+			if !leftOK {
+				leftIndex = len(r.aggregateState.allEvents)
+			}
+			if !rightOK {
+				rightIndex = len(r.aggregateState.allEvents)
+			}
+			return leftIndex < rightIndex
+		})
 	}
 	if len(plan.query.orderBy) > 0 {
 		orderAggregateResults(entries, plan.query.orderBy, definition, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, false)
@@ -14406,6 +14476,9 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				if transition.complete {
 					completed = true
 					if row, visible := r.evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
+						if plan.query.iterableUnbound {
+							r.patternState.iterableRows = []Result{resultRow(row)}
+						}
 						batch.New = append(batch.New, resultRow(row))
 					}
 
@@ -14456,6 +14529,9 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				if transition.complete {
 					completed = true
 					if row, visible := r.evaluatePatternMatch(definition, started, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, started) {
+						if plan.query.iterableUnbound {
+							r.patternState.iterableRows = []Result{resultRow(row)}
+						}
 						batch.New = append(batch.New, resultRow(row))
 					}
 					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, started, definition, pool) {
@@ -14668,6 +14744,9 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 			if transition.complete {
 				completed = true
 				if row, visible := r.evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
+					if plan.query.iterableUnbound {
+						r.patternState.iterableRows = []Result{resultRow(row)}
+					}
 					batch.New = append(batch.New, resultRow(row))
 				}
 				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
@@ -15902,6 +15981,36 @@ func aggregateDefinitionIsRowForEvent(definition *aggregateDefinition) bool {
 		readsCurrentEvent = readsCurrentEvent || expressionTreeReadsCurrentEvent(selection.Expr)
 	}
 	return hasAggregate && readsCurrentEvent
+}
+
+// aggregateDefinitionSnapshotRowForEvent extends the row-per-event shape to
+// grouped aggregates for statement iteration: Java's grouped iterator returns
+// one row per retained event carrying the group aggregate, while the listener
+// path still emits one row per group update.
+func aggregateDefinitionSnapshotRowForEvent(definition *aggregateDefinition) bool {
+	if definition == nil || definition.join != nil || definition.grouping != aggregateGroupingPlain {
+		return false
+	}
+	matchesGroupKey := func(expression Expr) bool {
+		if expression == nil || expression.node() == nil {
+			return false
+		}
+		for _, key := range definition.groupBy {
+			if key != nil && key.Description() == expression.Description() {
+				return true
+			}
+		}
+		return false
+	}
+	hasAggregate := false
+	readsNonKeyEvent := false
+	for _, selection := range definition.selections {
+		hasAggregate = hasAggregate || isAggregateExpression(selection.Expr)
+		if !isAggregateExpression(selection.Expr) && expressionTreeReadsCurrentEvent(selection.Expr) && !matchesGroupKey(selection.Expr) {
+			readsNonKeyEvent = true
+		}
+	}
+	return hasAggregate && readsNonKeyEvent
 }
 
 // expressionTreeReadsCurrentEvent identifies scalar projections that depend

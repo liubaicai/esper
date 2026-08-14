@@ -2554,6 +2554,13 @@ func (r *statementRuntime) snapshotQuery(plan Plan, now time.Time, variables map
 	r.variables = r.withContextVariables(variables)
 	r.variables = r.withContextProperties(r.variables)
 	variables = r.variables
+	if plan.query.pattern != nil {
+		result := ResultBatch{Time: now}
+		if plan.query.iterableUnbound && r.patternState != nil {
+			result.New = append([]Result(nil), r.patternState.iterableRows...)
+		}
+		return result
+	}
 	if plan.query.rowRecog != nil {
 		return r.snapshotRowRecog(plan, now, variables)
 	}

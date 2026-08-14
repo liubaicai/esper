@@ -7303,6 +7303,13 @@ func WithIntegerDivision(enabled bool) DivisionOption {
 	return internalengine.WithIntegerDivision(enabled)
 }
 
+// WithIterableUnbound mirrors Esper's @IterableUnbound annotation: a pattern
+// statement without a result data window retains its completed matches for
+// statement iteration.
+func WithIterableUnbound() QueryOption {
+	return internalengine.WithIterableUnbound()
+}
+
 // WithJSONDefaults supplies initial values for non-nullable fields on typed
 // JSON underlying values. It is useful when a Go struct deliberately models
 // a Java provided class with constructor-established primitive defaults.

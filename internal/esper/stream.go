@@ -2776,6 +2776,7 @@ type querySpec struct {
 	distinct                   bool
 	discardPartialsOnMatch     bool
 	suppressOverlappingMatches bool
+	iterableUnbound            bool
 	orderBy                    []SortKey
 	limit                      int
 	offset                     int
@@ -2824,6 +2825,13 @@ func WithStatementHints(hints ...StatementHint) QueryOption {
 			spec.statementMetadata.hints = append(spec.statementMetadata.hints, cloneStatementHint(hint))
 		}
 	}
+}
+
+// WithIterableUnbound mirrors Esper's @IterableUnbound annotation: a pattern
+// statement without a result data window retains its completed matches for
+// statement iteration.
+func WithIterableUnbound() QueryOption {
+	return func(spec *querySpec) { spec.iterableUnbound = true }
 }
 
 // StatementAudit enables typed runtime audit categories for the statement.
@@ -2978,7 +2986,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -3027,6 +3035,7 @@ type Query struct {
 	distinct                   bool
 	discardPartialsOnMatch     bool
 	suppressOverlappingMatches bool
+	iterableUnbound            bool
 	orderBy                    []SortKey
 	limit                      int
 	offset                     int
@@ -3103,6 +3112,9 @@ func (q Query) description() string {
 			selections = append(selections, selection.description())
 		}
 		parts = append(parts, "select("+strings.Join(selections, ",")+")")
+		if q.iterableUnbound {
+			parts = append(parts, "iterable-unbound")
+		}
 		if q.contextName != "" {
 			parts = append(parts, "context("+q.contextName+")")
 		}

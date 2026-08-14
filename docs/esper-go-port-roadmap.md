@@ -43,7 +43,7 @@
 
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
-- 最近切片：ResultSetQueryTypeRowPerGroup 17 个 execution 提升为 implemented（group reclaim、array/null group key、output snapshot iterator、join/named-window grouped aggregate）；InfraNamedWindowTypes 18 个 execution 提升为 implemented（窗口事件类型形状、嵌套 schema 列、表示矩阵、继承覆盖）；ViewTimeWin 15 个 execution 提升为 implemented（calendar-month 窗口、变量/参数时长、prev 与聚合、flip-timer）；ViewUnion 15 个 execution 提升为 implemented（named-window union retention、batch/sorted/groupwin/pattern/subquery union、child-delta old 流）；EPLInsertInto 20 个 execution 提升为 implemented；statement metrics CPU 采样差异登记为 approved intentional difference（2026-08-14）。
+- 最近切片：ResultSetQueryTypeIterator 17 个 execution 提升为 implemented（order-by/filter/pattern/aggregate iterator 契约、WithIterableUnbound）；ResultSetQueryTypeRowPerGroup 17 个 execution 提升为 implemented（group reclaim、array/null group key、output snapshot iterator、join/named-window grouped aggregate）；InfraNamedWindowTypes 18 个 execution 提升为 implemented（窗口事件类型形状、嵌套 schema 列、表示矩阵、继承覆盖）；ViewTimeWin 15 个 execution 提升为 implemented（calendar-month 窗口、变量/参数时长、prev 与聚合、flip-timer）；ViewUnion 15 个 execution 提升为 implemented（named-window union retention、batch/sorted/groupwin/pattern/subquery union、child-delta old 流）；EPLInsertInto 20 个 execution 提升为 implemented；statement metrics CPU 采样差异登记为 approved intentional difference（2026-08-14）。
 - 最新已提交：`0b56a90e0`（Implement ResultSetQueryTypeRowPerGroup parity (17 executions)）
 
 ### 2.2 对账清单
@@ -52,10 +52,10 @@
 | --- | --- |
 | Capability | 110 个 |
 | Case | 410 个 |
-| Case implemented（verification） | 399 个（其中 23 个 differential-verified、18 个 intentionally-different） |
+| Case implemented（verification） | 400 个（其中 23 个 differential-verified、18 个 intentionally-different） |
 | Case differential-verified | 23 个（33 个 runtime） |
 | Case intentionally-different | 18 个 |
-| Case inventoried-only | 11 个 |
+| Case inventoried-only | 10 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
 | Runtime 关联 | 2,715 条 |
 | 唯一已关联 runtime | 2,630 个 |
