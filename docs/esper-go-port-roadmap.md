@@ -43,7 +43,7 @@
 
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
-- 最新已提交：`0dd149d43`（Add output-first-having representative parity scenario）
+- 最新已提交：`f8d8527c3`（Add output-first-having representative parity scenario）
 
 ### 2.2 对账清单
 
