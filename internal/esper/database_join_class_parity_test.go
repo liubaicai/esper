@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql/driver"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 )
 
 type dbJoinClassS0 struct {
@@ -200,6 +202,294 @@ func TestDatabaseSimpleJoinRightMatchesJava(t *testing.T) {
 		"mybool": true, "mynumeric": int64(5000), "mydecimal": int64(100),
 		"mydouble": 1.2, "myreal": 1.3,
 	})
+}
+
+// TestDatabase2HistoricalStarMatchesJava covers EPLDatabase2HistoricalStar:
+// one event stream joins two parameterized historical streams; historical
+// rows persist with the triggering event and pair only with it.
+func TestDatabase2HistoricalStarMatchesJava(t *testing.T) {
+	dbJoinSetHandler(func(statement string, args []any) (dbJoinSQLResult, error) {
+		key, ok := dbJoinToInt64(args[0])
+		if !ok {
+			return dbJoinSQLResult{}, nil
+		}
+		if strings.Contains(statement, "myvarchar") {
+			cols := []string{"myvarchar"}
+			result := dbJoinSQLResult{columns: cols}
+			for _, row := range dbJoinMyTestTable {
+				if row.mybigint == key {
+					result.rows = append(result.rows, []driver.Value{row.myvarchar})
+					break
+				}
+			}
+			return result, nil
+		}
+		cols := []string{"myint"}
+		result := dbJoinSQLResult{columns: cols}
+		for _, row := range dbJoinMyTestTable {
+			if row.mybigint == key {
+				result.rows = append(result.rows, []driver.Value{row.myint})
+				break
+			}
+		}
+		return result, nil
+	})
+	env := NewEnvironment()
+	dbJoinRegisterSupportBean(t, env)
+	db := dbJoinOpenDB(t)
+	defer db.Close()
+	myIntSchema, err := NewMapSchema("Hist1MyInt", []FieldSpec{FieldDef("myint", reflect.TypeOf(0))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	myVarSchema, err := NewMapSchema("Hist2MyVarChar", []FieldSpec{FieldDef("myvarchar", reflect.TypeOf(""))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	providerOne, err := NewSQLHistoricalProvider(db, myIntSchema,
+		"select myint from mytesttable where ? = mybigint",
+		func(request HistoricalRequest) any { return request.Trigger.Get("intPrimitive").Any() })
+	if err != nil {
+		t.Fatal(err)
+	}
+	providerTwo, err := NewSQLHistoricalProvider(db, myVarSchema,
+		"select myvarchar from mytesttable where ? = mybigint",
+		func(request HistoricalRequest) any { return request.Trigger.Get("intPrimitive").Any() })
+	if err != nil {
+		t.Fatal(err)
+	}
+	h1 := FromHistoricalOn[map[string]any](env, "MyDBH1", "SupportBean", myIntSchema, providerOne)
+	h2 := FromHistoricalOn[map[string]any](env, "MyDBH2", "SupportBean", myVarSchema, providerTwo)
+	query := JoinMany(
+		JoinSource(From[dbJoinSupportBean](env, "SupportBean").Window(KeepAll())),
+		JoinSource(h1),
+		JoinSource(h2),
+	).Select(
+		SelectFrom(0, "intPrimitive", Field[dbJoinSupportBean, int]("intPrimitive")),
+		SelectFrom(1, "myint", Field[map[string]any, int]("myint")),
+		SelectFrom(2, "myvarchar", Field[map[string]any, string]("myvarchar")),
+	).Query(StatementName("s0-two-historical"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	statement := deployment.Statements()[0]
+	getRows := dbJoinSubscribeRows(t, statement)
+	if err := engine.Send(context.Background(), "SupportBean", dbJoinSupportBean{IntPrimitive: 6}); err != nil {
+		t.Fatal(err)
+	}
+	rows := getRows()
+	if len(rows) != 1 {
+		t.Fatalf("rows after 6 = %#v", rows)
+	}
+	dbJoinAssertRow(t, rows[0], map[string]any{"intPrimitive": 6, "myint": 60, "myvarchar": "F"})
+	snapshot, err := statement.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Results()) != 1 {
+		t.Fatalf("snapshot after 6 = %#v", snapshot.Results())
+	}
+	if err := engine.Send(context.Background(), "SupportBean", dbJoinSupportBean{IntPrimitive: 9}); err != nil {
+		t.Fatal(err)
+	}
+	rows = getRows()
+	if len(rows) != 2 {
+		t.Fatalf("rows after 9 = %#v", rows)
+	}
+	dbJoinAssertRow(t, rows[1], map[string]any{"intPrimitive": 9, "myint": 90, "myvarchar": "I"})
+	snapshot, err = statement.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Results()) != 2 {
+		t.Fatalf("snapshot after 9 = %#v", snapshot.Results())
+	}
+	if err := engine.Send(context.Background(), "SupportBean", dbJoinSupportBean{IntPrimitive: 20}); err != nil {
+		t.Fatal(err)
+	}
+	if len(getRows()) != 2 {
+		t.Fatalf("rows after 20 = %#v", getRows())
+	}
+	snapshot, err = statement.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Results()) != 2 {
+		t.Fatalf("snapshot after 20 = %#v", snapshot.Results())
+	}
+}
+
+// TestDatabase2HistoricalStarInnerMatchesJava covers
+// EPLDatabase2HistoricalStarInner: inner joins onto two historical streams.
+func TestDatabase2HistoricalStarInnerMatchesJava(t *testing.T) {
+	env := NewEnvironment()
+	dbJoinRegisterSupportBean(t, env)
+	db := dbJoinOpenDB(t)
+	defer db.Close()
+	myVarSchema, err := NewMapSchema("HistInnerMyVarChar", []FieldSpec{FieldDef("myvarchar", reflect.TypeOf(""))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dbJoinSetHandler(func(statement string, args []any) (dbJoinSQLResult, error) {
+		cols := []string{"myvarchar"}
+		result := dbJoinSQLResult{columns: cols}
+		if len(args) == 0 {
+			return result, nil
+		}
+		key, ok := dbJoinToInt64(args[0])
+		if !ok {
+			return result, nil
+		}
+		for _, row := range dbJoinMyTestTable {
+			excluded := row.mybigint == key
+			if strings.Contains(statement, "myint") {
+				excluded = row.myint == int(key)
+			}
+			if !excluded {
+				result.rows = append(result.rows, []driver.Value{row.myvarchar})
+			}
+		}
+		return result, nil
+	})
+	providerOne, err := NewSQLHistoricalProvider(db, myVarSchema,
+		"select myvarchar from mytesttable where ? <> mybigint",
+		func(request HistoricalRequest) any { return request.Trigger.Get("intPrimitive").Any() })
+	if err != nil {
+		t.Fatal(err)
+	}
+	providerTwo, err := NewSQLHistoricalProvider(db, myVarSchema,
+		"select myvarchar from mytesttable where ? <> myint",
+		func(request HistoricalRequest) any { return request.Trigger.Get("intPrimitive").Any() })
+	if err != nil {
+		t.Fatal(err)
+	}
+	h1 := FromHistoricalOn[map[string]any](env, "MyDBH1", "SupportBean", myVarSchema, providerOne)
+	h2 := FromHistoricalOn[map[string]any](env, "MyDBH2", "SupportBean", myVarSchema, providerTwo)
+	theString := Field[dbJoinSupportBean, string]("theString")
+	query := JoinMany(
+		JoinSource(From[dbJoinSupportBean](env, "SupportBean").Window(KeepAll())),
+		JoinSource(h1),
+		JoinSource(h2),
+	).On(
+		OnSourcesEqual(1, Field[map[string]any, string]("myvarchar"), 0, theString),
+		OnSourcesEqual(2, Field[map[string]any, string]("myvarchar"), 0, theString),
+	).Select(
+		SelectFrom(0, "a", theString),
+		SelectFrom(0, "b", Field[dbJoinSupportBean, int]("intPrimitive")),
+		SelectFrom(1, "c", Field[map[string]any, string]("myvarchar")),
+		SelectFrom(2, "d", Field[map[string]any, string]("myvarchar")),
+	).Query(StatementName("s0-two-historical-inner"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	getRows := dbJoinSubscribeRows(t, deployment.Statements()[0])
+	send := func(theString string, intPrimitive int) {
+		t.Helper()
+		if err := engine.Send(context.Background(), "SupportBean", dbJoinSupportBean{TheString: theString, IntPrimitive: intPrimitive}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send("E1", 1)
+	send("A", 1)
+	send("A", 10)
+	if len(getRows()) != 0 {
+		t.Fatalf("unexpected rows = %#v", getRows())
+	}
+	send("B", 3)
+	rows := getRows()
+	if len(rows) != 1 {
+		t.Fatalf("rows after B = %#v", rows)
+	}
+	dbJoinAssertRow(t, rows[0], map[string]any{"a": "B", "b": 3, "c": "B", "d": "B"})
+	send("D", 4)
+	if len(getRows()) != 1 {
+		t.Fatalf("rows after D = %#v", getRows())
+	}
+}
+
+// TestDatabaseWithPatternMatchesJava covers EPLDatabaseWithPattern: a
+// constant historical stream joined to a timer pattern.
+func TestDatabaseWithPatternMatchesJava(t *testing.T) {
+	dbJoinSetHandler(func(_ string, _ []any) (dbJoinSQLResult, error) {
+		cols := []string{"mychar"}
+		result := dbJoinSQLResult{columns: cols}
+		for _, row := range dbJoinMyTestTable {
+			if row.mybigint == 2 {
+				result.rows = append(result.rows, []driver.Value{row.mychar})
+				break
+			}
+		}
+		return result, nil
+	})
+	env := NewEnvironment()
+	if _, err := RegisterStruct[dbJoinClassS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	schema, err := NewMapSchema("HistPatternChar", []FieldSpec{FieldDef("mychar", reflect.TypeOf(""))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	db := dbJoinOpenDB(t)
+	defer db.Close()
+	provider, err := NewSQLHistoricalProvider(db, schema,
+		"select mychar from mytesttable where mybigint = 2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hist := FromHistorical[map[string]any](env, "MyDBWithRetain", schema, provider)
+	pattern := TimerInterval(From[dbJoinClassS0](env, "SupportBean_S0"), 5*time.Second).Every()
+	query := JoinMany(
+		JoinSource(hist),
+		JoinPatternSource(pattern),
+	).Select(
+		SelectFrom(0, "mychar", Field[map[string]any, string]("mychar")),
+	).Query(StatementName("s0-pattern"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	origin := time.Unix(0, 0).UTC()
+	engine := NewEngine(env, WithStartTime(origin))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	getRows := dbJoinSubscribeRows(t, deployment.Statements()[0])
+	if err := engine.AdvanceTime(context.Background(), origin.Add(5*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	rows := getRows()
+	if len(rows) != 1 || rows[0]["mychar"] != "Y" {
+		t.Fatalf("rows at 5s = %#v", rows)
+	}
+	if err := engine.AdvanceTime(context.Background(), origin.Add(9999*time.Millisecond)); err != nil {
+		t.Fatal(err)
+	}
+	if len(getRows()) != 1 {
+		t.Fatalf("rows at 9999 = %#v", getRows())
+	}
+	if err := engine.AdvanceTime(context.Background(), origin.Add(10*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	rows = getRows()
+	if len(rows) != 2 || rows[1]["mychar"] != "Y" {
+		t.Fatalf("rows at 10s = %#v", rows)
+	}
 }
 
 // TestDatabase2HistoricalStarMatchesJava covers EPLDatabase2HistoricalStar:

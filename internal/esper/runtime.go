@@ -9192,23 +9192,35 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	}
 	before := joinKeyedTuples(definition, r.joinState, now, r)
 	for _, event := range newEvents {
-		// Historical (SQL) and subordinate method results belong to exactly
-		// one trigger cycle. Clear those sides before evaluating the
-		// dependency graph so a subordinate source can never observe a
-		// previous trigger's rows. Dependency-free method rows instead
-		// persist per trigger lineage: Esper polls a method stream once per
-		// triggering event and retains the result rows inside the join
-		// windows until the owning event expires.
+		// Subordinate method results and unrestricted (triggerless) historical
+		// rows belong to exactly one trigger cycle and are cleared before
+		// evaluating the dependency graph so a subordinate source can never
+		// observe a previous trigger's rows. Dependency-free method rows and
+		// triggered historical rows persist with per-trigger lineage: Esper
+		// retains them while the triggering event is retained and removes
+		// them when it expires, so the iterator keeps every trigger's rows.
 		rebuiltSides := make(map[int][]storedEvent)
 		for index, source := range sources {
-			if containsHistoricalSource(source) && !isEvaluateOnceSource(source) {
-				if base, baseErr := sourceNode(source); baseErr == nil && base != nil &&
-					base.kind == streamMethod && base.method != nil && len(base.method.dependencies) == 0 {
+			base, baseErr := sourceNode(source)
+			if baseErr != nil || base == nil {
+				continue
+			}
+			if base.kind == streamHistorical {
+				if base.historical == nil || base.historical.trigger != "" {
 					continue
 				}
 				rebuiltSides[index] = r.joinState.sides[index]
 				r.joinState.sides[index] = nil
+				continue
 			}
+			if base.kind != streamMethod || isEvaluateOnceSource(source) {
+				continue
+			}
+			if base.method == nil || len(base.method.dependencies) == 0 {
+				continue
+			}
+			rebuiltSides[index] = r.joinState.sides[index]
+			r.joinState.sides[index] = nil
 		}
 		// Event-driven sides insert the arriving event ahead of lookup sides
 		// so a dependency-free method side polls the newly accepted rows of
@@ -9321,8 +9333,12 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 				return joinDelta{}, err
 			}
 			removeStoredEventsCascade(r.joinState, index, delta.oldEvents)
+			var historicalLineage map[int]uint64
+			if base.kind == streamHistorical && base.historical != nil && base.historical.trigger != "" {
+				historicalLineage = joinHistoricalTriggerLineage(base, triggerNewRows)
+			}
 			for _, newEvent := range delta.newEvents {
-				stored := storedEvent{event: newEvent, receivedAt: now, lineageID: r.nextJoinLineageID()}
+				stored := storedEvent{event: newEvent, receivedAt: now, lineageID: r.nextJoinLineageID(), lineage: historicalLineage}
 				r.joinState.sides[index] = append(r.joinState.sides[index], stored)
 				if joinSourceIsEventDriven(base) {
 					if len(triggerNewRows[index]) == 0 {
@@ -9348,6 +9364,26 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	after := joinKeyedTuples(definition, r.joinState, now, r)
 	delta := diffJoinKeyedTuples(before, after)
 	return joinDeltaWithPairs(delta), nil
+}
+
+// joinHistoricalTriggerLineage finds the event-driven row that triggered a
+// historical lookup in the current join cycle. Historical results pair only
+// with that row (Esper binds SQL results to the triggering event), so the
+// lineage key makes the tuple builder reject joins against older retained
+// events.
+func joinHistoricalTriggerLineage(base *streamNode, triggerNewRows map[int][]storedEvent) map[int]uint64 {
+	if base == nil || base.historical == nil {
+		return nil
+	}
+	triggerType := base.historical.trigger
+	for index, rows := range triggerNewRows {
+		for _, row := range rows {
+			if triggerType == "" || row.event.TypeName() == triggerType {
+				return map[int]uint64{index: row.lineageID}
+			}
+		}
+	}
+	return nil
 }
 
 // containedJoinSourceForDriver reports whether source is a contained-event

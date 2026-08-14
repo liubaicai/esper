@@ -1104,12 +1104,14 @@
         "internal/esper/faf.go",
         "internal/esper/historical.go",
         "internal/esper/historical_test.go",
+        "internal/esper/database_join_class_parity_test.go",
         "internal/esper/method_provider.go",
         "internal/esper/method_provider_test.go",
         "internal/esper/method_source_test.go",
         "internal/esper/method_source_join_test.go",
         "internal/esper/method_source_dependency_test.go",
         "internal/esper/method_source_context_test.go",
+        "internal/esper/pattern_join.go",
         "internal/esper/plan.go",
         "internal/esper/runtime.go",
         "internal/esper/sql_sink.go",
@@ -14003,10 +14005,19 @@
         "TestDatabaseHintOutputColumnConversionMatchesJava",
         "TestDatabaseHintInputParameterConversionMatchesJava",
         "TestDatabaseHintOutputRowConversionMatchesJava",
+        "TestDatabaseSimpleJoinLeftParity",
         "TestDatabaseJoinSimpleJoinRightMatchesJava",
+        "TestDatabaseSimpleJoinRightMatchesJava",
         "TestDatabaseJoinStreamNamesAndRenameMatchesJava",
+        "TestDatabaseStreamNamesAndRenameMatchesJava",
         "TestDatabaseJoinPropertyResolutionMatchesJava",
+        "TestDatabasePropertyResolutionMatchesJava",
+        "TestDatabase2HistoricalStarMatchesJava",
         "TestDatabaseJoin2HistoricalStarMatchesJava",
+        "TestDatabase2HistoricalStarInnerMatchesJava",
+        "TestDatabaseWithPatternMatchesJava",
+        "TestDatabaseJoinIndexNullTypeMatchesJava",
+        "TestDatabaseJoinInvalidBoundaryMatchesJava",
         "TestDatabase3StreamMatchesJava",
         "TestDatabaseVariablesMatchesJava",
         "TestDatabaseRestartStatementMatchesJava",
@@ -25723,21 +25734,47 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "epl",
         "database",
-        "join"
+        "join",
+        "historical",
+        "sql",
+        "pattern"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
+      ],
+      "goTests": [
+        "TestDatabaseSimpleJoinLeftParity",
+        "TestDatabaseSimpleJoinRightMatchesJava",
+        "TestDatabase2HistoricalStarMatchesJava",
+        "TestDatabaseJoin2HistoricalStarMatchesJava",
+        "TestDatabase2HistoricalStarInnerMatchesJava",
+        "TestDatabaseWithPatternMatchesJava",
+        "TestDatabaseStreamNamesAndRenameMatchesJava",
+        "TestDatabasePropertyResolutionMatchesJava",
+        "TestDatabaseJoinIndexNullTypeMatchesJava",
+        "TestDatabaseJoinInvalidBoundaryMatchesJava",
+        "TestDatabase3StreamMatchesJava",
+        "TestDatabaseVariablesMatchesJava",
+        "TestDatabaseRestartStatementMatchesJava"
       ],
       "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+        "EPLDatabaseTimeBatch / TimeBatchOM / TimeBatchCompile historical+time_batch join snapshot and iterator evidence",
+        "EPLDatabaseMySQLDatabaseConnection connection-pool and transaction semantics",
+        "EPLDatabaseInvalidBothHistorical / InvalidPropertyEvent / InvalidSubviews typed compile diagnostics",
+        "full Java differential trace for the remaining EPLDatabaseJoin executions"
+      ],
+      "difference": "Go implements the covered EPLDatabaseJoin executions with typed fluent historical joins: parameterized historical rows persist with per-trigger lineage and pair only with the triggering event (2HistoricalStar/Inner keepall iterator parity), unrestricted triggerless SQL sides remain per-trigger lookup snapshots (3Stream parity), and pattern-driven historical polling evaluates an unrestricted SQL side once per completed timer match (WithPattern parity). SimpleJoin/StreamNames/PropertyResolution/JoinIndexNullType and the invalid historical self-reference boundary are covered by fake database/sql provider tests. These executions are implemented but not yet differential-verified; TimeBatch, MySQL database connection and the remaining invalid compile variants are still open."
     },
     {
       "id": "case.resultset-row-per-group-simple",
@@ -26431,6 +26468,10 @@
     {
       "capabilityId": "query.historical-sql",
       "caseId": "case.historical-sql"
+    },
+    {
+      "capabilityId": "query.historical-sql",
+      "caseId": "case.inventory.epl-database-join"
     },
     {
       "capabilityId": "dataflow.graph",
@@ -27501,7 +27542,7 @@
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 400,
+    "implementedCases": 401,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 18,
@@ -27534,7 +27575,7 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "242 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, EPLOtherStaticFunctions, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm, InfraNWTableCreateIndex and EPLDatabaseJoin have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17) and ResultSetQueryTypeIterator (17) executions were implemented in prior slices (not yet differential-verified).",
+      "225 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, EPLOtherStaticFunctions, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm and InfraNWTableCreateIndex have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17) and EPLDatabaseJoin (17) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants still open.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."

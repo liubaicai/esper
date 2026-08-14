@@ -260,9 +260,35 @@ func (r *statementRuntime) applyPatternJoinTime(definition *joinDefinition, even
 		r.windows[source] = state
 		removeStoredEvents(&r.joinState.sides[timed.index], delta.oldEvents)
 		for _, event := range delta.newEvents {
-			r.joinState.sides[timed.index] = append(r.joinState.sides[timed.index], storedEvent{
-				event: event, receivedAt: now, lineageID: r.nextJoinLineageID(),
-			})
+			match := storedEvent{event: event, receivedAt: now, lineageID: r.nextJoinLineageID()}
+			r.joinState.sides[timed.index] = append(r.joinState.sides[timed.index], match)
+			// Historical (SQL) sides bound to this pattern fire are polled
+			// once per completed match and carry the match's lineage so they
+			// pair only with it (Esper joins constant SQL streams to timer
+			// patterns per firing).
+			for histIndex, histSource := range sources {
+				histBase, err := sourceNode(histSource)
+				if err != nil || histBase == nil || histBase.kind != streamHistorical || histBase.historical == nil || histBase.historical.provider == nil {
+					continue
+				}
+				if histBase.historical.trigger != "" && histBase.historical.trigger != event.TypeName() {
+					continue
+				}
+				rows, pollErr := histBase.historical.provider.Poll(r.context(), HistoricalRequest{
+					Trigger: event, Now: now,
+					Variables:  visibleVariableValues(r.variables),
+					Parameters: parameterValuesFromVariables(r.variables),
+				})
+				if pollErr != nil {
+					return joinDelta{}, pollErr
+				}
+				for _, row := range rows {
+					r.joinState.sides[histIndex] = append(r.joinState.sides[histIndex], storedEvent{
+						event: row, receivedAt: now, lineageID: r.nextJoinLineageID(),
+						lineage: map[int]uint64{timed.index: match.lineageID},
+					})
+				}
+			}
 		}
 	}
 	return joinDeltaWithPairs(result), nil
