@@ -524,9 +524,156 @@ func newTableState(definition TableDefinition, scope string, identity *tableIden
 	return &tableState{def: definition, scope: scope, identity: identity, rows: make(map[string]TableRow), indexes: indexes, indexEntries: indexEntries}
 }
 
+func rebuildTableIndexesLocked(state *tableState) {
+	if state == nil {
+		return
+	}
+	indexes := make(map[string]map[string][]string, len(state.def.indexes))
+	indexEntries := make(map[string][]tableIndexEntry, len(state.def.indexes))
+	for _, definition := range state.def.indexes {
+		indexes[definition.Name] = make(map[string][]string)
+		indexEntries[definition.Name] = nil
+	}
+	for _, rowKey := range state.order {
+		row, ok := state.rows[rowKey]
+		if !ok {
+			continue
+		}
+		for _, definition := range state.def.indexes {
+			key := state.indexKey(row, definition.Columns)
+			index := indexes[definition.Name]
+			if !definition.Unique || len(index[key]) == 0 {
+				index[key] = append(index[key], rowKey)
+			}
+			entries := indexEntries[definition.Name]
+			entries = append(entries, tableIndexEntry{rowKey: rowKey, values: tableIndexValues(row, definition.Columns)})
+			sort.SliceStable(entries, func(left, right int) bool {
+				comparison, comparable := compareIndexValueSlices(entries[left].values, entries[right].values)
+				if !comparable || comparison == 0 {
+					return false
+				}
+				return comparison < 0
+			})
+			indexEntries[definition.Name] = entries
+		}
+	}
+	state.indexes = indexes
+	state.indexEntries = indexEntries
+}
+
 func newTable(definition TableDefinition) *Table {
 	identity := &tableIdentitySource{}
 	return &Table{state: newTableState(definition, "", identity), identity: identity, scopedState: make(map[string]*tableState)}
+}
+
+// CreateIndex adds a secondary hash or B-tree index to a live table. Existing
+// rows are indexed immediately and future writes maintain the index
+// atomically. It mirrors Esper's late create-index statement for tables.
+func (t *Table) CreateIndex(name string, columns []string, kind IndexKind, unique bool) error {
+	if t == nil || t.state == nil {
+		return NewError(ErrorState, "nil table")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return NewError(ErrorInvalidRule, "table index name is required")
+	}
+	if len(columns) == 0 {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("table index %q requires at least one column", name))
+	}
+	if !kind.valid() {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("table index %q has an invalid index kind", name))
+	}
+	if unique && kind == IndexBTree {
+		return NewError(ErrorInvalidRule, "combination of unique index with btree (range) is not supported")
+	}
+	definition := TableIndexDefinition{Name: name, Columns: append([]string(nil), columns...), Kind: kind, Unique: unique}
+	root := t.state
+	root.mu.Lock()
+	for _, existing := range root.def.indexes {
+		if existing.Name == name {
+			root.mu.Unlock()
+			return NewError(ErrorDependency, fmt.Sprintf("an index by name %q already exists", name))
+		}
+	}
+	for _, column := range definition.Columns {
+		if _, ok := root.def.schema.Field(column); !ok {
+			root.mu.Unlock()
+			return NewError(ErrorUnknownName, fmt.Sprintf("table index %q references unknown column %q", name, column))
+		}
+	}
+	root.def.indexes = append(root.def.indexes, definition)
+	rebuildTableIndexesLocked(root)
+	root.mu.Unlock()
+
+	t.scopesMu.RLock()
+	states := make([]*tableState, 0, len(t.scopedState))
+	for _, state := range t.scopedState {
+		states = append(states, state)
+	}
+	t.scopesMu.RUnlock()
+	for _, state := range states {
+		if state == nil {
+			continue
+		}
+		state.mu.Lock()
+		state.def.indexes = append(state.def.indexes, definition)
+		rebuildTableIndexesLocked(state)
+		state.mu.Unlock()
+	}
+	return nil
+}
+
+// DropIndex removes a live table index. Future writes stop maintaining it and
+// candidate lookup can no longer select it.
+func (t *Table) DropIndex(name string) error {
+	if t == nil || t.state == nil {
+		return NewError(ErrorState, "nil table")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return NewError(ErrorInvalidRule, "table index name is required")
+	}
+	root := t.state
+	root.mu.Lock()
+	removed := false
+	kept := root.def.indexes[:0]
+	for _, definition := range root.def.indexes {
+		if definition.Name == name {
+			removed = true
+			continue
+		}
+		kept = append(kept, definition)
+	}
+	if !removed {
+		root.mu.Unlock()
+		return NewError(ErrorUnknownName, fmt.Sprintf("table index %q does not exist", name))
+	}
+	root.def.indexes = kept
+	rebuildTableIndexesLocked(root)
+	root.mu.Unlock()
+
+	t.scopesMu.RLock()
+	states := make([]*tableState, 0, len(t.scopedState))
+	for _, state := range t.scopedState {
+		states = append(states, state)
+	}
+	t.scopesMu.RUnlock()
+	for _, state := range states {
+		if state == nil {
+			continue
+		}
+		state.mu.Lock()
+		stateKept := state.def.indexes[:0]
+		for _, definition := range state.def.indexes {
+			if definition.Name != name {
+				stateKept = append(stateKept, definition)
+			}
+		}
+		state.def.indexes = stateKept
+		rebuildTableIndexesLocked(state)
+		state.mu.Unlock()
+	}
+	return nil
 }
 
 func (t *Table) Definition() TableDefinition {
@@ -2227,6 +2374,126 @@ func (w *NamedWindow) ensureSubquerySharedIndex(name string, columns []string) e
 		partition.mu.Unlock()
 	}
 	return nil
+}
+
+// CreateIndex adds a secondary hash or B-tree index to a live named window.
+// Existing events are indexed immediately and future mutations maintain the
+// index. It mirrors Esper's late create-index statement for named windows.
+func (w *NamedWindow) CreateIndex(name string, columns []string, kind IndexKind, unique bool) error {
+	if w == nil || w.state == nil {
+		return NewError(ErrorState, "nil named window")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return NewError(ErrorInvalidRule, "named-window index name is required")
+	}
+	if len(columns) == 0 {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("named-window index %q requires at least one column", name))
+	}
+	if !kind.valid() {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("named-window index %q has an invalid index kind", name))
+	}
+	if unique && kind == IndexBTree {
+		return NewError(ErrorInvalidRule, "combination of unique index with btree (range) is not supported")
+	}
+	definition := NamedWindowIndexDefinition{Name: name, Columns: append([]string(nil), columns...), Kind: kind, Unique: unique}
+	root := w.state
+	root.mu.Lock()
+	for _, existing := range root.def.indexes {
+		if existing.Name == name {
+			root.mu.Unlock()
+			return NewError(ErrorDependency, fmt.Sprintf("an index by name %q already exists", name))
+		}
+	}
+	for _, column := range definition.Columns {
+		if _, ok := root.def.schema.Field(column); !ok {
+			root.mu.Unlock()
+			return NewError(ErrorUnknownName, fmt.Sprintf("named-window index %q references unknown column %q", name, column))
+		}
+	}
+	root.def.indexes = append(root.def.indexes, definition)
+	if definition.Unique {
+		root.def.uniqueIndexes = append(root.def.uniqueIndexes, definition)
+	}
+	rebuildNamedWindowIndexesLocked(root)
+	partitions := make([]*namedWindowRuntime, 0, len(root.partitions))
+	for _, partition := range root.partitions {
+		partitions = append(partitions, partition)
+	}
+	root.mu.Unlock()
+
+	for _, partition := range partitions {
+		if partition == nil {
+			continue
+		}
+		partition.mu.Lock()
+		alreadyPresent := false
+		for _, existing := range partition.def.indexes {
+			if existing.Name == name {
+				alreadyPresent = true
+				break
+			}
+		}
+		if !alreadyPresent {
+			partition.def.indexes = append(partition.def.indexes, definition)
+			if definition.Unique {
+				partition.def.uniqueIndexes = append(partition.def.uniqueIndexes, definition)
+			}
+			rebuildNamedWindowIndexesLocked(partition)
+		}
+		partition.mu.Unlock()
+	}
+	return nil
+}
+
+// DropIndex removes a live named-window index.
+func (w *NamedWindow) DropIndex(name string) error {
+	if w == nil || w.state == nil {
+		return NewError(ErrorState, "nil named window")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return NewError(ErrorInvalidRule, "named-window index name is required")
+	}
+	root := w.state
+	root.mu.Lock()
+	removed := false
+	root.def.indexes = dropNamedWindowIndex(root.def.indexes, name, &removed)
+	root.def.uniqueIndexes = dropNamedWindowIndex(root.def.uniqueIndexes, name, &removed)
+	if !removed {
+		root.mu.Unlock()
+		return NewError(ErrorUnknownName, fmt.Sprintf("named-window index %q does not exist", name))
+	}
+	rebuildNamedWindowIndexesLocked(root)
+	partitions := make([]*namedWindowRuntime, 0, len(root.partitions))
+	for _, partition := range root.partitions {
+		partitions = append(partitions, partition)
+	}
+	root.mu.Unlock()
+
+	for _, partition := range partitions {
+		if partition == nil {
+			continue
+		}
+		partition.mu.Lock()
+		partition.def.indexes = dropNamedWindowIndex(partition.def.indexes, name, &removed)
+		partition.def.uniqueIndexes = dropNamedWindowIndex(partition.def.uniqueIndexes, name, &removed)
+		rebuildNamedWindowIndexesLocked(partition)
+		partition.mu.Unlock()
+	}
+	return nil
+}
+
+func dropNamedWindowIndex(indexes []NamedWindowIndexDefinition, name string, removed *bool) []NamedWindowIndexDefinition {
+	kept := indexes[:0]
+	for _, definition := range indexes {
+		if definition.Name == name {
+			*removed = true
+			continue
+		}
+		kept = append(kept, definition)
+	}
+	return kept
 }
 
 // releaseContextPartition drops the storage owned by one lifecycle-managed

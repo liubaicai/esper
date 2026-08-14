@@ -438,7 +438,8 @@
         "internal/esper/faf_subquery_index_parity_test.go",
         "internal/esper/faf_resolve_parity_test.go",
         "internal/esper/faf_index_parity_test.go",
-        "internal/esper/infra_nwtable_faf_parity_test.go"
+        "internal/esper/infra_nwtable_faf_parity_test.go",
+        "internal/esper/infra_nwtable_create_index_parity_test.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -25809,22 +25810,37 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "infra",
         "index",
         "named-window",
-        "table"
+        "table",
+        "create",
+        "drop",
+        "late-create",
+        "multiple-column",
+        "invalid"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
+      ],
+      "goTests": [
+        "TestInfraNWTableCreateIndexParity"
       ],
       "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+        "InfraMultiRangeAndKey / HashBTreeWidening / Widening / CompositeIndex range/key widening matrices",
+        "InfraLateCreateSceneTwo, InfraOnSelectReUse, InfraMultikeyIndexFAF variants",
+        "full Java differential trace for the covered InfraNWTableCreateIndex executions"
+      ],
+      "difference": "Go adds live NamedWindow.CreateIndex/DropIndex and Table.CreateIndex/DropIndex: existing rows are indexed immediately, future writes maintain the index atomically, and context partitions inherit late indexes. The parity test covers InfraLateCreate, InfraDropCreate, InfraMultipleColumnMultipleIndex and InfraInvalid for both named-window and table variants, including duplicate/unknown/unique-btree/empty-column rejection. Range/key widening, late-create scene two, on-select reuse and multikey FAF variants remain open."
     },
     {
       "id": "case.inventory.epl-database-join",
@@ -26336,6 +26352,10 @@
     {
       "capabilityId": "query.fire-and-forget",
       "caseId": "case.query-fire-and-forget-index"
+    },
+    {
+      "capabilityId": "query.fire-and-forget",
+      "caseId": "case.inventory.infra-nwtable-create-index"
     },
     {
       "capabilityId": "query.fire-and-forget",
@@ -27702,7 +27722,7 @@
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 407,
+    "implementedCases": 408,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 18,
@@ -27735,7 +27755,7 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "78 newly inventoried runtimes across ContextNested, ContextKeySegmentedWInitTermPrioritized and InfraNWTableCreateIndex have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18), InfraNWTableOnSelect (28), ExprFilterOptimizableConditionNegateConfirm (26), ResultSetOutputLimitRowPerGroupRollup (24) and ResultSetOutputLimitAggregateGrouped (27) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants, InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants, ExprFilter plan-hook/dataflow/stage/pattern variants, ResultSetOutputLimitRowPerGroupRollup output-all/join variants and ResultSetOutputLimitAggregateGrouped join/all/multikey-array variants still open.",
+      "56 newly inventoried runtimes across ContextNested and ContextKeySegmentedWInitTermPrioritized have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18), InfraNWTableOnSelect (28), ExprFilterOptimizableConditionNegateConfirm (26), ResultSetOutputLimitRowPerGroupRollup (24), ResultSetOutputLimitAggregateGrouped (27) and InfraNWTableCreateIndex (22) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants, InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants, ExprFilter plan-hook/dataflow/stage/pattern variants, ResultSetOutputLimitRowPerGroupRollup output-all/join variants, ResultSetOutputLimitAggregateGrouped join/all/multikey-array variants and InfraNWTableCreateIndex range/widening/reuse/multikey variants still open.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."
