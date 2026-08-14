@@ -43,7 +43,7 @@
 
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
-- 最新已提交：`718273442`（Add context-keyed-subquery representative parity scenario）
+- 最新已提交：`6e72acd08`（Verify MySQL, Kafka and RabbitMQ Docker integration gates）
 
 ### 2.2 对账清单
 
