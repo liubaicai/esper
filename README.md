@@ -34,3 +34,5 @@ git diff --check
 ESPER_MYSQL_DSN='root:password@tcp(127.0.0.1:3306)/test?parseTime=true&charset=utf8mb4' \
   go test ./connectors/db ./internal/esper -run 'MySQLDocker$' -count=1
 ```
+
+2026-08-14 已在本地 Docker fixture 上通过 MySQL、Kafka 和 RabbitMQ 的全部门控 round-trip（命令与结果见上方链接）。

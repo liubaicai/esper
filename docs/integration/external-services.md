@@ -2,6 +2,8 @@
 
 默认测试不依赖外部服务。下面的 fixture 只用于显式的 Docker 集成测试；没有对应环境变量时，测试会以 `t.Skip` 结束，不能把 skip 解释为通过。
 
+2026-08-14 已在固定工作区验证以下命令（MySQL 8.0、Kafka 3.8.1、RabbitMQ 3.x 均通过）：`TestDBConnectorMySQLDocker`、`TestSQLHistoricalProviderMySQLDocker`、`TestSQLHistoricalFireAndForgetMySQLDocker`、`TestSQLSinkMySQLDocker`、`TestKafkaDockerRoundTrip`、`TestAMQPDockerRoundTrip`、`TestAMQPDockerSinkRoundTrip`。Kafka fixture 若持续 Restarting，删除容器后按下方命令重建。
+
 ## MySQL
 
 启动并等待 ready：
