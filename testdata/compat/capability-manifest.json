@@ -238,7 +238,8 @@
         "internal/esper/plan.go",
         "internal/esper/runtime.go",
         "internal/esper/schema_test.go",
-        "internal/esper/inheritance_runtime_test.go"
+        "internal/esper/inheritance_runtime_test.go",
+        "internal/esper/epl_other_create_schema_parity_test.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -24799,20 +24800,45 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherCreateSchema.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "epl",
-        "create-schema"
+        "create-schema",
+        "event-type",
+        "schema",
+        "map",
+        "object-array",
+        "json",
+        "avro",
+        "inheritance",
+        "copyfrom",
+        "variant"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
+      ],
+      "goTests": [
+        "TestEPLOtherCreateSchemaPathAndPublicParity",
+        "TestEPLOtherCreateSchemaCopyAndInheritParity",
+        "TestEPLOtherCreateSchemaRepresentationParity",
+        "TestEPLOtherCreateSchemaVariantParity",
+        "TestEPLOtherCreateSchemaInvalidParity",
+        "TestEPLOtherCreateSchemaTypeParameterizedParity"
       ],
       "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+        "EPLOtherCreateSchemaWithEventType nested-fragment/pattern insert-into matrix",
+        "EPLOtherCreateSchemaSameCRC Java public crc32 identity collision contract",
+        "EPLOtherCreateSchemaBeanImport JVM class-name loading boundary",
+        "full Java differential trace for the covered EPLOtherCreateSchema executions"
+      ],
+      "difference": "Go represents EPL create-schema as typed RegisterMap/RegisterObjectArray/RegisterJSON/RegisterAvro/RegisterStruct calls with WithSchemaParent for inheritance and the new WithSchemaCopiedFrom option for Java copyfrom (fields and nested fragments are copied without parent identity or inheritance routing). ObjectArray schemas reject multiple parents, matching Java's single-supertype rule. Variant schemas cover predefined common fields, predefined-with-any and any routing. Type-parameterized collections/maps/arrays are represented by typed Go struct fields. These executions are implemented but not yet differential-verified; nested-fragment/pattern insert-into, Java CRC identity and JVM class loading remain open."
     },
     {
       "id": "case.inventory.resultset-query-type-iterator",
@@ -25933,6 +25959,10 @@
     {
       "capabilityId": "event.inheritance",
       "caseId": "case.event-inheritance"
+    },
+    {
+      "capabilityId": "event.inheritance",
+      "caseId": "case.inventory.epl-other-create-schema"
     },
     {
       "capabilityId": "view.derived-statistical",
@@ -27575,7 +27605,7 @@
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 402,
+    "implementedCases": 403,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 18,
@@ -27608,7 +27638,7 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "201 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm and InfraNWTableCreateIndex have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17) and EPLOtherStaticFunctions (24) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants and EPLOtherStaticFunctions map-array/timing/Java-time-enum variants still open.",
+      "183 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm and InfraNWTableCreateIndex have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24) and EPLOtherCreateSchema (18) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants and EPLOtherCreateSchema nested-fragment/CRC/class-loading variants still open.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."

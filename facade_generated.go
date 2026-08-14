@@ -7538,6 +7538,15 @@ func WithSchemaAnnotation(annotation StatementAnnotation) SchemaOption {
 	return internalengine.WithSchemaAnnotation(annotation)
 }
 
+// WithSchemaCopiedFrom copies the declared fields, nested fragments and
+// accessors of another schema into the new schema without establishing an
+// event-type parent relationship. It mirrors Esper's create-schema copyfrom:
+// the resulting type has independent identity and does not participate in
+// inheritance routing.
+func WithSchemaCopiedFrom(source Schema) SchemaOption {
+	return internalengine.WithSchemaCopiedFrom(source)
+}
+
 // WithSchemaParent adds an event-type parent. Parent fields precede child
 // fields, which also defines the positional order for ObjectArray schemas.
 func WithSchemaParent(parent Schema) SchemaOption {

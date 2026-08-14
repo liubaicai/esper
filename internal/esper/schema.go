@@ -167,6 +167,7 @@ type schemaConfig struct {
 	allowDynamic bool
 	busVisible   bool
 	parents      []Schema
+	copiedFrom   []Schema
 	getters      []schemaGetterSpec
 	setters      []schemaSetterSpec
 	nested       map[string]Schema
@@ -342,6 +343,15 @@ func WithJSONDefaults(defaults map[string]any) SchemaOption {
 // fields, which also defines the positional order for ObjectArray schemas.
 func WithSchemaParent(parent Schema) SchemaOption {
 	return func(cfg *schemaConfig) { cfg.parents = append(cfg.parents, parent) }
+}
+
+// WithSchemaCopiedFrom copies the declared fields, nested fragments and
+// accessors of another schema into the new schema without establishing an
+// event-type parent relationship. It mirrors Esper's create-schema copyfrom:
+// the resulting type has independent identity and does not participate in
+// inheritance routing.
+func WithSchemaCopiedFrom(source Schema) SchemaOption {
+	return func(cfg *schemaConfig) { cfg.copiedFrom = append(cfg.copiedFrom, source) }
 }
 
 // WithSchemaAnnotation attaches application-defined metadata to an event
@@ -844,6 +854,43 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 	setters := make(map[string]schemaSetterSpec)
 	nestedSchemas := make(map[string]Schema)
 	inheritedFields := make(map[string]FieldSpec)
+	copiedFields := make(map[string]FieldSpec)
+	for sourceIndex, source := range cfg.copiedFrom {
+		if !source.valid() {
+			return Schema{}, fmt.Errorf("esper: schema %q has invalid copy-from source at index %d", name, sourceIndex)
+		}
+		if source.Name() == name {
+			return Schema{}, fmt.Errorf("esper: schema %q cannot copy from itself", name)
+		}
+		for _, field := range source.fields {
+			if schemaFieldsContain(fields, field.Name) {
+				return Schema{}, fmt.Errorf("esper: schema %q duplicate column name %q", name, field.Name)
+			}
+			if existing, exists := copiedFields[field.Name]; exists {
+				if existing.Type != field.Type || existing.Optional != field.Optional || existing.StartTimestamp != field.StartTimestamp || existing.EndTimestamp != field.EndTimestamp {
+					return Schema{}, fmt.Errorf("esper: schema %q copy-from sources conflict for property %q", name, field.Name)
+				}
+				continue
+			}
+			copiedFields[field.Name] = field
+			copyFields = append(copyFields, field)
+		}
+		for getterName, getter := range source.getters {
+			if _, exists := getters[getterName]; !exists {
+				getters[getterName] = getter
+			}
+		}
+		for setterName, setter := range source.setters {
+			if _, exists := setters[setterName]; !exists {
+				setters[setterName] = setter
+			}
+		}
+		for nestedName, nested := range source.nested {
+			if _, exists := nestedSchemas[nestedName]; !exists {
+				nestedSchemas[nestedName] = nested
+			}
+		}
+	}
 	for index, parent := range cfg.parents {
 		if !parent.valid() {
 			return Schema{}, fmt.Errorf("esper: schema %q has invalid parent at index %d", name, index)
@@ -853,6 +900,9 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		}
 		parentNames = append(parentNames, parent.Name())
 		for _, field := range parent.fields {
+			if _, copied := copiedFields[field.Name]; copied {
+				continue
+			}
 			// A child-declared field overrides the inherited property
 			// (Go embedded structs promote the field into the child's own
 			// discovered fields), matching Java class override semantics.
@@ -875,9 +925,14 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 			setters[setterName] = setter
 		}
 		for nestedName, nested := range parent.nested {
-			nestedSchemas[nestedName] = nested
+			if _, exists := nestedSchemas[nestedName]; !exists {
+				nestedSchemas[nestedName] = nested
+			}
 		}
 		cfg.allowDynamic = cfg.allowDynamic || parent.allowDynamic
+	}
+	if kind == SchemaObjectArray && len(cfg.parents) > 1 {
+		return Schema{}, fmt.Errorf("esper: object-array event types only allow a single supertype")
 	}
 	if kind == SchemaAvro && cfg.allowDynamic {
 		return Schema{}, fmt.Errorf("esper: Avro schema %q does not allow dynamic fields", name)
