@@ -875,6 +875,9 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 		if definition.where.Type() != typeOf[bool]() {
 			return NewError(ErrorTypeMismatch, "table trigger predicate must return bool")
 		}
+		if isAggregateExpression(definition.where) {
+			return NewError(ErrorInvalidRule, "an aggregate function may not appear in a WHERE clause (use the HAVING clause)")
+		}
 		if err := e.validateTriggerTargetExpression(definition.input, table.schema, definition.where, "table-field"); err != nil {
 			return fmt.Errorf("table trigger predicate: %w", err)
 		}
@@ -910,6 +913,9 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("table select duplicates alias %q", selection.Name))
 			}
 			seenSelections[selection.Name] = struct{}{}
+			if expressionContainsPrevious(selection.Expr) {
+				return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+			}
 			var expressionErr error
 			if definition.where != nil {
 				expressionErr = e.validateTriggerTargetExpression(definition.input, table.schema, selection.Expr, "table-field")
@@ -1152,6 +1158,9 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 		if definition.where.Type() != typeOf[bool]() {
 			return NewError(ErrorTypeMismatch, "named-window predicate must return bool")
 		}
+		if isAggregateExpression(definition.where) {
+			return NewError(ErrorInvalidRule, "an aggregate function may not appear in a WHERE clause (use the HAVING clause)")
+		}
 		if err := e.validateTriggerTargetExpression(definition.input, targetSchema, definition.where, "named-window-field"); err != nil {
 			return fmt.Errorf("named-window predicate: %w", err)
 		}
@@ -1296,6 +1305,9 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 				return NewError(ErrorInvalidRule, fmt.Sprintf("named-window select duplicates alias %q", selection.Name))
 			}
 			seen[selection.Name] = struct{}{}
+			if expressionContainsPrevious(selection.Expr) {
+				return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+			}
 			if err := e.validateTriggerTargetExpression(definition.input, targetSchema, selection.Expr, "named-window-field"); err != nil {
 				return fmt.Errorf("named-window select projection %q: %w", selection.Name, err)
 			}
@@ -1588,6 +1600,14 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 	}
 	if err != nil {
 		return ResultBatch{}, err
+	}
+	if definition.action == triggerSelectTable {
+		if len(s.plan.query.orderBy) > 0 {
+			result.New = orderResults(result.New, s.plan.query.orderBy, now, runtime.variables)
+			result.Old = orderResults(result.Old, s.plan.query.orderBy, now, runtime.variables)
+		}
+		result.New = applyResultWindow(result.New, s.plan.query)
+		result.Old = applyResultWindow(result.Old, s.plan.query)
 	}
 	result = runtime.applyOutput(s.plan.query.output, result, false, now, s.plan)
 	if s.plan.query.distinct && !result.empty() {
@@ -2934,6 +2954,28 @@ func validateTriggerAssignment(e *Environment, input *streamNode, targetSchema S
 		return fmt.Errorf("array column %q: %w", assignment.Column, err)
 	}
 	return nil
+}
+
+func expressionContainsPrevious(expression Expr) bool {
+	if expression == nil {
+		return false
+	}
+	return expressionNodeContainsPrevious(expression.node())
+}
+
+func expressionNodeContainsPrevious(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.kind == "prev" || node.kind == "prior" {
+		return true
+	}
+	for _, child := range node.children {
+		if expressionNodeContainsPrevious(child) {
+			return true
+		}
+	}
+	return false
 }
 
 func validateTriggerAssignmentType(target reflect.Type, expression Expr) error {

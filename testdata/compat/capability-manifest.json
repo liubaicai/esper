@@ -1150,6 +1150,7 @@
       "goRefs": [
         "internal/esper/trigger.go",
         "internal/esper/trigger_test.go",
+        "internal/esper/infra_nwtable_on_select_parity_test.go",
         "internal/esper/trigger_merge_representation_test.go",
         "internal/esper/trigger_infra_insert_other_stream_test.go",
         "internal/esper/trigger_namedwindow_merge_test.go",
@@ -24663,22 +24664,45 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnSelect.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "infra",
         "named-window",
         "table",
-        "on-select"
+        "on-select",
+        "trigger",
+        "index",
+        "correlation",
+        "delete",
+        "limit",
+        "invalid"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
+      ],
+      "goTests": [
+        "TestInfraOnSelectIndexSimpleParity",
+        "TestInfraSelectCorrelationDeleteParity",
+        "TestInfraSelectConditionParity",
+        "TestInfraSelectJoinColumnsLimitParity",
+        "TestInfraInvalidParity"
       ],
       "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+        "InfraOnSelectIndexChoice query-plan/index-choice hook assertions",
+        "InfraWindowAgg window()/enum collection projections on on-select",
+        "InfraSelectAggregation / Correlated / Grouping / HavingStreamWildcard on-select aggregate group/having semantics",
+        "InfraPatternTimedSelect and InfraPatternCorrelation pattern-driven on-select",
+        "InfraOnSelectMultikeyWArray grouped array-key aggregation",
+        "full Java differential trace for the covered InfraNWTableOnSelect executions"
+      ],
+      "difference": "Go covers the non-aggregate named-window/table on-select executions with typed trigger APIs: indexed predicate selects, correlated selects with delete, filtered/ordered selects, trigger+window projections with limit, and invalid boundaries (aggregate-in-where, unknown infra, prev-in-select). Runtime additions: on-select results now apply order-by and limit/offset, and trigger WHERE/select validation rejects aggregates and prev/prior. The remaining executions need on-select aggregate/group/having, window()/enum projections, pattern triggers and index-plan hooks, which are still open."
     },
     {
       "id": "case.inventory.resultset-output-limit-row-per-group-rollup",
@@ -26334,6 +26358,10 @@
     },
     {
       "capabilityId": "trigger.table-named-window",
+      "caseId": "case.inventory.infra-nwtable-on-select"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
       "caseId": "case.trigger-merge-single-sided"
     },
     {
@@ -27605,7 +27633,7 @@
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 403,
+    "implementedCases": 404,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 18,
@@ -27638,7 +27666,7 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "183 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm and InfraNWTableCreateIndex have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24) and EPLOtherCreateSchema (18) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants and EPLOtherCreateSchema nested-fragment/CRC/class-loading variants still open.",
+      "155 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, ResultSetOutputLimitRowPerGroupRollup, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm and InfraNWTableCreateIndex have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18) and InfraNWTableOnSelect (28) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants and InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants still open.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."
