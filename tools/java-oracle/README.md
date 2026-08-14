@@ -112,6 +112,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/output-policy-iterator.json`、`testdata/parity/output-policy-iterator.evidence.json`；当前差异数为 0，覆盖 `ResultSetWildcardRowPerGroup`、`ResultSetFirstSimpleHavingAndNoHaving` 与 `ResultSetUnaggregatedOutputFirst` 三个 Java runtime。
 
+## Pattern-timer-interval oracle
+
+第五个代表性场景使用 `PatternTimerScenarioOracle.java`（runner：`run-pattern-timer.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)`，双跑 `every a=SupportBean -> timer:interval(intPrimitive seconds)`：t=10s 发送 E1(3) 与 E2(2) 各 arm 一个动态 timer，t=11.999s 无输出，t=12s 输出 E2，t=12.999s 无输出，t=13s 输出 E1。该场景覆盖 pattern every + followed-by + 动态 timer interval + 虚拟时钟边界。
+
+```sh
+./tools/java-oracle/run-pattern-timer.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/pattern-timer-interval.json \
+  --output /tmp/pattern-timer-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode pattern-timer-diff \
+  -scenario testdata/parity/pattern-timer-interval.json \
+  -java-trace /tmp/pattern-timer-java.json \
+  -evidence /tmp/pattern-timer.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/pattern-timer-interval.json`、`testdata/parity/pattern-timer-interval.evidence.json`；当前差异数为 0，覆盖 `PatternIntervalSpecExpressionWithProperty`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

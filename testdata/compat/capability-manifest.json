@@ -1002,7 +1002,9 @@
         "internal/esper/pattern_startloop_parity_test.go",
         "internal/esper/pattern_super_interfaces_parity_test.go",
         "internal/esper/pattern_invalid_parity_test.go",
-        "internal/esper/pattern_expression_text_parity_test.go"
+        "internal/esper/pattern_expression_text_parity_test.go",
+        "internal/esper/pattern_timer_interval_parity_test.go",
+        "internal/app/parity/pattern_timer.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -1013,7 +1015,15 @@
       ],
       "verification": [
         "inventoried",
-        "implemented"
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-36d18111e663f599bc14"
+      ],
+      "representativeScenarioIds": [
+        "pattern-timer-interval"
       ]
     },
     {
@@ -21088,7 +21098,10 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java"
       ],
       "goTests": [
-        "TestPatternObserverIntervalSpecExpressionWithPropertyMatchesEsper"
+        "TestPatternObserverIntervalSpecExpressionWithPropertyMatchesEsper",
+        "TestPatternTimerIntervalPropertyParity",
+        "TestRunPatternTimerDiffWritesPassingEvidence",
+        "TestRunPatternTimerDiffRejectsTraceMutations"
       ],
       "tags": [
         "correctness",
@@ -21096,17 +21109,30 @@
         "observer",
         "timer-interval",
         "dynamic-interval",
-        "every"
+        "every",
+        "differential",
+        "representative"
       ],
-      "status": "implemented",
+      "status": "differential-verified",
       "evidence": [
         "java-runtime-inventory",
-        "go-unit"
+        "go-unit",
+        "java-oracle",
+        "differential-evidence",
+        "mutation"
       ],
       "difference": "Go parity test replays the Java event/time sequence exactly: two events at t=10000 arm per-event dynamic timers from the captured event's intPrimitive property and fire at t=12000 (E2, 2s) and t=13000 (E1, 3s). The fluent API composes the dynamic interval as TimerIntervalExpr(DurationSeconds[int](TagField[int](a, intPrimitive))) where EPL embeds the property-timeperiod product inline; the engine-side freshness alignment (a done timer re-reporting satisfaction on a later clock advance no longer re-fires its sequence/or parent) matches EvalStateNode per-callback semantics.",
       "verification": [
         "inventoried",
-        "implemented"
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-36d18111e663f599bc14"
+      ],
+      "representativeScenarioIds": [
+        "pattern-timer-interval"
       ]
     },
     {
@@ -25129,23 +25155,23 @@
     "totalCapabilities": 110,
     "inventoriedCases": 378,
     "implementedCases": 378,
-    "differentialVerifiedCases": 4,
-    "differentialVerifiedRuntimeIds": 11,
+    "differentialVerifiedCases": 5,
+    "differentialVerifiedRuntimeIds": 12,
     "intentionallyDifferentCases": 17,
-    "representativeVerifiedCases": 4,
+    "representativeVerifiedCases": 5,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
-    "differentialVerifiedCapabilities": 5,
+    "differentialVerifiedCapabilities": 6,
     "intentionallyDifferentCapabilities": 6,
-    "representativeVerifiedCapabilities": 5,
+    "representativeVerifiedCapabilities": 6,
     "nfrVerifiedCapabilities": 0,
     "runtimeAssociationCount": 2351,
     "referencedJavaRuntimeIds": 2280,
     "totalJavaRuntimeIds": 4136,
     "unreferencedJavaRuntimeIds": 1856,
-    "representativeScenarioTotal": 4,
-    "representativeScenarioPassing": 4,
+    "representativeScenarioTotal": 5,
+    "representativeScenarioPassing": 5,
     "currentFailures": [],
     "currentSkips": [
       "connectors/kafka.TestKafkaDockerRoundTrip: ESPER_KAFKA_BROKERS is unset; run the Kafka fixture from docs/integration/external-services.md",
@@ -25157,8 +25183,8 @@
       "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
     ],
     "risks": [
-      "Four representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by records contain broad implemented subsets; only the eleven listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause runtimes are differential-verified.",
+      "Five representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic records contain broad implemented subsets; only the twelve listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty runtimes are differential-verified.",
       "No 20-scenario representative suite, stress load, fuzz/property suite, or Java-vs-Go performance baseline is complete.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
     ],

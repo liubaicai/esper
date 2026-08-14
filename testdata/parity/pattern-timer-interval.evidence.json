@@ -1,0 +1,133 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-36d18111e663f599bc14"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/pattern/PatternObserverTimerInterval.java"
+  ],
+  "javaExecutions": [
+    "PatternIntervalSpecExpressionWithProperty"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "pattern-timer-interval",
+    "steps": [
+      {
+        "op": "case",
+        "case": "interval-property"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:11.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:12Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:12.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:13Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-timer-interval",
+    "records": [
+      {
+        "case": "interval-property",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-property",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:13Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "pattern-timer-interval",
+    "records": [
+      {
+        "case": "interval-property",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "interval-property",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:13Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

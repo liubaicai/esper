@@ -1,0 +1,46 @@
+{
+  "version": "esper-parity/v1",
+  "id": "pattern-timer-interval",
+  "steps": [
+    {
+      "op": "case",
+      "case": "interval-property"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:10Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 2
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:11.999Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:12Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:12.999Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:13Z"
+    }
+  ]
+}
