@@ -3359,6 +3359,7 @@
       "goRefs": [
         "internal/esper/expr.go",
         "internal/esper/client_extend_udf_parity_test.go",
+        "internal/esper/epl_other_static_functions_parity_test.go",
         "internal/esper/infra_table_access_dot_method_parity_test.go",
         "internal/esper/datetime_plugin.go"
       ],
@@ -25007,20 +25008,48 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStaticFunctions.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "epl",
-        "static-functions"
+        "static-functions",
+        "udf",
+        "expression"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
+      ],
+      "goTests": [
+        "TestEPLOtherSingleParameterParity",
+        "TestEPLOtherTwoParametersParity",
+        "TestEPLOtherNoParametersParity",
+        "TestEPLOtherUserDefinedParity",
+        "TestEPLOtherComplexParametersParity",
+        "TestEPLOtherMultipleMethodInvocationsParity",
+        "TestEPLOtherOtherClausesParity",
+        "TestEPLOtherNestedFunctionParity",
+        "TestEPLOtherPassthruParity",
+        "TestEPLOtherRuntimeExceptionParity",
+        "TestEPLOtherNullPrimitiveParity",
+        "TestEPLOtherArrayParameterParity",
+        "TestEPLOtherPrimitiveConversionParity",
+        "TestEPLOtherChainedInstanceAndStaticParity",
+        "TestEPLOtherEscapeAndPatternParity",
+        "TestEPLOtherStaticFuncWCurrentTimeStampParity"
       ],
       "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+        "EPLOtherReturnsMapIndexProperty map/array-typed insert-into result property",
+        "EPLOtherPerfConstantParameters / PerfConstantParametersNested timing-based constant-argument evaluation contract",
+        "EPLOtherStaticFuncEnumConstant Java time/ZoneId/ChronoField enum API port",
+        "full Java differential trace for the covered EPLOtherStaticFunctions executions"
+      ],
+      "difference": "Go represents Java static-method invocation as named Func0-Func4 / Func*Ctx UDF expressions with stable Plan names; chained Java methods map to nested Func calls and mutable external Go state; pattern UDF filters use PatternFrom predicates; current_timestamp formatting uses CurrentTimestamp plus Go time formatting. Order-by expressions over projected rows retain the source event so deferred output policies can re-evaluate field/UDF sort keys. These executions are implemented but not yet differential-verified; map/array-typed insert-into property, constant-argument timing contracts and Java time enum APIs remain open."
     },
     {
       "id": "case.inventory.infra-named-window-types",
@@ -27338,6 +27367,10 @@
       "caseId": "case.infra-table-access-dot-method"
     },
     {
+      "capabilityId": "client.extend.single-row-function",
+      "caseId": "case.inventory.epl-other-static-functions"
+    },
+    {
       "capabilityId": "resultset.aggregate-access",
       "caseId": "case.infra-table-access-dot-method"
     },
@@ -27542,7 +27575,7 @@
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 401,
+    "implementedCases": 402,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 18,
@@ -27575,7 +27608,7 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "225 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, EPLOtherStaticFunctions, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm and InfraNWTableCreateIndex have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17) and EPLDatabaseJoin (17) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants still open.",
+      "201 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm and InfraNWTableCreateIndex have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17) and EPLOtherStaticFunctions (24) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants and EPLOtherStaticFunctions map-array/timing/Java-time-enum variants still open.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."

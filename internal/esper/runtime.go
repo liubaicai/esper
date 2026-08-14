@@ -101,11 +101,15 @@ func (f SinkFunc) Write(ctx context.Context, batch ResultBatch) error {
 type Result struct {
 	event      *Event
 	row        *Row
+	rowEvent   *Event
 	joinEvents []Event
 }
 
 func resultEvent(event Event) Result { return Result{event: &event} }
 func resultRow(row Row) Result       { return Result{row: &row} }
+func resultRowWithEvent(row Row, event Event) Result {
+	return Result{row: &row, rowEvent: &event}
+}
 
 func resultJoinRow(row Row, tuple []Event) Result {
 	return Result{row: &row, joinEvents: append([]Event(nil), tuple...)}
@@ -16251,7 +16255,7 @@ func projectResults(events []Event, query Query, resultSchema Schema, now time.T
 			values = append(values, selection.Expr.eval(projectionEvalContext(event, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)))
 		}
 		row := newRow(resultSchema, values)
-		results = append(results, resultRow(row))
+		results = append(results, resultRowWithEvent(row, event))
 	}
 	return results
 }
@@ -16397,6 +16401,10 @@ func resultOrderContext(result Result, now time.Time, variables map[string]Value
 	ctx := EvalContext{Now: now, Variables: variables, JoinEvents: result.joinEvents}
 	if event, ok := result.Event(); ok {
 		ctx.Event = event
+	}
+	if result.row != nil && result.rowEvent != nil {
+		ctx.Event = *result.rowEvent
+		ctx.OuterEvent = *result.rowEvent
 	}
 	if len(result.joinEvents) > 0 {
 		ctx.Event = result.joinEvents[0]
