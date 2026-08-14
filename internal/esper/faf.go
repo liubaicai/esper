@@ -625,7 +625,7 @@ func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, p
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", target.sourceName))
 	}
 	snapshot := window.snapshotMutationState()
-	delta := NamedWindowDelta{Time: now}
+	delta := NamedWindowDelta{Time: now, External: true}
 	for rowIndex, underlying := range underlyings {
 		if err := contextErr(ctx); err != nil {
 			window.restoreMutationState(snapshot)

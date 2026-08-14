@@ -2253,7 +2253,7 @@ func executeInsertFromNamedWindowAction(ctx context.Context, engine *Engine, def
 		return tableMutationResult{}, nil
 	}
 	schema := target.Definition().schema
-	combined := NamedWindowDelta{Time: now}
+	combined := NamedWindowDelta{Time: now, External: true}
 	offeredEvents := make([]Event, 0, 1)
 	for _, candidate := range snapshotNamedWindowState(source.state) {
 		if err := contextErr(ctx); err != nil {

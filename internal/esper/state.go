@@ -1737,6 +1737,11 @@ type NamedWindowDelta struct {
 	New  []Event
 	Old  []Event
 	Time time.Time
+	// External marks a delta caused by an explicit insert/update/delete/merge
+	// mutation rather than an internal time-based expiry. Consumers use it to
+	// distinguish external old-only batches (which produce new aggregate
+	// rows) from pure expiry batches (which are silent under istream).
+	External bool
 }
 
 func (d NamedWindowDelta) empty() bool { return len(d.New) == 0 && len(d.Old) == 0 }
@@ -2667,7 +2672,7 @@ func (w *NamedWindow) deleteWhere(ctx context.Context, predicate func(Event) boo
 	}
 	now := w.now()
 	if w.state.def.contextName != "" && w.state.contextKey == "" {
-		result := NamedWindowDelta{Time: now}
+		result := NamedWindowDelta{Time: now, External: true}
 		for _, state := range w.contextPartitionStates() {
 			delta, err := w.deleteWhereState(ctx, state, predicate, now)
 			if err != nil {
@@ -2705,7 +2710,7 @@ func (w *NamedWindow) deleteWhereState(ctx context.Context, state *namedWindowRu
 	state.mu.Lock()
 	defer state.mu.Unlock()
 	kept := state.entries[:0]
-	delta := NamedWindowDelta{Time: now}
+	delta := NamedWindowDelta{Time: now, External: true}
 	for _, entry := range state.entries {
 		if predicate(entry.event) {
 			delta.Old = append(delta.Old, entry.event)
@@ -2782,7 +2787,7 @@ func (w *NamedWindow) updateWhere(ctx context.Context, predicate func(Event) boo
 	}
 	now := w.now()
 	if w.state.def.contextName != "" && w.state.contextKey == "" {
-		result := NamedWindowDelta{Time: now}
+		result := NamedWindowDelta{Time: now, External: true}
 		for _, state := range w.contextPartitionStates() {
 			delta, err := w.updateWhereState(ctx, state, predicate, update, now)
 			if err != nil {
@@ -2822,7 +2827,7 @@ func (w *NamedWindow) updateWhereState(ctx context.Context, state *namedWindowRu
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
-	delta := NamedWindowDelta{Time: now}
+	delta := NamedWindowDelta{Time: now, External: true}
 	for index, entry := range state.entries {
 		if !predicate(entry.event) {
 			continue
@@ -2857,7 +2862,7 @@ func (w *NamedWindow) updateCompositeWhereState(state *namedWindowRuntime, predi
 	if len(state.compositeChildren) != len(composite.Windows) {
 		return NamedWindowDelta{}, NewError(ErrorState, "named-window composite retention is not initialized")
 	}
-	delta := NamedWindowDelta{Time: now}
+	delta := NamedWindowDelta{Time: now, External: true}
 	previous := append([]storedEvent(nil), state.entries...)
 	replacements := make(map[int]Event)
 	for index, entry := range previous {
@@ -2998,7 +3003,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 		preparedInsert = inserted
 	}
 
-	delta := NamedWindowDelta{Time: now}
+	delta := NamedWindowDelta{Time: now, External: true}
 	entries := make([]storedEvent, 0, len(state.entries)+1)
 	for index, entry := range state.entries {
 		decision := decisions[index]
@@ -3298,7 +3303,7 @@ func (w *NamedWindow) insertWithVariables(ctx context.Context, now time.Time, un
 		return NamedWindowDelta{}, err
 	}
 	entry := storedEvent{event: event, receivedAt: now}
-	delta := NamedWindowDelta{New: []Event{event}, Time: now}
+	delta := NamedWindowDelta{New: []Event{event}, Time: now, External: true}
 	switch retention := state.def.retention.(type) {
 	case KeepAllWindowSpec:
 		state.entries = append(state.entries, entry)

@@ -309,7 +309,9 @@
         "internal/esper/named_window_mutation_parity_test.go",
         "internal/app/parity/named_window_mutation.go",
         "internal/esper/time_window_long_running_parity_test.go",
-        "internal/app/parity/time_window_long.go"
+        "internal/app/parity/time_window_long.go",
+        "internal/esper/resultset_grouped_time_window_parity_test.go",
+        "internal/app/parity/resultset_grouped_time_window.go"
       ],
       "phase": 2,
       "status": "implemented",
@@ -333,14 +335,16 @@
         "java-runtime-dc2ac7e7293a204aa102",
         "java-runtime-decf2ff614722c1273d1",
         "java-runtime-62b4f6edf3c24229e8ac",
-        "java-runtime-d00485a2855b2128289f"
+        "java-runtime-d00485a2855b2128289f",
+        "java-runtime-9061246c4c67a2c25364"
       ],
       "representativeScenarioIds": [
         "filter-window-aggregate-output",
         "join-length-window",
         "output-policy-iterator",
         "named-window-mutation",
-        "time-window-long-running"
+        "time-window-long-running",
+        "resultset-grouped-time-window"
       ]
     },
     {
@@ -917,7 +921,9 @@
         "internal/esper/rollup_output_every_parity_test.go",
         "internal/app/parity/rollup.go",
         "internal/esper/output_first_having_parity_test.go",
-        "internal/app/parity/output_first_having.go"
+        "internal/app/parity/output_first_having.go",
+        "internal/esper/resultset_grouped_time_window_parity_test.go",
+        "internal/app/parity/resultset_grouped_time_window.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -3791,13 +3797,15 @@
         "java-runtime-decf2ff614722c1273d1",
         "java-runtime-bd4672ec90862ee08790",
         "java-runtime-3e89e6297511b7dfe531",
-        "java-runtime-52135d56e04dfb024bfe"
+        "java-runtime-52135d56e04dfb024bfe",
+        "java-runtime-9061246c4c67a2c25364"
       ],
       "representativeScenarioIds": [
         "output-policy-iterator",
         "high-cardinality-context",
         "rollup-output-every",
-        "output-first-having"
+        "output-first-having",
+        "resultset-grouped-time-window"
       ]
     },
     {
@@ -24486,7 +24494,6 @@
     {
       "id": "case.inventory.resultset-output-limit-aggregate-grouped",
       "javaRuntimeIds": [
-        "java-runtime-9061246c4c67a2c25364",
         "java-runtime-00013efc7c322d04c3b3",
         "java-runtime-11c5505c0b19dd86671c",
         "java-runtime-ecfb75f6916643de1c5f",
@@ -24517,7 +24524,6 @@
         "java-runtime-418605c41b57b8a28c09"
       ],
       "javaNames": [
-        "ResultSet1NoneNoHavingNoJoin",
         "ResultSet2NoneNoHavingJoin",
         "ResultSet3NoneHavingNoJoin",
         "ResultSet4NoneHavingJoin",
@@ -24841,6 +24847,57 @@
       ],
       "remaining": [
         "Go implementation and differential verification not yet established; inventory only"
+      ]
+    },
+    {
+      "id": "case.resultset-grouped-time-window",
+      "javaRuntimeIds": [
+        "java-runtime-9061246c4c67a2c25364"
+      ],
+      "javaNames": [
+        "ResultSet1NoneNoHavingNoJoin"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAggregateGrouped.java"
+      ],
+      "goTests": [
+        "TestResultSetGroupedTimeWindowIStreamParity",
+        "TestRunResultSetGroupedTimeWindowDiffWritesPassingEvidence",
+        "TestRunResultSetGroupedTimeWindowDiffRejectsTraceMutations"
+      ],
+      "tags": [
+        "correctness",
+        "resultset",
+        "aggregate",
+        "group-by",
+        "time-window",
+        "istream",
+        "differential",
+        "representative"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-9061246c4c67a2c25364"
+      ],
+      "representativeScenarioIds": [
+        "resultset-grouped-time-window"
+      ],
+      "remaining": [
+        "irstream old-row emission for pure grouped time-window updates is covered by existing aggregate tests but not yet by this differential scenario"
       ]
     }
   ],
@@ -26516,17 +26573,25 @@
     {
       "capabilityId": "rowrecog.match-recognize",
       "caseId": "case.rowrecog-aggregation"
+    },
+    {
+      "capabilityId": "resultset.aggregate-group-by",
+      "caseId": "case.resultset-grouped-time-window"
+    },
+    {
+      "capabilityId": "view.window-core",
+      "caseId": "case.resultset-grouped-time-window"
     }
   ],
   "summary": {
-    "totalCases": 398,
+    "totalCases": 399,
     "totalCapabilities": 110,
-    "inventoriedCases": 398,
-    "implementedCases": 392,
-    "differentialVerifiedCases": 21,
-    "differentialVerifiedRuntimeIds": 30,
+    "inventoriedCases": 399,
+    "implementedCases": 393,
+    "differentialVerifiedCases": 22,
+    "differentialVerifiedRuntimeIds": 31,
     "intentionallyDifferentCases": 17,
-    "representativeVerifiedCases": 21,
+    "representativeVerifiedCases": 22,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
@@ -26538,8 +26603,8 @@
     "referencedJavaRuntimeIds": 2432,
     "totalJavaRuntimeIds": 4136,
     "unreferencedJavaRuntimeIds": 1704,
-    "representativeScenarioTotal": 21,
-    "representativeScenarioPassing": 21,
+    "representativeScenarioTotal": 22,
+    "representativeScenarioPassing": 22,
     "currentFailures": [],
     "currentSkips": [
       "internal/esper.TestStressSyntheticMediumLoad: ESPER_STRESS is unset; run ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$' -count=1",
@@ -26552,10 +26617,11 @@
       "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
     ],
     "risks": [
-      "Twenty-one representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned runtimes are differential-verified.",
-      "The 21-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "149 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema and ResultSetQueryTypeIterator have no Go implementation or differential evidence yet.",
+      "Twenty-two representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-one listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin runtimes are differential-verified.",
+      "The 22-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
+      "148 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema and ResultSetQueryTypeIterator have no Go implementation or differential evidence yet.",
+      "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
     ],

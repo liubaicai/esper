@@ -4539,6 +4539,7 @@ func joinDeltaEvents(delta joinDelta, receivedAt time.Time) eventDelta {
 	for _, tuple := range oldTuples {
 		result.oldEvents = append(result.oldEvents, newJoinTupleEvent(tuple, receivedAt))
 	}
+	result.hadInput = len(result.newEvents) > 0
 	return result
 }
 
@@ -5253,6 +5254,7 @@ type eventDelta struct {
 	previousByEvent map[string][]Event
 	priorByEvent    map[string][]Event
 	forced          bool
+	hadInput        bool
 }
 
 func (s *Statement) process(ctx context.Context, now time.Time, event Event, variables map[string]Value) (ResultBatch, bool, error) {
@@ -8686,6 +8688,7 @@ func (r *statementRuntime) processNamedWindowDelta(plan Plan, now time.Time, del
 		}
 		result = mergeDelta(result, removed)
 	}
+	result.hadInput = result.hadInput || delta.External
 	if queryUsesPreviousAccess(plan.query) {
 		r.trackNamedWindowPriorArrival(&result)
 	}
@@ -8884,7 +8887,7 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 		query.contextName = ""
 		partitionPlan := s.plan
 		partitionPlan.query = query
-		partitionBatch, err := partition.processNamedWindowDelta(partitionPlan, now, NamedWindowDelta{New: group.newEvents, Old: group.oldEvents, Time: now})
+		partitionBatch, err := partition.processNamedWindowDelta(partitionPlan, now, NamedWindowDelta{New: group.newEvents, Old: group.oldEvents, Time: now, External: delta.External})
 		if err != nil {
 			return ResultBatch{}, false, err
 		}
@@ -10108,7 +10111,7 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		if !sourceNodeAcceptsEvent(r.query.env, node, event) {
 			return eventDelta{}, nil
 		}
-		return eventDelta{newEvents: []Event{event}}, nil
+		return eventDelta{newEvents: []Event{event}, hadInput: true}, nil
 	case streamHistorical:
 		if node.historical == nil || node.historical.provider == nil {
 			return eventDelta{}, NewError(ErrorDependency, fmt.Sprintf("historical source %q has no provider", node.sourceName))
@@ -10180,6 +10183,7 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			historyByEvent:  cloneEventHistories(inputDelta.historyByEvent),
 			previousByEvent: cloneEventHistories(inputDelta.previousByEvent),
 			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
+			hadInput:        inputDelta.hadInput,
 		}
 		for _, candidate := range inputDelta.newEvents {
 			value := node.predicate.eval(EvalContext{
@@ -10217,6 +10221,7 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			historyByEvent:  cloneEventHistories(inputDelta.historyByEvent),
 			previousByEvent: cloneEventHistories(inputDelta.previousByEvent),
 			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
+			hadInput:        inputDelta.hadInput,
 		}
 		for _, candidate := range inputDelta.newEvents {
 			delta, addErr := r.addToWindow(node.window, state, candidate, now)
@@ -12036,6 +12041,8 @@ func compareStoredEvents(left, right Event, keys []SortKey, now time.Time, varia
 func mergeDelta(left, right eventDelta) eventDelta {
 	left.newEvents = append(left.newEvents, right.newEvents...)
 	left.oldEvents = append(left.oldEvents, right.oldEvents...)
+	left.hadInput = left.hadInput || right.hadInput
+	left.forced = left.forced || right.forced
 	if right.history != nil {
 		left.history = append([]Event(nil), right.history...)
 	}
@@ -14593,6 +14600,12 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	removeAggregateScopeEvents(state, delta.oldEvents)
 	state.allEvents = appendAggregateScopeEvents(state.allEvents, delta.newEvents)
 	state.allEverEvents = appendAggregateScopeEvents(state.allEverEvents, delta.newEvents)
+	// Esper's istream/irstream aggregate result sets do not post new rows for
+	// pure time-expiry batches that contain no incoming event. New rows are
+	// emitted for removal-affected groups only when the removal is part of an
+	// insert batch (e.g. a window eviction caused by a new event) or when an
+	// output/forced boundary explicitly requests current state.
+	emitNew := delta.hadInput || delta.forced || len(delta.newEvents) > 0
 	affected := make([]string, 0)
 	seen := make(map[string]struct{})
 	groupingSets := aggregateGroupingSetsForDefinition(definition)
@@ -14689,7 +14702,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		if aggregateDefinitionIsRowForEvent(definition) && len(delta.newEvents) > 0 && len(group.events) > 0 {
 			for _, current := range delta.newEvents {
 				values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
-				if visible && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
+				if visible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 					newEntries = append(newEntries, aggregateResultEntry{
 						result: resultRow(newRow(plan.resultSchema, values)),
 						group:  group,
@@ -14717,7 +14730,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			continue
 		}
 		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
-		if visible && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
+		if visible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 			newEntries = append(newEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, newValues)),
 				group:  group,

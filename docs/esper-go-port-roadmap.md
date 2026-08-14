@@ -50,9 +50,9 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 个 |
-| Case | 398 个 |
+| Case | 399 个 |
 | Case implemented | 354 个 |
-| Case differential-verified | 21 个（30 个 runtime） |
+| Case differential-verified | 22 个（31 个 runtime） |
 | Case intentionally-different | 17 个 |
 | Case inventoried | 6 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
@@ -60,7 +60,7 @@
 | 唯一已关联 runtime | 2,432 个 |
 | 未关联 runtime | 1,704 个 |
 | 关联覆盖率 | 58.8% |
-| Representative scenario | 21/21 通过 |
+| Representative scenario | 22/22 通过 |
 | NFR | 0 个已验证 |
 | Docker integration | MySQL/Kafka/RabbitMQ round-trips passed（2026-08-14） |
 | Stress baseline | 语义不变量通过；`historyByEvent` 按需构建后 42.6s→18.45s（约 660 events/s），仍开放（2026-08-14） |
@@ -162,7 +162,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 Java/Go persisted differential evidence；当前已有 21 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`、`high-cardinality-context`、`time-window-long-running`、`dataflow-connector-output`、`output-after-last`、`rollup-output-every`、`match-recognize-simple`、`unidirectional-aggregate-join`、`output-first-having`、`context-keyed-subquery`、`rowrecog-aggregation`）。
+2. 扩展 Java/Go persisted differential evidence；当前已有 22 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`、`high-cardinality-context`、`time-window-long-running`、`dataflow-connector-output`、`output-after-last`、`rollup-output-every`、`match-recognize-simple`、`unidirectional-aggregate-join`、`output-first-having`、`context-keyed-subquery`、`rowrecog-aggregation`、`resultset-grouped-time-window`）。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；后续需在 CI 中固化并保持显式 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。
