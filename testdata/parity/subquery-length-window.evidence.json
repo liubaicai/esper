@@ -1,0 +1,298 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-60f4742e4d330725c1e5"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedSingleValue.java"
+  ],
+  "javaExecutions": [
+    "EPLSubselectUngroupedUncorrelatedInSelect"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "subquery-length-window",
+    "steps": [
+      {
+        "op": "case",
+        "case": "subquery"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 190
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 180
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 170
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 6
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "subquery-length-window",
+    "records": [
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 190
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "subquery-length-window",
+    "records": [
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 190
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

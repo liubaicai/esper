@@ -24,7 +24,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer or pattern-timer-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, subquery or subquery-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -119,6 +119,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, patternTimerJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, patternTimerJavaSources),
 				splitMetadata(*javaExecutions, patternTimerJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "subquery" || *mode == "subquery-diff" {
+		trace, err := runSubqueryScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "subquery-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, subqueryJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, subqueryJavaSources),
+				splitMetadata(*javaExecutions, subqueryJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

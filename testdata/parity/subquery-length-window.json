@@ -1,0 +1,87 @@
+{
+  "version": "esper-parity/v1",
+  "id": "subquery-length-window",
+  "steps": [
+    {
+      "op": "case",
+      "case": "subquery"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 200
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 190
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 4
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 180
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 170
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 6
+      }
+    }
+  ]
+}

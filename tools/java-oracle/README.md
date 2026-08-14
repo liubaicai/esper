@@ -132,6 +132,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/pattern-timer-interval.json`、`testdata/parity/pattern-timer-interval.evidence.json`；当前差异数为 0，覆盖 `PatternIntervalSpecExpressionWithProperty`。
 
+## Subquery-length-window oracle
+
+第六个代表性场景使用 `SubqueryScenarioOracle.java`（runner：`run-subquery.sh`）。它注册 Map 事件类型 `SupportBean_S0(id)` 与 `SupportBean_S1(id)`，双跑 `select (select max(id) from SupportBean_S1#length(3)) as value from SupportBean_S0`：空窗口投影 null，随后 S1 序列 100/200/190/180/170 使 S0 依次得到 100/200/200/200/190，覆盖 length(3) 窗口淘汰边界。
+
+```sh
+./tools/java-oracle/run-subquery.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/subquery-length-window.json \
+  --output /tmp/subquery-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode subquery-diff \
+  -scenario testdata/parity/subquery-length-window.json \
+  -java-trace /tmp/subquery-java.json \
+  -evidence /tmp/subquery.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/subquery-length-window.json`、`testdata/parity/subquery-length-window.evidence.json`；当前差异数为 0，覆盖 `EPLSubselectUngroupedUncorrelatedInSelect`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。
