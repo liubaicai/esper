@@ -853,6 +853,12 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 		}
 		parentNames = append(parentNames, parent.Name())
 		for _, field := range parent.fields {
+			// A child-declared field overrides the inherited property
+			// (Go embedded structs promote the field into the child's own
+			// discovered fields), matching Java class override semantics.
+			if schemaFieldsContain(fields, field.Name) {
+				continue
+			}
 			if inherited, exists := inheritedFields[field.Name]; exists {
 				if inherited.Type != field.Type || inherited.Optional != field.Optional || inherited.StartTimestamp != field.StartTimestamp || inherited.EndTimestamp != field.EndTimestamp {
 					return Schema{}, fmt.Errorf("esper: schema %q inherits conflicting definitions for property %q", name, field.Name)
