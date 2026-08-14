@@ -44,7 +44,7 @@
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
 - 最近切片：InfraNamedWindowTypes 18 个 execution 提升为 implemented（窗口事件类型形状、嵌套 schema 列、表示矩阵、继承覆盖）；ViewTimeWin 15 个 execution 提升为 implemented（calendar-month 窗口、变量/参数时长、prev 与聚合、flip-timer）；ViewUnion 15 个 execution 提升为 implemented（named-window union retention、batch/sorted/groupwin/pattern/subquery union、child-delta old 流）；EPLInsertInto 20 个 execution 提升为 implemented；statement metrics CPU 采样差异登记为 approved intentional difference（2026-08-14）。
-- 最新已提交：`121f6acf6`（Implement ViewTimeWin parity (15 executions)）
+- 最新已提交：`2fb1e2e5f`（Implement InfraNamedWindowTypes parity (18 executions)）
 
 ### 2.2 对账清单
 
