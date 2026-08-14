@@ -25209,6 +25209,352 @@
       "remaining": [
         "Go implementation and differential verification not yet established; inventory only"
       ]
+    },
+    {
+      "id": "case.inventory.context-key-segmented-w-init-term-prioritized",
+      "javaRuntimeIds": [
+        "java-runtime-ff63629908aaff8f6555",
+        "java-runtime-f4763277ba00b7100230",
+        "java-runtime-64c8b2796129dc977a46",
+        "java-runtime-ab1ca5ca3d90ae3f5da4",
+        "java-runtime-fe339832e06bca9dc804",
+        "java-runtime-2cc231738d5a51965177",
+        "java-runtime-3c94d3bf894919732ffa",
+        "java-runtime-c7a2e5058faf7b3f0794",
+        "java-runtime-f83f79e250b5f90f9557",
+        "java-runtime-1e4c4c31097c13b58984",
+        "java-runtime-e417dce9e41ba75cedf4",
+        "java-runtime-76ab390fd3535ffc01ea",
+        "java-runtime-563a4bc53f7f4cec37a6",
+        "java-runtime-3d25518130daf97763cc",
+        "java-runtime-f1825d35efaa9235e67e",
+        "java-runtime-16febe3810e982de1d46",
+        "java-runtime-80eab27aa0a9b9d850d0",
+        "java-runtime-47e164cd7a7efd8e50fe",
+        "java-runtime-9fdeb3288282824c2fb0",
+        "java-runtime-82ac6dbde429ca557035",
+        "java-runtime-0c846af52a6d25fe06ae",
+        "java-runtime-9e700ae525b2009a8d92",
+        "java-runtime-6da3650df0595faa6d92"
+      ],
+      "javaNames": [
+        "ContextKeySegmentedTermByFilter{soda=false}",
+        "ContextKeySegmentedTermByFilter{soda=true}",
+        "ContextKeySegmentedTermByFilterWSubtype",
+        "ContextKeySegmentedTermByFilterWSecondType",
+        "ContextKeySegmentedTermByAfter",
+        "ContextKeySegmentedTermByCrontabOutputWhenTerminated",
+        "ContextKeySegmentedTermByPatternTwoFilters",
+        "ContextKeySegmentedTermByUnrelated",
+        "ContextKeySegmentedTermByFilter2Keys",
+        "ContextKeySegmentedFilterExprTermByFilterWExpr",
+        "ContextKeySegmentedFilterExprTermByFilter",
+        "ContextKeySegmentedTermByPattern3Partition",
+        "ContextKeySegmentedInitTermNoPartitionFilter",
+        "ContextKeySegmentedInitTermWithPartitionFilter",
+        "ContextKeySegmentedInitTermWithTwoInit{soda=true}",
+        "ContextKeySegmentedInitTermWithTwoInit{soda=false}",
+        "ContextKeySegmentedInitNoTerm{soda=true}",
+        "ContextKeySegmentedInitNoTerm{soda=false}",
+        "ContextKeySegmentedInitWCorrelatedTermFilter",
+        "ContextKeySegmentedInitWCorrelatedTermPattern",
+        "ContextKeySegmentedWithCorrelatedTermFilter{soda=true}",
+        "ContextKeySegmentedWithCorrelatedTermFilter{soda=false}",
+        "ContextKeySegmentedInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmentedWInitTermPrioritized.java"
+      ],
+      "tags": [
+        "inventory",
+        "context",
+        "key-segmented",
+        "init-term"
+      ],
+      "status": "inventoried",
+      "evidence": [
+        "java-runtime-inventory"
+      ],
+      "verification": [
+        "inventoried"
+      ],
+      "remaining": [
+        "Go implementation and differential verification not yet established; inventory only"
+      ]
+    },
+    {
+      "id": "case.inventory.epl-insert-into",
+      "javaRuntimeIds": [
+        "java-runtime-7a0566bbcdc891584cf8",
+        "java-runtime-f30dd16750e47029d053",
+        "java-runtime-99fecc7807564d403644",
+        "java-runtime-51aca00fd15b49a1a07c",
+        "java-runtime-781043fbfc7db87fd30e",
+        "java-runtime-3c9e610fe04da0503dd7",
+        "java-runtime-d15b411218a1de76969a",
+        "java-runtime-9aa9328e5666ad3b70b9",
+        "java-runtime-58983e6d40d9d778eb51",
+        "java-runtime-5b9c5783f2c98c750c4e",
+        "java-runtime-23d98432e91c374358e3",
+        "java-runtime-0bec56157bde8774220f",
+        "java-runtime-488ade3c6e08f41378ec",
+        "java-runtime-4a425c078c0260dc381c",
+        "java-runtime-ead9fe84287a176e77ae",
+        "java-runtime-0df08b265fd506c78486",
+        "java-runtime-f31555116dfc07cdad32",
+        "java-runtime-86e8e6ac9a2adccdaa06",
+        "java-runtime-ee040ac2ad2276ef968b",
+        "java-runtime-742e0e5017b211fac0e3"
+      ],
+      "javaNames": [
+        "EPLInsertIntoAssertionWildcardRecast",
+        "EPLInsertIntoStaggeredWithWildcard",
+        "EPLInsertIntoNullType",
+        "EPLInsertIntoMultiBeanToMulti",
+        "EPLInsertIntoProvidePartitialCols",
+        "EPLInsertIntoRStreamOMToStmt",
+        "EPLInsertIntoNamedColsOMToStmt",
+        "EPLInsertIntoNamedColsEPLToOMStmt",
+        "EPLInsertIntoNamedColsSimple",
+        "EPLInsertIntoNamedColsStateless",
+        "EPLInsertIntoNamedColsWildcard",
+        "EPLInsertIntoNamedColsJoinWildcard",
+        "EPLInsertIntoUnnamedSimple",
+        "EPLInsertIntoUnnamedWildcard",
+        "EPLInsertIntoTypeMismatchInvalid",
+        "EPLInsertIntoEventRepresentationsSimple",
+        "EPLInsertIntoLenientPropCount{rep=MAP}",
+        "EPLInsertIntoLenientPropCount{rep=OBJECTARRAY}",
+        "EPLInsertIntoLenientPropCount{rep=JSON}",
+        "EPLInsertIntoLenientPropCount{rep=AVRO}"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertInto.java"
+      ],
+      "tags": [
+        "inventory",
+        "epl",
+        "insert-into"
+      ],
+      "status": "inventoried",
+      "evidence": [
+        "java-runtime-inventory"
+      ],
+      "verification": [
+        "inventoried"
+      ],
+      "remaining": [
+        "Go implementation and differential verification not yet established; inventory only"
+      ]
+    },
+    {
+      "id": "case.inventory.expr-filter-optimizable-condition-negate-confirm",
+      "javaRuntimeIds": [
+        "java-runtime-d57eebcfc31dd1e9d275",
+        "java-runtime-3485653bd0e0b0cbf286",
+        "java-runtime-242207e9ea99c064ed98",
+        "java-runtime-039bc080af94849f6d4e",
+        "java-runtime-e37173386a8bf2fa94d9",
+        "java-runtime-890d49975caf1e483c67",
+        "java-runtime-cdfb1978efed720e909d",
+        "java-runtime-376caa1833427f2bb2dd",
+        "java-runtime-482fe4c2a07693ef8389",
+        "java-runtime-fbf96d04f77c6a07adfe",
+        "java-runtime-b96a9472894ca25eaefe",
+        "java-runtime-d5971a41d89ed58f4489",
+        "java-runtime-7cf6e26617bd164d2a25",
+        "java-runtime-b9ebed213c0a7d708f16",
+        "java-runtime-0fe536daa46f3939b209",
+        "java-runtime-429ddcababef0ae09c6a",
+        "java-runtime-c8d36ee8816ad638f240",
+        "java-runtime-08d80378246709fac86b",
+        "java-runtime-5310a2c94e9bc3f563f3",
+        "java-runtime-c8deb8e15622c612b670",
+        "java-runtime-4ec6bfc4698f3c6da7fb",
+        "java-runtime-56543b93e8bde854dd9d",
+        "java-runtime-7eb800f5e812e345167e",
+        "java-runtime-2064d61ee6efc0d67940",
+        "java-runtime-c46415709e212925605a",
+        "java-runtime-5bdcc8cb1b90f4e444a6"
+      ],
+      "javaNames": [
+        "ExprFilterAndOrUnwinding",
+        "ExprFilterOnePathNegate1Eq2WithDataflow",
+        "ExprFilterOnePathNegate1Eq2WithStage",
+        "ExprFilterOnePathNegate1Eq2WithContextFilter",
+        "ExprFilterOnePathNegate1Eq2WithContextCategory",
+        "ExprFilterOnePathOrLeftLRightV",
+        "ExprFilterOnePathOrLeftLRightVWithPattern",
+        "ExprFilterOnePathAndLeftLRightV",
+        "ExprFilterOnePathAndLeftLRightVWithPattern",
+        "ExprFilterOnePathAndLeftLOrVRightLOrV",
+        "ExprFilterOnePathOrLeftVRightAndWithLL",
+        "ExprFilterOnePathOrWithLVV",
+        "ExprFilterOnePathAndWithOrLVVOrLVOrLV",
+        "ExprFilterTwoPathOrWithLLV",
+        "ExprFilterTwoPathOrLeftLRightAndLWithV",
+        "ExprFilterTwoPathOrLeftOrLVRightOrLV",
+        "ExprFilterTwoPathAndLeftOrLLRightV",
+        "ExprFilterTwoPathAndLeftOrLVRightOrLL",
+        "ExprFilterThreePathOrWithAndLVAndLVAndLV",
+        "ExprFilterFourPathAndWithOrLLOrLL",
+        "ExprFilterFourPathAndWithOrLLOrLLWithV",
+        "ExprFilterFourPathAndWithOrLLOrLLOrVV",
+        "ExprFilterTwoPathAndLeftOrLVVRightLL",
+        "ExprFilterSixPathAndLeftOrLLVRightOrLL",
+        "ExprFilterEightPathLeftOrLLVRightOrLLV",
+        "ExprFilterAnyPathCompileMore"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableConditionNegateConfirm.java"
+      ],
+      "tags": [
+        "inventory",
+        "expr",
+        "filter",
+        "optimizable"
+      ],
+      "status": "inventoried",
+      "evidence": [
+        "java-runtime-inventory"
+      ],
+      "verification": [
+        "inventoried"
+      ],
+      "remaining": [
+        "Go implementation and differential verification not yet established; inventory only"
+      ]
+    },
+    {
+      "id": "case.inventory.infra-nwtable-create-index",
+      "javaRuntimeIds": [
+        "java-runtime-7242c335a588f1d6fa15",
+        "java-runtime-4d509bfd0e311be23afe",
+        "java-runtime-ea8f73c9bd9fc31f1312",
+        "java-runtime-c29b248899a0388e0768",
+        "java-runtime-f4b0d37d40e38914df36",
+        "java-runtime-2bffd7c0683d9195c556",
+        "java-runtime-78145a646789e9674a38",
+        "java-runtime-694aacd1c09bee51ffda",
+        "java-runtime-ae0b11741e8c17c55271",
+        "java-runtime-31d2b97272df49845355",
+        "java-runtime-ba5fc9c488e24b9bae78",
+        "java-runtime-386fcd9642ae114b58af",
+        "java-runtime-b3fc4383cc57caee42ff",
+        "java-runtime-dfaed70d1fe593eeaff6",
+        "java-runtime-e7e73e0b560922423713",
+        "java-runtime-f92e53bb74e3471d66a5",
+        "java-runtime-ef9ec62512971b058e1b",
+        "java-runtime-e2ef7f21884bd471b60f",
+        "java-runtime-1c04a900bd31d5dc0d0b",
+        "java-runtime-a27f8fd61fbafd563173",
+        "java-runtime-4c0e49ebf2ae523ef825",
+        "java-runtime-dbe715ce8e9fbede1285"
+      ],
+      "javaNames": [
+        "InfraMultiRangeAndKey{namedWindow=true}",
+        "InfraMultiRangeAndKey{namedWindow=false}",
+        "InfraHashBTreeWidening{namedWindow=true}",
+        "InfraHashBTreeWidening{namedWindow=false}",
+        "InfraWidening{namedWindow=true}",
+        "InfraWidening{namedWindow=false}",
+        "InfraCompositeIndex{namedWindow=true}",
+        "InfraCompositeIndex{namedWindow=false}",
+        "InfraLateCreate{namedWindow=true}",
+        "InfraLateCreate{namedWindow=false}",
+        "InfraLateCreateSceneTwo{namedWindow=true}",
+        "InfraLateCreateSceneTwo{namedWindow=false}",
+        "InfraMultipleColumnMultipleIndex{namedWindow=true}",
+        "InfraMultipleColumnMultipleIndex{namedWindow=false}",
+        "InfraDropCreate{namedWindow=true}",
+        "InfraDropCreate{namedWindow=false}",
+        "InfraOnSelectReUse{namedWindow=true}",
+        "InfraOnSelectReUse{namedWindow=false}",
+        "InfraInvalid{namedWindow=true}",
+        "InfraInvalid{namedWindow=false}",
+        "InfraMultikeyIndexFAF{isNamedWindow=true}",
+        "InfraMultikeyIndexFAF{isNamedWindow=false}"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableCreateIndex.java"
+      ],
+      "tags": [
+        "inventory",
+        "infra",
+        "index",
+        "named-window",
+        "table"
+      ],
+      "status": "inventoried",
+      "evidence": [
+        "java-runtime-inventory"
+      ],
+      "verification": [
+        "inventoried"
+      ],
+      "remaining": [
+        "Go implementation and differential verification not yet established; inventory only"
+      ]
+    },
+    {
+      "id": "case.inventory.epl-database-join",
+      "javaRuntimeIds": [
+        "java-runtime-dd10cb6cfcc160f4f9da",
+        "java-runtime-a6682a71c8c463babcff",
+        "java-runtime-8961178ee540998a99f3",
+        "java-runtime-fc8c20664fc4787fc987",
+        "java-runtime-fb0cea6fe1e469ee8237",
+        "java-runtime-b86f31a8dc33eda9fc51",
+        "java-runtime-d1a52864d392f7c194e5",
+        "java-runtime-e5109d0a7a6693f0bef9",
+        "java-runtime-4cbe25d2f647599d420a",
+        "java-runtime-6a92efa5731f590e1820",
+        "java-runtime-6ff003e9d79daa5b835d",
+        "java-runtime-197aa4b52632b4230504",
+        "java-runtime-3ddf3346fbe67a639057",
+        "java-runtime-33cc6c0610b2c801c1bb",
+        "java-runtime-0d41625df368897ca97b",
+        "java-runtime-45e68d7cf756824c19eb",
+        "java-runtime-a8180e298e71e8135b38"
+      ],
+      "javaNames": [
+        "EPLDatabaseMySQLDatabaseConnection",
+        "EPLDatabase2HistoricalStar",
+        "EPLDatabase2HistoricalStarInner",
+        "EPLDatabase3Stream",
+        "EPLDatabaseTimeBatch",
+        "EPLDatabaseTimeBatchOM",
+        "EPLDatabaseTimeBatchCompile",
+        "EPLDatabaseInvalidBothHistorical",
+        "EPLDatabaseInvalidPropertyEvent",
+        "EPLDatabaseInvalidPropertyHistorical",
+        "EPLDatabaseInvalid1Stream",
+        "EPLDatabaseInvalidSubviews",
+        "EPLDatabaseWithPattern",
+        "EPLDatabasePropertyResolution",
+        "EPLDatabaseRestartStatement",
+        "EPLDatabaseSimpleJoinRight",
+        "EPLDatabaseJoinIndexNullType"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java"
+      ],
+      "tags": [
+        "inventory",
+        "epl",
+        "database",
+        "join"
+      ],
+      "status": "inventoried",
+      "evidence": [
+        "java-runtime-inventory"
+      ],
+      "verification": [
+        "inventoried"
+      ],
+      "remaining": [
+        "Go implementation and differential verification not yet established; inventory only"
+      ]
     }
   ],
   "mappings": [
@@ -26894,9 +27240,9 @@
     }
   ],
   "summary": {
-    "totalCases": 404,
+    "totalCases": 409,
     "totalCapabilities": 110,
-    "inventoriedCases": 404,
+    "inventoriedCases": 409,
     "implementedCases": 393,
     "differentialVerifiedCases": 22,
     "differentialVerifiedRuntimeIds": 32,
@@ -26909,10 +27255,10 @@
     "intentionallyDifferentCapabilities": 6,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2607,
-    "referencedJavaRuntimeIds": 2522,
+    "runtimeAssociationCount": 2715,
+    "referencedJavaRuntimeIds": 2630,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1614,
+    "unreferencedJavaRuntimeIds": 1506,
     "representativeScenarioTotal": 22,
     "representativeScenarioPassing": 22,
     "currentFailures": [],
@@ -26930,7 +27276,7 @@
       "Twenty-two representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-two listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin runtimes are differential-verified.",
       "The 22-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "237 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ResultSetQueryTypeIterator, EPLOtherStaticFunctions, InfraNamedWindowTypes, ResultSetQueryTypeRowPerGroup, ViewUnion and ViewTimeWin have no Go implementation or differential evidence yet.",
+      "345 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ResultSetQueryTypeIterator, EPLOtherStaticFunctions, InfraNamedWindowTypes, ResultSetQueryTypeRowPerGroup, ViewUnion, ViewTimeWin, ContextKeySegmentedWInitTermPrioritized, EPLInsertInto, ExprFilterOptimizableConditionNegateConfirm, InfraNWTableCreateIndex and EPLDatabaseJoin have no Go implementation or differential evidence yet.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."

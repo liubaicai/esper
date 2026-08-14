@@ -1,3 +1,5 @@
+> 最新补充：Draft 4.65（2026-08-14），再登记五个高风险 Java 类的 108 个未关联 runtime 为 inventoried-only case：`ContextKeySegmentedWInitTermPrioritized`（23）、`EPLInsertInto`（20）、`ExprFilterOptimizableConditionNegateConfirm`（26）、`InfraNWTableCreateIndex`（22）、`EPLDatabaseJoin`（17）。只记录 inventory 证据，不宣称 Go 实现或差分。Manifest 更新为 409 case、2,715 条关联、2,630 个唯一 runtime（63.6%）、未关联 1,506 个。
+
 > 最新补充：Draft 4.64（2026-08-14），再登记五个高风险 Java 类的 90 个未关联 runtime 为 inventoried-only case：`EPLOtherStaticFunctions`（24）、`InfraNamedWindowTypes`（18）、`ResultSetQueryTypeRowPerGroup`（18）、`ViewUnion`（15）、`ViewTimeWin`（15）。只记录 inventory 证据，不宣称 Go 实现或差分。Manifest 更新为 404 case、2,607 条关联、2,522 个唯一 runtime（61.0%）、未关联 1,614 个。
 
 > 最新补充：Draft 4.63（2026-08-14），`resultset-grouped-time-window` 场景扩展 `ResultSet3NoneHavingNoJoin`（`java-runtime-11c5505c0b19dd86671c`）：同一 0-8s 事件序列在 `having sum(price) > 50` 下只输出 IBM 75/97 两条，Java/Go 共 11 records / 0 differences；该 runtime 从 inventoried 提升为 differential-verified，Manifest 更新为 32 个 differential runtime。

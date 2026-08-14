@@ -1,3 +1,5 @@
+本轮再登记五个高风险 Java 类的 108 个未关联 runtime 为 `inventoried` case（只盘点、不宣称实现）：`ContextKeySegmentedWInitTermPrioritized`（23）、`EPLInsertInto`（20）、`ExprFilterOptimizableConditionNegateConfirm`（26）、`InfraNWTableCreateIndex`（22）、`EPLDatabaseJoin`（17）。Manifest v2 更新为 409 case、2,715 条关联、2,630 个唯一 runtime（63.6%）、未关联 runtime 1,506 个；differential/representative 计数不变。
+
 本轮再登记五个高风险 Java 类的 90 个未关联 runtime 为 `inventoried` case（只盘点、不宣称实现）：`EPLOtherStaticFunctions`（24）、`InfraNamedWindowTypes`（18）、`ResultSetQueryTypeRowPerGroup`（18）、`ViewUnion`（15）、`ViewTimeWin`（15）。每个 case 只有 `java-runtime-inventory` 证据与 remaining 说明。Manifest v2 更新为 404 case、2,607 条关联、2,522 个唯一 runtime（61.0%）、未关联 runtime 1,614 个；differential/representative 计数不变。
 
 本轮继续扩展 `resultset-grouped-time-window` 差分场景：新增 `ResultSet3NoneHavingNoJoin`（`java-runtime-11c5505c0b19dd86671c`）case，EPL 增加 `having sum(price) > 50`，与 `ResultSet1NoneNoHavingNoJoin` 共用同一 0-8s 事件序列；Java/Go 各 11 条 records（grouped 9 + having 2）、0 differences。`TestResultSetGroupedTimeWindowHavingIStreamParity` 固定 having 只输出 IBM 75/97 两条；该 runtime 已从 inventoried case 提升为 differential-verified。Manifest v2 更新为 32 个 differential runtime，其余计数不变。
