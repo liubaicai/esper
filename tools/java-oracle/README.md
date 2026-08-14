@@ -332,6 +332,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/output-after-last.json`、`testdata/parity/output-after-last.evidence.json`；当前差异数为 0，覆盖 `ResultSetAfterWithOutputLast`。
 
+## Rollup-output-every oracle
+
+第十六个代表性场景使用 `RollupScenarioOracle.java`（runner：`run-rollup.sh`）。它双跑 `select irstream theString as c0, intPrimitive as c1, sum(longBoxed) as c2 from SupportBean#time(3.5 sec) group by rollup(theString, intPrimitive) output every 1 second`：三个 1 秒输出间隔分别交付 9/9、6/6、3/3 的 new/old rollup 行。
+
+```sh
+./tools/java-oracle/run-rollup.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/rollup-output-every.json \
+  --output /tmp/rollup-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode rollup-diff \
+  -scenario testdata/parity/rollup-output-every.json \
+  -java-trace /tmp/rollup-java.json \
+  -evidence /tmp/rollup.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/rollup-output-every.json`、`testdata/parity/rollup-output-every.evidence.json`；当前差异数为 0，覆盖 `ResultSetOutputDefault{join=false}`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

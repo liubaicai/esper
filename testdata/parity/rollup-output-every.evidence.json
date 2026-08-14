@@ -1,0 +1,917 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-3e89e6297511b7dfe531"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroupRollup.java"
+  ],
+  "javaExecutions": [
+    "ResultSetOutputDefault{join=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "rollup-output-every",
+    "steps": [
+      {
+        "op": "case",
+        "case": "rollup"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longBoxed": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longBoxed": 30
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longBoxed": 40
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longBoxed": 50
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longBoxed": 60
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-output-every",
+    "records": [
+      {
+        "case": "rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 60
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 60
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 70
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 150
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 60
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 60
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 170
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 210
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 150
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-output-every",
+    "records": [
+      {
+        "case": "rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 60
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 60
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 70
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 150
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 60
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 60
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 170
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 210
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 150
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
