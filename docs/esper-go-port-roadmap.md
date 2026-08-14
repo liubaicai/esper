@@ -43,23 +43,23 @@
 
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
-- 最新已提交：`f8d8527c3`（Add output-first-having representative parity scenario）
+- 最新已提交：`718273442`（Add context-keyed-subquery representative parity scenario）
 
 ### 2.2 对账清单
 
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 个 |
-| Case | 390 个 |
+| Case | 391 个 |
 | Case implemented | 354 个 |
-| Case differential-verified | 19 个（27 个 runtime） |
+| Case differential-verified | 20 个（28 个 runtime） |
 | Case intentionally-different | 17 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
-| Runtime 关联 | 2,365 条 |
+| Runtime 关联 | 2,366 条 |
 | 唯一已关联 runtime | 2,283 个 |
 | 未关联 runtime | 1,853 个 |
 | 关联覆盖率 | 55.1% |
-| Representative scenario | 19/19 通过 |
+| Representative scenario | 20/20 通过 |
 | NFR | 0 个已验证 |
 
 > 覆盖率 = 唯一已关联 Java runtime / inventory 中 `status=ok` runtime。它表示“已建立 Java runtime 对账/处置证据”的进度，不是“Go 已通过 parity”的比例。Manifest v2 的 `implemented` 只表示 Go 实现和测试登记，只有 `differential-verified` 才有已保存的 Java/Go trace 差分证据。
@@ -159,7 +159,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 Java/Go persisted differential evidence；当前已有 19 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`、`high-cardinality-context`、`time-window-long-running`、`dataflow-connector-output`、`output-after-last`、`rollup-output-every`、`match-recognize-simple`、`unidirectional-aggregate-join`、`output-first-having`）。
+2. 扩展 Java/Go persisted differential evidence；当前已有 20 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`、`high-cardinality-context`、`time-window-long-running`、`dataflow-connector-output`、`output-after-last`、`rollup-output-every`、`match-recognize-simple`、`unidirectional-aggregate-join`、`output-first-having`、`context-keyed-subquery`）。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 启动外部服务 fixture 后重新执行 Kafka、RabbitMQ 和 MySQL 门控测试；未启动时保持显式 skip。
 
