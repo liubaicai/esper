@@ -3595,6 +3595,7 @@
         "internal/esper/expr_filter_in_and_between_parity_test.go",
         "internal/esper/expr_filter_where_clause_parity_test.go",
         "internal/esper/expr_filter_optimizable_parity_test.go",
+        "internal/esper/expr_filter_optimizable_condition_negate_confirm_parity_test.go",
         "internal/esper/expr_filter_pattern_enum_parity_test.go",
         "internal/esper/expr_filter_remaining_parity_test.go",
         "internal/esper/expr.go",
@@ -25682,21 +25683,36 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableConditionNegateConfirm.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "expr",
         "filter",
-        "optimizable"
+        "optimizable",
+        "context",
+        "pattern",
+        "boolean"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
+      ],
+      "goTests": [
+        "TestExprFilterOptimizableConditionNegateConfirmParity"
       ],
       "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+        "ExprFilterAndOrUnwinding filter-plan node canonicalization assertions",
+        "ExprFilterOnePathNegate1Eq2WithDataflow / Stage / ContextFilter / ContextCategory lifecycle variants",
+        "ExprFilterOnePathOrLeftLRightVWithPattern / AndLeftLRightVWithPattern pattern-with-filter variants",
+        "remaining multi-path boolean matrices (ThreePath, FourPathWithV/OrVV, TwoPathAndLeftOrLVVRightLL, SixPath, EightPath, AnyPathCompileMore)",
+        "full Java differential trace for the covered ExprFilterOptimizableConditionNegateConfirm executions"
+      ],
+      "difference": "Go covers ten listener-observable executions with typed context and pattern filters: OnePathAndLeftLRightV, OnePathOrLeftLRightV, TwoPathAndLeftOrLLRightV, TwoPathAndLeftOrLVRightOrLL, FourPathAndWithOrLLOrLL, OnePathAndWithOrLVVOrLVOrLV, OnePathAndLeftLOrVRightLOrV, TwoPathOrLeftLRightAndLWithV, TwoPathOrWithLLV and OnePathOrWithLVV. Context start/end use CreateInitiatedTerminatedContext with TypeName predicates; pattern variants use PatternFrom(...).Every().Then(...) with TagField. The Java SupportFilterPlanHook plan-node assertions and the dataflow/stage/context-category/pattern variants remain open."
     },
     {
       "id": "case.inventory.infra-nwtable-create-index",
@@ -27273,6 +27289,10 @@
       "caseId": "case.expr-filter-optimizable"
     },
     {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.inventory.expr-filter-optimizable-condition-negate-confirm"
+    },
+    {
       "capabilityId": "view.basic-windows",
       "caseId": "case.view-unique-basic"
     },
@@ -27633,7 +27653,7 @@
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 404,
+    "implementedCases": 405,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 18,
@@ -27666,7 +27686,7 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "155 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, ResultSetOutputLimitRowPerGroupRollup, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm and InfraNWTableCreateIndex have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18) and InfraNWTableOnSelect (28) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants and InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants still open.",
+      "129 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, ResultSetOutputLimitRowPerGroupRollup, ContextKeySegmentedWInitTermPrioritized and InfraNWTableCreateIndex have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18), InfraNWTableOnSelect (28) and ExprFilterOptimizableConditionNegateConfirm (26) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants, InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants and ExprFilter plan-hook/dataflow/stage/pattern variants still open.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."
