@@ -1,0 +1,273 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-78f23a1b470f6bd625c4"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesOnSet.java"
+  ],
+  "javaExecutions": [
+    "EPLVariableOnSetWDeploy"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "variable-deploy",
+    "steps": [
+      {
+        "op": "case",
+        "case": "deploy-variable"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S2",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 5
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "variable-deploy",
+    "records": [
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1",
+              "var1RTC": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2",
+              "var1RTC": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1RTC": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3",
+              "var1RTC": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1RTC": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4",
+              "var1RTC": -1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "variable-deploy",
+    "records": [
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1",
+              "var1RTC": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2",
+              "var1RTC": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1RTC": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3",
+              "var1RTC": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1RTC": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "deploy-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4",
+              "var1RTC": -1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

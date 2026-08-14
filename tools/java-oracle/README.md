@@ -192,6 +192,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/table-mutation.json`、`testdata/parity/table-mutation.evidence.json`；当前差异数为 0，覆盖 `InfraTableOnUpdateTwoKey`。
 
+## Variable-deploy oracle
+
+第九个代表性场景使用 `VariableDeployScenarioOracle.java`（runner：`run-variable-deploy.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)`，双跑 `create variable int var1RTC = 10`、`select var1RTC, theString from SupportBean(theString like 'E%')` 与 `on SupportBean(theString like 'S%') set var1RTC = intPrimitive`：select 先部署并读默认 10，set 后部署后 E 事件读到 3/-1、S 事件 set listener 输出 3/-1。
+
+```sh
+./tools/java-oracle/run-variable-deploy.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/variable-deploy.json \
+  --output /tmp/variable-deploy-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode variable-deploy-diff \
+  -scenario testdata/parity/variable-deploy.json \
+  -java-trace /tmp/variable-deploy-java.json \
+  -evidence /tmp/variable-deploy.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/variable-deploy.json`、`testdata/parity/variable-deploy.evidence.json`；当前差异数为 0，覆盖 `EPLVariableOnSetWDeploy`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

@@ -3946,7 +3946,9 @@
       "goRefs": [
         "internal/esper/variable_onset_parity_test.go",
         "internal/esper/trigger.go",
-        "internal/esper/variable.go"
+        "internal/esper/variable.go",
+        "internal/esper/variable_deploy_parity_test.go",
+        "internal/app/parity/variable_deploy.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -3958,7 +3960,15 @@
       ],
       "verification": [
         "inventoried",
-        "implemented"
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-78f23a1b470f6bd625c4"
+      ],
+      "representativeScenarioIds": [
+        "variable-deploy"
       ]
     },
     {
@@ -22446,21 +22456,37 @@
         "TestVariableOnSetCoercionParity",
         "TestVariableOnSetRuntimeOrderMultipleParity",
         "TestVariableOnSetWDeployParity",
-        "TestVariableOnSetInvalidParity"
+        "TestVariableOnSetInvalidParity",
+        "TestVariableDeployOrderParity",
+        "TestRunVariableDeployDiffWritesPassingEvidence",
+        "TestRunVariableDeployDiffRejectsTraceMutations"
       ],
       "tags": [
         "variable",
         "on-set",
-        "trigger"
+        "trigger",
+        "differential",
+        "representative"
       ],
-      "status": "implemented",
+      "status": "differential-verified",
       "evidence": [
-        "8 of 18 EPLVariablesOnSet runtimes mapped: simple boolean flip with dependent select, ordered no-dup and dup batch assignments, trigger-stream filter gating, numeric coercion (int to float32/float64/int64), OR-filtered multi-variable trigger with dependent select, deploy-order select, and build-time invalid diagnostics"
+        "8 of 18 EPLVariablesOnSet runtimes mapped: simple boolean flip with dependent select, ordered no-dup and dup batch assignments, trigger-stream filter gating, numeric coercion (int to float32/float64/int64), OR-filtered multi-variable trigger with dependent select, deploy-order select, and build-time invalid diagnostics",
+        "java-oracle",
+        "differential-evidence",
+        "mutation"
       ],
       "difference": "nullable Integer boxed column uses a plain Go int (Go value model; the nullable *int trigger-expression dereference is tracked separately); SODA object-model, subquery, array-index and inlined-class executions remain open",
       "verification": [
         "inventoried",
-        "implemented"
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-78f23a1b470f6bd625c4"
+      ],
+      "representativeScenarioIds": [
+        "variable-deploy"
       ]
     },
     {
@@ -25307,23 +25333,23 @@
     "totalCapabilities": 110,
     "inventoriedCases": 380,
     "implementedCases": 380,
-    "differentialVerifiedCases": 8,
-    "differentialVerifiedRuntimeIds": 15,
+    "differentialVerifiedCases": 9,
+    "differentialVerifiedRuntimeIds": 16,
     "intentionallyDifferentCases": 17,
-    "representativeVerifiedCases": 8,
+    "representativeVerifiedCases": 9,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
-    "differentialVerifiedCapabilities": 8,
+    "differentialVerifiedCapabilities": 9,
     "intentionallyDifferentCapabilities": 6,
-    "representativeVerifiedCapabilities": 8,
+    "representativeVerifiedCapabilities": 9,
     "nfrVerifiedCapabilities": 0,
     "runtimeAssociationCount": 2354,
     "referencedJavaRuntimeIds": 2282,
     "totalJavaRuntimeIds": 4136,
     "unreferencedJavaRuntimeIds": 1854,
-    "representativeScenarioTotal": 8,
-    "representativeScenarioPassing": 8,
+    "representativeScenarioTotal": 9,
+    "representativeScenarioPassing": 9,
     "currentFailures": [],
     "currentSkips": [
       "connectors/kafka.TestKafkaDockerRoundTrip: ESPER_KAFKA_BROKERS is unset; run the Kafka fixture from docs/integration/external-services.md",
@@ -25335,8 +25361,8 @@
       "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
     ],
     "risks": [
-      "Eight representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window records contain broad implemented subsets; only the fifteen listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey runtimes are differential-verified.",
+      "Nine representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset records contain broad implemented subsets; only the sixteen listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy runtimes are differential-verified.",
       "No 20-scenario representative suite, stress load, fuzz/property suite, or Java-vs-Go performance baseline is complete.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
     ],

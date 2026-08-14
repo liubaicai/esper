@@ -1,0 +1,58 @@
+{
+  "version": "esper-parity/v1",
+  "id": "variable-deploy",
+  "steps": [
+    {
+      "op": "case",
+      "case": "deploy-variable"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S1",
+        "intPrimitive": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 4
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S2",
+        "intPrimitive": -1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E4",
+        "intPrimitive": 5
+      }
+    }
+  ]
+}
