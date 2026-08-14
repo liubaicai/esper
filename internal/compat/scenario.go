@@ -142,8 +142,10 @@ func Replay(ctx context.Context, engine *esper.Engine, statement *esper.Statemen
 	}
 	trace := Trace{Version: ScenarioVersion, ID: scenario.ID}
 	var mu sync.Mutex
+	var listenerSequence uint64
 	_, err := statement.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
-		record := TraceRecord{Operation: "listener", Statement: statement.Name(), Sequence: batch.Sequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
+		listenerSequence++
+		record := TraceRecord{Operation: "listener", Statement: statement.Name(), Sequence: listenerSequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
 		record.New = normalizeResults(batch.New)
 		record.Old = normalizeResults(batch.Old)
 		mu.Lock()
@@ -197,15 +199,17 @@ func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *
 	}
 	trace := Trace{Version: ScenarioVersion, ID: scenario.ID}
 	caseName := ""
-	appendBatch := func(caseName, operation string, current *esper.Statement, batch esper.ResultBatch, selector esper.ContextPartitionSelector) {
-		record := TraceRecord{Case: caseName, Operation: operation, Statement: current.Name(), Sequence: batch.Sequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
+	var listenerSequence uint64
+	appendBatch := func(caseName, operation string, current *esper.Statement, batch esper.ResultBatch, selector esper.ContextPartitionSelector, sequence uint64) {
+		record := TraceRecord{Case: caseName, Operation: operation, Statement: current.Name(), Sequence: sequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
 		record.New = normalizeResults(batch.New)
 		record.Old = normalizeResults(batch.Old)
 		record.Partitions = normalizePartitions(current.ContextPartitionsWith(selector))
 		trace.Records = append(trace.Records, record)
 	}
 	if _, err := statement.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
-		appendBatch(caseName, "listener", statement, batch, nil)
+		listenerSequence++
+		appendBatch(caseName, "listener", statement, batch, nil, listenerSequence)
 		return nil
 	}); err != nil {
 		return Trace{}, err
@@ -263,7 +267,7 @@ func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *
 				return trace, err
 			}
 			batch := result.Batch
-			appendBatch(caseName, step.Op, current, batch, selector)
+			appendBatch(caseName, step.Op, current, batch, selector, 0)
 		}
 	}
 	return trace, nil

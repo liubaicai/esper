@@ -24,7 +24,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window or join-length-window-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy or output-policy-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -87,6 +87,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, joinLengthWindowJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, joinLengthWindowJavaSources),
 				splitMetadata(*javaExecutions, joinLengthWindowJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "output-policy" || *mode == "output-policy-diff" {
+		trace, err := runOutputPolicyScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "output-policy-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, outputPolicyJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, outputPolicyJavaSources),
+				splitMetadata(*javaExecutions, outputPolicyJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -160,6 +160,7 @@ type ResultBatch struct {
 	outputRemoved   int64
 	outputKeysNew   []string
 	outputKeysOld   []string
+	inputKeysNew    []string
 }
 
 func (b ResultBatch) empty() bool { return len(b.New) == 0 && len(b.Old) == 0 }
@@ -169,6 +170,7 @@ func (b ResultBatch) clone() ResultBatch {
 	b.Old = append([]Result(nil), b.Old...)
 	b.outputKeysNew = append([]string(nil), b.outputKeysNew...)
 	b.outputKeysOld = append([]string(nil), b.outputKeysOld...)
+	b.inputKeysNew = append([]string(nil), b.inputKeysNew...)
 	return b
 }
 
@@ -4898,27 +4900,27 @@ type patternMatch struct {
 }
 
 type outputRuntimeState struct {
-	firstEmitted      int
-	firstEverySeen    int
-	firstEveryStarted bool
-	firstEveryGroups  map[string]struct{}
-	firstEveryNext    map[string]time.Time
-	lastEverySeen     int
-	pending           *ResultBatch
-	pendingCount      int
-	whenPending       *ResultBatch
-	afterSeen         int
-	afterActive       bool
-	afterStarted      time.Time
-	nextOutputAt      time.Time
-	cronNext          time.Time
-	cronSchedule      resolvedCronSchedule
-	cronPending       *ResultBatch
-	insertCount       int64
-	removeCount       int64
-	insertTotal       int64
-	removeTotal       int64
-	lastOutputAt      time.Time
+	firstEmitted        int
+	firstEverySeen      int
+	firstEveryWitnessed bool
+	firstEveryCounts    map[string]int
+	firstEveryNext      map[string]time.Time
+	lastEverySeen       int
+	pending             *ResultBatch
+	pendingCount        int
+	whenPending         *ResultBatch
+	afterSeen           int
+	afterActive         bool
+	afterStarted        time.Time
+	nextOutputAt        time.Time
+	cronNext            time.Time
+	cronSchedule        resolvedCronSchedule
+	cronPending         *ResultBatch
+	insertCount         int64
+	removeCount         int64
+	insertTotal         int64
+	removeTotal         int64
+	lastOutputAt        time.Time
 	// lastOutputGroupRows retains the last emitted row per group for default
 	// count/time output policies (output every N/time). Esper's statement
 	// iterator for those policies reads the last output rather than live
@@ -7484,40 +7486,103 @@ func (r *statementRuntime) applyFirstEveryEvents(policy OutputPolicy, batch Resu
 	if r == nil || r.outputState == nil {
 		return ResultBatch{}
 	}
-	state := r.outputState
-	if state.firstEveryGroups == nil {
-		state.firstEveryGroups = make(map[string]struct{})
+	grouped := false
+	if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 {
+		grouped = true
 	}
-	if !state.firstEveryStarted {
+	if grouped {
+		return r.applyFirstEveryEventsGrouped(policy, batch, now, plans...)
+	}
+	return r.applyFirstEveryEventsUngrouped(policy, batch, now, plans...)
+}
+
+// applyFirstEveryEventsUngrouped mirrors Esper's OutputProcessViewConditionFirst:
+// the first relevant result emits immediately, then the global count includes
+// every accepted input event (having-filtered events count after the first
+// output), and the next relevant result after count events emits.
+func (r *statementRuntime) applyFirstEveryEventsUngrouped(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
+	state := r.outputState
+	count := len(batch.New) + len(batch.Old)
+	if batch.outputCountsSet {
+		count = int(batch.outputInserted) + int(batch.outputRemoved)
+	}
+	if !state.firstEveryWitnessed {
 		if batch.empty() {
 			return ResultBatch{}
 		}
-		state.firstEveryStarted = true
-		state.firstEverySeen = 0
-		result := selectFirstOutputByGroup(batch, func(key string) bool {
-			if _, exists := state.firstEveryGroups[key]; exists {
-				return false
-			}
-			state.firstEveryGroups[key] = struct{}{}
-			return true
-		})
-		return r.finishOutput(policy, result, now, plans...)
+		state.firstEveryWitnessed = true
+		state.firstEverySeen = count
+		return r.finishOutput(policy, batch, now, plans...)
 	}
-	state.firstEverySeen += acceptedOutputEventCount(batch)
+	state.firstEverySeen += count
 	if state.firstEverySeen >= policy.Count {
 		state.firstEverySeen = 0
-		clearOutputGroupSet(state.firstEveryGroups)
+		state.firstEveryWitnessed = false
 	}
-	if batch.empty() {
+	return ResultBatch{}
+}
+
+// applyFirstEveryEventsGrouped mirrors Esper's per-group OutputConditionPolledCount:
+// each group's first event passes immediately, then every N subsequent events
+// for that group pass. Events that fail a grouped having clause do not count.
+func (r *statementRuntime) applyFirstEveryEventsGrouped(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
+	state := r.outputState
+	if state.firstEveryCounts == nil {
+		state.firstEveryCounts = make(map[string]int)
+	}
+	visible := make(map[string]int, len(batch.New))
+	for index := range batch.New {
+		visible[outputGroupKey(batch.outputKeysNew, index)] = index
+	}
+	keys := batch.inputKeysNew
+	if len(keys) == 0 {
+		keys = append([]string(nil), batch.outputKeysNew...)
+	}
+	emit := make(map[string]struct{}, len(keys))
+	for _, key := range keys {
+		count, exists := state.firstEveryCounts[key]
+		if !exists {
+			state.firstEveryCounts[key] = 0
+			if _, ok := visible[key]; ok {
+				emit[key] = struct{}{}
+			}
+			continue
+		}
+		count++
+		if count >= policy.Count {
+			state.firstEveryCounts[key] = 0
+			if _, ok := visible[key]; ok {
+				emit[key] = struct{}{}
+			}
+			continue
+		}
+		state.firstEveryCounts[key] = count
+	}
+	result := ResultBatch{Time: batch.Time}
+	for index, item := range batch.New {
+		key := outputGroupKey(batch.outputKeysNew, index)
+		if _, ok := emit[key]; !ok {
+			continue
+		}
+		result.New = append(result.New, item)
+		if len(batch.outputKeysNew) > index {
+			result.outputKeysNew = append(result.outputKeysNew, key)
+		}
+	}
+	for index, item := range batch.Old {
+		key := outputGroupKey(batch.outputKeysOld, index)
+		if _, seen := state.firstEveryCounts[key]; seen {
+			continue
+		}
+		state.firstEveryCounts[key] = 0
+		result.Old = append(result.Old, item)
+		if len(batch.outputKeysOld) > index {
+			result.outputKeysOld = append(result.outputKeysOld, key)
+		}
+	}
+	if result.empty() {
 		return ResultBatch{}
 	}
-	result := selectFirstOutputByGroup(batch, func(key string) bool {
-		if _, exists := state.firstEveryGroups[key]; exists {
-			return false
-		}
-		state.firstEveryGroups[key] = struct{}{}
-		return true
-	})
 	return r.finishOutput(policy, result, now, plans...)
 }
 
@@ -7646,12 +7711,6 @@ func selectFirstOutputByGroup(batch ResultBatch, allow func(string) bool) Result
 		appendOld(index)
 	}
 	return result
-}
-
-func clearOutputGroupSet(groups map[string]struct{}) {
-	for key := range groups {
-		delete(groups, key)
-	}
 }
 
 func outputGroupKey(keys []string, index int) string {
@@ -7791,7 +7850,7 @@ func (r *statementRuntime) snapshotAggregateBatch(plan Plan, now time.Time) Resu
 		return r.snapshotAggregateFromTable(plan, now)
 	}
 	if r != nil && plan.query.aggregate != nil && outputLimitedGroupedIterator(plan.query.output) && len(aggregateGroupingSetsForDefinition(plan.query.aggregate)) == 1 {
-		return r.snapshotOutputLimitedAggregateBatch(plan, now)
+		return r.snapshotOutputLimitedAggregateBatch(plan, now, false)
 	}
 	return r.snapshotAggregateStateBatch(plan, now)
 }
@@ -7807,6 +7866,23 @@ func outputLimitedGroupedIterator(policy OutputPolicy) bool {
 	switch policy.Kind {
 	case OutputEveryPolicy, OutputEveryTimePolicy:
 		return !policy.Snapshot
+	default:
+		return false
+	}
+}
+
+// outputPolicyIteratorUsesSourceOrder reports whether Esper's statement
+// iterator for this output policy walks the current filtered source and
+// returns one live row per group. Default count/time policies use the
+// last-output rows instead; snapshot-every, first-every and last-every
+// policies expose the live aggregate state in source order.
+func outputPolicyIteratorUsesSourceOrder(policy OutputPolicy) bool {
+	if policy.Snapshot {
+		return policy.Kind == OutputEveryPolicy || policy.Kind == OutputEveryTimePolicy
+	}
+	switch policy.Kind {
+	case OutputEveryPolicy, OutputEveryTimePolicy, OutputFirstEveryEventsPolicy, OutputFirstEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy:
+		return true
 	default:
 		return false
 	}
@@ -7833,10 +7909,15 @@ func (r *statementRuntime) recordOutputGroupRows(plan Plan, batch ResultBatch) {
 }
 
 func (r *statementRuntime) removeOutputGroupRow(key string) {
-	if r == nil || r.outputState == nil || r.outputState.lastOutputGroupRows == nil {
+	if r == nil || r.outputState == nil {
 		return
 	}
-	delete(r.outputState.lastOutputGroupRows, key)
+	if r.outputState.lastOutputGroupRows != nil {
+		delete(r.outputState.lastOutputGroupRows, key)
+	}
+	if r.outputState.firstEveryCounts != nil {
+		delete(r.outputState.firstEveryCounts, key)
+	}
 }
 
 // snapshotOutputLimitedAggregateBatch implements Esper's iterator contract for
@@ -7847,7 +7928,7 @@ func (r *statementRuntime) removeOutputGroupRow(key string) {
 // aggregates. Java's OutputProcessViewConditionDefault iterator walks the
 // parent view and reads the per-group rows retained by the output process;
 // this mirrors that behavior without changing listener delivery.
-func (r *statementRuntime) snapshotOutputLimitedAggregateBatch(plan Plan, now time.Time) ResultBatch {
+func (r *statementRuntime) snapshotOutputLimitedAggregateBatch(plan Plan, now time.Time, live bool) ResultBatch {
 	result := ResultBatch{Time: now}
 	if r == nil || r.outputState == nil || plan.query.aggregate == nil || len(plan.query.aggregate.groupBy) == 0 || r.aggregateState == nil {
 		return result
@@ -7865,22 +7946,37 @@ func (r *statementRuntime) snapshotOutputLimitedAggregateBatch(plan Plan, now ti
 			continue
 		}
 		seen[key] = struct{}{}
-		if row, exists := r.outputState.lastOutputGroupRows[key]; exists {
-			result.New = append(result.New, row)
-			result.outputKeysNew = append(result.outputKeysNew, key)
-			continue
+		if !live {
+			if row, exists := r.outputState.lastOutputGroupRows[key]; exists {
+				result.New = append(result.New, row)
+				result.outputKeysNew = append(result.outputKeysNew, key)
+				continue
+			}
 		}
 		current := event
 		var pluginStates map[*exprNode]aggregatePluginState
 		var multiPluginStates map[string]aggregateMultiPluginState
+		var groupEvents []Event
+		var groupEverEvents []Event
+		groupingSetIndex := groupingSet
+		hasGroup := false
 		if group := r.aggregateState.groups[key]; group != nil {
 			if group.current.Schema().Name() != "" {
 				current = group.current
 			}
 			pluginStates = group.pluginStates
 			multiPluginStates = group.multiPluginStates
+			hasGroup = true
+			if live {
+				groupEvents = group.events
+				groupEverEvents = group.everEvents
+				groupingSetIndex = group.groupingSet
+			}
 		}
-		values, visible := evaluateAggregateGroup(definition, nil, nil, nil, false, groupingSet, current, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, pluginStates, multiPluginStates)
+		if live && !hasGroup {
+			continue
+		}
+		values, visible := evaluateAggregateGroup(definition, groupEvents, groupEverEvents, nil, false, groupingSetIndex, current, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, pluginStates, multiPluginStates)
 		if !visible {
 			continue
 		}
@@ -8248,6 +8344,9 @@ func (r *statementRuntime) outputWhenMatches(condition Expr, now time.Time) bool
 func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
 	if r == nil || batch.empty() {
 		return batch
+	}
+	if batch.Sequence == 0 {
+		batch.Sequence = r.seq.Add(1)
 	}
 	if len(plans) > 0 && deferOutputResultWindow(plans[0].query.output) {
 		batch.New = orderResults(batch.New, plans[0].query.orderBy, now, r.variables)
@@ -14538,6 +14637,13 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	batch.outputCountsSet = true
 	batch.outputInserted = int64(len(delta.newEvents))
 	batch.outputRemoved = int64(len(delta.oldEvents))
+	if definition.having == nil {
+		for _, event := range delta.newEvents {
+			for _, groupingSet := range groupingSets {
+				batch.inputKeysNew = append(batch.inputKeysNew, aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables))
+			}
+		}
+	}
 	newEntries := make([]aggregateResultEntry, 0, len(affected))
 	oldEntries := make([]aggregateResultEntry, 0, len(affected))
 	for _, key := range affected {

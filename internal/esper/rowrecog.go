@@ -2557,6 +2557,10 @@ func (r *statementRuntime) snapshotQuery(plan Plan, now time.Time, variables map
 	if plan.query.rowRecog != nil {
 		return r.snapshotRowRecog(plan, now, variables)
 	}
+	if plan.query.aggregate != nil && outputPolicyIteratorUsesSourceOrder(plan.query.output) &&
+		len(aggregateGroupingSetsForDefinition(plan.query.aggregate)) == 1 {
+		return r.snapshotOutputLimitedAggregateBatch(plan, now, !outputLimitedGroupedIterator(plan.query.output))
+	}
 	return r.snapshotBatch(plan, now)
 }
 

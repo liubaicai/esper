@@ -1,0 +1,234 @@
+{
+  "version": "esper-parity/v1",
+  "id": "output-policy-iterator",
+  "steps": [
+    {
+      "op": "case",
+      "case": "all-every-3"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "A",
+        "price": 11
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "B",
+        "price": 12
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "A",
+        "price": 13
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "B",
+        "price": 14
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "A",
+        "price": 20
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "B",
+        "price": 15
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "first-every-3"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "A",
+        "price": 11
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "B",
+        "price": 12
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "A",
+        "price": 13
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "B",
+        "price": 14
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "A",
+        "price": 20
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "B",
+        "price": 15
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "last-every-3"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "A",
+        "price": 11
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "B",
+        "price": 12
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "A",
+        "price": 13
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "B",
+        "price": 14
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "A",
+        "price": 20
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Trade",
+      "payload": {
+        "symbol": "B",
+        "price": 15
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    }
+  ]
+}
