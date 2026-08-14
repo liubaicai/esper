@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -668,6 +669,9 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	if err := validateStatementMetadata(query.statementMetadata); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "statement metadata", err)
 	}
+	if err := e.validateReclaimHintParameters(query.statementMetadata); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "statement metadata", err)
+	}
 
 	description := query.description()
 	if query.routeTarget != "" {
@@ -956,6 +960,30 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 		resultSchema:    resultSchema,
 		indexPlan:       indexPlan.clone(),
 	}, nil
+}
+
+func (e *Environment) validateReclaimHintParameters(metadata statementMetadata) error {
+	if e == nil {
+		return nil
+	}
+	for _, hint := range metadata.hints {
+		switch hint.kind {
+		case HintReclaimGroupAged, HintReclaimGroupFreq:
+			for _, parameter := range hint.parameters {
+				if value, err := strconv.ParseFloat(parameter, 64); err == nil {
+					if value <= 0 {
+						return NewError(ErrorInvalidRule, fmt.Sprintf("reclaim hint parameter %q must be a positive seconds value", parameter))
+					}
+					continue
+				}
+				if definition, ok := e.Variable(parameter); ok && isNumericType(definition.Type()) {
+					continue
+				}
+				return NewError(ErrorInvalidRule, fmt.Sprintf("reclaim hint parameter %q must be a numeric seconds value or a numeric variable name", parameter))
+			}
+		}
+	}
+	return nil
 }
 
 func canonicalDataflowSelect(operator DataflowOperator) string {

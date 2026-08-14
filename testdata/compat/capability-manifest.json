@@ -3778,7 +3778,8 @@
         "internal/esper/rollup_output_every_parity_test.go",
         "internal/app/parity/rollup.go",
         "internal/esper/output_first_having_parity_test.go",
-        "internal/app/parity/output_first_having.go"
+        "internal/app/parity/output_first_having.go",
+        "internal/esper/resultset_row_per_group_parity_test.go"
       ],
       "phase": 2,
       "status": "implemented",
@@ -25119,20 +25120,50 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowPerGroup.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "resultset",
-        "row-per-group"
+        "aggregate",
+        "group-by",
+        "row-per-group",
+        "irstream",
+        "window-access",
+        "array-key",
+        "null-key",
+        "reclaim",
+        "output-snapshot",
+        "join",
+        "named-window",
+        "time-batch"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
       ],
-      "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+      "goTests": [
+        "TestResultSetRowPerGroupSumOneViewParity",
+        "TestResultSetRowPerGroupSumJoinParity",
+        "TestResultSetRowPerGroupCriteriaByDotMethodParity",
+        "TestResultSetRowPerGroupNamedWindowDeleteParity",
+        "TestResultSetRowPerGroupUnboundStreamUnlimitedKeyParity",
+        "TestResultSetRowPerGroupAggregateGroupedPropsParity",
+        "TestResultSetRowPerGroupAggregateGroupedPropsPerGroupParity",
+        "TestResultSetRowPerGroupAggregationOverGroupedPropsParity",
+        "TestResultSetRowPerGroupUniqueInBatchParity",
+        "TestResultSetRowPerGroupSelectAvgExprGroupByParity",
+        "TestResultSetRowPerGroupUnboundStreamIterateParity",
+        "TestResultSetRowPerGroupReclaimSideBySideParity",
+        "TestResultSetRowPerGroupMultikeyWArrayParity",
+        "TestResultSetRowPerGroupMultikeyWReclaimParity",
+        "TestResultSetRowPerGroupNullGroupKeyParity"
+      ],
+      "difference": "Go implements the ResultSetQueryTypeRowPerGroup executions with typed GroupBy/Select chains: irstream grouped sum/avg over length windows and joins, grouped count by one/two keys with iterator order, order-by grouped aggregates, avg-expr group-by, method-expression group keys, output snapshot every N with live unbound iterators, named-window delete group reset to null rows, per-group window access, int-array group keys (unbound/keepall/join), null-typed group keys, and time-batch+unique grouped delivery. New runtime features: reclaim_group_aged/freq hints (sweep on aggregate enter, nextSweepTime = now+freq, groups older than aged dropped, numeric or numeric-variable parameters, invalid parameters rejected at Build), insertion-ordered aggregate groups (Java LinkedHashMap iterator order), unbound-source aggregate iterator fallback to live groups, and consistent group removal from the order tracker. The 1000-key unlimited-key execution is covered by a reduced 40-key variant with the same aged/freq boundaries; Java TestSuiteResultSetQueryType#testResultSetQueryTypeRowPerGroup passes at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c. These executions are implemented but not yet differential-verified."
     },
     {
       "id": "case.inventory.view-union",
@@ -27433,13 +27464,17 @@
     {
       "capabilityId": "infra.namedwindow.views",
       "caseId": "case.inventory.infra-named-window-types"
+    },
+    {
+      "capabilityId": "resultset.aggregate-group-by",
+      "caseId": "case.inventory.resultset-query-type-row-per-group"
     }
   ],
   "summary": {
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 398,
+    "implementedCases": 399,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 18,
@@ -27472,7 +27507,7 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "276 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ResultSetQueryTypeIterator, EPLOtherStaticFunctions, ResultSetQueryTypeRowPerGroup, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm, InfraNWTableCreateIndex and EPLDatabaseJoin have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15) and InfraNamedWindowTypes (18) executions were implemented in prior slices (not yet differential-verified).",
+      "259 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ResultSetQueryTypeIterator, EPLOtherStaticFunctions, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm, InfraNWTableCreateIndex and EPLDatabaseJoin have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18) and ResultSetQueryTypeRowPerGroup (17) executions were implemented in prior slices (not yet differential-verified).",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."

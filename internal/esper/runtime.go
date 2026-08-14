@@ -4618,6 +4618,7 @@ type statementRuntime struct {
 	contextProperties        map[string]Value
 	variables                map[string]Value
 	methodDependencies       map[string]Event
+	nextReclaimSweep         time.Time
 	joinLineageSeq           uint64
 	subqueryRegistry         *subqueryRuntimeRegistry
 	seq                      *atomic.Uint64
@@ -4648,6 +4649,7 @@ type aggregateRuntimeState struct {
 	groups        map[string]*aggregateGroup
 	allEvents     []Event
 	allEverEvents []Event
+	groupOrder    []string
 }
 
 type aggregateGroup struct {
@@ -4658,6 +4660,7 @@ type aggregateGroup struct {
 	multiPluginStates map[string]aggregateMultiPluginState
 	representative    Event
 	current           Event
+	lastActivity      time.Time
 	groupingSet       []int
 	leaving           bool
 	previous          []Value
@@ -8008,13 +8011,20 @@ func (r *statementRuntime) removeOutputGroupRow(key string) {
 // this mirrors that behavior without changing listener delivery.
 func (r *statementRuntime) snapshotOutputLimitedAggregateBatch(plan Plan, now time.Time, live bool) ResultBatch {
 	result := ResultBatch{Time: now}
-	if r == nil || r.outputState == nil || plan.query.aggregate == nil || len(plan.query.aggregate.groupBy) == 0 || r.aggregateState == nil {
+	if r == nil || r.outputState == nil || plan.query.aggregate == nil || r.aggregateState == nil {
 		return result
 	}
 	definition := plan.query.aggregate
 	events := r.currentStreamEvents(plan.query.input, now)
 	if len(events) == 0 {
-		return result
+		// Unbound sources have no window state to enumerate; Java's
+		// output-limited grouped aggregate iterator still exposes the
+		// current aggregate groups.
+		return r.snapshotAggregateStateBatch(plan, now)
+	}
+	if len(definition.groupBy) == 0 {
+		// Ungrouped aggregates expose the single live row.
+		return r.snapshotAggregateStateBatch(plan, now)
 	}
 	groupingSet := allGroupingSetIndices(len(definition.groupBy))
 	seen := make(map[string]struct{}, len(events))
@@ -8093,11 +8103,28 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 	if r == nil || definition == nil || r.aggregateState == nil {
 		return result
 	}
-	keys := make([]string, 0, len(r.aggregateState.groups))
-	for key := range r.aggregateState.groups {
-		keys = append(keys, key)
+	// Java's grouped aggregate iterator preserves group creation order
+	// (LinkedHashMap). groupOrder tracks that order; groups created through
+	// paths that bypass markAffected fall back to a stable sorted order.
+	keys := append([]string(nil), r.aggregateState.groupOrder...)
+	seenKeys := make(map[string]struct{}, len(keys))
+	deduped := keys[:0]
+	orderedLen := 0
+	for _, key := range keys {
+		if _, exists := seenKeys[key]; exists {
+			continue
+		}
+		seenKeys[key] = struct{}{}
+		deduped = append(deduped, key)
+		orderedLen++
 	}
-	sort.Strings(keys)
+	keys = deduped
+	for key := range r.aggregateState.groups {
+		if _, exists := seenKeys[key]; !exists {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys[orderedLen:])
 	entries := make([]aggregateResultEntry, 0, len(keys))
 	if len(keys) == 0 && len(definition.groupBy) == 0 {
 		values, visible := evaluateEmptyAggregateGroup(definition, now, r.variables)
@@ -14787,6 +14814,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		r.aggregateState = &aggregateRuntimeState{groups: make(map[string]*aggregateGroup)}
 	}
 	state := r.aggregateState
+	r.sweepReclaimGroups(plan, now)
 	removeAggregateScopeEvents(state, delta.oldEvents)
 	state.allEvents = appendAggregateScopeEvents(state.allEvents, delta.newEvents)
 	state.allEverEvents = appendAggregateScopeEvents(state.allEverEvents, delta.newEvents)
@@ -14841,6 +14869,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				multiPluginStates: make(map[string]aggregateMultiPluginState),
 			}
 			state.groups[key] = group
+			state.groupOrder = append(state.groupOrder, key)
 		}
 		// A table trigger may delete an aggregate-backed materialized row
 		// without discarding its aggregation history. The next contribution
@@ -14867,8 +14896,10 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	for _, event := range delta.newEvents {
 		for _, groupingSet := range groupingSets {
 			key := markAffected(event, groupingSet)
-			state.groups[key].events = append(state.groups[key].events, event)
-			state.groups[key].everEvents = append(state.groups[key].everEvents, event)
+			group := state.groups[key]
+			group.events = append(group.events, event)
+			group.everEvents = append(group.everEvents, event)
+			group.lastActivity = now
 		}
 	}
 
@@ -14923,7 +14954,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 						pluginState.clear()
 					}
 				}
-				delete(state.groups, key)
+				removeAggregateGroupKey(state, key)
 				r.removeOutputGroupRow(key)
 			}
 			continue
@@ -14969,7 +15000,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 					pluginState.clear()
 				}
 			}
-			delete(state.groups, key)
+			removeAggregateGroupKey(state, key)
 			r.removeOutputGroupRow(key)
 		}
 	}
@@ -15023,6 +15054,89 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		}
 	}
 	return batch, nil
+}
+
+// sweepReclaimGroups implements Esper's reclaim_group_aged/reclaim_group_freq
+// hint: on each aggregate enter, when the sweep is due (nextSweepTime), groups
+// whose last update is older than the aged window are dropped so their state
+// resets on the next event. Hint values are seconds or numeric variable names;
+// defaults mirror Java's 60-second fallbacks.
+func (r *statementRuntime) sweepReclaimGroups(plan Plan, now time.Time) {
+	if r == nil || r.aggregateState == nil || plan.query.aggregate == nil || len(plan.query.aggregate.groupBy) == 0 {
+		return
+	}
+	var agedParam, freqParam string
+	agedSet, freqSet, disabled := false, false, false
+	for _, hint := range plan.query.statementMetadata.hints {
+		switch hint.kind {
+		case HintDisableReclaimGroup:
+			disabled = true
+		case HintReclaimGroupAged:
+			if len(hint.parameters) > 0 {
+				agedParam = hint.parameters[0]
+				agedSet = true
+			}
+		case HintReclaimGroupFreq:
+			if len(hint.parameters) > 0 {
+				freqParam = hint.parameters[0]
+				freqSet = true
+			}
+		}
+	}
+	if disabled || (!agedSet && !freqSet) {
+		return
+	}
+	if !r.nextReclaimSweep.IsZero() && now.Before(r.nextReclaimSweep) {
+		return
+	}
+	const defaultReclaim = 60 * time.Second
+	aged := defaultReclaim
+	if agedSet {
+		aged = reclaimHintDuration(agedParam, r.variables, defaultReclaim)
+	}
+	freq := defaultReclaim
+	if freqSet {
+		freq = reclaimHintDuration(freqParam, r.variables, defaultReclaim)
+	}
+	if freq <= 0 {
+		freq = defaultReclaim
+	}
+	r.nextReclaimSweep = now.Add(freq)
+	if aged <= 0 {
+		return
+	}
+	for key, group := range r.aggregateState.groups {
+		if !group.lastActivity.IsZero() && now.Sub(group.lastActivity) > aged {
+			removeAggregateGroupKey(r.aggregateState, key)
+		}
+	}
+}
+
+func removeAggregateGroupKey(state *aggregateRuntimeState, key string) {
+	if state == nil {
+		return
+	}
+	delete(state.groups, key)
+	for index, existing := range state.groupOrder {
+		if existing == key {
+			state.groupOrder = append(state.groupOrder[:index], state.groupOrder[index+1:]...)
+			break
+		}
+	}
+}
+
+func reclaimHintDuration(parameter string, variables map[string]Value, fallback time.Duration) time.Duration {
+	if value, err := strconv.ParseFloat(parameter, 64); err == nil {
+		return time.Duration(value * float64(time.Second))
+	}
+	if variables != nil {
+		if variable, ok := variables[parameter]; ok {
+			if number, ok := numericValue(variable); ok {
+				return time.Duration(number * float64(time.Second))
+			}
+		}
+	}
+	return fallback
 }
 
 func implicitAggregateGroupBy(input *streamNode) []Expr {
