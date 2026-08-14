@@ -1,0 +1,66 @@
+{
+  "version": "esper-parity/v1",
+  "id": "named-window-mutation",
+  "steps": [
+    {
+      "op": "case",
+      "case": "mutation"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "A"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "A"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 4
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "X"
+      }
+    }
+  ]
+}

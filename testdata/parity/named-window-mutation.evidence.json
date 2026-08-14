@@ -1,0 +1,403 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-62b4f6edf3c24229e8ac"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnDelete.java"
+  ],
+  "javaExecutions": [
+    "InfraFirstUnique"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "named-window-mutation",
+    "steps": [
+      {
+        "op": "case",
+        "case": "mutation"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "X"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "named-window-mutation",
+    "records": [
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "count",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "count",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "count",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "count",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 4,
+              "theString": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "count",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "named-window-mutation",
+    "records": [
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "count",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "count",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "count",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "count",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 4,
+              "theString": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "count",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -188,9 +188,11 @@ func Replay(ctx context.Context, engine *esper.Engine, statement *esper.Statemen
 
 // ReplayWithStatements is the parity replay entry point for scenarios that
 // contain multiple named cases and explicit iterator/snapshot actions.
+// Additional statements are subscribed as named listeners so multi-statement
+// Java/Go traces share one normalized record stream.
 type StatementResolver func(name string) (*esper.Statement, error)
 
-func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *esper.Statement, scenario Scenario, decode DecodePayload, resolve StatementResolver) (Trace, error) {
+func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *esper.Statement, scenario Scenario, decode DecodePayload, resolve StatementResolver, additional ...*esper.Statement) (Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return Trace{}, err
 	}
@@ -199,7 +201,7 @@ func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *
 	}
 	trace := Trace{Version: ScenarioVersion, ID: scenario.ID}
 	caseName := ""
-	var listenerSequence uint64
+	listenerSequences := make(map[string]uint64)
 	appendBatch := func(caseName, operation string, current *esper.Statement, batch esper.ResultBatch, selector esper.ContextPartitionSelector, sequence uint64) {
 		record := TraceRecord{Case: caseName, Operation: operation, Statement: current.Name(), Sequence: sequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
 		record.New = normalizeResults(batch.New)
@@ -207,12 +209,32 @@ func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *
 		record.Partitions = normalizePartitions(current.ContextPartitionsWith(selector))
 		trace.Records = append(trace.Records, record)
 	}
-	if _, err := statement.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
-		listenerSequence++
-		appendBatch(caseName, "listener", statement, batch, nil, listenerSequence)
-		return nil
-	}); err != nil {
-		return Trace{}, err
+	statements := make([]*esper.Statement, 0, len(additional)+1)
+	statements = append(statements, statement)
+	for _, additionalStatement := range additional {
+		if additionalStatement == nil || additionalStatement.Name() == statement.Name() {
+			continue
+		}
+		duplicate := false
+		for _, existing := range statements {
+			if existing.Name() == additionalStatement.Name() {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			statements = append(statements, additionalStatement)
+		}
+	}
+	for _, current := range statements {
+		current := current
+		if _, err := current.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+			listenerSequences[current.Name()]++
+			appendBatch(caseName, "listener", current, batch, nil, listenerSequences[current.Name()])
+			return nil
+		}); err != nil {
+			return Trace{}, err
+		}
 	}
 	for _, step := range scenario.Steps {
 		if err := contextErr(ctx); err != nil {

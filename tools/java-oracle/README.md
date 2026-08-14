@@ -152,6 +152,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/subquery-length-window.json`、`testdata/parity/subquery-length-window.evidence.json`；当前差异数为 0，覆盖 `EPLSubselectUngroupedUncorrelatedInSelect`。
 
+## Named-window-mutation oracle
+
+第七个代表性场景使用 `NamedWindowMutationScenarioOracle.java`（runner：`run-named-window-mutation.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)` 与 `SupportBean_S0(id, p00)`，双跑 `create window MyWindow#firstunique(theString) as SupportBean`、`insert into MyWindow select * from SupportBean`、`on SupportBean_S0 delete from MyWindow where p00 = theString` 与 `select count(*) as cnt from MyWindow` 的 create/count 两个 listener：重复键静默忽略、删除以 old-stream 交付给 create consumer、count 随 mutation 更新。
+
+```sh
+./tools/java-oracle/run-named-window-mutation.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/named-window-mutation.json \
+  --output /tmp/named-window-mutation-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode named-window-mutation-diff \
+  -scenario testdata/parity/named-window-mutation.json \
+  -java-trace /tmp/named-window-mutation-java.json \
+  -evidence /tmp/named-window-mutation.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/named-window-mutation.json`、`testdata/parity/named-window-mutation.evidence.json`；当前差异数为 0，覆盖 `InfraFirstUnique`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。
