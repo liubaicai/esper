@@ -4938,6 +4938,7 @@ type outputRuntimeState struct {
 	firstEveryCounts    map[string]int
 	firstEveryNext      map[string]time.Time
 	lastEverySeen       int
+	lastEveryOutputRows map[string]Result
 	pending             *ResultBatch
 	pendingCount        int
 	whenPending         *ResultBatch
@@ -7757,6 +7758,9 @@ func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultB
 		return ResultBatch{}
 	}
 	state := r.outputState
+	if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 {
+		return r.applyLastEveryTimeGrouped(policy, batch, flush, now, plans...)
+	}
 	if !batch.empty() {
 		copyBatch := mergeLastOutputBatch(state.pending, batch)
 		state.pending = &copyBatch
@@ -7772,6 +7776,92 @@ func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultB
 	state.pending = nil
 	r.advanceOutputSchedule(policy, now)
 	return r.finishOutput(policy, result, now, plans...)
+}
+
+func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch ResultBatch, flush bool, now time.Time, plans ...Plan) ResultBatch {
+	state := r.outputState
+	if !batch.empty() {
+		copyBatch := mergeLastOutputBatch(state.pending, batch)
+		state.pending = &copyBatch
+		if state.nextOutputAt.IsZero() {
+			state.nextOutputAt = now.Add(policy.Interval)
+		}
+	}
+	if !flush || state.nextOutputAt.IsZero() || now.Before(state.nextOutputAt) || state.pending == nil {
+		return ResultBatch{}
+	}
+	current := state.pending.clone()
+	current.Time = now
+	if current.empty() {
+		state.pending = nil
+		state.pendingCount = 0
+		r.advanceOutputSchedule(policy, now)
+		return ResultBatch{}
+	}
+	keys := current.outputKeysNew
+	if len(keys) != len(current.New) {
+		keys = make([]string, len(current.New))
+		for index := range keys {
+			keys[index] = strconv.Itoa(index)
+		}
+	}
+	groupNames := aggregateGroupFieldNames(plans[0].query.aggregate)
+	old := make([]Result, 0, len(current.New))
+	oldKeys := make([]string, 0, len(current.New))
+	for index, key := range keys {
+		if row, exists := state.lastEveryOutputRows[key]; exists {
+			old = append(old, row)
+		} else {
+			old = append(old, lastEveryNullResult(current.New[index], groupNames))
+		}
+		oldKeys = append(oldKeys, key)
+	}
+	result := ResultBatch{Time: now, New: current.New, Old: old, outputKeysNew: keys, outputKeysOld: oldKeys}
+	if state.lastEveryOutputRows == nil {
+		state.lastEveryOutputRows = make(map[string]Result)
+	}
+	for index, key := range keys {
+		if index < len(result.New) {
+			state.lastEveryOutputRows[key] = result.New[index]
+		}
+	}
+	state.pending = nil
+	state.pendingCount = 0
+	r.advanceOutputSchedule(policy, now)
+	return r.finishOutput(policy, result, now, plans...)
+}
+
+func lastEveryNullResult(result Result, groupNames []string) Result {
+	row, ok := result.Row()
+	if !ok {
+		return result
+	}
+	groupSet := make(map[string]struct{}, len(groupNames))
+	for _, name := range groupNames {
+		groupSet[name] = struct{}{}
+	}
+	values := append([]Value(nil), row.Values()...)
+	fields := row.Schema().Fields()
+	for index, field := range fields {
+		if _, grouped := groupSet[field.Name]; !grouped {
+			values[index] = Null()
+		}
+	}
+	return resultRow(newRow(row.Schema(), values))
+}
+
+func aggregateGroupFieldNames(definition *aggregateDefinition) []string {
+	if definition == nil {
+		return nil
+	}
+	names := make([]string, 0, len(definition.selections))
+	for _, selection := range definition.selections {
+		if selection.Expr == nil || isAggregateExpression(selection.Expr) {
+			continue
+		}
+		names = append(names, selection.Name)
+	}
+	return names
 }
 
 func acceptedOutputEventCount(batch ResultBatch) int {

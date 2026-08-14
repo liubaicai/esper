@@ -44,6 +44,7 @@
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
 - 最近切片：ContextNested 提升为 implemented（非 temporal key/category/hash 嵌套、三层 key 隔离、parent context 属性、nested selector、重复 child 拒绝；temporal/initiated/pattern/iterator 仍 open）；ContextKeySegmentedWInitTermPrioritized 七个显式 initiated executions 提升为 implemented（keyed initiated-terminated grouped aggregate、correlated termination、no-term、filter-expr、invalid）；InfraNWTableCreateIndex late-create/drop/recreate/multiple-index/invalid 提升为 implemented（live NamedWindow/Table CreateIndex/DropIndex、Context partition 继承）；ResultSetOutputLimitAggregateGrouped 八个 no-join executions 提升为 implemented（grouped time-window default/last/first/snapshot/having/max/no-output-clause）；ResultSetOutputLimitRowPerGroupRollup 十个 no-join executions 提升为 implemented（rollup default/last/first/snapshot/order-limit/sorted）；ExprFilterOptimizableConditionNegateConfirm 十个 listener executions 提升为 implemented（typed context/pattern boolean filter 矩阵）；InfraNWTableOnSelect 非聚合 executions 提升为 implemented（on-select index/correlation/condition/limit/invalid、trigger order-by+limit 与 aggregate/prev 校验）；EPLOtherCreateSchema 主要 executions 提升为 implemented（typed create-schema、copyfrom/inherit/variant、ObjectArray 单 supertype）；EPLOtherStaticFunctions 主要 executions 提升为 implemented（Go UDF 静态方法对照、chained/nested/pattern/order-by、投影行源事件保留）；EPLDatabaseJoin 主要 join executions 提升为 implemented（2HistoricalStar/Inner 触发历史 lineage、WithPattern pattern 驱动求值、3Stream 无触发替换）；ResultSetQueryTypeIterator 17 个 execution 提升为 implemented（order-by/filter/pattern/aggregate iterator 契约、WithIterableUnbound）；ResultSetQueryTypeRowPerGroup 17 个 execution 提升为 implemented（group reclaim、array/null group key、output snapshot iterator、join/named-window grouped aggregate）；InfraNamedWindowTypes 18 个 execution 提升为 implemented（窗口事件类型形状、嵌套 schema 列、表示矩阵、继承覆盖）；ViewTimeWin 15 个 execution 提升为 implemented（calendar-month 窗口、变量/参数时长、prev 与聚合、flip-timer）；ViewUnion 15 个 execution 提升为 implemented（named-window union retention、batch/sorted/groupwin/pattern/subquery union、child-delta old 流）；EPLInsertInto 20 个 execution 提升为 implemented；statement metrics CPU 采样差异登记为 approved intentional difference（2026-08-14）。
+- 最新进展：`rollup-output-last` 差分场景通过并登记为 differential-verified（grouped `OutputLastEveryTime` old-row 语义修复：按输出 key 缓存上一周期行、新 group 首次 old 行输出 null 聚合占位，3 条 records/0 differences）。
 - 最新已提交：`137b27f64`（Add rollup-output-last differential scenario infra）
 
 ### 2.2 对账清单
@@ -51,17 +52,17 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 个 |
-| Case | 410 个 |
-| Case implemented（verification） | 410 个（其中 23 个 differential-verified、18 个 intentionally-different） |
-| Case differential-verified | 23 个（33 个 runtime） |
+| Case | 411 个 |
+| Case implemented（verification） | 411 个（其中 24 个 differential-verified、18 个 intentionally-different） |
+| Case differential-verified | 24 个（34 个 runtime） |
 | Case intentionally-different | 18 个 |
 | Case inventoried-only | 0 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
-| Runtime 关联 | 2,715 条 |
+| Runtime 关联 | 2,716 条 |
 | 唯一已关联 runtime | 2,630 个 |
 | 未关联 runtime | 1,506 个 |
 | 关联覆盖率 | 63.6% |
-| Representative scenario | 23/23 通过 |
+| Representative scenario | 24/24 通过 |
 | NFR | 0 个已验证 |
 | Docker integration | MySQL/Kafka/RabbitMQ round-trips passed（2026-08-14） |
 | Stress baseline | 语义不变量通过；`historyByEvent` 按需构建后 42.6s→18.45s（约 660 events/s），仍开放（2026-08-14） |
