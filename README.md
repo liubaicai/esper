@@ -42,3 +42,5 @@ ESPER_MYSQL_DSN='root:password@tcp(127.0.0.1:3306)/test?parseTime=true&charset=u
 ```sh
 ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$' -count=1 -timeout 5m
 ```
+
+基线语义不变量通过，但 12,200 事件约 42.6s（约 280 events/s）；memprofile 显示主要热点是 `windowHistoryByEvent` 每次 insert 复制完整窗口历史，性能优化是开放项。

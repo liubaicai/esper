@@ -1,3 +1,5 @@
+> 最新补充：Draft 4.58（2026-08-14），补充 stress 基线根因：`go tool pprof -alloc_space` 显示 5,000 个 length(200) 聚合事件累计约 83GB 分配，其中 82.6% 来自 `windowHistoryByEvent`——每次 `insert` 都重建 `historyByEvent` map，并为窗口内每个事件复制完整历史切片；`aggregateGroupContext` 再复制一次。优化方向是仅在实际需要 Prev/Prior/窗口访问/历史表达式的查询中按需构建 `historyByEvent`，并复用不可变窗口快照，避免 O(events×window) 的分配。该优化作为下一切片，性能/NFR 仍未完成。
+
 > 最新补充：Draft 4.57（2026-08-14），新增环境门控的周期 stress 基线 `TestStressSyntheticMediumLoad`（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$' -count=1 -timeout 5m`）：固定种子 42 覆盖 filter+length(200)+sum 快照、5,000 个 keyed context 分区、join 部署/卸载状态清理；语义不变量全部通过，但 12,200 事件耗时 42.6s（约 280 events/s），该低吞吐根因未定位，性能/NFR 不宣称完成。manifest `quality.stress` 记录 baseline-captured，普通 `go test` 显式 skip。
 
 > 最新补充：Draft 4.56（2026-08-14），完成 Docker 外部依赖门控验证：MySQL 8.0（`TestDBConnectorMySQLDocker`、`TestSQLHistoricalProviderMySQLDocker`、`TestSQLHistoricalFireAndForgetMySQLDocker`、`TestSQLSinkMySQLDocker`）、Kafka 3.8.1（`TestKafkaDockerRoundTrip`，重建了损坏的 fixture）、RabbitMQ 3.x（`TestAMQPDockerRoundTrip`、`TestAMQPDockerSinkRoundTrip`）全部通过；文档记录精确命令与验证日期，manifest `quality.docker` 更新为 passed。普通 `go test ./...` 仍按环境变量显式 skip。

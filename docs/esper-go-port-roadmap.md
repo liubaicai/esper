@@ -62,7 +62,7 @@
 | Representative scenario | 20/20 通过 |
 | NFR | 0 个已验证 |
 | Docker integration | MySQL/Kafka/RabbitMQ round-trips passed（2026-08-14） |
-| Stress baseline | 语义不变量通过；约 280 events/s，低吞吐根因未定位（2026-08-14） |
+| Stress baseline | 语义不变量通过；约 280 events/s，根因 `windowHistoryByEvent` 每次 insert 全窗口拷贝（2026-08-14） |
 
 > 覆盖率 = 唯一已关联 Java runtime / inventory 中 `status=ok` runtime。它表示“已建立 Java runtime 对账/处置证据”的进度，不是“Go 已通过 parity”的比例。Manifest v2 的 `implemented` 只表示 Go 实现和测试登记，只有 `differential-verified` 才有已保存的 Java/Go trace 差分证据。
 
@@ -164,7 +164,7 @@
 2. 扩展 Java/Go persisted differential evidence；当前已有 20 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`、`high-cardinality-context`、`time-window-long-running`、`dataflow-connector-output`、`output-after-last`、`rollup-output-every`、`match-recognize-simple`、`unidirectional-aggregate-join`、`output-first-having`、`context-keyed-subquery`）。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；后续需在 CI 中固化并保持显式 skip。
-5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；当前语义通过但吞吐约 280 events/s，先定位 filter/window/aggregate/join 热点再宣称 NFR。
+5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；memprofile 显示 `windowHistoryByEvent` 每次 insert 都复制完整窗口历史（5,000 事件约 83GB 分配），先按需计算/复用 `historyByEvent` 再宣称 NFR。
 
 ### 5.2 P1 — 下一批高价值切片
 
