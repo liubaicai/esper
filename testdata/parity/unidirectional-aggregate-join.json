@@ -1,0 +1,66 @@
+{
+  "version": "esper-parity/v1",
+  "id": "unidirectional-aggregate-join",
+  "steps": [
+    {
+      "op": "case",
+      "case": "grouped"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "E1",
+        "volume": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "E1",
+        "volume": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 20
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "E1",
+        "volume": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 40
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "E2",
+        "volume": 4
+      }
+    }
+  ]
+}

@@ -372,6 +372,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/match-recognize-simple.json`、`testdata/parity/match-recognize-simple.evidence.json`；当前差异数为 0，覆盖 `RowRecogConcatenation`。
 
+## Unidirectional-aggregate-join oracle
+
+第十八个代表性场景使用 `UnidirectionalJoinScenarioOracle.java`（runner：`run-unidirectional-join.sh`）。它注册 Map 事件类型 `SupportMarketDataBean(symbol, volume)` 与 `SupportBean(theString, intPrimitive)`，双跑 `@name('s0') select irstream symbol, count(*) as cnt from SupportMarketDataBean unidirectional, SupportBean#keepall where theString = symbol group by theString, symbol`：被动 SupportBean 不输出，三次 SupportMarketDataBean driver 触发分别交付 new/old {E1,1/0}、{E1,2/0}、{E2,1/0}。Go 用 `Join(...).Unidirectional(JoinLeft)` + `GroupBy(JoinField(...))` + `CountAll` + `WithOldStream` 链式 API 复现同一语义。
+
+```sh
+./tools/java-oracle/run-unidirectional-join.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/unidirectional-aggregate-join.json \
+  --output /tmp/unidirectional-join-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode unidirectional-join-diff \
+  -scenario testdata/parity/unidirectional-aggregate-join.json \
+  -java-trace /tmp/unidirectional-join-java.json \
+  -evidence /tmp/unidirectional-join.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/unidirectional-aggregate-join.json`、`testdata/parity/unidirectional-aggregate-join.evidence.json`；当前差异数为 0，覆盖 `EPLJoin2TableJoinGrouped`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。
