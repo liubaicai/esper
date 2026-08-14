@@ -44,7 +44,7 @@
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
 - 最近切片：EPLInsertInto 20 个 execution 提升为 implemented，statement metrics CPU 采样差异登记为 approved intentional difference（2026-08-14）。
-- 最新已提交：见本文件最后的提交记录。
+- 最新已提交：`67bda1499`（Implement EPLInsertInto parity and finalize statement-metrics CPU difference）
 
 ### 2.2 对账清单
 
