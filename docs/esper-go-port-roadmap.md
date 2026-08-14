@@ -43,7 +43,7 @@
 
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
-- 最新已提交：`8cf4a33b2`（Add grouped time-window istream differential scenario and fix expiry output）
+- 最新已提交：`2f8aae7b1`（Extend grouped time-window scenario with having execution）
 
 ### 2.2 对账清单
 
