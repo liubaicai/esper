@@ -1,0 +1,3749 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-bd4672ec90862ee08790"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+  ],
+  "javaExecutions": [
+    "ContextKeySegmentedLargeNumberPartitions"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "high-cardinality-context",
+    "steps": [
+      {
+        "op": "case",
+        "case": "high-cardinality"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E00",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E01",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E02",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E03",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E04",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E05",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E06",
+          "intPrimitive": 7
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E07",
+          "intPrimitive": 8
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E08",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E09",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E10",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E11",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E12",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E13",
+          "intPrimitive": 14
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E14",
+          "intPrimitive": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E15",
+          "intPrimitive": 16
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E16",
+          "intPrimitive": 17
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E17",
+          "intPrimitive": 18
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E18",
+          "intPrimitive": 19
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E19",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E20",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E21",
+          "intPrimitive": 22
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E22",
+          "intPrimitive": 23
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E23",
+          "intPrimitive": 24
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E24",
+          "intPrimitive": 25
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E25",
+          "intPrimitive": 26
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E26",
+          "intPrimitive": 27
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E27",
+          "intPrimitive": 28
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E28",
+          "intPrimitive": 29
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E29",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E30",
+          "intPrimitive": 31
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E31",
+          "intPrimitive": 32
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E32",
+          "intPrimitive": 33
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E33",
+          "intPrimitive": 34
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E34",
+          "intPrimitive": 35
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E35",
+          "intPrimitive": 36
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E36",
+          "intPrimitive": 37
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E37",
+          "intPrimitive": 38
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E38",
+          "intPrimitive": 39
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E39",
+          "intPrimitive": 40
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E00",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E01",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E02",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E03",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E04",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E05",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E06",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E07",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E08",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E09",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "high-cardinality-context",
+    "records": [
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 15
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 16
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 17
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 18
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 19
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 22
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 23,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 23
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 24,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 24
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 25,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 25
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 26,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 26
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 27,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 28,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 28
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 29,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 29
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 30,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 31,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 31
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 32,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 32
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 33,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 33
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 34,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 34
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 35,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 35
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 36,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 36
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 37,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 37
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 38,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 38
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 39,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 40,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 7
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 8
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 9
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 14
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 15
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 16
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 17
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 18
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 19
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 23
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 24
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 25
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 26
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 27
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 28
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 29
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 31
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 32
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 33
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 34
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 35
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 36
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 37
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 38
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 39
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 40
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "key:E00",
+            "properties": {}
+          },
+          {
+            "id": 1,
+            "key": "key:E01",
+            "properties": {}
+          },
+          {
+            "id": 2,
+            "key": "key:E02",
+            "properties": {}
+          },
+          {
+            "id": 3,
+            "key": "key:E03",
+            "properties": {}
+          },
+          {
+            "id": 4,
+            "key": "key:E04",
+            "properties": {}
+          },
+          {
+            "id": 5,
+            "key": "key:E05",
+            "properties": {}
+          },
+          {
+            "id": 6,
+            "key": "key:E06",
+            "properties": {}
+          },
+          {
+            "id": 7,
+            "key": "key:E07",
+            "properties": {}
+          },
+          {
+            "id": 8,
+            "key": "key:E08",
+            "properties": {}
+          },
+          {
+            "id": 9,
+            "key": "key:E09",
+            "properties": {}
+          },
+          {
+            "id": 10,
+            "key": "key:E10",
+            "properties": {}
+          },
+          {
+            "id": 11,
+            "key": "key:E11",
+            "properties": {}
+          },
+          {
+            "id": 12,
+            "key": "key:E12",
+            "properties": {}
+          },
+          {
+            "id": 13,
+            "key": "key:E13",
+            "properties": {}
+          },
+          {
+            "id": 14,
+            "key": "key:E14",
+            "properties": {}
+          },
+          {
+            "id": 15,
+            "key": "key:E15",
+            "properties": {}
+          },
+          {
+            "id": 16,
+            "key": "key:E16",
+            "properties": {}
+          },
+          {
+            "id": 17,
+            "key": "key:E17",
+            "properties": {}
+          },
+          {
+            "id": 18,
+            "key": "key:E18",
+            "properties": {}
+          },
+          {
+            "id": 19,
+            "key": "key:E19",
+            "properties": {}
+          },
+          {
+            "id": 20,
+            "key": "key:E20",
+            "properties": {}
+          },
+          {
+            "id": 21,
+            "key": "key:E21",
+            "properties": {}
+          },
+          {
+            "id": 22,
+            "key": "key:E22",
+            "properties": {}
+          },
+          {
+            "id": 23,
+            "key": "key:E23",
+            "properties": {}
+          },
+          {
+            "id": 24,
+            "key": "key:E24",
+            "properties": {}
+          },
+          {
+            "id": 25,
+            "key": "key:E25",
+            "properties": {}
+          },
+          {
+            "id": 26,
+            "key": "key:E26",
+            "properties": {}
+          },
+          {
+            "id": 27,
+            "key": "key:E27",
+            "properties": {}
+          },
+          {
+            "id": 28,
+            "key": "key:E28",
+            "properties": {}
+          },
+          {
+            "id": 29,
+            "key": "key:E29",
+            "properties": {}
+          },
+          {
+            "id": 30,
+            "key": "key:E30",
+            "properties": {}
+          },
+          {
+            "id": 31,
+            "key": "key:E31",
+            "properties": {}
+          },
+          {
+            "id": 32,
+            "key": "key:E32",
+            "properties": {}
+          },
+          {
+            "id": 33,
+            "key": "key:E33",
+            "properties": {}
+          },
+          {
+            "id": 34,
+            "key": "key:E34",
+            "properties": {}
+          },
+          {
+            "id": 35,
+            "key": "key:E35",
+            "properties": {}
+          },
+          {
+            "id": 36,
+            "key": "key:E36",
+            "properties": {}
+          },
+          {
+            "id": 37,
+            "key": "key:E37",
+            "properties": {}
+          },
+          {
+            "id": 38,
+            "key": "key:E38",
+            "properties": {}
+          },
+          {
+            "id": 39,
+            "key": "key:E39",
+            "properties": {}
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 41,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 101
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 42,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 102
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 43,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 103
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 44,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 104
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 45,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 105
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 46,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 47,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 107
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 48,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 108
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 49,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 109
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 50,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 110
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 101
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 102
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 103
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 104
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 105
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 106
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 107
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 108
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 109
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 14
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 15
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 16
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 17
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 18
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 19
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 23
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 24
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 25
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 26
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 27
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 28
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 29
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 31
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 32
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 33
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 34
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 35
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 36
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 37
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 38
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 39
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 40
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "key:E00",
+            "properties": {}
+          },
+          {
+            "id": 1,
+            "key": "key:E01",
+            "properties": {}
+          },
+          {
+            "id": 2,
+            "key": "key:E02",
+            "properties": {}
+          },
+          {
+            "id": 3,
+            "key": "key:E03",
+            "properties": {}
+          },
+          {
+            "id": 4,
+            "key": "key:E04",
+            "properties": {}
+          },
+          {
+            "id": 5,
+            "key": "key:E05",
+            "properties": {}
+          },
+          {
+            "id": 6,
+            "key": "key:E06",
+            "properties": {}
+          },
+          {
+            "id": 7,
+            "key": "key:E07",
+            "properties": {}
+          },
+          {
+            "id": 8,
+            "key": "key:E08",
+            "properties": {}
+          },
+          {
+            "id": 9,
+            "key": "key:E09",
+            "properties": {}
+          },
+          {
+            "id": 10,
+            "key": "key:E10",
+            "properties": {}
+          },
+          {
+            "id": 11,
+            "key": "key:E11",
+            "properties": {}
+          },
+          {
+            "id": 12,
+            "key": "key:E12",
+            "properties": {}
+          },
+          {
+            "id": 13,
+            "key": "key:E13",
+            "properties": {}
+          },
+          {
+            "id": 14,
+            "key": "key:E14",
+            "properties": {}
+          },
+          {
+            "id": 15,
+            "key": "key:E15",
+            "properties": {}
+          },
+          {
+            "id": 16,
+            "key": "key:E16",
+            "properties": {}
+          },
+          {
+            "id": 17,
+            "key": "key:E17",
+            "properties": {}
+          },
+          {
+            "id": 18,
+            "key": "key:E18",
+            "properties": {}
+          },
+          {
+            "id": 19,
+            "key": "key:E19",
+            "properties": {}
+          },
+          {
+            "id": 20,
+            "key": "key:E20",
+            "properties": {}
+          },
+          {
+            "id": 21,
+            "key": "key:E21",
+            "properties": {}
+          },
+          {
+            "id": 22,
+            "key": "key:E22",
+            "properties": {}
+          },
+          {
+            "id": 23,
+            "key": "key:E23",
+            "properties": {}
+          },
+          {
+            "id": 24,
+            "key": "key:E24",
+            "properties": {}
+          },
+          {
+            "id": 25,
+            "key": "key:E25",
+            "properties": {}
+          },
+          {
+            "id": 26,
+            "key": "key:E26",
+            "properties": {}
+          },
+          {
+            "id": 27,
+            "key": "key:E27",
+            "properties": {}
+          },
+          {
+            "id": 28,
+            "key": "key:E28",
+            "properties": {}
+          },
+          {
+            "id": 29,
+            "key": "key:E29",
+            "properties": {}
+          },
+          {
+            "id": 30,
+            "key": "key:E30",
+            "properties": {}
+          },
+          {
+            "id": 31,
+            "key": "key:E31",
+            "properties": {}
+          },
+          {
+            "id": 32,
+            "key": "key:E32",
+            "properties": {}
+          },
+          {
+            "id": 33,
+            "key": "key:E33",
+            "properties": {}
+          },
+          {
+            "id": 34,
+            "key": "key:E34",
+            "properties": {}
+          },
+          {
+            "id": 35,
+            "key": "key:E35",
+            "properties": {}
+          },
+          {
+            "id": 36,
+            "key": "key:E36",
+            "properties": {}
+          },
+          {
+            "id": 37,
+            "key": "key:E37",
+            "properties": {}
+          },
+          {
+            "id": 38,
+            "key": "key:E38",
+            "properties": {}
+          },
+          {
+            "id": 39,
+            "key": "key:E39",
+            "properties": {}
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "high-cardinality-context",
+    "records": [
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 15
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 16
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 17
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 18
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 19
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 22
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 23,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 23
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 24,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 24
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 25,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 25
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 26,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 26
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 27,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 28,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 28
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 29,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 29
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 30,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 31,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 31
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 32,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 32
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 33,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 33
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 34,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 34
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 35,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 35
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 36,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 36
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 37,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 37
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 38,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 38
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 39,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 40,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 7
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 8
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 9
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 14
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 15
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 16
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 17
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 18
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 19
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 23
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 24
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 25
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 26
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 27
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 28
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 29
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 31
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 32
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 33
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 34
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 35
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 36
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 37
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 38
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 39
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 40
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "key:E00",
+            "properties": {}
+          },
+          {
+            "id": 1,
+            "key": "key:E01",
+            "properties": {}
+          },
+          {
+            "id": 2,
+            "key": "key:E02",
+            "properties": {}
+          },
+          {
+            "id": 3,
+            "key": "key:E03",
+            "properties": {}
+          },
+          {
+            "id": 4,
+            "key": "key:E04",
+            "properties": {}
+          },
+          {
+            "id": 5,
+            "key": "key:E05",
+            "properties": {}
+          },
+          {
+            "id": 6,
+            "key": "key:E06",
+            "properties": {}
+          },
+          {
+            "id": 7,
+            "key": "key:E07",
+            "properties": {}
+          },
+          {
+            "id": 8,
+            "key": "key:E08",
+            "properties": {}
+          },
+          {
+            "id": 9,
+            "key": "key:E09",
+            "properties": {}
+          },
+          {
+            "id": 10,
+            "key": "key:E10",
+            "properties": {}
+          },
+          {
+            "id": 11,
+            "key": "key:E11",
+            "properties": {}
+          },
+          {
+            "id": 12,
+            "key": "key:E12",
+            "properties": {}
+          },
+          {
+            "id": 13,
+            "key": "key:E13",
+            "properties": {}
+          },
+          {
+            "id": 14,
+            "key": "key:E14",
+            "properties": {}
+          },
+          {
+            "id": 15,
+            "key": "key:E15",
+            "properties": {}
+          },
+          {
+            "id": 16,
+            "key": "key:E16",
+            "properties": {}
+          },
+          {
+            "id": 17,
+            "key": "key:E17",
+            "properties": {}
+          },
+          {
+            "id": 18,
+            "key": "key:E18",
+            "properties": {}
+          },
+          {
+            "id": 19,
+            "key": "key:E19",
+            "properties": {}
+          },
+          {
+            "id": 20,
+            "key": "key:E20",
+            "properties": {}
+          },
+          {
+            "id": 21,
+            "key": "key:E21",
+            "properties": {}
+          },
+          {
+            "id": 22,
+            "key": "key:E22",
+            "properties": {}
+          },
+          {
+            "id": 23,
+            "key": "key:E23",
+            "properties": {}
+          },
+          {
+            "id": 24,
+            "key": "key:E24",
+            "properties": {}
+          },
+          {
+            "id": 25,
+            "key": "key:E25",
+            "properties": {}
+          },
+          {
+            "id": 26,
+            "key": "key:E26",
+            "properties": {}
+          },
+          {
+            "id": 27,
+            "key": "key:E27",
+            "properties": {}
+          },
+          {
+            "id": 28,
+            "key": "key:E28",
+            "properties": {}
+          },
+          {
+            "id": 29,
+            "key": "key:E29",
+            "properties": {}
+          },
+          {
+            "id": 30,
+            "key": "key:E30",
+            "properties": {}
+          },
+          {
+            "id": 31,
+            "key": "key:E31",
+            "properties": {}
+          },
+          {
+            "id": 32,
+            "key": "key:E32",
+            "properties": {}
+          },
+          {
+            "id": 33,
+            "key": "key:E33",
+            "properties": {}
+          },
+          {
+            "id": 34,
+            "key": "key:E34",
+            "properties": {}
+          },
+          {
+            "id": 35,
+            "key": "key:E35",
+            "properties": {}
+          },
+          {
+            "id": 36,
+            "key": "key:E36",
+            "properties": {}
+          },
+          {
+            "id": 37,
+            "key": "key:E37",
+            "properties": {}
+          },
+          {
+            "id": 38,
+            "key": "key:E38",
+            "properties": {}
+          },
+          {
+            "id": 39,
+            "key": "key:E39",
+            "properties": {}
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 41,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 101
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 42,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 102
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 43,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 103
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 44,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 104
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 45,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 105
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 46,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 106
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 47,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 107
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 48,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 108
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 49,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 109
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 50,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 110
+            }
+          }
+        ]
+      },
+      {
+        "case": "high-cardinality",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 101
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 102
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 103
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 104
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 105
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 106
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 107
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 108
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 109
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 14
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 15
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 16
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 17
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 18
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 19
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 23
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 24
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 25
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 26
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 27
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 28
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 29
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 31
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 32
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 33
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 34
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 35
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 36
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 37
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 38
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 39
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 40
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "key:E00",
+            "properties": {}
+          },
+          {
+            "id": 1,
+            "key": "key:E01",
+            "properties": {}
+          },
+          {
+            "id": 2,
+            "key": "key:E02",
+            "properties": {}
+          },
+          {
+            "id": 3,
+            "key": "key:E03",
+            "properties": {}
+          },
+          {
+            "id": 4,
+            "key": "key:E04",
+            "properties": {}
+          },
+          {
+            "id": 5,
+            "key": "key:E05",
+            "properties": {}
+          },
+          {
+            "id": 6,
+            "key": "key:E06",
+            "properties": {}
+          },
+          {
+            "id": 7,
+            "key": "key:E07",
+            "properties": {}
+          },
+          {
+            "id": 8,
+            "key": "key:E08",
+            "properties": {}
+          },
+          {
+            "id": 9,
+            "key": "key:E09",
+            "properties": {}
+          },
+          {
+            "id": 10,
+            "key": "key:E10",
+            "properties": {}
+          },
+          {
+            "id": 11,
+            "key": "key:E11",
+            "properties": {}
+          },
+          {
+            "id": 12,
+            "key": "key:E12",
+            "properties": {}
+          },
+          {
+            "id": 13,
+            "key": "key:E13",
+            "properties": {}
+          },
+          {
+            "id": 14,
+            "key": "key:E14",
+            "properties": {}
+          },
+          {
+            "id": 15,
+            "key": "key:E15",
+            "properties": {}
+          },
+          {
+            "id": 16,
+            "key": "key:E16",
+            "properties": {}
+          },
+          {
+            "id": 17,
+            "key": "key:E17",
+            "properties": {}
+          },
+          {
+            "id": 18,
+            "key": "key:E18",
+            "properties": {}
+          },
+          {
+            "id": 19,
+            "key": "key:E19",
+            "properties": {}
+          },
+          {
+            "id": 20,
+            "key": "key:E20",
+            "properties": {}
+          },
+          {
+            "id": 21,
+            "key": "key:E21",
+            "properties": {}
+          },
+          {
+            "id": 22,
+            "key": "key:E22",
+            "properties": {}
+          },
+          {
+            "id": 23,
+            "key": "key:E23",
+            "properties": {}
+          },
+          {
+            "id": 24,
+            "key": "key:E24",
+            "properties": {}
+          },
+          {
+            "id": 25,
+            "key": "key:E25",
+            "properties": {}
+          },
+          {
+            "id": 26,
+            "key": "key:E26",
+            "properties": {}
+          },
+          {
+            "id": 27,
+            "key": "key:E27",
+            "properties": {}
+          },
+          {
+            "id": 28,
+            "key": "key:E28",
+            "properties": {}
+          },
+          {
+            "id": 29,
+            "key": "key:E29",
+            "properties": {}
+          },
+          {
+            "id": 30,
+            "key": "key:E30",
+            "properties": {}
+          },
+          {
+            "id": 31,
+            "key": "key:E31",
+            "properties": {}
+          },
+          {
+            "id": 32,
+            "key": "key:E32",
+            "properties": {}
+          },
+          {
+            "id": 33,
+            "key": "key:E33",
+            "properties": {}
+          },
+          {
+            "id": 34,
+            "key": "key:E34",
+            "properties": {}
+          },
+          {
+            "id": 35,
+            "key": "key:E35",
+            "properties": {}
+          },
+          {
+            "id": 36,
+            "key": "key:E36",
+            "properties": {}
+          },
+          {
+            "id": 37,
+            "key": "key:E37",
+            "properties": {}
+          },
+          {
+            "id": 38,
+            "key": "key:E38",
+            "properties": {}
+          },
+          {
+            "id": 39,
+            "key": "key:E39",
+            "properties": {}
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

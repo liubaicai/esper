@@ -327,6 +327,24 @@ func NormalizeResults(results []esper.Result) []ResultRecord {
 	return normalizeResults(results)
 }
 
+// normalizePartitionKey converts internal Go keyed-context partition keys to
+// the language-neutral "key:<value>" form used by the Java oracle.
+func normalizePartitionKey(key string) string {
+	const marker = `string:"`
+	if !strings.HasPrefix(key, "esper.ValueState:") {
+		return key
+	}
+	index := strings.Index(key, marker)
+	if index < 0 {
+		return key
+	}
+	value := key[index+len(marker):]
+	if end := strings.IndexByte(value, '"'); end >= 0 {
+		value = value[:end]
+	}
+	return "key:" + value
+}
+
 func normalizePartitions(descriptors []esper.ContextPartitionDescriptor) []PartitionRecord {
 	if len(descriptors) == 0 {
 		return nil
@@ -337,7 +355,7 @@ func normalizePartitions(descriptors []esper.ContextPartitionDescriptor) []Parti
 		if hash, ok := descriptor.Property("hash"); ok {
 			properties["hash"] = normalizeValue(hash)
 		}
-		result = append(result, PartitionRecord{ID: descriptor.ID, Key: descriptor.Key, Properties: properties})
+		result = append(result, PartitionRecord{ID: descriptor.ID, Key: normalizePartitionKey(descriptor.Key), Properties: properties})
 	}
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].ID != result[j].ID {

@@ -252,6 +252,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/deployment-restart-window.json`、`testdata/parity/deployment-restart-window.evidence.json`；当前差异数为 0，覆盖 `EPLJoinStartStopSceneOne`。
 
+## High-cardinality-context oracle
+
+第十二个代表性场景使用 `HighCardinalityScenarioOracle.java`（runner：`run-high-cardinality.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)`，双跑 `create context SegmentedByAString partition by theString from SupportBean` 与 `context SegmentedByAString select sum(intPrimitive) as col1 from SupportBean#keepall`：40 个唯一 key 各建一个分段分区并保留独立聚合，第二次给前 10 组各 +100 后快照前 10 行为 101..110、其余保持 1..40。
+
+```sh
+./tools/java-oracle/run-high-cardinality.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/high-cardinality-context.json \
+  --output /tmp/high-cardinality-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode high-cardinality-diff \
+  -scenario testdata/parity/high-cardinality-context.json \
+  -java-trace /tmp/high-cardinality-java.json \
+  -evidence /tmp/high-cardinality.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/high-cardinality-context.json`、`testdata/parity/high-cardinality-context.evidence.json`；当前差异数为 0，覆盖 `ContextKeySegmentedLargeNumberPartitions`（缩减版）。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。
