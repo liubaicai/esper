@@ -43,7 +43,7 @@
 
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
-- 最新已提交：`2134268f3`（Register five more high-risk Java classes as inventoried-only cases）
+- 最新已提交：`178b454c7`（Add resultset-row-per-group-simple representative parity scenario）
 
 ### 2.2 对账清单
 
