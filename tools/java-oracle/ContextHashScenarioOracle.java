@@ -267,7 +267,9 @@ public final class ContextHashScenarioOracle {
             if (oldArray.size() > 0) {
                 record.add("old", oldArray);
             }
-            record.add("partitions", partitions(selector));
+            if (!"listener".equals(operation)) {
+                record.add("partitions", partitions(selector));
+            }
             records.add(record);
         }
 

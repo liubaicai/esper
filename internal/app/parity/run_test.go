@@ -913,3 +913,97 @@ func TestRunVariableDeployDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunContextOutputDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-output-termination.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-output.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-output-termination.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-output-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextOutputDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["c1"] = json.Number("999")
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+		{
+			name: "time-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Time = "2002-05-01T08:01:00Z"
+			},
+		},
+		{
+			name: "field-name",
+			mutate: func(trace *compat.Trace) {
+				fields := trace.Records[0].New[0].Fields
+				fields["c2"] = fields["c1"]
+				delete(fields, "c1")
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-output-termination.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-output.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-output-termination.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-output-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

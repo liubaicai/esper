@@ -206,7 +206,9 @@ func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *
 		record := TraceRecord{Case: caseName, Operation: operation, Statement: current.Name(), Sequence: sequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
 		record.New = normalizeResults(batch.New)
 		record.Old = normalizeResults(batch.Old)
-		record.Partitions = normalizePartitions(current.ContextPartitionsWith(selector))
+		if operation == "snapshot" || operation == "snapshot-selector" {
+			record.Partitions = normalizePartitions(current.ContextPartitionsWith(selector))
+		}
 		trace.Records = append(trace.Records, record)
 	}
 	statements := make([]*esper.Statement, 0, len(additional)+1)

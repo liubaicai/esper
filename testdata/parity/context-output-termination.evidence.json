@@ -1,0 +1,165 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-4b19317271be7df8b569"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTerm.java"
+  ],
+  "javaExecutions": [
+    "ContextInitTermOutputSnapshotWhenTerminated"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-output-termination",
+    "steps": [
+      {
+        "op": "case",
+        "case": "termination"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:01:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:01:59.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:02:00Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:02:01Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:03:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-output-termination",
+    "records": [
+      {
+        "case": "termination",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:02:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "termination",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T08:03:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 15
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-output-termination",
+    "records": [
+      {
+        "case": "termination",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:02:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "termination",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T08:03:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 15
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

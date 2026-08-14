@@ -212,6 +212,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/variable-deploy.json`、`testdata/parity/variable-deploy.evidence.json`；当前差异数为 0，覆盖 `EPLVariableOnSetWDeploy`。
 
+## Context-output-termination oracle
+
+第十个代表性场景使用 `ContextOutputScenarioOracle.java`（runner：`run-context-output.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)`，双跑 `create context EveryMinute as initiated by pattern[every timer:at(*, *, *, *, *)] terminated after 1 min` 与 `context EveryMinute select sum(intPrimitive) as c1 from SupportBean output snapshot when terminated`：08:01 分区在 08:02 终止输出 6，08:02 分区在 08:03 终止输出 15。Go runner 必须在部署前把虚拟时钟初始化到 08:00（`WithStartTime`），避免从 epoch 0 追赶 every-minute cron 的全部历史分区。
+
+```sh
+./tools/java-oracle/run-context-output.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/context-output-termination.json \
+  --output /tmp/context-output-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode context-output-diff \
+  -scenario testdata/parity/context-output-termination.json \
+  -java-trace /tmp/context-output-java.json \
+  -evidence /tmp/context-output.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/context-output-termination.json`、`testdata/parity/context-output-termination.evidence.json`；当前差异数为 0，覆盖 `ContextInitTermOutputSnapshotWhenTerminated`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

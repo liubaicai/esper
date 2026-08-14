@@ -227,15 +227,6 @@
               "c2": 10
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          }
         ]
       },
       {
@@ -251,22 +242,6 @@
               "c0": 1,
               "c1": "E2",
               "c2": 11
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
             }
           }
         ]
@@ -286,22 +261,6 @@
               "c2": 23
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
-            }
-          }
         ]
       },
       {
@@ -319,22 +278,6 @@
               "c2": 24
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
-            }
-          }
         ]
       },
       {
@@ -360,15 +303,6 @@
               }
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:550184",
-            "properties": {
-              "hash": 550184
-            }
-          }
         ]
       },
       {
@@ -390,15 +324,6 @@
               }
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:550184",
-            "properties": {
-              "hash": 550184
-            }
-          }
         ]
       },
       {
@@ -416,15 +341,6 @@
               "c3": 21,
               "c4": 21,
               "c5": "S0"
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:550184",
-            "properties": {
-              "hash": 550184
             }
           }
         ]
@@ -452,15 +368,6 @@
               }
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:67928",
-            "properties": {
-              "hash": 67928
-            }
-          }
         ]
       },
       {
@@ -482,15 +389,6 @@
               }
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:67928",
-            "properties": {
-              "hash": 67928
-            }
-          }
         ]
       },
       {
@@ -508,15 +406,6 @@
               "c3": 21,
               "c4": 21,
               "c5": "S0"
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:67928",
-            "properties": {
-              "hash": 67928
             }
           }
         ]
@@ -536,120 +425,6 @@
               "c2": 1
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
-            }
-          }
         ]
       },
       {
@@ -665,120 +440,6 @@
               "c0": 15,
               "c1": "E2",
               "c2": 10
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
             }
           }
         ]
@@ -798,120 +459,6 @@
               "c2": 3
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
-            }
-          }
         ]
       },
       {
@@ -927,120 +474,6 @@
               "c0": 9,
               "c1": "E3",
               "c2": 100
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
             }
           }
         ]
@@ -1060,120 +493,6 @@
               "c2": 201
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
-            }
-          }
         ]
       },
       {
@@ -1189,120 +508,6 @@
               "c0": 5,
               "c1": "E1",
               "c2": 6
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
             }
           }
         ]
@@ -1549,15 +754,6 @@
               "c2": 10
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          }
         ]
       },
       {
@@ -1573,22 +769,6 @@
               "c0": 1,
               "c1": "E2",
               "c2": 11
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
             }
           }
         ]
@@ -1608,22 +788,6 @@
               "c2": 23
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
-            }
-          }
         ]
       },
       {
@@ -1641,22 +805,6 @@
               "c2": 24
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
-            }
-          }
         ]
       },
       {
@@ -1682,15 +830,6 @@
               }
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:550184",
-            "properties": {
-              "hash": 550184
-            }
-          }
         ]
       },
       {
@@ -1712,15 +851,6 @@
               }
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:550184",
-            "properties": {
-              "hash": 550184
-            }
-          }
         ]
       },
       {
@@ -1738,15 +868,6 @@
               "c3": 21,
               "c4": 21,
               "c5": "S0"
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:550184",
-            "properties": {
-              "hash": 550184
             }
           }
         ]
@@ -1774,15 +895,6 @@
               }
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:67928",
-            "properties": {
-              "hash": 67928
-            }
-          }
         ]
       },
       {
@@ -1804,15 +916,6 @@
               }
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:67928",
-            "properties": {
-              "hash": 67928
-            }
-          }
         ]
       },
       {
@@ -1830,15 +933,6 @@
               "c3": 21,
               "c4": 21,
               "c5": "S0"
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:67928",
-            "properties": {
-              "hash": 67928
             }
           }
         ]
@@ -1858,120 +952,6 @@
               "c2": 1
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
-            }
-          }
         ]
       },
       {
@@ -1987,120 +967,6 @@
               "c0": 15,
               "c1": "E2",
               "c2": 10
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
             }
           }
         ]
@@ -2120,120 +986,6 @@
               "c2": 3
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
-            }
-          }
         ]
       },
       {
@@ -2249,120 +1001,6 @@
               "c0": 9,
               "c1": "E3",
               "c2": 100
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
             }
           }
         ]
@@ -2382,120 +1020,6 @@
               "c2": 201
             }
           }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
-            }
-          }
         ]
       },
       {
@@ -2511,120 +1035,6 @@
               "c0": 5,
               "c1": "E1",
               "c2": 6
-            }
-          }
-        ],
-        "partitions": [
-          {
-            "id": 0,
-            "key": "hash:0",
-            "properties": {
-              "hash": 0
-            }
-          },
-          {
-            "id": 1,
-            "key": "hash:1",
-            "properties": {
-              "hash": 1
-            }
-          },
-          {
-            "id": 2,
-            "key": "hash:2",
-            "properties": {
-              "hash": 2
-            }
-          },
-          {
-            "id": 3,
-            "key": "hash:3",
-            "properties": {
-              "hash": 3
-            }
-          },
-          {
-            "id": 4,
-            "key": "hash:4",
-            "properties": {
-              "hash": 4
-            }
-          },
-          {
-            "id": 5,
-            "key": "hash:5",
-            "properties": {
-              "hash": 5
-            }
-          },
-          {
-            "id": 6,
-            "key": "hash:6",
-            "properties": {
-              "hash": 6
-            }
-          },
-          {
-            "id": 7,
-            "key": "hash:7",
-            "properties": {
-              "hash": 7
-            }
-          },
-          {
-            "id": 8,
-            "key": "hash:8",
-            "properties": {
-              "hash": 8
-            }
-          },
-          {
-            "id": 9,
-            "key": "hash:9",
-            "properties": {
-              "hash": 9
-            }
-          },
-          {
-            "id": 10,
-            "key": "hash:10",
-            "properties": {
-              "hash": 10
-            }
-          },
-          {
-            "id": 11,
-            "key": "hash:11",
-            "properties": {
-              "hash": 11
-            }
-          },
-          {
-            "id": 12,
-            "key": "hash:12",
-            "properties": {
-              "hash": 12
-            }
-          },
-          {
-            "id": 13,
-            "key": "hash:13",
-            "properties": {
-              "hash": 13
-            }
-          },
-          {
-            "id": 14,
-            "key": "hash:14",
-            "properties": {
-              "hash": 14
-            }
-          },
-          {
-            "id": 15,
-            "key": "hash:15",
-            "properties": {
-              "hash": 15
             }
           }
         ]
