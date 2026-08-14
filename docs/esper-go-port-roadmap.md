@@ -43,7 +43,7 @@
 
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
-- 最新已提交：`dc8d190fa`（Add rowrecog-aggregation representative parity scenario）
+- 最新已提交：`a7089cd37`（Register six high-risk Java classes as inventoried-only cases）
 
 ### 2.2 对账清单
 
