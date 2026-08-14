@@ -312,6 +312,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/dataflow-connector-output.json`、`testdata/parity/dataflow-connector-output.evidence.json`；当前差异数为 0，覆盖 `EPLDataflowBeacon`。
 
+## Output-after-last oracle
+
+第十五个代表性场景使用 `OutputAfterScenarioOracle.java`（runner：`run-output-after.sh`）。它双跑 `select sum(intPrimitive) as thesum from SupportBean#keepall output after 4 events last every 2 events`：前 4 个事件激活策略且不输出，第 5 个事件进入 last-every 窗口，第 6 个事件输出最终聚合行 thesum=210。
+
+```sh
+./tools/java-oracle/run-output-after.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/output-after-last.json \
+  --output /tmp/output-after-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode output-after-diff \
+  -scenario testdata/parity/output-after-last.json \
+  -java-trace /tmp/output-after-java.json \
+  -evidence /tmp/output-after.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/output-after-last.json`、`testdata/parity/output-after-last.evidence.json`；当前差异数为 0，覆盖 `ResultSetAfterWithOutputLast`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。
