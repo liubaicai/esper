@@ -14,7 +14,7 @@ Esper 9.0.0 的 Go 移植正在按 [实施规划](docs/esper-go-port-implementat
 
 ## 大概进度
 
-当前 capability 对账进度为：固定 Java commit 的 inventory 中有 4,136 个 `status=ok` runtime，manifest 记录 2,366 条关联，覆盖 2,283 个唯一 runtime（55.1%），尚有 1,853 个 runtime 未建立关联；391 个 case 中 354 个为 `implemented`、20 个为 `differential-verified`、17 个为 `intentionally-different`。另有 20 个代表性场景已通过 Java/Go 差分验证（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`、`high-cardinality-context`、`time-window-long-running`、`dataflow-connector-output`、`output-after-last`、`rollup-output-every`、`match-recognize-simple`、`unidirectional-aggregate-join`、`output-first-having`、`context-keyed-subquery`），NFR 尚未验证。这里的 55.1% 是"已建立 Java runtime 对账/处置证据"的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
+当前 capability 对账进度为：固定 Java commit 的 inventory 中有 4,136 个 `status=ok` runtime，manifest 记录 2,366 条关联，覆盖 2,283 个唯一 runtime（55.1%），尚有 1,853 个 runtime 未建立关联；391 个 case 中 354 个为 `implemented`、20 个为 `differential-verified`、17 个为 `intentionally-different`。另有 20 个代表性场景已通过 Java/Go 差分验证（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`、`high-cardinality-context`、`time-window-long-running`、`dataflow-connector-output`、`output-after-last`、`rollup-output-every`、`match-recognize-simple`、`unidirectional-aggregate-join`、`output-first-having`、`context-keyed-subquery`）。Docker MySQL/Kafka/RabbitMQ 门控已通过；stress 语义基线已捕获但吞吐量偏低（约 280 events/s），性能/NFR 尚未验证。这里的 55.1% 是"已建立 Java runtime 对账/处置证据"的进度，不是 Java/Go 行为 parity 通过率，也不代表 Esper 全量移植完成。
 
 Java 基线的静态回归候选清单在 testdata/compat/static-manifest.json，运行态 execution 清单在 testdata/compat/java-execution-inventory.jsonl，非 Regression 的源资产盘点在 testdata/compat/source-test-manifest.json，首批 capability/case 映射在 testdata/compat/capability-manifest.json；这些清单都不是全量 Go 映射完成或 Java/Go 行为差分通过的证明。
 
@@ -36,3 +36,9 @@ ESPER_MYSQL_DSN='root:password@tcp(127.0.0.1:3306)/test?parseTime=true&charset=u
 ```
 
 2026-08-14 已在本地 Docker fixture 上通过 MySQL、Kafka 和 RabbitMQ 的全部门控 round-trip（命令与结果见上方链接）。
+
+周期 stress 基线（环境门控，普通 `go test` 会显式 skip）：
+
+```sh
+ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$' -count=1 -timeout 5m
+```

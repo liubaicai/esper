@@ -26031,6 +26031,7 @@
     "representativeScenarioPassing": 20,
     "currentFailures": [],
     "currentSkips": [
+      "internal/esper.TestStressSyntheticMediumLoad: ESPER_STRESS is unset; run ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$' -count=1",
       "connectors/kafka.TestKafkaDockerRoundTrip: ESPER_KAFKA_BROKERS is unset; run the Kafka fixture from docs/integration/external-services.md",
       "connectors/amqp.TestAMQPDockerRoundTrip: ESPER_AMQP_URL is unset; run the RabbitMQ fixture from docs/integration/external-services.md",
       "connectors/amqp.TestAMQPDockerSinkRoundTrip: ESPER_AMQP_URL is unset; run the RabbitMQ fixture from docs/integration/external-services.md",
@@ -26042,13 +26043,14 @@
     "risks": [
       "Twenty representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the twenty-eight listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered runtimes are differential-verified.",
-      "The 20-scenario representative suite is complete; stress load, fuzz/property suite, and Java-vs-Go performance baselines are still open.",
+      "The 20-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
+      "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 42.6s (~280 events/s); the low throughput is not yet root-caused, so performance/NFR is not complete.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
     ],
   "quality": {
     "race": "passed",
     "docker": "mysql/kafka/rabbitmq round-trip tests passed 2026-08-14; environment-gated in normal go test",
-    "stress": "not-run",
+    "stress": "baseline-captured 2026-08-14; semantic invariants pass, throughput low (~280 events/s), root cause open",
       "performance": "partial; targeted statement-metrics workload only"
     }
   }
