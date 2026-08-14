@@ -311,7 +311,8 @@
         "internal/esper/time_window_long_running_parity_test.go",
         "internal/app/parity/time_window_long.go",
         "internal/esper/resultset_grouped_time_window_parity_test.go",
-        "internal/app/parity/resultset_grouped_time_window.go"
+        "internal/app/parity/resultset_grouped_time_window.go",
+        "internal/esper/view_union_parity_test.go"
       ],
       "phase": 2,
       "status": "implemented",
@@ -25145,20 +25146,52 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewUnion.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "view",
-        "union"
+        "union",
+        "retain-union",
+        "composite",
+        "unique",
+        "first-unique",
+        "first-length",
+        "length-batch",
+        "sort",
+        "time-window",
+        "groupwin",
+        "pattern",
+        "subquery",
+        "named-window",
+        "on-delete",
+        "invalid"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
       ],
-      "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+      "goTests": [
+        "TestViewUnionFirstUniqueAndFirstLengthParity",
+        "TestViewUnionBatchWindowParity",
+        "TestViewUnionDerivedValueParity",
+        "TestViewUnionGroupByParity",
+        "TestViewUnionThreeUniqueParity",
+        "TestViewUnionPatternParity",
+        "TestViewUnionTwoUniqueParity",
+        "TestViewUnionSortedParity",
+        "TestViewUnionTimeWinParity",
+        "TestViewUnionSubselectParity",
+        "TestViewUnionInvalidParity",
+        "TestViewUnionNamedWindowFirstUniqueAndFirstLengthParity",
+        "TestViewUnionNamedWindowTimeWinParity",
+        "TestViewUnionNamedWindowTimeWinNoDeleteParity"
+      ],
+      "difference": "Go implements the Java ViewUnion retain-union executions with UnionWindows(...) composite retention. Runtime support: stream-level unions across firstunique/firstlength, length_batch+unique, two/three unique, sorted+sorted, time+unique, groupwin#length+groupwin#unique, pattern-derived streams and subqueries; named-window union retention is now accepted with time/unique/firstunique/firstlength/length/keepall children, including on-delete and time expiry; union old data is emitted when an event leaves every child (or is immediately self-evicted by all children), while batch children contribute both the last flushed batch and the currently accumulating batch to the union ref-count model. Java #uni derived-value statistics map to a Sum aggregate over the union window in the typed API; the pattern windowed stream maps to pattern insert-into routing into a union-windowed derived stream; #groupwin(k)#length(n)#unique(k2) retain-union maps to two GroupWindow children (groupwin+length and groupwin+unique), confirmed by Java oracle probes; Java's group/merge mismatch invalid is unrepresentable because Go has no merge window view, and nested group windows are rejected as the multiple-groupwin boundary. Java TestSuiteView 27/27 passes at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c; these executions are implemented but not yet differential-verified."
     },
     {
       "id": "case.inventory.view-time-win",
@@ -27333,13 +27366,17 @@
     {
       "capabilityId": "query.insert-into-route",
       "caseId": "case.inventory.epl-insert-into"
+    },
+    {
+      "capabilityId": "view.window-core",
+      "caseId": "case.inventory.view-union"
     }
   ],
   "summary": {
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 395,
+    "implementedCases": 396,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 18,
@@ -27372,7 +27409,7 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "324 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ResultSetQueryTypeIterator, EPLOtherStaticFunctions, InfraNamedWindowTypes, ResultSetQueryTypeRowPerGroup, ViewUnion, ViewTimeWin, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm, InfraNWTableCreateIndex and EPLDatabaseJoin have no Go implementation or differential evidence yet; EPLInsertInto's 20 executions were implemented in this slice (not yet differential-verified).",
+      "309 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema, ResultSetQueryTypeIterator, EPLOtherStaticFunctions, InfraNamedWindowTypes, ResultSetQueryTypeRowPerGroup, ViewTimeWin, ContextKeySegmentedWInitTermPrioritized, ExprFilterOptimizableConditionNegateConfirm, InfraNWTableCreateIndex and EPLDatabaseJoin have no Go implementation or differential evidence yet; EPLInsertInto's 20 executions and ViewUnion's 15 executions were implemented in prior slices (not yet differential-verified).",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."

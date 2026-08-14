@@ -43,7 +43,7 @@
 
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
-- 最近切片：EPLInsertInto 20 个 execution 提升为 implemented，statement metrics CPU 采样差异登记为 approved intentional difference（2026-08-14）。
+- 最近切片：ViewUnion 15 个 execution 提升为 implemented（named-window union retention、batch/sorted/groupwin/pattern/subquery union、child-delta old 流）；EPLInsertInto 20 个 execution 提升为 implemented；statement metrics CPU 采样差异登记为 approved intentional difference（2026-08-14）。
 - 最新已提交：`67bda1499`（Implement EPLInsertInto parity and finalize statement-metrics CPU difference）
 
 ### 2.2 对账清单
@@ -52,10 +52,10 @@
 | --- | --- |
 | Capability | 110 个 |
 | Case | 410 个 |
-| Case implemented（verification） | 395 个（其中 23 个 differential-verified、18 个 intentionally-different） |
+| Case implemented（verification） | 396 个（其中 23 个 differential-verified、18 个 intentionally-different） |
 | Case differential-verified | 23 个（33 个 runtime） |
 | Case intentionally-different | 18 个 |
-| Case inventoried-only | 15 个 |
+| Case inventoried-only | 14 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
 | Runtime 关联 | 2,715 条 |
 | 唯一已关联 runtime | 2,630 个 |

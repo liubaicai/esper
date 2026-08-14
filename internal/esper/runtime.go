@@ -10745,17 +10745,64 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		if len(state.children) == 0 {
 			state.children = make([]*windowRuntimeState, len(window.Windows))
 		}
+		childDeltas := make([]eventDelta, 0, len(window.Windows))
 		for index, childSpec := range window.Windows {
 			child := state.children[index]
 			if child == nil {
 				child = &windowRuntimeState{}
 				state.children[index] = child
 			}
-			if _, err := r.addToWindow(childSpec, child, event, now); err != nil {
+			childDelta, err := r.addToWindow(childSpec, child, event, now)
+			if err != nil {
 				return eventDelta{}, err
 			}
+			childDeltas = append(childDeltas, childDelta)
+		}
+		previous := make(map[string]struct{}, len(state.entries))
+		for _, stored := range state.entries {
+			previous[eventIdentity(stored.event)] = struct{}{}
 		}
 		result := reconcileCompositeWindow(state, window, now)
+		if window.Mode == UnionWindowMode {
+			// Java's symmetric UnionView posts every arriving event as new
+			// and emits an event as old when every child removed it. Child
+			// deltas can carry a self-evicted event that is never retained by
+			// the union (e.g. a sort window that expels the incoming event
+			// immediately): reconcile only sees retained sets, so the
+			// new/old pair is recovered from the child deltas here.
+			newSeen := make(map[string]struct{}, len(result.newEvents))
+			for _, newEvent := range result.newEvents {
+				newSeen[eventIdentity(newEvent)] = struct{}{}
+			}
+			oldSeen := make(map[string]struct{}, len(result.oldEvents))
+			for _, oldEvent := range result.oldEvents {
+				oldSeen[eventIdentity(oldEvent)] = struct{}{}
+			}
+			for _, childDelta := range childDeltas {
+				for _, newEvent := range childDelta.newEvents {
+					key := eventIdentity(newEvent)
+					if _, known := previous[key]; known {
+						continue
+					}
+					if _, exists := newSeen[key]; exists {
+						continue
+					}
+					result.newEvents = append(result.newEvents, newEvent)
+					newSeen[key] = struct{}{}
+				}
+				for _, oldEvent := range childDelta.oldEvents {
+					key := eventIdentity(oldEvent)
+					if _, retained := previous[key]; retained {
+						continue
+					}
+					if _, exists := oldSeen[key]; exists {
+						continue
+					}
+					result.oldEvents = append(result.oldEvents, oldEvent)
+					oldSeen[key] = struct{}{}
+				}
+			}
+		}
 		// Keep child views in sync, mirroring Java Esper's
 		// IntersectDefaultView. Two categories of events must be
 		// forwarded as removals to every child:
@@ -11584,7 +11631,7 @@ func reconcileCompositeWindow(state *windowRuntimeState, spec CompositeWindowSpe
 			continue
 		}
 		seenInChild := make(map[string]struct{})
-		for _, stored := range storedWindowHistory(spec.Windows[index], child) {
+		for _, stored := range storedWindowHistory(spec.Mode, spec.Windows[index], child) {
 			key := eventIdentity(stored.event)
 			if _, exists := candidates[key]; !exists {
 				candidates[key] = stored
@@ -11602,7 +11649,7 @@ func reconcileCompositeWindow(state *windowRuntimeState, spec CompositeWindowSpe
 		if index >= len(spec.Windows) {
 			continue
 		}
-		for _, stored := range storedWindowHistory(spec.Windows[index], child) {
+		for _, stored := range storedWindowHistory(spec.Mode, spec.Windows[index], child) {
 			key := eventIdentity(stored.event)
 			if spec.Mode == UnionWindowMode || presence[key] == len(state.children) {
 				eligible[key] = stored
@@ -11654,8 +11701,12 @@ func reconcileCompositeWindow(state *windowRuntimeState, spec CompositeWindowSpe
 // order used by windowHistory, while preserving received timestamps for
 // composite reconciliation. Unique windows keep their current entries in a
 // keyed map rather than state.entries; treating every child as a flat entries
-// slice would silently break composite unique/group views.
-func storedWindowHistory(spec WindowSpec, state *windowRuntimeState) []storedEvent {
+// slice would silently break composite unique/group views. Union composites
+// additionally include the currently accumulating batch of batch children,
+// mirroring Java's ref-counted union window (currentBatch events hold a
+// reference until the next flush emits them as old); intersection composites
+// keep Java's IntersectBatchView silent-accumulation contract instead.
+func storedWindowHistory(mode CompositeWindowMode, spec WindowSpec, state *windowRuntimeState) []storedEvent {
 	if state == nil {
 		return nil
 	}
@@ -11663,7 +11714,7 @@ func storedWindowHistory(spec WindowSpec, state *windowRuntimeState) []storedEve
 		keys := groupWindowOrder(state)
 		var result []storedEvent
 		for _, key := range keys {
-			result = append(result, storedWindowHistory(window.Inner, state.groups[key])...)
+			result = append(result, storedWindowHistory(mode, window.Inner, state.groups[key])...)
 		}
 		return result
 	}
@@ -11699,7 +11750,14 @@ func storedWindowHistory(spec WindowSpec, state *windowRuntimeState) []storedEve
 		}
 		return result
 	}
-	return append([]storedEvent(nil), state.entries...)
+	result := append([]storedEvent(nil), state.entries...)
+	if mode == UnionWindowMode {
+		switch spec.(type) {
+		case LengthBatchWindowSpec, TimeBatchWindowSpec, TimeLengthBatchWindowSpec, ExpressionBatchWindowSpec, ExternallyTimedWindowSpec:
+			result = append(result, state.pendingNew...)
+		}
+	}
+	return result
 }
 
 func containsEvent(events []storedEvent, target Event) bool {
@@ -11795,7 +11853,14 @@ func compositeIteratorEvents(spec CompositeWindowSpec, state *windowRuntimeState
 			continue
 		}
 		seen := make(map[string]struct{})
-		for _, event := range windowIteratorEvents(childSpec, state.children[index]) {
+		childEvents := windowIteratorEvents(childSpec, state.children[index])
+		if spec.Mode == UnionWindowMode {
+			// Java's union iterator is the ref-counted union window: batch
+			// children contribute both the last flushed batch and the
+			// currently accumulating batch.
+			childEvents = compositeChildRetainedEvents(childSpec, state.children[index])
+		}
+		for _, event := range childEvents {
 			key := eventIdentity(event)
 			if _, exists := candidates[key]; !exists {
 				candidates[key] = event
@@ -11830,6 +11895,32 @@ func compositeIteratorEvents(spec CompositeWindowSpec, state *windowRuntimeState
 		seen[key] = struct{}{}
 	}
 	return result
+}
+
+// compositeChildRetainedEvents returns the events a child view contributes to
+// a union's ref-counted window. This matches storedWindowHistory: batch
+// children hold a reference for the last flushed batch until the next flush
+// emits it as old, plus a reference for the currently accumulating batch.
+func compositeChildRetainedEvents(spec WindowSpec, state *windowRuntimeState) []Event {
+	if state == nil {
+		return nil
+	}
+	if window, ok := spec.(GroupWindowSpec); ok {
+		keys := groupWindowOrder(state)
+		var result []Event
+		for _, key := range keys {
+			result = append(result, compositeChildRetainedEvents(window.Inner, state.groups[key])...)
+		}
+		return result
+	}
+	if _, ok := spec.(UniqueWindowSpec); ok {
+		return windowHistoryFromUniqueState(state)
+	}
+	switch spec.(type) {
+	case LengthBatchWindowSpec, TimeBatchWindowSpec, TimeLengthBatchWindowSpec, ExpressionBatchWindowSpec, ExternallyTimedWindowSpec:
+		return append(eventsFromStored(state.entries), eventsFromStored(state.pendingNew)...)
+	}
+	return windowHistory(spec, state)
 }
 
 func windowHistory(spec WindowSpec, state *windowRuntimeState) []Event {

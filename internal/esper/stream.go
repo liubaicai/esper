@@ -2083,6 +2083,9 @@ func (w GroupWindowSpec) validate() error {
 	if w.Inner == nil {
 		return fmt.Errorf("esper: group window inner window is required")
 	}
+	if _, nested := w.Inner.(GroupWindowSpec); nested {
+		return fmt.Errorf("esper: multiple group-window declarations are not supported")
+	}
 	return w.Inner.validate()
 }
 
