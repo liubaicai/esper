@@ -1222,7 +1222,8 @@
         "internal/app/parity/high_cardinality.go",
         "internal/esper/context_keyed_subquery_parity_test.go",
         "internal/app/parity/context_keyed_subquery.go",
-        "internal/esper/context_key_segmented_w_init_term_prioritized_parity_test.go"
+        "internal/esper/context_key_segmented_w_init_term_prioritized_parity_test.go",
+        "internal/esper/context_nested_initiated_parity_test.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -24509,20 +24510,38 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextNested.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "context",
-        "nested"
+        "nested",
+        "key",
+        "category",
+        "hash",
+        "invalid"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
+      ],
+      "goTests": [
+        "TestContextNestedSingleEventTriggerParity",
+        "TestContextNestedNestingFilterCorrectnessParity",
+        "TestContextNestedInvalidParity"
       ],
       "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+        "temporal outer/child nested contexts (TemporalOverCategoryOverPartition, TemporalFixedOverHash, CategoryOverTemporalOverlapping, FixedTemporalOverPartitioned, PartitionedOverFixedTemporal, TemporalOverlapOverPartition)",
+        "initiated/pattern nested lifecycle semantics (CategoryOverPatternInitiated, FourContextsNested, PartitionedOverPatternInitiated, OverlappingAndPattern, NonOverlapping, InitWStartNow variants, KeyedStartStop, KeyedFilter)",
+        "nested iterator/targeted partition selectors and late-coming statement lifecycle",
+        "multi-props/init-term/end-event nested combinations",
+        "full Java differential trace for the covered ContextNested executions"
+      ],
+      "difference": "Go covers non-temporal nested contexts with CreateNestedContext over key/category/hash children: three-level key partition isolation with context property paths, category-over-key/hash routing, nested selectors, and duplicate child-name rejection. Temporal, initiated/pattern and iterator-targeted nested lifecycles remain open."
     },
     {
       "id": "case.inventory.resultset-output-limit-aggregate-grouped",
@@ -26448,6 +26467,10 @@
     },
     {
       "capabilityId": "context.partition",
+      "caseId": "case.inventory.context-nested"
+    },
+    {
+      "capabilityId": "context.partition",
       "caseId": "case.context-table-live-ownership"
     },
     {
@@ -27743,7 +27766,7 @@
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 409,
+    "implementedCases": 410,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 18,
@@ -27776,7 +27799,7 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "33 newly inventoried runtimes across ContextNested have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18), InfraNWTableOnSelect (28), ExprFilterOptimizableConditionNegateConfirm (26), ResultSetOutputLimitRowPerGroupRollup (24), ResultSetOutputLimitAggregateGrouped (27), InfraNWTableCreateIndex (22) and ContextKeySegmentedWInitTermPrioritized (23) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants, InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants, ExprFilter plan-hook/dataflow/stage/pattern variants, ResultSetOutputLimitRowPerGroupRollup output-all/join variants, ResultSetOutputLimitAggregateGrouped join/all/multikey-array variants, InfraNWTableCreateIndex range/widening/reuse/multikey variants and ContextKeySegmented implicit-start/temporal/pattern variants still open.",
+      "No inventoried-only cases remain; all 410 cases have at least implemented verification. EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18), InfraNWTableOnSelect (28), ExprFilterOptimizableConditionNegateConfirm (26), ResultSetOutputLimitRowPerGroupRollup (24), ResultSetOutputLimitAggregateGrouped (27), InfraNWTableCreateIndex (22), ContextKeySegmentedWInitTermPrioritized (23) and ContextNested (33) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants, InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants, ExprFilter plan-hook/dataflow/stage/pattern variants, ResultSetOutputLimitRowPerGroupRollup output-all/join variants, ResultSetOutputLimitAggregateGrouped join/all/multikey-array variants, InfraNWTableCreateIndex range/widening/reuse/multikey variants, ContextKeySegmented implicit-start/temporal/pattern variants and ContextNested temporal/initiated/iterator/late-coming variants still open.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."
