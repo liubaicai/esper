@@ -1,0 +1,238 @@
+{
+  "version": "esper-parity/v1",
+  "id": "rowrecog-aggregation",
+  "steps": [
+    {
+      "op": "case",
+      "case": "unpartitioned"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E1",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E2",
+        "value": 1
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E3",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E4",
+        "value": 5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E5",
+        "value": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E6",
+        "value": 1
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E7",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E8",
+        "value": 4
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E9",
+        "value": -1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E10",
+        "value": 7
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E11",
+        "value": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E12",
+        "value": 1
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "partitioned"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E1",
+        "cat": "x",
+        "value": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E2",
+        "cat": "y",
+        "value": 20
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E3",
+        "cat": "x",
+        "value": 7
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E4",
+        "cat": "y",
+        "value": 5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E5",
+        "cat": "x",
+        "value": 8
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E6",
+        "cat": "y",
+        "value": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E7",
+        "cat": "x",
+        "value": -2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E8",
+        "cat": "y",
+        "value": -7
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E9",
+        "cat": "x",
+        "value": -5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E10",
+        "cat": "y",
+        "value": -4
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E11",
+        "cat": "y",
+        "value": 999
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E12",
+        "cat": "x",
+        "value": 999
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    }
+  ]
+}

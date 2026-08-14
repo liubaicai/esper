@@ -24,7 +24,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, subquery, subquery-diff, named-window-mutation, named-window-mutation-diff, table-mutation, table-mutation-diff, variable-deploy, variable-deploy-diff, context-output, context-output-diff, deployment-restart, deployment-restart-diff, high-cardinality, high-cardinality-diff, time-window, time-window-diff, dataflow-connector, dataflow-connector-diff, output-after, output-after-diff, rollup, rollup-diff, match-recognize, match-recognize-diff, unidirectional-join, unidirectional-join-diff, output-first-having, output-first-having-diff, context-keyed-subquery or context-keyed-subquery-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, subquery, subquery-diff, named-window-mutation, named-window-mutation-diff, table-mutation, table-mutation-diff, variable-deploy, variable-deploy-diff, context-output, context-output-diff, deployment-restart, deployment-restart-diff, high-cardinality, high-cardinality-diff, time-window, time-window-diff, dataflow-connector, dataflow-connector-diff, output-after, output-after-diff, rollup, rollup-diff, match-recognize, match-recognize-diff, unidirectional-join, unidirectional-join-diff, output-first-having, output-first-having-diff, context-keyed-subquery, context-keyed-subquery-diff, rowrecog-aggregation or rowrecog-aggregation-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -359,6 +359,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, contextKeyedSubqueryJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, contextKeyedSubqueryJavaSources),
 				splitMetadata(*javaExecutions, contextKeyedSubqueryJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "rowrecog-aggregation" || *mode == "rowrecog-aggregation-diff" {
+		trace, err := runRowRecogAggregationScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "rowrecog-aggregation-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, rowRecogAggregationJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, rowRecogAggregationJavaSources),
+				splitMetadata(*javaExecutions, rowRecogAggregationJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

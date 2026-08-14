@@ -432,6 +432,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/context-keyed-subquery.json`、`testdata/parity/context-keyed-subquery.evidence.json`；当前差异数为 0，覆盖 `ContextKeySegmentedSubqueryFiltered`。
 
+## Rowrecog-aggregation oracle
+
+第二十一个代表性场景使用 `RowRecogAggregationScenarioOracle.java`（runner：`run-rowrecog-aggregation.sh`）。它注册 Map 事件类型 `SupportRecogBean(theString, cat, value)`，双跑 `RowRecogMeasureAggregation`（`pattern (A B* C)` + max/min/first/last/count measures，三次匹配后快照）与 `RowRecogMeasureAggregationPartitioned`（`partition by cat` + `pattern (A B B C C D)` + sum measures，两次匹配后快照）。Java 语义要点：B* 为空时 max/min/first/last 为 null、count 为 0；partitioned 匹配按 cat 分区独立累计。Go 用 `PartitionBy` + `TagMax/TagMin/TagLast/TagFirst/TagCount/TagSum` 链式 API 复现同一语义。
+
+```sh
+./tools/java-oracle/run-rowrecog-aggregation.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/rowrecog-aggregation.json \
+  --output /tmp/rowrecog-aggregation-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode rowrecog-aggregation-diff \
+  -scenario testdata/parity/rowrecog-aggregation.json \
+  -java-trace /tmp/rowrecog-aggregation-java.json \
+  -evidence /tmp/rowrecog-aggregation.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/rowrecog-aggregation.json`、`testdata/parity/rowrecog-aggregation.evidence.json`；当前差异数为 0，覆盖 `RowRecogMeasureAggregation` 与 `RowRecogMeasureAggregationPartitioned`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

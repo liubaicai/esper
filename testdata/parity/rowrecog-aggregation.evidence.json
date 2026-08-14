@@ -1,0 +1,881 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-254b2ace6ea437689d15",
+    "java-runtime-0de4e4485dc851b8c4a5"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogAggregation.java"
+  ],
+  "javaExecutions": [
+    "RowRecogMeasureAggregation",
+    "RowRecogMeasureAggregationPartitioned"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "rowrecog-aggregation",
+    "steps": [
+      {
+        "op": "case",
+        "case": "unpartitioned"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E1",
+          "value": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E2",
+          "value": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E3",
+          "value": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E4",
+          "value": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E5",
+          "value": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E6",
+          "value": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E7",
+          "value": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E8",
+          "value": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E9",
+          "value": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E10",
+          "value": 7
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E11",
+          "value": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E12",
+          "value": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "partitioned"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E1",
+          "cat": "x",
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E2",
+          "cat": "y",
+          "value": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E3",
+          "cat": "x",
+          "value": 7
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E4",
+          "cat": "y",
+          "value": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E5",
+          "cat": "x",
+          "value": 8
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E6",
+          "cat": "y",
+          "value": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E7",
+          "cat": "x",
+          "value": -2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E8",
+          "cat": "y",
+          "value": -7
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E9",
+          "cat": "x",
+          "value": -5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E10",
+          "cat": "y",
+          "value": -4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E11",
+          "cat": "y",
+          "value": 999
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E12",
+          "cat": "x",
+          "value": 999
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "rowrecog-aggregation",
+    "records": [
+      {
+        "case": "unpartitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "c_string": "E2",
+              "countb": 0,
+              "firstb": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              },
+              "maxb": {
+                "state": "null"
+              },
+              "minb": {
+                "state": "null"
+              },
+              "minb2x": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "unpartitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "c_string": "E2",
+              "countb": 0,
+              "firstb": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              },
+              "maxb": {
+                "state": "null"
+              },
+              "minb": {
+                "state": "null"
+              },
+              "minb2x": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "unpartitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E3",
+              "c_string": "E6",
+              "countb": 2,
+              "firstb": 5,
+              "lastb": 3,
+              "maxb": 5,
+              "minb": 3,
+              "minb2x": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "unpartitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "c_string": "E2",
+              "countb": 0,
+              "firstb": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              },
+              "maxb": {
+                "state": "null"
+              },
+              "minb": {
+                "state": "null"
+              },
+              "minb2x": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E3",
+              "c_string": "E6",
+              "countb": 2,
+              "firstb": 5,
+              "lastb": 3,
+              "maxb": 5,
+              "minb": 3,
+              "minb2x": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "unpartitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E7",
+              "c_string": "E12",
+              "countb": 4,
+              "firstb": 4,
+              "lastb": 2,
+              "maxb": 7,
+              "minb": -1,
+              "minb2x": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "unpartitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "c_string": "E2",
+              "countb": 0,
+              "firstb": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              },
+              "maxb": {
+                "state": "null"
+              },
+              "minb": {
+                "state": "null"
+              },
+              "minb2x": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E3",
+              "c_string": "E6",
+              "countb": 2,
+              "firstb": 5,
+              "lastb": 3,
+              "maxb": 5,
+              "minb": 3,
+              "minb2x": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E7",
+              "c_string": "E12",
+              "countb": 4,
+              "firstb": 4,
+              "lastb": 2,
+              "maxb": 7,
+              "minb": -1,
+              "minb2x": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "partitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E2",
+              "cat": "y",
+              "d_string": "E11",
+              "sumaplusb": 47,
+              "sumaplusc": 29,
+              "sumb": 7,
+              "sumc": -11
+            }
+          }
+        ]
+      },
+      {
+        "case": "partitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E2",
+              "cat": "y",
+              "d_string": "E11",
+              "sumaplusb": 47,
+              "sumaplusc": 29,
+              "sumb": 7,
+              "sumc": -11
+            }
+          }
+        ]
+      },
+      {
+        "case": "partitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "cat": "x",
+              "d_string": "E12",
+              "sumaplusb": 35,
+              "sumaplusc": 13,
+              "sumb": 15,
+              "sumc": -7
+            }
+          }
+        ]
+      },
+      {
+        "case": "partitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "cat": "x",
+              "d_string": "E12",
+              "sumaplusb": 35,
+              "sumaplusc": 13,
+              "sumb": 15,
+              "sumc": -7
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E2",
+              "cat": "y",
+              "d_string": "E11",
+              "sumaplusb": 47,
+              "sumaplusc": 29,
+              "sumb": 7,
+              "sumc": -11
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "rowrecog-aggregation",
+    "records": [
+      {
+        "case": "unpartitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "c_string": "E2",
+              "countb": 0,
+              "firstb": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              },
+              "maxb": {
+                "state": "null"
+              },
+              "minb": {
+                "state": "null"
+              },
+              "minb2x": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "unpartitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "c_string": "E2",
+              "countb": 0,
+              "firstb": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              },
+              "maxb": {
+                "state": "null"
+              },
+              "minb": {
+                "state": "null"
+              },
+              "minb2x": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "unpartitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E3",
+              "c_string": "E6",
+              "countb": 2,
+              "firstb": 5,
+              "lastb": 3,
+              "maxb": 5,
+              "minb": 3,
+              "minb2x": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "unpartitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "c_string": "E2",
+              "countb": 0,
+              "firstb": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              },
+              "maxb": {
+                "state": "null"
+              },
+              "minb": {
+                "state": "null"
+              },
+              "minb2x": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E3",
+              "c_string": "E6",
+              "countb": 2,
+              "firstb": 5,
+              "lastb": 3,
+              "maxb": 5,
+              "minb": 3,
+              "minb2x": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "unpartitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E7",
+              "c_string": "E12",
+              "countb": 4,
+              "firstb": 4,
+              "lastb": 2,
+              "maxb": 7,
+              "minb": -1,
+              "minb2x": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "unpartitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "c_string": "E2",
+              "countb": 0,
+              "firstb": {
+                "state": "null"
+              },
+              "lastb": {
+                "state": "null"
+              },
+              "maxb": {
+                "state": "null"
+              },
+              "minb": {
+                "state": "null"
+              },
+              "minb2x": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E3",
+              "c_string": "E6",
+              "countb": 2,
+              "firstb": 5,
+              "lastb": 3,
+              "maxb": 5,
+              "minb": 3,
+              "minb2x": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E7",
+              "c_string": "E12",
+              "countb": 4,
+              "firstb": 4,
+              "lastb": 2,
+              "maxb": 7,
+              "minb": -1,
+              "minb2x": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "partitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E2",
+              "cat": "y",
+              "d_string": "E11",
+              "sumaplusb": 47,
+              "sumaplusc": 29,
+              "sumb": 7,
+              "sumc": -11
+            }
+          }
+        ]
+      },
+      {
+        "case": "partitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E2",
+              "cat": "y",
+              "d_string": "E11",
+              "sumaplusb": 47,
+              "sumaplusc": 29,
+              "sumb": 7,
+              "sumc": -11
+            }
+          }
+        ]
+      },
+      {
+        "case": "partitioned",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "cat": "x",
+              "d_string": "E12",
+              "sumaplusb": 35,
+              "sumaplusc": 13,
+              "sumb": 15,
+              "sumc": -7
+            }
+          }
+        ]
+      },
+      {
+        "case": "partitioned",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E1",
+              "cat": "x",
+              "d_string": "E12",
+              "sumaplusb": 35,
+              "sumaplusc": 13,
+              "sumb": 15,
+              "sumc": -7
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E2",
+              "cat": "y",
+              "d_string": "E11",
+              "sumaplusb": 47,
+              "sumaplusc": 29,
+              "sumb": 7,
+              "sumc": -11
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
