@@ -1,3 +1,5 @@
+本轮实现 stress 热点优化：新增 `windowHistoryByEventRequired`，普通 length/time 窗口不再每次 insert/remove/expire 重建 `historyByEvent` map（`eventDelta.history` 已是同一完整历史）；group、time-order/sorted/accum 与 batch 窗口继续保留 per-event/批量前缀语义。`TestStressSyntheticMediumLoad` 从 42.6s 降至 18.45s（filter-window-aggregate 子项 28.5s→6.3s），全量 `go test ./... -count=1`、`go test -race ./... -count=1`、vet、layout 与 compat 均通过。性能/NFR 仍开放。
+
 本轮补充 stress 基线根因分析：`go tool pprof -alloc_space` 显示 5,000 个 length(200) 聚合事件累计约 83GB 分配，82.6% 来自 `windowHistoryByEvent`——每次 `insert` 都重建 `historyByEvent` map 并为窗口内每个事件复制完整历史切片，`aggregateGroupContext` 再复制一次；该热点解释了约 280 events/s 的低吞吐。优化方向（按需构建 historyByEvent、复用不可变窗口快照）已写入 roadmap 与实施计划，作为下一切片；性能/NFR 仍不宣称完成。
 
 本轮新增环境门控的周期 stress 基线 `internal/esper/stress_synthetic_test.go`（`TestStressSyntheticMediumLoad`）：固定种子 42，覆盖 filter + length(200) + ungrouped sum 的 5,000 事件快照、5,000 个 keyed context 分区聚合与 1,000 次重复更新、join length(50) 的 500 对匹配和 undeploy/redeploy 状态清理。语义不变量全部通过，但 12,200 事件耗时 42.6s（约 280 events/s），暴露 filter/window/aggregate/join 路径低吞吐；该根因未定位，因此性能/NFR 不宣称完成。普通 `go test ./...` 在未设置 `ESPER_STRESS=1` 时显式 skip，命令与基线记录已写入 README、roadmap 与 manifest `quality.stress`。

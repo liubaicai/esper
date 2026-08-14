@@ -10227,7 +10227,9 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		}
 		r.windows[node] = state
 		result.history = windowHistory(node.window, state)
-		result.historyByEvent = windowHistoryByEvent(node.window, state)
+		if windowHistoryByEventRequired(node.window) {
+			result.historyByEvent = windowHistoryByEvent(node.window, state)
+		}
 		if _, batch := node.window.(ExpressionBatchWindowSpec); batch && len(result.newEvents) > 0 {
 			// Esper's expression batch view posts the completed batch as one
 			// new-data array and PREV-family expressions resolve against the
@@ -10380,7 +10382,9 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 			}
 		}
 		result.history = windowHistory(node.window, state)
-		result.historyByEvent = windowHistoryByEvent(node.window, state)
+		if windowHistoryByEventRequired(node.window) {
+			result.historyByEvent = windowHistoryByEvent(node.window, state)
+		}
 		result.previousByEvent = windowPreviousAccessByEvent(node.window, state)
 		if windowUsesPreviousAccess(node.window) {
 			if result.previousByEvent == nil {
@@ -11194,7 +11198,9 @@ func (r *statementRuntime) expire(now time.Time) eventDelta {
 		delta := r.expireWindowState(node.window, state, now)
 		result.forced = result.forced || delta.forced
 		delta.history = windowHistory(node.window, state)
-		delta.historyByEvent = windowHistoryByEvent(node.window, state)
+		if windowHistoryByEventRequired(node.window) {
+			delta.historyByEvent = windowHistoryByEvent(node.window, state)
+		}
 		if len(delta.priorByEvent) == 0 && windowUsesArrivalPrior(node.window) {
 			delta.priorByEvent = windowPriorAccessByEvent(node.window, state)
 		}
@@ -11895,6 +11901,27 @@ func windowHistoryByEvent(spec WindowSpec, state *windowRuntimeState) map[string
 		result[eventIdentity(event)] = append([]Event(nil), history...)
 	}
 	return result
+}
+
+// windowHistoryByEventRequired reports whether the per-event history map is
+// needed for the current window. Ordinary length/time/sorted windows expose
+// the same full retained history to every event, so eventDelta.history is
+// sufficient and rebuilding the map on every insert would be O(events×window)
+// allocation. Group windows and time-order/sorted/accum windows need
+// partition/access-specific maps, and batch windows override the map with
+// batch-prefix history.
+func windowHistoryByEventRequired(spec WindowSpec) bool {
+	if windowUsesPreviousAccess(spec) || windowUsesArrivalPrior(spec) {
+		return true
+	}
+	switch spec.(type) {
+	case ExpressionBatchWindowSpec, LengthBatchWindowSpec, TimeLengthBatchWindowSpec, TimeBatchWindowSpec:
+		return true
+	}
+	if external, ok := spec.(ExternallyTimedWindowSpec); ok {
+		return external.Batch
+	}
+	return false
 }
 
 func removeWindowKeyOrder(state *windowRuntimeState, key string) {
