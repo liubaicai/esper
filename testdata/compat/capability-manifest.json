@@ -1221,7 +1221,8 @@
         "internal/esper/high_cardinality_context_parity_test.go",
         "internal/app/parity/high_cardinality.go",
         "internal/esper/context_keyed_subquery_parity_test.go",
-        "internal/app/parity/context_keyed_subquery.go"
+        "internal/app/parity/context_keyed_subquery.go",
+        "internal/esper/context_key_segmented_w_init_term_prioritized_parity_test.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -25546,21 +25547,37 @@
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmentedWInitTermPrioritized.java"
       ],
       "tags": [
-        "inventory",
+        "correctness",
         "context",
         "key-segmented",
-        "init-term"
+        "init-term",
+        "partition",
+        "termination",
+        "correlated",
+        "invalid"
       ],
-      "status": "inventoried",
+      "status": "implemented",
       "evidence": [
-        "java-runtime-inventory"
+        "java-runtime-inventory",
+        "java-source",
+        "java-junit",
+        "go-unit"
       ],
       "verification": [
-        "inventoried"
+        "inventoried",
+        "implemented"
+      ],
+      "goTests": [
+        "TestContextKeySegmentedWInitTermPrioritizedParity"
       ],
       "remaining": [
-        "Go implementation and differential verification not yet established; inventory only"
-      ]
+        "ContextKeySegmentedTermByFilter / WSubtype / WSecondType / Unrelated / Filter2Keys implicit-start executions",
+        "ContextKeySegmentedTermByAfter / CrontabOutputWhenTerminated / PatternTwoFilters / Pattern3Partition temporal/pattern terminations",
+        "ContextKeySegmentedInitTermWithPartitionFilter / WithTwoInit / InitWCorrelatedTermPattern",
+        "ContextKeySegmentedWithCorrelatedTermFilter implicit-start aggregate inclusion",
+        "full Java differential trace for the covered ContextKeySegmentedWInitTermPrioritized executions"
+      ],
+      "difference": "Go covers the explicit-initiated executions with CreateInitiatedTerminatedContext/By and grouped aggregates: InitTermNoPartitionFilter, InitNoTerm (two soda variants), InitWCorrelatedTermFilter, FilterExprTermByFilter, FilterExprTermByFilterWExpr and Invalid. Explicit start events are excluded from aggregate state, matching Java's initiated-by contract. Implicit partition-by start events are not yet included in aggregate state, so those executions remain open."
     },
     {
       "id": "case.inventory.epl-insert-into",
@@ -26424,6 +26441,10 @@
     {
       "capabilityId": "context.partition",
       "caseId": "case.context-partitioning"
+    },
+    {
+      "capabilityId": "context.partition",
+      "caseId": "case.inventory.context-key-segmented-w-init-term-prioritized"
     },
     {
       "capabilityId": "context.partition",
@@ -27722,7 +27743,7 @@
     "totalCases": 410,
     "totalCapabilities": 110,
     "inventoriedCases": 410,
-    "implementedCases": 408,
+    "implementedCases": 409,
     "differentialVerifiedCases": 23,
     "differentialVerifiedRuntimeIds": 33,
     "intentionallyDifferentCases": 18,
@@ -27755,7 +27776,7 @@
       "Twenty-three representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
       "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
       "The 23-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "56 newly inventoried runtimes across ContextNested and ContextKeySegmentedWInitTermPrioritized have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18), InfraNWTableOnSelect (28), ExprFilterOptimizableConditionNegateConfirm (26), ResultSetOutputLimitRowPerGroupRollup (24), ResultSetOutputLimitAggregateGrouped (27) and InfraNWTableCreateIndex (22) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants, InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants, ExprFilter plan-hook/dataflow/stage/pattern variants, ResultSetOutputLimitRowPerGroupRollup output-all/join variants, ResultSetOutputLimitAggregateGrouped join/all/multikey-array variants and InfraNWTableCreateIndex range/widening/reuse/multikey variants still open.",
+      "33 newly inventoried runtimes across ContextNested have no Go implementation or differential evidence yet; EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18), InfraNWTableOnSelect (28), ExprFilterOptimizableConditionNegateConfirm (26), ResultSetOutputLimitRowPerGroupRollup (24), ResultSetOutputLimitAggregateGrouped (27), InfraNWTableCreateIndex (22) and ContextKeySegmentedWInitTermPrioritized (23) executions were implemented in later slices (not yet differential-verified), with EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants, InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants, ExprFilter plan-hook/dataflow/stage/pattern variants, ResultSetOutputLimitRowPerGroupRollup output-all/join variants, ResultSetOutputLimitAggregateGrouped join/all/multikey-array variants, InfraNWTableCreateIndex range/widening/reuse/multikey variants and ContextKeySegmented implicit-start/temporal/pattern variants still open.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."
