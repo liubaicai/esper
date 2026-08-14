@@ -6725,6 +6725,41 @@ func TimeWindow(duration time.Duration) TimeWindowSpec {
 	return internalengine.TimeWindow(duration)
 }
 
+// TimeWindowCalendar builds a calendar-period time window with an optional
+// millisecond remainder, mirroring Esper time(1 months 10 milliseconds).
+func TimeWindowCalendar(years, months, days int, duration time.Duration) TimeWindowSpec {
+	return internalengine.TimeWindowCalendar(years, months, days, duration)
+}
+
+func TimeWindowDays[T Numeric](value Expression[T]) TimeWindowSpec {
+	return internalengine.TimeWindowDays[T](value)
+}
+
+// TimeWindowExpr sizes the window by an expression that evaluates to a
+// time.Duration (or numeric milliseconds) per event, mirroring Esper
+// time(<variable>) forms.
+func TimeWindowExpr(expr Expr) TimeWindowSpec {
+	return internalengine.TimeWindowExpr(expr)
+}
+
+func TimeWindowHours[T Numeric](value Expression[T]) TimeWindowSpec {
+	return internalengine.TimeWindowHours[T](value)
+}
+
+// TimeWindowMilliseconds/Seconds/Minutes/Hours/Days size the window by a
+// variable or parameter expression in the given unit.
+func TimeWindowMilliseconds[T Numeric](value Expression[T]) TimeWindowSpec {
+	return internalengine.TimeWindowMilliseconds[T](value)
+}
+
+func TimeWindowMinutes[T Numeric](value Expression[T]) TimeWindowSpec {
+	return internalengine.TimeWindowMinutes[T](value)
+}
+
+func TimeWindowSeconds[T Numeric](value Expression[T]) TimeWindowSpec {
+	return internalengine.TimeWindowSeconds[T](value)
+}
+
 type TimeWindowSpec = internalengine.TimeWindowSpec
 
 // TimerAt creates a one-shot timer observer driven by Engine.AdvanceTime.

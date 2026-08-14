@@ -3179,6 +3179,8 @@ func visitStreamNodeExpressions(node *streamNode, visit func(Expr) error) error 
 
 func visitWindowExpressions(window WindowSpec, visit func(Expr) error) error {
 	switch value := window.(type) {
+	case TimeWindowSpec:
+		return visit(value.Expr)
 	case ExpressionWindowSpec:
 		return visit(value.Keep)
 	case ExpressionBatchWindowSpec:

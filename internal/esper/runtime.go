@@ -2929,6 +2929,7 @@ func (e *Engine) prepareStatementLocked(ctx context.Context, deployment *Deploym
 	statement.runtime.variables = statementVariables(e.variables, statement.parameters)
 	statement.runtime.subqueryRegistry = newSubqueryRuntimeRegistry(e.env, e, plan.query)
 	statement.runtime.variables = statement.runtime.subqueryRegistry.attachVariables(statement.runtime.variables)
+	statement.runtime.resolveWindowDurations(plan)
 	statement.runtime.initializeAt(e.clock.Now())
 	if plan.query.tableTarget != "" {
 		if err := statement.runtime.persistAggregateTable(plan, e.clock.Now()); err != nil {
@@ -4568,14 +4569,24 @@ type windowRuntimeState struct {
 	groups     map[string]*windowRuntimeState
 	groupOrder []string
 	children   []*windowRuntimeState
+	// timeWindowExprResolved/resolvedTimeWindowDuration hold the deployment-time
+	// snapshot of an expression-sized time window (time(<variable>) /
+	// time(<parameter>)), mirroring Esper's view-creation evaluation.
+	timeWindowExprResolved     bool
+	resolvedTimeWindowDuration time.Duration
 }
 
 type statementRuntime struct {
-	query                    Query
-	engine                   *Engine
-	rowRecogOwner            string
-	ctx                      context.Context
-	windows                  map[*streamNode]*windowRuntimeState
+	query         Query
+	engine        *Engine
+	rowRecogOwner string
+	ctx           context.Context
+	windows       map[*streamNode]*windowRuntimeState
+	// windowExprDurations holds the deployment-time snapshot of
+	// expression-sized time-window durations keyed by window node. The
+	// engine deletes empty window states during expiry, so the snapshot
+	// lives on the runtime and is copied into newly created states.
+	windowExprDurations      map[*streamNode]time.Duration
 	joinState                *joinRuntimeState
 	aggregateState           *aggregateRuntimeState
 	derivedStates            map[*streamNode]*aggregateRuntimeState
@@ -5139,7 +5150,7 @@ func coalescePatternProgressSchedules(progress *patternProgress, at time.Time) {
 }
 
 func newStatementRuntime(query Query) statementRuntime {
-	runtime := statementRuntime{query: query, ctx: context.Background(), windows: make(map[*streamNode]*windowRuntimeState), derivedStates: make(map[*streamNode]*aggregateRuntimeState), partitions: make(map[string]*statementRuntime), patternJoinStates: make(map[*streamNode]*patternJoinRuntime), variables: make(map[string]Value), seq: &atomic.Uint64{}}
+	runtime := statementRuntime{query: query, ctx: context.Background(), windows: make(map[*streamNode]*windowRuntimeState), windowExprDurations: make(map[*streamNode]time.Duration), derivedStates: make(map[*streamNode]*aggregateRuntimeState), partitions: make(map[string]*statementRuntime), patternJoinStates: make(map[*streamNode]*patternJoinRuntime), variables: make(map[string]Value), seq: &atomic.Uint64{}}
 	if query.join != nil {
 		runtime.joinState = &joinRuntimeState{}
 	}
@@ -5256,6 +5267,59 @@ func (r *statementRuntime) initializeAt(at time.Time) {
 			}
 		}
 	}
+}
+
+// resolveWindowDurations snapshots expression-sized time-window durations at
+// deployment time using the statement's bound variables/parameters. Esper's
+// time(<variable>) view evaluates its size expression when the view is
+// created, so later variable updates must not resize an already deployed
+// window.
+func (r *statementRuntime) resolveWindowDurations(plan Plan) {
+	if r == nil || plan.query.input == nil {
+		return
+	}
+	sources := []*streamNode{plan.query.input}
+	if plan.query.aggregate != nil {
+		sources = append(sources, plan.query.aggregate.input)
+	}
+	if plan.query.join != nil {
+		sources = append(sources, joinDefinitionSources(plan.query.join)...)
+	}
+	seen := make(map[*streamNode]struct{})
+	for _, source := range sources {
+		for node := source; node != nil; node = node.input {
+			if _, exists := seen[node]; exists {
+				continue
+			}
+			seen[node] = struct{}{}
+			window, ok := node.window.(TimeWindowSpec)
+			if !ok || window.Expr == nil {
+				continue
+			}
+			state := r.windows[node]
+			if state == nil {
+				state = &windowRuntimeState{}
+			}
+			state.timeWindowExprResolved = true
+			state.resolvedTimeWindowDuration = evaluateTimeWindowDuration(window.Expr, r.variables)
+			r.windowExprDurations[node] = state.resolvedTimeWindowDuration
+			r.windows[node] = state
+		}
+	}
+}
+
+func evaluateTimeWindowDuration(expression Expr, variables map[string]Value) time.Duration {
+	if expression == nil {
+		return 0
+	}
+	value := expression.eval(EvalContext{Variables: variables})
+	if duration, ok := value.Any().(time.Duration); ok {
+		return duration
+	}
+	if number, ok := numericValue(value); ok {
+		return time.Duration(number * float64(time.Millisecond))
+	}
+	return 0
 }
 
 type eventDelta struct {
@@ -10226,6 +10290,10 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		state := r.windows[node]
 		if state == nil {
 			state = &windowRuntimeState{}
+			if duration, ok := r.windowExprDurations[node]; ok {
+				state.timeWindowExprResolved = true
+				state.resolvedTimeWindowDuration = duration
+			}
 		}
 		result := eventDelta{
 			oldEvents:       append([]Event(nil), inputDelta.oldEvents...),
@@ -11332,7 +11400,11 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 	case TimeWindowSpec:
 		kept := state.entries[:0]
 		for _, stored := range state.entries {
-			if !stored.receivedAt.Add(window.Duration).After(now) {
+			var resolved *time.Duration
+			if state.timeWindowExprResolved {
+				resolved = &state.resolvedTimeWindowDuration
+			}
+			if !timeWindowEventDeadline(window, stored.event, stored.receivedAt, now, r.variables, resolved).After(now) {
 				result.oldEvents = append(result.oldEvents, stored.event)
 				continue
 			}
@@ -11490,6 +11562,21 @@ func timeWindowDeadline(duration time.Duration, years, months, days int, from ti
 		return from.AddDate(years, months, days)
 	}
 	return from.Add(duration)
+}
+
+// timeWindowEventDeadline returns the expiry deadline of one event in a time
+// window. Calendar periods are added first (Esper time(1 months 10 ms)), then
+// the millisecond remainder; an expression-sized window evaluates its
+// duration expression per event with the statement variables/parameters.
+func timeWindowEventDeadline(window TimeWindowSpec, event Event, receivedAt, now time.Time, variables map[string]Value, resolved *time.Duration) time.Time {
+	deadline := receivedAt.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	if window.Expr != nil {
+		if resolved != nil {
+			return deadline.Add(*resolved)
+		}
+		return deadline.Add(evaluateTimeWindowDuration(window.Expr, variables))
+	}
+	return deadline.Add(window.Duration)
 }
 
 func timeBatchBoundary(window TimeBatchWindowSpec, reference time.Time) time.Time {

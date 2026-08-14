@@ -1715,12 +1715,85 @@ func (w LengthBatchWindowSpec) validate() error {
 	return nil
 }
 
-type TimeWindowSpec struct{ Duration time.Duration }
+type TimeWindowSpec struct {
+	Duration       time.Duration
+	CalendarYears  int
+	CalendarMonths int
+	CalendarDays   int
+	// Expr evaluates to a time.Duration (or numeric milliseconds) when the
+	// window size comes from a variable or deployment-time substitution
+	// parameter. It mirrors Esper's time(<expr>) form.
+	Expr Expr
+}
 
-func TimeWindow(duration time.Duration) TimeWindowSpec { return TimeWindowSpec{Duration: duration} }
-func (TimeWindowSpec) windowSpec()                     {}
-func (w TimeWindowSpec) description() string           { return "time(" + w.Duration.String() + ")" }
+func TimeWindow(duration time.Duration) TimeWindowSpec {
+	return TimeWindowSpec{Duration: duration}
+}
+
+// TimeWindowCalendar builds a calendar-period time window with an optional
+// millisecond remainder, mirroring Esper time(1 months 10 milliseconds).
+func TimeWindowCalendar(years, months, days int, duration time.Duration) TimeWindowSpec {
+	return TimeWindowSpec{Duration: duration, CalendarYears: years, CalendarMonths: months, CalendarDays: days}
+}
+
+// TimeWindowExpr sizes the window by an expression that evaluates to a
+// time.Duration (or numeric milliseconds) per event, mirroring Esper
+// time(<variable>) forms.
+func TimeWindowExpr(expr Expr) TimeWindowSpec {
+	return TimeWindowSpec{Expr: expr}
+}
+
+// TimeWindowMilliseconds/Seconds/Minutes/Hours/Days size the window by a
+// variable or parameter expression in the given unit.
+func TimeWindowMilliseconds[T Numeric](value Expression[T]) TimeWindowSpec {
+	return TimeWindowSpec{Expr: DurationMilliseconds[T](value)}
+}
+
+func TimeWindowSeconds[T Numeric](value Expression[T]) TimeWindowSpec {
+	return TimeWindowSpec{Expr: DurationSeconds[T](value)}
+}
+
+func TimeWindowMinutes[T Numeric](value Expression[T]) TimeWindowSpec {
+	return TimeWindowSpec{Expr: DurationMinutes[T](value)}
+}
+
+func TimeWindowHours[T Numeric](value Expression[T]) TimeWindowSpec {
+	return TimeWindowSpec{Expr: DurationHours[T](value)}
+}
+
+func TimeWindowDays[T Numeric](value Expression[T]) TimeWindowSpec {
+	return TimeWindowSpec{Expr: DurationDays[T](value)}
+}
+
+func (TimeWindowSpec) windowSpec() {}
+func (w TimeWindowSpec) description() string {
+	if w.Expr != nil {
+		return "time(" + w.Expr.Description() + ")"
+	}
+	if w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
+		return fmt.Sprintf("time(%dY%dM%dD%s)", w.CalendarYears, w.CalendarMonths, w.CalendarDays, w.Duration)
+	}
+	return "time(" + w.Duration.String() + ")"
+}
 func (w TimeWindowSpec) validate() error {
+	if w.Expr != nil {
+		if w.Duration != 0 || w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
+			return fmt.Errorf("esper: time window expression cannot be combined with a fixed duration")
+		}
+		if typ := w.Expr.Type(); typ != nil && typ != typeOf[time.Duration]() && typ != typeOf[any]() && !isNumericType(typ) {
+			return fmt.Errorf("esper: time window expression must evaluate to a duration, got %s", typ)
+		}
+		return nil
+	}
+	if w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
+		if w.Duration < 0 {
+			return fmt.Errorf("esper: time window duration must not be negative, got %s", w.Duration)
+		}
+		if w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 {
+			return fmt.Errorf("esper: time window calendar period must not be negative")
+		}
+		return nil
+	}
 	if w.Duration <= 0 {
 		return fmt.Errorf("esper: time window duration must be positive, got %s", w.Duration)
 	}

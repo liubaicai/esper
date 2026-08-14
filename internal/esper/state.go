@@ -3877,7 +3877,18 @@ func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindow
 		rebuildNamedWindowIndexesLocked(state)
 		return delta
 	case TimeWindowSpec:
-		duration = retention.Duration
+		kept := state.entries[:0]
+		delta := NamedWindowDelta{Time: at}
+		for _, entry := range state.entries {
+			if !timeWindowEventDeadline(retention, entry.event, entry.receivedAt, at, nil, nil).After(at) {
+				delta.Old = append(delta.Old, entry.event)
+			} else {
+				kept = append(kept, entry)
+			}
+		}
+		state.entries = kept
+		rebuildNamedWindowIndexesLocked(state)
+		return delta
 	case TimeToLiveWindowSpec:
 		duration = retention.Duration
 	case TimeToLiveAtWindowSpec:
