@@ -52,7 +52,7 @@
 | Capability | 110 个 |
 | Case | 399 个 |
 | Case implemented | 354 个 |
-| Case differential-verified | 22 个（31 个 runtime） |
+| Case differential-verified | 22 个（32 个 runtime） |
 | Case intentionally-different | 17 个 |
 | Case inventoried | 6 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |

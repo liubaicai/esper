@@ -54,9 +54,9 @@ public final class ResultSetGroupedTimeWindowScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"grouped"};
+        String[] cases = {"grouped", "having"};
         for (String caseName : cases) {
-            if (!hasCase(steps, caseName)) {
+            if (!hasCase(steps, caseName) && !"having".equals(caseName)) {
                 continue;
             }
             runCase(steps, caseName, records);
@@ -87,7 +87,11 @@ public final class ResultSetGroupedTimeWindowScenarioOracle {
         ((EPRuntimeSPI) runtime).initialize(0L);
         String epl = "@name('s0') select symbol, volume, sum(price) " +
                 "from SupportMarketDataBean#time(5.5 sec) group by symbol";
-        if (!"grouped".equals(caseName)) {
+        if ("having".equals(caseName)) {
+            epl = "@name('s0') select symbol, volume, sum(price) " +
+                    "from SupportMarketDataBean#time(5.5 sec) " +
+                    "group by symbol having sum(price) > 50";
+        } else if (!"grouped".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }
 
@@ -120,7 +124,7 @@ public final class ResultSetGroupedTimeWindowScenarioOracle {
             JsonObject step = allSteps.get(i).asObject();
             String op = step.getString("op", "");
             if ("case".equals(op)) {
-                active = caseName.equals(step.getString("case", ""));
+                active = "grouped".equals(caseName) ? caseName.equals(step.getString("case", "")) : true;
                 continue;
             }
             if (!active) {

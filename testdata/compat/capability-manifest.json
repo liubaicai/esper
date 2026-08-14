@@ -336,7 +336,8 @@
         "java-runtime-decf2ff614722c1273d1",
         "java-runtime-62b4f6edf3c24229e8ac",
         "java-runtime-d00485a2855b2128289f",
-        "java-runtime-9061246c4c67a2c25364"
+        "java-runtime-9061246c4c67a2c25364",
+        "java-runtime-11c5505c0b19dd86671c"
       ],
       "representativeScenarioIds": [
         "filter-window-aggregate-output",
@@ -3798,7 +3799,8 @@
         "java-runtime-bd4672ec90862ee08790",
         "java-runtime-3e89e6297511b7dfe531",
         "java-runtime-52135d56e04dfb024bfe",
-        "java-runtime-9061246c4c67a2c25364"
+        "java-runtime-9061246c4c67a2c25364",
+        "java-runtime-11c5505c0b19dd86671c"
       ],
       "representativeScenarioIds": [
         "output-policy-iterator",
@@ -24495,7 +24497,6 @@
       "id": "case.inventory.resultset-output-limit-aggregate-grouped",
       "javaRuntimeIds": [
         "java-runtime-00013efc7c322d04c3b3",
-        "java-runtime-11c5505c0b19dd86671c",
         "java-runtime-ecfb75f6916643de1c5f",
         "java-runtime-a7dd740df8a4fa0a88e6",
         "java-runtime-80532da2ea5ec539be06",
@@ -24525,7 +24526,6 @@
       ],
       "javaNames": [
         "ResultSet2NoneNoHavingJoin",
-        "ResultSet3NoneHavingNoJoin",
         "ResultSet4NoneHavingJoin",
         "ResultSet5DefaultNoHavingNoJoin",
         "ResultSet6DefaultNoHavingJoin",
@@ -24852,16 +24852,19 @@
     {
       "id": "case.resultset-grouped-time-window",
       "javaRuntimeIds": [
-        "java-runtime-9061246c4c67a2c25364"
+        "java-runtime-9061246c4c67a2c25364",
+        "java-runtime-11c5505c0b19dd86671c"
       ],
       "javaNames": [
-        "ResultSet1NoneNoHavingNoJoin"
+        "ResultSet1NoneNoHavingNoJoin",
+        "ResultSet3NoneHavingNoJoin"
       ],
       "javaSourceFiles": [
         "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAggregateGrouped.java"
       ],
       "goTests": [
         "TestResultSetGroupedTimeWindowIStreamParity",
+        "TestResultSetGroupedTimeWindowHavingIStreamParity",
         "TestRunResultSetGroupedTimeWindowDiffWritesPassingEvidence",
         "TestRunResultSetGroupedTimeWindowDiffRejectsTraceMutations"
       ],
@@ -24891,7 +24894,8 @@
         "representative-verified"
       ],
       "differentialVerifiedRuntimeIds": [
-        "java-runtime-9061246c4c67a2c25364"
+        "java-runtime-9061246c4c67a2c25364",
+        "java-runtime-11c5505c0b19dd86671c"
       ],
       "representativeScenarioIds": [
         "resultset-grouped-time-window"
@@ -26589,7 +26593,7 @@
     "inventoriedCases": 399,
     "implementedCases": 393,
     "differentialVerifiedCases": 22,
-    "differentialVerifiedRuntimeIds": 31,
+    "differentialVerifiedRuntimeIds": 32,
     "intentionallyDifferentCases": 17,
     "representativeVerifiedCases": 22,
     "nfrVerifiedCases": 0,
@@ -26618,9 +26622,9 @@
     ],
     "risks": [
       "Twenty-two representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-one listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin runtimes are differential-verified.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-two listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin runtimes are differential-verified.",
       "The 22-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "148 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema and ResultSetQueryTypeIterator have no Go implementation or differential evidence yet.",
+      "147 newly inventoried runtimes across ContextNested, ResultSetOutputLimitAggregateGrouped, InfraNWTableOnSelect, ResultSetOutputLimitRowPerGroupRollup, EPLOtherCreateSchema and ResultSetQueryTypeIterator have no Go implementation or differential evidence yet.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."

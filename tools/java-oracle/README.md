@@ -454,7 +454,7 @@ checked-in 场景与 evidence：`testdata/parity/rowrecog-aggregation.json`、`t
 
 ## Resultset-grouped-time-window oracle
 
-第二十二个代表性场景使用 `ResultSetGroupedTimeWindowScenarioOracle.java`（runner：`run-resultset-grouped-time-window.sh`）。它注册 Map 事件类型 `SupportMarketDataBean(symbol, volume, price)`，双跑 `select symbol, volume, sum(price) from SupportMarketDataBean#time(5.5 sec) group by symbol`（istream 默认）：0-6s 的 9 条 insert 记录，7s/8s 纯时间淘汰边界不输出。Java 语义要点：默认 istream 分组聚合在纯时间淘汰批次不产生 listener 行；Go 已按同一契约修复并锁定。
+第二十二个代表性场景使用 `ResultSetGroupedTimeWindowScenarioOracle.java`（runner：`run-resultset-grouped-time-window.sh`）。它注册 Map 事件类型 `SupportMarketDataBean(symbol, volume, price)`，双跑 `select symbol, volume, sum(price) from SupportMarketDataBean#time(5.5 sec) group by symbol`（istream 默认）及其 `having sum(price) > 50` 变体：grouped case 为 0-6s 的 9 条 insert 记录，having case 只输出 IBM 75/97 两条，7s/8s 纯时间淘汰边界不输出。Java 语义要点：默认 istream 分组聚合在纯时间淘汰批次不产生 listener 行；Go 已按同一契约修复并锁定。
 
 ```sh
 ./tools/java-oracle/run-resultset-grouped-time-window.sh \
@@ -470,7 +470,7 @@ go run ./cmd/parity \
   -evidence /tmp/resultset-grouped-time-window.evidence.json
 ```
 
-checked-in 场景与 evidence：`testdata/parity/resultset-grouped-time-window.json`、`testdata/parity/resultset-grouped-time-window.evidence.json`；当前差异数为 0，覆盖 `ResultSet1NoneNoHavingNoJoin`。
+checked-in 场景与 evidence：`testdata/parity/resultset-grouped-time-window.json`、`testdata/parity/resultset-grouped-time-window.evidence.json`；当前差异数为 0，覆盖 `ResultSet1NoneNoHavingNoJoin` 与 `ResultSet3NoneHavingNoJoin`。
 
 ## Java regression baseline
 

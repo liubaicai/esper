@@ -100,3 +100,84 @@ func TestResultSetGroupedTimeWindowIStreamParity(t *testing.T) {
 		t.Fatalf("last batch = %#v", batches[8])
 	}
 }
+
+// TestResultSetGroupedTimeWindowHavingIStreamParity mirrors
+// ResultSet3NoneHavingNoJoin: HAVING filters grouped time-window sums so only
+// groups whose aggregate exceeds the threshold emit under istream.
+func TestResultSetGroupedTimeWindowHavingIStreamParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[resultsetGroupedTimeWindowMarket](env, "SupportMarketDataBean"); err != nil {
+		t.Fatal(err)
+	}
+	symbol := Field[resultsetGroupedTimeWindowMarket, string]("symbol")
+	volume := Field[resultsetGroupedTimeWindowMarket, int64]("volume")
+	price := Field[resultsetGroupedTimeWindowMarket, float64]("price")
+	sum := Sum[float64](price)
+	plan, err := env.Build(From[resultsetGroupedTimeWindowMarket](env, "SupportMarketDataBean").
+		Window(TimeWindow(5500*time.Millisecond)).
+		GroupBy(symbol).
+		Having(Greater[float64](sum, Literal(50.0))).
+		Select(
+			Alias("symbol", symbol),
+			Alias("volume", volume),
+			Alias("sum(price)", sum),
+		).
+		Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	defer func() { _ = engine.Close(context.Background()) }()
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	send := func(symbol string, volume int64, price float64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), resultsetGroupedTimeWindowMarket{Symbol: symbol, Volume: volume, Price: price}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	advance := func(second int64) {
+		t.Helper()
+		if err := engine.AdvanceTime(context.Background(), time.Unix(second, 0).UTC()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	advance(0)
+	send("IBM", 100, 25)
+	advance(1)
+	send("MSFT", 5000, 9)
+	advance(2)
+	send("IBM", 150, 24)
+	send("YAH", 10000, 1)
+	advance(3)
+	send("IBM", 155, 26)
+	advance(4)
+	send("YAH", 11000, 2)
+	advance(5)
+	send("IBM", 150, 22)
+	send("YAH", 11500, 3)
+	advance(6)
+	send("YAH", 10500, 1)
+	advance(7)
+	advance(8)
+	if len(batches) != 2 {
+		t.Fatalf("having istream batches = %d, want 2", len(batches))
+	}
+	first, ok := batches[0].New[0].Row()
+	if !ok || first.Get("symbol").Any() != "IBM" || first.Get("sum(price)").Any() != float64(75) {
+		t.Fatalf("having first batch = %#v", batches[0])
+	}
+	second, ok := batches[1].New[0].Row()
+	if !ok || second.Get("symbol").Any() != "IBM" || second.Get("sum(price)").Any() != float64(97) {
+		t.Fatalf("having second batch = %#v", batches[1])
+	}
+}
