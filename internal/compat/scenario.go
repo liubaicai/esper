@@ -302,7 +302,7 @@ func normalizeResults(results []esper.Result) []ResultRecord {
 	normalized := make([]ResultRecord, 0, len(results))
 	for _, result := range results {
 		if event, ok := result.Event(); ok {
-			record := ResultRecord{Kind: "event", Type: event.TypeName(), Fields: make(map[string]any)}
+			record := ResultRecord{Kind: "row", Fields: make(map[string]any)}
 			for _, field := range event.Schema().Fields() {
 				record.Fields[field.Name] = normalizeValue(event.Get(field.Name))
 			}

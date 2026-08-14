@@ -1,0 +1,93 @@
+{
+  "version": "esper-parity/v1",
+  "id": "table-mutation",
+  "steps": [
+    {
+      "op": "case",
+      "case": "mutation"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 20,
+        "p00": "G2"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 10,
+        "p00": "G1"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportTwoKeyEvent",
+      "payload": {
+        "k1": "G1",
+        "k2": 10,
+        "newValue": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 10,
+        "p00": "G1"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G2",
+        "intPrimitive": 20
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 20,
+        "p00": "G2"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportTwoKeyEvent",
+      "payload": {
+        "k1": "G2",
+        "k2": 20,
+        "newValue": 7
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 20,
+        "p00": "G2"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportTwoKeyEvent",
+      "payload": {
+        "k1": "G3",
+        "k2": 30,
+        "newValue": 9
+      }
+    }
+  ]
+}

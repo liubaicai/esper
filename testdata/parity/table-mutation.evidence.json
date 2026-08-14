@@ -1,0 +1,382 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-3707b3fa08171bbd791c"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableOnUpdate.java"
+  ],
+  "javaExecutions": [
+    "InfraTableOnUpdateTwoKey"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "table-mutation",
+    "steps": [
+      {
+        "op": "case",
+        "case": "mutation"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "G2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "G1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTwoKeyEvent",
+        "payload": {
+          "k1": "G1",
+          "k2": 10,
+          "newValue": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "G1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "G2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTwoKeyEvent",
+        "payload": {
+          "k1": "G2",
+          "k2": 20,
+          "newValue": 7
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "G2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTwoKeyEvent",
+        "payload": {
+          "k1": "G3",
+          "k2": 30,
+          "newValue": 9
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "table-mutation",
+    "records": [
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyOne": "G1",
+              "keyTwo": 10,
+              "p0": 2
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyOne": "G1",
+              "keyTwo": 10,
+              "p0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyOne": "G2",
+              "keyTwo": 20,
+              "p0": 7
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyOne": "G2",
+              "keyTwo": 20,
+              "p0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 7
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "table-mutation",
+    "records": [
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyOne": "G1",
+              "keyTwo": 10,
+              "p0": 2
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyOne": "G1",
+              "keyTwo": 10,
+              "p0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyOne": "G2",
+              "keyTwo": 20,
+              "p0": 7
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyOne": "G2",
+              "keyTwo": 20,
+              "p0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "mutation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 7
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -24,7 +24,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, subquery, subquery-diff, named-window-mutation or named-window-mutation-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, subquery, subquery-diff, named-window-mutation, named-window-mutation-diff, table-mutation or table-mutation-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -151,6 +151,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, namedWindowMutationJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, namedWindowMutationJavaSources),
 				splitMetadata(*javaExecutions, namedWindowMutationJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "table-mutation" || *mode == "table-mutation-diff" {
+		trace, err := runTableMutationScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "table-mutation-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, tableMutationJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, tableMutationJavaSources),
+				splitMetadata(*javaExecutions, tableMutationJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

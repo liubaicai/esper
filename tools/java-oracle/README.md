@@ -172,6 +172,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/named-window-mutation.json`、`testdata/parity/named-window-mutation.evidence.json`；当前差异数为 0，覆盖 `InfraFirstUnique`。
 
+## Table-mutation oracle
+
+第八个代表性场景使用 `TableMutationScenarioOracle.java`（runner：`run-table-mutation.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)`、`SupportBean_S0(id, p00)` 与 `SupportTwoKeyEvent(k1, k2, newValue)`，双跑 `create table varagg(keyOne string primary key, keyTwo int primary key, p0 long)`、`on SupportBean merge varagg when not matched then insert`、`select varagg[p00,id].p0 from SupportBean_S0` 与 `on SupportTwoKeyEvent update varagg`：缺失 key 读 null、merge insert 后读 1、update listener 交付 new/old、无匹配更新不触发。
+
+```sh
+./tools/java-oracle/run-table-mutation.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/table-mutation.json \
+  --output /tmp/table-mutation-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode table-mutation-diff \
+  -scenario testdata/parity/table-mutation.json \
+  -java-trace /tmp/table-mutation-java.json \
+  -evidence /tmp/table-mutation.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/table-mutation.json`、`testdata/parity/table-mutation.evidence.json`；当前差异数为 0，覆盖 `InfraTableOnUpdateTwoKey`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

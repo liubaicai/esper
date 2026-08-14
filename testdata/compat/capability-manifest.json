@@ -1126,7 +1126,9 @@
         "internal/esper/infra_table_access_dot_method_parity_test.go",
         "internal/esper/infra_table_on_merge_parity_test.go",
         "internal/esper/named_window_mutation_parity_test.go",
-        "internal/app/parity/named_window_mutation.go"
+        "internal/app/parity/named_window_mutation.go",
+        "internal/esper/table_mutation_parity_test.go",
+        "internal/app/parity/table_mutation.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -1146,10 +1148,12 @@
         "representative-verified"
       ],
       "differentialVerifiedRuntimeIds": [
-        "java-runtime-62b4f6edf3c24229e8ac"
+        "java-runtime-62b4f6edf3c24229e8ac",
+        "java-runtime-3707b3fa08171bbd791c"
       ],
       "representativeScenarioIds": [
-        "named-window-mutation"
+        "named-window-mutation",
+        "table-mutation"
       ]
     },
     {
@@ -23647,6 +23651,53 @@
       "representativeScenarioIds": [
         "named-window-mutation"
       ]
+    },
+    {
+      "id": "case.table-mutation-two-key",
+      "javaRuntimeIds": [
+        "java-runtime-3707b3fa08171bbd791c"
+      ],
+      "javaNames": [
+        "InfraTableOnUpdateTwoKey"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableOnUpdate.java"
+      ],
+      "goTests": [
+        "TestTableMutationTwoKeyParity",
+        "TestRunTableMutationDiffWritesPassingEvidence",
+        "TestRunTableMutationDiffRejectsTraceMutations"
+      ],
+      "tags": [
+        "correctness",
+        "table",
+        "mutation",
+        "merge",
+        "update",
+        "differential",
+        "representative"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-3707b3fa08171bbd791c"
+      ],
+      "representativeScenarioIds": [
+        "table-mutation"
+      ]
     }
   ],
   "mappings": [
@@ -25245,17 +25296,21 @@
     {
       "capabilityId": "view.window-core",
       "caseId": "case.named-window-mutation-firstunique"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.table-mutation-two-key"
     }
   ],
   "summary": {
-    "totalCases": 379,
+    "totalCases": 380,
     "totalCapabilities": 110,
-    "inventoriedCases": 379,
-    "implementedCases": 379,
-    "differentialVerifiedCases": 7,
-    "differentialVerifiedRuntimeIds": 14,
+    "inventoriedCases": 380,
+    "implementedCases": 380,
+    "differentialVerifiedCases": 8,
+    "differentialVerifiedRuntimeIds": 15,
     "intentionallyDifferentCases": 17,
-    "representativeVerifiedCases": 7,
+    "representativeVerifiedCases": 8,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
@@ -25263,12 +25318,12 @@
     "intentionallyDifferentCapabilities": 6,
     "representativeVerifiedCapabilities": 8,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2353,
+    "runtimeAssociationCount": 2354,
     "referencedJavaRuntimeIds": 2282,
     "totalJavaRuntimeIds": 4136,
     "unreferencedJavaRuntimeIds": 1854,
-    "representativeScenarioTotal": 7,
-    "representativeScenarioPassing": 7,
+    "representativeScenarioTotal": 8,
+    "representativeScenarioPassing": 8,
     "currentFailures": [],
     "currentSkips": [
       "connectors/kafka.TestKafkaDockerRoundTrip: ESPER_KAFKA_BROKERS is unset; run the Kafka fixture from docs/integration/external-services.md",
@@ -25280,8 +25335,8 @@
       "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
     ],
     "risks": [
-      "Seven representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window records contain broad implemented subsets; only the fourteen listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique runtimes are differential-verified.",
+      "Eight representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window records contain broad implemented subsets; only the fifteen listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey runtimes are differential-verified.",
       "No 20-scenario representative suite, stress load, fuzz/property suite, or Java-vs-Go performance baseline is complete.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
     ],
