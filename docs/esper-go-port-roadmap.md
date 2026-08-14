@@ -43,7 +43,7 @@
 
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
-- 最新已提交：`9f8d4ed27`（Optimize window history map construction）
+- 最新已提交：`dc8d190fa`（Add rowrecog-aggregation representative parity scenario）
 
 ### 2.2 对账清单
 
