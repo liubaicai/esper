@@ -1251,7 +1251,9 @@
         "internal/esper/dataflow_stats_test.go",
         "internal/esper/dataflow_options_test.go",
         "internal/esper/dataflow_filter_ports_test.go",
-        "internal/esper/dataflow_source_filter_test.go"
+        "internal/esper/dataflow_source_filter_test.go",
+        "internal/esper/dataflow_connector_parity_test.go",
+        "internal/app/parity/dataflow_connector.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -1262,7 +1264,15 @@
       ],
       "verification": [
         "inventoried",
-        "implemented"
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-1ecb769e10b4a818772c"
+      ],
+      "representativeScenarioIds": [
+        "dataflow-connector-output"
       ]
     },
     {
@@ -23946,6 +23956,54 @@
       "representativeScenarioIds": [
         "time-window-long-running"
       ]
+    },
+    {
+      "id": "case.dataflow-connector-output",
+      "javaRuntimeIds": [
+        "java-runtime-1ecb769e10b4a818772c"
+      ],
+      "javaNames": [
+        "EPLDataflowBeacon"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEventBusSink.java"
+      ],
+      "goTests": [
+        "TestDataflowConnectorOutputParity",
+        "TestRunDataflowConnectorDiffWritesPassingEvidence",
+        "TestRunDataflowConnectorDiffRejectsTraceMutations"
+      ],
+      "tags": [
+        "correctness",
+        "dataflow",
+        "connector",
+        "event-bus",
+        "beacon",
+        "output",
+        "differential",
+        "representative"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-1ecb769e10b4a818772c"
+      ],
+      "representativeScenarioIds": [
+        "dataflow-connector-output"
+      ]
     }
   ],
   "mappings": [
@@ -25576,30 +25634,34 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.time-window-long-running"
+    },
+    {
+      "capabilityId": "dataflow.graph",
+      "caseId": "case.dataflow-connector-output"
     }
   ],
   "summary": {
-    "totalCases": 384,
+    "totalCases": 385,
     "totalCapabilities": 110,
-    "inventoriedCases": 384,
-    "implementedCases": 384,
-    "differentialVerifiedCases": 13,
-    "differentialVerifiedRuntimeIds": 20,
+    "inventoriedCases": 385,
+    "implementedCases": 385,
+    "differentialVerifiedCases": 14,
+    "differentialVerifiedRuntimeIds": 21,
     "intentionallyDifferentCases": 17,
-    "representativeVerifiedCases": 13,
+    "representativeVerifiedCases": 14,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
-    "differentialVerifiedCapabilities": 9,
+    "differentialVerifiedCapabilities": 10,
     "intentionallyDifferentCapabilities": 6,
-    "representativeVerifiedCapabilities": 9,
+    "representativeVerifiedCapabilities": 10,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2358,
+    "runtimeAssociationCount": 2359,
     "referencedJavaRuntimeIds": 2282,
     "totalJavaRuntimeIds": 4136,
     "unreferencedJavaRuntimeIds": 1854,
-    "representativeScenarioTotal": 13,
-    "representativeScenarioPassing": 13,
+    "representativeScenarioTotal": 14,
+    "representativeScenarioPassing": 14,
     "currentFailures": [],
     "currentSkips": [
       "connectors/kafka.TestKafkaDockerRoundTrip: ESPER_KAFKA_BROKERS is unset; run the Kafka fixture from docs/integration/external-services.md",
@@ -25611,8 +25673,8 @@
       "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
     ],
     "risks": [
-      "Thirteen representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset records contain broad implemented subsets; only the twenty listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow runtimes are differential-verified.",
+      "Fourteen representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph records contain broad implemented subsets; only the twenty-one listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon runtimes are differential-verified.",
       "No 20-scenario representative suite, stress load, fuzz/property suite, or Java-vs-Go performance baseline is complete.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
     ],

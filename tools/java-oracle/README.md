@@ -292,6 +292,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/time-window-long-running.json`、`testdata/parity/time-window-long-running.evidence.json`；当前差异数为 0，覆盖 `InfraTimeWindow`。
 
+## Dataflow-connector-output oracle
+
+第十四个代表性场景使用 `DataflowConnectorScenarioOracle.java`（runner：`run-dataflow-connector.sh`）。它双跑 `create objectarray schema MyEventBeacon(p0 string, p1 long)`、`select p0, p1 from MyEventBeacon` 与 `create dataflow MyDataFlowOne BeaconSource -> BeaconStream<MyEventBeacon> { iterations: 3, p0: 'abc', p1: 1 } EventBusSink(BeaconStream) {}`：BeaconSource 产生 3 个事件，EventBusSink 路由到 event bus，s0 listener 收到 3 行。
+
+```sh
+./tools/java-oracle/run-dataflow-connector.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/dataflow-connector-output.json \
+  --output /tmp/dataflow-connector-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode dataflow-connector-diff \
+  -scenario testdata/parity/dataflow-connector-output.json \
+  -java-trace /tmp/dataflow-connector-java.json \
+  -evidence /tmp/dataflow-connector.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/dataflow-connector-output.json`、`testdata/parity/dataflow-connector-output.evidence.json`；当前差异数为 0，覆盖 `EPLDataflowBeacon`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

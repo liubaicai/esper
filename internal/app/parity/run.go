@@ -24,7 +24,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, subquery, subquery-diff, named-window-mutation, named-window-mutation-diff, table-mutation, table-mutation-diff, variable-deploy, variable-deploy-diff, context-output, context-output-diff, deployment-restart, deployment-restart-diff, high-cardinality, high-cardinality-diff, time-window or time-window-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, subquery, subquery-diff, named-window-mutation, named-window-mutation-diff, table-mutation, table-mutation-diff, variable-deploy, variable-deploy-diff, context-output, context-output-diff, deployment-restart, deployment-restart-diff, high-cardinality, high-cardinality-diff, time-window, time-window-diff, dataflow-connector or dataflow-connector-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -247,6 +247,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, timeWindowJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, timeWindowJavaSources),
 				splitMetadata(*javaExecutions, timeWindowJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "dataflow-connector" || *mode == "dataflow-connector-diff" {
+		trace, err := runDataflowConnectorScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "dataflow-connector-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, dataflowConnectorJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, dataflowConnectorJavaSources),
+				splitMetadata(*javaExecutions, dataflowConnectorJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -1,0 +1,10 @@
+{
+  "version": "esper-parity/v1",
+  "id": "dataflow-connector-output",
+  "steps": [
+    {
+      "op": "case",
+      "case": "connector"
+    }
+  ]
+}
