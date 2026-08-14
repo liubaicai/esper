@@ -352,6 +352,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/rollup-output-every.json`、`testdata/parity/rollup-output-every.evidence.json`；当前差异数为 0，覆盖 `ResultSetOutputDefault{join=false}`。
 
+## Match-recognize-simple oracle
+
+第十七个代表性场景使用 `MatchRecognizeScenarioOracle.java`（runner：`run-match-recognize.sh`）。它双跑 `SupportRecogBean#keepall match_recognize ( measures A.theString as a_string, B.theString as b_string all matches pattern (A B) define B as B.value > A.value ) order by a_string, b_string`：E1/E2 不匹配、E3 匹配 E2-E3、E4/E5 匹配、E6/E7/E8 不再匹配。
+
+```sh
+./tools/java-oracle/run-match-recognize.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/match-recognize-simple.json \
+  --output /tmp/match-recognize-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode match-recognize-diff \
+  -scenario testdata/parity/match-recognize-simple.json \
+  -java-trace /tmp/match-recognize-java.json \
+  -evidence /tmp/match-recognize.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/match-recognize-simple.json`、`testdata/parity/match-recognize-simple.evidence.json`；当前差异数为 0，覆盖 `RowRecogConcatenation`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

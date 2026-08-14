@@ -1,0 +1,165 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-ce4e140777e93d5226b5"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogOps.java"
+  ],
+  "javaExecutions": [
+    "RowRecogConcatenation"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "match-recognize-simple",
+    "steps": [
+      {
+        "op": "case",
+        "case": "match"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E1",
+          "value": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E2",
+          "value": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E3",
+          "value": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E4",
+          "value": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E5",
+          "value": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E6",
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E7",
+          "value": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportRecogBean",
+        "payload": {
+          "theString": "E8",
+          "value": 4
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "match-recognize-simple",
+    "records": [
+      {
+        "case": "match",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E2",
+              "b_string": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "match",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E4",
+              "b_string": "E5"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "match-recognize-simple",
+    "records": [
+      {
+        "case": "match",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E2",
+              "b_string": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "match",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a_string": "E4",
+              "b_string": "E5"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

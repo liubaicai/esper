@@ -1,0 +1,74 @@
+{
+  "version": "esper-parity/v1",
+  "id": "match-recognize-simple",
+  "steps": [
+    {
+      "op": "case",
+      "case": "match"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E1",
+        "value": 5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E2",
+        "value": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E3",
+        "value": 6
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E4",
+        "value": 4
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E5",
+        "value": 6
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E6",
+        "value": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E7",
+        "value": 9
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportRecogBean",
+      "payload": {
+        "theString": "E8",
+        "value": 4
+      }
+    }
+  ]
+}

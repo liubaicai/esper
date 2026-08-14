@@ -1510,7 +1510,9 @@
         "internal/esper/rowrecog_perf_test.go",
         "internal/esper/rowrecog_pool_test.go",
         "internal/esper/rowrecog_nfa.go",
-        "internal/esper/rowrecog_nfa_state_pool_test.go"
+        "internal/esper/rowrecog_nfa_state_pool_test.go",
+        "internal/esper/match_recognize_parity_test.go",
+        "internal/app/parity/match_recognize.go"
       ],
       "phase": 5,
       "status": "implemented",
@@ -1527,7 +1529,15 @@
       ],
       "verification": [
         "inventoried",
-        "implemented"
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-ce4e140777e93d5226b5"
+      ],
+      "representativeScenarioIds": [
+        "match-recognize-simple"
       ]
     },
     {
@@ -24111,6 +24121,52 @@
       "representativeScenarioIds": [
         "rollup-output-every"
       ]
+    },
+    {
+      "id": "case.match-recognize-simple",
+      "javaRuntimeIds": [
+        "java-runtime-ce4e140777e93d5226b5"
+      ],
+      "javaNames": [
+        "RowRecogConcatenation"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/rowrecog/RowRecogOps.java"
+      ],
+      "goTests": [
+        "TestMatchRecognizeSimpleParity",
+        "TestRunMatchRecognizeDiffWritesPassingEvidence",
+        "TestRunMatchRecognizeDiffRejectsTraceMutations"
+      ],
+      "tags": [
+        "correctness",
+        "match-recognize",
+        "pattern",
+        "measures",
+        "differential",
+        "representative"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-ce4e140777e93d5226b5"
+      ],
+      "representativeScenarioIds": [
+        "match-recognize-simple"
+      ]
     }
   ],
   "mappings": [
@@ -25757,30 +25813,34 @@
     {
       "capabilityId": "output.core",
       "caseId": "case.rollup-output-every"
+    },
+    {
+      "capabilityId": "rowrecog.match-recognize",
+      "caseId": "case.match-recognize-simple"
     }
   ],
   "summary": {
-    "totalCases": 387,
+    "totalCases": 388,
     "totalCapabilities": 110,
-    "inventoriedCases": 387,
-    "implementedCases": 387,
-    "differentialVerifiedCases": 16,
-    "differentialVerifiedRuntimeIds": 23,
+    "inventoriedCases": 388,
+    "implementedCases": 388,
+    "differentialVerifiedCases": 17,
+    "differentialVerifiedRuntimeIds": 24,
     "intentionallyDifferentCases": 17,
-    "representativeVerifiedCases": 16,
+    "representativeVerifiedCases": 17,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
-    "differentialVerifiedCapabilities": 10,
+    "differentialVerifiedCapabilities": 11,
     "intentionallyDifferentCapabilities": 6,
-    "representativeVerifiedCapabilities": 10,
+    "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2361,
+    "runtimeAssociationCount": 2362,
     "referencedJavaRuntimeIds": 2283,
     "totalJavaRuntimeIds": 4136,
     "unreferencedJavaRuntimeIds": 1853,
-    "representativeScenarioTotal": 16,
-    "representativeScenarioPassing": 16,
+    "representativeScenarioTotal": 17,
+    "representativeScenarioPassing": 17,
     "currentFailures": [],
     "currentSkips": [
       "connectors/kafka.TestKafkaDockerRoundTrip: ESPER_KAFKA_BROKERS is unset; run the Kafka fixture from docs/integration/external-services.md",
@@ -25792,8 +25852,8 @@
       "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
     ],
     "risks": [
-      "Sixteen representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph records contain broad implemented subsets; only the twenty-three listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false} runtimes are differential-verified.",
+      "Seventeen representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, match-recognize-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the twenty-four listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/RowRecogConcatenation runtimes are differential-verified.",
       "No 20-scenario representative suite, stress load, fuzz/property suite, or Java-vs-Go performance baseline is complete.",
       "Statement CPU metrics currently use process CPU time on Linux while Java uses current-thread CPU time; this remains an intentional-difference candidate under review."
     ],
