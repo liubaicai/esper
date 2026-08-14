@@ -50,15 +50,16 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 个 |
-| Case | 392 个 |
+| Case | 398 个 |
 | Case implemented | 354 个 |
 | Case differential-verified | 21 个（30 个 runtime） |
 | Case intentionally-different | 17 个 |
+| Case inventoried | 6 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
-| Runtime 关联 | 2,368 条 |
-| 唯一已关联 runtime | 2,283 个 |
-| 未关联 runtime | 1,853 个 |
-| 关联覆盖率 | 55.1% |
+| Runtime 关联 | 2,517 条 |
+| 唯一已关联 runtime | 2,432 个 |
+| 未关联 runtime | 1,704 个 |
+| 关联覆盖率 | 58.8% |
 | Representative scenario | 21/21 通过 |
 | NFR | 0 个已验证 |
 | Docker integration | MySQL/Kafka/RabbitMQ round-trips passed（2026-08-14） |
