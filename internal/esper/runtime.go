@@ -4939,6 +4939,8 @@ type outputRuntimeState struct {
 	firstEveryNext         map[string]time.Time
 	lastEverySeen          int
 	lastEveryOutputRows    map[string]Result
+	allEveryOutputRows     map[string]Result
+	allEveryOutputOrder    []string
 	outputScheduleAnchored bool
 	pending                *ResultBatch
 	pendingCount           int
@@ -7475,6 +7477,8 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		return r.applyLastEveryEvents(policy, batch, now, plans...)
 	case OutputLastEveryTimePolicy:
 		return r.applyLastEveryTime(policy, batch, flush, now, plans...)
+	case OutputAllEveryTimePolicy:
+		return r.applyAllEveryTime(policy, batch, flush, now, plans...)
 	case OutputLastPolicy, OutputSnapshotPolicy:
 		if !batch.empty() {
 			copyBatch := mergeLastOutputBatch(r.outputState.pending, batch)
@@ -7862,6 +7866,99 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 	return r.finishOutput(policy, result, now, plans...)
 }
 
+func (r *statementRuntime) applyAllEveryTime(policy OutputPolicy, batch ResultBatch, flush bool, now time.Time, plans ...Plan) ResultBatch {
+	if r == nil || r.outputState == nil {
+		return ResultBatch{}
+	}
+	state := r.outputState
+	if !batch.empty() && state.nextOutputAt.IsZero() {
+		state.nextOutputAt = now.Add(policy.Interval)
+	}
+	if !flush || state.nextOutputAt.IsZero() || now.Before(state.nextOutputAt) || len(plans) == 0 {
+		return ResultBatch{}
+	}
+	result := r.snapshotBatch(plans[0], now)
+	definition := plans[0].query.aggregate
+	if definition != nil && len(definition.groupBy) > 0 {
+		groupNames := aggregateGroupFieldNames(definition)
+		currentByKey := make(map[string]Result, len(result.New))
+		keys := make([]string, 0, len(result.New))
+		for index, row := range result.New {
+			key := outputGroupKey(result.outputKeysNew, index)
+			if _, exists := currentByKey[key]; exists {
+				continue
+			}
+			currentByKey[key] = row
+			keys = append(keys, key)
+		}
+		for key := range state.allEveryOutputRows {
+			if _, exists := currentByKey[key]; !exists {
+				keys = append(keys, key)
+			}
+		}
+		orderRank := make(map[string]int, len(state.allEveryOutputOrder))
+		for index, key := range state.allEveryOutputOrder {
+			orderRank[key] = index
+		}
+		rowFor := func(key string) Result {
+			if row, ok := currentByKey[key]; ok {
+				return row
+			}
+			return state.allEveryOutputRows[key]
+		}
+		sort.SliceStable(keys, func(i, j int) bool {
+			leftLevel := groupedOutputLevel(rowFor(keys[i]), groupNames)
+			rightLevel := groupedOutputLevel(rowFor(keys[j]), groupNames)
+			if leftLevel != rightLevel {
+				return leftLevel > rightLevel
+			}
+			leftRank, leftOK := orderRank[keys[i]]
+			rightRank, rightOK := orderRank[keys[j]]
+			if !leftOK {
+				leftRank = len(state.allEveryOutputOrder)
+			}
+			if !rightOK {
+				rightRank = len(state.allEveryOutputOrder)
+			}
+			return leftRank < rightRank
+		})
+		newRows := make([]Result, 0, len(keys))
+		old := make([]Result, 0, len(keys))
+		for _, key := range keys {
+			current, hasCurrent := currentByKey[key]
+			previous, hasPrevious := state.allEveryOutputRows[key]
+			if !hasCurrent {
+				current = lastEveryNullResult(previous, groupNames)
+			}
+			if hasPrevious {
+				old = append(old, previous)
+			} else {
+				old = append(old, lastEveryNullResult(current, groupNames))
+			}
+			newRows = append(newRows, current)
+		}
+		result.New = newRows
+		result.outputKeysNew = append([]string(nil), keys...)
+		result.Old = old
+		result.outputKeysOld = append([]string(nil), keys...)
+		if state.allEveryOutputRows == nil {
+			state.allEveryOutputRows = make(map[string]Result)
+		}
+		for index, key := range result.outputKeysNew {
+			state.allEveryOutputRows[key] = result.New[index]
+			if _, ok := orderRank[key]; !ok {
+				state.allEveryOutputOrder = append(state.allEveryOutputOrder, key)
+			}
+		}
+	}
+	r.advanceOutputSchedule(policy, now)
+	if result.empty() {
+		return ResultBatch{}
+	}
+	result.Time = now
+	return r.finishOutput(policy, result, now, plans...)
+}
+
 func orderGroupedOutputRows(results []Result, keys []string, groupNames []string) ([]Result, []string) {
 	if len(keys) != len(results) {
 		keys = make([]string, len(results))
@@ -8174,7 +8271,7 @@ func outputPolicyIteratorUsesSourceOrder(policy OutputPolicy) bool {
 		return policy.Kind == OutputEveryPolicy || policy.Kind == OutputEveryTimePolicy
 	}
 	switch policy.Kind {
-	case OutputEveryPolicy, OutputEveryTimePolicy, OutputFirstEveryEventsPolicy, OutputFirstEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy:
+	case OutputEveryPolicy, OutputEveryTimePolicy, OutputFirstEveryEventsPolicy, OutputFirstEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy, OutputAllEveryTimePolicy:
 		return true
 	default:
 		return false
@@ -8886,7 +8983,7 @@ func (r *statementRuntime) appendCronPending(batch ResultBatch) {
 }
 
 func (r *statementRuntime) scheduleOutput(policy OutputPolicy, at time.Time) {
-	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy) || policy.Interval <= 0 {
+	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy && policy.Kind != OutputAllEveryTimePolicy) || policy.Interval <= 0 {
 		return
 	}
 	if r.outputState.nextOutputAt.IsZero() {
@@ -8895,7 +8992,7 @@ func (r *statementRuntime) scheduleOutput(policy OutputPolicy, at time.Time) {
 }
 
 func (r *statementRuntime) anchorOutputSchedule(policy OutputPolicy, at time.Time) {
-	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy) || policy.Interval <= 0 {
+	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy && policy.Kind != OutputAllEveryTimePolicy) || policy.Interval <= 0 {
 		return
 	}
 	if !r.outputState.afterActive || r.outputState.outputScheduleAnchored {
@@ -8933,7 +9030,7 @@ func (r *statementRuntime) ensureCronSchedule(policy OutputPolicy, now time.Time
 }
 
 func (r *statementRuntime) advanceOutputSchedule(policy OutputPolicy, now time.Time) {
-	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy) || policy.Interval <= 0 {
+	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy && policy.Kind != OutputAllEveryTimePolicy) || policy.Interval <= 0 {
 		return
 	}
 	if r.outputState.nextOutputAt.IsZero() {

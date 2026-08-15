@@ -32,7 +32,8 @@ import java.util.Map;
  * ResultSet4OutputLimitLast; case "first-market" mirrors
  * ResultSet5OutputLimitFirst; case "no-limit-market" mirrors
  * ResultSet1NoOutputLimit; case "default-market" mirrors
- * ResultSet2OutputLimitDefault.
+ * ResultSet2OutputLimitDefault; case "all" mirrors
+ * ResultSetOutputAll{join=false}.
  */
 public final class RollupOutputLastScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -62,7 +63,7 @@ public final class RollupOutputLastScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market", "first-market", "no-limit-market", "default-market"};
+        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market", "first-market", "no-limit-market", "default-market", "all"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -136,6 +137,10 @@ public final class RollupOutputLastScenarioOracle {
             epl = "@Name('s0') select irstream symbol, sum(price) " +
                     "from SupportMarketDataBean#time(5.5 sec) group by rollup(symbol) " +
                     "output every 1 seconds";
+        } else if ("all".equals(caseName)) {
+            epl = "@Name('s0') select irstream theString as c0, intPrimitive as c1, sum(longBoxed) as c2 " +
+                    "from SupportBean#time(3.5 sec) group by rollup(theString, intPrimitive) " +
+                    "output all every 1 second";
         } else if (!"last".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }

@@ -4419,6 +4419,15 @@ func OutputAll() OutputPolicy {
 	return internalengine.OutputAll()
 }
 
+// OutputAllEveryTime emits the complete current state with new/old rows at
+// each virtual-clock interval. It is the chainable Go form of Esper's
+// "output all every" policy.
+func OutputAllEveryTime(interval time.Duration) OutputPolicy {
+	return internalengine.OutputAllEveryTime(interval)
+}
+
+const OutputAllEveryTimePolicy = internalengine.OutputAllEveryTimePolicy
+
 const OutputAllPolicy = internalengine.OutputAllPolicy
 
 const OutputAndOnTermination = internalengine.OutputAndOnTermination

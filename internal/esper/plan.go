@@ -5471,10 +5471,10 @@ func validateOutputPolicy(policy OutputPolicy) error {
 	if (policy.Kind == OutputFirstPolicy || policy.Kind == OutputEveryPolicy || policy.Kind == OutputFirstEveryEventsPolicy || policy.Kind == OutputLastEveryEventsPolicy) && policy.Count <= 0 {
 		return NewError(ErrorInvalidRule, "output count must be positive")
 	}
-	if (policy.Kind == OutputEveryTimePolicy || policy.Kind == OutputFirstEveryTimePolicy || policy.Kind == OutputLastEveryTimePolicy) && policy.Interval <= 0 {
+	if (policy.Kind == OutputEveryTimePolicy || policy.Kind == OutputFirstEveryTimePolicy || policy.Kind == OutputLastEveryTimePolicy || policy.Kind == OutputAllEveryTimePolicy) && policy.Interval <= 0 {
 		return NewError(ErrorInvalidRule, "time-based output interval must be positive")
 	}
-	if policy.Kind > OutputLastEveryTimePolicy {
+	if policy.Kind > OutputAllEveryTimePolicy {
 		return NewError(ErrorInvalidRule, "unknown output policy")
 	}
 	switch policy.Termination {

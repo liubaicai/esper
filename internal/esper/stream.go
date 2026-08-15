@@ -2550,6 +2550,7 @@ const (
 	OutputFirstEveryTimePolicy
 	OutputLastEveryEventsPolicy
 	OutputLastEveryTimePolicy
+	OutputAllEveryTimePolicy
 )
 
 type OutputAfterKind uint8
@@ -2633,6 +2634,13 @@ func OutputLastEveryEvents(count int) OutputPolicy {
 // interval. It never starts a wall-clock goroutine.
 func OutputLastEveryTime(interval time.Duration) OutputPolicy {
 	return OutputPolicy{Kind: OutputLastEveryTimePolicy, Interval: interval}
+}
+
+// OutputAllEveryTime emits the complete current state with new/old rows at
+// each virtual-clock interval. It is the chainable Go form of Esper's
+// "output all every" policy.
+func OutputAllEveryTime(interval time.Duration) OutputPolicy {
+	return OutputPolicy{Kind: OutputAllEveryTimePolicy, Interval: interval}
 }
 
 func OutputLast() OutputPolicy { return OutputPolicy{Kind: OutputLastPolicy, Count: 1} }
@@ -3604,6 +3612,8 @@ func outputDescription(policy OutputPolicy) string {
 		base = fmt.Sprintf("last-every-events(%d)", policy.Count)
 	case OutputLastEveryTimePolicy:
 		base = fmt.Sprintf("last-every-time(%s)", policy.Interval)
+	case OutputAllEveryTimePolicy:
+		base = fmt.Sprintf("all-every-time(%s)", policy.Interval)
 	case OutputLastPolicy:
 		base = "last"
 	case OutputSnapshotPolicy:
