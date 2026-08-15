@@ -1,0 +1,45 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-join-sort-window",
+  "steps": [
+    {
+      "op": "case",
+      "case": "join-sort-window"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "JOIN_KEY",
+        "intPrimitive": -1,
+        "longBoxed": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "JOIN_KEY",
+        "volume": 1,
+        "price": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "JOIN_KEY",
+        "volume": 2,
+        "price": 2
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01Z"
+    }
+  ]
+}

@@ -9711,6 +9711,7 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 		return r.updateUnidirectionalJoin(definition, sources, evaluationOrder, now, newEvents, oldEvents)
 	}
 	before := joinKeyedTuples(definition, r.joinState, now, r)
+	immediatelyEvictedBySide := make(map[int][]Event)
 	for _, event := range newEvents {
 		// Subordinate method results and unrestricted (triggerless) historical
 		// rows belong to exactly one trigger cycle and are cleared before
@@ -9866,6 +9867,15 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 					}
 					triggerNewRows[index] = append(triggerNewRows[index], stored)
 				}
+				if _, wasEvicted := immediatelyEvictedBySide[index]; !wasEvicted {
+					immediatelyEvictedBySide[index] = nil
+				}
+				for _, oldEvent := range delta.oldEvents {
+					if eventIdentity(oldEvent) == eventIdentity(newEvent) {
+						immediatelyEvictedBySide[index] = append(immediatelyEvictedBySide[index], newEvent)
+						break
+					}
+				}
 			}
 			if previous, rebuilt := rebuiltSides[index]; rebuilt {
 				r.joinState.sides[index] = r.assignJoinLineageIDs(r.joinState.sides[index], previous)
@@ -9883,6 +9893,19 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	}
 	after := joinKeyedTuples(definition, r.joinState, now, r)
 	delta := diffJoinKeyedTuples(before, after)
+	for _, events := range immediatelyEvictedBySide {
+		for _, ev := range events {
+			for _, tuple := range delta.newTuples {
+				if len(tuple) == 2 && (eventIdentity(tuple[0]) == eventIdentity(ev) || eventIdentity(tuple[1]) == eventIdentity(ev)) {
+					delta.oldTuples = append(delta.oldTuples, tuple)
+					break
+				}
+			}
+		}
+	}
+	for index, events := range immediatelyEvictedBySide {
+		removeStoredEvents(&r.joinState.sides[index], events)
+	}
 	return joinDeltaWithPairs(delta), nil
 }
 
@@ -11441,6 +11464,28 @@ func removeFromWindowState(spec WindowSpec, state *windowRuntimeState, event Eve
 
 func sameEvent(left, right Event) bool {
 	return left.TypeName() == right.TypeName() && reflect.DeepEqual(left.Underlying(), right.Underlying())
+}
+
+// sameEventRow reports whether two events denote the same aggregate
+// contribution for removal. Join-tuple wrappers are allocated fresh per
+// delta, so the stable row identity is the wrapped stream events rather than
+// the wrapper token; plain events compare by their stable event identity so
+// that payload-identical replacements are distinct contributions.
+func sameEventRow(left, right Event) bool {
+	leftTuple, leftJoin := left.Underlying().(joinTuple)
+	rightTuple, rightJoin := right.Underlying().(joinTuple)
+	if leftJoin || rightJoin {
+		if !leftJoin || !rightJoin || len(leftTuple.events) != len(rightTuple.events) {
+			return false
+		}
+		for index := range leftTuple.events {
+			if eventIdentity(leftTuple.events[index]) != eventIdentity(rightTuple.events[index]) {
+				return false
+			}
+		}
+		return true
+	}
+	return eventIdentity(left) == eventIdentity(right)
 }
 
 func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeState, event Event, now time.Time) (eventDelta, error) {
@@ -15450,9 +15495,9 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	}
 	state := r.aggregateState
 	r.sweepReclaimGroups(plan, now)
-	removeAggregateScopeEvents(state, delta.oldEvents)
 	state.allEvents = appendAggregateScopeEvents(state.allEvents, delta.newEvents)
 	state.allEverEvents = appendAggregateScopeEvents(state.allEverEvents, delta.newEvents)
+	removeAggregateScopeEvents(state, delta.oldEvents)
 	// Esper's istream/irstream aggregate result sets do not post new rows for
 	// pure time-expiry batches that contain no incoming event. New rows are
 	// emitted for removal-affected groups only when the removal is part of an
@@ -15538,20 +15583,6 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		group.current = event
 		return key
 	}
-	for _, event := range delta.oldEvents {
-		for _, groupingSet := range groupingSets {
-			key := markAffected(event, groupingSet)
-			group := state.groups[key]
-			group.leaving = true
-			group.leavingEvents = append(group.leavingEvents, event)
-			for index, current := range group.events {
-				if sameEvent(current, event) {
-					group.events = append(group.events[:index], group.events[index+1:]...)
-					break
-				}
-			}
-		}
-	}
 	for _, event := range delta.newEvents {
 		for _, groupingSet := range groupingSets {
 			key := markAffected(event, groupingSet)
@@ -15559,6 +15590,20 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			group.events = append(group.events, event)
 			group.everEvents = append(group.everEvents, event)
 			group.lastActivity = now
+		}
+	}
+	for _, event := range delta.oldEvents {
+		for _, groupingSet := range groupingSets {
+			key := markAffected(event, groupingSet)
+			group := state.groups[key]
+			group.leaving = true
+			group.leavingEvents = append(group.leavingEvents, event)
+			for index, current := range group.events {
+				if sameEventRow(current, event) {
+					group.events = append(group.events[:index], group.events[index+1:]...)
+					break
+				}
+			}
 		}
 	}
 
@@ -16403,7 +16448,7 @@ func removeAggregateScopeEvents(state *aggregateRuntimeState, removals []Event) 
 	}
 	for _, removal := range removals {
 		for index, event := range state.allEvents {
-			if sameEvent(event, removal) {
+			if sameEventRow(event, removal) {
 				state.allEvents = append(state.allEvents[:index], state.allEvents[index+1:]...)
 				break
 			}

@@ -1,0 +1,142 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-412ca9b80556afdf36e8"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAggregateGrouped.java"
+  ],
+  "javaExecutions": [
+    "ResultSetJoinSortWindow"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-join-sort-window",
+    "steps": [
+      {
+        "op": "case",
+        "case": "join-sort-window"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "JOIN_KEY",
+          "intPrimitive": -1,
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "JOIN_KEY",
+          "volume": 1,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "JOIN_KEY",
+          "volume": 2,
+          "price": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-join-sort-window",
+    "records": [
+      {
+        "case": "join-sort-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxVol": 1,
+              "symbol": "JOIN_KEY",
+              "volume": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxVol": 1,
+              "symbol": "JOIN_KEY",
+              "volume": 2
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxVol": 1,
+              "symbol": "JOIN_KEY",
+              "volume": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-join-sort-window",
+    "records": [
+      {
+        "case": "join-sort-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxVol": 1,
+              "symbol": "JOIN_KEY",
+              "volume": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxVol": 1,
+              "symbol": "JOIN_KEY",
+              "volume": 2
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxVol": 1,
+              "symbol": "JOIN_KEY",
+              "volume": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
