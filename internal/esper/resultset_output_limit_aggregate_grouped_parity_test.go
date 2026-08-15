@@ -478,3 +478,93 @@ func TestResultSetOutputLimitAggregateGroupedAllEventsParity(t *testing.T) {
 	assertRow(batches[1], 1, "DELL", 40000, 148)
 	assertRow(batches[1], 2, "IBM", 500, 20)
 }
+
+// TestResultSetHavingEveryEventsParity mirrors ResultSetHaving: a time(10 sec)
+// grouped sum with having sum(price) >= 10 and output every 3 events counts
+// input events even when having filters them, and a pure three-event removal
+// batch triggers the old-stream output.
+func TestResultSetHavingEveryEventsParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[resultsetGroupedTimeWindowMarket](env, "SupportMarketDataBean"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.UnixMilli(0).UTC()))
+	defer func() { _ = engine.Close(context.Background()) }()
+	symbol := Field[resultsetGroupedTimeWindowMarket, string]("symbol")
+	volume := Field[resultsetGroupedTimeWindowMarket, int64]("volume")
+	price := Field[resultsetGroupedTimeWindowMarket, float64]("price")
+	sum := Sum[float64](price)
+	plan, err := env.Build(From[resultsetGroupedTimeWindowMarket](env, "SupportMarketDataBean").
+		Window(TimeWindow(10*time.Second)).
+		GroupBy(symbol).
+		Having(GreaterOrEqual[float64](sum, Literal(10.0))).
+		Select(
+			Alias("symbol", symbol),
+			Alias("volume", volume),
+			Alias("sumprice", sum),
+		).Query(StatementName("s0"), WithOldStream(), WithOutput(OutputEvery(3))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	send := func(volume int64, price float64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), resultsetGroupedTimeWindowMarket{Symbol: "IBM", Volume: volume, Price: price}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send(1, 5)
+	send(2, 6)
+	send(3, -3)
+	if err := engine.AdvanceTime(context.Background(), time.UnixMilli(5000).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	send(4, 10)
+	send(5, 0)
+	send(6, 1)
+	if err := engine.AdvanceTime(context.Background(), time.UnixMilli(11000).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(batches) != 3 {
+		t.Fatalf("having-every-events batches = %#v", batches)
+	}
+	assertHavingRow := func(batch ResultBatch, side string, index int, volume int64, sumprice float64) {
+		t.Helper()
+		var row Row
+		var ok bool
+		if side == "new" {
+			row, ok = batch.New[index].Row()
+		} else {
+			row, ok = batch.Old[index].Row()
+		}
+		if !ok || row.Get("symbol").Any() != "IBM" || row.Get("volume").Any() != volume || row.Get("sumprice").Any() != sumprice {
+			t.Fatalf("having-every-events %s row %d = %#v", side, index, batch)
+		}
+	}
+	if len(batches[0].New) != 1 || len(batches[0].Old) != 0 {
+		t.Fatalf("having-every-events first batch = %#v", batches[0])
+	}
+	assertHavingRow(batches[0], "new", 0, 2, 11)
+	if len(batches[1].New) != 3 || len(batches[1].Old) != 0 {
+		t.Fatalf("having-every-events second batch = %#v", batches[1])
+	}
+	assertHavingRow(batches[1], "new", 0, 4, 18)
+	assertHavingRow(batches[1], "new", 1, 5, 18)
+	assertHavingRow(batches[1], "new", 2, 6, 19)
+	if len(batches[2].New) != 0 || len(batches[2].Old) != 3 {
+		t.Fatalf("having-every-events expiry batch = %#v", batches[2])
+	}
+	assertHavingRow(batches[2], "old", 0, 1, 11)
+	assertHavingRow(batches[2], "old", 1, 2, 11)
+	assertHavingRow(batches[2], "old", 2, 3, 11)
+}

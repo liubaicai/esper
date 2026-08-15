@@ -4938,6 +4938,7 @@ type outputRuntimeState struct {
 	firstEveryCounts       map[string]int
 	firstEveryNext         map[string]time.Time
 	lastEverySeen          int
+	lastEverySeenRemoved   int
 	lastEveryOutputRows    map[string]Result
 	allEveryOutputRows     map[string]Result
 	allEveryOutputOrder    []string
@@ -4947,6 +4948,8 @@ type outputRuntimeState struct {
 	outputScheduleAnchored bool
 	pending                *ResultBatch
 	pendingCount           int
+	pendingInserted        int
+	pendingRemoved         int
 	whenPending            *ResultBatch
 	afterSeen              int
 	afterActive            bool
@@ -7520,25 +7523,31 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			}
 			return r.finishOutput(policy, result, now, plans...)
 		}
-		if !batch.empty() {
-			if r.outputState.pending == nil {
-				copyBatch := batch.clone()
-				r.outputState.pending = &copyBatch
-			} else {
-				r.outputState.pending.New = append(r.outputState.pending.New, batch.New...)
-				r.outputState.pending.Old = append(r.outputState.pending.Old, batch.Old...)
-				r.outputState.pending.outputKeysNew = append(r.outputState.pending.outputKeysNew, batch.outputKeysNew...)
-				r.outputState.pending.outputKeysOld = append(r.outputState.pending.outputKeysOld, batch.outputKeysOld...)
-				r.outputState.pending.Time = batch.Time
+		if !batch.empty() || batch.outputCountsSet {
+			if !batch.empty() {
+				if r.outputState.pending == nil {
+					copyBatch := batch.clone()
+					r.outputState.pending = &copyBatch
+				} else {
+					r.outputState.pending.New = append(r.outputState.pending.New, batch.New...)
+					r.outputState.pending.Old = append(r.outputState.pending.Old, batch.Old...)
+					r.outputState.pending.outputKeysNew = append(r.outputState.pending.outputKeysNew, batch.outputKeysNew...)
+					r.outputState.pending.outputKeysOld = append(r.outputState.pending.outputKeysOld, batch.outputKeysOld...)
+					r.outputState.pending.Time = batch.Time
+				}
 			}
-			r.outputState.pendingCount += len(batch.New) + len(batch.Old)
+			inserted, removed := outputEventCounts(batch)
+			r.outputState.pendingInserted += inserted
+			r.outputState.pendingRemoved += removed
 		}
-		if r.outputState.pending == nil || r.outputState.pendingCount < policy.Count {
+		if r.outputState.pending == nil || (r.outputState.pendingInserted < policy.Count && r.outputState.pendingRemoved < policy.Count) {
 			return ResultBatch{}
 		}
 		result := r.outputState.pending.clone()
 		r.outputState.pending = nil
 		r.outputState.pendingCount = 0
+		r.outputState.pendingInserted = 0
+		r.outputState.pendingRemoved = 0
 		if len(plans) > 0 && plans[0].query.distinct {
 			result.New = distinctSnapshotResults(result.New)
 			result.Old = distinctSnapshotResults(result.Old)
@@ -7789,15 +7798,18 @@ func (r *statementRuntime) applyLastEveryEvents(policy OutputPolicy, batch Resul
 		return ResultBatch{}
 	}
 	state := r.outputState
-	state.lastEverySeen += acceptedOutputEventCount(batch)
+	inserted, removed := outputEventCounts(batch)
+	state.lastEverySeen += inserted
+	state.lastEverySeenRemoved += removed
 	if !batch.empty() {
 		copyBatch := mergeLastOutputBatch(state.pending, batch)
 		state.pending = &copyBatch
 	}
-	if state.lastEverySeen < policy.Count {
+	if state.lastEverySeen < policy.Count && state.lastEverySeenRemoved < policy.Count {
 		return ResultBatch{}
 	}
 	state.lastEverySeen = 0
+	state.lastEverySeenRemoved = 0
 	if state.pending == nil {
 		return ResultBatch{}
 	}
@@ -8018,6 +8030,9 @@ func (r *statementRuntime) applyAllEveryEvents(policy OutputPolicy, batch Result
 		state.allEveryReps = make(map[string]Result)
 		state.allEverySeen = make(map[string]struct{})
 	}
+	inserted, removed := outputEventCounts(batch)
+	state.pendingInserted += inserted
+	state.pendingRemoved += removed
 	if !batch.empty() {
 		if state.pending == nil {
 			state.pending = &ResultBatch{}
@@ -8032,12 +8047,13 @@ func (r *statementRuntime) applyAllEveryEvents(policy OutputPolicy, batch Result
 			state.allEveryReps[key] = result
 			state.allEverySeen[key] = struct{}{}
 		}
-		state.pendingCount += len(batch.New) + len(batch.Old)
 	}
-	if state.pendingCount < policy.Count {
+	if state.pendingInserted < policy.Count && state.pendingRemoved < policy.Count {
 		return ResultBatch{}
 	}
 	state.pendingCount = 0
+	state.pendingInserted = 0
+	state.pendingRemoved = 0
 	var result ResultBatch
 	if state.pending != nil {
 		result = state.pending.clone()
@@ -8136,6 +8152,17 @@ func acceptedOutputEventCount(batch ResultBatch) int {
 		return int(batch.outputInserted)
 	}
 	return len(batch.New)
+}
+
+// outputEventCounts returns the input insert/remove event counts for an event
+// count output policy. Java's OutputConditionCount satisfies when either
+// count reaches the configured rate, so having-filtered inserts and pure
+// removal batches both advance the output condition.
+func outputEventCounts(batch ResultBatch) (inserted, removed int) {
+	if batch.outputCountsSet {
+		return int(batch.outputInserted), int(batch.outputRemoved)
+	}
+	return len(batch.New), len(batch.Old)
 }
 
 func firstOutputResult(batch ResultBatch) ResultBatch {
@@ -15528,6 +15555,26 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			// is 0 while sum/avg/min/max are null.
 			nullPrior := make([]Value, len(newValues))
 			emptyCtx := aggregateGroupContext(definition, nil, nil, nil, false, group.groupingSet, group.current, nil, nil, now, r.variables, group.pluginStates, group.multiPluginStates)
+			for index, selection := range definition.selections {
+				if isAggregateExpression(selection.Expr) {
+					nullPrior[index] = evaluateAggregateExpression(selection.Expr, emptyCtx)
+				} else {
+					nullPrior[index] = newValues[index]
+				}
+			}
+			oldEntries = append(oldEntries, aggregateResultEntry{
+				result: resultRow(newRow(plan.resultSchema, nullPrior)),
+				group:  group,
+				key:    key,
+			})
+		}
+		if visible && !emittedBefore && len(definition.groupBy) == 0 && plan.query.selector == SelectIRStream {
+			// Ungrouped irstream aggregates pair the first new row with an
+			// old row whose aggregate columns evaluate over the empty group
+			// (Java ResultSetProcessorRowForAll: sum/avg/min/max are null and
+			// count(*) is 0 on the first update).
+			nullPrior := make([]Value, len(newValues))
+			emptyCtx := aggregateGroupContext(definition, nil, nil, nil, false, nil, group.current, nil, nil, now, r.variables, group.pluginStates, group.multiPluginStates)
 			for index, selection := range definition.selections {
 				if isAggregateExpression(selection.Expr) {
 					nullPrior[index] = evaluateAggregateExpression(selection.Expr, emptyCtx)

@@ -181,9 +181,11 @@ func TestOutputRowPerGroupAllAndLastMatchesEsper(t *testing.T) {
 }
 
 // TestOutputRowForAllAggregateOldNewBatchMatchesEsper covers an ungrouped
-// aggregate over a length window. The second input closes the output
-// interval; the third input creates the first old/new aggregate transition,
-// preserving the row-for-all result shape without a group key.
+// aggregate over a length window. Java's OutputConditionCount satisfies on
+// input view events (new >= N or old >= N), so the third input closes the
+// interval even though the length(2) window also emits its first removal;
+// the buffered deltas deliver new [10,30,50] and old [null,10,30]. The
+// fourth input starts a fresh count and does not flush.
 func TestOutputRowForAllAggregateOldNewBatchMatchesEsper(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	price := Field[runtimeTestTrade, float64]("price")
@@ -209,33 +211,34 @@ func TestOutputRowForAllAggregateOldNewBatchMatchesEsper(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	for _, price := range []float64{10, 20} {
+	for _, price := range []float64{10, 20, 30} {
 		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: price}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if len(batches) != 1 || len(batches[0].New) != 2 || len(batches[0].Old) != 1 {
+	if len(batches) != 1 || len(batches[0].New) != 3 || len(batches[0].Old) != 3 {
 		t.Fatalf("row-for-all initial output = %#v", batches)
 	}
-	oldInitial, oldInitialOK := batches[0].Old[0].Row()
-	if !oldInitialOK || oldInitial.Get("sum").Any() != float64(10) {
-		t.Fatalf("row-for-all initial old row = %#v", batches[0].Old)
+	for index, want := range []float64{10, 30, 50} {
+		row, ok := batches[0].New[index].Row()
+		if !ok || row.Get("sum").Any() != want {
+			t.Fatalf("row-for-all initial new row %d = %#v", index, batches[0].New[index])
+		}
 	}
-	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: 30}); err != nil {
-		t.Fatal(err)
+	oldNull, oldNullOK := batches[0].Old[0].Row()
+	if !oldNullOK || !oldNull.Get("sum").IsNull() {
+		t.Fatalf("row-for-all initial null old row = %#v", batches[0].Old[0])
 	}
-	if len(batches) != 1 {
-		t.Fatalf("row-for-all old/new output flushed too early = %#v", batches)
+	for index, want := range []float64{10, 30} {
+		row, ok := batches[0].Old[index+1].Row()
+		if !ok || row.Get("sum").Any() != want {
+			t.Fatalf("row-for-all initial old row %d = %#v", index+1, batches[0].Old[index+1])
+		}
 	}
 	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: 40}); err != nil {
 		t.Fatal(err)
 	}
-	if len(batches) != 2 || len(batches[1].Old) != 2 || len(batches[1].New) != 2 {
-		t.Fatalf("row-for-all old/new output = %#v", batches)
-	}
-	oldFirst, oldOK := batches[1].Old[0].Row()
-	newFirst, newOK := batches[1].New[0].Row()
-	if !oldOK || !newOK || oldFirst.Get("sum").Any() != float64(30) || newFirst.Get("sum").Any() != float64(50) {
-		t.Fatalf("row-for-all aggregate transition old=%#v new=%#v", oldFirst.AsMap(), newFirst.AsMap())
+	if len(batches) != 1 {
+		t.Fatalf("row-for-all old/new output flushed too early = %#v", batches)
 	}
 }

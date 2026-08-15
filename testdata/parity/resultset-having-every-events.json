@@ -1,0 +1,76 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-having-every-events",
+  "steps": [
+    {
+      "op": "case",
+      "case": "having-output"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 1,
+        "price": 5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 2,
+        "price": 6
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 3,
+        "price": -3
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:05Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 4,
+        "price": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 5,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 6,
+        "price": 1
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:11Z"
+    }
+  ]
+}
