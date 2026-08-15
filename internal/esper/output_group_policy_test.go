@@ -185,3 +185,62 @@ func TestOutputLastEveryTimeKeepsLatestRowsPerGroupAndSupportsMultikey(t *testin
 		}
 	}
 }
+
+func TestNonAggregatedHavingFiltersRowsLikeEsper(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[outputGroupEvent](env, "OutputGroupEvent"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	symbol := Field[outputGroupEvent, string]("symbol")
+	value := Field[outputGroupEvent, int64]("value")
+	having := Greater[int64](value, Literal(int64(2)))
+	plan, err := env.Build(Select[outputGroupEvent](
+		From[outputGroupEvent](env, "OutputGroupEvent"),
+		Alias("symbol", symbol),
+		Alias("value", value),
+	).Having(having).Query(StatementName("non-aggregated-having")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	filterPlan, err := env.Build(Select[outputGroupEvent](
+		From[outputGroupEvent](env, "OutputGroupEvent"),
+		Alias("symbol", symbol),
+		Alias("value", value),
+	).Filter(having).Query(StatementName("non-aggregated-having")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(plan.Canonical()) != string(filterPlan.Canonical()) {
+		t.Fatalf("non-aggregated having plan = %q, filter plan = %q", plan.Canonical(), filterPlan.Canonical())
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("non-aggregated having result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range []outputGroupEvent{
+		{Symbol: "A", Value: 1},
+		{Symbol: "B", Value: 3},
+		{Symbol: "C", Value: 4},
+	} {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(rows) != 2 || rows[0].Get("symbol").Any() != "B" || rows[1].Get("symbol").Any() != "C" {
+		t.Fatalf("non-aggregated having rows = %#v", rows)
+	}
+}

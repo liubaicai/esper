@@ -7887,11 +7887,12 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 	current.New, keys = orderGroupedOutputRows(current.New, keys, groupNames)
 	tableSource := containsTableSource(plans[0].query.input, nil) || containsNamedWindow(plans[0].query.input, nil)
 	aggregateGroupedRowPerEvent := !tableSource && len(definition.groupBy) > 0 && len(aggregateGroupingSetsForDefinition(definition)) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
-	if aggregateGroupedRowPerEvent {
-		// Aggregate-grouped irstream output-last follows
-		// ResultSetProcessorAggregateGroupedImpl: the last row per group is
-		// posted as new and old rows come only from leaving events carried in
-		// the pending batches. Previous-output rows are not posted as old.
+	if aggregateGroupedRowPerEvent || len(aggregateGroupingSetsForDefinition(definition)) == 1 {
+		// Aggregate-grouped and plain row-per-group irstream output-last post
+		// the current row per group as new; old rows come only from leaving
+		// events carried in the pending batches. Previous-output rows are not
+		// posted as old (ResultSetLastNoDataWindow). Rollup output-last below
+		// additionally posts the previous output rows as old.
 		result := ResultBatch{Time: now, New: current.New, Old: current.Old, outputKeysNew: keys, outputKeysOld: current.outputKeysOld}
 		if len(result.outputKeysOld) != len(result.Old) {
 			result.outputKeysOld = nil

@@ -1272,6 +1272,14 @@ func (s RecordStream) Filter(predicate Expression[bool]) RecordStream {
 	return RecordStream{env: s.env, node: &streamNode{kind: streamFilter, input: s.node, predicate: predicate}, selections: append([]Selection(nil), s.selections...)}
 }
 
+// Having applies a non-aggregated having predicate to an unaggregated query.
+// Esper treats having without group-by or aggregate functions as a row
+// filter, so the builder lowers it to the same filter semantics as Where.
+// Grouped and aggregate having remains available on AggregateStream.
+func (s RecordStream) Having(predicate Expression[bool]) RecordStream {
+	return RecordStream{env: s.env, node: &streamNode{kind: streamFilter, input: s.node, predicate: predicate}, selections: append([]Selection(nil), s.selections...)}
+}
+
 // Select appends a typed projection to an untyped record source such as a
 // Named Window or Table. Keeping this as a method makes those sources as
 // chainable as a typed Stream while preserving the existing selection list.

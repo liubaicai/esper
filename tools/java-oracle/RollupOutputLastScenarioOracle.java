@@ -60,7 +60,12 @@ import java.util.Map;
  * ResultSetJoinAll and ResultSetJoinLast; case "having-join" mirrors
  * ResultSetHavingJoin; case "join-sort-window" mirrors
  * ResultSetJoinSortWindow; cases "multikey-last" and "multikey-all" mirror
- * ResultSetOutputLastMultikeyWArray and ResultSetOutputAllMultikeyWArray.
+ * ResultSetOutputLastMultikeyWArray and ResultSetOutputAllMultikeyWArray;
+ * cases "last-no-data-window", "wildcard-last", "wildcard-all" and
+ * "unaggregated-first" mirror ResultSetLastNoDataWindow,
+ * ResultSetWildcardRowPerGroup and ResultSetUnaggregatedOutputFirst; cases
+ * "first-simple" and "first-simple-having" mirror the two statements of
+ * ResultSetFirstSimpleHavingAndNoHaving.
  */
 public final class RollupOutputLastScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -90,7 +95,7 @@ public final class RollupOutputLastScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market", "first-market", "no-limit-market", "default-market", "all", "all-sorted", "first-having", "default", "last-aggregate", "no-output", "default-output", "default-having", "last-output", "last-having", "first-output", "snapshot-output", "all-output", "having-output", "max-output", "none-join", "none-having-join", "default-join", "default-having-join", "last-join", "last-having-join", "first-join", "all-time", "all-join", "all-having", "all-having-join", "default-join2", "all-join2", "last-join2", "having-join", "join-sort-window", "multikey-last", "multikey-all"};
+        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market", "first-market", "no-limit-market", "default-market", "all", "all-sorted", "first-having", "default", "last-aggregate", "no-output", "default-output", "default-having", "last-output", "last-having", "first-output", "snapshot-output", "all-output", "having-output", "max-output", "none-join", "none-having-join", "default-join", "default-having-join", "last-join", "last-having-join", "first-join", "all-time", "all-join", "all-having", "all-having-join", "default-join2", "all-join2", "last-join2", "having-join", "join-sort-window", "multikey-last", "multikey-all", "last-no-data-window", "wildcard-last", "wildcard-all", "unaggregated-first", "first-simple", "first-simple-having"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -315,6 +320,19 @@ public final class RollupOutputLastScenarioOracle {
         } else if ("multikey-all".equals(caseName)) {
             epl = "@Name('s0') select theString, longPrimitive, intPrimitive, sum(intPrimitive) as thesum " +
                     "from SupportBean#keepall group by theString, longPrimitive output all every 1 seconds";
+        } else if ("last-no-data-window".equals(caseName)) {
+            epl = "@Name('s0') select theString, intPrimitive as intp from SupportBean " +
+                    "group by theString output last every 1 seconds order by theString asc";
+        } else if ("wildcard-last".equals(caseName)) {
+            epl = "@Name('s0') select * from SupportBean group by theString output last every 3 events order by theString asc";
+        } else if ("wildcard-all".equals(caseName)) {
+            epl = "@Name('s0') select * from SupportBean group by theString output all every 3 events";
+        } else if ("unaggregated-first".equals(caseName)) {
+            epl = "@Name('s0') select * from SupportBean group by theString output first every 10 seconds";
+        } else if ("first-simple".equals(caseName)) {
+            epl = "@Name('s0') select theString from SupportBean output first every 3 events";
+        } else if ("first-simple-having".equals(caseName)) {
+            epl = "@Name('s0') select theString from SupportBean having intPrimitive != 0 output first every 3 events";
         } else if (!"last".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }

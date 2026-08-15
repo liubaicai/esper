@@ -1,0 +1,1010 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-fbb40900955b851741c6",
+    "java-runtime-34a8b14ea96443475b9c",
+    "java-runtime-decf2ff614722c1273d1",
+    "java-runtime-132314df55366e67ec84"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAggregateGrouped.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitSimple.java"
+  ],
+  "javaExecutions": [
+    "ResultSetLastNoDataWindow",
+    "ResultSetWildcardRowPerGroup",
+    "ResultSetUnaggregatedOutputFirst",
+    "ResultSetFirstSimpleHavingAndNoHaving"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-group-output",
+    "steps": [
+      {
+        "op": "case",
+        "case": "last-no-data-window"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 31,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 22,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 21,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 31,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 5,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 33,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "case",
+        "case": "wildcard-last"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": 10,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "ATT",
+          "intPrimitive": 11,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": 100,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "wildcard-all"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": 10,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "ATT",
+          "intPrimitive": 11,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": 100,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "unaggregated-first"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 3,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 4,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 5,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 6,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 7,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 8,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 9,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "first-simple"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "first-simple-having"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-group-output",
+    "records": [
+      {
+        "case": "last-no-data-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intp": 3,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intp": 21,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intp": 31,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-no-data-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intp": 5,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intp": 33,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "wildcard-last",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 11,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "ATT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 100,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "wildcard-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 11,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "ATT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 100,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "unaggregated-first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "unaggregated-first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "unaggregated-first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 4,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "unaggregated-first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "unaggregated-first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 9,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-simple-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-simple-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-group-output",
+    "records": [
+      {
+        "case": "last-no-data-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intp": 3,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intp": 21,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intp": 31,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-no-data-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intp": 5,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intp": 33,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "wildcard-last",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 11,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "ATT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 100,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "wildcard-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 11,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "ATT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 100,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "unaggregated-first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "unaggregated-first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "unaggregated-first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 4,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "unaggregated-first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "unaggregated-first",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 9,
+              "longBoxed": 0,
+              "longPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-simple-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-simple-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
