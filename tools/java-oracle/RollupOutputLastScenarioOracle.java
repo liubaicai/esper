@@ -59,7 +59,8 @@ import java.util.Map;
  * "default-join2", "all-join2" and "last-join2" mirror ResultSetJoinDefault,
  * ResultSetJoinAll and ResultSetJoinLast; case "having-join" mirrors
  * ResultSetHavingJoin; case "join-sort-window" mirrors
- * ResultSetJoinSortWindow.
+ * ResultSetJoinSortWindow; cases "multikey-last" and "multikey-all" mirror
+ * ResultSetOutputLastMultikeyWArray and ResultSetOutputAllMultikeyWArray.
  */
 public final class RollupOutputLastScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -89,7 +90,7 @@ public final class RollupOutputLastScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market", "first-market", "no-limit-market", "default-market", "all", "all-sorted", "first-having", "default", "last-aggregate", "no-output", "default-output", "default-having", "last-output", "last-having", "first-output", "snapshot-output", "all-output", "having-output", "max-output", "none-join", "none-having-join", "default-join", "default-having-join", "last-join", "last-having-join", "first-join", "all-time", "all-join", "all-having", "all-having-join", "default-join2", "all-join2", "last-join2", "having-join", "join-sort-window"};
+        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market", "first-market", "no-limit-market", "default-market", "all", "all-sorted", "first-having", "default", "last-aggregate", "no-output", "default-output", "default-having", "last-output", "last-having", "first-output", "snapshot-output", "all-output", "having-output", "max-output", "none-join", "none-having-join", "default-join", "default-having-join", "last-join", "last-having-join", "first-join", "all-time", "all-join", "all-having", "all-having-join", "default-join2", "all-join2", "last-join2", "having-join", "join-sort-window", "multikey-last", "multikey-all"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -116,6 +117,7 @@ public final class RollupOutputLastScenarioOracle {
         beanType.put("theString", String.class);
         beanType.put("intPrimitive", Integer.class);
         beanType.put("longBoxed", Long.class);
+        beanType.put("longPrimitive", Long.class);
         configuration.getCommon().addEventType("SupportBean", beanType);
         Map<String, Object> stringBeanType = new HashMap<>();
         stringBeanType.put("theString", String.class);
@@ -307,6 +309,12 @@ public final class RollupOutputLastScenarioOracle {
                     "from SupportMarketDataBean#sort(1, volume) as s0, " +
                     "SupportBean#keepall as s1 where s1.theString = s0.symbol " +
                     "group by symbol output every 1 seconds";
+        } else if ("multikey-last".equals(caseName)) {
+            epl = "@Name('s0') select theString, longPrimitive, intPrimitive, sum(intPrimitive) as thesum " +
+                    "from SupportBean#keepall group by theString, longPrimitive output last every 1 seconds";
+        } else if ("multikey-all".equals(caseName)) {
+            epl = "@Name('s0') select theString, longPrimitive, intPrimitive, sum(intPrimitive) as thesum " +
+                    "from SupportBean#keepall group by theString, longPrimitive output all every 1 seconds";
         } else if (!"last".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }
@@ -382,7 +390,10 @@ public final class RollupOutputLastScenarioOracle {
         Map<String, Object> event = new HashMap<>();
         event.put("theString", payload.getString("theString", null));
         event.put("intPrimitive", payload.get("intPrimitive").asInt());
-        event.put("longBoxed", payload.get("longBoxed").asLong());
+        JsonValue longBoxed = payload.get("longBoxed");
+        event.put("longBoxed", longBoxed == null ? null : longBoxed.asLong());
+        JsonValue longPrimitive = payload.get("longPrimitive");
+        event.put("longPrimitive", longPrimitive == null ? null : longPrimitive.asLong());
         runtime.getEventService().sendEventMap(event, "SupportBean");
     }
 

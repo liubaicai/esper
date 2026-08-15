@@ -1,0 +1,128 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-multikey",
+  "steps": [
+    {
+      "op": "case",
+      "case": "multikey-last"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "longPrimitive": 0,
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "longPrimitive": 1,
+        "intPrimitive": 11
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "longPrimitive": 0,
+        "intPrimitive": 12
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "C",
+        "longPrimitive": 0,
+        "intPrimitive": 13
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "longPrimitive": 0,
+        "intPrimitive": 14
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:02Z"
+    },
+    {
+      "op": "case",
+      "case": "multikey-all"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "longPrimitive": 0,
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "longPrimitive": 1,
+        "intPrimitive": 11
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "longPrimitive": 0,
+        "intPrimitive": 12
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "C",
+        "longPrimitive": 0,
+        "intPrimitive": 13
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "longPrimitive": 0,
+        "intPrimitive": 14
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:02Z"
+    }
+  ]
+}
