@@ -1,0 +1,36 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-max-time-window",
+  "steps": [
+    {
+      "op": "case",
+      "case": "max-output"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "SYM1",
+        "volume": 1,
+        "price": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "SYM1",
+        "volume": 2,
+        "price": 2
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01Z"
+    }
+  ]
+}

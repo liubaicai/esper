@@ -406,8 +406,22 @@ func TestResultSetOutputLimitAggregateGroupedParity(t *testing.T) {
 		if err := engine.AdvanceTime(context.Background(), time.UnixMilli(1000).UTC()); err != nil {
 			t.Fatal(err)
 		}
-		if len(batches) != 1 || len(batches[0].New) != 2 || len(batches[0].Old) < 2 {
+		if len(batches) != 1 || len(batches[0].New) != 2 || len(batches[0].Old) != 2 {
 			t.Fatalf("max-time-window batches = %#v", batches)
+		}
+		newRow, ok := batches[0].New[0].Row()
+		if !ok || newRow.Get("symbol").Any() != "SYM1" || newRow.Get("volume").Any() != int64(1) || newRow.Get("maxVol").Any() != float64(1) {
+			t.Fatalf("max-time-window first new row = %#v", batches[0].New[0])
+		}
+		newRow, ok = batches[0].New[1].Row()
+		if !ok || newRow.Get("symbol").Any() != "SYM1" || newRow.Get("volume").Any() != int64(2) || newRow.Get("maxVol").Any() != float64(2) {
+			t.Fatalf("max-time-window second new row = %#v", batches[0].New[1])
+		}
+		for index := 0; index < 2; index++ {
+			oldRow, oldOK := batches[0].Old[index].Row()
+			if !oldOK || oldRow.Get("symbol").Any() != "SYM1" || oldRow.Get("volume").Any() != int64(index+1) || !oldRow.Get("maxVol").IsNull() {
+				t.Fatalf("max-time-window old row %d = %#v", index, batches[0].Old[index])
+			}
 		}
 	})
 }
