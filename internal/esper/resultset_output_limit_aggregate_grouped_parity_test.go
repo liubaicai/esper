@@ -95,7 +95,7 @@ func TestResultSetOutputLimitAggregateGroupedParity(t *testing.T) {
 		if len(batches) < 2 {
 			t.Fatalf("default-no-having batches = %#v", batches)
 		}
-		if len(batches[0].New) != 2 || len(batches[0].Old) != 2 {
+		if len(batches[0].New) != 2 || len(batches[0].Old) != 0 {
 			t.Fatalf("default-no-having first batch = %#v", batches[0])
 		}
 	})

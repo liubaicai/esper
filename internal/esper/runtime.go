@@ -15355,7 +15355,17 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			continue
 		}
 		emittedBefore := group.emitted
-		if group.emitted && (plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) {
+		tableSource := containsTableSource(plan.query.input, nil) || containsNamedWindow(plan.query.input, nil)
+		aggregateGroupedRowPerEvent := definition.join == nil && !tableSource && len(definition.groupBy) > 0 && len(groupingSets) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
+		// Rollup/cube result sets (multiple grouping sets), ungrouped
+		// aggregates, grouped joins, named-window consumers and grouped
+		// row-per-group result sets post the previous row as old whenever the
+		// group is affected. Aggregate-grouped view irstream (a select that
+		// reads a non-group event property) follows
+		// ResultSetProcessorAggregateGroupedImpl: one old row per leaving
+		// event, evaluated after the removal is applied; ordinary updates
+		// carry no old row.
+		if group.emitted && (plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) && !aggregateGroupedRowPerEvent {
 			oldEntries = append(oldEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, group.previous)),
 				group:  group,
@@ -15392,6 +15402,23 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			}
 			continue
 		}
+		if aggregateGroupedRowPerEvent && (plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) {
+			groupingSet := groupingSets[0]
+			for _, leaving := range delta.oldEvents {
+				leavingKey := aggregateGroupKey(definition.groupBy, groupingSet, leaving, now, r.variables)
+				if leavingKey != key {
+					continue
+				}
+				leavingValues, leavingVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+				if leavingVisible {
+					oldEntries = append(oldEntries, aggregateResultEntry{
+						result: resultRow(newRow(plan.resultSchema, leavingValues)),
+						group:  group,
+						key:    key,
+					})
+				}
+			}
+		}
 		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
 		if visible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 			newEntries = append(newEntries, aggregateResultEntry{
@@ -15400,11 +15427,12 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				key:    key,
 			})
 		}
-		if visible && !emittedBefore && len(definition.groupBy) > 0 && plan.query.selector == SelectIRStream {
-			// Esper group-by irstream semantics: creating a group pairs the
-			// first new row with a prior old row whose group-by columns are
-			// populated and whose aggregate columns evaluate over the empty
-			// group: count(*) is 0 while sum/avg/min/max are null.
+		if visible && !emittedBefore && len(definition.groupBy) > 0 && !aggregateGroupedRowPerEvent && plan.query.selector == SelectIRStream {
+			// Esper rollup/cube, grouped-join, named-window and row-per-group
+			// irstream semantics: creating a group pairs the first new row
+			// with a prior old row whose group-by columns are populated and
+			// whose aggregate columns evaluate over the empty group: count(*)
+			// is 0 while sum/avg/min/max are null.
 			nullPrior := make([]Value, len(newValues))
 			emptyCtx := aggregateGroupContext(definition, nil, nil, nil, false, group.groupingSet, group.current, nil, nil, now, r.variables, group.pluginStates, group.multiPluginStates)
 			for index, selection := range definition.selections {
@@ -16337,12 +16365,15 @@ func aggregateDefinitionIsRowForEvent(definition *aggregateDefinition) bool {
 	return hasAggregate && readsCurrentEvent
 }
 
-// aggregateDefinitionSnapshotRowForEvent extends the row-per-event shape to
-// grouped aggregates for statement iteration: Java's grouped iterator returns
-// one row per retained event carrying the group aggregate, while the listener
-// path still emits one row per group update.
-func aggregateDefinitionSnapshotRowForEvent(definition *aggregateDefinition) bool {
-	if definition == nil || definition.join != nil || definition.grouping != aggregateGroupingPlain {
+// aggregateDefinitionReadsNonKeyEvent reports whether any scalar projection
+// reads an ordinary event property that is not one of the group-by keys.
+// Java routes these queries to ResultSetProcessorAggregateGroupedImpl (one
+// row per event, old rows only for leaving events), while queries whose
+// projections are only group-by keys and aggregates route to
+// ResultSetProcessorRowPerGroupImpl (one row per group, old rows on every
+// update).
+func aggregateDefinitionReadsNonKeyEvent(definition *aggregateDefinition) bool {
+	if definition == nil {
 		return false
 	}
 	matchesGroupKey := func(expression Expr) bool {
@@ -16365,6 +16396,17 @@ func aggregateDefinitionSnapshotRowForEvent(definition *aggregateDefinition) boo
 		}
 	}
 	return hasAggregate && readsNonKeyEvent
+}
+
+// aggregateDefinitionSnapshotRowForEvent extends the row-per-event shape to
+// grouped aggregates for statement iteration: Java's grouped iterator returns
+// one row per retained event carrying the group aggregate, while the listener
+// path still emits one row per group update.
+func aggregateDefinitionSnapshotRowForEvent(definition *aggregateDefinition) bool {
+	if definition == nil || definition.join != nil || definition.grouping != aggregateGroupingPlain {
+		return false
+	}
+	return aggregateDefinitionReadsNonKeyEvent(definition)
 }
 
 // expressionTreeReadsCurrentEvent identifies scalar projections that depend

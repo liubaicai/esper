@@ -38,7 +38,8 @@ import java.util.Map;
  * ResultSetOutputFirstHaving{join=false}; case "default" mirrors
  * ResultSetNoJoinDefault; case "last-aggregate" mirrors
  * ResultSetNoJoinLast; case "no-output" mirrors
- * ResultSetNoOutputClauseView.
+ * ResultSetNoOutputClauseView; case "default-output" mirrors
+ * ResultSet5DefaultNoHavingNoJoin.
  */
 public final class RollupOutputLastScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -68,7 +69,7 @@ public final class RollupOutputLastScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market", "first-market", "no-limit-market", "default-market", "all", "all-sorted", "first-having", "default", "last-aggregate", "no-output"};
+        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market", "first-market", "no-limit-market", "default-market", "all", "all-sorted", "first-having", "default", "last-aggregate", "no-output", "default-output"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -96,7 +97,7 @@ public final class RollupOutputLastScenarioOracle {
         beanType.put("intPrimitive", Integer.class);
         beanType.put("longBoxed", Long.class);
         configuration.getCommon().addEventType("SupportBean", beanType);
-        if ("snapshot".equals(caseName) || "last-market".equals(caseName) || "first-market".equals(caseName) || "no-limit-market".equals(caseName) || "default-market".equals(caseName) || "default".equals(caseName) || "last-aggregate".equals(caseName) || "no-output".equals(caseName)) {
+        if ("snapshot".equals(caseName) || "last-market".equals(caseName) || "first-market".equals(caseName) || "no-limit-market".equals(caseName) || "default-market".equals(caseName) || "default".equals(caseName) || "last-aggregate".equals(caseName) || "no-output".equals(caseName) || "default-output".equals(caseName)) {
             Map<String, Object> marketType = new HashMap<>();
             marketType.put("symbol", String.class);
             marketType.put("volume", Long.class);
@@ -166,6 +167,10 @@ public final class RollupOutputLastScenarioOracle {
             epl = "@Name('s0') select symbol, volume, sum(price) as mySum " +
                     "from SupportMarketDataBean#length(5) " +
                     "where symbol in ('DELL', 'IBM', 'GE') group by symbol";
+        } else if ("default-output".equals(caseName)) {
+            epl = "@Name('s0') select irstream symbol, volume, sum(price) " +
+                    "from SupportMarketDataBean#time(5.5 sec) " +
+                    "group by symbol output every 1 seconds";
         } else if (!"last".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }
