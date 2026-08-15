@@ -1,0 +1,123 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-dc2ac7e7293a204aa102"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAggregateGrouped.java"
+  ],
+  "javaExecutions": [
+    "ResultSetNoOutputClauseView"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-no-output",
+    "steps": [
+      {
+        "op": "case",
+        "case": "no-output"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 10,
+          "price": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 15,
+          "price": 50
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-no-output",
+    "records": [
+      {
+        "case": "no-output",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 100,
+              "symbol": "DELL",
+              "volume": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 50,
+              "symbol": "IBM",
+              "volume": 15
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-no-output",
+    "records": [
+      {
+        "case": "no-output",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 100,
+              "symbol": "DELL",
+              "volume": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-output",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 50,
+              "symbol": "IBM",
+              "volume": 15
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -1,0 +1,28 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-no-output",
+  "steps": [
+    {
+      "op": "case",
+      "case": "no-output"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 10,
+        "price": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 15,
+        "price": 50
+      }
+    }
+  ]
+}
