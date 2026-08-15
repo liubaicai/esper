@@ -22,9 +22,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Direct Esper 9.0.0 oracle for the shared grouped-rollup parity scenario.
- * Mirrors ResultSetOutputLimitRowPerGroupRollup.ResultSetOutputDefault{join=false}:
- * an irstream rollup over a time window emits every second.
+ * Direct Esper 9.0.0 oracle for the shared grouped-rollup parity scenarios.
+ * Case "rollup" mirrors ResultSetOutputDefault{join=false}; case
+ * "rollup-sorted" mirrors ResultSetOutputDefaultSorted{join=false}.
  */
 public final class RollupScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -54,7 +54,7 @@ public final class RollupScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"rollup"};
+        String[] cases = {"rollup", "rollup-sorted"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -87,7 +87,9 @@ public final class RollupScenarioOracle {
         ((EPRuntimeSPI) runtime).initialize(0L);
         String epl = "@Name('s0') select irstream theString as c0, intPrimitive as c1, sum(longBoxed) as c2 " +
                 "from SupportBean#time(3.5 sec) group by rollup(theString, intPrimitive) output every 1 second";
-        if (!"rollup".equals(caseName)) {
+        if ("rollup-sorted".equals(caseName)) {
+            epl += " order by theString, intPrimitive";
+        } else if (!"rollup".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }
 

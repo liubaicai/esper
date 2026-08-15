@@ -6,26 +6,27 @@ import (
 	"time"
 )
 
-// TestRollupOutputLastSortedParity mirrors the rollup-output-last-sorted
-// parity scenario (Java ResultSetOutputLastSorted{join=false}): the same
-// 3.5s rollup with output-last every second, ordered by c0 then c1.
-func TestRollupOutputLastSortedParity(t *testing.T) {
+// TestRollupOutputEverySortedParity mirrors the rollup-output-every-sorted
+// parity scenario (Java ResultSetOutputDefaultSorted{join=false}): an
+// irstream rollup over a 3.5s time window emits every second with order by
+// c0 then c1.
+func TestRollupOutputEverySortedParity(t *testing.T) {
 	env := NewEnvironment()
-	if _, err := RegisterStruct[rollupOutputLastBean](env, "SupportBean"); err != nil {
+	if _, err := RegisterStruct[rollupOutputEveryBean](env, "SupportBean"); err != nil {
 		t.Fatal(err)
 	}
-	theString := Field[rollupOutputLastBean, string]("theString")
-	intPrimitive := Field[rollupOutputLastBean, int]("intPrimitive")
-	plan, err := env.Build(From[rollupOutputLastBean](env, "SupportBean").Window(TimeWindow(3500*time.Millisecond)).
+	theString := Field[rollupOutputEveryBean, string]("theString")
+	intPrimitive := Field[rollupOutputEveryBean, int]("intPrimitive")
+	plan, err := env.Build(From[rollupOutputEveryBean](env, "SupportBean").Window(TimeWindow(3500*time.Millisecond)).
 		GroupByRollup(theString, intPrimitive).
 		Select(
 			Alias("c0", theString),
 			Alias("c1", intPrimitive),
-			Alias("c2", Sum[int64](Field[rollupOutputLastBean, int64]("longBoxed"))),
+			Alias("c2", Sum[int64](Field[rollupOutputEveryBean, int64]("longBoxed"))),
 		).Query(
 		StatementName("s0"),
 		WithOldStream(),
-		WithOutput(OutputLastEveryTime(time.Second)),
+		WithOutput(OutputEveryTime(time.Second)),
 		OrderBy(Ascending(ResultField[string]("c0")), Ascending(ResultField[int]("c1"))),
 	))
 	if err != nil {
@@ -53,7 +54,7 @@ func TestRollupOutputLastSortedParity(t *testing.T) {
 	}
 	send := func(s string, i int, l int64) {
 		t.Helper()
-		if err := engine.SendEvent(ctx, rollupOutputLastBean{TheString: s, IntPrimitive: i, LongBoxed: l}); err != nil {
+		if err := engine.SendEvent(ctx, rollupOutputEveryBean{TheString: s, IntPrimitive: i, LongBoxed: l}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -73,12 +74,18 @@ func TestRollupOutputLastSortedParity(t *testing.T) {
 	}
 	wantNew := [][]rollupOutputLastRowWant{
 		{
+			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(10)},
+			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(30)},
 			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(60)},
+			{c0: "E1", c1: nil, c1Null: true, c2: int64(10)},
+			{c0: "E1", c1: nil, c1Null: true, c2: int64(30)},
 			{c0: "E1", c1: nil, c1Null: true, c2: int64(60)},
+			{c0: "E1", c1: 1, c2: int64(10)},
 			{c0: "E1", c1: 1, c2: int64(40)},
 			{c0: "E1", c1: 2, c2: int64(20)},
 		},
 		{
+			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(100)},
 			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(150)},
 			{c0: "E1", c1: nil, c1Null: true, c2: int64(110)},
 			{c0: "E1", c1: 2, c2: int64(70)},
@@ -94,12 +101,18 @@ func TestRollupOutputLastSortedParity(t *testing.T) {
 	wantOld := [][]rollupOutputLastRowWant{
 		{
 			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: nil, c2Null: true},
+			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(10)},
+			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(30)},
 			{c0: "E1", c1: nil, c1Null: true, c2: nil, c2Null: true},
+			{c0: "E1", c1: nil, c1Null: true, c2: int64(10)},
+			{c0: "E1", c1: nil, c1Null: true, c2: int64(30)},
 			{c0: "E1", c1: 1, c2: nil, c2Null: true},
+			{c0: "E1", c1: 1, c2: int64(10)},
 			{c0: "E1", c1: 2, c2: nil, c2Null: true},
 		},
 		{
 			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(60)},
+			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(100)},
 			{c0: "E1", c1: nil, c1Null: true, c2: int64(60)},
 			{c0: "E1", c1: 2, c2: int64(20)},
 			{c0: "E2", c1: nil, c1Null: true, c2: nil, c2Null: true},

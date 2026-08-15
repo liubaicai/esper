@@ -21,7 +21,7 @@ type rollupOutputLastRowWant struct {
 	c2Null bool
 }
 
-func checkRollupOutputLastRow(t *testing.T, result Result, want rollupOutputLastRowWant) {
+func checkRollupOutputRow(t *testing.T, result Result, want rollupOutputLastRowWant) {
 	t.Helper()
 	row, ok := result.Row()
 	if !ok {
@@ -156,10 +156,10 @@ func TestRollupOutputLastParity(t *testing.T) {
 			t.Fatalf("batch %d new/old = %d/%d, want %d/%d", index, len(batch.New), len(batch.Old), len(wantNew[index]), len(wantOld[index]))
 		}
 		for rowIndex, want := range wantNew[index] {
-			checkRollupOutputLastRow(t, batch.New[rowIndex], want)
+			checkRollupOutputRow(t, batch.New[rowIndex], want)
 		}
 		for rowIndex, want := range wantOld[index] {
-			checkRollupOutputLastRow(t, batch.Old[rowIndex], want)
+			checkRollupOutputRow(t, batch.Old[rowIndex], want)
 		}
 	}
 }
