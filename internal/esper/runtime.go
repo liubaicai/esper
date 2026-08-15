@@ -7753,6 +7753,12 @@ func (r *statementRuntime) applyFirstEveryTime(policy OutputPolicy, batch Result
 		groupNames := aggregateGroupFieldNames(plans[0].query.aggregate)
 		result.New, result.outputKeysNew = orderGroupedOutputRows(result.New, result.outputKeysNew, groupNames)
 		result.Old, result.outputKeysOld = orderGroupedOutputRows(result.Old, result.outputKeysOld, groupNames)
+		if plans[0].query.aggregate.having != nil {
+			// Esper's grouped output-first-with-having delivers the current
+			// aggregate values in both new and old rows.
+			result.Old = append([]Result(nil), result.New...)
+			result.outputKeysOld = append([]string(nil), result.outputKeysNew...)
+		}
 	}
 	return r.finishOutput(policy, result, now, plans...)
 }

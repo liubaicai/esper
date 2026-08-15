@@ -1,0 +1,119 @@
+{
+  "version": "esper-parity/v1",
+  "id": "rollup-output-first-having",
+  "steps": [
+    {
+      "op": "case",
+      "case": "first-having"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1,
+        "longBoxed": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 2,
+        "longBoxed": 20
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1,
+        "longBoxed": 30
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 1,
+        "longBoxed": 40
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 2,
+        "longBoxed": 50
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:02Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1,
+        "longBoxed": 60
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:03Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1,
+        "longBoxed": 70
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:04Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1,
+        "longBoxed": 80
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:05Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1,
+        "longBoxed": 90
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:06Z"
+    }
+  ]
+}
