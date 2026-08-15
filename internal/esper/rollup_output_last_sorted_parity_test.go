@@ -6,51 +6,10 @@ import (
 	"time"
 )
 
-type rollupOutputLastBean struct {
-	TheString    string `esper:"theString"`
-	IntPrimitive int    `esper:"intPrimitive"`
-	LongBoxed    int64  `esper:"longBoxed"`
-}
-
-type rollupOutputLastRowWant struct {
-	c0     any
-	c0Null bool
-	c1     any
-	c1Null bool
-	c2     any
-	c2Null bool
-}
-
-func checkRollupOutputLastRow(t *testing.T, result Result, want rollupOutputLastRowWant) {
-	t.Helper()
-	row, ok := result.Row()
-	if !ok {
-		t.Fatalf("expected a row, got %#v", result)
-	}
-	check := func(name string, got any, wantNull bool) {
-		t.Helper()
-		value := row.Get(name)
-		if wantNull {
-			if !value.IsNull() {
-				t.Fatalf("%s = %#v, want null", name, value)
-			}
-			return
-		}
-		if value.IsNull() || value.Any() != got {
-			t.Fatalf("%s = %#v, want %#v", name, value, got)
-		}
-	}
-	check("c0", want.c0, want.c0Null)
-	check("c1", want.c1, want.c1Null)
-	check("c2", want.c2, want.c2Null)
-}
-
-// TestRollupOutputLastParity mirrors the rollup-output-last parity scenario
-// (Java ResultSetOutputLast{join=false}): an irstream rollup over a 3.5s time
-// window emits output-last every second with only the changed groups, and old
-// rows carry the previous emitted values (or null placeholders for groups that
-// just arrived).
-func TestRollupOutputLastParity(t *testing.T) {
+// TestRollupOutputLastSortedParity mirrors the rollup-output-last-sorted
+// parity scenario (Java ResultSetOutputLastSorted{join=false}): the same
+// 3.5s rollup with output-last every second, ordered by c0 then c1.
+func TestRollupOutputLastSortedParity(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[rollupOutputLastBean](env, "SupportBean"); err != nil {
 		t.Fatal(err)
@@ -67,6 +26,7 @@ func TestRollupOutputLastParity(t *testing.T) {
 		StatementName("s0"),
 		WithOldStream(),
 		WithOutput(OutputLastEveryTime(time.Second)),
+		OrderBy(Ascending(ResultField[string]("c0")), Ascending(ResultField[int]("c1"))),
 	))
 	if err != nil {
 		t.Fatal(err)
@@ -113,42 +73,42 @@ func TestRollupOutputLastParity(t *testing.T) {
 	}
 	wantNew := [][]rollupOutputLastRowWant{
 		{
+			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(60)},
+			{c0: "E1", c1: nil, c1Null: true, c2: int64(60)},
 			{c0: "E1", c1: 1, c2: int64(40)},
 			{c0: "E1", c1: 2, c2: int64(20)},
-			{c0: "E1", c1: nil, c1Null: true, c2: int64(60)},
-			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(60)},
 		},
 		{
-			{c0: "E2", c1: 1, c2: int64(40)},
+			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(150)},
+			{c0: "E1", c1: nil, c1Null: true, c2: int64(110)},
 			{c0: "E1", c1: 2, c2: int64(70)},
 			{c0: "E2", c1: nil, c1Null: true, c2: int64(40)},
-			{c0: "E1", c1: nil, c1Null: true, c2: int64(110)},
-			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(150)},
+			{c0: "E2", c1: 1, c2: int64(40)},
 		},
 		{
-			{c0: "E1", c1: 1, c2: int64(100)},
-			{c0: "E1", c1: nil, c1Null: true, c2: int64(170)},
 			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(210)},
+			{c0: "E1", c1: nil, c1Null: true, c2: int64(170)},
+			{c0: "E1", c1: 1, c2: int64(100)},
 		},
 	}
 	wantOld := [][]rollupOutputLastRowWant{
 		{
+			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: nil, c2Null: true},
+			{c0: "E1", c1: nil, c1Null: true, c2: nil, c2Null: true},
 			{c0: "E1", c1: 1, c2: nil, c2Null: true},
 			{c0: "E1", c1: 2, c2: nil, c2Null: true},
-			{c0: "E1", c1: nil, c1Null: true, c2: nil, c2Null: true},
-			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: nil, c2Null: true},
 		},
 		{
-			{c0: "E2", c1: 1, c2: nil, c2Null: true},
+			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(60)},
+			{c0: "E1", c1: nil, c1Null: true, c2: int64(60)},
 			{c0: "E1", c1: 2, c2: int64(20)},
 			{c0: "E2", c1: nil, c1Null: true, c2: nil, c2Null: true},
-			{c0: "E1", c1: nil, c1Null: true, c2: int64(60)},
-			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(60)},
+			{c0: "E2", c1: 1, c2: nil, c2Null: true},
 		},
 		{
-			{c0: "E1", c1: 1, c2: int64(40)},
-			{c0: "E1", c1: nil, c1Null: true, c2: int64(110)},
 			{c0: nil, c0Null: true, c1: nil, c1Null: true, c2: int64(150)},
+			{c0: "E1", c1: nil, c1Null: true, c2: int64(110)},
+			{c0: "E1", c1: 1, c2: int64(40)},
 		},
 	}
 	for index, batch := range batches {

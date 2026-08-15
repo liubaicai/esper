@@ -22,8 +22,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Direct Esper 9.0.0 oracle for the rollup-output-last parity scenario.
- * Mirrors ResultSetOutputLimitRowPerGroupRollup.ResultSetOutputLast{join=false}.
+ * Direct Esper 9.0.0 oracle for the rollup-output-last parity scenarios.
+ * Case "last" mirrors ResultSetOutputLast{join=false}; case "last-sorted"
+ * mirrors ResultSetOutputLastSorted{join=false}.
  */
 public final class RollupOutputLastScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -53,7 +54,7 @@ public final class RollupOutputLastScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"last"};
+        String[] cases = {"last", "last-sorted"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -86,8 +87,10 @@ public final class RollupOutputLastScenarioOracle {
         ((EPRuntimeSPI) runtime).initialize(0L);
         String epl = "@Name('s0') select irstream theString as c0, intPrimitive as c1, sum(longBoxed) as c2 " +
                 "from SupportBean#time(3.5 sec) group by rollup(theString, intPrimitive) " +
-                "output last every 1 second order by theString, intPrimitive";
-        if (!"last".equals(caseName)) {
+                "output last every 1 second";
+        if ("last-sorted".equals(caseName)) {
+            epl += " order by theString, intPrimitive";
+        } else if (!"last".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }
 

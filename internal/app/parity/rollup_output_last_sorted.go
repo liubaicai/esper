@@ -10,28 +10,28 @@ import (
 	"github.com/liubaicai/esper/internal/compat"
 )
 
-const rollupOutputLastJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
+const rollupOutputLastSortedJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 
-var rollupOutputLastJavaSources = []string{
+var rollupOutputLastSortedJavaSources = []string{
 	"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroupRollup.java",
 }
 
 var (
-	rollupOutputLastJavaRuntimeIDs = []string{
-		"java-runtime-7c5309b323dde51e021e",
+	rollupOutputLastSortedJavaRuntimeIDs = []string{
+		"java-runtime-99a674653d406c745332",
 	}
-	rollupOutputLastJavaExecutions = []string{
-		"ResultSetOutputLast{join=false}",
+	rollupOutputLastSortedJavaExecutions = []string{
+		"ResultSetOutputLastSorted{join=false}",
 	}
 )
 
-func runRollupOutputLastScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
+func runRollupOutputLastSortedScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
 	}
-	caseName := "last"
+	caseName := "last-sorted"
 	if !scenarioHasCase(scenario, caseName) {
-		return compat.Trace{}, fmt.Errorf("rollup-output-last scenario %q has no supported cases", scenario.ID)
+		return compat.Trace{}, fmt.Errorf("rollup-output-last-sorted scenario %q has no supported cases", scenario.ID)
 	}
 	caseScenario, err := scenarioForCase(scenario, caseName)
 	if err != nil {
@@ -53,6 +53,7 @@ func runRollupOutputLastScenario(ctx context.Context, scenario compat.Scenario) 
 		esper.StatementName("s0"),
 		esper.WithOldStream(),
 		esper.WithOutput(esper.OutputLastEveryTime(time.Second)),
+		esper.OrderBy(esper.Ascending(esper.ResultField[string]("c0")), esper.Ascending(esper.ResultField[int]("c1"))),
 	)
 	plan, err := env.Build(query)
 	if err != nil {
@@ -64,15 +65,15 @@ func runRollupOutputLastScenario(ctx context.Context, scenario compat.Scenario) 
 	}
 	defer func() { _ = engine.Close(context.Background()) }()
 
-	return compat.ReplayWithStatements(ctx, engine, statement, caseScenario, decodeRollupPayload, func(name string) (*esper.Statement, error) {
+	return compat.ReplayWithStatements(ctx, engine, statement, caseScenario, decodeRollupOutputLastPayload, func(name string) (*esper.Statement, error) {
 		if name != statement.Name() {
-			return nil, fmt.Errorf("unknown rollup-output-last statement %q", name)
+			return nil, fmt.Errorf("unknown rollup-output-last-sorted statement %q", name)
 		}
 		return statement, nil
 	})
 }
 
-func decodeRollupOutputLastPayload(step compat.Step) (any, error) {
+func decodeRollupOutputLastSortedPayload(step compat.Step) (any, error) {
 	var value rollupBean
 	if err := json.Unmarshal(step.Payload, &value); err != nil {
 		return nil, fmt.Errorf("decode SupportBean: %w", err)

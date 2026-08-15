@@ -7806,6 +7806,21 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 		}
 	}
 	groupNames := aggregateGroupFieldNames(plans[0].query.aggregate)
+	order := make([]int, len(current.New))
+	for index := range order {
+		order[index] = index
+	}
+	sort.SliceStable(order, func(i, j int) bool {
+		return groupedOutputLevel(current.New[order[i]], groupNames) > groupedOutputLevel(current.New[order[j]], groupNames)
+	})
+	newRows := make([]Result, len(current.New))
+	newKeys := make([]string, len(keys))
+	for index, source := range order {
+		newRows[index] = current.New[source]
+		newKeys[index] = keys[source]
+	}
+	current.New = newRows
+	keys = newKeys
 	old := make([]Result, 0, len(current.New))
 	oldKeys := make([]string, 0, len(current.New))
 	for index, key := range keys {
@@ -7829,6 +7844,20 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 	state.pendingCount = 0
 	r.advanceOutputSchedule(policy, now)
 	return r.finishOutput(policy, result, now, plans...)
+}
+
+func groupedOutputLevel(result Result, groupNames []string) int {
+	row, ok := result.Row()
+	if !ok {
+		return 0
+	}
+	level := 0
+	for _, name := range groupNames {
+		if !row.Get(name).IsNull() {
+			level++
+		}
+	}
+	return level
 }
 
 func lastEveryNullResult(result Result, groupNames []string) Result {
