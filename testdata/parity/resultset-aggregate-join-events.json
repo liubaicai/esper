@@ -1,0 +1,168 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-join-events",
+  "steps": [
+    {
+      "op": "case",
+      "case": "default-join2"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "DELL"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "IBM"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 500,
+        "price": 20
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 10000,
+        "price": 51
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 20000,
+        "price": 52
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 40000,
+        "price": 45
+      }
+    },
+    {
+      "op": "case",
+      "case": "all-join2"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "DELL"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "IBM"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 500,
+        "price": 20
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 10000,
+        "price": 51
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 20000,
+        "price": 52
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 40000,
+        "price": 45
+      }
+    },
+    {
+      "op": "case",
+      "case": "last-join2"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "DELL"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "IBM"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 10000,
+        "price": 51
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 20000,
+        "price": 52
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 30000,
+        "price": 70
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 10000,
+        "price": 20
+      }
+    }
+  ]
+}
