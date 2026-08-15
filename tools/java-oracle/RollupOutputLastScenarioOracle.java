@@ -28,7 +28,8 @@ import java.util.Map;
  * ResultSetOutputFirst{join=false}; case "first-sorted" mirrors
  * ResultSetOutputFirstSorted{join=false}; case "snapshot-order-limit"
  * mirrors ResultSetOutputSnapshotOrderWLimit; case "snapshot" mirrors
- * ResultSet6OutputLimitSnapshot{join=false}.
+ * ResultSet6OutputLimitSnapshot{join=false}; case "last-market" mirrors
+ * ResultSet4OutputLimitLast.
  */
 public final class RollupOutputLastScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -58,7 +59,7 @@ public final class RollupOutputLastScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot"};
+        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -86,7 +87,7 @@ public final class RollupOutputLastScenarioOracle {
         beanType.put("intPrimitive", Integer.class);
         beanType.put("longBoxed", Long.class);
         configuration.getCommon().addEventType("SupportBean", beanType);
-        if ("snapshot".equals(caseName)) {
+        if ("snapshot".equals(caseName) || "last-market".equals(caseName)) {
             Map<String, Object> marketType = new HashMap<>();
             marketType.put("symbol", String.class);
             marketType.put("volume", Long.class);
@@ -117,6 +118,10 @@ public final class RollupOutputLastScenarioOracle {
             epl = "@Name('s0') select symbol, sum(price) " +
                     "from SupportMarketDataBean#time(5.5 sec) group by rollup(symbol) " +
                     "output snapshot every 1 seconds";
+        } else if ("last-market".equals(caseName)) {
+            epl = "@Name('s0') select irstream symbol, sum(price) " +
+                    "from SupportMarketDataBean#time(5.5 sec) group by rollup(symbol) " +
+                    "output last every 1 seconds";
         } else if (!"last".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }
@@ -209,14 +214,19 @@ public final class RollupOutputLastScenarioOracle {
                     .add("case", caseName)
                     .add("operation", "listener")
                     .add("statement", statement.getName())
-                    .add("sequence", ++sequence)
+                    .add("sequence", sequence + 1)
                     .add("time", Instant.ofEpochMilli(runtime.getEventService().getCurrentTime()).toString());
             JsonArray newArray = results(newEvents);
+            JsonArray oldArray = oldEvents == null ? new JsonArray() : results(oldEvents);
+            if (newArray.size() == 0 && oldArray.size() == 0) {
+                return;
+            }
+            sequence++;
             if (newArray.size() > 0) {
                 record.add("new", newArray);
             }
-            if (oldEvents != null && oldEvents.length > 0) {
-                record.add("old", results(oldEvents));
+            if (oldArray.size() > 0) {
+                record.add("old", oldArray);
             }
             records.add(record);
         }

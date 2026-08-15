@@ -7786,7 +7786,11 @@ func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultB
 			state.nextOutputAt = now.Add(policy.Interval)
 		}
 	}
-	if !flush || state.pending == nil || state.nextOutputAt.IsZero() || now.Before(state.nextOutputAt) {
+	if !flush || state.nextOutputAt.IsZero() || now.Before(state.nextOutputAt) {
+		return ResultBatch{}
+	}
+	if state.pending == nil {
+		r.advanceOutputSchedule(policy, now)
 		return ResultBatch{}
 	}
 	result := state.pending.clone()
@@ -7805,7 +7809,11 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 			state.nextOutputAt = now.Add(policy.Interval)
 		}
 	}
-	if !flush || state.nextOutputAt.IsZero() || now.Before(state.nextOutputAt) || state.pending == nil {
+	if !flush || state.nextOutputAt.IsZero() || now.Before(state.nextOutputAt) {
+		return ResultBatch{}
+	}
+	if state.pending == nil {
+		r.advanceOutputSchedule(policy, now)
 		return ResultBatch{}
 	}
 	current := state.pending.clone()

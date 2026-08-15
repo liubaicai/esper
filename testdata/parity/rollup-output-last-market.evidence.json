@@ -1,0 +1,922 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-548e5460f3bc34ee8cbb"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroupRollup.java"
+  ],
+  "javaExecutions": [
+    "ResultSet4OutputLimitLast"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "rollup-output-last-market",
+    "steps": [
+      {
+        "op": "case",
+        "case": "last-market"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.200Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 100,
+          "price": 25
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.800Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "MSFT",
+          "volume": 5000,
+          "price": 9
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 150,
+          "price": 24
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 10000,
+          "price": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.100Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 155,
+          "price": 26
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.500Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 11000,
+          "price": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.300Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 150,
+          "price": 22
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.900Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 11500,
+          "price": 3
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.700Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.900Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 10500,
+          "price": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06.300Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:07Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:07.200Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-output-last-market",
+    "records": [
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 25,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 9,
+              "symbol": "MSFT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 34,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "MSFT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 75,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 85,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 25,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 34,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:04.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 87,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 85,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:05.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 97,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 112,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 75,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 87,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:06.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 72,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 88,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 97,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 112,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:07.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "MSFT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 48,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 54,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 9,
+              "symbol": "MSFT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 72,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 88,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-output-last-market",
+    "records": [
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 25,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 9,
+              "symbol": "MSFT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 34,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "MSFT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 75,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 85,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 25,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 34,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:04.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 87,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 85,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:05.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 97,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 112,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 75,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 87,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:06.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 72,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 88,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 97,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 112,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-market",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:07.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "MSFT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 48,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 54,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 9,
+              "symbol": "MSFT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 72,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "YAH"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 88,
+              "symbol": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
