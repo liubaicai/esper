@@ -15704,17 +15704,14 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			}
 		}
 	}
-	// Esper's istream result set lists the incoming event's group before
-	// groups whose rows changed only because a window eviction removed an old
-	// event; the irstream/remove path lists eviction-affected groups first.
-	// Java's ResultSetOutputLimitAggregateGrouped traces exercise both forms.
-	if plan.query.selector == SelectIStream {
-		orderAffected(delta.newEvents)
-		orderAffected(delta.oldEvents)
-	} else {
-		orderAffected(delta.oldEvents)
-		orderAffected(delta.newEvents)
-	}
+	// Esper's result set lists the incoming event's group before groups whose
+	// rows changed only because a window eviction removed an old event. The
+	// grouped irstream trace (ResultSetAggregateCountSum count-one-view /
+	// count-join) exercises both groups in one batch: new rows list the new
+	// event's group first and the eviction-affected group second, and the old
+	// rows follow the same group order with the pre-batch state.
+	orderAffected(delta.newEvents)
+	orderAffected(delta.oldEvents)
 	markAffected := func(event Event, groupingSet []int) string {
 		key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
 		group := state.groups[key]

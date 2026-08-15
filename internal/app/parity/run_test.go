@@ -5596,3 +5596,137 @@ func TestRunResultSetAggregateLimitSnapshotDiffRejectsTraceMutations(t *testing.
 		})
 	}
 }
+
+func TestRunResultSetAggregateCountSumDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-count-sum.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-count-sum.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-count-sum.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-count-sum-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunResultSetAggregateCountSumDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["countAll"] = int64(99)
+			},
+		},
+		{
+			name: "row-order",
+			mutate: func(trace *compat.Trace) {
+				rows := trace.Records[5].New
+				rows[0], rows[1] = rows[1], rows[0]
+			},
+		},
+		{
+			name: "old-row-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].Old = trace.Records[5].Old[1:]
+			},
+		},
+		{
+			name: "null-state",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[26].New[0].Fields["mysum"] = int64(100)
+			},
+		},
+		{
+			name: "distinct-expiry",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[1].Fields["countDistVol"] = int64(2)
+			},
+		},
+		{
+			name: "time-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[25].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+		{
+			name: "field-name",
+			mutate: func(trace *compat.Trace) {
+				fields := trace.Records[21].New[0].Fields
+				fields["x"] = fields["theString"]
+				delete(fields, "theString")
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:33]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[33].Case = "count-one-view"
+			},
+		},
+		{
+			name: "snapshot-row-added",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[25].New = append(trace.Records[25].New, compat.ResultRecord{
+					Kind:   "row",
+					Fields: map[string]any{"mysum": float64(7), "theString": "C"},
+				})
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-count-sum.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-count-sum.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-count-sum.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-count-sum-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

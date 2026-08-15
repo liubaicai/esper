@@ -4316,6 +4316,20 @@ func CountDistinct[T comparable](expression Expression[T]) AggregateExpression[i
 				continue
 			}
 			candidate := value.Any()
+			// Dereference pointer candidates so that distinctness follows
+			// the pointed-to value, matching Esper's equals-based
+			// count(distinct ...) on boxed event properties (two Long(25)
+			// values are one distinct value regardless of object identity).
+			reflected := reflect.ValueOf(candidate)
+			for reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {
+				if reflected.IsNil() {
+					break
+				}
+				reflected = reflected.Elem()
+			}
+			if reflected.IsValid() && reflected.Kind() != reflect.Pointer && reflected.Kind() != reflect.Interface {
+				candidate = reflected.Interface()
+			}
 			if reflect.ValueOf(candidate).IsValid() && reflect.ValueOf(candidate).Comparable() {
 				seen[candidate] = struct{}{}
 				continue

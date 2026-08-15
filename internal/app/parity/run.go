@@ -893,6 +893,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-aggregate-count-sum" || *mode == "resultset-aggregate-count-sum-diff" {
+		trace, err := runResultSetAggregateCountSumScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-count-sum-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetAggregateCountSumJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetAggregateCountSumJavaSources),
+				splitMetadata(*javaExecutions, resultsetAggregateCountSumJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-aggregate-limit-snapshot" || *mode == "resultset-aggregate-limit-snapshot-diff" {
 		trace, err := runResultSetAggregateLimitSnapshotScenario(context.Background(), scenario)
 		if err != nil {

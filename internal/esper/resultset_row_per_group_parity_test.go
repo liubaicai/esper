@@ -145,13 +145,17 @@ func TestResultSetRowPerGroupSumOneViewParity(t *testing.T) {
 	if len(last.New) != 2 || len(last.Old) != 2 {
 		t.Fatalf("IBM batch = %#v", last)
 	}
-	// Order: DELL old/new then IBM old/new (Java asserts DELL first).
-	if last.Old[0].Get("symbol").Any() != "DELL" || last.New[0].Get("symbol").Any() != "DELL" ||
-		last.Old[1].Get("symbol").Any() != "IBM" || last.New[1].Get("symbol").Any() != "IBM" {
+	// Order: IBM old/new then DELL old/new. Java's row-per-group processor
+	// iterates an internal HashMap for row order (assertPropsPerRowAnyOrder),
+	// so the group order is unconstrained there; Go emits the incoming
+	// event's group first, matching the aggregate-grouped irstream contract
+	// verified by the resultset-aggregate-count-sum oracle.
+	if last.Old[0].Get("symbol").Any() != "IBM" || last.New[0].Get("symbol").Any() != "IBM" ||
+		last.Old[1].Get("symbol").Any() != "DELL" || last.New[1].Get("symbol").Any() != "DELL" {
 		t.Fatalf("IBM batch order = %#v", last)
 	}
-	if last.Old[0].Get("mySum").Any() != 55.0 || last.New[0].Get("mySum").Any() != 5.0 ||
-		last.Old[1].Get("mySum").Any() != nil || last.New[1].Get("mySum").Any() != 70.0 {
+	if last.Old[0].Get("mySum").Any() != nil || last.New[0].Get("mySum").Any() != 70.0 ||
+		last.Old[1].Get("mySum").Any() != 55.0 || last.New[1].Get("mySum").Any() != 5.0 {
 		t.Fatalf("IBM batch values = %#v", last)
 	}
 	sendRowPerGroupMarket(t, engine, "AAA", 2000)

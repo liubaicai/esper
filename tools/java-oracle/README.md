@@ -492,6 +492,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/resultset-row-per-group-simple.json`、`testdata/parity/resultset-row-per-group-simple.evidence.json`；当前差异数为 0，覆盖 `ResultSetQueryTypeRowPerGroupSimple`。
 
+## Resultset-aggregate-count-sum oracle
+
+第二十四个代表性场景使用 `ResultSetAggregateCountSumScenarioOracle.java`（runner：`run-resultset-aggregate-count-sum.sh`）。它注册 Map 事件类型 `SupportMarketDataBean(symbol, volume, price, feed)`、`SupportBeanString(theString)`、`SupportBean(theString, intPrimitive, longBoxed, longPrimitive)`、`SupportBean_A(id)` 与 `SupportBean_B(id)`，双跑四个 case：`count-one-view`（irstream 分组 `count(*)/count(distinct volume)/count(all volume)` over `#length(3)`，DELL 50/null/25/25/25 + IBM 1/null/null/null 序列，覆盖 null volume、重复值与窗口淘汰 distinct 重算）、`count-join`（同一语句的 SupportBeanString#length(100) join 变体）、`count-simple`（`count(*)` over `#time(1)` 逐事件 1/2/3）与 `sum-named-window-remove-group`（keepall named window + insert + 按 id on-delete + delete-all 触发下的分组 sum：组删除输出 null 行、iterator 按 order by theString 逐组快照）。Go 用 `Count/CountAll/CountDistinct` + `GroupBy` + named-window/trigger 链式 API 复现同一语义。
+
+```sh
+./tools/java-oracle/run-resultset-aggregate-count-sum.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/resultset-aggregate-count-sum.json \
+  --output /tmp/resultset-aggregate-count-sum-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode resultset-aggregate-count-sum-diff \
+  -scenario testdata/parity/resultset-aggregate-count-sum.json \
+  -java-trace /tmp/resultset-aggregate-count-sum-java.json \
+  -evidence /tmp/resultset-aggregate-count-sum.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/resultset-aggregate-count-sum.json`、`testdata/parity/resultset-aggregate-count-sum.evidence.json`；当前差异数为 0，覆盖 `ResultSetAggregateCountOneView`、`ResultSetAggregateCountJoin`、`ResultSetAggregateCountSimple` 与 `ResultSetAggregateSumNamedWindowRemoveGroup`。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

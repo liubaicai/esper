@@ -1,0 +1,335 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-count-sum",
+  "steps": [
+    {
+      "op": "case",
+      "case": "count-one-view"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 50,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": null,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 25,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 25,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 25,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 1,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": null,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": null,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": null,
+        "price": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "count-join"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "DELL"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "IBM"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 50,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": null,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 25,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 25,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 25,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 1,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": null,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": null,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": null,
+        "price": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "count-simple"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 1,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 1,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 1,
+        "price": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "sum-named-window-remove-group"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 100,
+        "longBoxed": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 20,
+        "longBoxed": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 101,
+        "longBoxed": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 21,
+        "longBoxed": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_A",
+      "payload": {
+        "id": "A"
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 102,
+        "longBoxed": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_A",
+      "payload": {
+        "id": "B"
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 22,
+        "longBoxed": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    }
+  ]
+}
