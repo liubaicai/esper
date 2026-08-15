@@ -7929,6 +7929,15 @@ func (r *statementRuntime) applyAllEveryTime(policy OutputPolicy, batch ResultBa
 		return ResultBatch{}
 	}
 	state := r.outputState
+	aggregateGroupedRowPerEvent := false
+	if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 {
+		definition := plans[0].query.aggregate
+		tableSource := containsTableSource(plans[0].query.input, nil) || containsNamedWindow(plans[0].query.input, nil)
+		aggregateGroupedRowPerEvent = !tableSource && len(aggregateGroupingSetsForDefinition(definition)) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
+	}
+	if aggregateGroupedRowPerEvent {
+		return r.applyAllEveryTimeAggregateGrouped(policy, batch, flush, now, plans...)
+	}
 	if !batch.empty() && state.nextOutputAt.IsZero() {
 		state.nextOutputAt = now.Add(policy.Interval)
 	}
@@ -8017,6 +8026,46 @@ func (r *statementRuntime) applyAllEveryTime(policy OutputPolicy, batch ResultBa
 	return r.finishOutput(policy, result, now, plans...)
 }
 
+// applyAllEveryTimeAggregateGrouped implements time-based "output all" for
+// aggregate-grouped queries. Esper's ResultSetProcessorAggregateGrouped
+// OutputAllHelper accumulates one row per input event (with the group
+// aggregate as of that event), posts a representative-based current row for
+// each removed group, keeps removal old rows, and re-emits untouched groups at
+// each interval boundary. Full-state snapshot old rows are only used by
+// rollup/cube and row-per-group result sets.
+func (r *statementRuntime) applyAllEveryTimeAggregateGrouped(policy OutputPolicy, batch ResultBatch, flush bool, now time.Time, plans ...Plan) ResultBatch {
+	if r == nil || r.outputState == nil || len(plans) == 0 || plans[0].query.aggregate == nil {
+		return ResultBatch{}
+	}
+	state := r.outputState
+	if !batch.empty() && state.nextOutputAt.IsZero() {
+		state.nextOutputAt = now.Add(policy.Interval)
+	}
+	r.accumulateAllEveryRows(state, batch, plans[0].query.aggregate)
+	if !flush || state.nextOutputAt.IsZero() || now.Before(state.nextOutputAt) {
+		return ResultBatch{}
+	}
+	result := ResultBatch{Time: now}
+	if state.pending != nil {
+		result = state.pending.clone()
+	}
+	for _, key := range state.allEveryRepsOrder {
+		if _, seen := state.allEverySeen[key]; seen {
+			continue
+		}
+		result.New = append(result.New, state.allEveryReps[key])
+		result.outputKeysNew = append(result.outputKeysNew, key)
+	}
+	state.pending = nil
+	state.allEverySeen = make(map[string]struct{})
+	r.advanceOutputSchedule(policy, now)
+	if result.empty() {
+		return ResultBatch{}
+	}
+	result.Time = now
+	return r.finishOutput(policy, result, now, plans...)
+}
+
 // applyAllEveryEvents implements Esper's grouped "output all every N events"
 // result-set processor for aggregate-grouped queries. Each input event
 // contributes one accumulated row carrying the group aggregate as of that
@@ -8028,28 +8077,14 @@ func (r *statementRuntime) applyAllEveryEvents(policy OutputPolicy, batch Result
 		return ResultBatch{}
 	}
 	state := r.outputState
-	if state.allEveryReps == nil {
-		state.allEveryReps = make(map[string]Result)
-		state.allEverySeen = make(map[string]struct{})
-	}
 	inserted, removed := outputEventCounts(batch)
 	state.pendingInserted += inserted
 	state.pendingRemoved += removed
-	if !batch.empty() {
-		if state.pending == nil {
-			state.pending = &ResultBatch{}
-		}
-		for index, result := range batch.New {
-			key := outputGroupKey(batch.outputKeysNew, index)
-			state.pending.New = append(state.pending.New, result)
-			state.pending.outputKeysNew = append(state.pending.outputKeysNew, key)
-			if _, exists := state.allEveryReps[key]; !exists {
-				state.allEveryRepsOrder = append(state.allEveryRepsOrder, key)
-			}
-			state.allEveryReps[key] = result
-			state.allEverySeen[key] = struct{}{}
-		}
+	var definition *aggregateDefinition
+	if len(plans) > 0 && plans[0].query.aggregate != nil {
+		definition = plans[0].query.aggregate
 	}
+	r.accumulateAllEveryRows(state, batch, definition)
 	if state.pendingInserted < policy.Count && state.pendingRemoved < policy.Count {
 		return ResultBatch{}
 	}
@@ -8074,6 +8109,67 @@ func (r *statementRuntime) applyAllEveryEvents(policy OutputPolicy, batch Result
 	}
 	result.Time = now
 	return r.finishOutput(policy, result, now, plans...)
+}
+
+// accumulateAllEveryRows buffers one row per input event, keeps removal old
+// rows, posts a representative-based current row for each removed group, and
+// tracks group representatives/seen keys for the output-all helper.
+func (r *statementRuntime) accumulateAllEveryRows(state *outputRuntimeState, batch ResultBatch, definition *aggregateDefinition) {
+	if batch.empty() {
+		return
+	}
+	if state.allEveryReps == nil {
+		state.allEveryReps = make(map[string]Result)
+		state.allEverySeen = make(map[string]struct{})
+	}
+	if state.pending == nil {
+		state.pending = &ResultBatch{}
+	}
+	for index, result := range batch.New {
+		key := outputGroupKey(batch.outputKeysNew, index)
+		state.pending.New = append(state.pending.New, result)
+		state.pending.outputKeysNew = append(state.pending.outputKeysNew, key)
+		if _, exists := state.allEveryReps[key]; !exists {
+			state.allEveryRepsOrder = append(state.allEveryRepsOrder, key)
+		}
+		state.allEveryReps[key] = result
+		state.allEverySeen[key] = struct{}{}
+	}
+	for index, result := range batch.Old {
+		key := outputGroupKey(batch.outputKeysOld, index)
+		state.pending.Old = append(state.pending.Old, result)
+		state.pending.outputKeysOld = append(state.pending.outputKeysOld, key)
+		if rep, exists := state.allEveryReps[key]; exists && definition != nil {
+			state.pending.New = append(state.pending.New, combineAggregateGroupRow(rep, result, definition))
+			state.pending.outputKeysNew = append(state.pending.outputKeysNew, key)
+		}
+		state.allEverySeen[key] = struct{}{}
+	}
+}
+
+// combineAggregateGroupRow builds the output-all current row for a removed
+// group: non-aggregate columns come from the group's representative (last
+// seen) row and aggregate columns from the post-removal old row.
+func combineAggregateGroupRow(representative, current Result, definition *aggregateDefinition) Result {
+	repRow, repOK := representative.Row()
+	curRow, curOK := current.Row()
+	if !repOK || !curOK || len(repRow.Values()) != len(curRow.Values()) {
+		return representative
+	}
+	schema := repRow.Schema()
+	fields := schema.Fields()
+	values := make([]Value, len(repRow.Values()))
+	for index, selection := range definition.selections {
+		if index >= len(fields) {
+			break
+		}
+		if isAggregateExpression(selection.Expr) {
+			values[index] = curRow.Get(fields[index].Name)
+		} else {
+			values[index] = repRow.Get(fields[index].Name)
+		}
+	}
+	return resultRow(newRow(schema, values))
 }
 
 func orderGroupedOutputRows(results []Result, keys []string, groupNames []string) ([]Result, []string) {

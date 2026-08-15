@@ -1,0 +1,191 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-all-time-window",
+  "steps": [
+    {
+      "op": "case",
+      "case": "all-time"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00.200Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 100,
+        "price": 25
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00.800Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "MSFT",
+        "volume": 5000,
+        "price": 9
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01.200Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01.500Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 150,
+        "price": 24
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "YAH",
+        "volume": 10000,
+        "price": 1
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:02Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:02.100Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 155,
+        "price": 26
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:02.200Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:02.500Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:03Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:03.200Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:03.500Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "YAH",
+        "volume": 11000,
+        "price": 2
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:04Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:04.200Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:04.300Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 150,
+        "price": 22
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:04.900Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "YAH",
+        "volume": 11500,
+        "price": 3
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:05Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:05.200Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:05.700Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:05.900Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "YAH",
+        "volume": 10500,
+        "price": 1
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:06Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:06.200Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:06.300Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:07Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:07.200Z"
+    }
+  ]
+}
