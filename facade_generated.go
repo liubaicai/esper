@@ -6077,7 +6077,9 @@ func SubqueryAscending(expression Expr) SubqueryOption {
 }
 
 // SubqueryAvg evaluates a numeric projection over matching inner rows and
-// returns a float64 average, or Null when no numeric row remains.
+// returns a float64 average, or Null when no numeric row remains. The
+// definition carries the wrapped Avg projection for the same reasons as
+// SubquerySum.
 func SubqueryAvg[T Numeric](source RecordStream, projection Expression[T], predicate ...Expression[bool]) Expression[float64] {
 	return internalengine.SubqueryAvg[T](source, projection, predicate...)
 }
@@ -6345,7 +6347,11 @@ func SubquerySomeWithOptions[T any](value Expression[T], source RecordStream, pr
 }
 
 // SubquerySum evaluates a numeric projection over matching inner rows. It
-// follows Esper aggregate null behavior: no numeric input yields Null.
+// follows Esper aggregate null behavior: no numeric input yields Null. The
+// definition carries the wrapped Sum projection so unbound event-stream
+// sources are accepted (an aggregate subselect over all events ever) and the
+// aggregate evaluation path applies to window, named-window and table
+// sources alike.
 func SubquerySum[T Numeric](source RecordStream, projection Expression[T], predicate ...Expression[bool]) Expression[T] {
 	return internalengine.SubquerySum[T](source, projection, predicate...)
 }

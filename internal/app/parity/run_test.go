@@ -5857,3 +5857,131 @@ func TestRunSubselectAggregatedInExistsAnyAllDiffRejectsTraceMutations(t *testin
 		})
 	}
 }
+
+func TestRunSubselectAggregatedSingleValueDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-single-value.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "subselect-aggregated-single-value.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-single-value.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "subselect-aggregated-single-value-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunSubselectAggregatedSingleValueDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["c1"] = int64(31)
+			},
+		},
+		{
+			name: "null-state",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["c1"] = int64(0)
+			},
+		},
+		{
+			name: "correlated-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[24].New[0].Fields["mycount"] = int64(1)
+			},
+		},
+		{
+			name: "filtered-event",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[30].New[0].Fields["p00"] = "T2"
+			},
+		},
+		{
+			name: "having-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[37].New[0].Fields["c0"] = int64(22)
+			},
+		},
+		{
+			name: "grouped-scalar",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[44].New[0].Fields["c0"] = "E1"
+			},
+		},
+		{
+			name: "table-having",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[53].New[0].Fields["c0"] = int64(106)
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:56]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[56].Case = "ungrouped-table-having"
+			},
+		},
+		{
+			name: "sequence",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[40].Sequence = 99
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-single-value.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "subselect-aggregated-single-value.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-single-value.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "subselect-aggregated-single-value-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

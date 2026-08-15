@@ -7752,6 +7752,94 @@
    ]
   },
   {
+   "id": "case.subselect-aggregated-single-value",
+   "javaRuntimeIds": [
+    "java-runtime-1697def4792eef9e455f",
+    "java-runtime-bee3648a1cb51568a329",
+    "java-runtime-ddfc4da686e2140599f1",
+    "java-runtime-af1a6e27be2a4587fcac",
+    "java-runtime-da3530feea7227f22475",
+    "java-runtime-999af3370fde9daf0484",
+    "java-runtime-8e56c1b7043f63e081e6",
+    "java-runtime-5aa8d16a080bba1bf9d9",
+    "java-runtime-35be7861ebe96a48817a",
+    "java-runtime-58bc2a73c88692723791",
+    "java-runtime-494ca71cfcaf96e0696b",
+    "java-runtime-b49d7c217bee63a5aab4",
+    "java-runtime-fc5e32b56ceb8866146f"
+   ],
+   "javaNames": [
+    "EPLSubselectUngroupedUncorrelatedNoDataWindow",
+    "EPLSubselectUngroupedUncorrelatedWHaving",
+    "EPLSubselectUngroupedUncorrelatedInSelectClause",
+    "EPLSubselectUngroupedUncorrelatedWWhereClause",
+    "EPLSubselectUngroupedCorrelatedSceneTwo",
+    "EPLSubselectUngroupedCorrelatedInWhereClause",
+    "EPLSubselectUngroupedCorrelatedWHaving",
+    "EPLSubselectGroupedUncorrelatedWHaving",
+    "EPLSubselectGroupedCorrelatedWHaving",
+    "EPLSubselectGroupedCorrelationInsideHaving",
+    "EPLSubselectUngroupedCorrelationInsideHaving",
+    "EPLSubselectUngroupedTableWHaving",
+    "EPLSubselectGroupedTableWHaving"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedSingleValue.java"
+   ],
+   "goTests": [
+    "TestRunSubselectAggregatedSingleValueDiffWritesPassingEvidence",
+    "TestRunSubselectAggregatedSingleValueDiffRejectsTraceMutations",
+    "TestSubqueryGroupScalarSingleGroupWithMultipleEvents",
+    "TestSubqueryGroupedInAnyAllFollowsEmptySetAndHavingSemantics"
+   ],
+   "tags": [
+    "correctness",
+    "subselect",
+    "aggregate",
+    "group-by",
+    "correlated",
+    "having",
+    "table",
+    "into-table",
+    "null",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1697def4792eef9e455f",
+    "java-runtime-bee3648a1cb51568a329",
+    "java-runtime-ddfc4da686e2140599f1",
+    "java-runtime-af1a6e27be2a4587fcac",
+    "java-runtime-da3530feea7227f22475",
+    "java-runtime-999af3370fde9daf0484",
+    "java-runtime-8e56c1b7043f63e081e6",
+    "java-runtime-5aa8d16a080bba1bf9d9",
+    "java-runtime-35be7861ebe96a48817a",
+    "java-runtime-58bc2a73c88692723791",
+    "java-runtime-494ca71cfcaf96e0696b",
+    "java-runtime-b49d7c217bee63a5aab4",
+    "java-runtime-fc5e32b56ceb8866146f"
+   ],
+   "representativeScenarioIds": [
+    "subselect-aggregated-single-value"
+   ]
+  },
+  {
    "id": "case.subquery-basic",
    "javaRuntimeIds": [
     "java-runtime-254575805bd1d6155c56",
@@ -29993,17 +30081,25 @@
   {
    "capabilityId": "query.subquery-basic",
    "caseId": "case.subselect-aggregated-in-exists-any-all"
+  },
+  {
+   "capabilityId": "query.subquery-basic",
+   "caseId": "case.subselect-aggregated-single-value"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.subselect-aggregated-single-value"
   }
  ],
  "summary": {
-  "totalCases": 444,
+  "totalCases": 445,
   "totalCapabilities": 110,
-  "inventoriedCases": 444,
-  "implementedCases": 444,
-  "differentialVerifiedCases": 55,
-  "differentialVerifiedRuntimeIds": 94,
+  "inventoriedCases": 445,
+  "implementedCases": 445,
+  "differentialVerifiedCases": 56,
+  "differentialVerifiedRuntimeIds": 107,
   "intentionallyDifferentCases": 18,
-  "representativeVerifiedCases": 57,
+  "representativeVerifiedCases": 58,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 110,
   "implementedCapabilities": 109,
@@ -30011,12 +30107,12 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 2776,
-  "referencedJavaRuntimeIds": 2647,
+  "runtimeAssociationCount": 2789,
+  "referencedJavaRuntimeIds": 2660,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1489,
-  "representativeScenarioTotal": 57,
-  "representativeScenarioPassing": 57,
+  "unreferencedJavaRuntimeIds": 1476,
+  "representativeScenarioTotal": 58,
+  "representativeScenarioPassing": 58,
   "currentFailures": [],
   "currentSkips": [
    "internal/esper.TestStressSyntheticMediumLoad: ESPER_STRESS is unset; run ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$' -count=1",

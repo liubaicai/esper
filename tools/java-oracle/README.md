@@ -532,6 +532,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/subselect-aggregated-in-exists-any-all.json`、`testdata/parity/subselect-aggregated-in-exists-any-all.evidence.json`；当前差异数为 0，覆盖 `EPLSubselectAggregatedInExistsAnyAll` 的 13 个 execution。
 
+## Subselect-aggregated-single-value oracle
+
+第二十六个代表性场景使用 `EPLSubselectAggregatedSingleValueScenarioOracle.java`（runner：`run-subselect-aggregated-single-value.sh`）。它注册 Map 事件类型 `SupportBean_S0(id, p00)`、`SupportBean_S1(id, p10, p11)` 与 `SupportBean(theString, intPrimitive)`，双跑 `EPLSubselectAggregatedSingleValue` 的 13 个 execution：单值聚合子查询覆盖无窗口累积 `sum`、keepall + having、select 子句内 `s0.id + max(s1.id)` 混合投影、length(3) where 过滤、相关 count、where 子句相关子查询（含 `||` 拼接变体）、相关 where + having、分组 scalar 子查询（相关 having、having 内相关 `sum = s0.id`）、`last(theString)` 相关 having，以及 table + into-table 聚合列上的 having 子查询（无键与双键分组）。Go 以 `SubquerySum/SubqueryValue/SubqueryGroupScalar` + `OuterField` + `SubqueryHaving` + `IntoTable`/`FromTable` 复现同一语义；table 子查询的行投影与分组键使用 `Field`（`TableField` 是 trigger/assignment 目标行语义）。
+
+```sh
+./tools/java-oracle/run-subselect-aggregated-single-value.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/subselect-aggregated-single-value.json \
+  --output /tmp/subselect-single-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode subselect-aggregated-single-value-diff \
+  -scenario testdata/parity/subselect-aggregated-single-value.json \
+  -java-trace /tmp/subselect-single-java.json \
+  -evidence /tmp/subselect-single.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/subselect-aggregated-single-value.json`、`testdata/parity/subselect-aggregated-single-value.evidence.json`；当前差异数为 0，覆盖 `EPLSubselectAggregatedSingleValue` 的 13 个 execution。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

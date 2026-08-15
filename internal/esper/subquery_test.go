@@ -1017,3 +1017,90 @@ func TestSubqueryGroupedInAnyAllFollowsEmptySetAndHavingSemantics(t *testing.T) 
 		t.Fatalf("grouped in hit = %#v", last.AsMap())
 	}
 }
+
+// TestSubqueryGroupScalarSingleGroupWithMultipleEvents covers the scalar
+// grouped subselect contract on a non-aggregate projection: a grouped query
+// collapses to one row per group, so a single group passes the scalar row
+// regardless of how many events it contains (the group-key projection is
+// constant for the group) and two groups yield Null. Mirrors the
+// EPLSubselectGroupedCorrelationInsideHaving trajectory exercised by the
+// subselect-aggregated-single-value differential scenario.
+func TestSubqueryGroupScalarSingleGroupWithMultipleEvents(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "GroupScalarTrade"); err != nil {
+		t.Fatal(err)
+	}
+	triggerSchema, err := RegisterMap(env, "GroupScalarTrigger", []FieldSpec{
+		OptionalFieldDef("value", reflect.TypeOf(int(0))),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = triggerSchema
+	inner := From[runtimeTestTrade](env, "GroupScalarTrade").Window(KeepAll()).AsRecord()
+	theString := Field[any, string]("symbol")
+	sum := Sum[int](Field[any, int]("price"))
+	query := Select(
+		From[map[string]any](env, "GroupScalarTrigger"),
+		Alias("key", SubqueryGroupScalar[string, string](inner, theString, theString,
+			SubqueryGroupHaving(Equal[int](sum, OuterField[int]("value"))))),
+	).Query(StatementName("group-scalar-single"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := make([]Row, 0, 5)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("group scalar result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	send := func(value int) {
+		if err := engine.Send(context.Background(), "GroupScalarTrigger", map[string]any{"value": value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendTrade := func(symbol string, price int) {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol, Price: float64(price)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Empty: no group.
+	send(5)
+	// Group A with a single event: sum 5 -> key "A".
+	sendTrade("A", 5)
+	send(5)
+	// Group A grows to two events (sum 8): still one group row -> key "A".
+	sendTrade("A", 3)
+	send(8)
+	// Group B joins: two distinct groups -> Null.
+	sendTrade("B", 8)
+	send(8)
+	if len(rows) != 4 {
+		t.Fatalf("group scalar rows = %#v", rows)
+	}
+	if !rows[0].Get("key").IsNull() {
+		t.Fatalf("empty group scalar = %#v", rows[0].AsMap())
+	}
+	if rows[1].Get("key").Any() != "A" {
+		t.Fatalf("single event group scalar = %#v", rows[1].AsMap())
+	}
+	if rows[2].Get("key").Any() != "A" {
+		t.Fatalf("multi event single group scalar = %#v", rows[2].AsMap())
+	}
+	if !rows[3].Get("key").IsNull() {
+		t.Fatalf("two group scalar = %#v", rows[3].AsMap())
+	}
+}

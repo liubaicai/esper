@@ -1509,14 +1509,25 @@ func SubqueryGroupScalar[K any, V any](source RecordStream, key Expression[K], p
 	}
 	return makeSubqueryExpr[V]("subquery-group-scalar", "group-scalar("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		values := evaluateSubqueryValues(definition, ctx)
-		if len(values) != 1 {
+		if len(values) == 0 {
 			return Null()
 		}
-		group, ok := values[0].Any().(subqueryGroupValue)
+		first, ok := values[0].Any().(subqueryGroupValue)
 		if !ok {
 			return Null()
 		}
-		return group.value
+		// A grouped subquery collapses to one row per group: the scalar form
+		// requires exactly one distinct group and returns its first projected
+		// value. Multiple events inside the single group still produce one
+		// group row (the group-key projection is constant for the group),
+		// matching Esper's scalar grouped subselect.
+		for _, value := range values[1:] {
+			group, ok := value.Any().(subqueryGroupValue)
+			if !ok || !subqueryValuesEqual(group.key, first.key) {
+				return Null()
+			}
+		}
+		return first.value
 	})
 }
 
@@ -1619,13 +1630,21 @@ func SubqueryCount(source RecordStream, predicate ...Expression[bool]) Expressio
 }
 
 // SubquerySum evaluates a numeric projection over matching inner rows. It
-// follows Esper aggregate null behavior: no numeric input yields Null.
+// follows Esper aggregate null behavior: no numeric input yields Null. The
+// definition carries the wrapped Sum projection so unbound event-stream
+// sources are accepted (an aggregate subselect over all events ever) and the
+// aggregate evaluation path applies to window, named-window and table
+// sources alike.
 func SubquerySum[T Numeric](source RecordStream, projection Expression[T], predicate ...Expression[bool]) Expression[T] {
-	definition := subqueryWithProjection(source, projection, predicate...)
+	options := make([]SubqueryOption, 0, 1)
+	if len(predicate) > 0 && predicate[0] != nil {
+		options = append(options, SubqueryWhere(predicate[0]))
+	}
+	definition := subqueryWithProjectionOptions(source, Sum[T](projection), options...)
 	return makeSubqueryExpr[T]("subquery-sum", "sum("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		var total float64
 		found := false
-		for _, candidate := range evaluateSubqueryValues(definition, ctx) {
+		for _, candidate := range unwrapSubqueryGroupValues(evaluateSubqueryValues(definition, ctx)) {
 			value, ok := numericValue(candidate)
 			if !ok {
 				continue
@@ -1641,13 +1660,19 @@ func SubquerySum[T Numeric](source RecordStream, projection Expression[T], predi
 }
 
 // SubqueryAvg evaluates a numeric projection over matching inner rows and
-// returns a float64 average, or Null when no numeric row remains.
+// returns a float64 average, or Null when no numeric row remains. The
+// definition carries the wrapped Avg projection for the same reasons as
+// SubquerySum.
 func SubqueryAvg[T Numeric](source RecordStream, projection Expression[T], predicate ...Expression[bool]) Expression[float64] {
-	definition := subqueryWithProjection(source, projection, predicate...)
+	options := make([]SubqueryOption, 0, 1)
+	if len(predicate) > 0 && predicate[0] != nil {
+		options = append(options, SubqueryWhere(predicate[0]))
+	}
+	definition := subqueryWithProjectionOptions(source, Avg[T](projection), options...)
 	return makeSubqueryExpr[float64]("subquery-avg", "avg("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		var total float64
 		var count int64
-		for _, candidate := range evaluateSubqueryValues(definition, ctx) {
+		for _, candidate := range unwrapSubqueryGroupValues(evaluateSubqueryValues(definition, ctx)) {
 			value, ok := numericValue(candidate)
 			if !ok {
 				continue
