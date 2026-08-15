@@ -44,7 +44,7 @@
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
 - 最近切片：ContextNested 提升为 implemented（非 temporal key/category/hash 嵌套、三层 key 隔离、parent context 属性、nested selector、重复 child 拒绝；temporal/initiated/pattern/iterator 仍 open）；ContextKeySegmentedWInitTermPrioritized 七个显式 initiated executions 提升为 implemented（keyed initiated-terminated grouped aggregate、correlated termination、no-term、filter-expr、invalid）；InfraNWTableCreateIndex late-create/drop/recreate/multiple-index/invalid 提升为 implemented（live NamedWindow/Table CreateIndex/DropIndex、Context partition 继承）；ResultSetOutputLimitAggregateGrouped 八个 no-join executions 提升为 implemented（grouped time-window default/last/first/snapshot/having/max/no-output-clause）；ResultSetOutputLimitRowPerGroupRollup 十个 no-join executions 提升为 implemented（rollup default/last/first/snapshot/order-limit/sorted）；ExprFilterOptimizableConditionNegateConfirm 十个 listener executions 提升为 implemented（typed context/pattern boolean filter 矩阵）；InfraNWTableOnSelect 非聚合 executions 提升为 implemented（on-select index/correlation/condition/limit/invalid、trigger order-by+limit 与 aggregate/prev 校验）；EPLOtherCreateSchema 主要 executions 提升为 implemented（typed create-schema、copyfrom/inherit/variant、ObjectArray 单 supertype）；EPLOtherStaticFunctions 主要 executions 提升为 implemented（Go UDF 静态方法对照、chained/nested/pattern/order-by、投影行源事件保留）；EPLDatabaseJoin 主要 join executions 提升为 implemented（2HistoricalStar/Inner 触发历史 lineage、WithPattern pattern 驱动求值、3Stream 无触发替换）；ResultSetQueryTypeIterator 17 个 execution 提升为 implemented（order-by/filter/pattern/aggregate iterator 契约、WithIterableUnbound）；ResultSetQueryTypeRowPerGroup 17 个 execution 提升为 implemented（group reclaim、array/null group key、output snapshot iterator、join/named-window grouped aggregate）；InfraNamedWindowTypes 18 个 execution 提升为 implemented（窗口事件类型形状、嵌套 schema 列、表示矩阵、继承覆盖）；ViewTimeWin 15 个 execution 提升为 implemented（calendar-month 窗口、变量/参数时长、prev 与聚合、flip-timer）；ViewUnion 15 个 execution 提升为 implemented（named-window union retention、batch/sorted/groupwin/pattern/subquery union、child-delta old 流）；EPLInsertInto 20 个 execution 提升为 implemented；statement metrics CPU 采样差异登记为 approved intentional difference（2026-08-14）。
-- 最新进展：`resultset-aggregate-last-time-window` 登记为 differential-verified（`ResultSet13LastNoHavingNoJoin`，6 条 records/0 differences），并修复 `OutputLastEveryTime` aggregate-grouped 路径（普通更新不再合成 previous old 行，old 只来自 leaving events）；`resultset-aggregate-time-window` 已登记 `ResultSet5DefaultNoHavingNoJoin` 与 `ResultSet7DefaultHavingNoJoin`；`resultset-aggregate-no-output`、`resultset-aggregate-last`、`resultset-aggregate-default`、`rollup-output-first-having`、`rollup-output-all-sorted`、`rollup-output-all`、`rollup-output-default-market`、`rollup-output-no-limit-market`、`rollup-output-first-market`、`rollup-output-last-market`、`rollup-output-snapshot`、`rollup-output-snapshot-order-limit`、`rollup-output-first-sorted`、`rollup-output-first`、`rollup-output-every-sorted`、`rollup-output-last` 与 `rollup-output-last-sorted` 亦已登记。
+- 最新进展：`resultset-aggregate-last-time-window` 扩展 `ResultSet15LastHavingNoJoin` 登记为 differential-verified（`java-runtime-68d3d21c1d3e57d6ab3b`，9 条 records/0 differences，复用 `OutputLastEveryTime` aggregate-grouped 修复）；该场景此前已登记 `ResultSet13LastNoHavingNoJoin`；`resultset-aggregate-time-window` 已登记 `ResultSet5DefaultNoHavingNoJoin` 与 `ResultSet7DefaultHavingNoJoin`；`resultset-aggregate-no-output`、`resultset-aggregate-last`、`resultset-aggregate-default`、`rollup-output-first-having`、`rollup-output-all-sorted`、`rollup-output-all`、`rollup-output-default-market`、`rollup-output-no-limit-market`、`rollup-output-first-market`、`rollup-output-last-market`、`rollup-output-snapshot`、`rollup-output-snapshot-order-limit`、`rollup-output-first-sorted`、`rollup-output-first`、`rollup-output-every-sorted`、`rollup-output-last` 与 `rollup-output-last-sorted` 亦已登记。
 - 最新已提交：`23d916d5e`（Add resultset-aggregate-last-time-window differential scenario）
 
 ### 2.2 对账清单
@@ -54,11 +54,11 @@
 | Capability | 110 个 |
 | Case | 428 个 |
 | Case implemented（verification） | 428 个（其中 41 个 differential-verified、18 个 intentionally-different） |
-| Case differential-verified | 42 个（52 个 runtime） |
+| Case differential-verified | 42 个（53 个 runtime） |
 | Case intentionally-different | 18 个 |
 | Case inventoried-only | 0 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
-| Runtime 关联 | 2,735 条 |
+| Runtime 关联 | 2,736 条 |
 | 唯一已关联 runtime | 2,630 个 |
 | 未关联 runtime | 1,506 个 |
 | 关联覆盖率 | 63.6% |

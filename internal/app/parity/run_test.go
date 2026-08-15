@@ -4115,8 +4115,13 @@ func TestRunResultSetAggregateLastTimeWindowDiffRejectsTraceMutations(t *testing
 		{
 			name: "expiry-old-order",
 			mutate: func(trace *compat.Trace) {
-				old := trace.Records[len(trace.Records)-1].Old
-				old[0], old[1] = old[1], old[0]
+				for index := len(trace.Records) - 1; index >= 0; index-- {
+					if len(trace.Records[index].Old) == 3 {
+						old := trace.Records[index].Old
+						old[0], old[1] = old[1], old[0]
+						return
+					}
+				}
 			},
 		},
 	}
