@@ -154,17 +154,18 @@ func (r Result) Get(name string) Value {
 
 // ResultBatch preserves listener call boundaries, logical time and sequence.
 type ResultBatch struct {
-	New             []Result
-	Old             []Result
-	Sequence        uint64
-	Time            time.Time
-	forced          bool
-	outputCountsSet bool
-	outputInserted  int64
-	outputRemoved   int64
-	outputKeysNew   []string
-	outputKeysOld   []string
-	inputKeysNew    []string
+	New              []Result
+	Old              []Result
+	Sequence         uint64
+	Time             time.Time
+	forced           bool
+	outputCountsSet  bool
+	outputInserted   int64
+	outputRemoved    int64
+	outputKeysNew    []string
+	outputKeysOld    []string
+	inputKeysNew     []string
+	removedGroupKeys []string
 }
 
 func (b ResultBatch) empty() bool { return len(b.New) == 0 && len(b.Old) == 0 }
@@ -175,6 +176,7 @@ func (b ResultBatch) clone() ResultBatch {
 	b.outputKeysNew = append([]string(nil), b.outputKeysNew...)
 	b.outputKeysOld = append([]string(nil), b.outputKeysOld...)
 	b.inputKeysNew = append([]string(nil), b.inputKeysNew...)
+	b.removedGroupKeys = append([]string(nil), b.removedGroupKeys...)
 	return b
 }
 
@@ -8115,12 +8117,12 @@ func (r *statementRuntime) applyAllEveryEvents(policy OutputPolicy, batch Result
 // rows, posts a representative-based current row for each removed group, and
 // tracks group representatives/seen keys for the output-all helper.
 func (r *statementRuntime) accumulateAllEveryRows(state *outputRuntimeState, batch ResultBatch, definition *aggregateDefinition) {
-	if batch.empty() {
-		return
-	}
 	if state.allEveryReps == nil {
 		state.allEveryReps = make(map[string]Result)
 		state.allEverySeen = make(map[string]struct{})
+	}
+	if batch.empty() && len(batch.removedGroupKeys) == 0 {
+		return
 	}
 	if state.pending == nil {
 		state.pending = &ResultBatch{}
@@ -8143,6 +8145,12 @@ func (r *statementRuntime) accumulateAllEveryRows(state *outputRuntimeState, bat
 			state.pending.New = append(state.pending.New, combineAggregateGroupRow(rep, result, definition))
 			state.pending.outputKeysNew = append(state.pending.outputKeysNew, key)
 		}
+		state.allEverySeen[key] = struct{}{}
+	}
+	// Removal groups whose old rows are suppressed by having still count as
+	// seen in the current interval; Java's output-all helper marks them in
+	// processView before having filters the generated rows.
+	for _, key := range batch.removedGroupKeys {
 		state.allEverySeen[key] = struct{}{}
 	}
 }
@@ -15563,6 +15571,11 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			for _, groupingSet := range groupingSets {
 				batch.inputKeysNew = append(batch.inputKeysNew, aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables))
 			}
+		}
+	}
+	for _, event := range delta.oldEvents {
+		for _, groupingSet := range groupingSets {
+			batch.removedGroupKeys = append(batch.removedGroupKeys, aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables))
 		}
 	}
 	newEntries := make([]aggregateResultEntry, 0, len(affected))
