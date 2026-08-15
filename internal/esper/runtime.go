@@ -7741,14 +7741,30 @@ func (r *statementRuntime) applyFirstEveryTime(policy OutputPolicy, batch Result
 	if state.firstEveryNext == nil {
 		state.firstEveryNext = make(map[string]time.Time)
 	}
-	result := selectFirstOutputByGroup(batch, func(key string) bool {
+	allow := func(key string) bool {
 		next, exists := state.firstEveryNext[key]
 		if exists && now.Before(next) {
 			return false
 		}
 		state.firstEveryNext[key] = now.Add(policy.Interval)
 		return true
-	})
+	}
+	var result ResultBatch
+	aggregateGroupedRowPerEvent := false
+	if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 {
+		definition := plans[0].query.aggregate
+		tableSource := containsTableSource(plans[0].query.input, nil) || containsNamedWindow(plans[0].query.input, nil)
+		aggregateGroupedRowPerEvent = definition.join == nil && !tableSource && len(aggregateGroupingSetsForDefinition(definition)) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
+	}
+	if aggregateGroupedRowPerEvent && len(batch.New) == 0 && len(batch.Old) > 0 {
+		// Aggregate-grouped output-first posts the post-removal current state
+		// as new at a pure time-expiry boundary (Java tryAssertion17), instead
+		// of delivering the removal as old.
+		promoted := ResultBatch{Time: batch.Time, New: batch.Old, outputKeysNew: batch.outputKeysOld}
+		result = selectFirstOutputByGroup(promoted, allow)
+	} else {
+		result = selectFirstOutputByGroup(batch, allow)
+	}
 	if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 {
 		groupNames := aggregateGroupFieldNames(plans[0].query.aggregate)
 		result.New, result.outputKeysNew = orderGroupedOutputRows(result.New, result.outputKeysNew, groupNames)
