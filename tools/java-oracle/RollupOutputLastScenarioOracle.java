@@ -57,7 +57,8 @@ import java.util.Map;
  * ResultSet10AllNoHavingJoin; cases "all-having" and "all-having-join"
  * mirror ResultSet11AllHavingNoJoin and ResultSet12AllHavingJoin; cases
  * "default-join2", "all-join2" and "last-join2" mirror ResultSetJoinDefault,
- * ResultSetJoinAll and ResultSetJoinLast.
+ * ResultSetJoinAll and ResultSetJoinLast; case "having-join" mirrors
+ * ResultSetHavingJoin.
  */
 public final class RollupOutputLastScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -87,7 +88,7 @@ public final class RollupOutputLastScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market", "first-market", "no-limit-market", "default-market", "all", "all-sorted", "first-having", "default", "last-aggregate", "no-output", "default-output", "default-having", "last-output", "last-having", "first-output", "snapshot-output", "all-output", "having-output", "max-output", "none-join", "none-having-join", "default-join", "default-having-join", "last-join", "last-having-join", "first-join", "all-time", "all-join", "all-having", "all-having-join", "default-join2", "all-join2", "last-join2"};
+        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot", "last-market", "first-market", "no-limit-market", "default-market", "all", "all-sorted", "first-having", "default", "last-aggregate", "no-output", "default-output", "default-having", "last-output", "last-having", "first-output", "snapshot-output", "all-output", "having-output", "max-output", "none-join", "none-having-join", "default-join", "default-having-join", "last-join", "last-having-join", "first-join", "all-time", "all-join", "all-having", "all-having-join", "default-join2", "all-join2", "last-join2", "having-join"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -118,7 +119,7 @@ public final class RollupOutputLastScenarioOracle {
         Map<String, Object> stringBeanType = new HashMap<>();
         stringBeanType.put("theString", String.class);
         configuration.getCommon().addEventType("SupportBeanString", stringBeanType);
-        if ("snapshot".equals(caseName) || "last-market".equals(caseName) || "first-market".equals(caseName) || "no-limit-market".equals(caseName) || "default-market".equals(caseName) || "default".equals(caseName) || "last-aggregate".equals(caseName) || "no-output".equals(caseName) || "default-output".equals(caseName) || "default-having".equals(caseName) || "last-output".equals(caseName) || "last-having".equals(caseName) || "first-output".equals(caseName) || "snapshot-output".equals(caseName) || "all-output".equals(caseName) || "having-output".equals(caseName) || "max-output".equals(caseName) || "none-join".equals(caseName) || "none-having-join".equals(caseName) || "default-join".equals(caseName) || "default-having-join".equals(caseName) || "last-join".equals(caseName) || "last-having-join".equals(caseName) || "first-join".equals(caseName) || "all-time".equals(caseName) || "all-join".equals(caseName) || "all-having".equals(caseName) || "all-having-join".equals(caseName) || "default-join2".equals(caseName) || "all-join2".equals(caseName) || "last-join2".equals(caseName)) {
+        if ("snapshot".equals(caseName) || "last-market".equals(caseName) || "first-market".equals(caseName) || "no-limit-market".equals(caseName) || "default-market".equals(caseName) || "default".equals(caseName) || "last-aggregate".equals(caseName) || "no-output".equals(caseName) || "default-output".equals(caseName) || "default-having".equals(caseName) || "last-output".equals(caseName) || "last-having".equals(caseName) || "first-output".equals(caseName) || "snapshot-output".equals(caseName) || "all-output".equals(caseName) || "having-output".equals(caseName) || "max-output".equals(caseName) || "none-join".equals(caseName) || "none-having-join".equals(caseName) || "default-join".equals(caseName) || "default-having-join".equals(caseName) || "last-join".equals(caseName) || "last-having-join".equals(caseName) || "first-join".equals(caseName) || "all-time".equals(caseName) || "all-join".equals(caseName) || "all-having".equals(caseName) || "all-having-join".equals(caseName) || "default-join2".equals(caseName) || "all-join2".equals(caseName) || "last-join2".equals(caseName) || "having-join".equals(caseName)) {
             Map<String, Object> marketType = new HashMap<>();
             marketType.put("symbol", String.class);
             marketType.put("volume", Long.class);
@@ -295,6 +296,11 @@ public final class RollupOutputLastScenarioOracle {
                     "SupportMarketDataBean#length(5) as two " +
                     "where (symbol='DELL' or symbol='IBM' or symbol='GE') " +
                     "and one.theString = two.symbol group by symbol output last every 2 events";
+        } else if ("having-join".equals(caseName)) {
+            epl = "@Name('s0') select irstream symbol, volume, sum(price) as sumprice " +
+                    "from SupportMarketDataBean#time(10 sec) as s0, " +
+                    "SupportBean#keepall as s1 where s0.symbol = s1.theString " +
+                    "group by symbol having sum(price) >= 10 output every 3 events";
         } else if (!"last".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }
