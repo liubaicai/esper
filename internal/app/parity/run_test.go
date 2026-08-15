@@ -2743,6 +2743,105 @@ func TestRunRollupOutputAllDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunRollupOutputAllSortedDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "rollup-output-all-sorted.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "rollup-output-all-sorted.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rollup-output-all-sorted.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "rollup-output-all-sorted-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunRollupOutputAllSortedDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["c2"] = json.Number("999")
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+		{
+			name: "row-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[2], trace.Records[4].New[3] = trace.Records[4].New[3], trace.Records[4].New[2]
+			},
+		},
+		{
+			name: "empty-group-rows",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New = trace.Records[4].New[:4]
+				trace.Records[4].Old = trace.Records[4].Old[:4]
+			},
+		},
+		{
+			name: "time-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Time = "1970-01-01T00:00:02Z"
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "rollup-output-all-sorted.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "rollup-output-all-sorted.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rollup-output-all-sorted.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "rollup-output-all-sorted-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunMatchRecognizeDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "match-recognize-simple.evidence.json"),

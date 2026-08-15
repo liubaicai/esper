@@ -16675,7 +16675,7 @@ func deferOutputResultWindow(policy OutputPolicy) bool {
 		return false
 	}
 	switch policy.Kind {
-	case OutputEveryPolicy, OutputEveryTimePolicy, OutputFirstEveryEventsPolicy, OutputFirstEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy:
+	case OutputEveryPolicy, OutputEveryTimePolicy, OutputFirstEveryEventsPolicy, OutputFirstEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy, OutputAllEveryTimePolicy:
 		return true
 	default:
 		return false
