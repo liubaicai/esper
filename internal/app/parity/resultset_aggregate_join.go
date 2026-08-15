@@ -25,6 +25,7 @@ var (
 		"java-runtime-b3cb0ef477369111027c",
 		"java-runtime-e0866a0c063a6db46942",
 		"java-runtime-9a902334e2f0f270f8f5",
+		"java-runtime-fff1f571dd69b6dd0579",
 	}
 	resultsetAggregateJoinJavaExecutions = []string{
 		"ResultSet2NoneNoHavingJoin",
@@ -34,6 +35,7 @@ var (
 		"ResultSet14LastNoHavingJoin",
 		"ResultSet16LastHavingJoin",
 		"ResultSet17FirstNoHavingJoin",
+		"ResultSet10AllNoHavingJoin",
 	}
 )
 
@@ -44,7 +46,7 @@ func runResultSetAggregateJoinScenario(ctx context.Context, scenario compat.Scen
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
 	}
-	caseOrder := []string{"none-join", "none-having-join", "default-join", "default-having-join", "last-join", "last-having-join", "first-join"}
+	caseOrder := []string{"none-join", "none-having-join", "default-join", "default-having-join", "last-join", "last-having-join", "first-join", "all-join"}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("resultset-aggregate-join scenario %q has no supported cases", scenario.ID)
 	}
@@ -118,6 +120,12 @@ func runResultSetAggregateJoinCase(ctx context.Context, scenario compat.Scenario
 			Select(selects...).Query(options...)
 	case "first-join":
 		options = append(options, esper.WithOutput(esper.OutputFirstEveryTime(time.Second)))
+		query = grouped.Select(selects...).Query(options...)
+	case "all-join":
+		options = append(options,
+			esper.WithOutput(esper.OutputAllEveryTime(time.Second)),
+			esper.OrderBy(esper.Ascending(esper.ResultField[string]("symbol"))),
+		)
 		query = grouped.Select(selects...).Query(options...)
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported resultset-aggregate-join case %q", caseName)

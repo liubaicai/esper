@@ -4219,7 +4219,7 @@ func TestRunResultSetAggregateFirstTimeWindowDiffRejectsTraceMutations(t *testin
 			},
 		},
 		{
-			name: "pure-expiry-new-value",
+			name: "expiry-new-value",
 			mutate: func(trace *compat.Trace) {
 				last := trace.Records[len(trace.Records)-1]
 				last.New[0].Fields["sum(price)"] = float64(99)
