@@ -552,6 +552,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/subselect-aggregated-single-value.json`、`testdata/parity/subselect-aggregated-single-value.evidence.json`；当前差异数为 0，覆盖 `EPLSubselectAggregatedSingleValue` 的 13 个 execution。
 
+## Subselect-in oracle
+
+第二十七个代表性场景使用 `EPLSubselectInScenarioOracle.java`（runner：`run-subselect-in.sh`）。它注册 Map 事件类型 `SupportBean_S0(id, p00, p01)`、`SupportBean_S1(id, p10, p11)` 与 `SupportBean(theString, intBoxed, longBoxed)`，双跑 `EPLSubselectIn` 的 14 个 execution：IN/NOT IN 子查询在 select 子句（含 OM/Compile 等价变体）、filter criteria（length(2) 窗口淘汰边界）与 where 子句（含 `3*id in (select 2*id)` 双侧表达式）的位置形态，nullable 字符串（p00/p10）与 boxed 数值（longBoxed in intBoxed 及反向）的 coercion 三值逻辑，null row（`x in (null)` → null、空集 `not in` → true 含 null 外层），以及 keepall 相关 IN 索引形态（`s0.p01 in (s1.p10, s1.p11)` 与 `s1.p11 in (s0.p00, s0.p01)`）。Go 以 `SubqueryIn` + `In` + `Not` 与 boxed 指针值语义（`reflect.DeepEqual` 指针解引用）复现同一行为。
+
+```sh
+./tools/java-oracle/run-subselect-in.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/subselect-in.json \
+  --output /tmp/subselect-in-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode subselect-in-diff \
+  -scenario testdata/parity/subselect-in.json \
+  -java-trace /tmp/subselect-in-java.json \
+  -evidence /tmp/subselect-in.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/subselect-in.json`、`testdata/parity/subselect-in.evidence.json`；当前差异数为 0，覆盖 `EPLSubselectIn` 的 14 个 execution。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

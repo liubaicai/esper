@@ -5985,3 +5985,131 @@ func TestRunSubselectAggregatedSingleValueDiffRejectsTraceMutations(t *testing.T
 		})
 	}
 }
+
+func TestRunSubselectInDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "subselect-in.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "subselect-in.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-in.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "subselect-in-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunSubselectInDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["value"] = false
+			},
+		},
+		{
+			name: "empty-set-in",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["value"] = true
+			},
+		},
+		{
+			name: "eviction-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[13].New[0].Fields["id"] = int64(12)
+			},
+		},
+		{
+			name: "expression-projection",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[24].New[0].Fields["value"] = true
+			},
+		},
+		{
+			name: "nullable-match",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[26].New[0].Fields["id"] = int64(3)
+			},
+		},
+		{
+			name: "coercion",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[27].New[0].Fields["longBoxed"] = int64(97)
+			},
+		},
+		{
+			name: "index-shape",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[35].New[0].Fields["c0"] = "v9"
+			},
+		},
+		{
+			name: "not-in-null-row",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[41].New[0].Fields["intBoxed"] = int64(1)
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:51]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[51].Case = "in-select"
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "subselect-in.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "subselect-in.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-in.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "subselect-in-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

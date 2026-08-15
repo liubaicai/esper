@@ -7840,6 +7840,97 @@
    ]
   },
   {
+   "id": "case.subselect-in",
+   "javaRuntimeIds": [
+    "java-runtime-89105b3cad99d9063f41",
+    "java-runtime-fdbcd79e160d0517e820",
+    "java-runtime-b12caa00c143fc43c04e",
+    "java-runtime-f7e01f372cd72fdf1be5",
+    "java-runtime-e291b5da908b66ede9c3",
+    "java-runtime-c187889237cc3556dc2c",
+    "java-runtime-ca0cf0245938a62a8afc",
+    "java-runtime-4ae92db4360046f4c27c",
+    "java-runtime-57815ee2825665c40f31",
+    "java-runtime-af6f36fa0a98caf23fbe",
+    "java-runtime-7ca64412e62473c7d2d7",
+    "java-runtime-65e715bf6d8eebf884ee",
+    "java-runtime-ad48b4b457ce24456800",
+    "java-runtime-462a485c982dc5360d48"
+   ],
+   "javaNames": [
+    "EPLSubselectInSelect",
+    "EPLSubselectInSelectOM",
+    "EPLSubselectInSelectCompile",
+    "EPLSubselectInSelectWhere",
+    "EPLSubselectInSelectWhereExpressions",
+    "EPLSubselectInFilterCriteria",
+    "EPLSubselectInNullable",
+    "EPLSubselectInNullableCoercion",
+    "EPLSubselectInNullRow",
+    "EPLSubselectInSingleIndex",
+    "EPLSubselectInMultiIndex",
+    "EPLSubselectNotInNullRow",
+    "EPLSubselectNotInSelect",
+    "EPLSubselectNotInNullableCoercion"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectIn.java"
+   ],
+   "goTests": [
+    "TestRunSubselectInDiffWritesPassingEvidence",
+    "TestRunSubselectInDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "subselect",
+    "in",
+    "not-in",
+    "filter",
+    "where",
+    "nullable",
+    "coercion",
+    "null-row",
+    "eviction",
+    "index",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-89105b3cad99d9063f41",
+    "java-runtime-fdbcd79e160d0517e820",
+    "java-runtime-b12caa00c143fc43c04e",
+    "java-runtime-f7e01f372cd72fdf1be5",
+    "java-runtime-e291b5da908b66ede9c3",
+    "java-runtime-c187889237cc3556dc2c",
+    "java-runtime-ca0cf0245938a62a8afc",
+    "java-runtime-4ae92db4360046f4c27c",
+    "java-runtime-57815ee2825665c40f31",
+    "java-runtime-af6f36fa0a98caf23fbe",
+    "java-runtime-7ca64412e62473c7d2d7",
+    "java-runtime-65e715bf6d8eebf884ee",
+    "java-runtime-ad48b4b457ce24456800",
+    "java-runtime-462a485c982dc5360d48"
+   ],
+   "representativeScenarioIds": [
+    "subselect-in"
+   ]
+  },
+  {
    "id": "case.subquery-basic",
    "javaRuntimeIds": [
     "java-runtime-254575805bd1d6155c56",
@@ -30089,17 +30180,21 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.subselect-aggregated-single-value"
+  },
+  {
+   "capabilityId": "query.subquery-basic",
+   "caseId": "case.subselect-in"
   }
  ],
  "summary": {
-  "totalCases": 445,
+  "totalCases": 446,
   "totalCapabilities": 110,
-  "inventoriedCases": 445,
-  "implementedCases": 445,
-  "differentialVerifiedCases": 56,
-  "differentialVerifiedRuntimeIds": 107,
+  "inventoriedCases": 446,
+  "implementedCases": 446,
+  "differentialVerifiedCases": 57,
+  "differentialVerifiedRuntimeIds": 121,
   "intentionallyDifferentCases": 18,
-  "representativeVerifiedCases": 58,
+  "representativeVerifiedCases": 59,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 110,
   "implementedCapabilities": 109,
@@ -30107,12 +30202,12 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 2789,
-  "referencedJavaRuntimeIds": 2660,
+  "runtimeAssociationCount": 2803,
+  "referencedJavaRuntimeIds": 2674,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1476,
-  "representativeScenarioTotal": 58,
-  "representativeScenarioPassing": 58,
+  "unreferencedJavaRuntimeIds": 1462,
+  "representativeScenarioTotal": 59,
+  "representativeScenarioPassing": 59,
   "currentFailures": [],
   "currentSkips": [
    "internal/esper.TestStressSyntheticMediumLoad: ESPER_STRESS is unset; run ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$' -count=1",
