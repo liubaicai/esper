@@ -411,3 +411,70 @@ func TestResultSetOutputLimitAggregateGroupedParity(t *testing.T) {
 		}
 	})
 }
+
+// TestResultSetOutputLimitAggregateGroupedAllEventsParity mirrors
+// ResultSetNoJoinAll: a length(5) grouped sum with output all every 2 events
+// emits one accumulated row per event and re-posts representative rows of
+// untouched groups at each boundary.
+func TestResultSetOutputLimitAggregateGroupedAllEventsParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[resultsetGroupedTimeWindowMarket](env, "SupportMarketDataBean"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(time.UnixMilli(0).UTC()))
+	defer func() { _ = engine.Close(context.Background()) }()
+	symbol := Field[resultsetGroupedTimeWindowMarket, string]("symbol")
+	volume := Field[resultsetGroupedTimeWindowMarket, int64]("volume")
+	price := Field[resultsetGroupedTimeWindowMarket, float64]("price")
+	plan, err := env.Build(From[resultsetGroupedTimeWindowMarket](env, "SupportMarketDataBean").
+		Window(LengthWindow(5)).
+		Filter(Or(
+			Or(Equal[string](symbol, Literal("DELL")), Equal[string](symbol, Literal("IBM"))),
+			Equal[string](symbol, Literal("GE")),
+		)).
+		GroupBy(symbol).
+		Select(
+			Alias("symbol", symbol),
+			Alias("volume", volume),
+			Alias("mySum", Sum[float64](price)),
+		).Query(StatementName("s0"), WithOutput(OutputAllEveryEvents(2))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		batches = append(batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	send := func(symbol string, volume int64, price float64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), resultsetGroupedTimeWindowMarket{Symbol: symbol, Volume: volume, Price: price}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send("IBM", 500, 20)
+	send("DELL", 10000, 51)
+	send("DELL", 20000, 52)
+	send("DELL", 40000, 45)
+	if len(batches) != 2 || len(batches[0].Old) != 0 || len(batches[1].Old) != 0 {
+		t.Fatalf("all-every-events batches = %#v", batches)
+	}
+	assertRow := func(batch ResultBatch, index int, symbol string, volume int64, mySum float64) {
+		t.Helper()
+		row, ok := batch.New[index].Row()
+		if !ok || row.Get("symbol").Any() != symbol || row.Get("volume").Any() != volume || row.Get("mySum").Any() != mySum {
+			t.Fatalf("all-every-events row %d = %#v", index, batch.New[index])
+		}
+	}
+	assertRow(batches[0], 0, "IBM", 500, 20)
+	assertRow(batches[0], 1, "DELL", 10000, 51)
+	assertRow(batches[1], 0, "DELL", 20000, 103)
+	assertRow(batches[1], 1, "DELL", 40000, 148)
+	assertRow(batches[1], 2, "IBM", 500, 20)
+}

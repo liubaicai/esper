@@ -2551,6 +2551,7 @@ const (
 	OutputLastEveryEventsPolicy
 	OutputLastEveryTimePolicy
 	OutputAllEveryTimePolicy
+	OutputAllEveryEventsPolicy
 )
 
 type OutputAfterKind uint8
@@ -2641,6 +2642,16 @@ func OutputLastEveryTime(interval time.Duration) OutputPolicy {
 // "output all every" policy.
 func OutputAllEveryTime(interval time.Duration) OutputPolicy {
 	return OutputPolicy{Kind: OutputAllEveryTimePolicy, Interval: interval}
+}
+
+// OutputAllEveryEvents emits the accumulated rows since the previous output
+// plus one representative row per group that had no new event in the current
+// interval, matching Esper's grouped "output all every N events" result-set
+// processor. Java's aggregate-grouped output-all delivers one row per new
+// event (with the group aggregate as of that event) and re-posts the last
+// output row of untouched groups at each boundary.
+func OutputAllEveryEvents(count int) OutputPolicy {
+	return OutputPolicy{Kind: OutputAllEveryEventsPolicy, Count: count}
 }
 
 func OutputLast() OutputPolicy { return OutputPolicy{Kind: OutputLastPolicy, Count: 1} }
@@ -3614,6 +3625,8 @@ func outputDescription(policy OutputPolicy) string {
 		base = fmt.Sprintf("last-every-time(%s)", policy.Interval)
 	case OutputAllEveryTimePolicy:
 		base = fmt.Sprintf("all-every-time(%s)", policy.Interval)
+	case OutputAllEveryEventsPolicy:
+		base = fmt.Sprintf("all-every-events(%d)", policy.Count)
 	case OutputLastPolicy:
 		base = "last"
 	case OutputSnapshotPolicy:

@@ -272,6 +272,9 @@ func TestOutputAfterTimeAndTimedEveryUseVirtualClock(t *testing.T) {
 	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(WithOutput(OutputEveryTime(0)))); err == nil {
 		t.Fatal("zero time output interval was accepted")
 	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(WithOutput(OutputAllEveryEvents(0)))); err == nil {
+		t.Fatal("zero all-every-events output count was accepted")
+	}
 }
 
 func TestOutputAfterCalendarUsesCalendarBoundaries(t *testing.T) {

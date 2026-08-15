@@ -4419,6 +4419,18 @@ func OutputAll() OutputPolicy {
 	return internalengine.OutputAll()
 }
 
+// OutputAllEveryEvents emits the accumulated rows since the previous output
+// plus one representative row per group that had no new event in the current
+// interval, matching Esper's grouped "output all every N events" result-set
+// processor. Java's aggregate-grouped output-all delivers one row per new
+// event (with the group aggregate as of that event) and re-posts the last
+// output row of untouched groups at each boundary.
+func OutputAllEveryEvents(count int) OutputPolicy {
+	return internalengine.OutputAllEveryEvents(count)
+}
+
+const OutputAllEveryEventsPolicy = internalengine.OutputAllEveryEventsPolicy
+
 // OutputAllEveryTime emits the complete current state with new/old rows at
 // each virtual-clock interval. It is the chainable Go form of Esper's
 // "output all every" policy.

@@ -5468,13 +5468,13 @@ func validateOutputPolicy(policy OutputPolicy) error {
 	if policy.Snapshot && policy.Cron != nil {
 		return NewError(ErrorInvalidRule, "snapshot-every output cannot be combined with a calendar schedule")
 	}
-	if (policy.Kind == OutputFirstPolicy || policy.Kind == OutputEveryPolicy || policy.Kind == OutputFirstEveryEventsPolicy || policy.Kind == OutputLastEveryEventsPolicy) && policy.Count <= 0 {
+	if (policy.Kind == OutputFirstPolicy || policy.Kind == OutputEveryPolicy || policy.Kind == OutputFirstEveryEventsPolicy || policy.Kind == OutputLastEveryEventsPolicy || policy.Kind == OutputAllEveryEventsPolicy) && policy.Count <= 0 {
 		return NewError(ErrorInvalidRule, "output count must be positive")
 	}
 	if (policy.Kind == OutputEveryTimePolicy || policy.Kind == OutputFirstEveryTimePolicy || policy.Kind == OutputLastEveryTimePolicy || policy.Kind == OutputAllEveryTimePolicy) && policy.Interval <= 0 {
 		return NewError(ErrorInvalidRule, "time-based output interval must be positive")
 	}
-	if policy.Kind > OutputAllEveryTimePolicy {
+	if policy.Kind > OutputAllEveryEventsPolicy {
 		return NewError(ErrorInvalidRule, "unknown output policy")
 	}
 	switch policy.Termination {

@@ -4941,6 +4941,9 @@ type outputRuntimeState struct {
 	lastEveryOutputRows    map[string]Result
 	allEveryOutputRows     map[string]Result
 	allEveryOutputOrder    []string
+	allEveryReps           map[string]Result
+	allEveryRepsOrder      []string
+	allEverySeen           map[string]struct{}
 	outputScheduleAnchored bool
 	pending                *ResultBatch
 	pendingCount           int
@@ -7479,6 +7482,8 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		return r.applyLastEveryTime(policy, batch, flush, now, plans...)
 	case OutputAllEveryTimePolicy:
 		return r.applyAllEveryTime(policy, batch, flush, now, plans...)
+	case OutputAllEveryEventsPolicy:
+		return r.applyAllEveryEvents(policy, batch, now, plans...)
 	case OutputLastPolicy, OutputSnapshotPolicy:
 		if !batch.empty() {
 			copyBatch := mergeLastOutputBatch(r.outputState.pending, batch)
@@ -7998,6 +8003,61 @@ func (r *statementRuntime) applyAllEveryTime(policy OutputPolicy, batch ResultBa
 	return r.finishOutput(policy, result, now, plans...)
 }
 
+// applyAllEveryEvents implements Esper's grouped "output all every N events"
+// result-set processor for aggregate-grouped queries. Each input event
+// contributes one accumulated row carrying the group aggregate as of that
+// event; at an output boundary groups with no new event in the interval are
+// re-emitted with their representative (last seen) row. Old rows are not
+// synthesized for insert-only intervals, matching ResultSetNoJoinAll.
+func (r *statementRuntime) applyAllEveryEvents(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
+	if r == nil || r.outputState == nil {
+		return ResultBatch{}
+	}
+	state := r.outputState
+	if state.allEveryReps == nil {
+		state.allEveryReps = make(map[string]Result)
+		state.allEverySeen = make(map[string]struct{})
+	}
+	if !batch.empty() {
+		if state.pending == nil {
+			state.pending = &ResultBatch{}
+		}
+		for index, result := range batch.New {
+			key := outputGroupKey(batch.outputKeysNew, index)
+			state.pending.New = append(state.pending.New, result)
+			state.pending.outputKeysNew = append(state.pending.outputKeysNew, key)
+			if _, exists := state.allEveryReps[key]; !exists {
+				state.allEveryRepsOrder = append(state.allEveryRepsOrder, key)
+			}
+			state.allEveryReps[key] = result
+			state.allEverySeen[key] = struct{}{}
+		}
+		state.pendingCount += len(batch.New) + len(batch.Old)
+	}
+	if state.pendingCount < policy.Count {
+		return ResultBatch{}
+	}
+	state.pendingCount = 0
+	var result ResultBatch
+	if state.pending != nil {
+		result = state.pending.clone()
+	}
+	for _, key := range state.allEveryRepsOrder {
+		if _, seen := state.allEverySeen[key]; seen {
+			continue
+		}
+		result.New = append(result.New, state.allEveryReps[key])
+		result.outputKeysNew = append(result.outputKeysNew, key)
+	}
+	state.pending = nil
+	state.allEverySeen = make(map[string]struct{})
+	if result.empty() {
+		return ResultBatch{}
+	}
+	result.Time = now
+	return r.finishOutput(policy, result, now, plans...)
+}
+
 func orderGroupedOutputRows(results []Result, keys []string, groupNames []string) ([]Result, []string) {
 	if len(keys) != len(results) {
 		keys = make([]string, len(results))
@@ -8310,7 +8370,7 @@ func outputPolicyIteratorUsesSourceOrder(policy OutputPolicy) bool {
 		return policy.Kind == OutputEveryPolicy || policy.Kind == OutputEveryTimePolicy
 	}
 	switch policy.Kind {
-	case OutputEveryPolicy, OutputEveryTimePolicy, OutputFirstEveryEventsPolicy, OutputFirstEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy, OutputAllEveryTimePolicy:
+	case OutputEveryPolicy, OutputEveryTimePolicy, OutputFirstEveryEventsPolicy, OutputFirstEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy, OutputAllEveryTimePolicy, OutputAllEveryEventsPolicy:
 		return true
 	default:
 		return false
@@ -16756,7 +16816,7 @@ func deferOutputResultWindow(policy OutputPolicy) bool {
 		return false
 	}
 	switch policy.Kind {
-	case OutputEveryPolicy, OutputEveryTimePolicy, OutputFirstEveryEventsPolicy, OutputFirstEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy, OutputAllEveryTimePolicy:
+	case OutputEveryPolicy, OutputEveryTimePolicy, OutputFirstEveryEventsPolicy, OutputFirstEveryTimePolicy, OutputLastEveryEventsPolicy, OutputLastEveryTimePolicy, OutputAllEveryTimePolicy, OutputAllEveryEventsPolicy:
 		return true
 	default:
 		return false
