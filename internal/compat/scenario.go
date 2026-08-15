@@ -115,6 +115,23 @@ type TraceRecord struct {
 	Partitions []PartitionRecord `json:"partitions,omitempty"`
 }
 
+// formatTraceTime matches Java's Instant.toString() representation used by
+// the oracle trace writers: RFC3339 with fractional seconds emitted in groups
+// of three digits and trailing zero groups omitted.
+func formatTraceTime(value time.Time) string {
+	value = value.UTC()
+	if value.Nanosecond() == 0 {
+		return value.Format(time.RFC3339)
+	}
+	if value.Nanosecond()%1000000 == 0 {
+		return value.Format("2006-01-02T15:04:05.000Z07:00")
+	}
+	if value.Nanosecond()%1000 == 0 {
+		return value.Format("2006-01-02T15:04:05.000000Z07:00")
+	}
+	return value.Format("2006-01-02T15:04:05.000000000Z07:00")
+}
+
 type PartitionRecord struct {
 	ID         int            `json:"id"`
 	Key        string         `json:"key"`
@@ -145,7 +162,7 @@ func Replay(ctx context.Context, engine *esper.Engine, statement *esper.Statemen
 	var listenerSequence uint64
 	_, err := statement.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
 		listenerSequence++
-		record := TraceRecord{Operation: "listener", Statement: statement.Name(), Sequence: listenerSequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
+		record := TraceRecord{Operation: "listener", Statement: statement.Name(), Sequence: listenerSequence, Time: formatTraceTime(batch.Time)}
 		record.New = normalizeResults(batch.New)
 		record.Old = normalizeResults(batch.Old)
 		mu.Lock()
@@ -203,7 +220,7 @@ func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *
 	caseName := ""
 	listenerSequences := make(map[string]uint64)
 	appendBatch := func(caseName, operation string, current *esper.Statement, batch esper.ResultBatch, selector esper.ContextPartitionSelector, sequence uint64) {
-		record := TraceRecord{Case: caseName, Operation: operation, Statement: current.Name(), Sequence: sequence, Time: batch.Time.UTC().Format(time.RFC3339Nano)}
+		record := TraceRecord{Case: caseName, Operation: operation, Statement: current.Name(), Sequence: sequence, Time: formatTraceTime(batch.Time)}
 		record.New = normalizeResults(batch.New)
 		record.Old = normalizeResults(batch.Old)
 		if operation == "snapshot" || operation == "snapshot-selector" {

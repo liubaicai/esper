@@ -27,7 +27,8 @@ import java.util.Map;
  * mirrors ResultSetOutputLastSorted{join=false}; case "first" mirrors
  * ResultSetOutputFirst{join=false}; case "first-sorted" mirrors
  * ResultSetOutputFirstSorted{join=false}; case "snapshot-order-limit"
- * mirrors ResultSetOutputSnapshotOrderWLimit.
+ * mirrors ResultSetOutputSnapshotOrderWLimit; case "snapshot" mirrors
+ * ResultSet6OutputLimitSnapshot{join=false}.
  */
 public final class RollupOutputLastScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -57,7 +58,7 @@ public final class RollupOutputLastScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit"};
+        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit", "snapshot"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -85,6 +86,13 @@ public final class RollupOutputLastScenarioOracle {
         beanType.put("intPrimitive", Integer.class);
         beanType.put("longBoxed", Long.class);
         configuration.getCommon().addEventType("SupportBean", beanType);
+        if ("snapshot".equals(caseName)) {
+            Map<String, Object> marketType = new HashMap<>();
+            marketType.put("symbol", String.class);
+            marketType.put("volume", Long.class);
+            marketType.put("price", Double.class);
+            configuration.getCommon().addEventType("SupportMarketDataBean", marketType);
+        }
 
         EPRuntime runtime = EPRuntimeProvider.getRuntime("parity-rollup-output-last-" + caseName, configuration);
         ((EPRuntimeSPI) runtime).initialize(0L);
@@ -105,6 +113,10 @@ public final class RollupOutputLastScenarioOracle {
             epl = "@Name('s0') select theString as c0, sum(intPrimitive) as c1 " +
                     "from SupportBean group by rollup(theString) " +
                     "output snapshot every 1 seconds order by sum(intPrimitive) limit 3";
+        } else if ("snapshot".equals(caseName)) {
+            epl = "@Name('s0') select symbol, sum(price) " +
+                    "from SupportMarketDataBean#time(5.5 sec) group by rollup(symbol) " +
+                    "output snapshot every 1 seconds";
         } else if (!"last".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }
@@ -158,7 +170,16 @@ public final class RollupOutputLastScenarioOracle {
     private static void send(EPRuntime runtime, JsonObject step) {
         String eventType = step.getString("eventType", "");
         if (!"SupportBean".equals(eventType)) {
-            throw new IllegalArgumentException("unsupported event type " + eventType);
+            if (!"SupportMarketDataBean".equals(eventType)) {
+                throw new IllegalArgumentException("unsupported event type " + eventType);
+            }
+            JsonObject payload = step.get("payload").asObject();
+            Map<String, Object> event = new HashMap<>();
+            event.put("symbol", payload.getString("symbol", null));
+            event.put("volume", payload.get("volume").asLong());
+            event.put("price", payload.get("price").asDouble());
+            runtime.getEventService().sendEventMap(event, "SupportMarketDataBean");
+            return;
         }
         JsonObject payload = step.get("payload").asObject();
         Map<String, Object> event = new HashMap<>();

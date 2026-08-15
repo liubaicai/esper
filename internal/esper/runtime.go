@@ -4932,28 +4932,29 @@ type patternMatch struct {
 }
 
 type outputRuntimeState struct {
-	firstEmitted        int
-	firstEverySeen      int
-	firstEveryWitnessed bool
-	firstEveryCounts    map[string]int
-	firstEveryNext      map[string]time.Time
-	lastEverySeen       int
-	lastEveryOutputRows map[string]Result
-	pending             *ResultBatch
-	pendingCount        int
-	whenPending         *ResultBatch
-	afterSeen           int
-	afterActive         bool
-	afterStarted        time.Time
-	nextOutputAt        time.Time
-	cronNext            time.Time
-	cronSchedule        resolvedCronSchedule
-	cronPending         *ResultBatch
-	insertCount         int64
-	removeCount         int64
-	insertTotal         int64
-	removeTotal         int64
-	lastOutputAt        time.Time
+	firstEmitted           int
+	firstEverySeen         int
+	firstEveryWitnessed    bool
+	firstEveryCounts       map[string]int
+	firstEveryNext         map[string]time.Time
+	lastEverySeen          int
+	lastEveryOutputRows    map[string]Result
+	outputScheduleAnchored bool
+	pending                *ResultBatch
+	pendingCount           int
+	whenPending            *ResultBatch
+	afterSeen              int
+	afterActive            bool
+	afterStarted           time.Time
+	nextOutputAt           time.Time
+	cronNext               time.Time
+	cronSchedule           resolvedCronSchedule
+	cronPending            *ResultBatch
+	insertCount            int64
+	removeCount            int64
+	insertTotal            int64
+	removeTotal            int64
+	lastOutputAt           time.Time
 	// lastOutputGroupRows retains the last emitted row per group for default
 	// count/time output policies (output every N/time). Esper's statement
 	// iterator for those policies reads the last output rather than live
@@ -6719,6 +6720,7 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 	r.variables = r.withContextVariables(r.variables)
 	r.variables = r.withContextProperties(r.variables)
 	variables = r.variables
+	r.anchorOutputSchedule(plan.query.output, now)
 	var batch ResultBatch
 	var err error
 	if plan.query.aggregate != nil {
@@ -7538,12 +7540,20 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		return r.finishOutput(policy, result, now, plans...)
 	case OutputEveryTimePolicy:
 		if policy.Snapshot {
+			if !batch.empty() && r.outputState.nextOutputAt.IsZero() {
+				r.outputState.nextOutputAt = now.Add(policy.Interval)
+			}
 			if !flush || r.outputState.nextOutputAt.IsZero() || now.Before(r.outputState.nextOutputAt) {
 				return ResultBatch{}
 			}
 			result := ResultBatch{}
 			if len(plans) > 0 {
 				result = r.snapshotBatch(plans[0], now)
+				if plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 {
+					groupNames := aggregateGroupFieldNames(plans[0].query.aggregate)
+					result.New, result.outputKeysNew = orderGroupedOutputRows(result.New, result.outputKeysNew, groupNames)
+					result.Old, result.outputKeysOld = orderGroupedOutputRows(result.Old, result.outputKeysOld, groupNames)
+				}
 			}
 			r.outputState.pending = nil
 			r.outputState.pendingCount = 0
@@ -7555,6 +7565,9 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			return r.finishOutput(policy, result, now, plans...)
 		}
 		if !batch.empty() {
+			if r.outputState.nextOutputAt.IsZero() {
+				r.outputState.nextOutputAt = now.Add(policy.Interval)
+			}
 			r.appendPending(batch)
 		}
 		if !flush || r.outputState.pending == nil || r.outputState.nextOutputAt.IsZero() || now.Before(r.outputState.nextOutputAt) {
@@ -8379,15 +8392,21 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 		// creation order; groups without retained events keep creation order.
 		firstIndex := make(map[string]int, len(entries))
 		groupingSets := aggregateGroupingSetsForDefinition(definition)
-		if len(groupingSets) == 1 {
+		for _, groupingSet := range groupingSets {
 			for index, event := range r.aggregateState.allEvents {
-				key := aggregateGroupKey(definition.groupBy, groupingSets[0], event, now, r.variables)
+				key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
 				if _, exists := firstIndex[key]; !exists {
 					firstIndex[key] = index
 				}
 			}
 		}
+		groupNames := aggregateGroupFieldNames(definition)
 		sort.SliceStable(entries, func(left, right int) bool {
+			leftLevel := groupedOutputLevel(entries[left].result, groupNames)
+			rightLevel := groupedOutputLevel(entries[right].result, groupNames)
+			if leftLevel != rightLevel {
+				return leftLevel > rightLevel
+			}
 			leftIndex, leftOK := firstIndex[entries[left].key]
 			rightIndex, rightOK := firstIndex[entries[right].key]
 			if !leftOK {
@@ -8861,6 +8880,17 @@ func (r *statementRuntime) scheduleOutput(policy OutputPolicy, at time.Time) {
 	if r.outputState.nextOutputAt.IsZero() {
 		r.outputState.nextOutputAt = at.Add(policy.Interval)
 	}
+}
+
+func (r *statementRuntime) anchorOutputSchedule(policy OutputPolicy, at time.Time) {
+	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy) || policy.Interval <= 0 {
+		return
+	}
+	if !r.outputState.afterActive || r.outputState.outputScheduleAnchored {
+		return
+	}
+	r.outputState.nextOutputAt = at.Add(policy.Interval)
+	r.outputState.outputScheduleAnchored = true
 }
 
 func (r *statementRuntime) scheduleCron(policy OutputPolicy, at time.Time) {
