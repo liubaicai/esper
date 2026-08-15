@@ -1,0 +1,46 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-default",
+  "steps": [
+    {
+      "op": "case",
+      "case": "default"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 500,
+        "price": 20
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 10000,
+        "price": 51
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 20000,
+        "price": 52
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 40000,
+        "price": 45
+      }
+    }
+  ]
+}
