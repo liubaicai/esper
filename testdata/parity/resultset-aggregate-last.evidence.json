@@ -1,0 +1,157 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-1debb0e930f955641300"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAggregateGrouped.java"
+  ],
+  "javaExecutions": [
+    "ResultSetNoJoinLast"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-last",
+    "steps": [
+      {
+        "op": "case",
+        "case": "last-aggregate"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 10000,
+          "price": 51
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 20000,
+          "price": 52
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 30000,
+          "price": 70
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 10000,
+          "price": 20
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-last",
+    "records": [
+      {
+        "case": "last-aggregate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 103,
+              "symbol": "DELL",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-aggregate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 173,
+              "symbol": "DELL",
+              "volume": 30000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 20,
+              "symbol": "IBM",
+              "volume": 10000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-last",
+    "records": [
+      {
+        "case": "last-aggregate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 103,
+              "symbol": "DELL",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-aggregate",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 173,
+              "symbol": "DELL",
+              "volume": 30000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 20,
+              "symbol": "IBM",
+              "volume": 10000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

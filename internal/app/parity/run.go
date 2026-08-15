@@ -24,7 +24,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, subquery, subquery-diff, named-window-mutation, named-window-mutation-diff, table-mutation, table-mutation-diff, variable-deploy, variable-deploy-diff, context-output, context-output-diff, deployment-restart, deployment-restart-diff, high-cardinality, high-cardinality-diff, time-window, time-window-diff, dataflow-connector, dataflow-connector-diff, output-after, output-after-diff, rollup, rollup-diff, rollup-output-every-sorted, rollup-output-every-sorted-diff, rollup-output-last, rollup-output-last-diff, rollup-output-last-sorted, rollup-output-last-sorted-diff, rollup-output-first, rollup-output-first-diff, rollup-output-first-sorted, rollup-output-first-sorted-diff, rollup-output-snapshot-order-limit, rollup-output-snapshot-order-limit-diff, rollup-output-snapshot, rollup-output-snapshot-diff, rollup-output-last-market, rollup-output-last-market-diff, rollup-output-first-market, rollup-output-first-market-diff, rollup-output-no-limit-market, rollup-output-no-limit-market-diff, rollup-output-default-market, rollup-output-default-market-diff, rollup-output-all, rollup-output-all-diff, rollup-output-all-sorted, rollup-output-all-sorted-diff, rollup-output-first-having, rollup-output-first-having-diff, resultset-aggregate-default, resultset-aggregate-default-diff, match-recognize, match-recognize-diff, unidirectional-join, unidirectional-join-diff, output-first-having, output-first-having-diff, context-keyed-subquery, context-keyed-subquery-diff, rowrecog-aggregation, rowrecog-aggregation-diff, resultset-grouped-time-window, resultset-grouped-time-window-diff, resultset-row-per-group-simple or resultset-row-per-group-simple-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, subquery, subquery-diff, named-window-mutation, named-window-mutation-diff, table-mutation, table-mutation-diff, variable-deploy, variable-deploy-diff, context-output, context-output-diff, deployment-restart, deployment-restart-diff, high-cardinality, high-cardinality-diff, time-window, time-window-diff, dataflow-connector, dataflow-connector-diff, output-after, output-after-diff, rollup, rollup-diff, rollup-output-every-sorted, rollup-output-every-sorted-diff, rollup-output-last, rollup-output-last-diff, rollup-output-last-sorted, rollup-output-last-sorted-diff, rollup-output-first, rollup-output-first-diff, rollup-output-first-sorted, rollup-output-first-sorted-diff, rollup-output-snapshot-order-limit, rollup-output-snapshot-order-limit-diff, rollup-output-snapshot, rollup-output-snapshot-diff, rollup-output-last-market, rollup-output-last-market-diff, rollup-output-first-market, rollup-output-first-market-diff, rollup-output-no-limit-market, rollup-output-no-limit-market-diff, rollup-output-default-market, rollup-output-default-market-diff, rollup-output-all, rollup-output-all-diff, rollup-output-all-sorted, rollup-output-all-sorted-diff, rollup-output-first-having, rollup-output-first-having-diff, resultset-aggregate-default, resultset-aggregate-default-diff, resultset-aggregate-last, resultset-aggregate-last-diff, match-recognize, match-recognize-diff, unidirectional-join, unidirectional-join-diff, output-first-having, output-first-having-diff, context-keyed-subquery, context-keyed-subquery-diff, rowrecog-aggregation, rowrecog-aggregation-diff, resultset-grouped-time-window, resultset-grouped-time-window-diff, resultset-row-per-group-simple or resultset-row-per-group-simple-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -535,6 +535,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetAggregateDefaultJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetAggregateDefaultJavaSources),
 				splitMetadata(*javaExecutions, resultsetAggregateDefaultJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-aggregate-last" || *mode == "resultset-aggregate-last-diff" {
+		trace, err := runResultSetAggregateLastScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-last-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetAggregateLastJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetAggregateLastJavaSources),
+				splitMetadata(*javaExecutions, resultsetAggregateLastJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
