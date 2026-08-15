@@ -7845,8 +7845,25 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 			keys[index] = strconv.Itoa(index)
 		}
 	}
-	groupNames := aggregateGroupFieldNames(plans[0].query.aggregate)
+	definition := plans[0].query.aggregate
+	groupNames := aggregateGroupFieldNames(definition)
 	current.New, keys = orderGroupedOutputRows(current.New, keys, groupNames)
+	tableSource := containsTableSource(plans[0].query.input, nil) || containsNamedWindow(plans[0].query.input, nil)
+	aggregateGroupedRowPerEvent := definition.join == nil && !tableSource && len(definition.groupBy) > 0 && len(aggregateGroupingSetsForDefinition(definition)) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
+	if aggregateGroupedRowPerEvent {
+		// Aggregate-grouped irstream output-last follows
+		// ResultSetProcessorAggregateGroupedImpl: the last row per group is
+		// posted as new and old rows come only from leaving events carried in
+		// the pending batches. Previous-output rows are not posted as old.
+		result := ResultBatch{Time: now, New: current.New, Old: current.Old, outputKeysNew: keys, outputKeysOld: current.outputKeysOld}
+		if len(result.outputKeysOld) != len(result.Old) {
+			result.outputKeysOld = nil
+		}
+		state.pending = nil
+		state.pendingCount = 0
+		r.advanceOutputSchedule(policy, now)
+		return r.finishOutput(policy, result, now, plans...)
+	}
 	old := make([]Result, 0, len(current.New))
 	oldKeys := make([]string, 0, len(current.New))
 	for index, key := range keys {
