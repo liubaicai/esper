@@ -1,0 +1,206 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-limit-snapshot",
+  "steps": [
+    {
+      "op": "case",
+      "case": "limit-snapshot"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "s0",
+        "volume": 1,
+        "price": 20
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00.500Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 2,
+        "price": 16
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "s0",
+        "volume": 3,
+        "price": 14
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01.500Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "MSFT",
+        "volume": 4,
+        "price": 18
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 5,
+        "price": 30
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:10Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:11Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:12Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:13Z"
+    },
+    {
+      "op": "case",
+      "case": "limit-snapshot-join"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ABC",
+        "intPrimitive": 1,
+        "longBoxed": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "IBM",
+        "intPrimitive": 2,
+        "longBoxed": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "MSFT",
+        "intPrimitive": 3,
+        "longBoxed": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "ABC",
+        "volume": 1,
+        "price": 20
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00.500Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 2,
+        "price": 16
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "ABC",
+        "volume": 3,
+        "price": 14
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:01.500Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "MSFT",
+        "volume": 4,
+        "price": 18
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "volume": 5,
+        "price": 30
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:10Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:10.500Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:11Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:11.500Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:12Z"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:13Z"
+    }
+  ]
+}

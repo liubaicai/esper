@@ -4965,6 +4965,10 @@ type outputRuntimeState struct {
 	insertTotal            int64
 	removeTotal            int64
 	lastOutputAt           time.Time
+	// snapshotBoundary carries the exact-boundary events (deadline equal to
+	// the current tick) captured before same-tick window expiry, so the next
+	// time-based snapshot can include them exactly as Esper does.
+	snapshotBoundary *aggregateSnapshotBoundary
 	// lastOutputGroupRows retains the last emitted row per group for default
 	// count/time output policies (output every N/time). Esper's statement
 	// iterator for those policies reads the last output rather than live
@@ -7374,6 +7378,25 @@ func (r *statementRuntime) expireBatch(plan Plan, now time.Time, variables map[s
 	r.variables = r.withContextVariables(r.variables)
 	r.variables = r.withContextProperties(r.variables)
 	variables = r.variables
+	// Esper evaluates a time-based snapshot output before the same-tick
+	// window expiry: an event whose deadline equals the snapshot tick is
+	// still visible in the snapshot (ResultSetLimitSnapshot at t=10s), while
+	// overdue (< now) events crossed by a clock jump stay excluded. Capture
+	// the exact-boundary aggregate events before expiry; snapshotAggregate
+	// consumes them when the snapshot fires, and the expiry below still runs
+	// so state and istream consumers see the removal.
+	policy := plan.query.output
+	if policy.Kind == OutputEveryTimePolicy && policy.Snapshot && r.outputState != nil &&
+		!r.outputState.nextOutputAt.IsZero() && !now.Before(r.outputState.nextOutputAt) &&
+		r.aggregateState != nil {
+		preExpiryAllEvents := append([]Event(nil), r.aggregateState.allEvents...)
+		if exact := r.exactBoundaryAggregateEvents(now); len(exact) > 0 {
+			r.outputState.snapshotBoundary = &aggregateSnapshotBoundary{
+				preExpiryAllEvents: preExpiryAllEvents,
+				exact:              exact,
+			}
+		}
+	}
 	var batch ResultBatch
 	if plan.query.aggregate != nil {
 		if plan.query.aggregate.join != nil {
@@ -8640,15 +8663,52 @@ func (r *statementRuntime) snapshotAggregateFromTable(plan Plan, now time.Time) 
 }
 
 func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time) ResultBatch {
+	if r.outputState != nil && r.outputState.snapshotBoundary != nil {
+		boundary := r.outputState.snapshotBoundary
+		r.outputState.snapshotBoundary = nil
+		return r.snapshotAggregateStateBatchInternal(plan, now, boundary)
+	}
+	return r.snapshotAggregateStateBatchInternal(plan, now, nil)
+}
+
+// aggregateSnapshotBoundary carries the events whose time-window deadline
+// equals the current snapshot tick. Esper evaluates a time-based snapshot
+// output before the same-tick exact-boundary expiry, so those events must
+// still be visible (and contribute to aggregates) in the snapshot, while
+// overdue (< now) events crossed by a clock jump stay excluded.
+type aggregateSnapshotBoundary struct {
+	preExpiryAllEvents []Event
+	exact              map[string]Event
+}
+
+func (r *statementRuntime) snapshotAggregateStateBatchInternal(plan Plan, now time.Time, boundary *aggregateSnapshotBoundary) ResultBatch {
 	result := ResultBatch{Time: now}
 	definition := plan.query.aggregate
 	if r == nil || definition == nil || r.aggregateState == nil {
 		return result
 	}
+	state := r.aggregateState
+	scopeEvents := state.allEvents
+	exactByKey := make(map[string][]Event)
+	if boundary != nil && len(boundary.exact) > 0 {
+		groupingSets := aggregateGroupingSetsForDefinition(definition)
+		if len(groupingSets) == 1 {
+			groupingSet := groupingSets[0]
+			for _, event := range boundary.exact {
+				key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
+				exactByKey[key] = append(exactByKey[key], event)
+			}
+		}
+		scopeEvents = append(append([]Event(nil), state.allEvents...), boundaryEventsInOrder(boundary, state.allEvents)...)
+	}
+	iterationEvents := state.allEvents
+	if boundary != nil && len(boundary.preExpiryAllEvents) > 0 {
+		iterationEvents = boundary.preExpiryAllEvents
+	}
 	// Java's grouped aggregate iterator preserves group creation order
 	// (LinkedHashMap). groupOrder tracks that order; groups created through
 	// paths that bypass markAffected fall back to a stable sorted order.
-	keys := append([]string(nil), r.aggregateState.groupOrder...)
+	keys := append([]string(nil), state.groupOrder...)
 	seenKeys := make(map[string]struct{}, len(keys))
 	deduped := keys[:0]
 	orderedLen := 0
@@ -8661,7 +8721,7 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 		orderedLen++
 	}
 	keys = deduped
-	for key := range r.aggregateState.groups {
+	for key := range state.groups {
 		if _, exists := seenKeys[key]; !exists {
 			keys = append(keys, key)
 		}
@@ -8674,25 +8734,48 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 			entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: "<all>"})
 		}
 	}
+	groupingSets := aggregateGroupingSetsForDefinition(definition)
 	if aggregateDefinitionSnapshotRowForEvent(definition) {
-		groupingSets := aggregateGroupingSetsForDefinition(definition)
 		if len(groupingSets) == 1 {
-			for _, current := range r.aggregateState.allEvents {
+			var exactSet map[string]struct{}
+			if boundary != nil {
+				exactSet = make(map[string]struct{}, len(boundary.exact))
+				for identity := range boundary.exact {
+					exactSet[identity] = struct{}{}
+				}
+			}
+			currentSet := make(map[string]struct{}, len(state.allEvents))
+			for _, current := range state.allEvents {
+				currentSet[eventIdentity(current)] = struct{}{}
+			}
+			for _, current := range iterationEvents {
+				identity := eventIdentity(current)
+				if boundary != nil {
+					if _, inCurrent := currentSet[identity]; !inCurrent {
+						if _, inExact := exactSet[identity]; !inExact {
+							continue
+						}
+					}
+				}
 				key := aggregateGroupKey(definition.groupBy, groupingSets[0], current, now, r.variables)
-				group := r.aggregateState.groups[key]
+				group := state.groups[key]
 				if group == nil {
 					continue
 				}
+				groupEvents := group.events
+				if extra := exactByKey[key]; len(extra) > 0 {
+					groupEvents = append(append([]Event(nil), group.events...), extra...)
+				}
 				values, visible := evaluateAggregateGroup(
 					definition,
-					group.events,
+					groupEvents,
 					group.everEvents,
 					nil,
 					false,
 					group.groupingSet,
 					current,
-					r.aggregateState.allEvents,
-					r.aggregateState.allEverEvents,
+					scopeEvents,
+					state.allEverEvents,
 					now,
 					r.variables,
 					group.pluginStates,
@@ -8705,20 +8788,31 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 		}
 	} else {
 		for _, key := range keys {
-			group := r.aggregateState.groups[key]
-			if group == nil || (len(group.events) == 0 && !aggregateDefinitionUsesEver(definition) && !aggregateDefinitionRetainsEmptyGroups(definition)) {
+			group := state.groups[key]
+			if group == nil {
+				continue
+			}
+			groupEvents := group.events
+			current := group.current
+			if extra := exactByKey[key]; len(extra) > 0 {
+				groupEvents = append(append([]Event(nil), group.events...), extra...)
+				if len(group.events) == 0 {
+					current = extra[len(extra)-1]
+				}
+			}
+			if len(groupEvents) == 0 && !aggregateDefinitionUsesEver(definition) && !aggregateDefinitionRetainsEmptyGroups(definition) {
 				continue
 			}
 			values, visible := evaluateAggregateGroup(
 				definition,
-				group.events,
+				groupEvents,
 				group.everEvents,
 				nil,
 				false,
 				group.groupingSet,
-				group.current,
-				r.aggregateState.allEvents,
-				r.aggregateState.allEverEvents,
+				current,
+				scopeEvents,
+				state.allEverEvents,
 				now,
 				r.variables,
 				group.pluginStates,
@@ -8733,9 +8827,8 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 		// retained event's position in the source window, not by group
 		// creation order; groups without retained events keep creation order.
 		firstIndex := make(map[string]int, len(entries))
-		groupingSets := aggregateGroupingSetsForDefinition(definition)
 		for _, groupingSet := range groupingSets {
-			for index, event := range r.aggregateState.allEvents {
+			for index, event := range iterationEvents {
 				key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
 				if _, exists := firstIndex[key]; !exists {
 					firstIndex[key] = index
@@ -8752,16 +8845,16 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 			leftIndex, leftOK := firstIndex[entries[left].key]
 			rightIndex, rightOK := firstIndex[entries[right].key]
 			if !leftOK {
-				leftIndex = len(r.aggregateState.allEvents)
+				leftIndex = len(iterationEvents)
 			}
 			if !rightOK {
-				rightIndex = len(r.aggregateState.allEvents)
+				rightIndex = len(iterationEvents)
 			}
 			return leftIndex < rightIndex
 		})
 	}
 	if len(plan.query.orderBy) > 0 {
-		orderAggregateResults(entries, plan.query.orderBy, definition, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, false)
+		orderAggregateResults(entries, plan.query.orderBy, definition, scopeEvents, state.allEverEvents, now, r.variables, false)
 	}
 	for _, entry := range entries {
 		result.New = append(result.New, entry.result)
@@ -8772,6 +8865,65 @@ func (r *statementRuntime) snapshotAggregateStateBatch(plan Plan, now time.Time)
 	}
 	result.New = applyResultWindow(result.New, plan.query)
 	return result
+}
+
+func boundaryEventsInOrder(boundary *aggregateSnapshotBoundary, current []Event) []Event {
+	currentSet := make(map[string]struct{}, len(current))
+	for _, event := range current {
+		currentSet[eventIdentity(event)] = struct{}{}
+	}
+	result := make([]Event, 0, len(boundary.exact))
+	for _, event := range boundary.preExpiryAllEvents {
+		if _, exists := currentSet[eventIdentity(event)]; exists {
+			continue
+		}
+		if _, exact := boundary.exact[eventIdentity(event)]; exact {
+			result = append(result, event)
+		}
+	}
+	return result
+}
+
+// exactBoundaryAggregateEvents returns the aggregate-scope events (raw stream
+// events or join tuples) whose time-window deadline equals the current tick.
+// It must run before the same-tick expiry removes them from state.
+func (r *statementRuntime) exactBoundaryAggregateEvents(now time.Time) map[string]Event {
+	exactRaw := make(map[string]struct{})
+	for node, state := range r.windows {
+		window, ok := node.window.(TimeWindowSpec)
+		if !ok {
+			continue
+		}
+		var resolved *time.Duration
+		if state.timeWindowExprResolved {
+			resolved = &state.resolvedTimeWindowDuration
+		}
+		for _, stored := range state.entries {
+			deadline := timeWindowEventDeadline(window, stored.event, stored.receivedAt, now, r.variables, resolved)
+			if deadline.Equal(now) {
+				exactRaw[eventIdentity(stored.event)] = struct{}{}
+			}
+		}
+	}
+	if r.aggregateState == nil || len(exactRaw) == 0 {
+		return nil
+	}
+	exact := make(map[string]Event)
+	for _, event := range r.aggregateState.allEvents {
+		if tuple, ok := event.Underlying().(joinTuple); ok {
+			for _, member := range tuple.events {
+				if _, isExact := exactRaw[eventIdentity(member)]; isExact {
+					exact[eventIdentity(event)] = event
+					break
+				}
+			}
+			continue
+		}
+		if _, isExact := exactRaw[eventIdentity(event)]; isExact {
+			exact[eventIdentity(event)] = event
+		}
+	}
+	return exact
 }
 
 func (r *statementRuntime) snapshotJoinBatch(plan Plan, now time.Time) ResultBatch {
@@ -16700,7 +16852,7 @@ func aggregateDefinitionReadsNonKeyEvent(definition *aggregateDefinition) bool {
 // one row per retained event carrying the group aggregate, while the listener
 // path still emits one row per group update.
 func aggregateDefinitionSnapshotRowForEvent(definition *aggregateDefinition) bool {
-	if definition == nil || definition.join != nil || definition.grouping != aggregateGroupingPlain {
+	if definition == nil || definition.grouping != aggregateGroupingPlain {
 		return false
 	}
 	return aggregateDefinitionReadsNonKeyEvent(definition)

@@ -1,0 +1,663 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-caa47dd0c613a0fc0ff4",
+    "java-runtime-ba55e3db86bd1b3007eb"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAggregateGrouped.java"
+  ],
+  "javaExecutions": [
+    "ResultSetLimitSnapshot",
+    "ResultSetLimitSnapshotJoin"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-limit-snapshot",
+    "steps": [
+      {
+        "op": "case",
+        "case": "limit-snapshot"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "s0",
+          "volume": 1,
+          "price": 20
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 2,
+          "price": 16
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "s0",
+          "volume": 3,
+          "price": 14
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "MSFT",
+          "volume": 4,
+          "price": 18
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 5,
+          "price": 30
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:11Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:12Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:13Z"
+      },
+      {
+        "op": "case",
+        "case": "limit-snapshot-join"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "ABC",
+          "intPrimitive": 1,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": 2,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "MSFT",
+          "intPrimitive": 3,
+          "longBoxed": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "ABC",
+          "volume": 1,
+          "price": 20
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 2,
+          "price": 16
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "ABC",
+          "volume": 3,
+          "price": 14
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "MSFT",
+          "volume": 4,
+          "price": 18
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 5,
+          "price": 30
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10.500Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:11Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:11.500Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:12Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:13Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-limit-snapshot",
+    "records": [
+      {
+        "case": "limit-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "s0",
+              "volume": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 16,
+              "symbol": "IBM",
+              "volume": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "s0",
+              "volume": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "limit-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "s0",
+              "volume": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 46,
+              "symbol": "IBM",
+              "volume": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "s0",
+              "volume": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 18,
+              "symbol": "MSFT",
+              "volume": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 46,
+              "symbol": "IBM",
+              "volume": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "limit-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 18,
+              "symbol": "MSFT",
+              "volume": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 30,
+              "symbol": "IBM",
+              "volume": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "limit-snapshot-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "ABC",
+              "volume": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "ABC",
+              "volume": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 16,
+              "symbol": "IBM",
+              "volume": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "limit-snapshot-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "ABC",
+              "volume": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "ABC",
+              "volume": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 46,
+              "symbol": "IBM",
+              "volume": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 46,
+              "symbol": "IBM",
+              "volume": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 18,
+              "symbol": "MSFT",
+              "volume": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "limit-snapshot-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 30,
+              "symbol": "IBM",
+              "volume": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 18,
+              "symbol": "MSFT",
+              "volume": 4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-limit-snapshot",
+    "records": [
+      {
+        "case": "limit-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "s0",
+              "volume": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 16,
+              "symbol": "IBM",
+              "volume": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "s0",
+              "volume": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "limit-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "s0",
+              "volume": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 46,
+              "symbol": "IBM",
+              "volume": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "s0",
+              "volume": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 18,
+              "symbol": "MSFT",
+              "volume": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 46,
+              "symbol": "IBM",
+              "volume": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "limit-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 18,
+              "symbol": "MSFT",
+              "volume": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 30,
+              "symbol": "IBM",
+              "volume": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "limit-snapshot-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "ABC",
+              "volume": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "ABC",
+              "volume": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 16,
+              "symbol": "IBM",
+              "volume": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "limit-snapshot-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "ABC",
+              "volume": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 34,
+              "symbol": "ABC",
+              "volume": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 46,
+              "symbol": "IBM",
+              "volume": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 46,
+              "symbol": "IBM",
+              "volume": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 18,
+              "symbol": "MSFT",
+              "volume": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "limit-snapshot-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 30,
+              "symbol": "IBM",
+              "volume": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumprice": 18,
+              "symbol": "MSFT",
+              "volume": 4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
