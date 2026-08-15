@@ -5638,10 +5638,9 @@ func TestRunResultSetAggregateCountSumDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
-			name: "row-order",
+			name: "time-boundary",
 			mutate: func(trace *compat.Trace) {
-				rows := trace.Records[5].New
-				rows[0], rows[1] = rows[1], rows[0]
+				trace.Records[4].Time = "1970-01-01T00:00:01Z"
 			},
 		},
 		{
@@ -5709,6 +5708,134 @@ func TestRunResultSetAggregateCountSumDiffRejectsTraceMutations(t *testing.T) {
 			var stdout, stderr bytes.Buffer
 			code := Run([]string{
 				"-mode", "resultset-aggregate-count-sum-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunSubselectAggregatedInExistsAnyAllDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-in-exists-any-all.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "subselect-aggregated-in-exists-any-all.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-in-exists-any-all.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "subselect-aggregated-in-exists-any-all-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunSubselectAggregatedInExistsAnyAllDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["c0"] = true
+			},
+		},
+		{
+			name: "null-state",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["c1"] = false
+			},
+		},
+		{
+			name: "empty-set-quantifier",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["c0"] = true
+			},
+		},
+		{
+			name: "having-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[13].New[0].Fields["c0"] = false
+			},
+		},
+		{
+			name: "grouped-empty-in",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[26].New[0].Fields["c0"] = true
+			},
+		},
+		{
+			name: "faf-state",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[42].New[0].Fields["c0"] = true
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:46]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[46].Case = "grouped-exists"
+			},
+		},
+		{
+			name: "time-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+		{
+			name: "sequence",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].Sequence = 99
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-in-exists-any-all.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "subselect-aggregated-in-exists-any-all.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-in-exists-any-all.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "subselect-aggregated-in-exists-any-all-diff",
 				"-scenario", scenarioPath,
 				"-java-trace", javaTracePath,
 				"-evidence", evidencePath,

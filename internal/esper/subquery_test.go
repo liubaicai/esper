@@ -912,3 +912,108 @@ func TestSubqueryRowsAndGroupedRows(t *testing.T) {
 		t.Fatal("grouped subquery non-key scalar column must be rejected")
 	}
 }
+
+// TestSubqueryGroupedInAnyAllFollowsEmptySetAndHavingSemantics covers the
+// SubqueryGroupKey option family on IN/ANY/ALL/SOME subqueries: an empty
+// group set yields SQL empty-set results (IN/ANY/SOME false, ALL true), a
+// group-by aggregate produces one candidate per group, and a SubqueryHaving
+// filters groups before quantification. Mirrors the
+// EPLSubselectAggregatedInExistsAnyAll trajectories exercised by the
+// subselect-aggregated-in-exists-any-all differential scenario.
+func TestSubqueryGroupedInAnyAllFollowsEmptySetAndHavingSemantics(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "GroupedSubselectTrade"); err != nil {
+		t.Fatal(err)
+	}
+	triggerSchema, err := RegisterMap(env, "GroupedSubselectTrigger", []FieldSpec{
+		OptionalFieldDef("value", reflect.TypeOf(int(0))),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = triggerSchema
+	inner := From[runtimeTestTrade](env, "GroupedSubselectTrade").Window(KeepAll()).AsRecord()
+	theString := Field[any, string]("symbol")
+	sum := Sum[int](Field[any, int]("price"))
+	value := Field[any, int]("value")
+	grouped := SubqueryGroupKey(theString)
+	query := Select(
+		From[map[string]any](env, "GroupedSubselectTrigger"),
+		Alias("in", SubqueryInWithOptions[int](value, inner, sum, grouped)),
+		Alias("any", SubqueryAnyWithOptions[int](value, inner, sum, SubqueryLess, grouped)),
+		Alias("all", SubqueryAllWithOptions[int](value, inner, sum, SubqueryLess, grouped)),
+		Alias("in_having", SubqueryInWithOptions[int](value, inner, sum, grouped,
+			SubqueryHaving(NotEqual[string](Last[string](theString), Literal("B"))))),
+	).Query(StatementName("grouped-in-any-all"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := make([]Row, 0, 6)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				return fmt.Errorf("grouped subquery result is not a row: %#v", result)
+			}
+			rows = append(rows, row)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	send := func(value int) {
+		if err := engine.Send(context.Background(), "GroupedSubselectTrigger", map[string]any{"value": value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendTrade := func(symbol string, price int) {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol, Price: float64(price)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Empty group set: IN/ANY false, ALL true; having leaves it empty too.
+	send(10)
+	// Groups {A:5}: 10 < 5 false for every quantifier; in_having keeps A.
+	sendTrade("A", 5)
+	send(10)
+	// Groups {A:5, B:12}: 10 < 12 true -> ANY true, ALL false (10 < 5);
+	// in_having drops group B (last(theString) == "B") and keeps A: no match.
+	sendTrade("B", 12)
+	send(10)
+	// Group A grows to sum 8: 10 < 8 false; in_having keeps A only.
+	sendTrade("A", 3)
+	send(10)
+	// Groups {A:8, B:12}: 10 < all false; 10 < any true.
+	if len(rows) != 4 {
+		t.Fatalf("grouped subquery rows = %#v", rows)
+	}
+	first := rows[0]
+	if first.Get("in").Any() != false || first.Get("any").Any() != false || first.Get("all").Any() != true || first.Get("in_having").Any() != false {
+		t.Fatalf("empty grouped subquery = %#v", first.AsMap())
+	}
+	second := rows[1]
+	if second.Get("in").Any() != false || second.Get("any").Any() != false || second.Get("all").Any() != false || second.Get("in_having").Any() != false {
+		t.Fatalf("single group subquery = %#v", second.AsMap())
+	}
+	third := rows[2]
+	if third.Get("in").Any() != false || third.Get("any").Any() != true || third.Get("all").Any() != false || third.Get("in_having").Any() != false {
+		t.Fatalf("two group subquery = %#v", third.AsMap())
+	}
+	fourth := rows[3]
+	if fourth.Get("in").Any() != false || fourth.Get("any").Any() != true || fourth.Get("all").Any() != false || fourth.Get("in_having").Any() != false {
+		t.Fatalf("grown group subquery = %#v", fourth.AsMap())
+	}
+	// An IN hit: value 12 matches group B's sum 12; in_having drops group B
+	// (last(theString) == "B") so the having variant stays false.
+	send(12)
+	last := rows[len(rows)-1]
+	if last.Get("in").Any() != true || last.Get("in_having").Any() != false {
+		t.Fatalf("grouped in hit = %#v", last.AsMap())
+	}
+}

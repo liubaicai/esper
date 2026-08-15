@@ -512,6 +512,26 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/resultset-aggregate-count-sum.json`、`testdata/parity/resultset-aggregate-count-sum.evidence.json`；当前差异数为 0，覆盖 `ResultSetAggregateCountOneView`、`ResultSetAggregateCountJoin`、`ResultSetAggregateCountSimple` 与 `ResultSetAggregateSumNamedWindowRemoveGroup`。
 
+## Subselect-aggregated-in-exists-any-all oracle
+
+第二十五个代表性场景使用 `EPLSubselectAggregatedInExistsAnyAllScenarioOracle.java`（runner：`run-subselect-aggregated-in-exists-any-all.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)`、`SupportValueEvent(value)` 与 `SupportIdAndValueEvent(id, value)`，双跑 `EPLSubselectAggregatedInExistsAnyAll` 的全部 13 个 execution：SupportValueEvent 触发投影 IN/NOT IN、EXISTS/NOT EXISTS 与 ALL/ANY/SOME 量词，对照 SupportBean#keepall 上的聚合子查询（无分组、按 theString 分组、带 `last(theString)/first(theString)` having 过滤），并覆盖 named window + `delete from MyWindow` fire-and-forget 后 EXISTS 复位。Java 语义要点：无分组聚合子查询空输入仍产出 null 聚合行（`10 in (null)` 为 null、EXISTS 为 true），分组空集遵循 SQL 规则（IN/ANY/SOME false、ALL true、EXISTS false），having 过滤掉唯一聚合行时 IN 为 null。Go 以 `SubqueryIn/SubqueryAny/SubqueryAll/SubquerySome/SubqueryExistsValue` + 新增 `SubqueryGroupKey` option + `SubqueryHaving` 复现同一语义；场景回放协议新增 `faf` step（`ReplayWithStatementsAndFaf`）。
+
+```sh
+./tools/java-oracle/run-subselect-aggregated-in-exists-any-all.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/subselect-aggregated-in-exists-any-all.json \
+  --output /tmp/subselect-aggregated-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode subselect-aggregated-in-exists-any-all-diff \
+  -scenario testdata/parity/subselect-aggregated-in-exists-any-all.json \
+  -java-trace /tmp/subselect-aggregated-java.json \
+  -evidence /tmp/subselect-aggregated.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/subselect-aggregated-in-exists-any-all.json`、`testdata/parity/subselect-aggregated-in-exists-any-all.evidence.json`；当前差异数为 0，覆盖 `EPLSubselectAggregatedInExistsAnyAll` 的 13 个 execution。
+
 ## Java regression baseline
 
 Java 基线记录在 `testdata/compat/java-regression-baseline.json`。该基线不是 Go parity 证据。需要 MySQL 的 Java fixture、Docker 命令和 ready 检查见 [外部服务集成](../../docs/integration/external-services.md)；Java regression-run 的完整构建仍需在有对应 Maven/JDK 和外部服务的环境执行。

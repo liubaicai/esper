@@ -1025,6 +1025,7 @@ type SubqueryOrderKey struct {
 type SubqueryConfig struct {
 	Predicate           Expression[bool]
 	Having              Expression[bool]
+	GroupBy             Expr
 	Cardinality         SubqueryCardinality
 	OrderBy             []SubqueryOrderKey
 	Offset              int
@@ -1065,6 +1066,16 @@ func SubqueryWhere(predicate Expression[bool]) SubqueryOption {
 // OuterField, matching Esper's correlated having clause.
 func SubqueryHaving(predicate Expression[bool]) SubqueryOption {
 	return func(config *SubqueryConfig) { config.Having = predicate }
+}
+
+// SubqueryGroupKey turns an IN/ANY/ALL/SOME/EXISTS/value subquery into the
+// grouped form `select <projection> from <source> group by <key>`: the
+// projection is evaluated once per group (aggregate projections produce one
+// value per group) and a SubqueryHaving option then filters groups. An empty
+// group set follows SQL empty-set semantics: IN/ANY/SOME are false, ALL is
+// true and EXISTS is false, matching Esper's grouped subselects.
+func SubqueryGroupKey(expression Expr) SubqueryOption {
+	return func(config *SubqueryConfig) { config.GroupBy = expression }
 }
 
 func SubqueryOrderBy(expression Expr, descending bool) SubqueryOption {
@@ -1151,7 +1162,7 @@ func SubqueryExistsWithOptions(source RecordStream, predicate Expression[bool], 
 func SubqueryExistsValue[T any](source RecordStream, projection Expression[T], options ...SubqueryOption) Expression[bool] {
 	definition := subqueryWithProjectionOptions(source, projection, options...)
 	return makeSubqueryExpr[bool]("subquery-exists-value", "exists("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
-		return Present(len(evaluateSubqueryValues(definition, ctx)) > 0)
+		return Present(len(unwrapSubqueryGroupValues(evaluateSubqueryValues(definition, ctx))) > 0)
 	})
 }
 
@@ -1183,6 +1194,8 @@ func SubqueryValueWithOptions[T any](source RecordStream, projection Expression[
 		having:              config.Having,
 		projection:          projection,
 		aggregateProjection: isAggregateExpression(projection),
+		groupBy:             config.GroupBy,
+		grouped:             config.GroupBy != nil,
 		cardinality:         config.Cardinality,
 		orderBy:             append([]SubqueryOrderKey(nil), config.OrderBy...),
 		offset:              config.Offset,
@@ -1193,7 +1206,7 @@ func SubqueryValueWithOptions[T any](source RecordStream, projection Expression[
 		disableIndexSharing: config.DisableIndexSharing,
 	}
 	return makeSubqueryExpr[T]("subquery-value", "value("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
-		values := evaluateSubqueryValues(definition, ctx)
+		values := unwrapSubqueryGroupValues(evaluateSubqueryValues(definition, ctx))
 		if len(values) == 0 {
 			return Null()
 		}
@@ -1560,11 +1573,11 @@ func SubqueryIn[T comparable](value Expression[T], source RecordStream, projecti
 func SubqueryInWithOptions[T comparable](value Expression[T], source RecordStream, projection Expression[T], options ...SubqueryOption) Expression[bool] {
 	definition := subqueryWithProjectionOptions(source, projection, options...)
 	return makeSubqueryExprWithChildren[bool]("subquery-in", "("+value.Description()+" in "+subqueryDescription(definition)+")", definition, []*exprNode{value.node()}, func(ctx EvalContext) Value {
-		values := evaluateSubqueryValues(definition, ctx)
+		values := unwrapSubqueryGroupValues(evaluateSubqueryValues(definition, ctx))
 		// Esper follows the SQL empty-set rule for IN: there is no matching
 		// candidate, even when the outer value itself is null.
 		if len(values) == 0 {
-			if definition.aggregateProjection {
+			if definition.aggregateProjection && !definition.grouped {
 				// An aggregate subquery with a HAVING clause can produce no
 				// aggregate result row. Esper exposes that missing aggregate row
 				// as Null rather than as a scalar empty collection.
@@ -1668,7 +1681,8 @@ func SubqueryAnyWithOptions[T any](value Expression[T], source RecordStream, pro
 	definition.comparison = comparison
 	description := fmt.Sprintf("%s %s any (%s)", value.Description(), comparison.symbol(), subqueryDescription(definition))
 	return makeSubqueryExprWithChildren[bool]("subquery-any", description, definition, []*exprNode{value.node()}, func(ctx EvalContext) Value {
-		return evaluateQuantifiedSubquery(value.eval(ctx), evaluateSubqueryValues(definition, ctx), comparison, false, definition.aggregateProjection)
+		values := unwrapSubqueryGroupValues(evaluateSubqueryValues(definition, ctx))
+		return evaluateQuantifiedSubquery(value.eval(ctx), values, comparison, false, definition.aggregateProjection && !definition.grouped)
 	})
 }
 
@@ -1699,7 +1713,8 @@ func SubqueryAllWithOptions[T any](value Expression[T], source RecordStream, pro
 	definition.comparison = comparison
 	description := fmt.Sprintf("%s %s all (%s)", value.Description(), comparison.symbol(), subqueryDescription(definition))
 	return makeSubqueryExprWithChildren[bool]("subquery-all", description, definition, []*exprNode{value.node()}, func(ctx EvalContext) Value {
-		return evaluateQuantifiedSubquery(value.eval(ctx), evaluateSubqueryValues(definition, ctx), comparison, true, definition.aggregateProjection)
+		values := unwrapSubqueryGroupValues(evaluateSubqueryValues(definition, ctx))
+		return evaluateQuantifiedSubquery(value.eval(ctx), values, comparison, true, definition.aggregateProjection && !definition.grouped)
 	})
 }
 
@@ -1724,6 +1739,8 @@ func subqueryWithProjectionOptions(source RecordStream, projection Expr, options
 		having:              config.Having,
 		projection:          projection,
 		aggregateProjection: isAggregateExpression(projection),
+		groupBy:             config.GroupBy,
+		grouped:             config.GroupBy != nil,
 		cardinality:         config.Cardinality,
 		orderBy:             append([]SubqueryOrderKey(nil), config.OrderBy...),
 		offset:              config.Offset,
@@ -2165,6 +2182,23 @@ func subqueryEnclosingEvent(outer EvalContext) Event {
 		return outer.Event
 	}
 	return outer.OuterEvent
+}
+
+// unwrapSubqueryGroupValues collapses grouped subquery result wrappers to
+// the projected group value so quantified, IN, EXISTS and scalar subquery
+// consumers observe the same raw values as ungrouped aggregate subselects.
+// The grouped row-shape consumers (SubqueryGroupBy, SubqueryGroupScalar,
+// SubqueryGroupRows) keep the wrapper because they need the group key.
+func unwrapSubqueryGroupValues(values []Value) []Value {
+	unwrapped := make([]Value, 0, len(values))
+	for _, value := range values {
+		if group, ok := value.Any().(subqueryGroupValue); ok {
+			unwrapped = append(unwrapped, group.value)
+			continue
+		}
+		unwrapped = append(unwrapped, value)
+	}
+	return unwrapped
 }
 
 func evaluateSubqueryGroups(definition *subqueryDefinition, candidates []subqueryCandidate, outer EvalContext, engine *Engine, now time.Time) []Value {

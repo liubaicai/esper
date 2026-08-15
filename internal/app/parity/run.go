@@ -893,6 +893,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "subselect-aggregated-in-exists-any-all" || *mode == "subselect-aggregated-in-exists-any-all-diff" {
+		trace, err := runSubselectAggregatedInExistsAnyAllScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "subselect-aggregated-in-exists-any-all-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, subselectAggregatedJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, subselectAggregatedJavaSources),
+				splitMetadata(*javaExecutions, subselectAggregatedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-aggregate-count-sum" || *mode == "resultset-aggregate-count-sum-diff" {
 		trace, err := runResultSetAggregateCountSumScenario(context.Background(), scenario)
 		if err != nil {

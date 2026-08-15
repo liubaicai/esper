@@ -1,0 +1,2406 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-65400a42c947bd3ae69e",
+    "java-runtime-e174f8d39b7f89f46452",
+    "java-runtime-ce0cf46523cc5d57751c",
+    "java-runtime-8baf27223e966f5f35f5",
+    "java-runtime-4af2c34842f5722967c8",
+    "java-runtime-66a9022463735d95a070",
+    "java-runtime-39015db22ebf36db9755",
+    "java-runtime-ef3c5cb21a4dfa2d47da",
+    "java-runtime-c447732f0b3c94049f43",
+    "java-runtime-0fdce6e02cf49d65c418",
+    "java-runtime-86696aa18175de593720",
+    "java-runtime-f9bfad593078d0461b08",
+    "java-runtime-111a24e93847238a7e3c"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedInExistsAnyAll.java"
+  ],
+  "javaExecutions": [
+    "EPLSubselectUngroupedWOHavingWIn",
+    "EPLSubselectUngroupedWOHavingWRelOpAllAnySome",
+    "EPLSubselectUngroupedWOHavingWExists",
+    "EPLSubselectUngroupedWHavingWExists",
+    "EPLSubselectUngroupedWHavingWIn",
+    "EPLSubselectUngroupedWHavingWRelOpAllAnySome",
+    "EPLSubselectUngroupedWHavingWEqualsAllAnySome",
+    "EPLSubselectGroupedWOHavingWIn",
+    "EPLSubselectGroupedWOHavingWEqualsAllAnySome",
+    "EPLSubselectGroupedWHavingWIn",
+    "EPLSubselectGroupedWHavingWEqualsAllAnySome",
+    "EPLSubselectGroupedWOHavingWExists",
+    "EPLSubselectGroupedWHavingWExists"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "subselect-aggregated-in-exists-any-all",
+    "steps": [
+      {
+        "op": "case",
+        "case": "ungrouped-in"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "ungrouped-any-all"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -1000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "ungrouped-exists"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "case",
+        "case": "ungrouped-having-exists"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "case",
+        "case": "ungrouped-having-in"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "ungrouped-having-any-all"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 19
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": -1000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "ungrouped-having-equals"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "grouped-in"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 19
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 11
+        }
+      },
+      {
+        "op": "case",
+        "case": "grouped-equals"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "grouped-having-in"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "grouped-having-equals"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "grouped-exists"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportIdAndValueEvent",
+        "payload": {
+          "id": "E1",
+          "value": 19
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "MyWindow"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "case",
+        "case": "grouped-having-exists"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportIdAndValueEvent",
+        "payload": {
+          "id": "E1",
+          "value": 19
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportIdAndValueEvent",
+        "payload": {
+          "id": "E2",
+          "value": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "MyWindow"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportValueEvent",
+        "payload": {
+          "value": -1
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "subselect-aggregated-in-exists-any-all",
+    "records": [
+      {
+        "case": "ungrouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "subselect-aggregated-in-exists-any-all",
+    "records": [
+      {
+        "case": "ungrouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-any-all",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-in",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-equals",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-having-exists",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

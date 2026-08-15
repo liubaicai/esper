@@ -6197,6 +6197,16 @@ func SubqueryGroupHaving(predicate Expression[bool]) SubqueryGroupOption {
 	return internalengine.SubqueryGroupHaving(predicate)
 }
 
+// SubqueryGroupKey turns an IN/ANY/ALL/SOME/EXISTS/value subquery into the
+// grouped form `select <projection> from <source> group by <key>`: the
+// projection is evaluated once per group (aggregate projections produce one
+// value per group) and a SubqueryHaving option then filters groups. An empty
+// group set follows SQL empty-set semantics: IN/ANY/SOME are false, ALL is
+// true and EXISTS is false, matching Esper's grouped subselects.
+func SubqueryGroupKey(expression Expr) SubqueryOption {
+	return internalengine.SubqueryGroupKey(expression)
+}
+
 type SubqueryGroupOption = internalengine.SubqueryGroupOption
 
 // SubqueryGroupRows returns one multi-column map row per accepted group. The

@@ -73,6 +73,10 @@ func (s Scenario) Validate() error {
 			if _, err := time.Parse(time.RFC3339Nano, step.At); err != nil {
 				return fmt.Errorf("compat: step %d invalid time %q: %w", i, step.At, err)
 			}
+		case "faf":
+			if strings.TrimSpace(step.Statement) == "" {
+				return fmt.Errorf("compat: step %d faf has no statement", i)
+			}
 		case "snapshot", "snapshot-selector":
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
@@ -209,7 +213,21 @@ func Replay(ctx context.Context, engine *esper.Engine, statement *esper.Statemen
 // Java/Go traces share one normalized record stream.
 type StatementResolver func(name string) (*esper.Statement, error)
 
+// FafHandler executes a fire-and-forget step such as a FAF named-window
+// delete that is part of the language-neutral scenario. Java oracles run the
+// equivalent FireAndForgetService query so both traces observe the same
+// mutation.
+type FafHandler func(step Step) error
+
 func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *esper.Statement, scenario Scenario, decode DecodePayload, resolve StatementResolver, additional ...*esper.Statement) (Trace, error) {
+	return ReplayWithStatementsAndFaf(ctx, engine, statement, scenario, decode, resolve, nil, additional...)
+}
+
+// ReplayWithStatementsAndFaf is ReplayWithStatements plus fire-and-forget
+// step handling: a step with op "faf" is delegated to faf (which must be
+// non-nil), allowing Java/Go traces to include FAF mutations such as
+// delete-all from a named window.
+func ReplayWithStatementsAndFaf(ctx context.Context, engine *esper.Engine, statement *esper.Statement, scenario Scenario, decode DecodePayload, resolve StatementResolver, faf FafHandler, additional ...*esper.Statement) (Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return Trace{}, err
 	}
@@ -281,6 +299,13 @@ func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *
 		case "advance-time":
 			at, _ := time.Parse(time.RFC3339Nano, step.At)
 			if err := engine.AdvanceTime(ctx, at); err != nil {
+				return trace, err
+			}
+		case "faf":
+			if faf == nil {
+				return trace, fmt.Errorf("compat: no fire-and-forget handler for step %q", step.Statement)
+			}
+			if err := faf(step); err != nil {
 				return trace, err
 			}
 		case "snapshot", "snapshot-selector":
