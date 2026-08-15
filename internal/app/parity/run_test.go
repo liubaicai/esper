@@ -4751,10 +4751,10 @@ func TestRunResultSetAggregateJoinDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
-			name: "expiry-old-value",
+			name: "pure-expiry-new-value",
 			mutate: func(trace *compat.Trace) {
 				last := trace.Records[len(trace.Records)-1]
-				last.Old[0].Fields["sum(price)"] = float64(99)
+				last.New[0].Fields["sum(price)"] = float64(99)
 			},
 		},
 	}

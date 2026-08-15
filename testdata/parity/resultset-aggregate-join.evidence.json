@@ -5,7 +5,10 @@
     "java-runtime-00013efc7c322d04c3b3",
     "java-runtime-ecfb75f6916643de1c5f",
     "java-runtime-80532da2ea5ec539be06",
-    "java-runtime-d2978828701be89efbdb"
+    "java-runtime-d2978828701be89efbdb",
+    "java-runtime-b3cb0ef477369111027c",
+    "java-runtime-e0866a0c063a6db46942",
+    "java-runtime-9a902334e2f0f270f8f5"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAggregateGrouped.java"
@@ -14,7 +17,10 @@
     "ResultSet2NoneNoHavingJoin",
     "ResultSet4NoneHavingJoin",
     "ResultSet6DefaultNoHavingJoin",
-    "ResultSet8DefaultHavingJoin"
+    "ResultSet8DefaultHavingJoin",
+    "ResultSet14LastNoHavingJoin",
+    "ResultSet16LastHavingJoin",
+    "ResultSet17FirstNoHavingJoin"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -867,6 +873,642 @@
       {
         "op": "advance-time",
         "at": "1970-01-01T00:00:07.200Z"
+      },
+      {
+        "op": "case",
+        "case": "last-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": 0,
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "MSFT",
+          "intPrimitive": 0,
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "YAH",
+          "intPrimitive": 0,
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.200Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 100,
+          "price": 25
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.800Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "MSFT",
+          "volume": 5000,
+          "price": 9
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 150,
+          "price": 24
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 10000,
+          "price": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.100Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 155,
+          "price": 26
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.500Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 11000,
+          "price": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.300Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 150,
+          "price": 22
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.900Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 11500,
+          "price": 3
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.700Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.900Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 10500,
+          "price": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06.300Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:07Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:07.200Z"
+      },
+      {
+        "op": "case",
+        "case": "last-having-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": 0,
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "MSFT",
+          "intPrimitive": 0,
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "YAH",
+          "intPrimitive": 0,
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.200Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 100,
+          "price": 25
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.800Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "MSFT",
+          "volume": 5000,
+          "price": 9
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 150,
+          "price": 24
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 10000,
+          "price": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.100Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 155,
+          "price": 26
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.500Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 11000,
+          "price": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.300Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 150,
+          "price": 22
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.900Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 11500,
+          "price": 3
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.700Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.900Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 10500,
+          "price": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06.300Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:07Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:07.200Z"
+      },
+      {
+        "op": "case",
+        "case": "first-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": 0,
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "MSFT",
+          "intPrimitive": 0,
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "YAH",
+          "intPrimitive": 0,
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.200Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 100,
+          "price": 25
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.800Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "MSFT",
+          "volume": 5000,
+          "price": 9
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 150,
+          "price": 24
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 10000,
+          "price": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.100Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 155,
+          "price": 26
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.500Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 11000,
+          "price": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.300Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 150,
+          "price": 22
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.900Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 11500,
+          "price": 3
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.700Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.900Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "YAH",
+          "volume": 10500,
+          "price": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06.200Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06.300Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:07Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:07.200Z"
       }
     ]
   },
@@ -1351,6 +1993,408 @@
             }
           }
         ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 25,
+              "symbol": "IBM",
+              "volume": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 9,
+              "symbol": "MSFT",
+              "volume": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 75,
+              "symbol": "IBM",
+              "volume": 155
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "YAH",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:04.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "YAH",
+              "volume": 11000
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:05.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 97,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH",
+              "volume": 11500
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:06.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "YAH",
+              "volume": 10500
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 72,
+              "symbol": "IBM",
+              "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:07.200Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 48,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "MSFT",
+              "volume": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 75,
+              "symbol": "IBM",
+              "volume": 155
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 97,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:06.200Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 72,
+              "symbol": "IBM",
+              "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 25,
+              "symbol": "IBM",
+              "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00.800Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 9,
+              "symbol": "MSFT",
+              "volume": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 49,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "YAH",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:03.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "YAH",
+              "volume": 11000
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:04.300Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 97,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:04.900Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH",
+              "volume": 11500
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:05.700Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 72,
+              "symbol": "IBM",
+              "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:05.900Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "YAH",
+              "volume": 10500
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:06.300Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "MSFT",
+              "volume": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:07Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 48,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH",
+              "volume": 10000
+            }
+          }
+        ]
       }
     ]
   },
@@ -1832,6 +2876,408 @@
               "sum(price)": 72,
               "symbol": "IBM",
               "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 25,
+              "symbol": "IBM",
+              "volume": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 9,
+              "symbol": "MSFT",
+              "volume": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 75,
+              "symbol": "IBM",
+              "volume": 155
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "YAH",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:04.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "YAH",
+              "volume": 11000
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:05.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 97,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH",
+              "volume": 11500
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:06.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "YAH",
+              "volume": 10500
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 72,
+              "symbol": "IBM",
+              "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:07.200Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 48,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "MSFT",
+              "volume": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:02.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 75,
+              "symbol": "IBM",
+              "volume": 155
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 97,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:06.200Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 72,
+              "symbol": "IBM",
+              "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 25,
+              "symbol": "IBM",
+              "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00.800Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 9,
+              "symbol": "MSFT",
+              "volume": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 49,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:01.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "YAH",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:03.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "YAH",
+              "volume": 11000
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:04.300Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 97,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:04.900Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH",
+              "volume": 11500
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:05.700Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 72,
+              "symbol": "IBM",
+              "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:05.900Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "YAH",
+              "volume": 10500
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:06.300Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": {
+                "state": "null"
+              },
+              "symbol": "MSFT",
+              "volume": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:07Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 48,
+              "symbol": "IBM",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 6,
+              "symbol": "YAH",
+              "volume": 10000
             }
           }
         ]

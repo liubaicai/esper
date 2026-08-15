@@ -22,12 +22,18 @@ var (
 		"java-runtime-ecfb75f6916643de1c5f",
 		"java-runtime-80532da2ea5ec539be06",
 		"java-runtime-d2978828701be89efbdb",
+		"java-runtime-b3cb0ef477369111027c",
+		"java-runtime-e0866a0c063a6db46942",
+		"java-runtime-9a902334e2f0f270f8f5",
 	}
 	resultsetAggregateJoinJavaExecutions = []string{
 		"ResultSet2NoneNoHavingJoin",
 		"ResultSet4NoneHavingJoin",
 		"ResultSet6DefaultNoHavingJoin",
 		"ResultSet8DefaultHavingJoin",
+		"ResultSet14LastNoHavingJoin",
+		"ResultSet16LastHavingJoin",
+		"ResultSet17FirstNoHavingJoin",
 	}
 )
 
@@ -38,7 +44,7 @@ func runResultSetAggregateJoinScenario(ctx context.Context, scenario compat.Scen
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
 	}
-	caseOrder := []string{"none-join", "none-having-join", "default-join", "default-having-join"}
+	caseOrder := []string{"none-join", "none-having-join", "default-join", "default-having-join", "last-join", "last-having-join", "first-join"}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("resultset-aggregate-join scenario %q has no supported cases", scenario.ID)
 	}
@@ -100,6 +106,19 @@ func runResultSetAggregateJoinCase(ctx context.Context, scenario compat.Scenario
 		options = append(options, esper.WithOutput(esper.OutputEveryTime(time.Second)))
 		query = grouped.Having(esper.Greater[float64](sum, esper.Literal(50.0))).
 			Select(selects...).Query(options...)
+	case "last-join":
+		options = append(options,
+			esper.WithOutput(esper.OutputLastEveryTime(time.Second)),
+			esper.OrderBy(esper.Ascending(esper.ResultField[string]("symbol"))),
+		)
+		query = grouped.Select(selects...).Query(options...)
+	case "last-having-join":
+		options = append(options, esper.WithOutput(esper.OutputLastEveryTime(time.Second)))
+		query = grouped.Having(esper.Greater[float64](sum, esper.Literal(50.0))).
+			Select(selects...).Query(options...)
+	case "first-join":
+		options = append(options, esper.WithOutput(esper.OutputFirstEveryTime(time.Second)))
+		query = grouped.Select(selects...).Query(options...)
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported resultset-aggregate-join case %q", caseName)
 	}
