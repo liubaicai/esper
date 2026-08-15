@@ -7728,6 +7728,11 @@ func (r *statementRuntime) applyFirstEveryTime(policy OutputPolicy, batch Result
 		state.firstEveryNext[key] = now.Add(policy.Interval)
 		return true
 	})
+	if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 {
+		groupNames := aggregateGroupFieldNames(plans[0].query.aggregate)
+		result.New, result.outputKeysNew = orderGroupedOutputRows(result.New, result.outputKeysNew, groupNames)
+		result.Old, result.outputKeysOld = orderGroupedOutputRows(result.Old, result.outputKeysOld, groupNames)
+	}
 	return r.finishOutput(policy, result, now, plans...)
 }
 
@@ -7806,21 +7811,7 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 		}
 	}
 	groupNames := aggregateGroupFieldNames(plans[0].query.aggregate)
-	order := make([]int, len(current.New))
-	for index := range order {
-		order[index] = index
-	}
-	sort.SliceStable(order, func(i, j int) bool {
-		return groupedOutputLevel(current.New[order[i]], groupNames) > groupedOutputLevel(current.New[order[j]], groupNames)
-	})
-	newRows := make([]Result, len(current.New))
-	newKeys := make([]string, len(keys))
-	for index, source := range order {
-		newRows[index] = current.New[source]
-		newKeys[index] = keys[source]
-	}
-	current.New = newRows
-	keys = newKeys
+	current.New, keys = orderGroupedOutputRows(current.New, keys, groupNames)
 	old := make([]Result, 0, len(current.New))
 	oldKeys := make([]string, 0, len(current.New))
 	for index, key := range keys {
@@ -7844,6 +7835,29 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 	state.pendingCount = 0
 	r.advanceOutputSchedule(policy, now)
 	return r.finishOutput(policy, result, now, plans...)
+}
+
+func orderGroupedOutputRows(results []Result, keys []string, groupNames []string) ([]Result, []string) {
+	if len(keys) != len(results) {
+		keys = make([]string, len(results))
+		for index := range keys {
+			keys[index] = strconv.Itoa(index)
+		}
+	}
+	order := make([]int, len(results))
+	for index := range order {
+		order[index] = index
+	}
+	sort.SliceStable(order, func(i, j int) bool {
+		return groupedOutputLevel(results[order[i]], groupNames) > groupedOutputLevel(results[order[j]], groupNames)
+	})
+	orderedResults := make([]Result, len(results))
+	orderedKeys := make([]string, len(keys))
+	for index, source := range order {
+		orderedResults[index] = results[source]
+		orderedKeys[index] = keys[source]
+	}
+	return orderedResults, orderedKeys
 }
 
 func groupedOutputLevel(result Result, groupNames []string) int {
@@ -7925,13 +7939,23 @@ func firstOutputResult(batch ResultBatch) ResultBatch {
 
 func selectFirstOutputByGroup(batch ResultBatch, allow func(string) bool) ResultBatch {
 	result := ResultBatch{Time: batch.Time}
-	selected := make(map[string]struct{})
+	selectedNew := make(map[string]struct{})
+	selectedOld := make(map[string]struct{})
+	allowed := make(map[string]bool)
+	checked := make(map[string]struct{})
+	isAllowed := func(key string) bool {
+		if _, ok := checked[key]; !ok {
+			checked[key] = struct{}{}
+			allowed[key] = allow(key)
+		}
+		return allowed[key]
+	}
 	appendNew := func(index int) {
 		key := outputGroupKey(batch.outputKeysNew, index)
-		if _, exists := selected[key]; exists || !allow(key) {
+		if _, exists := selectedNew[key]; exists || !isAllowed(key) {
 			return
 		}
-		selected[key] = struct{}{}
+		selectedNew[key] = struct{}{}
 		result.New = append(result.New, batch.New[index])
 		if len(batch.outputKeysNew) > index {
 			result.outputKeysNew = append(result.outputKeysNew, key)
@@ -7939,10 +7963,10 @@ func selectFirstOutputByGroup(batch ResultBatch, allow func(string) bool) Result
 	}
 	appendOld := func(index int) {
 		key := outputGroupKey(batch.outputKeysOld, index)
-		if _, exists := selected[key]; exists || !allow(key) {
+		if _, exists := selectedOld[key]; exists || !isAllowed(key) {
 			return
 		}
-		selected[key] = struct{}{}
+		selectedOld[key] = struct{}{}
 		result.Old = append(result.Old, batch.Old[index])
 		if len(batch.outputKeysOld) > index {
 			result.outputKeysOld = append(result.outputKeysOld, key)
@@ -15076,6 +15100,15 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	affected := make([]string, 0)
 	seen := make(map[string]struct{})
 	groupingSets := aggregateGroupingSetsForDefinition(definition)
+	if len(definition.groupBy) > 0 && plan.query.selector == SelectIRStream && len(delta.oldEvents) > 0 && len(groupingSets) > 1 {
+		// Grouped irstream rollup result sets post the current row at a pure
+		// time-expiry boundary: Java ResultSetOutputDefault/First/Last over
+		// a grouped rollup emits the post-removal aggregate as new and the
+		// pre-removal value as old. Plain grouped irstream continues to
+		// suppress pure expiry (ResultSetOutputLimitAggregateGrouped
+		// MaxTimeWindow keeps only the incoming event batch).
+		emitNew = true
+	}
 	orderAffected := func(events []Event) {
 		for _, event := range events {
 			for _, groupingSet := range groupingSets {
