@@ -7570,7 +7570,11 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			}
 			r.appendPending(batch)
 		}
-		if !flush || r.outputState.pending == nil || r.outputState.nextOutputAt.IsZero() || now.Before(r.outputState.nextOutputAt) {
+		if !flush || r.outputState.nextOutputAt.IsZero() || now.Before(r.outputState.nextOutputAt) {
+			return ResultBatch{}
+		}
+		if r.outputState.pending == nil {
+			r.advanceOutputSchedule(policy, now)
 			return ResultBatch{}
 		}
 		result := r.outputState.pending.clone()
@@ -15148,6 +15152,21 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		emitNew = true
 	}
 	orderAffected := func(events []Event) {
+		if len(groupingSets) > 1 {
+			// Java's rollup remove path lists all leaf groups for the removed
+			// events before the coarser grouping levels when the events share
+			// one delta (e.g. two window expiries at the same virtual time).
+			for _, groupingSet := range groupingSets {
+				for _, event := range events {
+					key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
+					if _, exists := seen[key]; !exists {
+						seen[key] = struct{}{}
+						affected = append(affected, key)
+					}
+				}
+			}
+			return
+		}
 		for _, event := range events {
 			for _, groupingSet := range groupingSets {
 				key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
