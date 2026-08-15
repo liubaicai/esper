@@ -6728,7 +6728,6 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 	r.variables = r.withContextVariables(r.variables)
 	r.variables = r.withContextProperties(r.variables)
 	variables = r.variables
-	r.anchorOutputSchedule(plan.query.output, now)
 	var batch ResultBatch
 	var err error
 	if plan.query.aggregate != nil {
@@ -6784,6 +6783,9 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 	}
 	if err != nil {
 		return ResultBatch{}, false, err
+	}
+	if !batch.empty() || (batch.outputCountsSet && (batch.outputInserted > 0 || batch.outputRemoved > 0)) {
+		r.anchorOutputSchedule(plan.query.output, now)
 	}
 	batch = r.applyOutput(plan.query.output, batch, false, now, plan)
 	return batch, !batch.empty() || batch.forced, nil
@@ -7768,7 +7770,7 @@ func (r *statementRuntime) applyFirstEveryTime(policy OutputPolicy, batch Result
 	if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 {
 		definition := plans[0].query.aggregate
 		tableSource := containsTableSource(plans[0].query.input, nil) || containsNamedWindow(plans[0].query.input, nil)
-		aggregateGroupedRowPerEvent = definition.join == nil && !tableSource && len(aggregateGroupingSetsForDefinition(definition)) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
+		aggregateGroupedRowPerEvent = !tableSource && len(aggregateGroupingSetsForDefinition(definition)) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
 	}
 	if aggregateGroupedRowPerEvent && len(batch.New) == 0 && len(batch.Old) > 0 {
 		// Aggregate-grouped output-first posts the post-removal current state
@@ -7882,7 +7884,7 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 	groupNames := aggregateGroupFieldNames(definition)
 	current.New, keys = orderGroupedOutputRows(current.New, keys, groupNames)
 	tableSource := containsTableSource(plans[0].query.input, nil) || containsNamedWindow(plans[0].query.input, nil)
-	aggregateGroupedRowPerEvent := definition.join == nil && !tableSource && len(definition.groupBy) > 0 && len(aggregateGroupingSetsForDefinition(definition)) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
+	aggregateGroupedRowPerEvent := !tableSource && len(definition.groupBy) > 0 && len(aggregateGroupingSetsForDefinition(definition)) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
 	if aggregateGroupedRowPerEvent {
 		// Aggregate-grouped irstream output-last follows
 		// ResultSetProcessorAggregateGroupedImpl: the last row per group is
@@ -15476,7 +15478,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		}
 		emittedBefore := group.emitted
 		tableSource := containsTableSource(plan.query.input, nil) || containsNamedWindow(plan.query.input, nil)
-		aggregateGroupedRowPerEvent := definition.join == nil && !tableSource && len(definition.groupBy) > 0 && len(groupingSets) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
+		aggregateGroupedRowPerEvent := !tableSource && len(definition.groupBy) > 0 && len(groupingSets) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
 		// Rollup/cube result sets (multiple grouping sets), ungrouped
 		// aggregates, grouped joins, named-window consumers and grouped
 		// row-per-group result sets post the previous row as old whenever the
@@ -16569,7 +16571,7 @@ func expressionTreeReadsCurrentEvent(expression Expr) bool {
 		if expressionNodeIsAggregate(node) {
 			return false
 		}
-		if node.kind == "field" {
+		if node.kind == "field" || node.kind == "join-field" {
 			return true
 		}
 		for _, child := range node.children {
