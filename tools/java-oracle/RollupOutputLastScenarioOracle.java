@@ -26,7 +26,8 @@ import java.util.Map;
  * Case "last" mirrors ResultSetOutputLast{join=false}; case "last-sorted"
  * mirrors ResultSetOutputLastSorted{join=false}; case "first" mirrors
  * ResultSetOutputFirst{join=false}; case "first-sorted" mirrors
- * ResultSetOutputFirstSorted{join=false}.
+ * ResultSetOutputFirstSorted{join=false}; case "snapshot-order-limit"
+ * mirrors ResultSetOutputSnapshotOrderWLimit.
  */
 public final class RollupOutputLastScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -56,7 +57,7 @@ public final class RollupOutputLastScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"last", "last-sorted", "first", "first-sorted"};
+        String[] cases = {"last", "last-sorted", "first", "first-sorted", "snapshot-order-limit"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -100,6 +101,10 @@ public final class RollupOutputLastScenarioOracle {
             epl = "@Name('s0') select irstream theString as c0, intPrimitive as c1, sum(longBoxed) as c2 " +
                     "from SupportBean#time(3.5 sec) group by rollup(theString, intPrimitive) " +
                     "output first every 1 second order by theString, intPrimitive";
+        } else if ("snapshot-order-limit".equals(caseName)) {
+            epl = "@Name('s0') select theString as c0, sum(intPrimitive) as c1 " +
+                    "from SupportBean group by rollup(theString) " +
+                    "output snapshot every 1 seconds order by sum(intPrimitive) limit 3";
         } else if (!"last".equals(caseName)) {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }

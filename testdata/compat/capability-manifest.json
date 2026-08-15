@@ -937,6 +937,8 @@
         "internal/app/parity/rollup_output_first.go",
         "internal/esper/rollup_output_first_sorted_parity_test.go",
         "internal/app/parity/rollup_output_first_sorted.go",
+        "internal/esper/rollup_output_snapshot_order_limit_parity_test.go",
+        "internal/app/parity/rollup_output_snapshot_order_limit.go",
         "internal/esper/output_first_having_parity_test.go",
         "internal/app/parity/output_first_having.go",
         "internal/esper/resultset_grouped_time_window_parity_test.go",
@@ -976,7 +978,8 @@
         "java-runtime-99a674653d406c745332",
         "java-runtime-c2e751ee09e3300d3dba",
         "java-runtime-d3ba0dd07bb4e54ef9af",
-        "java-runtime-b46b070a7b151e7b4ecc"
+        "java-runtime-b46b070a7b151e7b4ecc",
+        "java-runtime-3a98c0c727c06ec21cfd"
       ],
       "representativeScenarioIds": [
         "filter-window-aggregate-output",
@@ -990,7 +993,8 @@
         "rollup-output-last",
         "rollup-output-last-sorted",
         "rollup-output-first",
-        "rollup-output-first-sorted"
+        "rollup-output-first-sorted",
+        "rollup-output-snapshot-order-limit"
       ]
     },
     {
@@ -3818,6 +3822,8 @@
         "internal/app/parity/rollup_output_first.go",
         "internal/esper/rollup_output_first_sorted_parity_test.go",
         "internal/app/parity/rollup_output_first_sorted.go",
+        "internal/esper/rollup_output_snapshot_order_limit_parity_test.go",
+        "internal/app/parity/rollup_output_snapshot_order_limit.go",
         "internal/esper/output_first_having_parity_test.go",
         "internal/app/parity/output_first_having.go",
         "internal/esper/resultset_row_per_group_parity_test.go",
@@ -3856,7 +3862,8 @@
         "java-runtime-99a674653d406c745332",
         "java-runtime-c2e751ee09e3300d3dba",
         "java-runtime-d3ba0dd07bb4e54ef9af",
-        "java-runtime-b46b070a7b151e7b4ecc"
+        "java-runtime-b46b070a7b151e7b4ecc",
+        "java-runtime-3a98c0c727c06ec21cfd"
       ],
       "representativeScenarioIds": [
         "output-policy-iterator",
@@ -3867,6 +3874,7 @@
         "rollup-output-last-sorted",
         "rollup-output-first",
         "rollup-output-first-sorted",
+        "rollup-output-snapshot-order-limit",
         "output-first-having",
         "resultset-grouped-time-window",
         "resultset-row-per-group-simple"
@@ -24475,6 +24483,54 @@
       ]
     },
     {
+      "id": "case.rollup-output-snapshot-order-limit",
+      "javaRuntimeIds": [
+        "java-runtime-3a98c0c727c06ec21cfd"
+      ],
+      "javaNames": [
+        "ResultSetOutputSnapshotOrderWLimit"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroupRollup.java"
+      ],
+      "goTests": [
+        "TestRollupOutputSnapshotOrderLimitParity",
+        "TestRunRollupOutputSnapshotOrderLimitDiffWritesPassingEvidence",
+        "TestRunRollupOutputSnapshotOrderLimitDiffRejectsTraceMutations"
+      ],
+      "tags": [
+        "correctness",
+        "rollup",
+        "group-by",
+        "output-snapshot",
+        "order-by",
+        "limit",
+        "differential",
+        "representative"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified",
+        "representative-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-3a98c0c727c06ec21cfd"
+      ],
+      "representativeScenarioIds": [
+        "rollup-output-snapshot-order-limit"
+      ]
+    },
+    {
       "id": "case.match-recognize-simple",
       "javaRuntimeIds": [
         "java-runtime-ce4e140777e93d5226b5"
@@ -25121,15 +25177,16 @@
         "TestRollupOutputLastParity",
         "TestRollupOutputLastSortedParity",
         "TestRollupOutputFirstParity",
-        "TestRollupOutputFirstSortedParity"
+        "TestRollupOutputFirstSortedParity",
+        "TestRollupOutputSnapshotOrderLimitParity"
       ],
       "remaining": [
         "ResultSetOutputLast / LastSorted / All / AllSorted / Default / DefaultSorted / First / FirstSorted / FirstHaving join=true variants",
         "ResultSetOutputAll / AllSorted no-join output-all-every-time policy",
         "ResultSet6OutputLimitSnapshot{join=true} join snapshot matrix",
-        "full Java differential trace for the remaining covered ResultSetOutputLimitRowPerGroupRollup executions (ResultSetOutputDefaultSorted{join=false}, ResultSetOutputLast{join=false}, ResultSetOutputLastSorted{join=false}, ResultSetOutputFirst{join=false} and ResultSetOutputFirstSorted{join=false} are differential-verified separately)"
+        "full Java differential trace for the remaining covered ResultSetOutputLimitRowPerGroupRollup executions (ResultSetOutputDefaultSorted{join=false}, ResultSetOutputLast{join=false}, ResultSetOutputLastSorted{join=false}, ResultSetOutputFirst{join=false}, ResultSetOutputFirstSorted{join=false} and ResultSetOutputSnapshotOrderWLimit are differential-verified separately)"
       ],
-      "difference": "Go covers ten no-join executions with the existing rollup/output machinery: ResultSet1NoOutputLimit, ResultSet2OutputLimitDefault, ResultSet4OutputLimitLast, ResultSet5OutputLimitFirst, ResultSet6OutputLimitSnapshot{join=false}, ResultSetOutputSnapshotOrderWLimit, ResultSetOutputDefault{join=false}, ResultSetOutputDefaultSorted{join=false}, ResultSetOutputLast{join=false} and ResultSetOutputLastSorted{join=false}. The shared 3.5s rollup scenario drives default/last/sorted counts and row values; snapshot/order-limit uses OutputSnapshotEvery plus order-by/limit. ResultSetOutputDefaultSorted{join=false}, ResultSetOutputLast{join=false}, ResultSetOutputLastSorted{join=false}, ResultSetOutputFirst{join=false} and ResultSetOutputFirstSorted{join=false} are registered as differential-verified via rollup-output-every-sorted, rollup-output-last, rollup-output-last-sorted, rollup-output-first and rollup-output-first-sorted. Output-all-every-time and all join=true variants remain open."
+      "difference": "Go covers ten no-join executions with the existing rollup/output machinery: ResultSet1NoOutputLimit, ResultSet2OutputLimitDefault, ResultSet4OutputLimitLast, ResultSet5OutputLimitFirst, ResultSet6OutputLimitSnapshot{join=false}, ResultSetOutputSnapshotOrderWLimit, ResultSetOutputDefault{join=false}, ResultSetOutputDefaultSorted{join=false}, ResultSetOutputLast{join=false} and ResultSetOutputLastSorted{join=false}. The shared 3.5s rollup scenario drives default/last/sorted counts and row values; snapshot/order-limit uses OutputSnapshotEvery plus order-by/limit. ResultSetOutputDefaultSorted{join=false}, ResultSetOutputLast{join=false}, ResultSetOutputLastSorted{join=false}, ResultSetOutputFirst{join=false}, ResultSetOutputFirstSorted{join=false} and ResultSetOutputSnapshotOrderWLimit are registered as differential-verified via rollup-output-every-sorted, rollup-output-last, rollup-output-last-sorted, rollup-output-first, rollup-output-first-sorted and rollup-output-snapshot-order-limit. Output-all-every-time and all join=true variants remain open."
     },
     {
       "id": "case.inventory.epl-other-create-schema",
@@ -28020,6 +28077,14 @@
       "caseId": "case.rollup-output-first-sorted"
     },
     {
+      "capabilityId": "resultset.aggregate-group-by",
+      "caseId": "case.rollup-output-snapshot-order-limit"
+    },
+    {
+      "capabilityId": "output.core",
+      "caseId": "case.rollup-output-snapshot-order-limit"
+    },
+    {
       "capabilityId": "rowrecog.match-recognize",
       "caseId": "case.match-recognize-simple"
     },
@@ -28093,14 +28158,14 @@
     }
   ],
   "summary": {
-    "totalCases": 415,
+    "totalCases": 416,
     "totalCapabilities": 110,
-    "inventoriedCases": 415,
-    "implementedCases": 415,
-    "differentialVerifiedCases": 28,
-    "differentialVerifiedRuntimeIds": 38,
+    "inventoriedCases": 416,
+    "implementedCases": 416,
+    "differentialVerifiedCases": 29,
+    "differentialVerifiedRuntimeIds": 39,
     "intentionallyDifferentCases": 18,
-    "representativeVerifiedCases": 28,
+    "representativeVerifiedCases": 29,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
@@ -28108,12 +28173,12 @@
     "intentionallyDifferentCapabilities": 7,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2720,
+    "runtimeAssociationCount": 2721,
     "referencedJavaRuntimeIds": 2630,
     "totalJavaRuntimeIds": 4136,
     "unreferencedJavaRuntimeIds": 1506,
-    "representativeScenarioTotal": 28,
-    "representativeScenarioPassing": 28,
+    "representativeScenarioTotal": 29,
+    "representativeScenarioPassing": 29,
     "currentFailures": [],
     "currentSkips": [
       "internal/esper.TestStressSyntheticMediumLoad: ESPER_STRESS is unset; run ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$' -count=1",
@@ -28126,10 +28191,10 @@
       "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
     ],
     "risks": [
-      "Twenty-eight representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, rollup-output-every-sorted, rollup-output-last, rollup-output-last-sorted, rollup-output-first, rollup-output-first-sorted, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
-      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-eight listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/ResultSetOutputDefaultSorted{join=false}/ResultSetOutputLast{join=false}/ResultSetOutputLastSorted{join=false}/ResultSetOutputFirst{join=false}/ResultSetOutputFirstSorted{join=false}/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
-      "The 28-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
-      "No inventoried-only cases remain; all 415 cases have at least implemented verification. EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18), InfraNWTableOnSelect (28), ExprFilterOptimizableConditionNegateConfirm (26), ResultSetOutputLimitRowPerGroupRollup (24), ResultSetOutputLimitAggregateGrouped (27), InfraNWTableCreateIndex (22), ContextKeySegmentedWInitTermPrioritized (23) and ContextNested (33) executions were implemented in later slices; ResultSetOutputDefaultSorted{join=false}, ResultSetOutputLast{join=false}, ResultSetOutputLastSorted{join=false}, ResultSetOutputFirst{join=false} and ResultSetOutputFirstSorted{join=false} are now differential-verified via rollup-output-every-sorted, rollup-output-last, rollup-output-last-sorted, rollup-output-first and rollup-output-first-sorted, while EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants, InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants, ExprFilter plan-hook/dataflow/stage/pattern variants, the remaining ResultSetOutputLimitRowPerGroupRollup output-all/join variants, ResultSetOutputLimitAggregateGrouped join/all/multikey-array variants, InfraNWTableCreateIndex range/widening/reuse/multikey variants, ContextKeySegmented implicit-start/temporal/pattern variants and ContextNested temporal/initiated/iterator/late-coming variants are still open.",
+      "Twenty-nine representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, rollup-output-every-sorted, rollup-output-last, rollup-output-last-sorted, rollup-output-first, rollup-output-first-sorted, rollup-output-snapshot-order-limit, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+      "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the thirty-nine listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/ResultSetOutputDefaultSorted{join=false}/ResultSetOutputLast{join=false}/ResultSetOutputLastSorted{join=false}/ResultSetOutputFirst{join=false}/ResultSetOutputFirstSorted{join=false}/ResultSetOutputSnapshotOrderWLimit/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
+      "The 29-scenario representative suite is complete; fuzz/property suite and Java-vs-Go performance baselines are still open.",
+      "No inventoried-only cases remain; all 416 cases have at least implemented verification. EPLInsertInto (20), ViewUnion (15), ViewTimeWin (15), InfraNamedWindowTypes (18), ResultSetQueryTypeRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18), InfraNWTableOnSelect (28), ExprFilterOptimizableConditionNegateConfirm (26), ResultSetOutputLimitRowPerGroupRollup (24), ResultSetOutputLimitAggregateGrouped (27), InfraNWTableCreateIndex (22), ContextKeySegmentedWInitTermPrioritized (23) and ContextNested (33) executions were implemented in later slices; ResultSetOutputDefaultSorted{join=false}, ResultSetOutputLast{join=false}, ResultSetOutputLastSorted{join=false}, ResultSetOutputFirst{join=false}, ResultSetOutputFirstSorted{join=false} and ResultSetOutputSnapshotOrderWLimit are now differential-verified via rollup-output-every-sorted, rollup-output-last, rollup-output-last-sorted, rollup-output-first, rollup-output-first-sorted and rollup-output-snapshot-order-limit, while EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants, InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants, ExprFilter plan-hook/dataflow/stage/pattern variants, the remaining ResultSetOutputLimitRowPerGroupRollup output-all/join variants, ResultSetOutputLimitAggregateGrouped join/all/multikey-array variants, InfraNWTableCreateIndex range/widening/reuse/multikey variants, ContextKeySegmented implicit-start/temporal/pattern variants and ContextNested temporal/initiated/iterator/late-coming variants are still open.",
       "The resultset-grouped-time-window scenario covers the istream insert stream; irstream old-row emission for pure grouped time-window updates remains a documented gap.",
       "The gated medium/stress baseline (5000 aggregate + 5000 context partitions + 600 join events) passes semantic invariants in 18.45s (~660 events/s) after lazy `historyByEvent` (down from 42.6s/280 events/s); remaining performance/NFR work is still open.",
       "Statement CPU metrics use process CPU time on Linux (getrusage) and explicit zero on platforms without a portable sampler; the difference from Java's current-thread CPU sampling is registered as an approved intentional difference on case.client-instrument-statement-metrics with automated test evidence."
