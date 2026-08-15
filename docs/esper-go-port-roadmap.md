@@ -44,7 +44,7 @@
 - 分支：`master`
 - 工作树：干净（最近一次提交已完成门禁）。
 - 最近切片：ContextNested 提升为 implemented（非 temporal key/category/hash 嵌套、三层 key 隔离、parent context 属性、nested selector、重复 child 拒绝；temporal/initiated/pattern/iterator 仍 open）；ContextKeySegmentedWInitTermPrioritized 七个显式 initiated executions 提升为 implemented（keyed initiated-terminated grouped aggregate、correlated termination、no-term、filter-expr、invalid）；InfraNWTableCreateIndex late-create/drop/recreate/multiple-index/invalid 提升为 implemented（live NamedWindow/Table CreateIndex/DropIndex、Context partition 继承）；ResultSetOutputLimitAggregateGrouped 八个 no-join executions 提升为 implemented（grouped time-window default/last/first/snapshot/having/max/no-output-clause）；ResultSetOutputLimitRowPerGroupRollup 十个 no-join executions 提升为 implemented（rollup default/last/first/snapshot/order-limit/sorted）；ExprFilterOptimizableConditionNegateConfirm 十个 listener executions 提升为 implemented（typed context/pattern boolean filter 矩阵）；InfraNWTableOnSelect 非聚合 executions 提升为 implemented（on-select index/correlation/condition/limit/invalid、trigger order-by+limit 与 aggregate/prev 校验）；EPLOtherCreateSchema 主要 executions 提升为 implemented（typed create-schema、copyfrom/inherit/variant、ObjectArray 单 supertype）；EPLOtherStaticFunctions 主要 executions 提升为 implemented（Go UDF 静态方法对照、chained/nested/pattern/order-by、投影行源事件保留）；EPLDatabaseJoin 主要 join executions 提升为 implemented（2HistoricalStar/Inner 触发历史 lineage、WithPattern pattern 驱动求值、3Stream 无触发替换）；ResultSetQueryTypeIterator 17 个 execution 提升为 implemented（order-by/filter/pattern/aggregate iterator 契约、WithIterableUnbound）；ResultSetQueryTypeRowPerGroup 17 个 execution 提升为 implemented（group reclaim、array/null group key、output snapshot iterator、join/named-window grouped aggregate）；InfraNamedWindowTypes 18 个 execution 提升为 implemented（窗口事件类型形状、嵌套 schema 列、表示矩阵、继承覆盖）；ViewTimeWin 15 个 execution 提升为 implemented（calendar-month 窗口、变量/参数时长、prev 与聚合、flip-timer）；ViewUnion 15 个 execution 提升为 implemented（named-window union retention、batch/sorted/groupwin/pattern/subquery union、child-delta old 流）；EPLInsertInto 20 个 execution 提升为 implemented；statement metrics CPU 采样差异登记为 approved intentional difference（2026-08-14）。
-- 最新进展：`rollup-output-first` 登记为 differential-verified（`ResultSetOutputFirst{join=false}`，10 条 records/0 differences；同时修复 grouped irstream 纯时间淘汰的 New/Old 语义）；`rollup-output-every-sorted`、`rollup-output-last` 与 `rollup-output-last-sorted` 亦已登记（上一轮 Java oracle 误加 order-by 已修正；grouped `OutputLastEveryTime` 现在按输出 key 缓存上一周期行、新 group 首次 old 行输出 null 聚合占位，并按 Java rollup 层级输出 leaf → subtotal → grand total）。
+- 最新进展：`rollup-output-first-sorted` 登记为 differential-verified（`ResultSetOutputFirstSorted{join=false}`，10 条 records/0 differences）；`rollup-output-first`（同时修复 grouped irstream 纯时间淘汰的 New/Old 语义）、`rollup-output-every-sorted`、`rollup-output-last` 与 `rollup-output-last-sorted` 亦已登记（上一轮 Java oracle 误加 order-by 已修正；grouped `OutputLastEveryTime` 现在按输出 key 缓存上一周期行、新 group 首次 old 行输出 null 聚合占位，并按 Java rollup 层级输出 leaf → subtotal → grand total）。
 - 最新已提交：`8ca687118`（Add rollup-output-first differential scenario）
 
 ### 2.2 对账清单
@@ -52,17 +52,17 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 个 |
-| Case | 414 个 |
-| Case implemented（verification） | 414 个（其中 27 个 differential-verified、18 个 intentionally-different） |
-| Case differential-verified | 27 个（37 个 runtime） |
+| Case | 415 个 |
+| Case implemented（verification） | 415 个（其中 28 个 differential-verified、18 个 intentionally-different） |
+| Case differential-verified | 28 个（38 个 runtime） |
 | Case intentionally-different | 18 个 |
 | Case inventoried-only | 0 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
-| Runtime 关联 | 2,719 条 |
+| Runtime 关联 | 2,720 条 |
 | 唯一已关联 runtime | 2,630 个 |
 | 未关联 runtime | 1,506 个 |
 | 关联覆盖率 | 63.6% |
-| Representative scenario | 27/27 通过 |
+| Representative scenario | 28/28 通过 |
 | NFR | 0 个已验证 |
 | Docker integration | MySQL/Kafka/RabbitMQ round-trips passed（2026-08-14） |
 | Stress baseline | 语义不变量通过；`historyByEvent` 按需构建后 42.6s→18.45s（约 660 events/s），仍开放（2026-08-14） |
@@ -164,7 +164,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 Java/Go persisted differential evidence；当前已有 27 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`、`high-cardinality-context`、`time-window-long-running`、`dataflow-connector-output`、`output-after-last`、`rollup-output-every`、`rollup-output-every-sorted`、`rollup-output-last`、`rollup-output-last-sorted`、`rollup-output-first`、`match-recognize-simple`、`unidirectional-aggregate-join`、`output-first-having`、`context-keyed-subquery`、`rowrecog-aggregation`、`resultset-grouped-time-window`、`resultset-row-per-group-simple`）。
+2. 扩展 Java/Go persisted differential evidence；当前已有 28 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`、`high-cardinality-context`、`time-window-long-running`、`dataflow-connector-output`、`output-after-last`、`rollup-output-every`、`rollup-output-every-sorted`、`rollup-output-last`、`rollup-output-last-sorted`、`rollup-output-first`、`rollup-output-first-sorted`、`match-recognize-simple`、`unidirectional-aggregate-join`、`output-first-having`、`context-keyed-subquery`、`rowrecog-aggregation`、`resultset-grouped-time-window`、`resultset-row-per-group-simple`）。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；后续需在 CI 中固化并保持显式 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。
