@@ -9076,3 +9076,118 @@ func TestRunContextKeySegmentedPatternDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunContextKeySegmentedPriorDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-prior.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-prior.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-prior.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-prior-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedPriorDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "cross-partition-prior",
+			mutate: func(trace *compat.Trace) {
+				// G1/11's prior is G1's own 10, not G2's 20; a shared
+				// history bug would show 20.
+				indices := recordIndicesOfCase(trace, "prior-per-partition")
+				trace.Records[indices[2]].New[0].Fields["val1"] = 20
+			},
+		},
+		{
+			name: "first-event-prior-null",
+			mutate: func(trace *compat.Trace) {
+				// The first event of each partition has null prior; a
+				// self-inclusion bug would show 10.
+				indices := recordIndicesOfCase(trace, "prior-per-partition")
+				trace.Records[indices[0]].New[0].Fields["val1"] = 10
+			},
+		},
+		{
+			name: "prior-offset",
+			mutate: func(trace *compat.Trace) {
+				// prior(1) reads the immediately previous event (11's
+				// prior is 10); an offset bug would read 12 itself.
+				indices := recordIndicesOfCase(trace, "prior-per-partition")
+				trace.Records[indices[2]].New[0].Fields["val1"] = 11
+			},
+		},
+		{
+			name: "chained-prior",
+			mutate: func(trace *compat.Trace) {
+				// G2/22's prior is G2/21 (21); a stale-history bug would
+				// repeat 20.
+				indices := recordIndicesOfCase(trace, "prior-per-partition")
+				trace.Records[indices[5]].New[0].Fields["val1"] = 20
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "other"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-prior.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-prior.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-prior.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-prior-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
