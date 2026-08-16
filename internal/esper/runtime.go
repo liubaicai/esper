@@ -609,12 +609,11 @@ func (e *Engine) setVariablesLocked(ctx context.Context, assignments []VariableA
 	}
 	e.refreshVariablesLocked()
 	validated := make([]VariableAssignment, 0, len(assignments))
-	seen := make(map[string]struct{}, len(assignments))
+	// The same variable may legitimately appear more than once in one batch:
+	// a context partition start output and a same-instant termination output
+	// both assign it, and Esper applies the assignments sequentially so the
+	// last value wins. Validate every occurrence and apply in order.
 	for _, assignment := range assignments {
-		if _, exists := seen[assignment.Name]; exists {
-			return NewError(ErrorInvalidRule, fmt.Sprintf("variable %q is assigned more than once", assignment.Name))
-		}
-		seen[assignment.Name] = struct{}{}
 		definition, ok := e.env.Variable(assignment.Name)
 		if !ok {
 			return NewError(ErrorUnknownName, fmt.Sprintf("variable %q is not registered", assignment.Name))
@@ -3369,6 +3368,62 @@ func (s *Statement) markClosed() {
 	s.markClosedLocked()
 }
 
+// unboundedRowInput reports whether the query input is an unbounded source
+// (optionally behind filters) with no data window. Esper's grouped output-all
+// process view keeps one representative row per group for unbounded inputs
+// while windowed inputs buffer one row per event; termination and every-N
+// flushes differ between the two modes.
+func unboundedRowInput(node *streamNode) bool {
+	for node != nil {
+		switch node.kind {
+		case streamSource:
+			return true
+		case streamFilter:
+			node = node.input
+		default:
+			return false
+		}
+	}
+	return false
+}
+
+// groupedAggregateHasFunctions reports whether the aggregate query selects at
+// least one aggregate function. Esper's grouped output-all processor keeps
+// one representative row per group only when the group state carries
+// aggregates; a group-by over plain fields posts one row per event instead.
+func groupedAggregateHasFunctions(definition *aggregateDefinition) bool {
+	if definition == nil {
+		return false
+	}
+	for _, selection := range definition.selections {
+		if isAggregateExpression(selection.Expr) {
+			return true
+		}
+	}
+	return false
+}
+
+// everyNGroupRepsBatch builds the output-all batch for an unbounded grouped
+// statement: one row per live group carrying the aggregate as of the last
+// input event, in first-seen group order. This mirrors Esper's
+// ResultSetProcessorGroupedOutputAllGroupReps.
+func (r *statementRuntime) everyNGroupRepsBatch(now time.Time) ResultBatch {
+	if r == nil || r.outputState == nil {
+		return ResultBatch{}
+	}
+	state := r.outputState
+	result := ResultBatch{Time: now}
+	for _, key := range state.allEveryRepsOrder {
+		rep, exists := state.allEveryReps[key]
+		if !exists {
+			continue
+		}
+		result.New = append(result.New, rep)
+		result.outputKeysNew = append(result.outputKeysNew, key)
+	}
+	return result
+}
+
 // sortedPartitionKeys lists context partition keys in allocation (creation)
 // order. Overlapping contexts derive keys from the initiating event, so the
 // lexicographic order does not match Esper's allocation order; the listener
@@ -4331,6 +4386,7 @@ func (e *Engine) applyStatementOutputAssignmentsLocked(ctx context.Context, stat
 	if len(assignments) == 0 {
 		return nil
 	}
+
 	if err := e.setVariablesLocked(ctx, assignments); err != nil {
 		return err
 	}
@@ -5774,6 +5830,8 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 	if s.runtime.partitions == nil {
 		s.runtime.partitions = make(map[string]*statementRuntime)
 	}
+	result := ResultBatch{Time: now}
+	changed := false
 
 	startMatches := advanceContextPattern(&s.runtime.contextStartPatternState, definition.startPattern, event, now, variables, nil, nil, s.engine.env, &s.runtime, "start")
 	for _, match := range startMatches {
@@ -5820,6 +5878,24 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		partition := ptrStatementRuntime(partitionRuntime)
 		s.runtime.partitions[allocationKey] = partition
 		s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partition)
+		if policy := s.plan.query.output; policy.When != nil && partition.outputWhenMatches(policy.When, now) {
+			// Esper evaluates the OUTPUT WHEN clause when a context
+			// partition starts: a satisfied condition (for example
+			// `output when true`) invokes the listener with an empty batch
+			// at the start instant and applies its then-set assignments.
+			startBatch := partition.applyOutputAssignments(policy, ResultBatch{Time: now, forced: true}, now)
+			if !startBatch.empty() {
+				result.New = append(result.New, startBatch.New...)
+				result.Old = append(result.Old, startBatch.Old...)
+			}
+			// Drain the start assignments immediately: the termination loop
+			// below flushes later partitions' pending assignments, and Esper
+			// applies the start output (then-set) before the termination
+			// output of the same clock instant.
+			s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
+			result.forced = true
+			changed = true
+		}
 	}
 
 	keys := sortedPartitionKeys(s.runtime.partitions)
@@ -5888,8 +5964,6 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 	}
 
 	accepts := statementAcceptsEvent(s.plan.query, event)
-	var result ResultBatch
-	var changed bool
 	if accepts {
 		for _, partitionKey := range keys {
 			if terminating[partitionKey] && s.plan.query.output.Termination != OutputNoTermination {
@@ -5931,7 +6005,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 			terminationBatch := partition.outputAtTermination(s.plan, now)
 			result.New = append(result.New, terminationBatch.New...)
 			result.Old = append(result.Old, terminationBatch.Old...)
-			changed = changed || !terminationBatch.empty()
+			changed = changed || !terminationBatch.empty() || terminationBatch.forced
 		}
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
@@ -6389,6 +6463,8 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 	if s.runtime.partitions == nil {
 		s.runtime.partitions = make(map[string]*statementRuntime)
 	}
+	result := ResultBatch{Time: now}
+	changed := false
 	for _, match := range advanceContextPatternTime(&s.runtime.contextStartPatternState, definition.startPattern, now, variables, nil, nil, &s.runtime, "start") {
 		if !definition.initiatedOverlapping && len(s.runtime.partitions) > 0 {
 			continue
@@ -6423,6 +6499,24 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		partition := ptrStatementRuntime(partitionRuntime)
 		s.runtime.partitions[allocationKey] = partition
 		s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partition)
+		if policy := s.plan.query.output; policy.When != nil && partition.outputWhenMatches(policy.When, now) {
+			// Esper evaluates the OUTPUT WHEN clause when a context
+			// partition starts: a satisfied condition (for example
+			// `output when true`) invokes the listener with an empty batch
+			// at the start instant and applies its then-set assignments.
+			startBatch := partition.applyOutputAssignments(policy, ResultBatch{Time: now, forced: true}, now)
+			if !startBatch.empty() {
+				result.New = append(result.New, startBatch.New...)
+				result.Old = append(result.Old, startBatch.Old...)
+			}
+			// Drain the start assignments immediately: the termination loop
+			// below flushes later partitions' pending assignments, and Esper
+			// applies the start output (then-set) before the termination
+			// output of the same clock instant.
+			s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
+			result.forced = true
+			changed = true
+		}
 	}
 
 	keys := sortedPartitionKeys(s.runtime.partitions)
@@ -6445,8 +6539,6 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		terminating[partitionKey] = true
 	}
 
-	result := ResultBatch{Time: now}
-	changed := false
 	for _, partitionKey := range keys {
 		if !terminating[partitionKey] {
 			continue
@@ -6460,7 +6552,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 			terminationBatch := partition.outputAtTermination(s.plan, now)
 			result.New = append(result.New, terminationBatch.New...)
 			result.Old = append(result.Old, terminationBatch.Old...)
-			changed = changed || !terminationBatch.empty()
+			changed = changed || !terminationBatch.empty() || terminationBatch.forced
 		}
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
@@ -6647,7 +6739,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 			terminationBatch := partition.outputAtTermination(s.plan, now)
 			result.New = append(result.New, terminationBatch.New...)
 			result.Old = append(result.Old, terminationBatch.Old...)
-			changed = changed || !terminationBatch.empty()
+			changed = changed || !terminationBatch.empty() || terminationBatch.forced
 		}
 		// The parent statement collects assignments from live partitions after
 		// processing. Drain this partition before releasing it, including
@@ -7543,7 +7635,7 @@ func (s *Statement) expireMixedEndPatternsLocked(definition ContextDefinition, n
 			terminationBatch := partition.outputAtTermination(s.plan, now)
 			result.New = append(result.New, terminationBatch.New...)
 			result.Old = append(result.Old, terminationBatch.Old...)
-			changed = changed || !terminationBatch.empty()
+			changed = changed || !terminationBatch.empty() || terminationBatch.forced
 		}
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
@@ -8331,15 +8423,23 @@ func (r *statementRuntime) applyAllEveryEvents(policy OutputPolicy, batch Result
 	state.pendingInserted = 0
 	state.pendingRemoved = 0
 	var result ResultBatch
-	if state.pending != nil {
-		result = state.pending.clone()
-	}
-	for _, key := range state.allEveryRepsOrder {
-		if _, seen := state.allEverySeen[key]; seen {
-			continue
+	if len(plans) > 0 && unboundedRowInput(plans[0].query.input) && groupedAggregateHasFunctions(plans[0].query.aggregate) {
+		// Unbounded inputs use one representative row per group, mirroring
+		// Esper's ResultSetProcessorGroupedOutputAllGroupReps: at the output
+		// boundary every live group appears exactly once with its current
+		// aggregate.
+		result = r.everyNGroupRepsBatch(now)
+	} else {
+		if state.pending != nil {
+			result = state.pending.clone()
 		}
-		result.New = append(result.New, state.allEveryReps[key])
-		result.outputKeysNew = append(result.outputKeysNew, key)
+		for _, key := range state.allEveryRepsOrder {
+			if _, seen := state.allEverySeen[key]; seen {
+				continue
+			}
+			result.New = append(result.New, state.allEveryReps[key])
+			result.outputKeysNew = append(result.outputKeysNew, key)
+		}
 	}
 	state.pending = nil
 	state.allEverySeen = make(map[string]struct{})
@@ -8651,8 +8751,24 @@ func (r *statementRuntime) outputAtTermination(plan Plan, now time.Time) ResultB
 		(policy.Kind == OutputLastPolicy && plan.query.aggregate != nil)
 	if snapshot {
 		result = r.snapshotBatch(plan, now)
+		if result.empty() && unboundedRowInput(plan.query.input) {
+			// An unbounded row-per-event source has no snapshot state; the
+			// termination output flushes the rows buffered since the last
+			// output, matching Esper's output-when-terminated flush. When
+			// clauses buffer into whenPending; plain termination-only
+			// policies buffer into pending.
+			if r.outputState.pending != nil {
+				result = r.outputState.pending.clone()
+				r.outputState.pending = nil
+			} else if r.outputState.whenPending != nil {
+				result = r.outputState.whenPending.clone()
+				r.outputState.whenPending = nil
+			}
+		}
 	} else if policy.When != nil || policy.TerminationWhen != nil {
 		result = r.takeWhenPending(ResultBatch{})
+	} else if policy.Kind == OutputAllEveryEventsPolicy && unboundedRowInput(plan.query.input) && groupedAggregateHasFunctions(plan.query.aggregate) {
+		result = r.everyNGroupRepsBatch(now)
 	} else if r.outputState.pending != nil {
 		result = r.outputState.pending.clone()
 		r.outputState.pending = nil
@@ -8661,7 +8777,19 @@ func (r *statementRuntime) outputAtTermination(plan Plan, now time.Time) ResultB
 	r.outputState.whenPending = nil
 	r.outputState.pendingCount = 0
 	if result.empty() {
-		return ResultBatch{}
+		// The termination condition held but there are no rows to emit.
+		// Esper still invokes the listener with an empty batch and applies
+		// the then-set termination assignments; the forced flag makes the
+		// empty batch observable to the caller.
+		terminationPolicy := policy
+		if policy.TerminationWhen != nil {
+			terminationPolicy.Then = append([]OutputVariableAssignment(nil), policy.TerminationThen...)
+		} else if len(policy.TerminationThen) > 0 {
+			terminationPolicy.Then = append([]OutputVariableAssignment(nil), policy.TerminationThen...)
+		}
+		empty := ResultBatch{Time: now, forced: true}
+		r.applyOutputAssignments(terminationPolicy, empty, now)
+		return empty
 	}
 
 	terminationPolicy := policy
@@ -9409,6 +9537,23 @@ func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, 
 		batch.New = orderRowRecogResults(batch.New, plans[0].query.orderBy, now, r.variables)
 		batch.Old = orderRowRecogResults(batch.Old, plans[0].query.orderBy, now, r.variables)
 	}
+	return r.applyOutputAssignments(policy, batch, now)
+}
+
+// applyOutputAssignments runs the then-set assignments of an output policy
+// against the current variables and queues them for the post-delivery flush.
+// It is shared by finishOutput and by empty termination/partition-start
+// outputs, which must apply assignments even when there are no rows to emit.
+func (r *statementRuntime) applyOutputAssignments(policy OutputPolicy, batch ResultBatch, now time.Time) ResultBatch {
+	if r == nil || r.outputState == nil {
+		return batch
+	}
+	if len(policy.Then) == 0 {
+		r.outputState.insertCount = 0
+		r.outputState.removeCount = 0
+		r.outputState.lastOutputAt = now
+		return batch
+	}
 	// Capture the counters before resetting the per-output values.  Esper makes
 	// the same output context available to both the OUTPUT WHEN predicate and
 	// its THEN assignments, so an assignment such as
@@ -9422,9 +9567,6 @@ func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, 
 	r.outputState.insertCount = 0
 	r.outputState.removeCount = 0
 	r.outputState.lastOutputAt = now
-	if len(policy.Then) == 0 {
-		return batch
-	}
 	working := cloneValues(r.variables)
 	assignments := make([]VariableAssignment, 0, len(policy.Then))
 	for _, assignment := range policy.Then {

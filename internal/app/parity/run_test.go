@@ -6845,6 +6845,19 @@ func recordsOfCase(trace *compat.Trace, caseName string) []compat.TraceRecord {
 	return selected
 }
 
+// recordIndicesOfCase returns the indices in trace.Records whose case label
+// matches. Scalar-field mutations must go through the trace slice directly
+// because recordsOfCase returns value copies.
+func recordIndicesOfCase(trace *compat.Trace, caseName string) []int {
+	var indices []int
+	for i := range trace.Records {
+		if trace.Records[i].Case == caseName {
+			indices = append(indices, i)
+		}
+	}
+	return indices
+}
+
 func TestRunContextInitTermFilterOperatorsDiffRejectsTraceMutations(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -6924,6 +6937,147 @@ func TestRunContextInitTermFilterOperatorsDiffRejectsTraceMutations(t *testing.T
 			var stdout, stderr bytes.Buffer
 			code := Run([]string{
 				"-mode", "context-init-term-filter-operators-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunContextInitTermOutputClauseDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-output-clause.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-init-term-output-clause.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-output-clause.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-init-term-output-clause-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextInitTermOutputClauseDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "every2-group-sum",
+			mutate: func(trace *compat.Trace) {
+				records := recordsOfCase(trace, "op-all-every2-terminated")
+				records[0].New[0].Fields["c2"] = int64(2)
+			},
+		},
+		{
+			name: "termination-group-order",
+			mutate: func(trace *compat.Trace) {
+				records := recordsOfCase(trace, "op-all-every2-terminated")
+				records[1].New[0], records[1].New[1] = records[1].New[1], records[1].New[0]
+			},
+		},
+		{
+			name: "termination-silence",
+			mutate: func(trace *compat.Trace) {
+				indices := recordIndicesOfCase(trace, "op-all-every2-terminated")
+				trace.Records[indices[1]].Case = ""
+			},
+		},
+		{
+			name: "when-condition-boundary",
+			mutate: func(trace *compat.Trace) {
+				records := recordsOfCase(trace, "op-when-expr-when-terminated")
+				records[1].New[0].Fields["c0"] = "E2"
+			},
+		},
+		{
+			name: "termination-only-condition",
+			mutate: func(trace *compat.Trace) {
+				indices := recordIndicesOfCase(trace, "op-only-when-terminated")
+				trace.Records[indices[0]].New = trace.Records[indices[0]].New[:1]
+			},
+		},
+		{
+			name: "start-empty-record",
+			mutate: func(trace *compat.Trace) {
+				indices := recordIndicesOfCase(trace, "op-when-set-variable")
+				trace.Records[indices[0]].Case = ""
+			},
+		},
+		{
+			name: "variable-value",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "op-when-set-variable" && trace.Records[i].Operation == "variable" && trace.Records[i].Name == "myvar" {
+						trace.Records[i].Value = int64(0)
+					}
+				}
+			},
+		},
+		{
+			name: "termination-assignment",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "op-only-terminated-set" && trace.Records[i].Operation == "variable" {
+						trace.Records[i].Value = int64(9)
+					}
+				}
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "op-only-when-terminated"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-output-clause.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-init-term-output-clause.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-output-clause.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-init-term-output-clause-diff",
 				"-scenario", scenarioPath,
 				"-java-trace", javaTracePath,
 				"-evidence", evidencePath,

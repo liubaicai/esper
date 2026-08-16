@@ -5493,7 +5493,7 @@ func validateOutputPolicy(policy OutputPolicy) error {
 	if policy.Termination == OutputNoTermination && (policy.TerminationWhen != nil || len(policy.TerminationThen) > 0) {
 		return NewError(ErrorInvalidRule, "termination condition and assignments require context-termination output")
 	}
-	if len(policy.TerminationThen) > 0 && policy.TerminationWhen == nil {
+	if len(policy.TerminationThen) > 0 && policy.TerminationWhen == nil && policy.Termination == OutputNoTermination {
 		return NewError(ErrorInvalidRule, "termination assignments require a termination condition")
 	}
 	switch policy.After {

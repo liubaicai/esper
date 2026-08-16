@@ -32,6 +32,7 @@ type Step struct {
 	Hashes    []int64         `json:"hashes,omitempty"`
 	EventType string          `json:"eventType,omitempty"`
 	At        string          `json:"at,omitempty"`
+	Name      string          `json:"name,omitempty"`
 	Payload   json.RawMessage `json:"payload,omitempty"`
 }
 
@@ -77,6 +78,10 @@ func (s Scenario) Validate() error {
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
 			}
+		case "read-variable":
+			if strings.TrimSpace(step.Name) == "" {
+				return fmt.Errorf("compat: step %d read-variable has no name", i)
+			}
 		case "snapshot", "snapshot-selector":
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
@@ -111,12 +116,14 @@ type Trace struct {
 type TraceRecord struct {
 	Case       string            `json:"case,omitempty"`
 	Operation  string            `json:"operation"`
-	Statement  string            `json:"statement"`
-	Sequence   uint64            `json:"sequence"`
-	Time       string            `json:"time"`
+	Statement  string            `json:"statement,omitempty"`
+	Sequence   uint64            `json:"sequence,omitempty"`
+	Time       string            `json:"time,omitempty"`
 	New        []ResultRecord    `json:"new,omitempty"`
 	Old        []ResultRecord    `json:"old,omitempty"`
 	Partitions []PartitionRecord `json:"partitions,omitempty"`
+	Name       string            `json:"name,omitempty"`
+	Value      any               `json:"value,omitempty"`
 }
 
 // formatTraceTime matches Java's Instant.toString() representation used by
@@ -225,7 +232,7 @@ type FafHandler func(step Step) error
 // trace listener to a statement deployed by the step, mirroring the oracle's
 // mid-case listener attachment; it is a no-op when the handler does not
 // deploy statements.
-type StepHandler func(step Step, attach func(*esper.Statement) error) error
+type StepHandler func(step Step, attach func(*esper.Statement) error) ([]TraceRecord, error)
 
 func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *esper.Statement, scenario Scenario, decode DecodePayload, resolve StatementResolver, additional ...*esper.Statement) (Trace, error) {
 	return ReplayWithStatementsAndFaf(ctx, engine, statement, scenario, decode, resolve, nil, additional...)
@@ -236,7 +243,7 @@ func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *
 // non-nil), allowing Java/Go traces to include FAF mutations such as
 // delete-all from a named window.
 func ReplayWithStatementsAndFaf(ctx context.Context, engine *esper.Engine, statement *esper.Statement, scenario Scenario, decode DecodePayload, resolve StatementResolver, faf FafHandler, additional ...*esper.Statement) (Trace, error) {
-	return ReplayWithStatementsAndHandlers(ctx, engine, statement, scenario, decode, resolve, map[string]StepHandler{"faf": func(step Step, _ func(*esper.Statement) error) error { return faf(step) }}, additional...)
+	return ReplayWithStatementsAndHandlers(ctx, engine, statement, scenario, decode, resolve, map[string]StepHandler{"faf": func(step Step, _ func(*esper.Statement) error) ([]TraceRecord, error) { return nil, faf(step) }}, additional...)
 }
 
 // ReplayWithStatementsAndHandlers is ReplayWithStatements plus protocol step
@@ -316,12 +323,12 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 			if err := engine.AdvanceTime(ctx, at); err != nil {
 				return trace, err
 			}
-		case "faf", "deploy":
+		case "faf", "deploy", "read-variable":
 			handler := handlers[step.Op]
 			if handler == nil {
 				return trace, fmt.Errorf("compat: no %s handler for step %q", step.Op, step.Statement)
 			}
-			if err := handler(step, func(attached *esper.Statement) error {
+			records, err := handler(step, func(attached *esper.Statement) error {
 				if attached == nil {
 					return fmt.Errorf("compat: %s step attached a nil statement", step.Op)
 				}
@@ -339,9 +346,16 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 					return err
 				}
 				return nil
-			}); err != nil {
+			})
+			if err != nil {
 				return trace, err
 			}
+			for i := range records {
+				if records[i].Case == "" {
+					records[i].Case = caseName
+				}
+			}
+			trace.Records = append(trace.Records, records...)
 		case "snapshot", "snapshot-selector":
 			current := statement
 			if resolve != nil {

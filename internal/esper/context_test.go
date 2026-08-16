@@ -4501,3 +4501,147 @@ func TestOverlappingContextPartitionsDeliverInCreationOrder(t *testing.T) {
 		t.Fatalf("expected creation order [b2 a3], got [%v %v]", first, second)
 	}
 }
+
+func TestOutputWhenTrueEmitsEmptyBatchAtPartitionStart(t *testing.T) {
+	// `output when true then set myvar=1 and when terminated then set
+	// myvar=2` on a timer-cron initiated context: the partition start fires
+	// the listener with an empty batch and applies the then-set assignment,
+	// and the termination applies its assignment even when no rows remain.
+	env, engine := newRuntimeTest(t)
+	type startBean struct {
+		TheString string `esper:"theString"`
+	}
+	if _, err := RegisterStruct[startBean](env, "SB"); err != nil {
+		t.Fatal(err)
+	}
+	base := From[startBean](env, "SB")
+	everyMinute := NewCronScheduleWithSeconds(CronValues(0), CronWildcard(), CronWildcard(), CronWildcard(), CronWildcard(), CronWildcard())
+	if _, err := CreateOverlappingPatternInitiatedTerminatedContext(env, "EveryMinute",
+		TimerCron(base, everyMinute).Every(), TimerInterval(base, time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.RegisterVariable("myvar", 0); err != nil {
+		t.Fatal(err)
+	}
+	policy := OutputAndWhenTerminatedIf(
+		OutputWhenWith(OutputAll(), Literal(true), SetOutputVariable("myvar", Literal(1))),
+		nil, SetOutputVariable("myvar", Literal(2)))
+	plan, err := env.Build(Select(base, Alias("c0", Field[startBean, string]("theString"))).Query(
+		StatementName("s0"), WithContext("EveryMinute"), WithOutput(policy)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := time.Date(2002, 5, 1, 8, 0, 0, 0, time.UTC)
+	if err := engine.AdvanceTime(context.Background(), start); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var emptyBatches int
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if batch.empty() {
+			emptyBatches++
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), start.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if value, _ := engine.GetVariable("myvar"); value.Any().(int) != 1 {
+		t.Fatalf("myvar after partition start = %v, want 1", value.Any())
+	}
+	if emptyBatches != 1 {
+		t.Fatalf("expected one empty batch at partition start, got %d", emptyBatches)
+	}
+	if err := engine.Send(context.Background(), "SB", startBean{TheString: "E3"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), start.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if value, _ := engine.GetVariable("myvar"); value.Any().(int) != 2 {
+		t.Fatalf("myvar after termination = %v, want 2", value.Any())
+	}
+}
+
+func TestOutputAllEveryNUnboundedGroupedEmitsGroupReps(t *testing.T) {
+	// An unbounded grouped query with aggregate functions and
+	// `output all every 2 events` posts one representative row per group at
+	// the boundary; the termination flushes every live group's final row,
+	// mirroring the differential context-init-term-output-clause case.
+	env, engine := newRuntimeTest(t)
+	type repBean struct {
+		TheString string `esper:"theString"`
+		Value     int    `esper:"value"`
+	}
+	if _, err := RegisterStruct[repBean](env, "RB"); err != nil {
+		t.Fatal(err)
+	}
+	base := From[repBean](env, "RB")
+	theString := Field[repBean, string]("theString")
+	value := Field[repBean, int]("value")
+	everyMinute := NewCronScheduleWithSeconds(CronValues(0), CronWildcard(), CronWildcard(), CronWildcard(), CronWildcard(), CronWildcard())
+	if _, err := CreateOverlappingPatternInitiatedTerminatedContext(env, "EveryMinute",
+		TimerCron(base, everyMinute).Every(), TimerInterval(base, time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(base.GroupBy(theString).Select(
+		Alias("c1", theString),
+		Alias("c2", Sum[int](value)),
+	).Query(StatementName("s0"), WithContext("EveryMinute"),
+		WithOutput(OutputAndWhenTerminated(OutputAllEveryEvents(2))),
+		OrderBy(Ascending(ResultField[string]("c1")))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := time.Date(2002, 5, 1, 8, 0, 0, 0, time.UTC)
+	if err := engine.AdvanceTime(context.Background(), start); err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batches []ResultBatch
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if !batch.empty() {
+			batches = append(batches, batch)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), start.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	send := func(s string, v int) {
+		t.Helper()
+		if err := engine.Send(context.Background(), "RB", repBean{TheString: s, Value: v}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	send("E1", 1)
+	send("E1", 2)
+	if len(batches) != 1 || len(batches[0].New) != 1 {
+		t.Fatalf("expected one boundary row, got %#v", batches)
+	}
+	if row, _ := batches[0].New[0].Row(); row.Get("c2").Any().(int) != 3 {
+		t.Fatalf("boundary sum = %v, want 3", row.Get("c2").Any())
+	}
+	send("E2", 3)
+	if err := engine.AdvanceTime(context.Background(), start.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if len(batches) != 2 || len(batches[1].New) != 2 {
+		t.Fatalf("expected one termination batch with two rows, got %#v", batches)
+	}
+	first, _ := batches[1].New[0].Row()
+	second, _ := batches[1].New[1].Row()
+	if first.Get("c1").Any() != "E1" || second.Get("c1").Any() != "E2" {
+		t.Fatalf("termination rows not ordered: %v %v", first.Get("c1").Any(), second.Get("c1").Any())
+	}
+}

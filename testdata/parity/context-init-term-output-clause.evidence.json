@@ -1,0 +1,938 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-81ca9d4f0d34ba460d2d",
+    "java-runtime-2e991ab4c62f16b80a30",
+    "java-runtime-67c0d47278e45cc8407a",
+    "java-runtime-61d4f2f4e683b9fbac02",
+    "java-runtime-d8420feb762d4f29563a"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTerm.java"
+  ],
+  "javaExecutions": [
+    "ContextInitTermOutputAllEvery2AndTerminated",
+    "ContextInitTermOutputWhenExprWhenTerminatedCondition",
+    "ContextInitTermOutputOnlyWhenTerminatedCondition",
+    "ContextInitTermOutputOnlyWhenSetAndWhenTerminatedSet",
+    "ContextInitTermOutputOnlyWhenTerminatedThenSet"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-output-clause",
+    "steps": [
+      {
+        "op": "case",
+        "case": "op-all-every2-terminated"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:00:00.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:01:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:01:10.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:01:59.999Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 3,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:02:00.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:02:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 5,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 6,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 10,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:03:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -1,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": -2,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-when-expr-when-terminated"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:00:00.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:01:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:01:59.999Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:02:00.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:02:10.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 5,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:03:00.000Z"
+      },
+      {
+        "op": "case",
+        "case": "op-only-when-terminated"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:00:00.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:01:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:02:00.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:03:00.000Z"
+      },
+      {
+        "op": "case",
+        "case": "op-when-set-variable"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:00:00.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:01:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "myvar"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:02:00.000Z"
+      },
+      {
+        "op": "read-variable",
+        "name": "myvar"
+      },
+      {
+        "op": "case",
+        "case": "op-only-terminated-set"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "S0",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:01:00.000Z"
+      },
+      {
+        "op": "read-variable",
+        "name": "myvar"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-output-clause",
+    "records": [
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:01:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E1",
+              "c2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T08:02:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E1",
+              "c2": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E2",
+              "c2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T08:02:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E4",
+              "c2": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E5",
+              "c2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-01T08:02:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E4",
+              "c2": 14
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E5",
+              "c2": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E6",
+              "c2": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-01T08:03:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E4",
+              "c2": 14
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E5",
+              "c2": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E6",
+              "c2": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-01T08:03:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E1",
+              "c2": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E6",
+              "c2": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-when-expr-when-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:01:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-when-expr-when-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T08:02:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-when-expr-when-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T08:02:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-only-when-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:02:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-when-set-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:01:00Z"
+      },
+      {
+        "case": "op-when-set-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T08:01:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-when-set-variable",
+        "operation": "variable",
+        "name": "myvar",
+        "value": 1
+      },
+      {
+        "case": "op-when-set-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T08:02:00Z"
+      },
+      {
+        "case": "op-when-set-variable",
+        "operation": "variable",
+        "name": "myvar",
+        "value": 2
+      },
+      {
+        "case": "op-only-terminated-set",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:01:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-only-terminated-set",
+        "operation": "variable",
+        "name": "myvar",
+        "value": 10
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-output-clause",
+    "records": [
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:01:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E1",
+              "c2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T08:02:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E1",
+              "c2": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E2",
+              "c2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T08:02:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E4",
+              "c2": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E5",
+              "c2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-01T08:02:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E4",
+              "c2": 14
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E5",
+              "c2": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E6",
+              "c2": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-01T08:03:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E4",
+              "c2": 14
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E5",
+              "c2": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E6",
+              "c2": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-all-every2-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-01T08:03:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E1",
+              "c2": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E6",
+              "c2": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-when-expr-when-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:01:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-when-expr-when-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T08:02:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-when-expr-when-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T08:02:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-only-when-terminated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:02:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-when-set-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:01:00Z"
+      },
+      {
+        "case": "op-when-set-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T08:01:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-when-set-variable",
+        "operation": "variable",
+        "name": "myvar",
+        "value": 1
+      },
+      {
+        "case": "op-when-set-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T08:02:00Z"
+      },
+      {
+        "case": "op-when-set-variable",
+        "operation": "variable",
+        "name": "myvar",
+        "value": 2
+      },
+      {
+        "case": "op-only-terminated-set",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T08:01:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-only-terminated-set",
+        "operation": "variable",
+        "name": "myvar",
+        "value": 10
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

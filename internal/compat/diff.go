@@ -52,6 +52,8 @@ func DiffTraces(expected, actual Trace) []TraceDifference {
 		compareResults(&differences, prefix+".new", want.New, got.New)
 		compareResults(&differences, prefix+".old", want.Old, got.Old)
 		comparePartitions(&differences, prefix+".partitions", want.Partitions, got.Partitions)
+		compareValue(prefix+".name", want.Name, got.Name)
+		compareValue(prefix+".value", want.Value, got.Value)
 	}
 	return differences
 }

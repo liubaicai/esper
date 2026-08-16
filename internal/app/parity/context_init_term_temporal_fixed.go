@@ -396,38 +396,38 @@ func runContextInitTermCase(ctx context.Context, scenario compat.Scenario, caseN
 			pendingB = true
 		}
 		handlers := map[string]compat.StepHandler{
-			"deploy": func(step compat.Step, attach func(*esper.Statement) error) error {
+			"deploy": func(step compat.Step, attach func(*esper.Statement) error) ([]compat.TraceRecord, error) {
 				switch step.Statement {
 				case "B":
 					if !pendingB {
-						return fmt.Errorf("statement B already deployed")
+						return nil, fmt.Errorf("statement B already deployed")
 					}
 					pendingB = false
 					plan, err := buildB()
 					if err != nil {
-						return err
+						return nil, err
 					}
 					statement, err := deploy(plan)
 					if err != nil {
-						return err
+						return nil, err
 					}
-					return attach(statement)
+					return nil, attach(statement)
 				case "C":
 					if !pendingC {
-						return fmt.Errorf("statement C already deployed")
+						return nil, fmt.Errorf("statement C already deployed")
 					}
 					pendingC = false
 					plan, err := buildC()
 					if err != nil {
-						return err
+						return nil, err
 					}
 					statement, err := deploy(plan)
 					if err != nil {
-						return err
+						return nil, err
 					}
-					return attach(statement)
+					return nil, attach(statement)
 				default:
-					return fmt.Errorf("unknown deploy target %q", step.Statement)
+					return nil, fmt.Errorf("unknown deploy target %q", step.Statement)
 				}
 			},
 		}
