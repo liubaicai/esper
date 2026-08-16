@@ -9911,3 +9911,114 @@ func TestRunContextKeySegmentedPatternSceneTwoDiffRejectsTraceMutations(t *testi
 		})
 	}
 }
+
+func TestRunContextKeySegmentedJoinWhereClauseOnPartitionKeyDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-join-where-clause-on-partition-key.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-join-where-clause-on-partition-key.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-join-where-clause-on-partition-key.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-join-where-clause-on-partition-key-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedJoinWhereClauseOnPartitionKeyDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "where-clause",
+			mutate: func(trace *compat.Trace) {
+				// The where clause admits only the Test partition; a bug
+				// dropping it would emit E2's join too.
+				indices := recordIndicesOfCase(trace, "join-where-partition-key")
+				record := trace.Records[indices[0]]
+				record.Sequence++
+				record.New = append(record.New, compat.ResultRecord{Kind: "row", Fields: map[string]any{
+					"sb.theString": "E2", "sb.intPrimitive": 20, "s0.id": 1, "s0.p00": "S0",
+				}})
+				trace.Records = append(trace.Records, record)
+			},
+		},
+		{
+			name: "fan-out",
+			mutate: func(trace *compat.Trace) {
+				// S0(1) fans out to both partitions; a missing fan-out
+				// would produce no record at all.
+				indices := recordIndicesOfCase(trace, "join-where-partition-key")
+				trace.Records = trace.Records[:indices[0]]
+			},
+		},
+		{
+			name: "partition-key-value",
+			mutate: func(trace *compat.Trace) {
+				// The join row carries SB(Test,10); a wrong window value
+				// would carry 20.
+				indices := recordIndicesOfCase(trace, "join-where-partition-key")
+				trace.Records[indices[0]].New[0].Fields["sb.intPrimitive"] = 20
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "other"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-join-where-clause-on-partition-key.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-join-where-clause-on-partition-key.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-join-where-clause-on-partition-key.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-join-where-clause-on-partition-key-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

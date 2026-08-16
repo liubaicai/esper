@@ -1,0 +1,34 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-join-where-clause-on-partition-key",
+ "steps": [
+  {
+   "op": "case",
+   "case": "join-where-partition-key"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "Test",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "S0"
+   }
+  }
+ ]
+}
