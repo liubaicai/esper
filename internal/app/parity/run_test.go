@@ -8124,3 +8124,128 @@ func TestRunContextKeySegmentedTermByFilterDiffRejectsTraceMutations(t *testing.
 		})
 	}
 }
+
+func TestRunContextKeySegmentedWInitTermEndEventDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-w-init-term-end-event.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-w-init-term-end-event.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-w-init-term-end-event.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-w-init-term-end-event-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedWInitTermEndEventDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "missing-endevent",
+			mutate: func(trace *compat.Trace) {
+				// The terminating event must be projected into c1; a
+				// buffered-at-arrival row would carry missing.
+				indices := recordIndicesOfCase(trace, "w-init-term-end-event")
+				trace.Records[indices[0]].New[0].Fields["c1"] = map[string]any{"state": "missing"}
+			},
+		},
+		{
+			name: "wrong-startevent",
+			mutate: func(trace *compat.Trace) {
+				// c0 is the initiating event; a snapshot row of the
+				// terminating event itself would carry intPrimitive=0.
+				indices := recordIndicesOfCase(trace, "w-init-term-end-event")
+				trace.Records[indices[0]].New[0].Fields["c0"] = map[string]any{
+					"kind": "row", "fields": map[string]any{"theString": "A", "intPrimitive": 0},
+				}
+			},
+		},
+		{
+			name: "terminating-event-analyzed",
+			mutate: func(trace *compat.Trace) {
+				// The terminating event does not enter the statement; a
+				// bug that analyzes it would emit an extra row.
+				indices := recordIndicesOfCase(trace, "w-init-term-end-event")
+				record := trace.Records[indices[0]]
+				record.Sequence++
+				record.New = append(record.New, compat.ResultRecord{Kind: "row", Fields: map[string]any{
+					"c0": map[string]any{"kind": "row", "fields": map[string]any{"theString": "A", "intPrimitive": 0}},
+					"c1": map[string]any{"kind": "row", "fields": map[string]any{"theString": "A", "intPrimitive": 0}},
+				}})
+				trace.Records = append(trace.Records, record)
+			},
+		},
+		{
+			name: "partition-isolation",
+			mutate: func(trace *compat.Trace) {
+				// B's partition starts from its own initiating event; a
+				// key leak would reuse A's.
+				indices := recordIndicesOfCase(trace, "w-init-term-end-event")
+				trace.Records[indices[1]].New[0].Fields["c0"] = map[string]any{
+					"kind": "row", "fields": map[string]any{"theString": "A", "intPrimitive": 1},
+				}
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "other"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-w-init-term-end-event.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-w-init-term-end-event.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-w-init-term-end-event.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-w-init-term-end-event-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

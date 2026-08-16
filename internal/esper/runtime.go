@@ -135,6 +135,17 @@ func (r Result) Row() (Row, bool) {
 	return *r.row, true
 }
 
+// RowEvent returns the source event a projected row was built from, when the
+// row retained it. Rows of unbounded row-per-event sources keep their source
+// event so termination-time output can re-project the batch with the context
+// properties current at termination.
+func (r Result) RowEvent() (Event, bool) {
+	if r.rowEvent == nil {
+		return Event{}, false
+	}
+	return *r.rowEvent, true
+}
+
 func (r Result) Underlying() any {
 	if r.event != nil {
 		return r.event.Underlying()
@@ -8925,14 +8936,21 @@ func (r *statementRuntime) outputAtTermination(plan Plan, now time.Time) ResultB
 			// termination output flushes the rows buffered since the last
 			// output, matching Esper's output-when-terminated flush. When
 			// clauses buffer into whenPending; plain termination-only
-			// policies buffer into pending.
+			// policies buffer into pending. The buffered rows are
+			// re-projected with the variables current at termination so
+			// context properties set by the ending event (for example
+			// terminating_event) are visible in every buffered row, as
+			// Esper projects the pending batch when the condition fires
+			// rather than when each row arrived.
+			var pending ResultBatch
 			if r.outputState.pending != nil {
-				result = r.outputState.pending.clone()
+				pending = *r.outputState.pending
 				r.outputState.pending = nil
 			} else if r.outputState.whenPending != nil {
-				result = r.outputState.whenPending.clone()
+				pending = *r.outputState.whenPending
 				r.outputState.whenPending = nil
 			}
+			result = r.reprojectPendingBatch(pending, plan, now)
 		}
 	} else if policy.When != nil || policy.TerminationWhen != nil {
 		result = r.takeWhenPending(ResultBatch{})
@@ -9859,6 +9877,51 @@ func dropResultPrefix(batch ResultBatch, count int) ResultBatch {
 		return result
 	}
 	result.Old = nil
+	return result
+}
+
+// reprojectPendingBatch re-projects the source events of a buffered
+// termination batch with the variables current at termination. Rows buffered
+// by output-when-terminated policies were projected at arrival; Esper
+// projects the batch when the termination condition fires, so context
+// properties set by the ending event must be visible in every buffered row.
+// The source events are recovered from the buffered results; a non-aggregate
+// unbounded row source retains one event per result.
+func (r *statementRuntime) reprojectPendingBatch(pending ResultBatch, plan Plan, now time.Time) ResultBatch {
+	if r == nil || len(pending.New) == 0 {
+		return ResultBatch{}
+	}
+	events := make([]Event, 0, len(pending.New))
+	for _, result := range pending.New {
+		if event, ok := result.Event(); ok {
+			events = append(events, event)
+			continue
+		}
+		if event, ok := result.RowEvent(); ok {
+			events = append(events, event)
+		}
+	}
+	if len(events) == 0 {
+		return ResultBatch{}
+	}
+	if len(plan.query.selections) == 0 {
+		result := ResultBatch{Time: now}
+		for _, event := range events {
+			result.New = append(result.New, resultEvent(event))
+		}
+		if !result.empty() {
+			result.Sequence = r.seq.Add(1)
+		}
+		return result
+	}
+	result := ResultBatch{Time: now}
+	result.New = projectResults(events, plan.query, plan.resultSchema, now, r.variables, nil, nil, nil, nil, false, r.evaluationContext())
+	if plan.query.distinct {
+		result.New = distinctSnapshotResults(result.New)
+	}
+	if !result.empty() {
+		result.Sequence = r.seq.Add(1)
+	}
 	return result
 }
 

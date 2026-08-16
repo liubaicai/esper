@@ -594,6 +594,16 @@ func normalizeValue(value esper.Value) any {
 		}
 		return rows
 	}
+	if event, ok := value.Any().(esper.Event); ok {
+		// Single event columns (for example context.startevent / context.
+		// endevent projections) normalize to the same row shape as the
+		// Java oracle's EventBean/Map rendering.
+		fields := make(map[string]any)
+		for _, field := range event.Schema().Fields() {
+			fields[field.Name] = normalizeValue(event.Get(field.Name))
+		}
+		return map[string]any{"kind": "row", "fields": fields}
+	}
 	return value.Any()
 }
 
