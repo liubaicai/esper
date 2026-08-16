@@ -1,0 +1,64 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-match-recognize",
+ "steps": [
+  {
+   "op": "case",
+   "case": "match-recognize"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 1,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": 1,
+    "longPrimitive": 30
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 2,
+    "longPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": 2,
+    "longPrimitive": 40
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 1,
+    "longPrimitive": 50
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 2,
+    "longPrimitive": 60
+   }
+  }
+ ]
+}

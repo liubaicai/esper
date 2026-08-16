@@ -1,0 +1,187 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-3e24f25a32226e390917"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+  ],
+  "javaExecutions": [
+    "ContextKeySegmentedMatchRecognize"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-match-recognize",
+    "steps": [
+      {
+        "op": "case",
+        "case": "match-recognize"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 1,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 1,
+          "longPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 2,
+          "longPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 2,
+          "longPrimitive": 40
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 1,
+          "longPrimitive": 50
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 2,
+          "longPrimitive": 60
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-match-recognize",
+    "records": [
+      {
+        "case": "match-recognize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": 10,
+              "b": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "match-recognize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": 30,
+              "b": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "match-recognize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": 50,
+              "b": 60
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-match-recognize",
+    "records": [
+      {
+        "case": "match-recognize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": 10,
+              "b": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "match-recognize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": 30,
+              "b": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "match-recognize",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": 50,
+              "b": 60
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
