@@ -187,7 +187,7 @@ func renderJSONSchemaPropertyWithRaw(schema Schema, name string, value Value, ra
 		if value.IsMissing() || value.IsNull() {
 			return nil, nil
 		}
-		encoded, err := adapter.Write(value.Any())
+		encoded, err := adapter.Write(jsonUnboxAdapterValue(adapter, value.Any()))
 		if err != nil {
 			return nil, fmt.Errorf("JSON field adapter %q: %w", name, err)
 		}
@@ -352,6 +352,9 @@ func renderJSONValueWithRaw(value any, maxDepth, depth int, raw any, declaredTyp
 		return number, nil
 	}
 	if character, ok := rawJSONCharacter(raw, declaredType, reflectValue); ok {
+		return character, nil
+	}
+	if character, ok := jsonCharacterValue(declaredType, reflectValue); ok {
 		return character, nil
 	}
 	if reflectValue.Type() == reflect.TypeOf(time.Time{}) {

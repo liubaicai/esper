@@ -75,7 +75,18 @@ func (a jsonFieldAdapterTyped[T]) Write(value any) (string, error) {
 	if a.write == nil {
 		return "", fmt.Errorf("esper: JSON field adapter write function is nil")
 	}
-	converted, err := assignReflectValue(typeOf[T](), value)
+	target := typeOf[T]()
+	for target.Kind() != reflect.Pointer && value != nil {
+		current := reflect.ValueOf(value)
+		if current.Kind() != reflect.Pointer {
+			break
+		}
+		if current.IsNil() {
+			break
+		}
+		value = current.Elem().Interface()
+	}
+	converted, err := assignReflectValue(target, value)
 	if err != nil {
 		return "", err
 	}

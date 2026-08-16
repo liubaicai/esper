@@ -14522,8 +14522,13 @@ func patternCompletionPermanent(progress *patternProgress) bool {
 		return !patternRepeatingLegAlive(progress.child)
 	case patternSequenceNode:
 		if progress.phase >= 2 && progress.right != nil {
-			// A completed followed-by quits exactly when its last child quit.
-			return patternCompletionPermanent(progress.right)
+			// A completed followed-by quits exactly when its last child quit —
+			// but a repeating left leg (every a -> b) keeps the followed-by
+			// alive: the every node keeps spawning waiting branches, so the
+			// completion is not permanent and the pattern must not stop after
+			// one match (Esper's EvalFollowedByStateNode stays resident while
+			// its every left leg can fire again).
+			return !patternRepeatingLegAlive(progress.left) && patternCompletionPermanent(progress.right)
 		}
 		// A followed-by waiting on its right side with a repeating left leg
 		// reports isQuitted=false in Esper: the every leg keeps spawning
