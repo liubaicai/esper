@@ -104,7 +104,31 @@ func EqualValues(left, right Value) Value {
 	if equal, numeric := numericEqual(left.data, right.data); numeric {
 		return Present(equal)
 	}
-	return Present(reflect.DeepEqual(left.data, right.data))
+	// Nullable fields read through a struct schema surface as pointers
+	// (*string, *bool, ...) while literals and non-nullable fields surface
+	// as values. Dereference both sides so a nullable field compares equal
+	// to a plain value of the same base type, mirroring Java's boxed
+	// equals semantics; nil pointers were already handled by IsPresent.
+	leftData := dereferenceValue(left.data)
+	rightData := dereferenceValue(right.data)
+	return Present(reflect.DeepEqual(leftData, rightData))
+}
+
+// dereferenceValue unwraps interface and pointer layers of a value for
+// comparison purposes. Nil layers return the value as-is so the caller's
+// null handling applies.
+func dereferenceValue(value any) any {
+	rv := reflect.ValueOf(value)
+	for rv.IsValid() && (rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface) {
+		if rv.IsNil() {
+			return value
+		}
+		rv = rv.Elem()
+	}
+	if !rv.IsValid() || !rv.CanInterface() {
+		return value
+	}
+	return rv.Interface()
 }
 
 // numericEqual applies expression-level numeric coercion without weakening

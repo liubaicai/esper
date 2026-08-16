@@ -893,6 +893,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "context-init-term-temporal-fixed" || *mode == "context-init-term-temporal-fixed-diff" {
+		trace, err := runContextInitTermTemporalFixedScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-init-term-temporal-fixed-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, contextInitTermJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextInitTermJavaSources),
+				splitMetadata(*javaExecutions, contextInitTermJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "subselect-in" || *mode == "subselect-in-diff" {
 		trace, err := runSubselectInScenario(context.Background(), scenario)
 		if err != nil {

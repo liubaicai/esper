@@ -3569,7 +3569,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 		return newProjectionResultSchema("result:"+query.name, fields, query.patternSelections)
 	}
 	if query.pattern != nil {
-		if len(query.patternSelections) == 0 {
+		if len(query.patternSelections) == 0 && len(patternDefinitionTagNames(query.pattern)) > 0 {
 			return Schema{}, NewError(ErrorInvalidRule, "pattern requires at least one projection")
 		}
 		fields := make([]FieldSpec, 0, len(query.patternSelections))
@@ -5205,7 +5205,7 @@ func (e *Environment) validatePattern(definition *patternDefinition, selections 
 			}
 		}
 	}
-	if len(selections) == 0 {
+	if len(selections) == 0 && len(patternDefinitionTagNames(definition)) > 0 {
 		return NewError(ErrorInvalidRule, "pattern requires at least one projection")
 	}
 	seen := make(map[string]struct{}, len(selections))

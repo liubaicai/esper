@@ -415,6 +415,31 @@ func NewPatternInitiatedContext(name string, start PatternStream) (ContextDefini
 	return newPatternInitiatedTerminatedContext(name, start, PatternStream{}, false, false)
 }
 
+// NewPatternTerminatedContext declares the mixed initiated-terminated form
+// `start <filter> end pattern [...]:` a filter predicate starts a partition
+// and the end pattern terminates it. The end pattern filter predicates may
+// reference the initiating event through ContextInitiatingEvent, matching
+// Esper's correlated pattern-ended contexts.
+func NewPatternTerminatedContext(name string, key Expr, start Expression[bool], end PatternStream) (ContextDefinition, error) {
+	if strings.TrimSpace(name) == "" {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, "context name is required")
+	}
+	if start == nil {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, "pattern-terminated context requires a start predicate")
+	}
+	if err := validateContextPatternStream(end, "end"); err != nil {
+		return ContextDefinition{}, err
+	}
+	return ContextDefinition{
+		name:               name,
+		kind:               ContextInitiatedTerminated,
+		key:                key,
+		start:              start,
+		endPattern:         end.def,
+		patternEnvironment: end.env,
+	}, nil
+}
+
 // NewOverlappingPatternInitiatedTerminatedContext declares a pattern context
 // that allocates one partition for every completed start pattern, even when
 // the start pattern itself does not use Every.
@@ -817,15 +842,48 @@ func (d ContextDefinition) cronWindow(origin, now time.Time) (time.Time, time.Ti
 	if d.cronStartResolved == nil || d.cronEndResolved == nil {
 		return time.Time{}, time.Time{}, false
 	}
-	start, err := d.cronStartResolved.previousOrAt(now)
-	if err != nil || start.Before(origin) {
+	// The first window contains the origin when the origin falls inside a
+	// start/end interval (Esper activates the context at deploy when the
+	// current time is inside the cycle); otherwise the first start is the
+	// next occurrence after the origin. Subsequent windows anchor to the
+	// previous end: the next start is computed strictly after the end, so a
+	// start coinciding with the previous end is skipped (the every-second
+	// context activates only every other second, matching the regression
+	// harness's deployment at a second boundary).
+	start, err := d.cronStartResolved.previousOrAt(origin)
+	if err != nil {
 		return time.Time{}, time.Time{}, false
 	}
 	end, err := d.cronEndResolved.nextAfter(start)
-	if err != nil || !now.Before(end) {
+	if err != nil {
 		return time.Time{}, time.Time{}, false
 	}
-	return start, end, true
+	if origin.Before(start) || !origin.Before(end) {
+		start, err = d.cronStartResolved.nextAfter(origin)
+		if err != nil {
+			return time.Time{}, time.Time{}, false
+		}
+		end, err = d.cronEndResolved.nextAfter(start)
+		if err != nil {
+			return time.Time{}, time.Time{}, false
+		}
+	}
+	for !start.After(now) {
+		if !now.Before(end) {
+			nextStart, err := d.cronStartResolved.nextAfter(end)
+			if err != nil {
+				return time.Time{}, time.Time{}, false
+			}
+			start = nextStart
+			end, err = d.cronEndResolved.nextAfter(start)
+			if err != nil {
+				return time.Time{}, time.Time{}, false
+			}
+			continue
+		}
+		return start, end, true
+	}
+	return time.Time{}, time.Time{}, false
 }
 
 func (d ContextDefinition) dailyWindow(origin, now time.Time) (time.Time, time.Time, bool) {
@@ -843,7 +901,11 @@ func (d ContextDefinition) dailyWindow(origin, now time.Time) (time.Time, time.T
 			endDate = date.AddDate(0, 0, 1)
 		}
 		end := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), d.dailyEnd.Hour, d.dailyEnd.Minute, d.dailyEnd.Second, d.dailyEnd.Nanosecond, location)
-		if start.Before(localOrigin) {
+		// A window whose end is at or before the origin lies entirely before
+		// the context activation; a window CONTAINING the origin (deploy
+		// landed inside the active period) stays active, matching Esper's
+		// activation of the current cycle at deploy.
+		if !end.After(localOrigin) {
 			continue
 		}
 		if !localNow.Before(start) && localNow.Before(end) {
@@ -1304,6 +1366,22 @@ func CreatePatternInitiatedTerminatedContext(env *Environment, name string, star
 		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
 	definition, err := NewPatternInitiatedTerminatedContext(name, start, end)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	if definition.patternEnvironment != env {
+		return ContextDefinition{}, NewError(ErrorDependency, "pattern context belongs to a different environment")
+	}
+	return env.registerContextDefinition(definition)
+}
+
+// CreatePatternTerminatedContext registers the mixed filter-start
+// pattern-end context form in env.
+func CreatePatternTerminatedContext(env *Environment, name string, key Expr, start Expression[bool], end PatternStream) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewPatternTerminatedContext(name, key, start, end)
 	if err != nil {
 		return ContextDefinition{}, err
 	}

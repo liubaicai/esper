@@ -73,9 +73,9 @@ func (s Scenario) Validate() error {
 			if _, err := time.Parse(time.RFC3339Nano, step.At); err != nil {
 				return fmt.Errorf("compat: step %d invalid time %q: %w", i, step.At, err)
 			}
-		case "faf":
+		case "faf", "deploy":
 			if strings.TrimSpace(step.Statement) == "" {
-				return fmt.Errorf("compat: step %d faf has no statement", i)
+				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
 			}
 		case "snapshot", "snapshot-selector":
 			if strings.TrimSpace(step.Statement) == "" {
@@ -219,6 +219,14 @@ type StatementResolver func(name string) (*esper.Statement, error)
 // mutation.
 type FafHandler func(step Step) error
 
+// StepHandler executes a protocol step such as a mid-case deployment or a
+// fire-and-forget mutation. Java oracles perform the equivalent runtime
+// action so both traces observe the same lifecycle. attach subscribes a
+// trace listener to a statement deployed by the step, mirroring the oracle's
+// mid-case listener attachment; it is a no-op when the handler does not
+// deploy statements.
+type StepHandler func(step Step, attach func(*esper.Statement) error) error
+
 func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *esper.Statement, scenario Scenario, decode DecodePayload, resolve StatementResolver, additional ...*esper.Statement) (Trace, error) {
 	return ReplayWithStatementsAndFaf(ctx, engine, statement, scenario, decode, resolve, nil, additional...)
 }
@@ -228,6 +236,13 @@ func ReplayWithStatements(ctx context.Context, engine *esper.Engine, statement *
 // non-nil), allowing Java/Go traces to include FAF mutations such as
 // delete-all from a named window.
 func ReplayWithStatementsAndFaf(ctx context.Context, engine *esper.Engine, statement *esper.Statement, scenario Scenario, decode DecodePayload, resolve StatementResolver, faf FafHandler, additional ...*esper.Statement) (Trace, error) {
+	return ReplayWithStatementsAndHandlers(ctx, engine, statement, scenario, decode, resolve, map[string]StepHandler{"faf": func(step Step, _ func(*esper.Statement) error) error { return faf(step) }}, additional...)
+}
+
+// ReplayWithStatementsAndHandlers is ReplayWithStatements plus protocol step
+// handlers keyed by op ("faf", "deploy", ...). Handlers receive the step and
+// perform the equivalent runtime action.
+func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, statement *esper.Statement, scenario Scenario, decode DecodePayload, resolve StatementResolver, handlers map[string]StepHandler, additional ...*esper.Statement) (Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return Trace{}, err
 	}
@@ -301,11 +316,30 @@ func ReplayWithStatementsAndFaf(ctx context.Context, engine *esper.Engine, state
 			if err := engine.AdvanceTime(ctx, at); err != nil {
 				return trace, err
 			}
-		case "faf":
-			if faf == nil {
-				return trace, fmt.Errorf("compat: no fire-and-forget handler for step %q", step.Statement)
+		case "faf", "deploy":
+			handler := handlers[step.Op]
+			if handler == nil {
+				return trace, fmt.Errorf("compat: no %s handler for step %q", step.Op, step.Statement)
 			}
-			if err := faf(step); err != nil {
+			if err := handler(step, func(attached *esper.Statement) error {
+				if attached == nil {
+					return fmt.Errorf("compat: %s step attached a nil statement", step.Op)
+				}
+				for _, existing := range statements {
+					if existing.Name() == attached.Name() {
+						return nil
+					}
+				}
+				statements = append(statements, attached)
+				if _, err := attached.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+					listenerSequences[attached.Name()]++
+					appendBatch(caseName, "listener", attached, batch, nil, listenerSequences[attached.Name()])
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}); err != nil {
 				return trace, err
 			}
 		case "snapshot", "snapshot-selector":

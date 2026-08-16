@@ -6113,3 +6113,144 @@ func TestRunSubselectInDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunContextInitTermTemporalFixedDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-temporal-fixed.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-init-term-temporal-fixed.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-temporal-fixed.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-init-term-temporal-fixed-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextInitTermTemporalFixedDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "correlated-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["c3"] = int64(99)
+			},
+		},
+		{
+			name: "pattern-sum",
+			mutate: func(trace *compat.Trace) {
+				for _, record := range trace.Records {
+					if record.Case == "pattern-pattern" {
+						record.New[0].Fields["c2"] = int64(42)
+						break
+					}
+				}
+			},
+		},
+		{
+			name: "every-second-null-state",
+			mutate: func(trace *compat.Trace) {
+				for _, record := range trace.Records {
+					if record.Case == "every-second" {
+						record.New[0].Fields["intBoxed"] = int64(7)
+						break
+					}
+				}
+			},
+		},
+		{
+			name: "daily-join-time-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[38].New[0].Fields["col3"] = int64(2)
+			},
+		},
+		{
+			name: "daily-pattern-time-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:41]
+			},
+		},
+		{
+			name: "turned-off-mid-deploy",
+			mutate: func(trace *compat.Trace) {
+				for _, record := range trace.Records {
+					if record.Case == "turned-off" && record.Statement == "B" {
+						record.New[0].Fields["theString"] = "mutated"
+						break
+					}
+				}
+			},
+		},
+		{
+			name: "turned-on-timer",
+			mutate: func(trace *compat.Trace) {
+				for _, record := range trace.Records {
+					if record.Case == "turned-on" && record.Statement == "B" {
+						record.New[0].Fields["intPrimitive"] = int64(3)
+						break
+					}
+				}
+			},
+		},
+		{
+			name: "snapshot-removed-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:64]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[64].Case = "daily-agg-ungrouped"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-temporal-fixed.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-init-term-temporal-fixed.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-temporal-fixed.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-init-term-temporal-fixed-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

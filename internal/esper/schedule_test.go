@@ -391,3 +391,48 @@ func TestCronScheduleRejectsInvalidPrecision(t *testing.T) {
 		t.Fatal("millisecond 1000 was accepted")
 	}
 }
+
+func TestCronEverySecondNextAfterIsExactAndBounded(t *testing.T) {
+	// The every-second cron schedule must resolve the next whole second
+	// immediately. A clock advanced years before deploy used to anchor the
+	// temporal origin at the Unix epoch, forcing cronWindow to step one
+	// cycle per second from 1970 to the deploy instant; the deploy-time
+	// origin anchoring fixed the hang, and this test pins the schedule
+	// arithmetic that the context loop relies on.
+	everySecond := NewCronScheduleWithSeconds(CronWildcard(), CronWildcard(), CronWildcard(),
+		CronWildcard(), CronWildcard(), CronWildcard())
+	resolved, err := everySecond.resolve(EvalContext{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2002, time.May, 1, 8, 0, 0, 0, time.UTC)
+	start := time.Now()
+	next, err := resolved.nextAfter(at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if time.Since(start) > time.Second {
+		t.Fatalf("nextAfter on a wildcard schedule took %s", time.Since(start))
+	}
+	want := at.Add(time.Second)
+	if !next.Equal(want) {
+		t.Fatalf("nextAfter(%s) = %s, want %s", at, next, want)
+	}
+	// Sub-second references advance to the next whole second boundary.
+	subSecond := at.Add(500 * time.Millisecond)
+	next, err = resolved.nextAfter(subSecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !next.Equal(want) {
+		t.Fatalf("nextAfter(%s) = %s, want %s", subSecond, next, want)
+	}
+	// previousOrAt returns the reference itself at a whole second.
+	previous, err := resolved.previousOrAt(at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !previous.Equal(at) {
+		t.Fatalf("previousOrAt(%s) = %s, want %s", at, previous, at)
+	}
+}

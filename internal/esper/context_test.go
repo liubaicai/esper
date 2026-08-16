@@ -3749,3 +3749,184 @@ func TestContextPartitionedNamedWindowConsumerRoutesByPartition(t *testing.T) {
 		t.Fatalf("context named-window partitions = %d", statement.ContextPartitionCount())
 	}
 }
+
+func TestTemporalContextOriginAnchorsAtDeployNotEpoch(t *testing.T) {
+	// The virtual clock starts at the Unix epoch. Deploying a recurring
+	// cron context after advancing the clock far ahead must anchor the
+	// context at the deploy instant: anchoring at the epoch would force
+	// cronWindow to step one cycle per second from 1970 to the deploy
+	// time (a multi-billion-iteration hang for an every-second schedule).
+	env := NewEnvironment()
+	if _, err := RegisterStruct[runtimeTestTrade](env, "Trade"); err != nil {
+		t.Fatal(err)
+	}
+	everySecond := NewCronScheduleWithSeconds(CronWildcard(), CronWildcard(), CronWildcard(),
+		CronWildcard(), CronWildcard(), CronWildcard())
+	if _, err := CreateCronTimeContext(env, "every-second-anchor", everySecond, everySecond); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(StatementName("s0"), WithContext("every-second-anchor")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	initial := time.Date(2002, time.May, 1, 8, 0, 0, 0, time.UTC)
+	if err := engine.AdvanceTime(context.Background(), initial); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Errorf("deploy: %v", err)
+		}
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("every-second cron context deploy hung: origin was anchored at the epoch")
+	}
+	origin := engine.contextTemporalOrigins["every-second-anchor"]
+	if !origin.Equal(initial) {
+		t.Fatalf("temporal origin = %s, want deploy time %s", origin, initial)
+	}
+	count, err := engine.ContextPartitionCount("every-second-anchor")
+	if err != nil || count != 1 {
+		t.Fatalf("active every-second partition count = %d, err=%v", count, err)
+	}
+}
+
+func TestDailyContextActivatesCurrentWindowWhenDeployedInsideIt(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	nine, _ := NewTimeOfDay(9, 0, 0)
+	five, _ := NewTimeOfDay(17, 0, 0)
+	if _, err := CreateDailyTimeContext(env, "business-window", nine, five); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(StatementName("s0"), WithContext("business-window")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	// Deploy at 09:15, inside the 09:00-17:00 window: Esper activates the
+	// current cycle at deploy, so the partition must exist immediately.
+	deployAt := time.Date(2024, time.May, 1, 9, 15, 0, 0, time.UTC)
+	if err := engine.AdvanceTime(context.Background(), deployAt); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), plan); err != nil {
+		t.Fatal(err)
+	}
+	count, err := engine.ContextPartitionCount("business-window")
+	if err != nil || count != 1 {
+		t.Fatalf("daily context partition count inside window = %d, err=%v, want 1", count, err)
+	}
+}
+
+func TestPatternContextStartPatternRearmsAfterCompletion(t *testing.T) {
+	// A non-every start pattern `a=A -> timer:interval(1 sec)` completes
+	// when its timer fires and the context condition must re-arm: a later
+	// A event starts a fresh instance, and a completion that overlaps an
+	// active partition is discarded (Esper's repeatable condition).
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	isStart := Or(
+		Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("A1")),
+		Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("A3")),
+	)
+	start := PatternFrom(base, "a", isStart).Then(TimerInterval(base, time.Second))
+	end := PatternFrom(base, "b", Equal[string](Field[runtimeTestTrade, string]("symbol"), Literal("B"))).Then(TimerInterval(base, time.Second))
+	if _, err := CreatePatternInitiatedTerminatedContext(env, "rearming-context", start, end); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(base.Window(KeepAll()).Aggregate(
+		Alias("c1", ContextPatternField[string]("a", "symbol")),
+		Alias("c2", Sum[int](Field[runtimeTestTrade, int]("price"))),
+	).Query(StatementName("s0"), WithContext("rearming-context")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A1", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(1, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E1", Price: 3}); err != nil {
+		t.Fatal(err)
+	}
+	// A2's start completes at t=2 while A1's partition is still active and
+	// is discarded; B1's end completes at t=2 and terminates A1.
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A2", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "B", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(2, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E2", Price: 4}); err != nil {
+		t.Fatal(err)
+	}
+	// A3 after A1's termination re-arms the condition and starts a fresh
+	// partition at t=3.
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A3", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(3, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E3", Price: 5}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(10, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E4", Price: 6}); err != nil {
+		t.Fatal(err)
+	}
+	count, err := engine.ContextPartitionCount("rearming-context")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("re-armed pattern context partition count = %d, want 1", count)
+	}
+	// A1's partition aggregates every Trade event while active (E1=3,
+	// A2=1, B=1); A2's overlapping start completion is discarded and never
+	// opens a partition. A3 re-arms the condition after A1's termination
+	// and its partition aggregates E3=5 and E4=6.
+	want := []struct {
+		symbol string
+		sum    float64
+	}{
+		{"A1", 3}, {"A1", 4}, {"A1", 5}, {"A3", 5}, {"A3", 11},
+	}
+	if len(rows) != len(want) {
+		t.Fatalf("re-armed pattern rows = %#v", rows)
+	}
+	for index, expected := range want {
+		got, ok := rows[index].Get("c1").Any().(string)
+		sum, _ := numericValue(rows[index].Get("c2"))
+		if !ok || got != expected.symbol || sum != expected.sum {
+			t.Fatalf("re-armed pattern row %d = %#v, want %s/%v", index, rows[index].AsMap(), expected.symbol, expected.sum)
+		}
+	}
+}

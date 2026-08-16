@@ -50,3 +50,27 @@ func TestCompareValuesSupportsOrderedAliases(t *testing.T) {
 		t.Fatalf("ordered string alias comparison = %d, %v", comparison, ok)
 	}
 }
+
+func TestEqualValuesDereferencesNullablePointers(t *testing.T) {
+	// A nullable struct field (P00 *string) reads through Event.Get as a
+	// pointer while a plain field or literal surfaces as a value; Esper
+	// compares the boxed contents. Both directions must be equal and
+	// relational comparisons must work across the pointer boundary.
+	value := "E1"
+	ptr := &value
+	if equal, ok := boolValue(EqualValues(Present("E1"), Present(ptr))); !ok || !equal {
+		t.Fatalf("string vs *string equality = %v, %v", equal, ok)
+	}
+	if equal, ok := boolValue(EqualValues(Present(ptr), Present("E1"))); !ok || !equal {
+		t.Fatalf("*string vs string equality = %v, %v", equal, ok)
+	}
+	if equal, ok := boolValue(EqualValues(Present(ptr), Present(ptr))); !ok || !equal {
+		t.Fatalf("*string vs *string equality = %v, %v", equal, ok)
+	}
+	if comparison, ok := compareValues(Present("a"), Present(&[]string{"b"}[0])); !ok || comparison >= 0 {
+		t.Fatalf("string vs *string comparison = %d, %v", comparison, ok)
+	}
+	if equal, ok := boolValue(EqualValues(Present("E1"), Present(&[]string{"E2"}[0]))); !ok || equal {
+		t.Fatalf("string vs different *string equality = %v, %v", equal, ok)
+	}
+}

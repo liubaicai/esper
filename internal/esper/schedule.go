@@ -783,6 +783,19 @@ func (schedule resolvedCronSchedule) nextAfter(after time.Time) (time.Time, erro
 		location = time.UTC
 	}
 	localAfter := after.In(location)
+	includeReference := false
+	if !hasSubSecond(schedule) {
+		// Esper's crontab computes the next occurrence on the finest
+		// constrained unit: a seconds-granularity schedule advances to the
+		// next whole second (computeDeltaNextOccurance adds one second to the
+		// reference). Candidates below the second boundary are not returned,
+		// so the reference is the next whole second and that boundary itself
+		// is a valid occurrence.
+		second := time.Date(localAfter.Year(), localAfter.Month(), localAfter.Day(),
+			localAfter.Hour(), localAfter.Minute(), localAfter.Second(), 0, location)
+		localAfter = second.Add(time.Second)
+		includeReference = true
+	}
 	months := schedule.month.candidates(1, 12)
 	for year := localAfter.Year(); year <= localAfter.Year()+400; year++ {
 		for _, month := range months {
@@ -808,6 +821,12 @@ func (schedule resolvedCronSchedule) nextAfter(after time.Time) (time.Time, erro
 							for _, millisecond := range schedule.millisecond.candidates(0, 999) {
 								for _, microsecond := range schedule.microsecond.candidates(0, 999) {
 									candidate := time.Date(year, time.Month(month), day, hour, minute, second, millisecond*int(time.Millisecond)+microsecond*int(time.Microsecond), location)
+									if includeReference {
+										if candidate.Before(localAfter) {
+											continue
+										}
+										return candidate, nil
+									}
 									if candidate.After(localAfter) {
 										return candidate, nil
 									}
@@ -1079,4 +1098,10 @@ func visitCronScheduleExpressions(schedule *CronSchedule, visit func(Expr) error
 		}
 	}
 	return nil
+}
+
+// hasSubSecond reports whether the schedule constrains milliseconds or
+// microseconds, which makes the occurrence grid finer than one second.
+func hasSubSecond(schedule resolvedCronSchedule) bool {
+	return !schedule.millisecond.wildcard || !schedule.microsecond.wildcard
 }

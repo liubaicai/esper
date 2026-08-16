@@ -1028,6 +1028,12 @@ func CreatePatternInitiatedTerminatedContext(env *Environment, name string, star
 	return internalengine.CreatePatternInitiatedTerminatedContext(env, name, start, end)
 }
 
+// CreatePatternTerminatedContext registers the mixed filter-start
+// pattern-end context form in env.
+func CreatePatternTerminatedContext(env *Environment, name string, key Expr, start Expression[bool], end PatternStream) (ContextDefinition, error) {
+	return internalengine.CreatePatternTerminatedContext(env, name, key, start, end)
+}
+
 // CreatePeriodicContext is an expressive alias for CreateTimePeriodContext.
 func CreatePeriodicContext(env *Environment, name string, startAfter, activeFor time.Duration) (ContextDefinition, error) {
 	return internalengine.CreatePeriodicContext(env, name, startAfter, activeFor)
@@ -4070,6 +4076,15 @@ func NewPatternInitiatedContext(name string, start PatternStream) (ContextDefini
 // advanced guard/consumption combinations remain separate parity work.
 func NewPatternInitiatedTerminatedContext(name string, start, end PatternStream) (ContextDefinition, error) {
 	return internalengine.NewPatternInitiatedTerminatedContext(name, start, end)
+}
+
+// NewPatternTerminatedContext declares the mixed initiated-terminated form
+// `start <filter> end pattern [...]:` a filter predicate starts a partition
+// and the end pattern terminates it. The end pattern filter predicates may
+// reference the initiating event through ContextInitiatingEvent, matching
+// Esper's correlated pattern-ended contexts.
+func NewPatternTerminatedContext(name string, key Expr, start Expression[bool], end PatternStream) (ContextDefinition, error) {
+	return internalengine.NewPatternTerminatedContext(name, key, start, end)
 }
 
 // NewPeriodicContext is an expressive alias for NewTimePeriodContext.

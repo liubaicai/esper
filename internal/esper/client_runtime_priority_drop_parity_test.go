@@ -288,7 +288,7 @@ func TestStatementPriorityDropPlanBoundaries(t *testing.T) {
 
 func deployClientRuntimePriorityTimer(t *testing.T, engine *Engine, env *Environment, name string, priority int, explicit bool, drop bool, got *[]int) *Deployment {
 	t.Helper()
-	plan, err := env.Build(TimerInterval(From[runtimeTestTrade](env, "Trade"), 10*time.Second).Select(
+	plan, err := env.Build(TimerInterval(From[runtimeTestTrade](env, "Trade"), 10*time.Second).Every().Select(
 		Alias("prio", Literal(priority)),
 	).Query(clientRuntimePriorityOptions(name, priority, explicit, drop)...))
 	if err != nil {

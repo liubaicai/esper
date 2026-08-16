@@ -14,6 +14,9 @@ import (
 
 const maxRoutedEventsPerSend = 1024
 
+// unixEpoch is the virtual clock's default start instant.
+var unixEpoch = time.Unix(0, 0).UTC()
+
 // Listener receives one deterministic new/old-stream batch.
 type Listener func(context.Context, ResultBatch) error
 
@@ -207,9 +210,11 @@ func (c *VirtualClock) Advance(at time.Time) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if at.Before(c.now) {
-		return fmt.Errorf("esper: clock cannot move backwards from %s to %s", c.now, at)
-	}
+	// Esper's external timer accepts non-monotonic advances: a backwards
+	// advanceTime re-evaluates temporal contexts from the new instant
+	// (ContextStartEndJoin drives the daily context across a backwards jump
+	// and starts a fresh partition). The internal timer never moves
+	// backwards, so no monotonicity enforcement is needed here.
 	c.now = at
 	return nil
 }
@@ -336,7 +341,7 @@ type Engine struct {
 
 func NewEngine(env *Environment, options ...EngineOption) *Engine {
 	cfg := engineConfig{
-		clock:      NewVirtualClock(time.Unix(0, 0).UTC()),
+		clock:      NewVirtualClock(unixEpoch),
 		runtimeURI: "default",
 		matchRecognize: MatchRecognizeRuntimeConfig{
 			MaxStates:    -1,
@@ -402,14 +407,16 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 	}
 	if env != nil {
 		env.mu.RLock()
-		for name, definition := range env.contexts {
+		for name := range env.contexts {
 			if _, protected := env.protectedModuleForQualifiedNameLocked(name); protected {
 				continue
 			}
 			engine.contextCreated[name] = true
-			if definition.isTemporal() {
-				engine.contextTemporalOrigins[name] = engine.clock.Now()
-			}
+			// The temporal origin is intentionally not pre-populated here:
+			// the virtual clock starts at the Unix epoch, and a context
+			// registered with the environment must anchor at its first
+			// deploy (the deploy path assigns the origin), not at engine
+			// creation.
 		}
 		for name, definition := range env.variables {
 			if _, protected := env.protectedModuleForQualifiedNameLocked(name); protected {
@@ -467,15 +474,14 @@ func (e *Engine) activateProtectedModuleLocked(moduleName, deploymentID string) 
 		}
 		e.variables[name] = variable.initial
 	}
-	for name, contextDefinition := range e.env.contexts {
+	for name := range e.env.contexts {
 		owner, protected := e.env.protectedModuleForQualifiedNameLocked(name)
 		if !protected || owner != moduleName {
 			continue
 		}
 		e.contextCreated[name] = true
-		if contextDefinition.isTemporal() {
-			e.contextTemporalOrigins[name] = e.clock.Now()
-		}
+		// Temporal origin assignment happens at first deploy, matching the
+		// non-module context path.
 		e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
 			kind:  contextNotificationCreated,
 			state: ContextStateEvent{ContextName: name},
@@ -5361,6 +5367,7 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 	if err := contextErr(ctx); err != nil {
 		return ResultBatch{}, false, err
 	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	defer s.collectOutputAssignmentsLocked()
@@ -5796,6 +5803,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 
 	terminating := make(map[string]bool, len(keys))
 	if definition.endPattern != nil {
+
 		for _, partitionKey := range keys {
 			partition := s.runtime.partitions[partitionKey]
 			if partition == nil {
@@ -5815,6 +5823,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 				partition,
 				"end",
 			)
+
 			if len(matches) == 0 {
 				continue
 			}
@@ -5883,6 +5892,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 	if changed {
 		result.Sequence = s.runtime.seq.Add(1)
 	}
+	result.Time = now
 	return result, changed, nil
 }
 
@@ -5984,11 +5994,18 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 				prearmed:  match.prearmed && !transition.matched,
 			}
 			if transition.complete {
-				completedAny = true
-				completed = append(completed, candidate)
-				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition, pool) {
+				// A completed context-pattern instance stays resident only
+				// while it carries a repeating or within leg whose timers
+				// the context layer needs (within expiry ends the
+				// partition). A one-shot completion leaves the active set:
+				// Esper's context condition restarts so a later event can
+				// begin a fresh instance, and the context layer discards
+				// completions overlapping an active partition.
+				if patternRepeatingLegAlive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition, pool) {
 					nextActive = append(nextActive, candidate)
 				}
+				completedAny = true
+				completed = append(completed, candidate)
 				if patternProgressTerminal(transition.state) {
 					terminal = true
 				}
@@ -6025,11 +6042,11 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 				startedAt: now,
 			}
 			if transition.complete {
-				completedAny = true
-				completed = append(completed, started)
-				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, started, definition, pool) {
+				if patternRepeatingLegAlive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, started, definition, pool) {
 					nextActive = append(nextActive, started)
 				}
+				completedAny = true
+				completed = append(completed, started)
 				if patternProgressTerminal(transition.state) {
 					terminal = true
 				}
@@ -6042,6 +6059,13 @@ func advanceContextPattern(state **patternRuntimeState, definition *patternDefin
 		}
 	}
 	runtimeState.active = nextActive
+	// A terminal completion (a timer guard whose deadline passed, or a
+	// within guard with no retained branch) ends the context condition:
+	// Esper's timer:within guard kills the whole guarded pattern at the
+	// deadline, so later events cannot start new instances. Non-terminal
+	// completions leave the machine armed so a later event can begin a
+	// fresh instance; the context layer discards completions that overlap
+	// an active partition.
 	if terminal || (definition.root.kind == patternWithinNode && len(nextActive) == 0 && completedAny) {
 		runtimeState.patternStopped = true
 	}
@@ -6158,10 +6182,10 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 				prearmed:  match.prearmed,
 			}
 			if transition.complete {
-				completed = append(completed, candidate)
-				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition, pool) {
+				if patternRepeatingLegAlive(transition.state) && admitContextPatternMatch(runtime, phase, nextActive, candidate, definition, pool) {
 					nextActive = append(nextActive, candidate)
 				}
+				completed = append(completed, candidate)
 				if patternProgressTerminal(transition.state) {
 					terminal = true
 				}
@@ -6395,6 +6419,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 }
 
 func (s *Statement) processInitiatedTerminated(definition ContextDefinition, event Event, now time.Time, variables map[string]Value) (ResultBatch, bool, error) {
+
 	if s == nil || s.engine == nil {
 		return ResultBatch{}, false, NewError(ErrorDependency, "initiated-terminated context has no engine")
 	}
@@ -6472,6 +6497,43 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 			terminating[partitionKey] = true
 		}
 	}
+	if definition.endPattern != nil {
+		// Mixed filter-start/pattern-end contexts evaluate the end pattern
+		// per active partition with the partition's context variables so
+		// correlated predicates can read the initiating event.
+		for _, partitionKey := range terminationKeys {
+			partition := s.runtime.partitions[partitionKey]
+			if partition == nil {
+				continue
+			}
+			partitionVariables := partition.withContextVariables(variablesWithEngine(variables, s.engine))
+			partitionVariables = partition.withContextProperties(partitionVariables)
+			matches := advanceContextPattern(
+				&partition.contextEndPatternState,
+				definition.endPattern,
+				event,
+				now,
+				partitionVariables,
+				partition.contextPatternTags,
+				partition.contextPatternTagValues,
+				s.engine.env,
+				partition,
+				"end",
+			)
+			if len(matches) == 0 {
+				continue
+			}
+			match := matches[0]
+			partition.contextPatternTags = clonePatternTags(match.tags)
+			partition.contextPatternTagValues = clonePatternTagValues(match.tagValues)
+			applyContextPatternProperties(partition, match.tags)
+			if partition.contextProperties == nil {
+				partition.contextProperties = make(map[string]Value)
+			}
+			partition.contextProperties["terminating_event"] = Present(event)
+			terminating[partitionKey] = true
+		}
+	}
 
 	accepts := statementAcceptsEvent(s.plan.query, event)
 	processKeys := keys
@@ -6539,6 +6601,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 	if changed {
 		result.Sequence = s.runtime.seq.Add(1)
 	}
+	result.Time = now
 	return result, changed, nil
 }
 
@@ -6549,6 +6612,22 @@ func initiatedContextKeyAvailable(definition ContextDefinition, event Event, now
 		}
 	}
 	return true
+}
+
+// temporalContextOrigin returns the activation reference instant of a
+// recurring temporal context, assigning now on first use. The deploy path
+// assigns the origin from the deploy-time clock before the first temporal
+// evaluation, so a clock advanced ahead of deployment anchors windows at
+// the deployment instant; a context whose origin is still absent (events
+// before any deploy) anchors at the first evaluation. The caller holds
+// engine.mu.
+func temporalContextOrigin(engine *Engine, contextName string, now time.Time) time.Time {
+	origin, ok := engine.contextTemporalOrigins[contextName]
+	if !ok {
+		origin = now
+		engine.contextTemporalOrigins[contextName] = origin
+	}
+	return origin
 }
 
 // syncTemporalContextLocked materializes the single active partition of a
@@ -6562,11 +6641,7 @@ func (s *Statement) syncTemporalContextLocked(now time.Time) (ResultBatch, bool)
 	if !ok || !definition.isTemporal() {
 		return ResultBatch{}, false
 	}
-	origin, ok := s.engine.contextTemporalOrigins[s.plan.query.contextName]
-	if !ok || origin.IsZero() {
-		origin = now
-		s.engine.contextTemporalOrigins[s.plan.query.contextName] = origin
-	}
+	origin := temporalContextOrigin(s.engine, s.plan.query.contextName, now)
 	start, end, active := definition.temporalWindow(origin, now)
 	activeKey := ""
 	if active {
@@ -15334,7 +15409,8 @@ func isPatternTimerRoot(definition *patternDefinition) bool {
 }
 
 func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatch {
-	if plan.query.pattern == nil || r.patternState == nil {
+	definition := plan.query.pattern
+	if definition == nil || r.patternState == nil {
 		return ResultBatch{}
 	}
 	if !isPatternTimerRoot(plan.query.pattern) {
@@ -15353,19 +15429,26 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 		if !rearmPatternTimerIntervalIfVariablesChanged(r.patternState, root, r.variables) {
 			break
 		}
-		// A large clock jump may make multiple interval callbacks due. Emit one
-		// result per due callback, but cap a malformed/hostile jump so a timer
-		// cannot turn into an unbounded allocation.
-		const maxTimerCatchUp = 100000
-		for emitted := 0; emitted < maxTimerCatchUp && !r.patternState.timerNext.IsZero() && !r.patternState.timerNext.After(now); emitted++ {
+		// Esper's TimerIntervalObserver arms one relative callback at a time
+		// and re-arms from the current time when it fires. A clock jump
+		// therefore delivers exactly one callback at the target instant
+		// (the first due tick), never one callback per missed interval; the
+		// match is evaluated at the delivery time. A non-every interval is
+		// one-shot: it fires once and the pattern completes.
+		if !r.patternState.timerNext.IsZero() && !r.patternState.timerNext.After(now) {
 			dueAt := r.patternState.timerNext
 			match := patternMatch{current: Event{}, startedAt: dueAt}
-			if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
-				if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
+			if patternGuardAllows(plan.query.pattern, Event{}, now, r.variables) {
+				if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, now, r.variables); visible {
 					batch.New = append(batch.New, resultRow(row))
 				}
 			}
-			next, ok := patternDurationDeadline(root, nil, dueAt, r.variables)
+			if !definition.every {
+				r.patternState.patternStopped = true
+				r.patternState.timerNext = time.Time{}
+				break
+			}
+			next, ok := patternDurationDeadline(root, nil, now, r.variables)
 			if !ok {
 				r.patternState.patternStopped = true
 				r.patternState.timerNext = time.Time{}
@@ -15569,9 +15652,6 @@ func clonePatternMatch(match patternMatch) patternMatch {
 }
 
 func (r *statementRuntime) evaluatePatternMatch(definition *patternDefinition, match patternMatch, plan Plan, now time.Time, variables map[string]Value) (Row, bool) {
-	if len(plan.query.patternSelections) == 0 {
-		return Row{}, false
-	}
 	ctx := EvalContext{Event: match.current, Tags: match.tags, TagValues: match.tagValues, Now: now, Variables: variables}
 	if plan.query.patternWhere != nil {
 		// Esper's where-clause after "from pattern [...]" filters completed
@@ -15580,6 +15660,12 @@ func (r *statementRuntime) evaluatePatternMatch(definition *patternDefinition, m
 		if allowed, ok := boolValue(value); !ok || !allowed {
 			return Row{}, false
 		}
+	}
+	if len(plan.query.patternSelections) == 0 {
+		// select * over a tagless pattern (for example every
+		// timer:interval) yields one empty row per match, matching the
+		// output shape of Esper's select-all projection.
+		return newRow(plan.resultSchema, nil), true
 	}
 	if patternSelectionsHaveAggregate(plan.query.patternSelections) {
 		// Ungrouped aggregates over a pattern stream see one representative

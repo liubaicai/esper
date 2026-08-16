@@ -64,14 +64,18 @@ func TestClientRuntimeSendTimeSpanParity(t *testing.T) {
 		}
 	}
 
-	assertAdvanceTimeSpan(3500*time.Millisecond, 0, 1500*time.Millisecond, 3*time.Second)
-	assertAdvanceTimeSpan(4500*time.Millisecond, 0, 4500*time.Millisecond)
-	assertAdvanceTimeSpan(9*time.Second, 0, 6*time.Second, 7500*time.Millisecond, 9*time.Second)
+	// A non-every timer:interval is one-shot: the first advance (or span
+	// step) reaching the deadline fires the callback once at the delivery
+	// time and the pattern completes (Java oracle probe, Esper 9.0.0
+	// pinned commit); later spans produce no rows.
+	assertAdvanceTimeSpan(3500*time.Millisecond, 0, 1500*time.Millisecond)
+	assertAdvanceTimeSpan(4500*time.Millisecond, 0)
+	assertAdvanceTimeSpan(9*time.Second, 0)
 	assertAdvanceTimeSpan(10499*time.Millisecond, 0)
 	assertAdvanceTimeSpan(10499*time.Millisecond, 0)
-	assertAdvanceTimeSpan(10500*time.Millisecond, 0, 10500*time.Millisecond)
 	assertAdvanceTimeSpan(10500*time.Millisecond, 0)
-	assertAdvanceTimeSpan(14*time.Second, 200*time.Millisecond, 12100*time.Millisecond, 13700*time.Millisecond)
+	assertAdvanceTimeSpan(10500*time.Millisecond, 0)
+	assertAdvanceTimeSpan(14*time.Second, 200*time.Millisecond)
 	if got := engine.Now(); !got.Equal(origin.Add(14 * time.Second)) {
 		t.Fatalf("current time = %s, want %s", got, origin.Add(14*time.Second))
 	}

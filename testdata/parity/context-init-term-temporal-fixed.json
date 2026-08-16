@@ -1,0 +1,1723 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-init-term-temporal-fixed",
+ "steps": [
+  {
+   "op": "case",
+   "case": "correlated-output-snapshot"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 100,
+    "p00": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 200,
+    "p10": "GX",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 200,
+    "p10": "G1",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 101,
+    "p00": "G2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 102,
+    "p00": "G3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 5,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E6",
+    "intPrimitive": 6,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 201,
+    "p10": "G2",
+    "p11": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "filter-pattern-correlated"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 100,
+    "p00": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 200,
+    "p10": "GX",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 200,
+    "p10": "G1",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 101,
+    "p00": "G2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E6",
+    "intPrimitive": 6,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 101,
+    "p10": null,
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 101,
+    "p10": "GY",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E7",
+    "intPrimitive": 7,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 300,
+    "p10": "G2",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E8",
+    "intPrimitive": 8,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 102,
+    "p00": "G3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 0,
+    "p10": "G3",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E9",
+    "intPrimitive": 9,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "filter-output-snapshot"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 100,
+    "p00": "S0_1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 200,
+    "p10": "S1_1",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 201,
+    "p10": "S1_2",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 102,
+    "p00": "S0_2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 201,
+    "p10": "S1_3",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 103,
+    "p00": "S0_3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 6,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 104,
+    "p00": "S0_4"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 201,
+    "p10": "S1_3",
+    "p11": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "pattern-pattern"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 100,
+    "p00": "S0_1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 5,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 101,
+    "p00": "S0_2"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:03.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E6",
+    "intPrimitive": 6,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 101,
+    "p10": "S1_1",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E7",
+    "intPrimitive": 7,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:04.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E8",
+    "intPrimitive": 8,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 102,
+    "p10": "S1_2",
+    "p11": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:10.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E9",
+    "intPrimitive": 9,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 103,
+    "p00": "S0_3"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:11.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E10",
+    "intPrimitive": 10,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "every-second"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:01.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:02.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:02.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:03.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:03.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:04.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:04.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:05.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:05.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:06.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:06.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:07.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:07.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:08.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:08.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:09.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:09.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:10.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:10.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:11.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:11.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:12.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:12.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:13.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:13.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:14.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:14.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:15.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:15.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:16.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:16.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:17.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:17.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:18.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:18.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:19.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:19.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:20.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:20.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:21.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "daily-join"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T17:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T09:00:00.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "case",
+   "case": "daily-pattern-time"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:00:00.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:00:10.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T17:00:00.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T09:00:00.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T09:00:10.000Z"
+  },
+  {
+   "op": "case",
+   "case": "turned-off"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:59:30.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:59:59.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "deploy",
+   "statement": "B"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T16:59:59.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T17:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "deploy",
+   "statement": "C"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T08:59:59.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T16:59:59.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T17:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "turned-on"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:15:00.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:16:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T16:59:59.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T17:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "deploy",
+   "statement": "B"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T08:59:59.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T09:15:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T16:59:59.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T17:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "daily-agg-ungrouped"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G3",
+    "intPrimitive": 3,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T17:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G4",
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T08:00:00.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G5",
+    "intPrimitive": 20,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "daily-agg-grouped"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T07:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  }
+ ]
+}

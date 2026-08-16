@@ -52,7 +52,7 @@ func TestPatternUnidirectionalTimerJoinMatchesEsper(t *testing.T) {
 	}
 	s0 := From[joinPatternS0](env, "PatternS0")
 	query := JoinMany(
-		JoinPatternSource(TimerInterval(s0, time.Second)).Unidirectional(),
+		JoinPatternSource(TimerInterval(s0, time.Second).Every()).Unidirectional(),
 		JoinSource(s0).Window(KeepAll()),
 	).LeftOuter().Aggregate(
 		Alias("sum", Sum[int](JoinField[int](1, "id"))),
@@ -131,7 +131,7 @@ func TestPatternUnidirectionalTimerJoinOutputRateMatchesEsper(t *testing.T) {
 	a := base.Filter(Equal[int](Field[joinPatternS0, int]("id"), Literal(1))).Window(Unique(Field[joinPatternS0, string]("p00")))
 	b := base.Filter(Equal[int](Field[joinPatternS0, int]("id"), Literal(2))).Window(Unique(Field[joinPatternS0, string]("p00")))
 	query := JoinMany(
-		JoinPatternSource(TimerInterval(base, time.Minute)).Unidirectional(),
+		JoinPatternSource(TimerInterval(base, time.Minute).Every()).Unidirectional(),
 		JoinSource(a),
 		JoinSource(b),
 	).On(OnSourcesEqual(

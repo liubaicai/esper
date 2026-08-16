@@ -934,10 +934,14 @@ func TestPatternTimerIntervalAndAtUseVirtualClock(t *testing.T) {
 	if err := engine.AdvanceTime(context.Background(), time.Unix(4, 0).UTC()); err != nil {
 		t.Fatal(err)
 	}
-	if len(intervalRows) != 4 || len(atRows) != 1 {
+	// Esper's TimerIntervalObserver arms one relative callback and fires it
+	// once at the first advance that reaches the deadline, evaluating the
+	// match at the delivery time; a non-every interval is one-shot and a
+	// clock jump past several deadlines produces exactly one row.
+	if len(intervalRows) != 1 || len(atRows) != 1 {
 		t.Fatalf("timer rows interval=%#v at=%#v", intervalRows, atRows)
 	}
-	if intervalRows[0].Get("now").Any() != time.Unix(1, 0).UTC() || atRows[0].Get("now").Any() != at {
+	if intervalRows[0].Get("now").Any() != time.Unix(2, 0).UTC() || atRows[0].Get("now").Any() != at {
 		t.Fatalf("timer values interval=%#v at=%#v", intervalRows, atRows)
 	}
 	// Esper accepts timer:interval(0): the observer is due at the deployment
@@ -1223,7 +1227,7 @@ func TestPatternTimerIntervalExpressionUsesVariableReconfigurationForNextPeriod(
 		t.Fatal(err)
 	}
 	base := From[runtimeTestTrade](env, "Trade")
-	plan, err := env.Build(TimerIntervalExpr(base, DurationSeconds[float64](VariableRef[float64]("timerSeconds"))).Select(
+	plan, err := env.Build(TimerIntervalExpr(base, DurationSeconds[float64](VariableRef[float64]("timerSeconds"))).Every().Select(
 		Alias("firedAt", CurrentTime()),
 	).Query(StatementName("pattern-timer-interval-variable-reconfiguration")))
 	if err != nil {
@@ -1347,8 +1351,11 @@ func TestPatternTimerIntervalPeriodPreservesCalendarAndFixedPrecision(t *testing
 	if err := engine.AdvanceTime(context.Background(), second); err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 2 || rows[0].Get("scheduled").Any() != first || rows[1].Get("scheduled").Any() != second {
-		t.Fatalf("mixed period timer rows = %#v, want %s and %s", rows, first, second)
+	// A jump past the first deadline delivers the one-shot callback once at
+	// the target instant, evaluated at the delivery time (Java oracle probe,
+	// Esper 9.0.0 pinned commit).
+	if len(rows) != 1 || rows[0].Get("scheduled").Any() != second {
+		t.Fatalf("mixed period timer rows = %#v, want %s", rows, second)
 	}
 	if _, err := env.Build(TimerIntervalPeriod(base, PatternTimerPeriod{FixedDuration: -time.Millisecond}).Select(
 		Alias("scheduled", CurrentTime()),
@@ -1394,14 +1401,11 @@ func TestPatternTimerIntervalCalendarUsesMonthRecurrence(t *testing.T) {
 	if err := engine.AdvanceTime(context.Background(), second); err != nil {
 		t.Fatal(err)
 	}
-	want := []time.Time{first, second}
-	if len(rows) != len(want) {
-		t.Fatalf("calendar timer rows = %#v", rows)
-	}
-	for index, expected := range want {
-		if got := rows[index].Get("scheduled").Any(); got != expected {
-			t.Fatalf("calendar timer row %d = %#v, want %s", index, got, expected)
-		}
+	// One callback per observer: a jump past the first month boundary
+	// delivers the one-shot callback once at the target instant, evaluated
+	// at the delivery time (Java oracle probe, Esper 9.0.0 pinned commit).
+	if len(rows) != 1 || rows[0].Get("scheduled").Any() != second {
+		t.Fatalf("calendar timer rows = %#v, want %s", rows, second)
 	}
 	if _, err := env.Build(TimerIntervalCalendar(base, -1, 0, 0).Select(Alias("scheduled", CurrentTime())).Query(StatementName("invalid-calendar-timer"))); err == nil {
 		t.Fatal("negative calendar timer interval was accepted")
@@ -2275,5 +2279,52 @@ func TestPatternWithinExpressionUsesDeploymentParameter(t *testing.T) {
 	}
 	if len(rows) != 1 {
 		t.Fatalf("parameterized within before deadline rows = %#v", rows)
+	}
+}
+
+func TestTaglessPatternSelectStarEmitsEmptyRows(t *testing.T) {
+	// `select * from pattern[every timer:interval(10 sec)]` projects no
+	// fields (the pattern carries no tags). Esper emits one empty row per
+	// match; the runtime must not drop selection-less matches.
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	plan, err := env.Build(TimerInterval(base, 10*time.Second).Every().Query(StatementName("tagless-timer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(10, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(10, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("tagless timer rows = %d, want 1", len(rows))
+	}
+	if fields := rows[0].AsMap(); len(fields) != 0 {
+		t.Fatalf("tagless timer row fields = %#v, want none", fields)
+	}
+	// A second due tick fires once at the delivery time.
+	if err := engine.AdvanceTime(context.Background(), time.Unix(25, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("tagless timer rows after jump = %d, want 2", len(rows))
 	}
 }
