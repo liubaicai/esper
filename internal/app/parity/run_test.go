@@ -7867,3 +7867,140 @@ func TestRunContextInitTermPrevPriorDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunContextKeySegmentedViewDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-view.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-view.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-view.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-view-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedViewDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "prevwindow-order",
+			mutate: func(trace *compat.Trace) {
+				// length(2) prevwindow is newest-to-oldest: [G1,11],[G1,10].
+				// Reversing the order would be an off-by-one window read.
+				indices := recordIndicesOfCase(trace, "view-scene-one")
+				record := trace.Records[indices[2]]
+				rows := record.New[0].Fields["pw"].([]any)
+				rows[0], rows[1] = rows[1], rows[0]
+				record.New[0].Fields["pw"] = rows
+				trace.Records[indices[2]] = record
+			},
+		},
+		{
+			name: "evicted-prevwindow-null",
+			mutate: func(trace *compat.Trace) {
+				// The evicted row's prevwindow is null; a window read that
+				// leaks the retained view would populate it.
+				indices := recordIndicesOfCase(trace, "view-scene-one")
+				record := trace.Records[indices[5]]
+				record.Old[0].Fields["pw"] = []any{map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": 10, "theString": "G1"}}}
+				trace.Records[indices[5]] = record
+			},
+		},
+		{
+			name: "partition-isolation",
+			mutate: func(trace *compat.Trace) {
+				// G2's first row has a single-element window; a key leak from
+				// G1's partition would show [G1,10],[G2,20].
+				indices := recordIndicesOfCase(trace, "view-scene-one")
+				record := trace.Records[indices[1]]
+				record.New[0].Fields["pw"] = []any{
+					map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": 10, "theString": "G1"}},
+					map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": 20, "theString": "G2"}},
+				}
+				trace.Records[indices[1]] = record
+			},
+		},
+		{
+			name: "lastevent-replacement",
+			mutate: func(trace *compat.Trace) {
+				// lastevent replacement emits new G1/2 with old G1/1; a
+				// retention bug that keeps both would drop the old row.
+				indices := recordIndicesOfCase(trace, "view-scene-two")
+				record := trace.Records[indices[2]]
+				record.Old = nil
+				trace.Records[indices[2]] = record
+			},
+		},
+		{
+			name: "snapshot-partition-key",
+			mutate: func(trace *compat.Trace) {
+				indices := recordIndicesOfCase(trace, "view-scene-one")
+				record := trace.Records[indices[3]]
+				record.Partitions[0].Key = "key:G3"
+				trace.Records[indices[3]] = record
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "view-scene-two"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-view.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-view.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-view.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-view-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
