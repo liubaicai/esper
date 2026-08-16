@@ -1,0 +1,66 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-multi-statement-filter-count",
+ "steps": [
+  {
+   "op": "case",
+   "case": "multi-statement"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S0"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 8,
+    "p00": "S1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 4,
+    "p00": "S0"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S0",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S2",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 7,
+    "p00": "S0"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S0",
+    "intPrimitive": 9
+   }
+  }
+ ]
+}
