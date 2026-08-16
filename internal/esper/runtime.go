@@ -2956,6 +2956,12 @@ func (e *Engine) prepareStatementLocked(ctx context.Context, deployment *Deploym
 			// calendar occurrences when the first clock advance jumps over more
 			// than one due instant.
 			initializeContextPatternTimer(&statement.runtime.contextStartPatternState, definition.startPattern, e.clock.Now(), statement.runtime.variables)
+			// Esper's @now initiation (an immediate timer branch such as
+			// timer:interval(0)) starts a partition at the deployment
+			// instant: process the start condition against the deploy-time
+			// clock so a due immediate timer materializes its partition
+			// before any event arrives.
+			_, _ = statement.processPatternContextTime(definition, e.clock.Now(), statement.runtime.variables)
 		}
 	}
 	if err := e.seedNamedWindowRowRecogLocked(ctx, statement); err != nil {
@@ -6278,7 +6284,13 @@ func advanceContextPatternTime(state **patternRuntimeState, definition *patternD
 		if !rearmPatternTimerIntervalIfVariablesChanged(runtimeState, root, variables) {
 			return completed
 		}
-		for emitted := 0; emitted < maxTimerCatchUp && !runtimeState.timerNext.IsZero() && !runtimeState.timerNext.After(now); emitted++ {
+		// A context start condition behaves like Esper's restarted
+		// condition: the timer fires at most once per advance and re-arms
+		// from the current time, so a clock jump delivers one callback at
+		// the target instant. A zero-progress interval (timer:interval(0))
+		// fires once at the deployment instant and then stops, matching
+		// Esper's immediate-fire observer.
+		if !runtimeState.timerNext.IsZero() && !runtimeState.timerNext.After(now) {
 			dueAt := runtimeState.timerNext
 			completed = append(completed, patternMatch{
 				current:   Event{},
@@ -6286,11 +6298,11 @@ func advanceContextPatternTime(state **patternRuntimeState, definition *patternD
 				tags:      clonePatternTags(seedTags),
 				tagValues: clonePatternTagValues(seedTagValues),
 			})
-			next, ok := patternDurationDeadline(root, nil, dueAt, variables)
-			if !ok {
+			next, ok := patternDurationDeadline(root, nil, now, variables)
+			if !ok || !next.After(now) {
 				runtimeState.patternStopped = true
 				runtimeState.timerNext = time.Time{}
-				break
+				return completed
 			}
 			runtimeState.timerNext = next
 			runtimeState.timerIntervalFired = true
@@ -6381,8 +6393,12 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		partitionRuntime.contextProperties = definition.contextPropertyValues(Event{}, now, variables, partitionRuntime.partitionID)
 		applyContextPatternProperties(&partitionRuntime, match.tags)
 		partitionRuntime.contextEndPatternState = &patternRuntimeState{distinct: make(map[string]struct{})}
+		// The end condition is armed at the start-completion instant (now),
+		// not at the retained match's original start: a repeating start
+		// timer completes at its due time, and a duration-based end such as
+		// timer:interval(10 sec) must run from the partition's actual start.
 		partitionRuntime.variables = partitionRuntime.withContextProperties(variables)
-		initializeContextPatternTimer(&partitionRuntime.contextEndPatternState, definition.endPattern, match.startedAt, partitionRuntime.variables)
+		initializeContextPatternTimer(&partitionRuntime.contextEndPatternState, definition.endPattern, now, partitionRuntime.variables)
 		partitionRuntime.initializeAt(now)
 		partition := ptrStatementRuntime(partitionRuntime)
 		s.runtime.partitions[allocationKey] = partition
@@ -8623,7 +8639,8 @@ func (r *statementRuntime) outputAtTermination(plan Plan, now time.Time) ResultB
 
 	var result ResultBatch
 	snapshot := policy.Kind == OutputSnapshotPolicy || policy.Kind == OutputEveryPolicy || policy.Kind == OutputEveryTimePolicy ||
-		(policy.Kind == OutputAllPolicy && policy.When == nil)
+		(policy.Kind == OutputAllPolicy && policy.When == nil) ||
+		(policy.Kind == OutputLastPolicy && plan.query.aggregate != nil)
 	if snapshot {
 		result = r.snapshotBatch(plan, now)
 	} else if policy.When != nil || policy.TerminationWhen != nil {

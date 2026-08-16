@@ -1,0 +1,583 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-8e440e320bbbb03c15d2",
+    "java-runtime-20229f5d0bc028d126fc",
+    "java-runtime-8f7f85ae13613f8e5083"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTermWithNow.java"
+  ],
+  "javaExecutions": [
+    "ContextStartStopWNow",
+    "ContextInitTermWithPattern",
+    "ContextInitTermWNowNoEnd"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-with-now",
+    "steps": [
+      {
+        "op": "case",
+        "case": "start-stop-now"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:08.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:10.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:19.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:20.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:30.000Z"
+      },
+      {
+        "op": "case",
+        "case": "initiated-now-pattern"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:08.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:09.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:10.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:10.100Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 5,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:19.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:20.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:30.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 6,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:40.000Z"
+      },
+      {
+        "op": "case",
+        "case": "now-no-end"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-with-now",
+    "records": [
+      {
+        "case": "start-stop-now",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "start-stop-now",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "start-stop-now",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "initiated-now-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "initiated-now-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "initiated-now-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "initiated-now-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-01T00:00:40Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "now-no-end",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "now-no-end",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "now-no-end",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "now-no-end",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-with-now",
+    "records": [
+      {
+        "case": "start-stop-now",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "start-stop-now",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "start-stop-now",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "initiated-now-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "initiated-now-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "initiated-now-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "initiated-now-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-01T00:00:40Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "now-no-end",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "now-no-end",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "now-no-end",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "now-no-end",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

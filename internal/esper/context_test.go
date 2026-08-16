@@ -4070,3 +4070,66 @@ func TestFilterStartPatternEndTimerTerminatesWithOutput(t *testing.T) {
 		t.Fatalf("timer-end row = %#v", rows[1].AsMap())
 	}
 }
+
+func TestTimePeriodContextOutputLastWhenTerminatedEmitsAggregateState(t *testing.T) {
+	// `start @now end after 10 seconds ... output last when terminated`
+	// emits the aggregate's current state at each termination: a populated
+	// cycle emits its final count, and an empty cycle still terminates with
+	// a zero-count row.
+	env, _ := newRuntimeTest(t)
+	if _, err := CreateTimePeriodContext(env, "now-cycles", 0, 10*time.Second); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Aggregate(
+		Alias("cnt", CountAll()),
+	).Query(StatementName("s0"), WithContext("now-cycles"),
+		WithOutput(OutputWhenTerminated(OutputLast()))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, symbol := range []string{"E1", "E2"} {
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: symbol}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E3"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(10, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || mustNumericFloat(rows[0].Get("cnt")) != 3 {
+		t.Fatalf("termination rows = %#v, want single cnt=3", rows)
+	}
+	// Empty second cycle: the termination still emits a zero-count row.
+	if err := engine.AdvanceTime(context.Background(), time.Unix(20, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || mustNumericFloat(rows[1].Get("cnt")) != 0 {
+		t.Fatalf("empty-cycle rows = %#v, want trailing cnt=0", rows)
+	}
+}
+
+func mustNumericFloat(value Value) float64 {
+	number, ok := numericValue(value)
+	if !ok {
+		return -1
+	}
+	return number
+}
