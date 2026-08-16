@@ -4231,3 +4231,115 @@ func TestOverlappingFilterStartDurationEndTerminatesPartitionsTogether(t *testin
 		t.Fatalf("rows after termination = %d, want 2 (no new rows)", len(rows))
 	}
 }
+
+func TestKeyedInitiatedTerminatedContextAggregatesPerPartition(t *testing.T) {
+	// `initiated by InitEvent as i terminated by TermEvent(grp = i.grp)`:
+	// the partition key is the initiating event's grp; SummedEvent rows
+	// filtered by the partition's grp aggregate grouped by key inside each
+	// partition; a TermEvent for the key ends the partition and a later
+	// InitEvent starts a fresh one.
+	env, _ := newRuntimeTest(t)
+	type keyedSummedEvent struct {
+		Grp   string `esper:"grp"`
+		Key   string `esper:"key"`
+		Value int    `esper:"value"`
+	}
+	type keyedInitEvent struct {
+		Grp string `esper:"grp"`
+	}
+	type keyedTermEvent struct {
+		Grp string `esper:"grp"`
+	}
+	if _, err := RegisterStruct[keyedSummedEvent](env, "SummedEvent"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[keyedInitEvent](env, "InitEvent"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[keyedTermEvent](env, "TermEvent"); err != nil {
+		t.Fatal(err)
+	}
+	summedBase := From[keyedSummedEvent](env, "SummedEvent")
+	isInit := Equal[string](TypeName(EventValue[Event]()), Literal("InitEvent"))
+	isTerm := Equal[string](TypeName(EventValue[Event]()), Literal("TermEvent"))
+	end := And(isTerm, Equal[string](Field[keyedTermEvent, string]("grp"), ContextKeyValue[string](0)))
+	if _, err := CreateInitiatedTerminatedContext(env, "keyed-ctx",
+		Field[keyedInitEvent, string]("grp"), isInit, end); err != nil {
+		t.Fatal(err)
+	}
+	query := summedBase.Filter(Equal[string](
+		Field[keyedSummedEvent, string]("grp"),
+		Property[string](ContextInitiatingEvent(), "grp"))).
+		GroupBy(Field[keyedSummedEvent, string]("key")).Select(
+		Alias("c0", Field[keyedSummedEvent, string]("key")),
+		Alias("c1", Sum[int](Field[keyedSummedEvent, int]("value"))),
+	).Query(StatementName("s0"), WithContext("keyed-ctx"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), keyedInitEvent{Grp: "CP1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), keyedInitEvent{Grp: "CP2"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), keyedSummedEvent{Grp: "CP2", Key: "G1", Value: 100}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), keyedSummedEvent{Grp: "CP1", Key: "G1", Value: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), keyedSummedEvent{Grp: "CP2", Key: "G1", Value: 101}); err != nil {
+		t.Fatal(err)
+	}
+	want := []struct {
+		key string
+		sum float64
+	}{{"G1", 100}, {"G1", 10}, {"G1", 201}}
+	if len(rows) != len(want) {
+		t.Fatalf("rows = %d, want %d", len(rows), len(want))
+	}
+	for i, expected := range want {
+		if rows[i].Get("c0").Any() != expected.key || mustNumericFloat(rows[i].Get("c1")) != expected.sum {
+			t.Fatalf("row %d = %#v, want %s/%v", i, rows[i].AsMap(), expected.key, expected.sum)
+		}
+	}
+	// TermEvent ends both partitions; the later InitEvent("CP1") starts a
+	// fresh partition with empty state.
+	if err := engine.SendEvent(context.Background(), keyedTermEvent{Grp: "CP1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), keyedTermEvent{Grp: "CP2"}); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("keyed-ctx"); err != nil || count != 0 {
+		t.Fatalf("partition count after termination = %d, err=%v", count, err)
+	}
+	if err := engine.SendEvent(context.Background(), keyedInitEvent{Grp: "CP1"}); err != nil {
+		t.Fatal(err)
+	}
+	rows = nil
+	if err := engine.SendEvent(context.Background(), keyedSummedEvent{Grp: "CP1", Key: "G1", Value: 1000}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Get("c0").Any() != "G1" || mustNumericFloat(rows[0].Get("c1")) != 1000 {
+		t.Fatalf("reinit rows = %#v", rows)
+	}
+}

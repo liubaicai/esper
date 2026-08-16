@@ -1,0 +1,345 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-e1f8f03e39a2fb3b6bcb"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTerm.java"
+  ],
+  "javaExecutions": [
+    "ContextInitTermAggregationGrouped"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-keyed-aggregation",
+    "steps": [
+      {
+        "op": "case",
+        "case": "keyed-aggregation"
+      },
+      {
+        "op": "send",
+        "eventType": "InitEvent",
+        "payload": {
+          "grp": "CP1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "InitEvent",
+        "payload": {
+          "grp": "CP2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SummedEvent",
+        "payload": {
+          "grp": "CP2",
+          "key": "G1",
+          "value": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SummedEvent",
+        "payload": {
+          "grp": "CP1",
+          "key": "G1",
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SummedEvent",
+        "payload": {
+          "grp": "CP1",
+          "key": "G2",
+          "value": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SummedEvent",
+        "payload": {
+          "grp": "CP2",
+          "key": "G1",
+          "value": 101
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SummedEvent",
+        "payload": {
+          "grp": "CP1",
+          "key": "G1",
+          "value": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "TermEvent",
+        "payload": {
+          "grp": "CP1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SummedEvent",
+        "payload": {
+          "grp": "CP1",
+          "key": "G1",
+          "value": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "TermEvent",
+        "payload": {
+          "grp": "CP2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SummedEvent",
+        "payload": {
+          "grp": "CP1",
+          "key": "G1",
+          "value": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SummedEvent",
+        "payload": {
+          "grp": "CP2",
+          "key": "G1",
+          "value": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "InitEvent",
+        "payload": {
+          "grp": "CP1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SummedEvent",
+        "payload": {
+          "grp": "CP1",
+          "key": "G1",
+          "value": 1000
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-keyed-aggregation",
+    "records": [
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G1",
+              "c1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G1",
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G2",
+              "c1": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G1",
+              "c1": 201
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G1",
+              "c1": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G1",
+              "c1": 1000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-keyed-aggregation",
+    "records": [
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G1",
+              "c1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G1",
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G2",
+              "c1": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G1",
+              "c1": 201
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G1",
+              "c1": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "keyed-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "G1",
+              "c1": 1000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

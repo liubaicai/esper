@@ -893,6 +893,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "context-init-term-keyed-aggregation" || *mode == "context-init-term-keyed-aggregation-diff" {
+		trace, err := runContextInitTermKeyedAggregationScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-init-term-keyed-aggregation-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, contextInitTermKeyedJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextInitTermKeyedJavaSources),
+				splitMetadata(*javaExecutions, contextInitTermKeyedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "context-init-term-overlap-duration" || *mode == "context-init-term-overlap-duration-diff" {
 		trace, err := runContextInitTermOverlapDurationScenario(context.Background(), scenario)
 		if err != nil {
