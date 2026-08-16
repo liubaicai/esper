@@ -1437,6 +1437,35 @@ func collectPatternNodeTags(node *patternNode) map[string]bool {
 	return tags
 }
 
+// patternTagOrder returns the tags a pattern can bind in declaration order:
+// event tags first (left-to-right through the operator tree), then array
+// tags. Esper's @Inclusive match routing evaluates the initiating pattern's
+// tagged events in this order (tagged events, then array events), so context
+// statements observe the start events in the same sequence the pattern bound
+// them.
+func patternTagOrder(definition *patternDefinition) []string {
+	if definition == nil {
+		return nil
+	}
+	order := make([]string, 0, 4)
+	seen := make(map[string]bool)
+	var walk func(n *patternNode)
+	walk = func(n *patternNode) {
+		if n == nil {
+			return
+		}
+		if n.tag != "" && !seen[n.tag] {
+			seen[n.tag] = true
+			order = append(order, n.tag)
+		}
+		walk(n.left)
+		walk(n.right)
+		walk(n.child)
+	}
+	walk(definition.root)
+	return order
+}
+
 // exprNodeTagReferences gathers the pattern tags an expression tree reads.
 func exprNodeTagReferences(node *exprNode) []string {
 	tags := make([]string, 0)

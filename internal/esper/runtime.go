@@ -5843,6 +5843,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 	changed := false
 
 	startMatches := advanceContextPattern(&s.runtime.contextStartPatternState, definition.startPattern, event, now, variables, nil, nil, s.engine.env, &s.runtime, "start")
+	startedByMatch := make(map[string]bool, len(startMatches))
 	for _, match := range startMatches {
 		if !definition.initiatedOverlapping && len(s.runtime.partitions) > 0 {
 			continue
@@ -5887,6 +5888,42 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		partition := ptrStatementRuntime(partitionRuntime)
 		s.runtime.partitions[allocationKey] = partition
 		s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partition)
+		startedByMatch[allocationKey] = true
+		if definition.initiatedOverlapping || definition.startPatternInclusive {
+			// Esper's @Inclusive (and the overlapping controller's default
+			// for pattern-initiated contexts) evaluates the start pattern's
+			// tagged events through the new partition's statements in tag
+			// order: tagged events first, then array events. The triggering
+			// event is part of the match map, so the new partition is
+			// skipped in the current-event loop below to avoid analyzing it
+			// twice.
+			partitionVariables := s.contextPartitionVariables(partition, variables)
+			for _, tag := range patternTagOrder(definition.startPattern) {
+				if len(match.tagValues[tag]) > 1 {
+					// Array tag (match-until/repeat): route every captured
+					// event, mirroring Esper's EventBean[] match entries.
+					for _, tagged := range match.tagValues[tag] {
+						batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables)
+						if processErr != nil {
+							return ResultBatch{}, false, processErr
+						}
+						result.New = append(result.New, batch.New...)
+						result.Old = append(result.Old, batch.Old...)
+						changed = changed || partitionChanged
+					}
+					continue
+				}
+				if tagged, ok := match.tags[tag]; ok {
+					batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables)
+					if processErr != nil {
+						return ResultBatch{}, false, processErr
+					}
+					result.New = append(result.New, batch.New...)
+					result.Old = append(result.Old, batch.Old...)
+					changed = changed || partitionChanged
+				}
+			}
+		}
 		if policy := s.plan.query.output; policy.When != nil && partition.outputWhenMatches(policy.When, now) {
 			// Esper evaluates the OUTPUT WHEN clause when a context
 			// partition starts: a satisfied condition (for example
@@ -5975,9 +6012,19 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 	accepts := statementAcceptsEvent(s.plan.query, event)
 	if accepts {
 		for _, partitionKey := range keys {
-			if terminating[partitionKey] && s.plan.query.output.Termination != OutputNoTermination {
-				// A terminating event is available through ContextTerminatingEvent
-				// but does not enter a termination snapshot.
+			if startedByMatch[partitionKey] {
+				// The start pattern's match events were already evaluated
+				// through this partition (Esper routes the match map for
+				// overlapping and @Inclusive starts, and routes nothing for
+				// non-overlapping starts without @Inclusive); the triggering
+				// event must not be analyzed a second time.
+				continue
+			}
+			if terminating[partitionKey] {
+				// A terminating event ends the partition and is never
+				// analyzed by the context's statements; it is available
+				// through ContextTerminatingEvent for termination output
+				// and snapshots.
 				continue
 			}
 			partition := s.runtime.partitions[partitionKey]
@@ -6508,6 +6555,35 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		partition := ptrStatementRuntime(partitionRuntime)
 		s.runtime.partitions[allocationKey] = partition
 		s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partition)
+		if definition.initiatedOverlapping || definition.startPatternInclusive {
+			// A time-completed start pattern carries the same match map as an
+			// event-completed one; @Inclusive and the overlapping controller
+			// route its tagged events through the new partition in tag order.
+			partitionVariables := s.contextPartitionVariables(partition, variables)
+			for _, tag := range patternTagOrder(definition.startPattern) {
+				if len(match.tagValues[tag]) > 1 {
+					for _, tagged := range match.tagValues[tag] {
+						batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables)
+						if processErr != nil {
+							return ResultBatch{}, false
+						}
+						result.New = append(result.New, batch.New...)
+						result.Old = append(result.Old, batch.Old...)
+						changed = changed || partitionChanged
+					}
+					continue
+				}
+				if tagged, ok := match.tags[tag]; ok {
+					batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables)
+					if processErr != nil {
+						return ResultBatch{}, false
+					}
+					result.New = append(result.New, batch.New...)
+					result.Old = append(result.Old, batch.Old...)
+					changed = changed || partitionChanged
+				}
+			}
+		}
 		if policy := s.plan.query.output; policy.When != nil && partition.outputWhenMatches(policy.When, now) {
 			// Esper evaluates the OUTPUT WHEN clause when a context
 			// partition starts: a satisfied condition (for example
@@ -7841,7 +7917,14 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 	r.recordOutputCounts(batch)
 	if policy.Termination == OutputOnlyOnTermination {
 		if !batch.empty() && policy.Kind != OutputSnapshotPolicy {
-			if policy.When != nil || policy.TerminationWhen != nil {
+			if policy.Kind == OutputLastPolicy && r.query.aggregate == nil {
+				// Non-aggregate `output last when terminated` retains only
+				// the most recent row: Esper's last-inserted row, not an
+				// accumulation. Aggregate last-when-terminated rebuilds the
+				// state snapshot at termination instead.
+				copyBatch := mergeLastOutputBatch(r.outputState.pending, batch)
+				r.outputState.pending = &copyBatch
+			} else if policy.When != nil || policy.TerminationWhen != nil {
 				r.appendWhenPending(batch)
 			} else {
 				r.appendPending(batch)

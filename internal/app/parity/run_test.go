@@ -7253,6 +7253,170 @@ func TestRunContextInitTermDurationDiffWritesPassingEvidence(t *testing.T) {
 	}
 }
 
+func TestRunContextInitTermInclusiveEqualsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-inclusive-equals.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-init-term-inclusive-equals.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-inclusive-equals.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-init-term-inclusive-equals-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextInitTermInclusiveEqualsDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "inclusive-start-event-routed",
+			mutate: func(trace *compat.Trace) {
+				// The start event E1@0 is analyzed through the partition
+				// (@Inclusive routes the match): the termination last row at
+				// 10000 is E1/3 (replaced by E1@8000), not E1/1. A
+				// non-inclusive runtime that drops the routed start event
+				// would emit the first retained event instead.
+				indices := recordIndicesOfCase(trace, "pattern-inclusion")
+				fields := trace.Records[indices[0]].New[0].Fields
+				fields["intPrimitive"] = 1
+			},
+		},
+		{
+			name: "distinct-expiry-at-10100",
+			mutate: func(trace *compat.Trace) {
+				// E1@10100 must start a NEW partition (key expired at 10000)
+				// and E1/5 is the last row at 20100. If every-distinct never
+				// expired, the second E1 partition would not exist and E1/5
+				// would not be emitted.
+				indices := recordIndicesOfCase(trace, "pattern-inclusion")
+				trace.Records[indices[2]].Case = ""
+			},
+		},
+		{
+			name: "distinct-swallow-at-8000",
+			mutate: func(trace *compat.Trace) {
+				// E1@8000 is analyzed by the first partition (theString=E1
+				// matches) so the last row at 10000 is E1/3, and E1@8000 must
+				// NOT start a second partition (key E1 seen at 0 within 10s).
+				indices := recordIndicesOfCase(trace, "pattern-inclusion")
+				record := trace.Records[indices[0]]
+				record.Sequence++
+				record.Time = "1970-01-01T00:00:08Z"
+				record.New = []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"theString": "E1", "intPrimitive": 3, "longPrimitive": map[string]any{"state": "null"}}}}
+				trace.Records = append(trace.Records, record)
+			},
+		},
+		{
+			name: "multi-event-order",
+			mutate: func(trace *compat.Trace) {
+				// The routed start events must be S0 then S1 (tag order): the
+				// inner pattern completes and fires. If the routing were
+				// reversed (S1 first), the sequence could not complete.
+				indices := recordIndicesOfCase(trace, "pattern-inclusion-multi")
+				fields := trace.Records[indices[0]].New[0].Fields
+				fields["a_id"] = 20
+				fields["b_id"] = 10
+			},
+		},
+		{
+			name: "multi-event-silence",
+			mutate: func(trace *compat.Trace) {
+				indices := recordIndicesOfCase(trace, "pattern-inclusion-multi")
+				trace.Records[indices[0]].Case = ""
+			},
+		},
+		{
+			name: "straight-equals-sum",
+			mutate: func(trace *compat.Trace) {
+				indices := recordIndicesOfCase(trace, "filter-straight-equals")
+				trace.Records[indices[0]].New[0].Fields["c1"] = 3
+			},
+		},
+		{
+			name: "straight-equals-partition-split",
+			mutate: func(trace *compat.Trace) {
+				// I2 (intPrimitive=3) starts a second partition: E4/15 sums to
+				// 29 in partition 2 while partition 1 (sb.intPrimitive=2)
+				// stays at 9 for E3/2. Dropping the second partition would
+				// change the last record to 12.
+				indices := recordIndicesOfCase(trace, "filter-straight-equals")
+				trace.Records[indices[4]].New[0].Fields["c1"] = 12
+			},
+		},
+		{
+			name: "straight-equals-like-filter",
+			mutate: func(trace *compat.Trace) {
+				// Only theString like "I%" initiates: E1(-1,-2) produces no
+				// partition. A like-filter bug that matched everything would
+				// analyze E1 into a partition and change the first sum.
+				indices := recordIndicesOfCase(trace, "filter-straight-equals")
+				trace.Records[indices[0]].New[0].Fields["c1"] = -2
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "filter-straight-equals"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-inclusive-equals.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-init-term-inclusive-equals.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-inclusive-equals.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-init-term-inclusive-equals-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunContextInitTermDurationDiffRejectsTraceMutations(t *testing.T) {
 	tests := []struct {
 		name   string

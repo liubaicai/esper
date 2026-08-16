@@ -126,31 +126,32 @@ func (c ContextCategory) Predicate() Expression[bool] { return c.predicate }
 // context. More context initiation/termination modes will use the same
 // registry and lifecycle boundary.
 type ContextDefinition struct {
-	name                 string
-	kind                 ContextKind
-	key                  Expr
-	keys                 []Expr
-	partitions           int
-	preallocate          bool
-	hashAlgorithm        HashAlgorithm
-	categories           []ContextCategory
-	start                Expression[bool]
-	end                  Expression[bool]
-	initiatedDistinct    bool
-	initiatedOverlapping bool
-	temporalStartAfter   time.Duration
-	temporalActiveFor    time.Duration
-	temporalScheduled    bool
-	dailyStart           TimeOfDay
-	dailyEnd             TimeOfDay
-	cronStart            *CronSchedule
-	cronEnd              *CronSchedule
-	cronStartResolved    *resolvedCronSchedule
-	cronEndResolved      *resolvedCronSchedule
-	startPattern         *patternDefinition
-	endPattern           *patternDefinition
-	patternEnvironment   *Environment
-	parent               *ContextDefinition
+	name                  string
+	kind                  ContextKind
+	key                   Expr
+	keys                  []Expr
+	partitions            int
+	preallocate           bool
+	hashAlgorithm         HashAlgorithm
+	categories            []ContextCategory
+	start                 Expression[bool]
+	end                   Expression[bool]
+	initiatedDistinct     bool
+	initiatedOverlapping  bool
+	startPatternInclusive bool
+	temporalStartAfter    time.Duration
+	temporalActiveFor     time.Duration
+	temporalScheduled     bool
+	dailyStart            TimeOfDay
+	dailyEnd              TimeOfDay
+	cronStart             *CronSchedule
+	cronEnd               *CronSchedule
+	cronStartResolved     *resolvedCronSchedule
+	cronEndResolved       *resolvedCronSchedule
+	startPattern          *patternDefinition
+	endPattern            *patternDefinition
+	patternEnvironment    *Environment
+	parent                *ContextDefinition
 }
 
 const contextVariablePrefix = "\x00esper.context."
@@ -406,14 +407,14 @@ func NewDistinctInitiatedTerminatedContextBy(name string, keys []Expr, start, en
 // Engine.AdvanceTime. Each active pattern match owns its observer state;
 // advanced guard/consumption combinations remain separate parity work.
 func NewPatternInitiatedTerminatedContext(name string, start, end PatternStream) (ContextDefinition, error) {
-	return newPatternInitiatedTerminatedContext(name, start, end, false, true)
+	return newPatternInitiatedTerminatedContext(name, start, end, false, true, false)
 }
 
 // NewPatternInitiatedContext declares an event-pattern initiated context with
 // no automatic termination condition. The context remains active until the
 // statement is undeployed.
 func NewPatternInitiatedContext(name string, start PatternStream) (ContextDefinition, error) {
-	return newPatternInitiatedTerminatedContext(name, start, PatternStream{}, false, false)
+	return newPatternInitiatedTerminatedContext(name, start, PatternStream{}, false, false, false)
 }
 
 // NewPatternTerminatedContext declares the mixed initiated-terminated form
@@ -484,16 +485,34 @@ func NewPatternInitiatedTerminatedByFilterContext(name string, start PatternStre
 // that allocates one partition for every completed start pattern, even when
 // the start pattern itself does not use Every.
 func NewOverlappingPatternInitiatedTerminatedContext(name string, start, end PatternStream) (ContextDefinition, error) {
-	return newPatternInitiatedTerminatedContext(name, start, end, true, true)
+	return newPatternInitiatedTerminatedContext(name, start, end, true, true, false)
+}
+
+// NewOverlappingPatternInitiatedTerminatedContextInclusive declares the
+// overlapping pattern lifecycle with Esper's @Inclusive start semantics: the
+// events that make up the start pattern match are analyzed by the context's
+// statements in tag order (tagged events first, then array events), in
+// addition to starting the partition. Java's overlapping controller routes
+// the match events unconditionally; the inclusive form makes that explicit in
+// the Go API for non-overlapping declarations where the routing is opt-in.
+func NewOverlappingPatternInitiatedTerminatedContextInclusive(name string, start, end PatternStream) (ContextDefinition, error) {
+	return newPatternInitiatedTerminatedContext(name, start, end, true, true, true)
+}
+
+// NewPatternInitiatedTerminatedContextInclusive declares the non-overlapping
+// pattern lifecycle with Esper's @Inclusive start semantics: the start
+// pattern match events are analyzed by the context's statements in tag order.
+func NewPatternInitiatedTerminatedContextInclusive(name string, start, end PatternStream) (ContextDefinition, error) {
+	return newPatternInitiatedTerminatedContext(name, start, end, false, true, true)
 }
 
 // NewOverlappingPatternInitiatedContext is the no-termination form of the
 // explicit overlapping pattern context constructor.
 func NewOverlappingPatternInitiatedContext(name string, start PatternStream) (ContextDefinition, error) {
-	return newPatternInitiatedTerminatedContext(name, start, PatternStream{}, true, false)
+	return newPatternInitiatedTerminatedContext(name, start, PatternStream{}, true, false, false)
 }
 
-func newPatternInitiatedTerminatedContext(name string, start, end PatternStream, overlapping, terminated bool) (ContextDefinition, error) {
+func newPatternInitiatedTerminatedContext(name string, start, end PatternStream, overlapping, terminated, inclusive bool) (ContextDefinition, error) {
 	if strings.TrimSpace(name) == "" {
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "context name is required")
 	}
@@ -515,12 +534,13 @@ func newPatternInitiatedTerminatedContext(name string, start, end PatternStream,
 		overlapping = true
 	}
 	return ContextDefinition{
-		name:                 name,
-		kind:                 ContextInitiatedTerminated,
-		startPattern:         start.def,
-		endPattern:           end.def,
-		patternEnvironment:   start.env,
-		initiatedOverlapping: overlapping,
+		name:                  name,
+		kind:                  ContextInitiatedTerminated,
+		startPattern:          start.def,
+		endPattern:            end.def,
+		patternEnvironment:    start.env,
+		initiatedOverlapping:  overlapping,
+		startPatternInclusive: inclusive,
 	}, nil
 }
 
@@ -1534,6 +1554,24 @@ func CreateOverlappingPatternInitiatedTerminatedContext(env *Environment, name s
 		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
 	definition, err := NewOverlappingPatternInitiatedTerminatedContext(name, start, end)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	if definition.patternEnvironment != env {
+		return ContextDefinition{}, NewError(ErrorDependency, "pattern context belongs to a different environment")
+	}
+	return env.registerContextDefinition(definition)
+}
+
+// CreateOverlappingPatternInitiatedTerminatedContextInclusive registers the
+// overlapping pattern lifecycle with Esper's @Inclusive start semantics: the
+// start pattern match events are analyzed by the context's statements in tag
+// order in addition to starting the partition.
+func CreateOverlappingPatternInitiatedTerminatedContextInclusive(env *Environment, name string, start, end PatternStream) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewOverlappingPatternInitiatedTerminatedContextInclusive(name, start, end)
 	if err != nil {
 		return ContextDefinition{}, err
 	}

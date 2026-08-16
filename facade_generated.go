@@ -1017,6 +1017,14 @@ func CreateOverlappingPatternInitiatedTerminatedContext(env *Environment, name s
 	return internalengine.CreateOverlappingPatternInitiatedTerminatedContext(env, name, start, end)
 }
 
+// CreateOverlappingPatternInitiatedTerminatedContextInclusive registers the
+// overlapping pattern lifecycle with Esper's @Inclusive start semantics: the
+// start pattern match events are analyzed by the context's statements in tag
+// order in addition to starting the partition.
+func CreateOverlappingPatternInitiatedTerminatedContextInclusive(env *Environment, name string, start, end PatternStream) (ContextDefinition, error) {
+	return internalengine.CreateOverlappingPatternInitiatedTerminatedContextInclusive(env, name, start, end)
+}
+
 // CreateOverlappingPatternTerminatedContext registers the overlapping mixed
 // filter-start pattern-end context form in env.
 func CreateOverlappingPatternTerminatedContext(env *Environment, name string, key Expr, start Expression[bool], end PatternStream) (ContextDefinition, error) {
@@ -4080,6 +4088,17 @@ func NewOverlappingPatternInitiatedTerminatedContext(name string, start, end Pat
 	return internalengine.NewOverlappingPatternInitiatedTerminatedContext(name, start, end)
 }
 
+// NewOverlappingPatternInitiatedTerminatedContextInclusive declares the
+// overlapping pattern lifecycle with Esper's @Inclusive start semantics: the
+// events that make up the start pattern match are analyzed by the context's
+// statements in tag order (tagged events first, then array events), in
+// addition to starting the partition. Java's overlapping controller routes
+// the match events unconditionally; the inclusive form makes that explicit in
+// the Go API for non-overlapping declarations where the routing is opt-in.
+func NewOverlappingPatternInitiatedTerminatedContextInclusive(name string, start, end PatternStream) (ContextDefinition, error) {
+	return internalengine.NewOverlappingPatternInitiatedTerminatedContextInclusive(name, start, end)
+}
+
 // NewOverlappingPatternTerminatedContext declares the overlapping mixed
 // form `initiated by <filter> ... terminated after <duration>:` every
 // matching start predicate allocates a fresh partition and the end pattern
@@ -4115,6 +4134,13 @@ func NewPatternInitiatedTerminatedByFilterContext(name string, start PatternStre
 // advanced guard/consumption combinations remain separate parity work.
 func NewPatternInitiatedTerminatedContext(name string, start, end PatternStream) (ContextDefinition, error) {
 	return internalengine.NewPatternInitiatedTerminatedContext(name, start, end)
+}
+
+// NewPatternInitiatedTerminatedContextInclusive declares the non-overlapping
+// pattern lifecycle with Esper's @Inclusive start semantics: the start
+// pattern match events are analyzed by the context's statements in tag order.
+func NewPatternInitiatedTerminatedContextInclusive(name string, start, end PatternStream) (ContextDefinition, error) {
+	return internalengine.NewPatternInitiatedTerminatedContextInclusive(name, start, end)
 }
 
 // NewPatternTerminatedContext declares the mixed initiated-terminated form

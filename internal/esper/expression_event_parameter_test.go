@@ -258,7 +258,10 @@ func TestParameterizedNamedExpressionReferenceSupportsContextPatternEventValues(
 	if err := engine.SendEvent(context.Background(), eventParameterParityEvent{P00: "next"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(*rows) != 2 || (*rows)[0].Get("value").Any() != "seed" || (*rows)[1].Get("value").Any() != "seed" {
+	// Java probe (fixed commit 9e1b9f1c): a non-overlapping pattern-start
+	// context consumes the start event (seed) in the start pattern; only the
+	// next event is analyzed, reading context.a.p00 = seed.
+	if len(*rows) != 1 || (*rows)[0].Get("value").Any() != "seed" {
 		t.Fatalf("context pattern event parameter rows = %#v", *rows)
 	}
 }

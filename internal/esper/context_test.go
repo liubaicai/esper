@@ -3070,13 +3070,18 @@ func TestPatternInitiatedTerminatedContextCorrelatesCapturedTags(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if len(rows) != 3 {
-		t.Fatalf("pattern context rows = %d, want 3: %#v", len(rows), rows)
+	// Java probe (fixed commit 9e1b9f1c): a non-overlapping pattern context
+	// does not analyze its start event (A/1) or its end event (A/101) — the
+	// pattern engine consumes both. Only A/2 enters the statement, so exactly
+	// one row {A, 2} is produced.
+	if len(rows) != 1 {
+		t.Fatalf("pattern context rows = %d, want 1: %#v", len(rows), rows)
 	}
-	for index, row := range rows {
-		if got := row.Get("starter").Any(); got != "A" {
-			t.Fatalf("row %d starter = %#v, want A", index, got)
-		}
+	if got := rows[0].Get("starter").Any(); got != "A" {
+		t.Fatalf("row 0 starter = %#v, want A", got)
+	}
+	if got := rows[0].Get("price").Any(); got != 2.0 {
+		t.Fatalf("row 0 price = %#v, want 2.0", got)
 	}
 	descriptors, err := engine.ContextPartitionDescriptors("pattern-session", ContextPartitionSelectorAll{})
 	if err != nil {
@@ -3185,8 +3190,8 @@ func TestPatternContextTerminationSnapshotCarriesEndTags(t *testing.T) {
 	if !ok {
 		t.Fatalf("pattern termination result is not a row: %#v", batches[0].New[0])
 	}
-	if got := row.Get("count").Any(); got != int64(2) {
-		t.Fatalf("pattern termination snapshot count = %#v, want 2", got)
+	if got := row.Get("count").Any(); got != int64(1) {
+		t.Fatalf("pattern termination snapshot count = %#v, want 1 (start event A/1 is consumed by the start pattern and not analyzed)", got)
 	}
 	if got := row.Get("starter").Any(); got != "A" {
 		t.Fatalf("pattern termination snapshot starter = %#v", got)
@@ -3546,8 +3551,8 @@ func TestPatternTimerContextComposesTimerAndEventLifecycle(t *testing.T) {
 		t.Fatalf("composed timer context termination batches = %#v", batches)
 	}
 	row, ok := batches[0].New[0].Row()
-	if !ok || row.Get("count").Any() != int64(2) {
-		t.Fatalf("composed timer context termination row = %#v", batches[0].New[0])
+	if !ok || row.Get("count").Any() != int64(1) {
+		t.Fatalf("composed timer context termination row = %#v (Java probe: start event A and end event E are consumed by their patterns; only D is analyzed, count=1)", batches[0].New[0])
 	}
 	if count, err := engine.ContextPartitionCount("pattern-composed-timer"); err != nil || count != 0 {
 		t.Fatalf("composed timer context count after termination=%d err=%v", count, err)
