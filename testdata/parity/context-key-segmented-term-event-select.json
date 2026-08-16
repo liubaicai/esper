@@ -1,0 +1,58 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-term-event-select",
+ "steps": [
+  {
+   "op": "case",
+   "case": "term-event-select"
+  },
+  {
+   "op": "send",
+   "eventType": "UserEvent",
+   "payload": {
+    "userId": "U1",
+    "alert": "A"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "UserEvent",
+   "payload": {
+    "userId": "U1",
+    "alert": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "UserEvent",
+   "payload": {
+    "userId": "U1",
+    "alert": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "UserEvent",
+   "payload": {
+    "userId": "U1",
+    "alert": "B"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "UserEvent",
+   "payload": {
+    "userId": "U2",
+    "alert": "A"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "UserEvent",
+   "payload": {
+    "userId": "U2",
+    "alert": "B"
+   }
+  }
+ ]
+}

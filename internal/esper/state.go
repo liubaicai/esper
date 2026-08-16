@@ -1585,6 +1585,17 @@ func coerceTableValue(value any, target reflect.Type) (Value, error) {
 func encodeKey(values []any) string {
 	parts := make([]string, 0, len(values))
 	for _, value := range values {
+		// Nullable schema fields surface as pointers (*string, *bool, ...)
+		// while literals and non-nullable fields surface as values; a key
+		// must encode the pointed-to value so equal boxed values share a
+		// partition, mirroring Java's value-based partitioning of nullable
+		// properties. Nil pointers keep their type so null and absent keys
+		// remain distinct from a present value.
+		if reflected := reflect.ValueOf(value); reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {
+			if !reflected.IsNil() {
+				value = reflected.Elem().Interface()
+			}
+		}
 		parts = append(parts, fmt.Sprintf("%T:%#v", value, value))
 	}
 	return strings.Join(parts, "\x1f")

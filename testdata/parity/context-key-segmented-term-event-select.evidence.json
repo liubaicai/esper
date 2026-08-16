@@ -1,0 +1,177 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-0fe0eaefe8ed7adcc2bf"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+  ],
+  "javaExecutions": [
+    "ContextKeySegmentedTermEventSelect"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-term-event-select",
+    "steps": [
+      {
+        "op": "case",
+        "case": "term-event-select"
+      },
+      {
+        "op": "send",
+        "eventType": "UserEvent",
+        "payload": {
+          "userId": "U1",
+          "alert": "A"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "UserEvent",
+        "payload": {
+          "userId": "U1",
+          "alert": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "UserEvent",
+        "payload": {
+          "userId": "U1",
+          "alert": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "UserEvent",
+        "payload": {
+          "userId": "U1",
+          "alert": "B"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "UserEvent",
+        "payload": {
+          "userId": "U2",
+          "alert": "A"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "UserEvent",
+        "payload": {
+          "userId": "U2",
+          "alert": "B"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-term-event-select",
+    "records": [
+      {
+        "case": "term-event-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "alert": "A",
+              "term": {
+                "fields": {
+                  "alert": "B",
+                  "userId": "U1"
+                },
+                "kind": "row"
+              },
+              "userId": "U1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "term-event-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "alert": "A",
+              "term": {
+                "fields": {
+                  "alert": "B",
+                  "userId": "U2"
+                },
+                "kind": "row"
+              },
+              "userId": "U2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-term-event-select",
+    "records": [
+      {
+        "case": "term-event-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "alert": "A",
+              "term": {
+                "fields": {
+                  "alert": "B",
+                  "userId": "U1"
+                },
+                "kind": "row"
+              },
+              "userId": "U1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "term-event-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "alert": "A",
+              "term": {
+                "fields": {
+                  "alert": "B",
+                  "userId": "U2"
+                },
+                "kind": "row"
+              },
+              "userId": "U2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
