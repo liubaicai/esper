@@ -893,6 +893,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "context-start-end-correlated" || *mode == "context-start-end-correlated-diff" {
+		trace, err := runContextStartEndCorrelatedScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-start-end-correlated-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, contextStartEndJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextStartEndJavaSources),
+				splitMetadata(*javaExecutions, contextStartEndJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "context-init-term-output-clause" || *mode == "context-init-term-output-clause-diff" {
 		trace, err := runContextInitTermOutputClauseScenario(context.Background(), scenario)
 		if err != nil {

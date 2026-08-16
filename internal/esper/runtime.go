@@ -5916,7 +5916,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 			}
 			partitionVariables := partition.withContextVariables(variablesWithEngine(variables, s.engine))
 			partitionVariables = partition.withContextProperties(partitionVariables)
-			endValue := definition.end.eval(EvalContext{Event: event, Now: now, Variables: partitionVariables})
+			endValue := definition.end.eval(EvalContext{Event: event, Now: now, Variables: partitionVariables, Tags: partition.contextPatternTags})
 			if end, ok := boolValue(endValue); ok && end {
 				if partition.contextProperties == nil {
 					partition.contextProperties = make(map[string]Value)
@@ -6638,7 +6638,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 		}
 		partitionVariables := partition.withContextVariables(variablesWithEngine(variables, s.engine))
 		partitionVariables = partition.withContextProperties(partitionVariables)
-		endValue := definition.end.eval(EvalContext{Event: event, Now: now, Variables: partitionVariables})
+		endValue := definition.end.eval(EvalContext{Event: event, Now: now, Variables: partitionVariables, Tags: partition.contextPatternTags})
 		if end, ok := boolValue(endValue); ok && end {
 			if partition.contextProperties == nil {
 				partition.contextProperties = make(map[string]Value)

@@ -4645,3 +4645,69 @@ func TestOutputAllEveryNUnboundedGroupedEmitsGroupReps(t *testing.T) {
 		t.Fatalf("termination rows not ordered: %v %v", first.Get("c1").Any(), second.Get("c1").Any())
 	}
 }
+
+func TestPatternStartFilterEndCorrelatedViaStartTag(t *testing.T) {
+	// `start pattern[s0=S0] end S1(id=starter.s0.id)`: the end predicate
+	// reads the start pattern tag; the S0 start event itself must not
+	// terminate the fresh partition, and a correlated S1 ends it.
+	env, engine := newRuntimeTest(t)
+	type corrS0 struct {
+		ID int `esper:"id"`
+	}
+	type corrS1 struct {
+		ID int `esper:"id"`
+	}
+	if _, err := RegisterStruct[corrS0](env, "CS0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[corrS1](env, "CS1"); err != nil {
+		t.Fatal(err)
+	}
+	base := From[runtimeTestTrade](env, "Trade")
+	s0Base := From[corrS0](env, "CS0")
+	start := PatternFrom(s0Base, "s0", Literal(true))
+	end := And(
+		Equal[string](TypeName(EventValue[Event]()), Literal("CS1")),
+		Equal[int](Field[corrS1, int]("id"), TagField[int]("s0", "id")),
+	)
+	if _, err := CreatePatternInitiatedTerminatedByFilterContext(env, "Ctx", start, end); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(base.Query(StatementName("s0"), WithContext("Ctx")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows int
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		rows += len(batch.New)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), corrS0{ID: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("Ctx"); err != nil || count != 1 {
+		t.Fatalf("partition count after S0 = %d, err=%v", count, err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E1", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	// The correlated S1 terminates the partition.
+	if err := engine.SendEvent(context.Background(), corrS1{ID: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("Ctx"); err != nil || count != 0 {
+		t.Fatalf("partition count after correlated S1 = %d, err=%v", count, err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E2", Price: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 1 {
+		t.Fatalf("expected exactly one row (E1), got %d", rows)
+	}
+}

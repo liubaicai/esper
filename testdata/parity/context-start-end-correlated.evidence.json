@@ -1,0 +1,711 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-9a99ccdac87623fb6c02",
+    "java-runtime-0d946f8f7b3a0c9afdcd",
+    "java-runtime-1da794026834900ba946"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTerm.java"
+  ],
+  "javaExecutions": [
+    "ContextStartEndPatternWithFilterCorrelatedWithAsName",
+    "ContextStartEndPatternCorrelated",
+    "ContextInitTermPatternCorrelated"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-start-end-correlated",
+    "steps": [
+      {
+        "op": "case",
+        "case": "start-end-pattern-filter"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": null,
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": null,
+          "p11": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "start-end-or-correlated"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 100,
+          "p10": null,
+          "p11": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "SB1",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 100,
+          "p20": null,
+          "p21": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 101,
+          "p30": null,
+          "p31": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 100,
+          "p30": null,
+          "p31": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "SB2",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 200,
+          "p00": null,
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "SB3",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 201,
+          "p20": null,
+          "p21": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 200,
+          "p30": null,
+          "p31": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "SB4",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 200,
+          "p20": null,
+          "p21": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "SB5",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "init-term-pattern-correlated"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "G1",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "X",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "G1",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "X",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "G1",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "G1",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "G2",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "G2",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "X",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "G1",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "G2",
+          "p01": null
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-start-end-correlated",
+    "records": [
+      {
+        "case": "start-end-pattern-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "shortBoxed": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "start-end-or-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "shortBoxed": {
+                "state": "null"
+              },
+              "theString": "SB1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "start-end-or-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "shortBoxed": {
+                "state": "null"
+              },
+              "theString": "SB3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "start-end-or-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "shortBoxed": {
+                "state": "null"
+              },
+              "theString": "SB4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "init-term-pattern-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "G1",
+              "p01": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "init-term-pattern-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "G1",
+              "p01": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "init-term-pattern-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "G2",
+              "p01": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "init-term-pattern-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "G2",
+              "p01": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-start-end-correlated",
+    "records": [
+      {
+        "case": "start-end-pattern-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "shortBoxed": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "start-end-or-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "shortBoxed": {
+                "state": "null"
+              },
+              "theString": "SB1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "start-end-or-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "shortBoxed": {
+                "state": "null"
+              },
+              "theString": "SB3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "start-end-or-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "shortBoxed": {
+                "state": "null"
+              },
+              "theString": "SB4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "init-term-pattern-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "G1",
+              "p01": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "init-term-pattern-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "G1",
+              "p01": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "init-term-pattern-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "G2",
+              "p01": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "init-term-pattern-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "p00": "G2",
+              "p01": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
