@@ -8837,3 +8837,118 @@ func TestRunContextKeySegmentedMatchRecognizeDiffRejectsTraceMutations(t *testin
 		})
 	}
 }
+
+func TestRunContextKeySegmentedNullKeysDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-null-keys.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-null-keys.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-null-keys.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-null-keys-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedNullKeysDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "null-key-shared",
+			mutate: func(trace *compat.Trace) {
+				// Two null-key events share one partition (cnt 1,2); a
+				// per-event partition bug would keep cnt at 1.
+				indices := recordIndicesOfCase(trace, "null-single-key")
+				trace.Records[indices[1]].New[0].Fields["cnt"] = 1
+			},
+		},
+		{
+			name: "null-vs-present",
+			mutate: func(trace *compat.Trace) {
+				// A's partition starts at 1; a null-merge bug would count
+				// into the null partition (3).
+				indices := recordIndicesOfCase(trace, "null-single-key")
+				trace.Records[indices[2]].New[0].Fields["cnt"] = 3
+			},
+		},
+		{
+			name: "multi-key-null-shared",
+			mutate: func(trace *compat.Trace) {
+				// (A,null,1) twice shares a partition (1,2); a null-boxed
+				// bug splitting by pointer would keep cnt at 1.
+				indices := recordIndicesOfCase(trace, "null-key-multi-key")
+				trace.Records[indices[1]].New[0].Fields["cnt"] = 1
+			},
+		},
+		{
+			name: "multi-key-present-distinct",
+			mutate: func(trace *compat.Trace) {
+				// (A,10,1) is a separate partition (cnt 1); merging into
+				// (A,null,1) would give 3.
+				indices := recordIndicesOfCase(trace, "null-key-multi-key")
+				trace.Records[indices[2]].New[0].Fields["cnt"] = 3
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "other"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-null-keys.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-null-keys.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-null-keys.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-null-keys-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

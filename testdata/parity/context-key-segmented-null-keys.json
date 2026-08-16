@@ -1,0 +1,65 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-null-keys",
+ "steps": [
+  {
+   "op": "case",
+   "case": "null-single-key"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 30
+   }
+  },
+  {
+   "op": "case",
+   "case": "null-key-multi-key"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intBoxed": null,
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intBoxed": null,
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intBoxed": 10,
+    "intPrimitive": 1
+   }
+  }
+ ]
+}
