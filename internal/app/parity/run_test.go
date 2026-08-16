@@ -6478,3 +6478,118 @@ func TestRunContextInitTermWithNowDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunContextInitTermOverlapDurationDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-overlap-duration.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-init-term-overlap-duration.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-overlap-duration.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-init-term-overlap-duration-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextInitTermOverlapDurationDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "cron-partition-sum",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["c2"] = int64(19)
+			},
+		},
+		{
+			name: "cron-multi-row-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0], trace.Records[2].New[1] = trace.Records[2].New[1], trace.Records[2].New[0]
+			},
+		},
+		{
+			name: "cron-partition-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[2].Fields["c2"] = int64(11)
+			},
+		},
+		{
+			name: "cron-timer-time",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].Time = "2002-05-01T08:04:59.999Z"
+			},
+		},
+		{
+			name: "two-context-partition-row",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].New[1].Fields["c3"] = "SB03"
+			},
+		},
+		{
+			name: "two-context-sum",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].New[0].Fields["c2"] = int64(15)
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:10]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].Case = "crontab-minute"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-overlap-duration.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-init-term-overlap-duration.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-overlap-duration.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-init-term-overlap-duration-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

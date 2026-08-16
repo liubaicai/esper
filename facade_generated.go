@@ -1017,6 +1017,12 @@ func CreateOverlappingPatternInitiatedTerminatedContext(env *Environment, name s
 	return internalengine.CreateOverlappingPatternInitiatedTerminatedContext(env, name, start, end)
 }
 
+// CreateOverlappingPatternTerminatedContext registers the overlapping mixed
+// filter-start pattern-end context form in env.
+func CreateOverlappingPatternTerminatedContext(env *Environment, name string, key Expr, start Expression[bool], end PatternStream) (ContextDefinition, error) {
+	return internalengine.CreateOverlappingPatternTerminatedContext(env, name, key, start, end)
+}
+
 // CreatePatternInitiatedContext registers the no-termination pattern form.
 func CreatePatternInitiatedContext(env *Environment, name string, start PatternStream) (ContextDefinition, error) {
 	return internalengine.CreatePatternInitiatedContext(env, name, start)
@@ -4064,6 +4070,15 @@ func NewOverlappingPatternInitiatedContext(name string, start PatternStream) (Co
 // the start pattern itself does not use Every.
 func NewOverlappingPatternInitiatedTerminatedContext(name string, start, end PatternStream) (ContextDefinition, error) {
 	return internalengine.NewOverlappingPatternInitiatedTerminatedContext(name, start, end)
+}
+
+// NewOverlappingPatternTerminatedContext declares the overlapping mixed
+// form `initiated by <filter> ... terminated after <duration>:` every
+// matching start predicate allocates a fresh partition and the end pattern
+// (typically a duration timer) terminates it, matching Esper's
+// `initiated by SupportBean_S0 ... terminated after 1 minute`.
+func NewOverlappingPatternTerminatedContext(name string, key Expr, start Expression[bool], end PatternStream) (ContextDefinition, error) {
+	return internalengine.NewOverlappingPatternTerminatedContext(name, key, start, end)
 }
 
 // NewPatternInitiatedContext declares an event-pattern initiated context with

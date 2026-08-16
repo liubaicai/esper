@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -4132,4 +4133,101 @@ func mustNumericFloat(value Value) float64 {
 		return -1
 	}
 	return number
+}
+
+func TestOverlappingFilterStartDurationEndTerminatesPartitionsTogether(t *testing.T) {
+	// `initiated by <filter> terminated after 1 minute`: every matching
+	// start event allocates a fresh partition whose duration end pattern
+	// terminates it one minute later; two partitions initiated one minute
+	// apart end at the same instant and stop accepting events together.
+	env, _ := newRuntimeTest(t)
+	if _, err := RegisterStruct[timerEndTrigger](env, "Trigger"); err != nil {
+		t.Fatal(err)
+	}
+	base := From[runtimeTestTrade](env, "Trade")
+	triggerBase := From[timerEndTrigger](env, "Trigger")
+	isTrigger := Equal[string](TypeName(EventValue[Event]()), Literal("Trigger"))
+	end := TimerInterval(triggerBase, time.Minute)
+	if _, err := CreateOverlappingPatternTerminatedContext(env, "ov-duration", Literal("global"), isTrigger, end); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(base.Aggregate(
+		Alias("c1", Field[runtimeTestTrade, string]("symbol")),
+		Alias("c2", Sum[int](Field[runtimeTestTrade, int]("price"))),
+	).Query(StatementName("s0"), WithContext("ov-duration")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Partition A at t=0; partition B at t=1s.
+	if err := engine.SendEvent(context.Background(), timerEndTrigger{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(1, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), timerEndTrigger{Symbol: "B"}); err != nil {
+		t.Fatal(err)
+	}
+	// Both partitions aggregate independently; the batch carries one row
+	// per active partition in start order.
+	rows = nil
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E1", Price: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		values := make([]string, 0, len(rows))
+		for _, row := range rows {
+			values = append(values, row.Get("c1").String()+"="+fmt.Sprint(row.Get("c2").Any()))
+		}
+		t.Fatalf("rows after E1 = %d (%v), want 2", len(rows), values)
+	}
+	// The projection reads the arriving event's fields; both active
+	// partitions report their own running sums (each seeded by its start
+	// trigger and now including E1).
+	for _, row := range rows {
+		if row.Get("c1").Any() != "E1" || mustNumericFloat(row.Get("c2")) != 3 {
+			t.Fatalf("per-partition row = %#v", row.AsMap())
+		}
+	}
+	// A second event distinguishes the partitions: A accumulates 3+5,
+	// B accumulates 3+5 too, one row per partition in start order.
+	rows = nil
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E2", Price: 5}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || mustNumericFloat(rows[0].Get("c2")) != 8 || mustNumericFloat(rows[1].Get("c2")) != 8 {
+		t.Fatalf("rows after E2 = %#v", rows)
+	}
+	// At t=60s partition A terminates; at t=61s partition B terminates.
+	if err := engine.AdvanceTime(context.Background(), time.Unix(60, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(61, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("ov-duration"); err != nil || count != 0 {
+		t.Fatalf("partition count after both terminations = %d, err=%v", count, err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E2", Price: 4}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("rows after termination = %d, want 2 (no new rows)", len(rows))
+	}
 }

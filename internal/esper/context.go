@@ -440,6 +440,20 @@ func NewPatternTerminatedContext(name string, key Expr, start Expression[bool], 
 	}, nil
 }
 
+// NewOverlappingPatternTerminatedContext declares the overlapping mixed
+// form `initiated by <filter> ... terminated after <duration>:` every
+// matching start predicate allocates a fresh partition and the end pattern
+// (typically a duration timer) terminates it, matching Esper's
+// `initiated by SupportBean_S0 ... terminated after 1 minute`.
+func NewOverlappingPatternTerminatedContext(name string, key Expr, start Expression[bool], end PatternStream) (ContextDefinition, error) {
+	definition, err := NewPatternTerminatedContext(name, key, start, end)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	definition.initiatedOverlapping = true
+	return definition, nil
+}
+
 // NewPatternInitiatedTerminatedByFilterContext declares the mixed form
 // `start pattern [...] end <filter>:` the start pattern allocates a
 // partition and a filter predicate terminates it. The end predicate may
@@ -1433,6 +1447,22 @@ func CreatePatternInitiatedTerminatedByFilterContext(env *Environment, name stri
 		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
 	definition, err := NewPatternInitiatedTerminatedByFilterContext(name, start, end)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	if definition.patternEnvironment != env {
+		return ContextDefinition{}, NewError(ErrorDependency, "pattern context belongs to a different environment")
+	}
+	return env.registerContextDefinition(definition)
+}
+
+// CreateOverlappingPatternTerminatedContext registers the overlapping mixed
+// filter-start pattern-end context form in env.
+func CreateOverlappingPatternTerminatedContext(env *Environment, name string, key Expr, start Expression[bool], end PatternStream) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewOverlappingPatternTerminatedContext(name, key, start, end)
 	if err != nil {
 		return ContextDefinition{}, err
 	}
