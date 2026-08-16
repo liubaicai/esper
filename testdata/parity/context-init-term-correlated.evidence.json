@@ -1,0 +1,314 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-9a99ccdac87623fb6c02",
+    "java-runtime-4f7224de7f4a4a153c43",
+    "java-runtime-d0776e587fee56bc29c3",
+    "java-runtime-c950c1a80c0106288084"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTerm.java"
+  ],
+  "javaExecutions": [
+    "ContextStartEndPatternWithFilterCorrelatedWithAsName",
+    "ContextStartEndPatternWithPatternCorrelatedWithAsName",
+    "ContextStartEndFilterWithPatternCorrelatedWithAsName{soda=false}",
+    "ContextStartEndFilterWithPatternCorrelatedWithAsName{soda=true}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-correlated",
+    "steps": [
+      {
+        "op": "case",
+        "case": "pattern-pattern-correlated"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": null,
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": null,
+          "p11": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "pattern-filter-correlated"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": null,
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": null,
+          "p11": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "intBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "filter-pattern-or-correlated"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": null,
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": null,
+          "p11": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:10.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": null,
+          "p01": null
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:40.000Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-correlated",
+    "records": [
+      {
+        "case": "pattern-pattern-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-filter-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-pattern-or-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 10,
+              "c2": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-pattern-or-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T00:00:40Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-correlated",
+    "records": [
+      {
+        "case": "pattern-pattern-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-filter-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-pattern-or-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 10,
+              "c2": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-pattern-or-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T00:00:40Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

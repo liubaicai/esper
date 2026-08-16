@@ -1022,6 +1022,12 @@ func CreatePatternInitiatedContext(env *Environment, name string, start PatternS
 	return internalengine.CreatePatternInitiatedContext(env, name, start)
 }
 
+// CreatePatternInitiatedTerminatedByFilterContext registers the mixed
+// pattern-start filter-end context form in env.
+func CreatePatternInitiatedTerminatedByFilterContext(env *Environment, name string, start PatternStream, end Expression[bool]) (ContextDefinition, error) {
+	return internalengine.CreatePatternInitiatedTerminatedByFilterContext(env, name, start, end)
+}
+
 // CreatePatternInitiatedTerminatedContext registers an event-pattern
 // initiated-terminated context in env.
 func CreatePatternInitiatedTerminatedContext(env *Environment, name string, start, end PatternStream) (ContextDefinition, error) {
@@ -4065,6 +4071,16 @@ func NewOverlappingPatternInitiatedTerminatedContext(name string, start, end Pat
 // statement is undeployed.
 func NewPatternInitiatedContext(name string, start PatternStream) (ContextDefinition, error) {
 	return internalengine.NewPatternInitiatedContext(name, start)
+}
+
+// NewPatternInitiatedTerminatedByFilterContext declares the mixed form
+// `start pattern [...] end <filter>:` the start pattern allocates a
+// partition and a filter predicate terminates it. The end predicate may
+// reference the initiating event through ContextInitiatingEvent, matching
+// Esper's correlated filter-ended contexts such as
+// `end SupportBean_S1(id=starter.s0.id)`.
+func NewPatternInitiatedTerminatedByFilterContext(name string, start PatternStream, end Expression[bool]) (ContextDefinition, error) {
+	return internalengine.NewPatternInitiatedTerminatedByFilterContext(name, start, end)
 }
 
 // NewPatternInitiatedTerminatedContext declares an initiated context whose

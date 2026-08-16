@@ -1,0 +1,133 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-init-term-correlated",
+ "steps": [
+  {
+   "op": "case",
+   "case": "pattern-pattern-correlated"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": null,
+    "p01": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 10,
+    "p10": null,
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "pattern-filter-correlated"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": null,
+    "p01": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 10,
+    "p10": null,
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "filter-pattern-or-correlated"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T00:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": null,
+    "p01": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 10,
+    "p10": null,
+    "p11": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T00:00:10.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 20,
+    "p00": null,
+    "p01": null
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T00:00:40.000Z"
+  }
+ ]
+}

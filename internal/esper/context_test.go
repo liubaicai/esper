@@ -3930,3 +3930,143 @@ func TestPatternContextStartPatternRearmsAfterCompletion(t *testing.T) {
 		}
 	}
 }
+
+func TestPatternContextDuplicateStartEndTagRejected(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	start := PatternFrom(base, "a", Literal[bool](true))
+	end := PatternFrom(base, "a", Literal[bool](true))
+	if _, err := NewPatternInitiatedTerminatedContext("duplicate-tag", start, end); err == nil {
+		t.Fatal("duplicate start/end pattern tag was accepted")
+	} else if !errors.Is(err, ErrorInvalidRule) {
+		t.Fatalf("duplicate tag error = %v, want %v", err, ErrorInvalidRule)
+	}
+	// Distinct tags remain valid.
+	if _, err := NewPatternInitiatedTerminatedContext(
+		"distinct-tags", PatternFrom(base, "a", Literal[bool](true)), PatternFrom(base, "b", Literal[bool](true))); err != nil {
+		t.Fatalf("distinct start/end tags rejected: %v", err)
+	}
+}
+
+func TestPatternStartFilterEndMixedContextTerminatesOnCorrelatedFilter(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	base := From[runtimeTestTrade](env, "Trade")
+	start := PatternFrom(base, "a", Literal[bool](true))
+	isTrade := Equal[string](TypeName(EventValue[Event]()), Literal("Trade"))
+	// The end filter terminates only a same-symbol event whose price is
+	// above the threshold, so the starting event never ends itself.
+	end := And(
+		And(isTrade,
+			Equal[string](Field[runtimeTestTrade, string]("symbol"), Property[string](ContextInitiatingEvent(), "symbol"))),
+		Greater[float64](Field[runtimeTestTrade, float64]("price"), Literal(1.0)))
+	if _, err := CreatePatternInitiatedTerminatedByFilterContext(env, "mixed-filter-end", start, end); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(base.Query(StatementName("s0"), WithContext("mixed-filter-end")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), plan); err != nil {
+		t.Fatal(err)
+	}
+	// A(1) starts the partition; A(2) terminates it via the correlated filter.
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("mixed-filter-end"); err != nil || count != 1 {
+		t.Fatalf("partition count after start = %d, err=%v", count, err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A", Price: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("mixed-filter-end"); err != nil || count != 0 {
+		t.Fatalf("partition count after end = %d, err=%v", count, err)
+	}
+	// A different symbol never terminates; a same-symbol low-price event
+	// does not terminate either.
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "B", Price: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "B", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("mixed-filter-end"); err != nil || count != 1 {
+		t.Fatalf("partition count after non-matching end = %d, err=%v", count, err)
+	}
+}
+
+type timerEndTrigger struct {
+	Symbol string  `esper:"symbol"`
+	Price  float64 `esper:"price"`
+}
+
+func TestFilterStartPatternEndTimerTerminatesWithOutput(t *testing.T) {
+	env, _ := newRuntimeTest(t)
+	if _, err := RegisterStruct[timerEndTrigger](env, "Trigger"); err != nil {
+		t.Fatal(err)
+	}
+	base := From[runtimeTestTrade](env, "Trade")
+	triggerBase := From[timerEndTrigger](env, "Trigger")
+	isTrade := Equal[string](TypeName(EventValue[Event]()), Literal("Trade"))
+	// The end pattern consumes Trigger events only, so the Trade start
+	// event never terminates its own partition; the timer branch is a
+	// second termination path.
+	end := PatternFrom(triggerBase, "b",
+		Equal[string](Field[timerEndTrigger, string]("symbol"), Property[string](ContextInitiatingEvent(), "symbol")),
+	).Or(TimerInterval(triggerBase, 10*time.Second))
+	if _, err := CreatePatternTerminatedContext(env, "mixed-timer-end", Literal("global"), isTrade, end); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(base.Aggregate(
+		Alias("c1", Property[string](ContextInitiatingEvent(), "symbol")),
+		Alias("c2", ContextPatternField[string]("b", "symbol")),
+	).Query(StatementName("s0"), WithContext("mixed-timer-end"),
+		WithOutput(OutputWhenTerminated())))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "A", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	// Correlated filter end: a matching Trigger terminates immediately.
+	if err := engine.SendEvent(context.Background(), timerEndTrigger{Symbol: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("termination rows after filter end = %d, want 1", len(rows))
+	}
+	if rows[0].Get("c1").Any() != "A" || rows[0].Get("c2").Any() != "A" {
+		t.Fatalf("filter-end row = %#v", rows[0].AsMap())
+	}
+	// Timer end: the second partition terminates at the 10-second deadline
+	// with no captured end tag.
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "B", Price: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(10, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("termination rows after timer end = %d, want 2", len(rows))
+	}
+	if rows[1].Get("c1").Any() != "B" || rows[1].Get("c2").IsPresent() {
+		t.Fatalf("timer-end row = %#v", rows[1].AsMap())
+	}
+}

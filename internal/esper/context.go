@@ -440,6 +440,31 @@ func NewPatternTerminatedContext(name string, key Expr, start Expression[bool], 
 	}, nil
 }
 
+// NewPatternInitiatedTerminatedByFilterContext declares the mixed form
+// `start pattern [...] end <filter>:` the start pattern allocates a
+// partition and a filter predicate terminates it. The end predicate may
+// reference the initiating event through ContextInitiatingEvent, matching
+// Esper's correlated filter-ended contexts such as
+// `end SupportBean_S1(id=starter.s0.id)`.
+func NewPatternInitiatedTerminatedByFilterContext(name string, start PatternStream, end Expression[bool]) (ContextDefinition, error) {
+	if strings.TrimSpace(name) == "" {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, "context name is required")
+	}
+	if err := validateContextPatternStream(start, "start"); err != nil {
+		return ContextDefinition{}, err
+	}
+	if end == nil {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, "pattern-initiated context requires an end predicate")
+	}
+	return ContextDefinition{
+		name:               name,
+		kind:               ContextInitiatedTerminated,
+		startPattern:       start.def,
+		end:                end,
+		patternEnvironment: start.env,
+	}, nil
+}
+
 // NewOverlappingPatternInitiatedTerminatedContext declares a pattern context
 // that allocates one partition for every completed start pattern, even when
 // the start pattern itself does not use Every.
@@ -466,6 +491,9 @@ func newPatternInitiatedTerminatedContext(name string, start, end PatternStream,
 		}
 		if start.env != end.env {
 			return ContextDefinition{}, NewError(ErrorDependency, "pattern context start and end require the same environment")
+		}
+		if err := validateContextPatternTagsDisjoint(start.def, end.def); err != nil {
+			return ContextDefinition{}, err
 		}
 	}
 	if patternDefinitionRepeats(start.def) || contextPatternIsRecurringTimer(start.def) {
@@ -507,6 +535,29 @@ func validateContextPatternStream(pattern PatternStream, label string) error {
 	}
 	if err := validatePattern(pattern.def); err != nil {
 		return WrapError(ErrorInvalidRule, "context "+label+" pattern", err)
+	}
+	return nil
+}
+
+// validateContextPatternTagsDisjoint rejects start/end pattern tag reuse:
+// Esper assigns a pattern tag to exactly one event stream in a context
+// condition, so reusing a tag name in the end condition fails with
+// "Tag 'x' for event '...' is already assigned".
+func validateContextPatternTagsDisjoint(start, end *patternDefinition) error {
+	if start == nil || end == nil {
+		return nil
+	}
+	startTags := patternDefinitionTagNames(start)
+	if len(startTags) == 0 {
+		return nil
+	}
+	endTags := patternDefinitionTagNames(end)
+	for _, tag := range endTags {
+		for _, existing := range startTags {
+			if tag == existing {
+				return NewError(ErrorInvalidRule, fmt.Sprintf("pattern tag %q is already assigned by the start pattern", tag))
+			}
+		}
 	}
 	return nil
 }
@@ -1366,6 +1417,22 @@ func CreatePatternInitiatedTerminatedContext(env *Environment, name string, star
 		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
 	definition, err := NewPatternInitiatedTerminatedContext(name, start, end)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	if definition.patternEnvironment != env {
+		return ContextDefinition{}, NewError(ErrorDependency, "pattern context belongs to a different environment")
+	}
+	return env.registerContextDefinition(definition)
+}
+
+// CreatePatternInitiatedTerminatedByFilterContext registers the mixed
+// pattern-start filter-end context form in env.
+func CreatePatternInitiatedTerminatedByFilterContext(env *Environment, name string, start PatternStream, end Expression[bool]) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewPatternInitiatedTerminatedByFilterContext(name, start, end)
 	if err != nil {
 		return ContextDefinition{}, err
 	}

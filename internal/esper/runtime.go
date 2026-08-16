@@ -5802,6 +5802,28 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 	}
 
 	terminating := make(map[string]bool, len(keys))
+	if definition.end != nil {
+		// Mixed pattern-start/filter-end contexts evaluate the end
+		// predicate per active partition with the partition's context
+		// variables so correlated filters can read the initiating event
+		// (for example `end SupportBean_S1(id=starter.s0.id)`).
+		for _, partitionKey := range keys {
+			partition := s.runtime.partitions[partitionKey]
+			if partition == nil {
+				continue
+			}
+			partitionVariables := partition.withContextVariables(variablesWithEngine(variables, s.engine))
+			partitionVariables = partition.withContextProperties(partitionVariables)
+			endValue := definition.end.eval(EvalContext{Event: event, Now: now, Variables: partitionVariables})
+			if end, ok := boolValue(endValue); ok && end {
+				if partition.contextProperties == nil {
+					partition.contextProperties = make(map[string]Value)
+				}
+				partition.contextProperties["terminating_event"] = Present(event)
+				terminating[partitionKey] = true
+			}
+		}
+	}
 	if definition.endPattern != nil {
 
 		for _, partitionKey := range keys {
@@ -6448,6 +6470,10 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 		partitionRuntime.partitionID = s.allocateContextPartitionID(allocationKey)
 		partitionRuntime.contextProperties = definition.contextPropertyValues(event, now, variables, partitionRuntime.partitionID)
 		partitionRuntime.contextProperties["initiating_event"] = Present(event)
+		if definition.endPattern != nil {
+			partitionRuntime.contextEndPatternState = &patternRuntimeState{distinct: make(map[string]struct{})}
+			initializeContextPatternTimer(&partitionRuntime.contextEndPatternState, definition.endPattern, now, partitionRuntime.variables)
+		}
 		partitionRuntime.variables = partitionRuntime.withContextProperties(variables)
 		partitionRuntime.initializeAt(now)
 		partitionValue := ptrStatementRuntime(partitionRuntime)
@@ -6585,7 +6611,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 			continue
 		}
 		partition.variables = s.contextPartitionVariables(partition, variables)
-		if definition.end != nil && s.plan.query.output.Termination != OutputNoTermination {
+		if s.plan.query.output.Termination != OutputNoTermination {
 			terminationBatch := partition.outputAtTermination(s.plan, now)
 			result.New = append(result.New, terminationBatch.New...)
 			result.Old = append(result.Old, terminationBatch.Old...)
@@ -7391,6 +7417,24 @@ func (s *Statement) expire(now time.Time, variables map[string]Value) (ResultBat
 			}
 			return batch, changed
 		}
+		// Filter-initiated contexts with a pattern end condition (mixed
+		// form) advance the per-partition end-pattern timers here so a
+		// timer branch such as `end pattern [s1=... or timer:interval(30)]`
+		// terminates the partition at its deadline.
+		if definition, ok := s.engine.env.Context(s.plan.query.contextName); ok && definition.kind == ContextInitiatedTerminated && definition.endPattern != nil {
+			endBatch, endChanged := s.expireMixedEndPatternsLocked(definition, now, variables)
+			batch, changed := s.expireContext(now, variables)
+			if endChanged {
+				endBatch.New = append(endBatch.New, batch.New...)
+				endBatch.Old = append(endBatch.Old, batch.Old...)
+				if !batch.empty() || batch.forced {
+					endBatch.Time = batch.Time
+				}
+				endBatch.forced = endBatch.forced || batch.forced
+				return endBatch, true
+			}
+			return batch, changed
+		}
 		var temporalBatch ResultBatch
 		var temporalChanged bool
 		if definition, ok := s.engine.env.Context(s.plan.query.contextName); ok && definition.isTemporal() {
@@ -7411,6 +7455,76 @@ func (s *Statement) expire(now time.Time, variables map[string]Value) (ResultBat
 	batch, _ := s.runtime.expireBatch(s.plan, now, variables)
 	changed := !batch.empty() || batch.forced
 	return batch, changed
+}
+
+// expireMixedEndPatternsLocked advances the end-pattern state of every live
+// partition of a filter-initiated context at a virtual-clock advance. A
+// completed end match terminates the partition and flushes a termination
+// output when the statement requests one.
+func (s *Statement) expireMixedEndPatternsLocked(definition ContextDefinition, now time.Time, variables map[string]Value) (ResultBatch, bool) {
+	if s == nil || s.engine == nil || definition.endPattern == nil {
+		return ResultBatch{}, false
+	}
+	keys := make([]string, 0, len(s.runtime.partitions))
+	for key := range s.runtime.partitions {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	terminating := make(map[string]bool, len(keys))
+	for _, partitionKey := range keys {
+		partition := s.runtime.partitions[partitionKey]
+		if partition == nil {
+			continue
+		}
+		partitionVariables := partition.withContextVariables(variablesWithEngine(variables, s.engine))
+		partitionVariables = partition.withContextProperties(partitionVariables)
+		matches := advanceContextPatternTime(
+			&partition.contextEndPatternState,
+			definition.endPattern,
+			now,
+			partitionVariables,
+			partition.contextPatternTags,
+			partition.contextPatternTagValues,
+			partition,
+			"end",
+		)
+		if len(matches) == 0 {
+			continue
+		}
+		match := matches[0]
+		partition.contextPatternTags = clonePatternTags(match.tags)
+		partition.contextPatternTagValues = clonePatternTagValues(match.tagValues)
+		applyContextPatternProperties(partition, match.tags)
+		if partition.contextProperties == nil {
+			partition.contextProperties = make(map[string]Value)
+		}
+		terminating[partitionKey] = true
+	}
+	result := ResultBatch{Time: now}
+	changed := false
+	for _, partitionKey := range keys {
+		if !terminating[partitionKey] {
+			continue
+		}
+		partition := s.runtime.partitions[partitionKey]
+		if partition == nil {
+			continue
+		}
+		partition.variables = s.contextPartitionVariables(partition, variables)
+		if s.plan.query.output.Termination != OutputNoTermination {
+			terminationBatch := partition.outputAtTermination(s.plan, now)
+			result.New = append(result.New, terminationBatch.New...)
+			result.Old = append(result.Old, terminationBatch.Old...)
+			changed = changed || !terminationBatch.empty()
+		}
+		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
+		delete(s.runtime.partitions, partitionKey)
+		s.engine.releaseContextPartitionLocked(s.plan.query.contextName, partitionKey, partition)
+	}
+	if changed {
+		result.Sequence = s.runtime.seq.Add(1)
+	}
+	return result, changed
 }
 
 func (s *Statement) expireContextSubqueriesLocked(now time.Time) {

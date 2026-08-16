@@ -1351,6 +1351,14 @@ func (e *Environment) validateContext(definition ContextDefinition, node *stream
 					return err
 				}
 			}
+			if definition.end != nil {
+				if definition.end.Type() != typeOf[bool]() {
+					return NewError(ErrorInvalidRule, "initiated-terminated context requires a bool end expression")
+				}
+				if err := e.validateContextLifecycleExpression(definition.end); err != nil {
+					return err
+				}
+			}
 			return nil
 		}
 		keys := definition.contextKeys()
