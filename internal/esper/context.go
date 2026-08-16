@@ -130,6 +130,7 @@ type ContextDefinition struct {
 	kind                  ContextKind
 	key                   Expr
 	keys                  []Expr
+	streamKeys            map[string][]Expr
 	partitions            int
 	preallocate           bool
 	hashAlgorithm         HashAlgorithm
@@ -187,6 +188,54 @@ func NewKeyContext(name string, keys ...Expr) (ContextDefinition, error) {
 		return ContextDefinition{}, err
 	}
 	return ContextDefinition{name: name, kind: ContextKeySegmented, key: keys[0], keys: copyContextKeys(keys)}, nil
+}
+
+// KeyContextStream declares one event type's partition keys for a
+// multi-stream segmented context, mirroring Esper's `partition by k1 from
+// TypeA, k2 from TypeB` form. Each stream contributes the same number of
+// key expressions; events of a declared type partition by that type's keys,
+// while events of other types fan out to every existing partition.
+type KeyContextStream struct {
+	Type string
+	Keys []Expr
+}
+
+// NewKeyContextByStreams declares a segmented context partitioning multiple
+// event types, one key list per type. All streams must declare the same
+// number of keys, matching Esper's validation for multi-type segmented
+// contexts.
+func NewKeyContextByStreams(name string, streams ...KeyContextStream) (ContextDefinition, error) {
+	if strings.TrimSpace(name) == "" {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, "context name is required")
+	}
+	if len(streams) == 0 {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, "context requires at least one stream")
+	}
+	streamKeys := make(map[string][]Expr, len(streams))
+	keyCount := -1
+	for _, stream := range streams {
+		if strings.TrimSpace(stream.Type) == "" {
+			return ContextDefinition{}, NewError(ErrorInvalidRule, "context stream type is required")
+		}
+		if err := validateContextKeys(stream.Keys); err != nil {
+			return ContextDefinition{}, err
+		}
+		if keyCount == -1 {
+			keyCount = len(stream.Keys)
+		} else if len(stream.Keys) != keyCount {
+			return ContextDefinition{}, NewError(ErrorInvalidRule,
+				fmt.Sprintf("expected the same number of key expressions for each event type, found %d for type %q", len(stream.Keys), stream.Type))
+		}
+		if _, exists := streamKeys[stream.Type]; exists {
+			return ContextDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("the event type %q is listed twice", stream.Type))
+		}
+		streamKeys[stream.Type] = copyContextKeys(stream.Keys)
+	}
+	definition := ContextDefinition{name: name, kind: ContextKeySegmented, streamKeys: streamKeys}
+	first := streams[0]
+	definition.key = first.Keys[0]
+	definition.keys = copyContextKeys(first.Keys)
+	return definition, nil
 }
 
 func NewHashContext(name string, key Expr, partitions int) (ContextDefinition, error) {
@@ -892,12 +941,27 @@ func (d ContextDefinition) keyDescription() string {
 }
 
 func (d ContextDefinition) evaluatedKeyResults(event Event, now time.Time, variables map[string]Value) []Value {
-	keys := d.contextKeys()
+	keys := d.contextKeysForEvent(event)
 	values := make([]Value, 0, len(keys))
 	for _, key := range keys {
 		values = append(values, key.eval(EvalContext{Event: event, Now: now, Variables: variables}))
 	}
 	return values
+}
+
+// contextKeysForEvent returns the partition key expressions for the event's
+// type. A multi-stream segmented context partitions each declared event
+// type by its own keys; an event of an undeclared type has no key
+// expressions and its key results are all Missing, which routes it to the
+// fan-out path (every existing partition) instead of creating a partition.
+func (d ContextDefinition) contextKeysForEvent(event Event) []Expr {
+	if len(d.streamKeys) == 0 {
+		return d.contextKeys()
+	}
+	if keys, ok := d.streamKeys[event.Schema().Name()]; ok {
+		return keys
+	}
+	return nil
 }
 
 func (d ContextDefinition) evaluatedKeyValues(event Event, now time.Time, variables map[string]Value) []any {
@@ -1366,6 +1430,20 @@ func CreateKeyContext(env *Environment, name string, keys ...Expr) (ContextDefin
 		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
 	return env.RegisterContext(name, keys...)
+}
+
+// CreateKeyContextByStreams registers a multi-stream segmented context
+// partitioning each declared event type by its own key list, mirroring
+// Esper's `partition by k1 from TypeA, k2 from TypeB` form.
+func CreateKeyContextByStreams(env *Environment, name string, streams ...KeyContextStream) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewKeyContextByStreams(name, streams...)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	return env.registerContextDefinition(definition)
 }
 
 func CreateHashContext(env *Environment, name string, key Expr, partitions int) (ContextDefinition, error) {

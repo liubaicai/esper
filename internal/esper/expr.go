@@ -239,6 +239,11 @@ type EvalContext struct {
 	// a consistent named-window/table snapshot.
 	Engine *Engine
 	Group  []Event
+	// GroupTags parallels Group with the pattern-match tag map of each group
+	// event. Pattern-stream aggregates (for example sum(sb.intPrimitive) over
+	// a pattern) evaluate their input per group event with that event's own
+	// captured tags, matching Esper's aggregate over the pattern match stream.
+	GroupTags []map[string]Event
 	// InitialGroup preserves the target row as it existed before an ordered
 	// on-trigger assignment list started. TableField follows the working row
 	// while InitialTableField deliberately remains bound to this snapshot.
@@ -354,6 +359,26 @@ type EvalContext struct {
 	aggregateEvaluation bool
 }
 
+// groupEventContext builds the per-event evaluation context for one member
+// of ctx.Group. When the group carries parallel pattern-match tags
+// (ctx.GroupTags), the member's own tags are exposed so tag-based aggregate
+// inputs such as sum(sb.intPrimitive) evaluate per match row like Esper's
+// aggregate over the pattern match stream.
+func (ctx EvalContext) groupEventContext(event Event, index int) EvalContext {
+	result := EvalContext{
+		Event:      event,
+		OuterEvent: ctx.OuterEvent,
+		Engine:     ctx.Engine,
+		Now:        ctx.Now,
+		Variables:  ctx.Variables,
+		Parameters: ctx.Parameters,
+	}
+	if index >= 0 && index < len(ctx.GroupTags) {
+		result.Tags = ctx.GroupTags[index]
+	}
+	return result
+}
+
 const parameterValuesVariable = "\x00esper.parameters"
 
 // positionalParameterPrefix is deliberately outside the user-visible name
@@ -401,14 +426,7 @@ func Leaving(predicate ...Expression[bool]) Expression[bool] {
 			return Present(ctx.IsLeaving)
 		}
 		for _, event := range ctx.LeavingEvents {
-			value := predicate[0].eval(EvalContext{
-				Event:      event,
-				OuterEvent: ctx.OuterEvent,
-				Engine:     ctx.Engine,
-				Now:        ctx.Now,
-				Variables:  ctx.Variables,
-				Parameters: ctx.Parameters,
-			})
+			value := predicate[0].eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
 			matched, ok := boolValue(value)
 			if ok && matched {
 				return Present(true)
@@ -3076,14 +3094,7 @@ func FilterAggregate[T any](aggregate AggregateExpression[T], predicate Expressi
 		filterEvents := func(events []Event) []Event {
 			filtered := make([]Event, 0, len(events))
 			for _, event := range events {
-				predicateContext := EvalContext{
-					Event:      event,
-					OuterEvent: ctx.OuterEvent,
-					Engine:     ctx.Engine,
-					Now:        ctx.Now,
-					Variables:  ctx.Variables,
-					Parameters: ctx.Parameters,
-				}
+				predicateContext := EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
 				value := predicate.eval(predicateContext)
 				ok, isBool := boolValue(value)
 				if isBool && ok {
@@ -3149,16 +3160,7 @@ func distinctAggregateEvents(events []Event, input Expr, ctx EvalContext) []Even
 	for _, event := range events {
 		key := eventIdentity(event)
 		if input != nil {
-			value := input.eval(EvalContext{
-				Event:                event,
-				JoinEvents:           joinTupleEvents(event),
-				OuterEvent:           ctx.OuterEvent,
-				ContainedParentEvent: ctx.ContainedParentEvent,
-				Engine:               ctx.Engine,
-				Now:                  ctx.Now,
-				Variables:            ctx.Variables,
-				Parameters:           ctx.Parameters,
-			})
+			value := input.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
 			key = encodeKey([]any{value})
 		}
 		if _, exists := seen[key]; exists {
@@ -3273,14 +3275,7 @@ func localGroupKeysEqual(keys []Expr, target []Value, event Event, ctx EvalConte
 }
 
 func localGroupContext(ctx EvalContext, event Event) EvalContext {
-	return EvalContext{
-		Event:      event,
-		OuterEvent: ctx.OuterEvent,
-		Engine:     ctx.Engine,
-		Now:        ctx.Now,
-		Variables:  ctx.Variables,
-		Parameters: ctx.Parameters,
-	}
+	return EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
 }
 
 func localGroupValueEqual(left, right Value) bool {
@@ -3754,17 +3749,10 @@ func evaluateAggregatePluginFactory(ctx EvalContext, node *exprNode, input Expr,
 		}
 	}
 	inputs := make([]Value, 0, len(ctx.Group))
-	for _, event := range ctx.Group {
+	for index, event := range ctx.Group {
 		value := Present(event)
 		if input != nil {
-			value = input.eval(EvalContext{
-				Event:      event,
-				OuterEvent: ctx.OuterEvent,
-				Engine:     ctx.Engine,
-				Now:        ctx.Now,
-				Variables:  ctx.Variables,
-				Parameters: ctx.Parameters,
-			})
+			value = input.eval(ctx.groupEventContext(event, index))
 		}
 		inputs = append(inputs, value)
 	}
@@ -3869,8 +3857,8 @@ func CountMinSketchAdd[T comparable](expression Expression[T], predicate ...Expr
 					return Missing()
 				}
 				sketch := newCountMinSketch[T]()
-				for _, event := range ctx.Group {
-					eventContext := EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+				for index, event := range ctx.Group {
+					eventContext := ctx.groupEventContext(event, index)
 					if filter != nil {
 						allowed, ok := boolValue(filter.eval(eventContext))
 						if !ok || !allowed {
@@ -3972,8 +3960,8 @@ func CountAll() AggregateExpression[int64] {
 func Count[T any](expression Expression[T]) AggregateExpression[int64] {
 	return makeAggregateExpr[int64]("count", "count("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		var count int64
-		for _, event := range ctx.Group {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+		for index, event := range ctx.Group {
+			value := expression.eval(ctx.groupEventContext(event, index))
 			if value.IsPresent() {
 				count++
 			}
@@ -3986,8 +3974,8 @@ func Sum[T Numeric](expression Expression[T]) AggregateExpression[T] {
 	return makeAggregateExpr[T]("sum", "sum("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		var total float64
 		found := false
-		for _, event := range ctx.Group {
-			value, ok := numericValue(expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+		for index, event := range ctx.Group {
+			value, ok := numericValue(expression.eval(ctx.groupEventContext(event, index)))
 			if !ok {
 				continue
 			}
@@ -4005,8 +3993,8 @@ func Avg[T Numeric](expression Expression[T]) AggregateExpression[float64] {
 	return makeAggregateExpr[float64]("avg", "avg("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		var total float64
 		var count int64
-		for _, event := range ctx.Group {
-			value, ok := numericValue(expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+		for index, event := range ctx.Group {
+			value, ok := numericValue(expression.eval(ctx.groupEventContext(event, index)))
 			if !ok {
 				continue
 			}
@@ -4031,8 +4019,8 @@ func SumExact[T ExactNumeric](expression Expression[T]) AggregateExpression[T] {
 	return makeAggregateExpr[T]("sum-exact", "sum-exact("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		total := new(big.Rat)
 		found := false
-		for _, event := range ctx.Group {
-			number, ok := enumRatFromValue(expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+		for index, event := range ctx.Group {
+			number, ok := enumRatFromValue(expression.eval(ctx.groupEventContext(event, index)))
 			if !ok {
 				continue
 			}
@@ -4062,8 +4050,8 @@ func AvgExact[T ExactNumeric](expression Expression[T]) AggregateExpression[big.
 	return makeAggregateExpr[big.Rat]("avg-exact", "avg-exact("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		total := new(big.Rat)
 		count := int64(0)
-		for _, event := range ctx.Group {
-			number, ok := enumRatFromValue(expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+		for index, event := range ctx.Group {
+			number, ok := enumRatFromValue(expression.eval(ctx.groupEventContext(event, index)))
 			if !ok {
 				continue
 			}
@@ -4098,8 +4086,8 @@ func exactExtreme[T ExactNumeric](kind string, expression Expression[T], minimum
 		var result T
 		var resultNumber *big.Rat
 		found := false
-		for _, event := range ctx.Group {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+		for index, event := range ctx.Group {
+			value := expression.eval(ctx.groupEventContext(event, index))
 			number, ok := enumRatFromValue(value)
 			if !ok {
 				continue
@@ -4310,8 +4298,8 @@ func CountDistinct[T comparable](expression Expression[T]) AggregateExpression[i
 	return makeAggregateExpr[int64]("count-distinct", "count-distinct("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		seen := make(map[any]struct{})
 		fallback := make(map[string]struct{})
-		for _, event := range ctx.Group {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+		for index, event := range ctx.Group {
+			value := expression.eval(ctx.groupEventContext(event, index))
 			if !value.IsPresent() {
 				continue
 			}
@@ -4430,8 +4418,8 @@ func Avedev[T Numeric](expression Expression[T]) AggregateExpression[float64] {
 func WeightedAvg[V Numeric, W Numeric](value Expression[V], weight Expression[W]) AggregateExpression[float64] {
 	return makeAggregateExpr[float64]("weighted-avg", "weighted-avg("+value.Description()+","+weight.Description()+")", []*exprNode{value.node(), weight.node()}, func(ctx EvalContext) Value {
 		var weighted, totalWeight float64
-		for _, event := range ctx.Group {
-			evalContext := EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+		for index, event := range ctx.Group {
+			evalContext := ctx.groupEventContext(event, index)
 			candidate, valueOK := numericValue(value.eval(evalContext))
 			factor, weightOK := numericValue(weight.eval(evalContext))
 			if !valueOK || !weightOK {
@@ -4606,8 +4594,8 @@ func linearRegressionValueExpression[X Numeric, Y Numeric](regression LinearRegr
 func numericPairs[X Numeric, Y Numeric](left Expression[X], right Expression[Y], ctx EvalContext) ([]float64, []float64) {
 	xs := make([]float64, 0, len(ctx.Group))
 	ys := make([]float64, 0, len(ctx.Group))
-	for _, event := range ctx.Group {
-		eventContext := EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+	for index, event := range ctx.Group {
+		eventContext := ctx.groupEventContext(event, index)
 		x, xOK := numericValue(left.eval(eventContext))
 		y, yOK := numericValue(right.eval(eventContext))
 		if !xOK || !yOK {
@@ -4793,14 +4781,7 @@ func ratePredicateMatches(predicate []Expression[bool], event Event, ctx EvalCon
 	if len(predicate) == 0 {
 		return true
 	}
-	value := predicate[0].eval(EvalContext{
-		Event:      event,
-		OuterEvent: ctx.OuterEvent,
-		Engine:     ctx.Engine,
-		Now:        ctx.Now,
-		Variables:  ctx.Variables,
-		Parameters: ctx.Parameters,
-	})
+	value := predicate[0].eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
 	matched, ok := boolValue(value)
 	return ok && matched
 }
@@ -4869,32 +4850,18 @@ func rateByTimestampAggregate(kind string, timestamp, quantity Expr, predicate E
 			if predicate == nil {
 				return true
 			}
-			value := predicate.eval(EvalContext{
-				Event:      event,
-				OuterEvent: ctx.OuterEvent,
-				Engine:     ctx.Engine,
-				Now:        ctx.Now,
-				Variables:  ctx.Variables,
-				Parameters: ctx.Parameters,
-			})
+			value := predicate.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
 			matched, ok := boolValue(value)
 			return ok && matched
 		}
 		numericTimestamp := func(event Event) (int64, bool) {
-			value, ok := numericValue(timestamp.eval(EvalContext{
-				Event:      event,
-				OuterEvent: ctx.OuterEvent,
-				Engine:     ctx.Engine,
-				Now:        ctx.Now,
-				Variables:  ctx.Variables,
-				Parameters: ctx.Parameters,
-			}))
+			value, ok := numericValue(timestamp.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
 			return int64(value), ok
 		}
 		var latest int64
 		var total float64
 		latestSet := false
-		for _, event := range ctx.Group {
+		for index, event := range ctx.Group {
 			if !matches(event) {
 				continue
 			}
@@ -4905,14 +4872,7 @@ func rateByTimestampAggregate(kind string, timestamp, quantity Expr, predicate E
 			if quantity == nil {
 				total++
 			} else {
-				value, numeric := numericValue(quantity.eval(EvalContext{
-					Event:      event,
-					OuterEvent: ctx.OuterEvent,
-					Engine:     ctx.Engine,
-					Now:        ctx.Now,
-					Variables:  ctx.Variables,
-					Parameters: ctx.Parameters,
-				}))
+				value, numeric := numericValue(quantity.eval(ctx.groupEventContext(event, index)))
 				if !numeric {
 					continue
 				}
@@ -5016,8 +4976,8 @@ func WindowValues[T any](expression Expression[T]) AggregateExpression[[]T] {
 			return Null()
 		}
 		values := make([]T, 0, len(ctx.Group))
-		for _, event := range ctx.Group {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+		for index, event := range ctx.Group {
+			value := expression.eval(ctx.groupEventContext(event, index))
 			if !value.IsPresent() {
 				continue
 			}
@@ -5592,8 +5552,8 @@ func sortedMultiKeyExpression[A Ordered, B Ordered](first Expression[A], second 
 
 func buildSortedAccessValue[V any, K Ordered](ctx EvalContext, value Expression[V], key Expression[K]) SortedAccessValue[K, V] {
 	entries := make([]SortedAccessEntry[K, V], 0)
-	for _, event := range ctx.Group {
-		evalContext := EvalContext{Event: event, OuterEvent: ctx.OuterEvent, Engine: ctx.Engine, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+	for index, event := range ctx.Group {
+		evalContext := ctx.groupEventContext(event, index)
 		keyValue := key.eval(evalContext)
 		valueValue := value.eval(evalContext)
 		if !keyValue.IsPresent() || !valueValue.IsPresent() {
@@ -5953,8 +5913,8 @@ func WindowAccessBy[V any](expression Expression[V]) WindowAccessExpression[V] {
 				return Missing()
 			}
 			values := make([]V, 0, len(ctx.Group))
-			for _, event := range ctx.Group {
-				evalContext := EvalContext{Event: event, OuterEvent: ctx.OuterEvent, Engine: ctx.Engine, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}
+			for index, event := range ctx.Group {
+				evalContext := ctx.groupEventContext(event, index)
 				value := expression.eval(evalContext)
 				if !value.IsPresent() {
 					continue
@@ -6027,8 +5987,8 @@ func SetOfValues[T comparable](expression Expression[T]) AggregateExpression[[]T
 	return makeAggregateExpr[[]T]("set", "set("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		values := make([]T, 0, len(ctx.Group))
 		seen := make(map[T]struct{})
-		for _, event := range ctx.Group {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+		for index, event := range ctx.Group {
+			value := expression.eval(ctx.groupEventContext(event, index))
 			if !value.IsPresent() {
 				continue
 			}
@@ -6050,8 +6010,8 @@ func SetOfValues[T comparable](expression Expression[T]) AggregateExpression[[]T
 func SortedValues[T Ordered](expression Expression[T], descending bool) AggregateExpression[[]T] {
 	return makeAggregateExpr[[]T]("sorted", fmt.Sprintf("sorted(%s,%t)", expression.Description(), descending), []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		values := make([]T, 0, len(ctx.Group))
-		for _, event := range ctx.Group {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+		for index, event := range ctx.Group {
+			value := expression.eval(ctx.groupEventContext(event, index))
 			if !value.IsPresent() {
 				continue
 			}
@@ -6110,8 +6070,8 @@ func populationVariance(values []float64) float64 {
 
 func numericAggregateValues[T Numeric](expression Expression[T], ctx EvalContext) []float64 {
 	values := make([]float64, 0, len(ctx.Group))
-	for _, event := range ctx.Group {
-		value, ok := numericValue(expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters}))
+	for index, event := range ctx.Group {
+		value, ok := numericValue(expression.eval(ctx.groupEventContext(event, index)))
 		if ok {
 			values = append(values, value)
 		}
@@ -6122,8 +6082,8 @@ func numericAggregateValues[T Numeric](expression Expression[T], ctx EvalContext
 func aggregateExtreme[T Ordered](kind string, expression Expression[T], minimum bool) AggregateExpression[T] {
 	return makeAggregateExpr[T](kind, kind+"("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		var result Value
-		for _, event := range ctx.Group {
-			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+		for index, event := range ctx.Group {
+			value := expression.eval(ctx.groupEventContext(event, index))
 			if !value.IsPresent() {
 				continue
 			}

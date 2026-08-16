@@ -4711,6 +4711,7 @@ type statementRuntime struct {
 	patternState             *patternRuntimeState
 	patternJoinStates        map[*streamNode]*patternJoinRuntime
 	patternAggregateGroup    []Event
+	patternAggregateTags     []map[string]Event
 	contextStartPatternState *patternRuntimeState
 	contextEndPatternState   *patternRuntimeState
 	contextPatternTags       map[string]Event
@@ -7045,6 +7046,14 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 	}
 	if !active {
 		return nil, false, nil
+	}
+	if (definition.kind == ContextKeySegmented || definition.kind == ContextHashSegmented) && len(definition.contextKeysForEvent(event)) == 0 {
+		// An event of a type not declared in a multi-stream segmented
+		// context cannot create or select a partition. Esper dispatches
+		// such events to every existing partition so joins, subqueries and
+		// patterns over the partner stream observe them per partition,
+		// while partitions created later never see them.
+		return nil, true, nil
 	}
 	if (definition.kind == ContextKeySegmented || definition.kind == ContextHashSegmented) && !initiatedContextKeyAvailable(definition, event, now, variables) {
 		// An event whose schema has no value for the partition key (for
@@ -16266,7 +16275,9 @@ func (r *statementRuntime) evaluatePatternMatch(definition *patternDefinition, m
 		// running number of matches exactly like Esper's aggregate over the
 		// pattern insert stream.
 		r.patternAggregateGroup = append(r.patternAggregateGroup, match.current)
+		r.patternAggregateTags = append(r.patternAggregateTags, match.tags)
 		ctx.Group = r.patternAggregateGroup
+		ctx.GroupTags = r.patternAggregateTags
 	}
 	values := make([]Value, 0, len(plan.query.patternSelections))
 	for _, selection := range plan.query.patternSelections {

@@ -1377,7 +1377,7 @@ func (e *Environment) validateContext(definition ContextDefinition, node *stream
 			}
 			return nil
 		}
-		keys := definition.contextKeys()
+		keys := definition.contextKeysForNode(node)
 		if len(keys) == 0 {
 			return fmt.Errorf("context key expression is required")
 		}
@@ -1884,6 +1884,28 @@ func (e *Environment) validateNode(node *streamNode) error {
 	default:
 		return fmt.Errorf("esper: unknown stream node kind %d", node.kind)
 	}
+}
+
+// contextKeysForNode returns the partition key expressions for the source
+// node's event type. A multi-stream segmented context validates each
+// declared type's keys against statements that reference that type; the
+// contextKeyValidatesOnAnySource wrapper tolerates other join sources.
+func (d ContextDefinition) contextKeysForNode(node *streamNode) []Expr {
+	if len(d.streamKeys) == 0 || node == nil {
+		return d.contextKeys()
+	}
+	source, err := sourceNode(node)
+	if err != nil {
+		return nil
+	}
+	return d.contextKeysForType(source.sourceName)
+}
+
+func (d ContextDefinition) contextKeysForType(typeName string) []Expr {
+	if len(d.streamKeys) == 0 {
+		return d.contextKeys()
+	}
+	return d.streamKeys[typeName]
 }
 
 // contextKeyValidatesOnAnySource reports whether a segmented or hash

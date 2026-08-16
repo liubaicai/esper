@@ -966,6 +966,13 @@ func CreateKeyContext(env *Environment, name string, keys ...Expr) (ContextDefin
 	return internalengine.CreateKeyContext(env, name, keys...)
 }
 
+// CreateKeyContextByStreams registers a multi-stream segmented context
+// partitioning each declared event type by its own key list, mirroring
+// Esper's `partition by k1 from TypeA, k2 from TypeB` form.
+func CreateKeyContextByStreams(env *Environment, name string, streams ...KeyContextStream) (ContextDefinition, error) {
+	return internalengine.CreateKeyContextByStreams(env, name, streams...)
+}
+
 func CreateNamedWindow(env *Environment, name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
 	return internalengine.CreateNamedWindow(env, name, schema, options...)
 }
@@ -3257,6 +3264,13 @@ func KeepAll() KeepAllWindowSpec {
 
 type KeepAllWindowSpec = internalengine.KeepAllWindowSpec
 
+// KeyContextStream declares one event type's partition keys for a
+// multi-stream segmented context, mirroring Esper's `partition by k1 from
+// TypeA, k2 from TypeB` form. Each stream contributes the same number of
+// key expressions; events of a declared type partition by that type's keys,
+// while events of other types fan out to every existing partition.
+type KeyContextStream = internalengine.KeyContextStream
+
 // Last returns the last non-null value in reverse insertion order. An optional
 // zero-based index mirrors Esper's last(value, index) form.
 func Last[T any](expression Expression[T], indexes ...int) AggregateExpression[T] {
@@ -4008,6 +4022,14 @@ func NewJSONSchemaFor[T any](name string, fields []FieldSpec, opts ...SchemaOpti
 // matching Esper's multi-key segmented context behavior.
 func NewKeyContext(name string, keys ...Expr) (ContextDefinition, error) {
 	return internalengine.NewKeyContext(name, keys...)
+}
+
+// NewKeyContextByStreams declares a segmented context partitioning multiple
+// event types, one key list per type. All streams must declare the same
+// number of keys, matching Esper's validation for multi-type segmented
+// contexts.
+func NewKeyContextByStreams(name string, streams ...KeyContextStream) (ContextDefinition, error) {
+	return internalengine.NewKeyContextByStreams(name, streams...)
 }
 
 // NewMapSchema constructs a map-backed schema. Unknown fields are missing
