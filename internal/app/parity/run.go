@@ -893,6 +893,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "context-init-term-filter-pattern-end" || *mode == "context-init-term-filter-pattern-end-diff" {
+		trace, err := runContextInitTermFilterPatternEndScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-init-term-filter-pattern-end-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, contextInitTermFilterPatternJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextInitTermFilterPatternJavaSources),
+				splitMetadata(*javaExecutions, contextInitTermFilterPatternJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "context-init-term-keyed-aggregation" || *mode == "context-init-term-keyed-aggregation-diff" {
 		trace, err := runContextInitTermKeyedAggregationScenario(context.Background(), scenario)
 		if err != nil {

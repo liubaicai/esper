@@ -4343,3 +4343,86 @@ func TestKeyedInitiatedTerminatedContextAggregatesPerPartition(t *testing.T) {
 		t.Fatalf("reinit rows = %#v", rows)
 	}
 }
+
+func TestOverlappingFilterStartSequenceEndPatternTerminatesMatchingPartition(t *testing.T) {
+	// `initiated by <filter> terminated by pattern [S0(p00=theString) ->
+	// S1(p10=theString)]`: each initiating event allocates a partition and
+	// only the two-step correlated sequence terminates it; the second step
+	// alone leaves the partition alive.
+	env, _ := newRuntimeTest(t)
+	type seqS0 struct {
+		ID  int     `esper:"id"`
+		P00 *string `esper:"p00"`
+	}
+	type seqS1 struct {
+		ID  int     `esper:"id"`
+		P10 *string `esper:"p10"`
+	}
+	if _, err := RegisterStruct[seqS0](env, "S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[seqS1](env, "S1"); err != nil {
+		t.Fatal(err)
+	}
+	base := From[runtimeTestTrade](env, "Trade")
+	s0Base := From[seqS0](env, "S0")
+	s1Base := From[seqS1](env, "S1")
+	isTrade := Equal[string](TypeName(EventValue[Event]()), Literal("Trade"))
+	initiating := Property[*string](ContextInitiatingEvent(), "symbol")
+	end := PatternFrom(s0Base, "s0", Equal[*string](Field[seqS0, *string]("p00"), initiating)).
+		Then(PatternFrom(s1Base, "s1", Equal[*string](Field[seqS1, *string]("p10"), initiating)))
+	if _, err := CreateOverlappingPatternTerminatedContext(env, "seq-end", Literal("global"), isTrade, end); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(base.Aggregate(
+		Alias("c1", Field[runtimeTestTrade, string]("symbol")),
+		Alias("c2", Sum[int](Field[runtimeTestTrade, int]("price"))),
+	).Query(StatementName("s0"), WithContext("seq-end")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "G1", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	// The S0 step arms the end sequence; S1 alone cannot terminate.
+	if err := engine.SendEvent(context.Background(), seqS0{P00: strPtr("G1")}); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("seq-end"); err != nil || count != 1 {
+		t.Fatalf("partition count after S0 = %d, err=%v", count, err)
+	}
+	if err := engine.SendEvent(context.Background(), seqS1{P10: strPtr("G2")}); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("seq-end"); err != nil || count != 1 {
+		t.Fatalf("partition count after mismatched S1 = %d, err=%v", count, err)
+	}
+	// The matching S1 completes the sequence and terminates the partition.
+	if err := engine.SendEvent(context.Background(), seqS1{P10: strPtr("G1")}); err != nil {
+		t.Fatal(err)
+	}
+	if count, err := engine.ContextPartitionCount("seq-end"); err != nil || count != 0 {
+		t.Fatalf("partition count after sequence end = %d, err=%v", count, err)
+	}
+	_ = rows
+}
+
+func strPtr(value string) *string {
+	return &value
+}
