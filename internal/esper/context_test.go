@@ -4426,3 +4426,78 @@ func TestOverlappingFilterStartSequenceEndPatternTerminatesMatchingPartition(t *
 func strPtr(value string) *string {
 	return &value
 }
+
+func TestOverlappingContextPartitionsDeliverInCreationOrder(t *testing.T) {
+	// Mixed-type starters produce partition keys whose lexicographic order
+	// differs from allocation order; a multi-partition event must emit rows
+	// in creation order, matching Esper's partition iteration.
+	env, _ := newRuntimeTest(t)
+	type orderS0 struct {
+		ID  int     `esper:"id"`
+		P00 *string `esper:"p00"`
+	}
+	type orderS1 struct {
+		ID  int     `esper:"id"`
+		P10 *string `esper:"p10"`
+	}
+	if _, err := RegisterStruct[orderS0](env, "O0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[orderS1](env, "O1"); err != nil {
+		t.Fatal(err)
+	}
+	base := From[runtimeTestTrade](env, "Trade")
+	s0Base := From[orderS0](env, "O0")
+	s1Base := From[orderS1](env, "O1")
+	start := PatternFrom(s0Base, "a", Literal(true)).Or(PatternFrom(s1Base, "b", Literal(true))).Every()
+	if _, err := CreateOverlappingPatternInitiatedTerminatedContext(env, "creation-order", start, TimerInterval(base, time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(base.Aggregate(
+		Alias("tag", IfThenElse[string](
+			IsNot(ContextPatternField[*int64]("a", "id"), NullLiteral[*int64]()),
+			ConcatOf(Literal("a"), ContextPatternField[*int64]("a", "id")),
+			ConcatOf(Literal("b"), ContextPatternField[*int64]("b", "id")),
+		)),
+	).Query(StatementName("s0"), WithContext("creation-order")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				rows = append(rows, row)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Creation order: S1(2) first, then S0(3); key order would put O0 before O1.
+	if err := engine.SendEvent(context.Background(), orderS1{ID: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), orderS0{ID: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "E", Price: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(rows))
+	}
+	first, firstErr := As[string](rows[0].Get("tag"))
+	second, secondErr := As[string](rows[1].Get("tag"))
+	if firstErr != nil || secondErr != nil {
+		t.Fatalf("tag decode: %v %v", firstErr, secondErr)
+	}
+	if first != "b2" || second != "a3" {
+		t.Fatalf("expected creation order [b2 a3], got [%v %v]", first, second)
+	}
+}

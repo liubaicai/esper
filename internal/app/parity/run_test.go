@@ -6805,3 +6805,143 @@ func TestRunContextInitTermFilterPatternEndDiffRejectsTraceMutations(t *testing.
 		})
 	}
 }
+
+func TestRunContextInitTermFilterOperatorsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-filter-operators.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-init-term-filter-operators.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-filter-operators.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-init-term-filter-operators-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func recordsOfCase(trace *compat.Trace, caseName string) []compat.TraceRecord {
+	var selected []compat.TraceRecord
+	for _, record := range trace.Records {
+		if record.Case == caseName {
+			selected = append(selected, record)
+		}
+	}
+	return selected
+}
+
+func TestRunContextInitTermFilterOperatorsDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "equality-value",
+			mutate: func(trace *compat.Trace) {
+				records := recordsOfCase(trace, "op-eq-intboxed-lhs")
+				records[0].New[0].Fields["c2"] = "S02"
+			},
+		},
+		{
+			name: "greater-boundary",
+			mutate: func(trace *compat.Trace) {
+				records := recordsOfCase(trace, "op-gt-intboxed")
+				records[0].New[0].Fields["c1"] = int64(9)
+			},
+		},
+		{
+			name: "is-not-null-match",
+			mutate: func(trace *compat.Trace) {
+				records := recordsOfCase(trace, "op-isnot-intboxed-lhs")
+				last := records[len(records)-1]
+				for i := range trace.Records {
+					if trace.Records[i].Case == last.Case && trace.Records[i].Sequence == last.Sequence {
+						trace.Records = append(trace.Records[:i], trace.Records[i+1:]...)
+						return
+					}
+				}
+				t.Fatal("is-not-null-match record not found")
+			},
+		},
+		{
+			name: "boolean-partition-attribution",
+			mutate: func(trace *compat.Trace) {
+				records := recordsOfCase(trace, "op-boolean-arithmetic")
+				last := records[len(records)-1]
+				last.New[0].Fields["c2"] = "S01"
+			},
+		},
+		{
+			name: "boolean-multi-row-order",
+			mutate: func(trace *compat.Trace) {
+				records := recordsOfCase(trace, "op-boolean-arithmetic")
+				multi := records[1]
+				multi.New[0], multi.New[1] = multi.New[1], multi.New[0]
+			},
+		},
+		{
+			name: "straight-select-unbound-tag",
+			mutate: func(trace *compat.Trace) {
+				records := recordsOfCase(trace, "op-pattern-straight-select")
+				records[0].New[0].Fields["c1"] = int64(2)
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "op-ne-intboxed-lhs"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-filter-operators.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-init-term-filter-operators.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-filter-operators.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-init-term-filter-operators-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

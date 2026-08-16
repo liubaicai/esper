@@ -3369,15 +3369,39 @@ func (s *Statement) markClosed() {
 	s.markClosedLocked()
 }
 
+// sortedPartitionKeys lists context partition keys in allocation (creation)
+// order. Overlapping contexts derive keys from the initiating event, so the
+// lexicographic order does not match Esper's allocation order; the listener
+// and termination output rows of a multi-partition event are observable and
+// therefore must follow creation order.
+func sortedPartitionKeys(partitions map[string]*statementRuntime) []string {
+	keys := make([]string, 0, len(partitions))
+	for key := range partitions {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		leftKey, rightKey := keys[i], keys[j]
+		left, right := partitions[leftKey], partitions[rightKey]
+		leftID, rightID := 0, 0
+		if left != nil {
+			leftID = left.partitionID
+		}
+		if right != nil {
+			rightID = right.partitionID
+		}
+		if leftID != rightID {
+			return leftID < rightID
+		}
+		return leftKey < rightKey
+	})
+	return keys
+}
+
 func (s *Statement) releaseContextPartitionsLocked() {
 	if s == nil || s.engine == nil || s.plan.query.contextName == "" {
 		return
 	}
-	keys := make([]string, 0, len(s.runtime.partitions))
-	for key := range s.runtime.partitions {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := sortedPartitionKeys(s.runtime.partitions)
 	for _, key := range keys {
 		s.engine.releaseContextPartitionLocked(s.plan.query.contextName, key, s.runtime.partitions[key])
 	}
@@ -5798,11 +5822,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partition)
 	}
 
-	keys := make([]string, 0, len(s.runtime.partitions))
-	for key := range s.runtime.partitions {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := sortedPartitionKeys(s.runtime.partitions)
 	if len(keys) == 0 {
 		return ResultBatch{}, false, nil
 	}
@@ -6405,11 +6425,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partition)
 	}
 
-	keys := make([]string, 0, len(s.runtime.partitions))
-	for key := range s.runtime.partitions {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := sortedPartitionKeys(s.runtime.partitions)
 	terminating := make(map[string]bool, len(keys))
 	for _, partitionKey := range keys {
 		partition := s.runtime.partitions[partitionKey]
@@ -7481,11 +7497,7 @@ func (s *Statement) expireMixedEndPatternsLocked(definition ContextDefinition, n
 	if s == nil || s.engine == nil || definition.endPattern == nil {
 		return ResultBatch{}, false
 	}
-	keys := make([]string, 0, len(s.runtime.partitions))
-	for key := range s.runtime.partitions {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := sortedPartitionKeys(s.runtime.partitions)
 	terminating := make(map[string]bool, len(keys))
 	for _, partitionKey := range keys {
 		partition := s.runtime.partitions[partitionKey]
@@ -7559,11 +7571,7 @@ func (s *Statement) expireContextSubqueriesLocked(now time.Time) {
 }
 
 func (s *Statement) expireContext(now time.Time, variables map[string]Value) (ResultBatch, bool) {
-	keys := make([]string, 0, len(s.runtime.partitions))
-	for key := range s.runtime.partitions {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := sortedPartitionKeys(s.runtime.partitions)
 	batch := ResultBatch{Time: now}
 	for _, key := range keys {
 		partition := s.runtime.partitions[key]

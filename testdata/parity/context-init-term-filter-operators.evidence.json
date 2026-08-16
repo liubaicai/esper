@@ -1,0 +1,3140 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-5c073601befa8b082832",
+    "java-runtime-f0010ebfc433a45f3619",
+    "java-runtime-621848b54b379207392b"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTerm.java"
+  ],
+  "javaExecutions": [
+    "ContextInitTermFilterAllOperators",
+    "ContextInitTermFilterBooleanOperator",
+    "ContextInitTermPatternInitiatedStraightSelect"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-filter-operators",
+    "steps": [
+      {
+        "op": "case",
+        "case": "op-eq-intboxed-lhs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-eq-intboxed-rhs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-gt-intboxed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-ge-intboxed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-lt-intboxed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-le-intboxed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-lt-intboxed-rev"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-le-intboxed-rev"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-gt-intboxed-rev"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-ge-intboxed-rev"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-in-intboxed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-between-intboxed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-ne-intboxed-lhs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-ne-intboxed-rhs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-notin-intboxed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-notbetween-intboxed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 11,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 8,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-is-intboxed-lhs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-is-intboxed-rhs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-isnot-intboxed-lhs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-isnot-intboxed-rhs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 10,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": 9,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-eq-short-lhs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 10,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 9,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-eq-short-rhs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 10,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 9,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-gt-short"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 11,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 10,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 9,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 8,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-lt-short-rev"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 11,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 10,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 9,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 8,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-in-short"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 11,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 10,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 9,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": 8,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-boolean-arithmetic"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "S01",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "S02",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 4,
+          "p00": "S03",
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 2,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "op-pattern-straight-select"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 2,
+          "p10": null,
+          "p11": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": null,
+          "p01": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0,
+          "intBoxed": null,
+          "shortBoxed": null,
+          "longBoxed": null
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-filter-operators",
+    "records": [
+      {
+        "case": "op-eq-intboxed-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-eq-intboxed-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-gt-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-gt-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ge-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ge-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ge-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-lt-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-le-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-le-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-lt-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-lt-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-le-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-le-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-le-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-gt-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ge-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ge-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-in-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-between-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ne-intboxed-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ne-intboxed-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notin-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notin-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notin-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notbetween-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notbetween-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notbetween-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-is-intboxed-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-is-intboxed-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-isnot-intboxed-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-isnot-intboxed-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-isnot-intboxed-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-isnot-intboxed-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-eq-short-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-eq-short-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-gt-short",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-gt-short",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-lt-short-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-lt-short-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-in-short",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-boolean-arithmetic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 2,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-boolean-arithmetic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3",
+              "c1": 2,
+              "c2": "S01"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3",
+              "c1": 2,
+              "c2": "S02"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-boolean-arithmetic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E4",
+              "c1": 2,
+              "c2": "S01"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E4",
+              "c1": 2,
+              "c2": "S02"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-boolean-arithmetic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E5",
+              "c1": 1,
+              "c2": "S03"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-pattern-straight-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2,
+              "c3": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-pattern-straight-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2,
+              "c3": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 3,
+              "c2": {
+                "state": "null"
+              },
+              "c3": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-filter-operators",
+    "records": [
+      {
+        "case": "op-eq-intboxed-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-eq-intboxed-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-gt-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-gt-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ge-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ge-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ge-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-lt-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-le-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-le-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-lt-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-lt-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-le-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-le-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-le-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-gt-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ge-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ge-intboxed-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-in-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-between-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ne-intboxed-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-ne-intboxed-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notin-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notin-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notin-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notbetween-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notbetween-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-notbetween-intboxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-is-intboxed-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-is-intboxed-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-isnot-intboxed-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-isnot-intboxed-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-isnot-intboxed-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-isnot-intboxed-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-eq-short-lhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-eq-short-rhs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-gt-short",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-gt-short",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-lt-short-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-lt-short-rev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-in-short",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "",
+              "c1": 0,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-boolean-arithmetic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 2,
+              "c2": "S01"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-boolean-arithmetic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3",
+              "c1": 2,
+              "c2": "S01"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3",
+              "c1": 2,
+              "c2": "S02"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-boolean-arithmetic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E4",
+              "c1": 2,
+              "c2": "S01"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E4",
+              "c1": 2,
+              "c2": "S02"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-boolean-arithmetic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E5",
+              "c1": 1,
+              "c2": "S03"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-pattern-straight-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2,
+              "c3": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "op-pattern-straight-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2,
+              "c3": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 3,
+              "c2": {
+                "state": "null"
+              },
+              "c3": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
