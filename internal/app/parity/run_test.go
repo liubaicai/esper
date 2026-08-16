@@ -8491,3 +8491,118 @@ func TestRunContextKeySegmentedWInitTermPatternAsNameDiffRejectsTraceMutations(t
 		})
 	}
 }
+
+func TestRunContextKeySegmentedMultikeyWArrayOfPrimitiveDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-multikey-w-array-of-primitive.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-multikey-w-array-of-primitive.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-multikey-w-array-of-primitive.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-multikey-w-array-of-primitive-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedMultikeyWArrayOfPrimitiveDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "array-content-merge",
+			mutate: func(trace *compat.Trace) {
+				// [1,2] and [1] partitions must stay isolated; a key bug
+				// merging them would show 22 after E12.
+				indices := recordIndicesOfCase(trace, "multikey-w-array-of-primitive")
+				trace.Records[indices[7]].New[0].Fields["thesum"] = 22
+			},
+		},
+		{
+			name: "empty-vs-null-merge",
+			mutate: func(trace *compat.Trace) {
+				// Empty [] and null are distinct keys: E13 sums into the
+				// empty partition (36). Merging null+empty would give 37.
+				indices := recordIndicesOfCase(trace, "multikey-w-array-of-primitive")
+				trace.Records[indices[8]].New[0].Fields["thesum"] = 37
+			},
+		},
+		{
+			name: "null-key-shared",
+			mutate: func(trace *compat.Trace) {
+				// E5 and E10 share the null partition (34); a per-event
+				// partition bug would keep E10 at 20.
+				indices := recordIndicesOfCase(trace, "multikey-w-array-of-primitive")
+				trace.Records[indices[5]].New[0].Fields["thesum"] = 20
+			},
+		},
+		{
+			name: "array-value-mismatch",
+			mutate: func(trace *compat.Trace) {
+				// E2 accumulates into the [1,2] partition (21); a value
+				// misrouting bug would show 11.
+				indices := recordIndicesOfCase(trace, "multikey-w-array-of-primitive")
+				trace.Records[indices[1]].New[0].Fields["thesum"] = 11
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "other"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-multikey-w-array-of-primitive.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-multikey-w-array-of-primitive.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-multikey-w-array-of-primitive.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-multikey-w-array-of-primitive-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
