@@ -7573,3 +7573,149 @@ func TestRunContextInitTermDurationDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunContextInitTermPartitionSelectionDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-partition-selection.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-init-term-partition-selection.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-partition-selection.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-init-term-partition-selection-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextInitTermPartitionSelectionDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "snapshot-sum",
+			mutate: func(trace *compat.Trace) {
+				indices := recordIndicesOfCase(trace, "partition-selection")
+				record := trace.Records[indices[6]] // snapshot record
+				record.New[0].Fields["c3"] = 5
+				trace.Records[indices[6]] = record
+			},
+		},
+		{
+			name: "snapshot-partition-key",
+			mutate: func(trace *compat.Trace) {
+				indices := recordIndicesOfCase(trace, "partition-selection")
+				record := trace.Records[indices[6]]
+				record.Partitions[0].Key = "start:999"
+				trace.Records[indices[6]] = record
+			},
+		},
+		{
+			name: "by-id-selector-filter",
+			mutate: func(trace *compat.Trace) {
+				// The ids selector must drop partition 0: restoring a
+				// by-key selection that keeps both partitions would add rows.
+				indices := recordIndicesOfCase(trace, "partition-selection")
+				record := trace.Records[indices[7]] // by-id selector
+				record.New = append(record.New,
+					compat.ResultRecord{Kind: "row", Fields: map[string]any{"c0": 0, "c1": "S0_1", "c2": "E1", "c3": 6}},
+					compat.ResultRecord{Kind: "row", Fields: map[string]any{"c0": 0, "c1": "S0_1", "c2": "E2", "c3": 10}},
+					compat.ResultRecord{Kind: "row", Fields: map[string]any{"c0": 0, "c1": "S0_1", "c2": "E3", "c3": 201}})
+				trace.Records[indices[7]] = record
+			},
+		},
+		{
+			name: "filtered-selector-value",
+			mutate: func(trace *compat.Trace) {
+				// The initiating-event filtered selector matches only
+				// S0_2; a selector matching the wrong property value would
+				// return no rows for this snapshot.
+				indices := recordIndicesOfCase(trace, "partition-selection")
+				record := trace.Records[indices[8]] // filtered S0_2 selector
+				record.New = nil
+				trace.Records[indices[8]] = record
+			},
+		},
+		{
+			name: "always-false-partition-observation",
+			mutate: func(trace *compat.Trace) {
+				// The always-false filtered selector still visits every
+				// partition; dropping the observed partition list hides a
+				// selector that short-circuits before inspecting all
+				// partitions.
+				indices := recordIndicesOfCase(trace, "partition-selection")
+				record := trace.Records[indices[9]] // always-false filtered selector
+				record.Partitions = []compat.PartitionRecord{{ID: 0, Key: "start:1000", Properties: map[string]any{"startTime": 1000, "endTime": nil, "initiating.p00": "S0_1"}}}
+				trace.Records[indices[9]] = record
+			},
+		},
+		{
+			name: "selector-error-category",
+			mutate: func(trace *compat.Trace) {
+				indices := recordIndicesOfCase(trace, "partition-selection")
+				record := trace.Records[len(trace.Records)-1]
+				record.Value = "some-other-error"
+				trace.Records[len(trace.Records)-1] = record
+				_ = indices
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "other"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-partition-selection.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-init-term-partition-selection.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-partition-selection.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-init-term-partition-selection-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

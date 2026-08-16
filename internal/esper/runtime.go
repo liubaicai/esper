@@ -5880,6 +5880,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		partitionRuntime.contextPatternTagValues = clonePatternTagValues(match.tagValues)
 		partitionRuntime.contextProperties = definition.contextPropertyValues(event, now, variables, partitionRuntime.partitionID)
 		partitionRuntime.contextProperties["initiating_event"] = Present(event)
+		partitionRuntime.contextProperties["startTime"] = Present(now)
 		applyContextPatternProperties(&partitionRuntime, match.tags)
 		partitionRuntime.contextEndPatternState = &patternRuntimeState{distinct: make(map[string]struct{})}
 		partitionRuntime.variables = partitionRuntime.withContextProperties(variables)
@@ -6543,6 +6544,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		partitionRuntime.contextPatternTags = clonePatternTags(match.tags)
 		partitionRuntime.contextPatternTagValues = clonePatternTagValues(match.tagValues)
 		partitionRuntime.contextProperties = definition.contextPropertyValues(Event{}, now, variables, partitionRuntime.partitionID)
+		partitionRuntime.contextProperties["startTime"] = Present(now)
 		applyContextPatternProperties(&partitionRuntime, match.tags)
 		partitionRuntime.contextEndPatternState = &patternRuntimeState{distinct: make(map[string]struct{})}
 		// The end condition is armed at the start-completion instant (now),
@@ -6679,6 +6681,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 		partitionRuntime.partitionID = s.allocateContextPartitionID(allocationKey)
 		partitionRuntime.contextProperties = definition.contextPropertyValues(event, now, variables, partitionRuntime.partitionID)
 		partitionRuntime.contextProperties["initiating_event"] = Present(event)
+		partitionRuntime.contextProperties["startTime"] = Present(now)
 		if definition.endPattern != nil {
 			partitionRuntime.contextEndPatternState = &patternRuntimeState{distinct: make(map[string]struct{})}
 			initializeContextPatternTimer(&partitionRuntime.contextEndPatternState, definition.endPattern, now, partitionRuntime.variables)

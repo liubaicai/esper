@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -25,15 +26,19 @@ type Scenario struct {
 }
 
 type Step struct {
-	Op        string          `json:"op"`
-	Case      string          `json:"case,omitempty"`
-	Statement string          `json:"statement,omitempty"`
-	Selector  string          `json:"selector,omitempty"`
-	Hashes    []int64         `json:"hashes,omitempty"`
-	EventType string          `json:"eventType,omitempty"`
-	At        string          `json:"at,omitempty"`
-	Name      string          `json:"name,omitempty"`
-	Payload   json.RawMessage `json:"payload,omitempty"`
+	Op             string          `json:"op"`
+	Case           string          `json:"case,omitempty"`
+	Statement      string          `json:"statement,omitempty"`
+	Selector       string          `json:"selector,omitempty"`
+	Hashes         []int64         `json:"hashes,omitempty"`
+	IDs            []int           `json:"ids,omitempty"`
+	FilterProperty string          `json:"filterProperty,omitempty"`
+	FilterValue    string          `json:"filterValue,omitempty"`
+	ExpectError    string          `json:"expectError,omitempty"`
+	EventType      string          `json:"eventType,omitempty"`
+	At             string          `json:"at,omitempty"`
+	Name           string          `json:"name,omitempty"`
+	Payload        json.RawMessage `json:"payload,omitempty"`
 }
 
 func LoadScenario(reader io.Reader) (Scenario, error) {
@@ -95,6 +100,18 @@ func (s Scenario) Validate() error {
 				case "hashes":
 					if len(step.Hashes) == 0 {
 						return fmt.Errorf("compat: step %d hash selector has no hashes", i)
+					}
+				case "ids":
+					if len(step.IDs) == 0 {
+						return fmt.Errorf("compat: step %d ids selector has no ids", i)
+					}
+				case "filtered":
+					if strings.TrimSpace(step.FilterProperty) == "" {
+						return fmt.Errorf("compat: step %d filtered selector has no filter property", i)
+					}
+				case "segmented":
+					if strings.TrimSpace(step.ExpectError) == "" {
+						return fmt.Errorf("compat: step %d segmented selector requires expectError", i)
 					}
 				default:
 					return fmt.Errorf("compat: step %d has unsupported selector %q", i, step.Selector)
@@ -374,10 +391,50 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 					selector = esper.ContextPartitionSelectorAll{}
 				case "hashes":
 					selector = esper.SelectContextPartitionHashes(step.Hashes...)
+				case "ids":
+					selector = esper.SelectContextPartitionIDs(step.IDs...)
+				case "filtered":
+					property := step.FilterProperty
+					value := step.FilterValue
+					selector = esper.ContextPartitionSelectorDescriptorFunc(func(descriptor esper.ContextPartitionDescriptor) bool {
+						// Filtered selectors match the initiating event's
+						// property value, mirroring Esper's
+						// ContextPartitionSelectorFiltered implementations
+						// that inspect the partition identifier's initiating
+						// event (for example SupportSelectorFilteredInitTerm).
+						initiating, ok := descriptor.Property("initiating_event")
+						if !ok || initiating.IsNull() || initiating.IsMissing() {
+							return false
+						}
+						event, ok := initiating.Any().(esper.Event)
+						if !ok {
+							return false
+						}
+						valueState := event.Get(property)
+						if valueState.IsNull() || valueState.IsMissing() {
+							return value == ""
+						}
+						return fmt.Sprintf("%v", dereferenceComparable(valueState.Any())) == value
+					})
+				case "segmented":
+					// A segmented selector is invalid for an initiated
+					// context; the runtime rejects it exactly like Esper's
+					// InvalidContextPartitionSelector.
+					selector = esper.SelectContextPartitionSegments([]any{})
 				}
 			}
 			result, err := current.SnapshotWithSelector(ctx, selector)
 			if err != nil {
+				if step.ExpectError != "" {
+					record := TraceRecord{Case: caseName, Operation: "selector-error", Statement: current.Name(), Time: formatTraceTime(engine.Now())}
+					if selectorErrorCategory(err) == step.ExpectError {
+						record.Value = step.ExpectError
+					} else {
+						record.Value = err.Error()
+					}
+					trace.Records = append(trace.Records, record)
+					continue
+				}
 				return trace, err
 			}
 			batch := result.Batch
@@ -419,7 +476,70 @@ func NormalizeResults(results []esper.Result) []ResultRecord {
 
 // normalizePartitionKey converts internal Go keyed-context partition keys to
 // the language-neutral "key:<value>" form used by the Java oracle.
-func normalizePartitionKey(key string) string {
+func normalizePartitions(descriptors []esper.ContextPartitionDescriptor) []PartitionRecord {
+	if len(descriptors) == 0 {
+		// The oracle emits an empty JSON array for snapshot-selector
+		// records; keep the field present so the trace shapes agree.
+		return []PartitionRecord{}
+	}
+	result := make([]PartitionRecord, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		properties := make(map[string]any)
+		if hash, ok := descriptor.Property("hash"); ok {
+			properties["hash"] = normalizeValue(hash)
+		}
+		if start, ok := descriptor.Property("startTime"); ok && start.IsPresent() {
+			properties["startTime"] = normalizeTraceTimeMillis(start)
+		}
+		// Active initiated-terminated partitions expose endTime as null, the
+		// same shape the oracle emits for ContextPartitionIdentifierInitiatedTerminated.
+		if _, ok := descriptor.Property("startTime"); ok {
+			properties["endTime"] = nil
+		}
+		if end, ok := descriptor.Property("endTime"); ok && end.IsPresent() {
+			properties["endTime"] = normalizeTraceTimeMillis(end)
+		}
+		if initiating, ok := descriptor.Property("initiating_event"); ok && initiating.IsPresent() {
+			if event, ok := initiating.Any().(esper.Event); ok {
+				properties["initiating.p00"] = normalizeValue(event.Get("p00"))
+			}
+		}
+		result = append(result, PartitionRecord{ID: descriptor.ID, Key: normalizePartitionKey(descriptor, properties), Properties: properties})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].ID != result[j].ID {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].Key < result[j].Key
+	})
+	return result
+}
+
+// normalizeTraceTimeMillis renders an initiated-context startTime/endTime
+// property as epoch milliseconds, matching the Java oracle's
+// ContextPartitionIdentifierInitiatedTerminated long values. A missing or
+// null endTime (active partition) stays null.
+func normalizeTraceTimeMillis(value esper.Value) any {
+	if value.IsMissing() || value.IsNull() {
+		return nil
+	}
+	if instant, ok := value.Any().(time.Time); ok {
+		return instant.UnixMilli()
+	}
+	return value.Any()
+}
+
+// normalizePartitionKey converts internal Go keyed-context partition keys to
+// the language-neutral "key:<value>" form used by the Java oracle.
+func normalizePartitionKey(descriptor esper.ContextPartitionDescriptor, properties map[string]any) string {
+	if start, ok := properties["startTime"]; ok {
+		// Initiated-terminated partitions are identified by their start
+		// instant, matching the oracle's "start:<epoch-ms>" key.
+		if millis, ok := start.(int64); ok {
+			return fmt.Sprintf("start:%d", millis)
+		}
+	}
+	key := descriptor.Key
 	const marker = `string:"`
 	if !strings.HasPrefix(key, "esper.ValueState:") {
 		return key
@@ -433,27 +553,6 @@ func normalizePartitionKey(key string) string {
 		value = value[:end]
 	}
 	return "key:" + value
-}
-
-func normalizePartitions(descriptors []esper.ContextPartitionDescriptor) []PartitionRecord {
-	if len(descriptors) == 0 {
-		return nil
-	}
-	result := make([]PartitionRecord, 0, len(descriptors))
-	for _, descriptor := range descriptors {
-		properties := make(map[string]any)
-		if hash, ok := descriptor.Property("hash"); ok {
-			properties["hash"] = normalizeValue(hash)
-		}
-		result = append(result, PartitionRecord{ID: descriptor.ID, Key: normalizePartitionKey(descriptor.Key), Properties: properties})
-	}
-	sort.Slice(result, func(i, j int) bool {
-		if result[i].ID != result[j].ID {
-			return result[i].ID < result[j].ID
-		}
-		return result[i].Key < result[j].Key
-	})
-	return result
 }
 
 // NormalizePartitions exposes the stable descriptor projection to host-specific
@@ -482,6 +581,37 @@ func normalizeValue(value esper.Value) any {
 		return map[string]any{"state": "null"}
 	}
 	return value.Any()
+}
+
+// selectorErrorCategory maps a selector rejection to the language-neutral
+// category used by the differential protocol, mirroring Esper's
+// InvalidContextPartitionSelector class name.
+func selectorErrorCategory(err error) string {
+	if err == nil {
+		return ""
+	}
+	message := err.Error()
+	if strings.Contains(message, "Invalid context partition selector") {
+		return "invalid-context-partition-selector"
+	}
+	return ""
+}
+
+// dereferenceComparable unwraps pointer indirections so string formatting of
+// event property values compares equal to their scalar representation, the
+// same way the trace normalizer (JSON) dereferences pointers.
+func dereferenceComparable(value any) any {
+	reflected := reflect.ValueOf(value)
+	for reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {
+		if reflected.IsNil() {
+			return nil
+		}
+		reflected = reflected.Elem()
+	}
+	if !reflected.IsValid() {
+		return nil
+	}
+	return reflected.Interface()
 }
 
 func contextErr(ctx context.Context) error {

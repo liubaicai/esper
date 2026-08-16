@@ -493,5 +493,5 @@ func validateContextPartitionSelector(definition ContextDefinition, selector Con
 		}
 		return nil
 	}
-	return NewError(ErrorInvalidRule, fmt.Sprintf("selector %T is incompatible with context %q kind %d", selector, definition.name, definition.kind))
+	return NewError(ErrorInvalidRule, fmt.Sprintf("Invalid context partition selector: selector %T is incompatible with context %q kind %d", selector, definition.name, definition.kind))
 }
