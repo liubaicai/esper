@@ -1,0 +1,55 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-w-init-term-pattern-as-name",
+ "steps": [
+  {
+   "op": "case",
+   "case": "w-init-term-pattern-as-name"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 1,
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 0,
+    "intBoxed": 99
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 2,
+    "intBoxed": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": 1,
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": 2,
+    "intBoxed": 20
+   }
+  }
+ ]
+}
