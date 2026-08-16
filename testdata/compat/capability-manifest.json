@@ -29147,6 +29147,55 @@
    "representativeScenarioIds": [
     "context-key-segmented-multikey-w-array-of-primitive"
    ]
+  },
+  {
+   "id": "case.context-key-segmented-multikey-w-array-two-field",
+   "javaRuntimeIds": [
+    "java-runtime-c6bd2f3b2b6f99ff6b3e"
+   ],
+   "javaNames": [
+    "ContextKeySegmentedMultikeyWArrayTwoField"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+   ],
+   "goTests": [
+    "TestRunContextKeySegmentedMultikeyWArrayTwoFieldDiffWritesPassingEvidence",
+    "TestRunContextKeySegmentedMultikeyWArrayTwoFieldDiffRejectsTraceMutations",
+    "TestKeyContextMultikeyArrayTwoFieldParity"
+   ],
+   "tags": [
+    "correctness",
+    "context",
+    "keyed",
+    "partition",
+    "two-field-key",
+    "array-key",
+    "per-key-sum",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c6bd2f3b2b6f99ff6b3e"
+   ],
+   "representativeScenarioIds": [
+    "context-key-segmented-multikey-w-array-two-field"
+   ]
   }
  ],
  "mappings": [
@@ -31341,17 +31390,21 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-key-segmented-multikey-w-array-of-primitive"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.context-key-segmented-multikey-w-array-two-field"
   }
  ],
  "summary": {
-  "totalCases": 465,
+  "totalCases": 466,
   "totalCapabilities": 110,
-  "inventoriedCases": 465,
-  "implementedCases": 465,
-  "differentialVerifiedCases": 76,
-  "differentialVerifiedRuntimeIds": 171,
+  "inventoriedCases": 466,
+  "implementedCases": 466,
+  "differentialVerifiedCases": 77,
+  "differentialVerifiedRuntimeIds": 172,
   "intentionallyDifferentCases": 18,
-  "representativeVerifiedCases": 78,
+  "representativeVerifiedCases": 79,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 110,
   "implementedCapabilities": 109,
@@ -31359,12 +31412,12 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 2854,
-  "referencedJavaRuntimeIds": 2716,
+  "runtimeAssociationCount": 2855,
+  "referencedJavaRuntimeIds": 2717,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1420,
-  "representativeScenarioTotal": 78,
-  "representativeScenarioPassing": 78,
+  "unreferencedJavaRuntimeIds": 1419,
+  "representativeScenarioTotal": 79,
+  "representativeScenarioPassing": 79,
   "currentFailures": [],
   "currentSkips": [
    "internal/esper.TestStressSyntheticMediumLoad: ESPER_STRESS is unset; run ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$' -count=1",
@@ -31377,7 +31430,7 @@
    "internal/esper.TestSQLSinkMySQLDocker: ESPER_MYSQL_DSN is unset; run the MySQL fixture from docs/integration/external-services.md"
   ],
   "risks": [
-   "Sixty-eight representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, rollup-output-every-sorted, rollup-output-last, rollup-output-last-sorted, rollup-output-first, rollup-output-first-sorted, rollup-output-snapshot-order-limit, rollup-output-snapshot, rollup-output-last-market, rollup-output-first-market, rollup-output-no-limit-market, rollup-output-default-market, rollup-output-all, rollup-output-all-sorted, rollup-output-first-having, resultset-aggregate-default, resultset-aggregate-last, resultset-aggregate-no-output, resultset-aggregate-time-window, resultset-aggregate-last-time-window, resultset-aggregate-first-time-window, resultset-aggregate-snapshot-time-window, resultset-aggregate-all-events, resultset-having-every-events, resultset-aggregate-max-time-window, resultset-aggregate-join, resultset-aggregate-all-time-window, resultset-aggregate-all-having, resultset-aggregate-join-events, resultset-aggregate-join-sort-window, resultset-aggregate-multikey, resultset-aggregate-group-output, resultset-aggregate-limit-snapshot, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple, context-init-term-temporal-fixed, context-init-term-correlated, context-init-term-with-now, context-init-term-overlap-duration, context-init-term-keyed-aggregation, context-init-term-filter-pattern-end, context-init-term-filter-operators, context-init-term-output-clause, context-init-term-duration, context-init-term-inclusive-equals, context-init-term-partition-selection, context-init-term-prev-prior, context-key-segmented-view, context-key-segmented-term-by-filter, context-key-segmented-w-init-term-end-event, context-key-segmented-term-event-select, context-key-segmented-w-init-term-pattern-as-name, context-key-segmented-multikey-w-array-of-primitive, context-start-end-correlated) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
+   "Sixty-eight representative scenarios (context-hash-segmented, filter-window-aggregate-output, join-length-window, output-policy-iterator, pattern-timer-interval, subquery-length-window, named-window-mutation, table-mutation, variable-deploy, context-output-termination, deployment-restart-window, high-cardinality-context, time-window-long-running, dataflow-connector-output, output-after-last, rollup-output-every, rollup-output-every-sorted, rollup-output-last, rollup-output-last-sorted, rollup-output-first, rollup-output-first-sorted, rollup-output-snapshot-order-limit, rollup-output-snapshot, rollup-output-last-market, rollup-output-first-market, rollup-output-no-limit-market, rollup-output-default-market, rollup-output-all, rollup-output-all-sorted, rollup-output-first-having, resultset-aggregate-default, resultset-aggregate-last, resultset-aggregate-no-output, resultset-aggregate-time-window, resultset-aggregate-last-time-window, resultset-aggregate-first-time-window, resultset-aggregate-snapshot-time-window, resultset-aggregate-all-events, resultset-having-every-events, resultset-aggregate-max-time-window, resultset-aggregate-join, resultset-aggregate-all-time-window, resultset-aggregate-all-having, resultset-aggregate-join-events, resultset-aggregate-join-sort-window, resultset-aggregate-multikey, resultset-aggregate-group-output, resultset-aggregate-limit-snapshot, match-recognize-simple, unidirectional-aggregate-join, output-first-having, context-keyed-subquery, rowrecog-aggregation, resultset-grouped-time-window, resultset-row-per-group-simple, context-init-term-temporal-fixed, context-init-term-correlated, context-init-term-with-now, context-init-term-overlap-duration, context-init-term-keyed-aggregation, context-init-term-filter-pattern-end, context-init-term-filter-operators, context-init-term-output-clause, context-init-term-duration, context-init-term-inclusive-equals, context-init-term-partition-selection, context-init-term-prev-prior, context-key-segmented-view, context-key-segmented-term-by-filter, context-key-segmented-w-init-term-end-event, context-key-segmented-term-event-select, context-key-segmented-w-init-term-pattern-as-name, context-key-segmented-multikey-w-array-of-primitive, context-key-segmented-multikey-w-array-two-field, context-start-end-correlated) currently have persisted Java/Go trace evidence; generic java-baseline and go-unit labels are not differential proof.",
    "The context.partition/output.core/view.window-core/join.basic/resultset.aggregate-group-by/pattern.basic/query.subquery-basic/trigger.table-named-window/epl.variable-onset/dataflow.graph/rowrecog.match-recognize records contain broad implemented subsets; only the seventy-seven listed ContextHash/ResultSetOutputLimit/EPLJoinNoWhereClause/PatternIntervalSpecExpressionWithProperty/EPLSubselectUngroupedUncorrelatedInSelect/InfraFirstUnique/InfraTableOnUpdateTwoKey/EPLVariableOnSetWDeploy/ContextInitTermOutputSnapshotWhenTerminated/EPLJoinStartStopSceneOne/ContextKeySegmentedLargeNumberPartitions/InfraTimeWindow/EPLDataflowBeacon/ResultSetAfterWithOutputLast/ResultSetOutputDefault{join=false}/ResultSetOutputDefaultSorted{join=false}/ResultSetOutputLast{join=false}/ResultSetOutputLastSorted{join=false}/ResultSetOutputFirst{join=false}/ResultSetOutputFirstSorted{join=false}/ResultSetOutputSnapshotOrderWLimit/ResultSet6OutputLimitSnapshot{join=false}/ResultSet4OutputLimitLast/ResultSet5OutputLimitFirst/ResultSet1NoOutputLimit/ResultSet2OutputLimitDefault/ResultSetOutputAll{join=false}/ResultSetOutputAllSorted{join=false}/ResultSetOutputFirstHaving{join=false}/ResultSetNoJoinDefault/ResultSetNoJoinLast/ResultSetNoOutputClauseView/RowRecogConcatenation/EPLJoin2TableJoinGrouped/ResultSetHavingNoAvgOutputFirstEvents/ResultSetHavingNoAvgOutputFirstMinutes/ContextKeySegmentedSubqueryFiltered/RowRecogMeasureAggregation/RowRecogMeasureAggregationPartitioned/ResultSet1NoneNoHavingNoJoin/ResultSet3NoneHavingNoJoin/ResultSet5DefaultNoHavingNoJoin/ResultSet7DefaultHavingNoJoin/ResultSet13LastNoHavingNoJoin/ResultSet15LastHavingNoJoin/ResultSet17FirstNoHavingNoJoin/ResultSet18SnapshotNoHavingNoJoin/ResultSetNoJoinAll/ResultSetHaving/ResultSetHavingJoin/ResultSetMaxTimeWindow/ResultSet2NoneNoHavingJoin/ResultSet4NoneHavingJoin/ResultSet6DefaultNoHavingJoin/ResultSet8DefaultHavingJoin/ResultSet14LastNoHavingJoin/ResultSet16LastHavingJoin/ResultSet17FirstNoHavingJoin/ResultSet9AllNoHavingNoJoin/ResultSet10AllNoHavingJoin/ResultSet11AllHavingNoJoin/ResultSet12AllHavingJoin/ResultSetJoinDefault/ResultSetJoinAll/ResultSetJoinLast/ResultSetJoinSortWindow/ResultSetOutputAllMultikeyWArray/ResultSetOutputLastMultikeyWArray/ResultSetLastNoDataWindow/ResultSetWildcardRowPerGroup/ResultSetUnaggregatedOutputFirst/ResultSetFirstSimpleHavingAndNoHaving/ResultSetLimitSnapshot/ResultSetLimitSnapshotJoin/ResultSetQueryTypeRowPerGroupSimple runtimes are differential-verified.",
    "The 55-scenario representative suite is and JrelyRowPerGroup (17), ResultSetQueryTypeIterator (17), EPLDatabaseJoin (17), EPLOtherStaticFunctions (24), EPLOtherCreateSchema (18), InfraNWTableOnSelect (28), ExprFilterOptimizableConditionNegateConfirm (26), ResultSetOutputLimitRowPerGroupRollup (24), ResultSetOutputLimitAggregateGrouped (27), InfraNWTableCreateIndex (22), ContextKeySegmentedWInitTermPrioritized (23) and ContextNested (33) executions were implemented in later slices; ResultSetOutputDefaultSorted{join=false}, ResultSetOutputLast{join=false}, ResultSetOutputLastSorted{join=false}, ResultSetOutputFirst{join=false}, ResultSetOutputFirstSorted{join=false}, ResultSetOutputSnapshotOrderWLimit, ResultSet6OutputLimitSnapshot{join=false}, ResultSet4OutputLimitLast, ResultSet5OutputLimitFirst, ResultSet1NoOutputLimit, ResultSet2OutputLimitDefault, ResultSetOutputAll{join=false}, ResultSetOutputAllSorted{join=false}, ResultSetOutputFirstHaving{join=false}, ResultSetNoJoinDefault, ResultSetNoJoinLast, ResultSetNoOutputClauseView, ResultSet5DefaultNoHavingNoJoin, ResultSet7DefaultHavingNoJoin, ResultSet13LastNoHavingNoJoin, ResultSet15LastHavingNoJoin, ResultSet17FirstNoHavingNoJoin, ResultSet18SnapshotNoHavingNoJoin, ResultSetNoJoinAll, ResultSetHaving, ResultSetHavingJoin, ResultSetMaxTimeWindow, ResultSet2NoneNoHavingJoin, ResultSet4NoneHavingJoin, ResultSet6DefaultNoHavingJoin, ResultSet8DefaultHavingJoin, ResultSet14LastNoHavingJoin, ResultSet16LastHavingJoin, ResultSet17FirstNoHavingJoin, ResultSet9AllNoHavingNoJoin, ResultSet10AllNoHavingJoin, ResultSet11AllHavingNoJoin, ResultSet12AllHavingJoin, ResultSetJoinDefault, ResultSetJoinAll, ResultSetJoinLast, ResultSetJoinSortWindow, ResultSetOutputLastMultikeyWArray, ResultSetOutputAllMultikeyWArray, ResultSetLastNoDataWindow, ResultSetWildcardRowPerGroup, ResultSetUnaggregatedOutputFirst and ResultSetFirstSimpleHavingAndNoHaving, ResultSetLimitSnapshot and ResultSetLimitSnapshotJoin are now differential-verified via rollup-output-every-sorted, rollup-output-last, rollup-output-last-sorted, rollup-output-first, rollup-output-first-sorted, rollup-output-snapshot-order-limit, rollup-output-snapshot, rollup-output-last-market, rollup-output-first-market, rollup-output-no-limit-market, rollup-output-default-market, rollup-output-all, rollup-output-all-sorted, rollup-output-first-having, resultset-aggregate-default, resultset-aggregate-last, resultset-aggregate-no-output, resultset-aggregate-time-window, resultset-aggregate-last-time-window, resultset-aggregate-first-time-window, resultset-aggregate-snapshot-time-window, resultset-aggregate-all-events, resultset-having-every-events, resultset-aggregate-max-time-window, resultset-aggregate-join, resultset-aggregate-all-time-window, resultset-aggregate-all-having, resultset-aggregate-join-events, resultset-aggregate-join-sort-window, resultset-aggregate-multikey, resultset-aggregate-group-output and resultset-aggregate-limit-snapshot, while EPLDatabaseJoin TimeBatch/MySQL/invalid compile variants, EPLOtherStaticFunctions map-array/timing/Java-time-enum variants, EPLOtherCreateSchema nested-fragment/CRC/class-loading variants, InfraNWTableOnSelect aggregate/pattern/window-enum/index-plan variants, ExprFilter plan-hook/dataflow/stage/pattern variants, the remaining ResultSetOutputLimitRowPerGroupRollup join=true variants, InfraNWTableCreateIndex range/widening/reuse/multikey variants, ContextKeySegmented implicit-start/temporal/pattern variants and ContextNested temporal/initiated/iterator/late-coming variants, plus ResultSetOutputLimitAggregateGrouped OutputFirstHavingJoinNoJoin, are still open. case.output-policy-iterator and case.filter-window-aggregate-output are representative synthetic scenarios; their earlier Java execution mappings were removed because those scenarios do not replay the executions, which now carry real differential evidence in resultset-aggregate-group-output.",
    "The resultset-grouped-time-window scenario covers the istream insert stream; resultset-aggregate-time-window, resultset-aggregate-last-time-window, resultset-aggregate-first-time-window, resultset-aggregate-snapshot-time-window, resultset-aggregate-all-events, resultset-having-every-events, resultset-aggregate-max-time-window, resultset-aggregate-join, resultset-aggregate-all-time-window, resultset-aggregate-all-having, resultset-aggregate-join-events, resultset-aggregate-join-sort-window, resultset-aggregate-multikey, resultset-aggregate-group-output and resultset-aggregate-limit-snapshot now differential-verify grouped output for output every/last every/first every/snapshot every 1 seconds, output all every 2 events/1 seconds, output every 3 events with having, coincident expiry output and grouped time-window joins (ResultSet5DefaultNoHavingNoJoin, ResultSet7DefaultHavingNoJoin with having sum(price) > 50, ResultSet13LastNoHavingNoJoin with order by symbol, ResultSet15LastHavingNoJoin with having, ResultSet17FirstNoHavingNoJoin with pure-expiry new rows, ResultSet18SnapshotNoHavingNoJoin with row-per-event snapshots, ResultSetNoJoinAll with accumulated event rows plus re-emitted untouched groups, ResultSetHaving and ResultSetHavingJoin with having-filtered input-event counting plus removal-triggered old rows, ResultSetMaxTimeWindow with buffered new rows plus null-aggregate old rows at the coincident expiry, ResultSet2/4/6/8/14/16/17/10/11/12/JoinDefault/JoinAll/JoinLast/JoinSortWindow join and view variants with aggregate-grouped join old rows plus event-anchored output schedules and ResultSet9AllNoHavingNoJoin with time-based output-all accumulation, representative re-emission and removal old rows, ResultSetOutputLastMultikeyWArray/ResultSetOutputAllMultikeyWArray with two-key group-by and keepall output last/all and ResultSetLastNoDataWindow/ResultSetWildcardRowPerGroup/ResultSetUnaggregatedOutputFirst/ResultSetFirstSimpleHavingAndNoHaving with unaggregated row-per-group output last/all/first, and ResultSetLimitSnapshot/ResultSetLimitSnapshotJoin with exact-boundary snapshot inclusion plus row-per-event join snapshots), including post-removal aggregate values and null aggregates for emptied groups. The remaining row-per-group multikey executions remain open.",

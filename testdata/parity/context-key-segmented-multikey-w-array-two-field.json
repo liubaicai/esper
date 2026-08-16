@@ -1,0 +1,64 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-multikey-w-array-two-field",
+ "steps": [
+  {
+   "op": "case",
+   "case": "multikey-w-array-two-field"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "G1",
+    "array": [1, 2],
+    "value": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "G2",
+    "array": [1, 2],
+    "value": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "G1",
+    "array": [1],
+    "value": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "G2",
+    "array": [1, 2],
+    "value": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "G1",
+    "array": [1, 2],
+    "value": 15
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "G1",
+    "array": [1],
+    "value": 18
+   }
+  }
+ ]
+}

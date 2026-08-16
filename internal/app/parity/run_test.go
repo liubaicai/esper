@@ -8606,3 +8606,118 @@ func TestRunContextKeySegmentedMultikeyWArrayOfPrimitiveDiffRejectsTraceMutation
 		})
 	}
 }
+
+func TestRunContextKeySegmentedMultikeyWArrayTwoFieldDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-multikey-w-array-two-field.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-multikey-w-array-two-field.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-multikey-w-array-two-field.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-multikey-w-array-two-field-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedMultikeyWArrayTwoFieldDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "id-isolation",
+			mutate: func(trace *compat.Trace) {
+				// G1 and G2 with equal arrays are separate partitions; a
+				// bug dropping the id key would merge G2[1,2] into G1.
+				indices := recordIndicesOfCase(trace, "multikey-w-array-two-field")
+				trace.Records[indices[3]].New[0].Fields["thesum"] = 3
+			},
+		},
+		{
+			name: "array-distinguishes-same-id",
+			mutate: func(trace *compat.Trace) {
+				// G1/[1,2] and G1/[1] accumulate independently: G1/[1]
+				// stays 3 after G1/[1,2]=15, then 21.
+				indices := recordIndicesOfCase(trace, "multikey-w-array-two-field")
+				trace.Records[indices[5]].New[0].Fields["thesum"] = 19
+			},
+		},
+		{
+			name: "array-content-merge",
+			mutate: func(trace *compat.Trace) {
+				// G2/[1,2] accumulates 2 then 12; a content-merge bug
+				// would give 11.
+				indices := recordIndicesOfCase(trace, "multikey-w-array-two-field")
+				trace.Records[indices[3]].New[0].Fields["thesum"] = 11
+			},
+		},
+		{
+			name: "accumulation-order",
+			mutate: func(trace *compat.Trace) {
+				// G1/[1,2] goes 1 then 16 (1+15); a fresh-partition bug
+				// would give 15.
+				indices := recordIndicesOfCase(trace, "multikey-w-array-two-field")
+				trace.Records[indices[4]].New[0].Fields["thesum"] = 15
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "other"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-multikey-w-array-two-field.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-multikey-w-array-two-field.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-multikey-w-array-two-field.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-multikey-w-array-two-field-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
