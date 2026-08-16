@@ -26,19 +26,22 @@ type Scenario struct {
 }
 
 type Step struct {
-	Op             string          `json:"op"`
-	Case           string          `json:"case,omitempty"`
-	Statement      string          `json:"statement,omitempty"`
-	Selector       string          `json:"selector,omitempty"`
-	Hashes         []int64         `json:"hashes,omitempty"`
-	IDs            []int           `json:"ids,omitempty"`
-	FilterProperty string          `json:"filterProperty,omitempty"`
-	FilterValue    string          `json:"filterValue,omitempty"`
-	ExpectError    string          `json:"expectError,omitempty"`
-	EventType      string          `json:"eventType,omitempty"`
-	At             string          `json:"at,omitempty"`
-	Name           string          `json:"name,omitempty"`
-	Payload        json.RawMessage `json:"payload,omitempty"`
+	Op             string            `json:"op"`
+	Case           string            `json:"case,omitempty"`
+	Statement      string            `json:"statement,omitempty"`
+	Selector       string            `json:"selector,omitempty"`
+	Hashes         []int64           `json:"hashes,omitempty"`
+	IDs            []int             `json:"ids,omitempty"`
+	FilterProperty string            `json:"filterProperty,omitempty"`
+	FilterValue    string            `json:"filterValue,omitempty"`
+	ExpectError    string            `json:"expectError,omitempty"`
+	EventType      string            `json:"eventType,omitempty"`
+	At             string            `json:"at,omitempty"`
+	Name           string            `json:"name,omitempty"`
+	Source         string            `json:"source,omitempty"`
+	PropertyOrder  []string          `json:"propertyOrder,omitempty"`
+	PropertyTypes  map[string]string `json:"propertyTypes,omitempty"`
+	Payload        json.RawMessage   `json:"payload,omitempty"`
 }
 
 func LoadScenario(reader io.Reader) (Scenario, error) {

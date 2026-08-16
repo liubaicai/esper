@@ -1,0 +1,20 @@
+{
+  "version": "esper-parity/v1",
+  "id": "csv-input-adapter",
+  "steps": [
+    {
+      "op": "case",
+      "case": "csv",
+      "source": "# comment line\nts,symbol,qty,price,active,note\n1,IBM,10,5.0,true,\"buy, hold\"\n2,AAPL,25,3.5,false,\"\"\"halt\"\" now\"\n\n3,MSFT,30,4.0,true,\n4,,15,2.0,false,\"multi\nline\"\n",
+      "propertyOrder": ["ts", "symbol", "qty", "price", "active", "note"],
+      "propertyTypes": {
+        "ts": "long",
+        "symbol": "string",
+        "qty": "int",
+        "price": "double",
+        "active": "boolean",
+        "note": "string"
+      }
+    }
+  ]
+}
