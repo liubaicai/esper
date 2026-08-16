@@ -7719,3 +7719,151 @@ func TestRunContextInitTermPartitionSelectionDiffRejectsTraceMutations(t *testin
 		})
 	}
 }
+
+func TestRunContextInitTermPrevPriorDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-prev-prior.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-init-term-prev-prior.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-prev-prior.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-init-term-prev-prior-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextInitTermPrevPriorDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "prev-value",
+			mutate: func(trace *compat.Trace) {
+				// col1 after E2 is the previous event's theString (E1); a
+				// prev bug returning the current event would read E2.
+				indices := recordIndicesOfCase(trace, "prev-prior")
+				record := trace.Records[indices[2]]
+				record.New[0].Fields["col1"] = "E2"
+				trace.Records[indices[2]] = record
+			},
+		},
+		{
+			name: "prevwindow-order",
+			mutate: func(trace *compat.Trace) {
+				// prevwindow returns newest-to-oldest ([E2,E1]); reversing
+				// the order breaks the window projection.
+				indices := recordIndicesOfCase(trace, "prev-prior")
+				record := trace.Records[indices[2]]
+				rows := record.New[0].Fields["col2"].([]any)
+				rows[0], rows[1] = rows[1], rows[0]
+				record.New[0].Fields["col2"] = rows
+				trace.Records[indices[2]] = record
+			},
+		},
+		{
+			name: "prevtail-value",
+			mutate: func(trace *compat.Trace) {
+				// col3 is the oldest event (E1 for both rows); a tail bug
+				// reading the newest event would emit E2.
+				indices := recordIndicesOfCase(trace, "prev-prior")
+				record := trace.Records[indices[2]]
+				record.New[0].Fields["col3"] = "E2"
+				trace.Records[indices[2]] = record
+			},
+		},
+		{
+			name: "prior-offset",
+			mutate: func(trace *compat.Trace) {
+				// prior(1) is the immediately preceding event (E1 after E2);
+				// an off-by-one reading two events back would emit null.
+				indices := recordIndicesOfCase(trace, "prev-prior")
+				record := trace.Records[indices[2]]
+				record.New[0].Fields["col4"] = map[string]any{"state": "null"}
+				trace.Records[indices[2]] = record
+			},
+		},
+		{
+			name: "daily-window-close",
+			mutate: func(trace *compat.Trace) {
+				// The partition ends at 17:00: the snapshot after the close
+				// has no rows. A window that never closes would retain E1/E2.
+				indices := recordIndicesOfCase(trace, "prev-prior")
+				record := trace.Records[indices[3]]
+				record.New = []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"col1": "E1", "col3": "E1", "col4": "E1", "col5": 3}}}
+				trace.Records[indices[3]] = record
+			},
+		},
+		{
+			name: "fresh-partition-prev",
+			mutate: func(trace *compat.Trace) {
+				// The second day starts a fresh partition: prev/prior are
+				// null for E3. A retained-window bug would report E2.
+				indices := recordIndicesOfCase(trace, "prev-prior")
+				record := trace.Records[indices[4]]
+				record.New[0].Fields["col1"] = "E2"
+				record.New[0].Fields["col4"] = "E2"
+				trace.Records[indices[4]] = record
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "other"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-prev-prior.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-init-term-prev-prior.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-prev-prior.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-init-term-prev-prior-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

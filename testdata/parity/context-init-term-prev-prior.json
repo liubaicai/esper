@@ -1,0 +1,78 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-init-term-prev-prior",
+ "steps": [
+  {
+   "op": "case",
+   "case": "prev-prior"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T17:00:00.000Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-02T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 9
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  }
+ ]
+}

@@ -1,0 +1,469 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-962cedd069e3beabeeec"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextInitTerm.java"
+  ],
+  "javaExecutions": [
+    "ContextInitTermPrevPrior"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-prev-prior",
+    "steps": [
+      {
+        "op": "case",
+        "case": "prev-prior"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T08:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T09:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T17:00:00.000Z"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-02T09:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-prev-prior",
+    "records": [
+      {
+        "case": "prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "col2": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "col3": "E1",
+              "col4": {
+                "state": "null"
+              },
+              "col5": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev-prior",
+        "operation": "snapshot",
+        "statement": "s0",
+        "time": "2002-05-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "col2": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "col3": "E1",
+              "col4": {
+                "state": "null"
+              },
+              "col5": 1
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "start:1020243600000",
+            "properties": {
+              "endTime": 1020272400000,
+              "startTime": 1020243600000
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "E1",
+              "col2": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "col3": "E1",
+              "col4": "E1",
+              "col5": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev-prior",
+        "operation": "snapshot",
+        "statement": "s0",
+        "time": "2002-05-01T17:00:00Z"
+      },
+      {
+        "case": "prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-02T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "col2": [
+                {
+                  "fields": {
+                    "intPrimitive": 9,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "col3": "E3",
+              "col4": {
+                "state": "null"
+              },
+              "col5": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev-prior",
+        "operation": "snapshot",
+        "statement": "s0",
+        "time": "2002-05-02T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "col2": [
+                {
+                  "fields": {
+                    "intPrimitive": 9,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "col3": "E3",
+              "col4": {
+                "state": "null"
+              },
+              "col5": 9
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 1,
+            "key": "start:1020330000000",
+            "properties": {
+              "endTime": 1020358800000,
+              "startTime": 1020330000000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-init-term-prev-prior",
+    "records": [
+      {
+        "case": "prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "col2": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "col3": "E1",
+              "col4": {
+                "state": "null"
+              },
+              "col5": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev-prior",
+        "operation": "snapshot",
+        "statement": "s0",
+        "time": "2002-05-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "col2": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "col3": "E1",
+              "col4": {
+                "state": "null"
+              },
+              "col5": 1
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "start:1020243600000",
+            "properties": {
+              "endTime": 1020272400000,
+              "startTime": 1020243600000
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "E1",
+              "col2": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "col3": "E1",
+              "col4": "E1",
+              "col5": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev-prior",
+        "operation": "snapshot",
+        "statement": "s0",
+        "time": "2002-05-01T17:00:00Z"
+      },
+      {
+        "case": "prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-02T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "col2": [
+                {
+                  "fields": {
+                    "intPrimitive": 9,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "col3": "E3",
+              "col4": {
+                "state": "null"
+              },
+              "col5": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev-prior",
+        "operation": "snapshot",
+        "statement": "s0",
+        "time": "2002-05-02T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "col2": [
+                {
+                  "fields": {
+                    "intPrimitive": 9,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "col3": "E3",
+              "col4": {
+                "state": "null"
+              },
+              "col5": 9
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 1,
+            "key": "start:1020330000000",
+            "properties": {
+              "endTime": 1020358800000,
+              "startTime": 1020330000000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

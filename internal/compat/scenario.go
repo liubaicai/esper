@@ -580,6 +580,20 @@ func normalizeValue(value esper.Value) any {
 	if value.IsNull() {
 		return map[string]any{"state": "null"}
 	}
+	if events, ok := value.Any().([]esper.Event); ok {
+		// Array-valued event columns (for example prevwindow) normalize to
+		// the same row shape as a result stream, matching the Java oracle's
+		// EventBean[] rendering.
+		rows := make([]any, 0, len(events))
+		for _, event := range events {
+			fields := make(map[string]any)
+			for _, field := range event.Schema().Fields() {
+				fields[field.Name] = normalizeValue(event.Get(field.Name))
+			}
+			rows = append(rows, map[string]any{"kind": "row", "fields": fields})
+		}
+		return rows
+	}
 	return value.Any()
 }
 
