@@ -1,0 +1,38 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-selector",
+ "steps": [
+  {
+   "op": "case",
+   "case": "selector-key1"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 21
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  }
+ ]
+}

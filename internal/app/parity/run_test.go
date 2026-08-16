@@ -9191,3 +9191,120 @@ func TestRunContextKeySegmentedPriorDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunContextKeySegmentedSelectorDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-selector.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-selector.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-selector.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-selector-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedSelectorDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "wrong-key-projection",
+			mutate: func(trace *compat.Trace) {
+				// c0 is the partition key (E1); a key bug would project
+				// the wrong value.
+				indices := recordIndicesOfCase(trace, "selector-key1")
+				trace.Records[indices[0]].New[0].Fields["c0"] = "E2"
+			},
+		},
+		{
+			name: "per-partition-sum",
+			mutate: func(trace *compat.Trace) {
+				// E2's sum accumulates only E2's events (41); a shared
+				// accumulator would show 51.
+				indices := recordIndicesOfCase(trace, "selector-key1")
+				trace.Records[indices[2]].New[0].Fields["c1"] = 51
+			},
+		},
+		{
+			name: "snapshot-rows",
+			mutate: func(trace *compat.Trace) {
+				// The snapshot holds one row per partition; a bug would
+				// drop the E1 row.
+				indices := recordIndicesOfCase(trace, "selector-key1")
+				snapshot := trace.Records[indices[3]]
+				snapshot.New = snapshot.New[1:]
+				trace.Records[indices[3]] = snapshot
+			},
+		},
+		{
+			name: "snapshot-partition-key",
+			mutate: func(trace *compat.Trace) {
+				indices := recordIndicesOfCase(trace, "selector-key1")
+				partitions := trace.Records[indices[3]].Partitions
+				partitions[0].Key = "key:E2"
+				trace.Records[indices[3]].Partitions = partitions
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "other"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-selector.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-selector.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-selector.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-selector-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
