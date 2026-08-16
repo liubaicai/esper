@@ -1,0 +1,74 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-pattern-scene-two",
+ "steps": [
+  {
+   "op": "case",
+   "case": "pattern-scene-two"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "G2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 20,
+    "p00": "G2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 20,
+    "p00": "G2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "G1"
+   }
+  }
+ ]
+}
