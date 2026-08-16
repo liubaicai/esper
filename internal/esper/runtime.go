@@ -5506,9 +5506,12 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		if definitionOK && definition.isTemporal() {
 			_, _ = s.syncTemporalContextLocked(now)
 		}
-		partition, err := s.partitionRuntime(event, now, variables)
+		partition, fanOut, err := s.partitionRuntime(event, now, variables)
 		if err != nil {
 			return ResultBatch{}, false, err
+		}
+		if fanOut {
+			return s.processContextFanOut(definition, event, now, variables)
 		}
 		if partition == nil {
 			return ResultBatch{}, false, nil
@@ -7012,10 +7015,10 @@ func (s *Statement) syncTemporalContextLocked(now time.Time) (ResultBatch, bool)
 	return batch, true
 }
 
-func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[string]Value) (*statementRuntime, error) {
+func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[string]Value) (*statementRuntime, bool, error) {
 	definition, ok := s.engine.env.Context(s.plan.query.contextName)
 	if !ok {
-		return nil, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", s.plan.query.contextName))
+		return nil, false, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", s.plan.query.contextName))
 	}
 	if definition.isTemporal() {
 		_, _ = s.syncTemporalContextLocked(now)
@@ -7028,20 +7031,29 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 			start, _, active = definition.temporalWindow(origin, now)
 		}
 		if !active {
-			return nil, nil
+			return nil, false, nil
 		}
 		key := temporalPartitionKey(start)
 		if partition := s.runtime.partitions[key]; partition != nil {
-			return partition, nil
+			return partition, false, nil
 		}
-		return nil, nil
+		return nil, false, nil
 	}
 	key, active, err := definition.partition(event, now, variables)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !active {
-		return nil, nil
+		return nil, false, nil
+	}
+	if (definition.kind == ContextKeySegmented || definition.kind == ContextHashSegmented) && !initiatedContextKeyAvailable(definition, event, now, variables) {
+		// An event whose schema has no value for the partition key (for
+		// example a join partner of a type not listed in the segmented
+		// context) cannot create or select a partition. Esper dispatches
+		// such events to every existing partition so joins, subqueries and
+		// patterns over the partner stream observe them per partition,
+		// while partitions created later never see them.
+		return nil, true, nil
 	}
 	if s.runtime.partitions == nil {
 		s.runtime.partitions = make(map[string]*statementRuntime)
@@ -7063,7 +7075,52 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 		s.runtime.partitions[key] = partition
 		s.engine.retainContextPartitionLocked(s.plan.query.contextName, key, partition)
 	}
-	return partition, nil
+	return partition, false, nil
+}
+
+// processContextFanOut dispatches an event whose type has no partition key
+// to every existing context partition, matching Esper's segmented-context
+// behavior for join partners and other streams not listed in the context.
+// The event is analyzed by each partition's statement state in partition
+// order without creating a partition; a later event for a new key starts a
+// fresh partition that never sees this event.
+func (s *Statement) processContextFanOut(definition ContextDefinition, event Event, now time.Time, variables map[string]Value) (ResultBatch, bool, error) {
+	if s == nil || s.engine == nil {
+		return ResultBatch{}, false, NewError(ErrorDependency, "context has no engine")
+	}
+	keys := make([]string, 0, len(s.runtime.partitions))
+	for partitionKey := range s.runtime.partitions {
+		keys = append(keys, partitionKey)
+	}
+	sort.Strings(keys)
+	var result ResultBatch
+	var changed bool
+	for _, partitionKey := range keys {
+		partition := s.runtime.partitions[partitionKey]
+		if partition == nil {
+			continue
+		}
+		var batch ResultBatch
+		var partitionChanged bool
+		var err error
+		if s.plan.query.trigger != nil {
+			batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
+			partitionChanged = !batch.empty() || batch.forced
+		} else {
+			batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
+		}
+		if err != nil {
+			return ResultBatch{}, false, err
+		}
+		result.New = append(result.New, batch.New...)
+		result.Old = append(result.Old, batch.Old...)
+		changed = changed || partitionChanged
+	}
+	if changed {
+		result.Sequence = s.runtime.seq.Add(1)
+	}
+	result.Time = now
+	return result, changed, nil
 }
 
 func (r *statementRuntime) ensureSubqueryRegistry(engine *Engine) {

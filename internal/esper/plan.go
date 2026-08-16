@@ -614,10 +614,26 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 			return Plan{}, NewError(ErrorInvalidRule, "context-termination output requires an initiated or temporal context")
 		}
 		if query.join != nil {
-			for index, source := range joinDefinitionSources(query.join) {
-				if err := e.validateContext(definition, source); err != nil {
-					return Plan{}, WrapError(ErrorInvalidRule, fmt.Sprintf("context source %d", index), err)
+			sources := joinDefinitionSources(query.join)
+			for index, source := range sources {
+				err := e.validateContext(definition, source)
+				if err == nil {
+					continue
 				}
+				if definition.kind == ContextKeySegmented || definition.kind == ContextHashSegmented {
+					// A segmented/hash context partitions only the event
+					// types declared in its create-context statement. Join
+					// partners of other types legitimately lack the key
+					// property: Esper requires only that at least one
+					// statement source carries the context's key (the
+					// partitioned type appears in the statement), and
+					// dispatches events of the other types to every
+					// existing partition.
+					if contextKeyValidatesOnAnySource(e, definition, sources) {
+						continue
+					}
+				}
+				return Plan{}, WrapError(ErrorInvalidRule, fmt.Sprintf("context source %d", index), err)
 			}
 		} else if err := e.validateContext(definition, query.input); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "context", err)
@@ -1868,6 +1884,23 @@ func (e *Environment) validateNode(node *streamNode) error {
 	default:
 		return fmt.Errorf("esper: unknown stream node kind %d", node.kind)
 	}
+}
+
+// contextKeyValidatesOnAnySource reports whether a segmented or hash
+// context's key expressions resolve against at least one statement source.
+// Esper requires the partitioned event types to appear among the statement's
+// filters; other sources (join partners, pattern streams) may be of types
+// not listed in the context and legitimately lack the key property.
+func contextKeyValidatesOnAnySource(e *Environment, definition ContextDefinition, sources []*streamNode) bool {
+	if e == nil || definition.kind != ContextKeySegmented && definition.kind != ContextHashSegmented {
+		return false
+	}
+	for _, source := range sources {
+		if err := e.validateContext(definition, source); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *Environment) validateExprFields(input *streamNode, expression Expr) error {
