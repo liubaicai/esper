@@ -140,6 +140,7 @@ type ContextDefinition struct {
 	initiatedOverlapping bool
 	temporalStartAfter   time.Duration
 	temporalActiveFor    time.Duration
+	temporalScheduled    bool
 	dailyStart           TimeOfDay
 	dailyEnd             TimeOfDay
 	cronStart            *CronSchedule
@@ -620,6 +621,22 @@ func NewPeriodicContext(name string, startAfter, activeFor time.Duration) (Conte
 	return NewTimePeriodContext(name, startAfter, activeFor)
 }
 
+// NewScheduledTimePeriodContext declares a temporal context whose start
+// condition is a scheduled timer rather than an immediate condition: when the
+// end fires at advance time T, the next start is armed at T + startAfter and
+// fires at the first time advance reaching that instant. Events at exactly
+// the end instant therefore belong to no cycle, matching Esper's
+// `start after ... end after ...` form (unlike `start @now`, whose re-arm is
+// synchronous at the boundary).
+func NewScheduledTimePeriodContext(name string, startAfter, activeFor time.Duration) (ContextDefinition, error) {
+	definition, err := NewTimePeriodContext(name, startAfter, activeFor)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	definition.temporalScheduled = true
+	return definition, nil
+}
+
 // NewDailyTimeContext declares a recurring local-time window. The start is
 // inclusive and the end is exclusive. If end is earlier than start, the
 // window crosses midnight and ends on the following local date.
@@ -987,6 +1004,13 @@ func temporalPartitionKey(start time.Time) string {
 func activeTemporalContextPartitionKey(engine *Engine, definition ContextDefinition, now time.Time) string {
 	if engine == nil || !definition.isTemporal() {
 		return ""
+	}
+	if definition.temporalScheduled {
+		start, _, active := engine.scheduledTemporalWindowLocked(definition, now)
+		if !active {
+			return ""
+		}
+		return temporalPartitionKey(start)
 	}
 	origin, ok := engine.contextTemporalOrigins[definition.name]
 	if !ok || origin.IsZero() {
@@ -1598,6 +1622,21 @@ func CreateTimePeriodContext(env *Environment, name string, startAfter, activeFo
 		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
 	definition, err := NewTimePeriodContext(name, startAfter, activeFor)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	return env.registerContextDefinition(definition)
+}
+
+// CreateScheduledTimePeriodContext registers the scheduled-start temporal
+// context form (`start after ... end after ...`): the next cycle starts at
+// the first time advance after the previous end, so events at exactly the
+// end instant are dropped.
+func CreateScheduledTimePeriodContext(env *Environment, name string, startAfter, activeFor time.Duration) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewScheduledTimePeriodContext(name, startAfter, activeFor)
 	if err != nil {
 		return ContextDefinition{}, err
 	}

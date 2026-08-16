@@ -1065,6 +1065,14 @@ func CreatePreallocatedHashContextWithAlgorithm(env *Environment, name string, a
 	return internalengine.CreatePreallocatedHashContextWithAlgorithm(env, name, algorithm, partitions, keys...)
 }
 
+// CreateScheduledTimePeriodContext registers the scheduled-start temporal
+// context form (`start after ... end after ...`): the next cycle starts at
+// the first time advance after the previous end, so events at exactly the
+// end instant are dropped.
+func CreateScheduledTimePeriodContext(env *Environment, name string, startAfter, activeFor time.Duration) (ContextDefinition, error) {
+	return internalengine.CreateScheduledTimePeriodContext(env, name, startAfter, activeFor)
+}
+
 func CreateTable(env *Environment, name string, columns []TableColumn, options ...TableOption) (TableDefinition, error) {
 	return internalengine.CreateTable(env, name, columns, options...)
 }
@@ -4187,6 +4195,17 @@ func NewSQLSinkWithExecutor(executor SQLExecContext, statement string, options S
 // statement reuse.
 func NewSQLSinkWithOptions(db *sql.DB, statement string, options SQLSinkOptions) (*SQLSink, error) {
 	return internalengine.NewSQLSinkWithOptions(db, statement, options)
+}
+
+// NewScheduledTimePeriodContext declares a temporal context whose start
+// condition is a scheduled timer rather than an immediate condition: when the
+// end fires at advance time T, the next start is armed at T + startAfter and
+// fires at the first time advance reaching that instant. Events at exactly
+// the end instant therefore belong to no cycle, matching Esper's
+// `start after ... end after ...` form (unlike `start @now`, whose re-arm is
+// synchronous at the boundary).
+func NewScheduledTimePeriodContext(name string, startAfter, activeFor time.Duration) (ContextDefinition, error) {
+	return internalengine.NewScheduledTimePeriodContext(name, startAfter, activeFor)
 }
 
 // NewSchema constructs a statically described event schema.

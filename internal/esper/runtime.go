@@ -307,6 +307,9 @@ type Engine struct {
 	contextPartitionListeners          map[string][]ContextPartitionStateListener
 	contextTableOwnership              map[string]map[string]map[uint64]tableContextRowOwnership
 	contextTemporalOrigins             map[string]time.Time
+	contextTemporalArmed               map[string]time.Time
+	contextTemporalArmedAt             map[string]time.Time
+	contextTemporalActiveStart         map[string]time.Time
 	contextStateListeners              []ContextStateListener
 	deploymentStateListeners           []DeploymentStateListener
 	contextCreated                     map[string]bool
@@ -380,6 +383,9 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		auditListeners:                   make(map[uint64]AuditListener),
 		contextTableOwnership:            make(map[string]map[string]map[uint64]tableContextRowOwnership),
 		contextTemporalOrigins:           make(map[string]time.Time),
+		contextTemporalArmed:             make(map[string]time.Time),
+		contextTemporalArmedAt:           make(map[string]time.Time),
+		contextTemporalActiveStart:       make(map[string]time.Time),
 		contextCreated:                   make(map[string]bool),
 		contextStatementRefs:             make(map[string]int),
 		variableChangeListeners:          make(map[string][]VariableChangeListener),
@@ -535,6 +541,9 @@ func (e *Engine) deactivateProtectedModuleLocked(moduleName string) {
 		delete(e.contextPartitionDescriptors, name)
 		delete(e.contextPartitionListeners, name)
 		delete(e.contextTemporalOrigins, name)
+		delete(e.contextTemporalArmed, name)
+		delete(e.contextTemporalArmedAt, name)
+		delete(e.contextTemporalActiveStart, name)
 		delete(e.contextCreated, name)
 		delete(e.contextStatementRefs, name)
 	}
@@ -6308,7 +6317,7 @@ func advanceContextPatternCompositeTime(state **patternRuntimeState, definition 
 					nextActive = append(nextActive, candidate)
 				}
 				completed = append(completed, candidate)
-				if patternProgressTerminal(transition.state) {
+				if patternProgressTerminal(transition.state) || transition.state.quit {
 					terminal = true
 				}
 				if definition.every {
@@ -6780,6 +6789,68 @@ func temporalContextOrigin(engine *Engine, contextName string, now time.Time) ti
 	return origin
 }
 
+// scheduledTemporalWindowLocked computes the active interval of a
+// scheduled-start time-period context (`start after X end after Y`). Unlike
+// the origin-anchored immediate form, the next start is armed only after the
+// previous end fires: the end condition is a schedule armed at partition
+// creation, and when it fires at advance time T the start re-arms at
+// T + startAfter, firing at the first advance reaching that instant. Events
+// at exactly the end instant therefore fall into no cycle.
+func (e *Engine) scheduledTemporalWindowLocked(definition ContextDefinition, now time.Time) (time.Time, time.Time, bool) {
+	if e == nil {
+		return time.Time{}, time.Time{}, false
+	}
+	name := definition.name
+	armed, hasArmed := e.contextTemporalArmed[name]
+	armedAt := e.contextTemporalArmedAt[name]
+	activeStart, hasActive := e.contextTemporalActiveStart[name]
+	if !hasActive && !hasArmed {
+		origin, ok := e.contextTemporalOrigins[name]
+		if !ok {
+			origin = now
+			e.contextTemporalOrigins[name] = origin
+		}
+		// Deploy: Java's determineCurrentlyRunning treats a time-period start
+		// whose expected end is at or before now as currently running, so a
+		// zero start-after begins immediately at the deploy instant. A
+		// positive start-after arms a schedule at origin + startAfter.
+		if definition.temporalStartAfter == 0 && !origin.After(now) {
+			e.contextTemporalActiveStart[name] = now
+			activeStart = now
+			hasActive = true
+		} else {
+			e.contextTemporalArmed[name] = origin.Add(definition.temporalStartAfter)
+			e.contextTemporalArmedAt[name] = now
+			armed = origin.Add(definition.temporalStartAfter)
+			armedAt = now
+			hasArmed = true
+		}
+	}
+	if hasActive {
+		end := activeStart.Add(definition.temporalActiveFor)
+		if !now.Before(end) {
+			// End fires at the first advance ≥ end; the next start is armed at
+			// end fire time + startAfter and fires at the first advance ≥ that
+			// (strictly later than the arming advance).
+			e.contextTemporalActiveStart[name] = time.Time{}
+			delete(e.contextTemporalActiveStart, name)
+			e.contextTemporalArmed[name] = now.Add(definition.temporalStartAfter)
+			e.contextTemporalArmedAt[name] = now
+			return time.Time{}, time.Time{}, false
+		}
+		return activeStart, end, true
+	}
+	if hasArmed && !now.Before(armed) && now.After(armedAt) {
+		// Armed start fires at this advance (the first advance reaching the
+		// armed instant and strictly after the arming advance).
+		e.contextTemporalActiveStart[name] = now
+		delete(e.contextTemporalArmed, name)
+		delete(e.contextTemporalArmedAt, name)
+		return now, now.Add(definition.temporalActiveFor), true
+	}
+	return time.Time{}, time.Time{}, false
+}
+
 // syncTemporalContextLocked materializes the single active partition of a
 // recurring temporal context and tears down a prior window when the virtual
 // clock crosses its boundary. The caller holds engine.mu and statement.mu.
@@ -6791,8 +6862,14 @@ func (s *Statement) syncTemporalContextLocked(now time.Time) (ResultBatch, bool)
 	if !ok || !definition.isTemporal() {
 		return ResultBatch{}, false
 	}
-	origin := temporalContextOrigin(s.engine, s.plan.query.contextName, now)
-	start, end, active := definition.temporalWindow(origin, now)
+	var start, end time.Time
+	var active bool
+	if definition.temporalScheduled {
+		start, end, active = s.engine.scheduledTemporalWindowLocked(definition, now)
+	} else {
+		origin := temporalContextOrigin(s.engine, s.plan.query.contextName, now)
+		start, end, active = definition.temporalWindow(origin, now)
+	}
 	activeKey := ""
 	if active {
 		activeKey = temporalPartitionKey(start)
@@ -6852,8 +6929,14 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 	}
 	if definition.isTemporal() {
 		_, _ = s.syncTemporalContextLocked(now)
-		origin := s.engine.contextTemporalOrigins[s.plan.query.contextName]
-		start, _, active := definition.temporalWindow(origin, now)
+		var start time.Time
+		var active bool
+		if definition.temporalScheduled {
+			start, _, active = s.engine.scheduledTemporalWindowLocked(definition, now)
+		} else {
+			origin := s.engine.contextTemporalOrigins[s.plan.query.contextName]
+			start, _, active = definition.temporalWindow(origin, now)
+		}
 		if !active {
 			return nil, nil
 		}
@@ -14728,6 +14811,24 @@ func advancePatternNodeTime(progress *patternProgress, now time.Time, variables 
 	return advancePatternNodeTrigger(progress, patternTrigger{now: now, isTimer: true, consumptionLevel: -1}, variables)
 }
 
+// patternOrExclusiveQuit reports whether a completed exclusive OR must quit.
+// Java's EvalOrStateNode quits all child listeners when a branch completes
+// with isQuitted=true (a terminal branch such as a one-shot filter or timer),
+// killing surviving siblings including an every-branch. A repeating leg that
+// fires keeps the OR alive for its next occurrence.
+func patternOrExclusiveQuit(node *patternNode, leftFired, rightFired bool, leftState, rightState *patternProgress) bool {
+	if node == nil || !node.orExclusive {
+		return false
+	}
+	if leftFired && leftState != nil && !patternRepeatingLegAlive(leftState) {
+		return true
+	}
+	if rightFired && rightState != nil && !patternRepeatingLegAlive(rightState) {
+		return true
+	}
+	return false
+}
+
 func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger, variables map[string]Value) []patternTransition {
 	if progress == nil || progress.node == nil {
 		return nil
@@ -14968,7 +15069,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					next.tags = clonePatternTags(leftTransition.state.tags)
 					next.tagValues = clonePatternTagValues(leftTransition.state.tagValues)
 				}
-				if next.done && patternCompletionPermanent(next) {
+				if next.done && (patternCompletionPermanent(next) || patternOrExclusiveQuit(progress.node, true, false, leftTransition.state, next.right)) {
 					next.quit = true
 				}
 				if !next.done && patternProgressTerminal(leftTransition.state) && patternProgressTerminal(next.right) {
@@ -14993,7 +15094,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					next.tags = clonePatternTags(rightTransition.state.tags)
 					next.tagValues = clonePatternTagValues(rightTransition.state.tagValues)
 				}
-				if next.done && patternCompletionPermanent(next) {
+				if next.done && (patternCompletionPermanent(next) || patternOrExclusiveQuit(progress.node, false, true, next.left, rightTransition.state)) {
 					next.quit = true
 				}
 				if !next.done && patternProgressTerminal(next.left) && patternProgressTerminal(rightTransition.state) {
@@ -15037,7 +15138,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 						next.tagValues = clonePatternTagValues(rightTransition.state.tagValues)
 					}
 				}
-				if next.done && patternCompletionPermanent(next) {
+				if next.done && (patternCompletionPermanent(next) || patternOrExclusiveQuit(progress.node, leftFired, rightFired, leftTransition.state, rightTransition.state)) {
 					next.quit = true
 				}
 				if !next.done && patternProgressTerminal(leftTransition.state) && patternProgressTerminal(rightTransition.state) {
@@ -15870,7 +15971,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
 					nextActive = append(nextActive, candidate)
 				}
-				if patternWithinTerminal(transition.state) {
+				if patternWithinTerminal(transition.state) || transition.state.quit {
 					terminal = true
 				}
 				if definition.every {
@@ -15896,7 +15997,7 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 		nextActive = nil
 	}
 	r.patternState.active = nextActive
-	if definition.root.kind == patternWithinNode && terminal {
+	if (definition.root.kind == patternWithinNode || (terminal && !definition.every && len(nextActive) == 0)) && terminal {
 		r.patternState.patternStopped = true
 	}
 	if !batch.empty() {

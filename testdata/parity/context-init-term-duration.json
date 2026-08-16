@@ -1,0 +1,396 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-init-term-duration",
+ "steps": [
+  {
+   "op": "case",
+   "case": "start-after-zero"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:59.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:01:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "same-event-not-included"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 11,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "same-event-included"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 11,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "filter-all-terminated"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S0_1",
+    "p01": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 11,
+    "p00": "S0_2",
+    "p01": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 1,
+    "p10": "S1_1",
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "filter-after-1-min"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "SB01",
+    "p01": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G3",
+    "intPrimitive": 3,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": "SB02",
+    "p01": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G4",
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G5",
+    "intPrimitive": 5,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:01:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G6",
+    "intPrimitive": 6,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "pattern-interval-zero"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:02:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:02:59.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:03:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "cal-month-scoped"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-02-01T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 1,
+    "p10": null,
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-03-01T08:59:59.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-03-01T09:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3,
+    "intBoxed": null,
+    "longBoxed": null,
+    "longPrimitive": 0
+   }
+  }
+ ]
+}

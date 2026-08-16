@@ -42,6 +42,7 @@ type patternNode struct {
 	source                 *streamNode
 	consumeLevel           int
 	consumeLevelSet        bool
+	orExclusive            bool
 	left                   *patternNode
 	right                  *patternNode
 	child                  *patternNode
@@ -945,6 +946,37 @@ func (p PatternStream) And(other PatternStream) PatternStream {
 // fan-out model used by the runtime.
 func (p PatternStream) Or(other PatternStream) PatternStream {
 	return p.combine(other, patternOrNode)
+}
+
+// OrExclusive is Java's true OR: when a branch completes terminally (a
+// non-repeating observer such as a one-shot filter or timer), the other
+// branches are cancelled. A repeating leg (Every) that fires keeps the OR
+// alive, matching EvalOrStateNode's isQuitted handling.
+func (p PatternStream) OrExclusive(other PatternStream) PatternStream {
+	return p.combineExclusive(other, patternOrNode)
+}
+
+// combineExclusive is combine with the orExclusive marker set on the OR node.
+func (p PatternStream) combineExclusive(other PatternStream, kind patternNodeKind) PatternStream {
+	if p.def == nil {
+		return p
+	}
+	copyDefinition := *p.def
+	copyDefinition.steps = nil
+	copyDefinition.every = false
+	copyDefinition.everyDistinct = nil
+	copyDefinition.everyDistinctExpiry = 0
+	copyDefinition.everyDistinctExpirySet = false
+	root := &patternNode{kind: kind, left: patternBranchRoot(p.def), right: patternBranchRoot(other.def)}
+	if kind == patternOrNode {
+		root.orExclusive = true
+	}
+	copyDefinition.root = root
+	if other.def == nil || p.env != other.env {
+		copyDefinition.sourceMismatch = true
+	}
+	copyDefinition.inputs = mergePatternInputs(p.def, other.def)
+	return PatternStream{env: p.env, def: &copyDefinition}
 }
 
 // Not creates a negative branch.  A negative branch is intended to be used

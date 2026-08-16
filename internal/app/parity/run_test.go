@@ -7223,3 +7223,189 @@ func TestRunContextStartEndCorrelatedDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunContextInitTermDurationDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-duration.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-init-term-duration.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-duration.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-init-term-duration-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextInitTermDurationDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "start-after-zero-end-instant",
+			mutate: func(trace *compat.Trace) {
+				// E3 at 60000 must be dropped: the end fires at the exact end
+				// instant and the re-armed start only fires at the next
+				// advance. Restoring the boundary-inclusive Go behavior
+				// (partition [0,60000] with E3 analyzed) would add a record.
+				indices := recordIndicesOfCase(trace, "start-after-zero")
+				record := trace.Records[indices[len(indices)-1]]
+				record.Sequence++
+				record.New = []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"c0": "E3", "c1": 3}}}
+				trace.Records = append(trace.Records, record)
+			},
+		},
+		{
+			name: "same-event-not-included-terminator",
+			mutate: func(trace *compat.Trace) {
+				// The terminating event (intPrimitive=11) must not enter the
+				// aggregate: min/max/sum/avg stay 10. A terminator-included
+				// bug would snapshot {10,11,21,10.5}.
+				indices := recordIndicesOfCase(trace, "same-event-not-included")
+				fields := trace.Records[indices[0]].New[0].Fields
+				fields["c2"] = 11
+				fields["c3"] = 21
+				fields["c4"] = 10.5
+			},
+		},
+		{
+			name: "same-event-included-avg",
+			mutate: func(trace *compat.Trace) {
+				// The insert-into terminator must not consume the analyzed
+				// event: avg is 10.5 (10+11)/2, not 10.
+				indices := recordIndicesOfCase(trace, "same-event-included")
+				trace.Records[indices[0]].New[0].Fields["c4"] = 10
+			},
+		},
+		{
+			name: "filter-all-terminated-broadcast",
+			mutate: func(trace *compat.Trace) {
+				// S1 must terminate all partitions: E4 after S1 produces no
+				// rows. A single-partition termination bug would keep the
+				// second partition alive and emit a third record.
+				indices := recordIndicesOfCase(trace, "filter-all-terminated")
+				record := trace.Records[indices[len(indices)-1]]
+				record.Sequence++
+				record.New = []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"c1": 11}}}
+				trace.Records = append(trace.Records, record)
+			},
+		},
+		{
+			name: "filter-after-1-min-initiating-property",
+			mutate: func(trace *compat.Trace) {
+				// context.sb0.p00 must project the initiating event: SB01 not
+				// G1's theString.
+				indices := recordIndicesOfCase(trace, "filter-after-1-min")
+				trace.Records[indices[0]].New[0].Fields["c3"] = "G2"
+			},
+		},
+		{
+			name: "filter-after-1-min-duration-split",
+			mutate: func(trace *compat.Trace) {
+				// Both partitions receive G4: a duration end that only ends
+				// one partition would drop the {G4,4,SB02} row.
+				indices := recordIndicesOfCase(trace, "filter-after-1-min")
+				row := trace.Records[indices[2]].New
+				row = row[:1]
+				trace.Records[indices[2]].New = row
+			},
+		},
+		{
+			name: "pattern-interval-zero-end-instant",
+			mutate: func(trace *compat.Trace) {
+				// E3 at 180000 must be dropped: the one-shot OR start fires
+				// once at deploy and the 60-second duration ends at 180000.
+				indices := recordIndicesOfCase(trace, "pattern-interval-zero")
+				record := trace.Records[indices[len(indices)-1]]
+				record.Sequence++
+				record.New = []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"c0": "E3", "c1": 34}}}
+				trace.Records = append(trace.Records, record)
+			},
+		},
+		{
+			name: "pattern-interval-zero-or-requeue",
+			mutate: func(trace *compat.Trace) {
+				// The terminal interval(0) OR branch must quit the OR and
+				// kill the every-child: E3 at 180000 stays unanalyzed. A
+				// keep-every-alive OR bug would restart a partition at
+				// 180000 and emit a third record.
+				indices := recordIndicesOfCase(trace, "pattern-interval-zero")
+				record := trace.Records[indices[len(indices)-1]]
+				record.Sequence++
+				record.New = []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"c0": "E3", "c1": 4}}}
+				trace.Records = append(trace.Records, record)
+			},
+		},
+		{
+			name: "cal-month-scoped-end-instant",
+			mutate: func(trace *compat.Trace) {
+				// E3 at 2002-03-01T09:00:00 must be dropped: the calendar
+				// month end fires at exactly one AddDate(0,1,0) month.
+				indices := recordIndicesOfCase(trace, "cal-month-scoped")
+				record := trace.Records[indices[len(indices)-1]]
+				record.Sequence++
+				record.New = []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"theString": "E3", "intPrimitive": 3}}}
+				trace.Records = append(trace.Records, record)
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "same-event-not-included"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-duration.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-init-term-duration.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-init-term-duration.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-init-term-duration-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
