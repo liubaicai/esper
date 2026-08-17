@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "scenarioId": "aggregate-firstlastwindow-ext",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "goCommit": "WORKTREE",
+  "oracleCommand": "tools/java-oracle/run-aggregate-firstlastwindow-ext.sh --esper-root /root/app/esper --scenario testdata/parity/aggregate-firstlastwindow-ext.json --output testdata/parity/aggregate-firstlastwindow-ext.trace.json",
+  "caseResults": {
+    "subquery": {
+      "records": 4,
+      "differences": 0,
+      "status": "match"
+    },
+    "output-rate-limiting": {
+      "records": 2,
+      "differences": 0,
+      "status": "match"
+    },
+    "late-initialize": {
+      "records": 1,
+      "differences": 0,
+      "status": "match"
+    },
+    "mixed-named-window": {
+      "records": 5,
+      "differences": 0,
+      "status": "match"
+    }
+  },
+  "totalRecords": 12,
+  "totalDifferences": 0,
+  "status": "differential-verified"
+}

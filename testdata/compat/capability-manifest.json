@@ -803,7 +803,8 @@
         "internal/esper/infra_table_access_aggregation_state_parity_test.go",
         "internal/esper/infra_table_access_dot_method_parity_test.go",
         "internal/esper/infra_table_on_merge_parity_test.go",
-        "internal/esper/resultset_aggregate_firstlastwindow_parity_test.go"
+        "internal/esper/resultset_aggregate_firstlastwindow_parity_test.go",
+        "internal/esper/resultset_aggregate_firstlastwindow_ext_parity_test.go"
       ],
       "phase": 3,
       "status": "implemented",
@@ -818,13 +819,18 @@
         "differential-verified"
       ],
       "differentialVerifiedRuntimeIds": [
+        "java-runtime-20f27b9b18b7ea3b5180",
+        "java-runtime-2aed2cacb4747c8fcbe6",
+        "java-runtime-3d1a2b9deed08981b0f9",
         "java-runtime-5c73ecba5097e8425b7f",
+        "java-runtime-6ae9bc8636941d90dd91",
         "java-runtime-b03302bb599098d90c20",
         "java-runtime-e4b69ac483b580cbbf07",
         "java-runtime-eb23cb37438e324a71ed",
         "java-runtime-f04c46c8d88698c3726a"
       ],
       "representativeScenarioIds": [
+        "aggregate-firstlastwindow-ext",
         "aggregate-firstlastwindow"
       ]
     },
@@ -30928,6 +30934,62 @@
         "aggregate-firstlastwindow"
       ],
       "notes": "UnboundedSimple uses FirstEver/LastEver (Java unbounded first/last = ever-semantics). WindowedGrouped covers plain variant only (reclaim-group hints unsupported in Go). BatchWindow verifies irstream new/old pairs. BatchWindowGrouped and WindowAndSumWGroup verify empty-group null row emission. Star and LastMaxMixedOnSelect executions deferred (need API additions for firstever(*) wildcard and aggregate selections in on-select)."
+    },
+    {
+      "id": "case.resultset-aggregate-firstlastwindow-ext",
+      "status": "differential-verified",
+      "javaNames": [
+        "ResultSetAggregateSubquery",
+        "ResultSetAggregateOutputRateLimiting",
+        "ResultSetAggregateLateInitialize",
+        "ResultSetAggregateMixedNamedWindow"
+      ],
+      "javaRuntimeIds": [
+        "java-runtime-20f27b9b18b7ea3b5180",
+        "java-runtime-6ae9bc8636941d90dd91",
+        "java-runtime-3d1a2b9deed08981b0f9",
+        "java-runtime-2aed2cacb4747c8fcbe6"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFirstLastWindow.java"
+      ],
+      "goTests": [
+        "TestResultSetAggregateSubqueryParity",
+        "TestResultSetAggregateOutputRateLimitingParity",
+        "TestResultSetAggregateLateInitializeParity",
+        "TestResultSetAggregateMixedNamedWindowParity"
+      ],
+      "tags": [
+        "aggregate",
+        "first",
+        "last",
+        "window",
+        "subquery",
+        "named-window",
+        "differential",
+        "representative"
+      ],
+      "evidence": [
+        "testdata/parity/aggregate-firstlastwindow-ext.json",
+        "testdata/parity/aggregate-firstlastwindow-ext.trace.json",
+        "testdata/parity/aggregate-firstlastwindow-ext.evidence.json"
+      ],
+      "difference": "None",
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-20f27b9b18b7ea3b5180",
+        "java-runtime-6ae9bc8636941d90dd91",
+        "java-runtime-3d1a2b9deed08981b0f9",
+        "java-runtime-2aed2cacb4747c8fcbe6"
+      ],
+      "representativeScenarioIds": [
+        "aggregate-firstlastwindow-ext"
+      ],
+      "notes": "Subquery: window(sb.*) in subquery over length(2) evaluated at trigger time. OutputRateLimiting: output every 2 events with per-event aggregate snapshots (all-rows output, not output-last). LateInitialize: named window consumer deployed after inserts sees pre-existing rows. MixedNamedWindow: on-delete empties group producing null-aggregate row."
     }
   ],
   "mappings": [
@@ -33278,17 +33340,21 @@
     {
       "capabilityId": "resultset.aggregate-access",
       "caseId": "case.resultset-aggregate-firstlastwindow"
+    },
+    {
+      "capabilityId": "resultset.aggregate-access",
+      "caseId": "case.resultset-aggregate-firstlastwindow-ext"
     }
   ],
   "summary": {
     "capabilities": 110,
-    "cases": 504,
-    "associations": 2958,
-    "referencedJavaRuntimeIds": 2816,
+    "cases": 505,
+    "associations": 2962,
+    "referencedJavaRuntimeIds": 2820,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1320,
-    "differentialVerifiedCases": 102,
-    "differentialVerifiedRuntimeIds": 288,
+    "unreferencedJavaRuntimeIds": 1316,
+    "differentialVerifiedCases": 103,
+    "differentialVerifiedRuntimeIds": 292,
     "capabilityVerificationCounts": {
       "inventoried": 110,
       "implemented": 109,

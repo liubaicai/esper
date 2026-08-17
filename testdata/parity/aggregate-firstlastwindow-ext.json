@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "name": "aggregate-firstlastwindow-ext",
+  "javaRuntimeIds": [
+    "java-runtime-20f27b9b18b7ea3b5180",
+    "java-runtime-6ae9bc8636941d90dd91",
+    "java-runtime-3d1a2b9deed08981b0f9",
+    "java-runtime-2aed2cacb4747c8fcbe6"
+  ],
+  "javaNames": [
+    "ResultSetAggregateSubquery",
+    "ResultSetAggregateOutputRateLimiting",
+    "ResultSetAggregateLateInitialize",
+    "ResultSetAggregateMixedNamedWindow"
+  ],
+  "cases": [
+    {
+      "name": "subquery",
+      "runtimeIds": ["java-runtime-20f27b9b18b7ea3b5180"],
+      "steps": [
+        {"op": "send", "type": "SupportBean_A", "id": "A1"},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 1},
+        {"op": "send", "type": "SupportBean_A", "id": "A2"},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 1},
+        {"op": "send", "type": "SupportBean_A", "id": "A3"},
+        {"op": "send", "type": "SupportBean", "theString": "E3", "intPrimitive": 1},
+        {"op": "send", "type": "SupportBean_A", "id": "A4"}
+      ]
+    },
+    {
+      "name": "output-rate-limiting",
+      "runtimeIds": ["java-runtime-6ae9bc8636941d90dd91"],
+      "steps": [
+        {"op": "send", "type": "SupportBean", "theString": "E", "intPrimitive": 1},
+        {"op": "send", "type": "SupportBean", "theString": "E", "intPrimitive": 2},
+        {"op": "send", "type": "SupportBean", "theString": "E", "intPrimitive": 3},
+        {"op": "send", "type": "SupportBean", "theString": "E", "intPrimitive": 4}
+      ]
+    },
+    {
+      "name": "late-initialize",
+      "runtimeIds": ["java-runtime-3d1a2b9deed08981b0f9"],
+      "steps": [
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 10},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 20},
+        {"op": "deploy-consumer"},
+        {"op": "send", "type": "SupportBean", "theString": "E3", "intPrimitive": 30}
+      ]
+    },
+    {
+      "name": "mixed-named-window",
+      "runtimeIds": ["java-runtime-2aed2cacb4747c8fcbe6"],
+      "steps": [
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 10},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 100},
+        {"op": "send", "type": "SupportBean_S0", "id": 100},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 11},
+        {"op": "send", "type": "SupportBean_S0", "id": 10}
+      ]
+    }
+  ]
+}
