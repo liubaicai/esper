@@ -30388,6 +30388,69 @@
     "java-oracle-trace",
     "go-unit"
    ]
+  },
+  {
+   "id": "case.insertinto-eventcol-subquery-bean",
+   "javaNames": [
+    "EPLInsertIntoColBeanFromSubquerySingle",
+    "EPLInsertIntoColBeanFromSubqueryMulti"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateEventTypeColumnBean.java"
+   ],
+   "goTests": [
+    "TestEPLInsertIntoColBeanFromSubquerySingleObjectArrayNoFilterParity",
+    "TestEPLInsertIntoColBeanFromSubquerySingleObjectArrayFilterParity",
+    "TestEPLInsertIntoColBeanFromSubquerySingleMapNoFilterParity",
+    "TestEPLInsertIntoColBeanFromSubquerySingleMapFilterParity",
+    "TestEPLInsertIntoColBeanFromSubqueryMultiObjectArrayNoFilterParity",
+    "TestEPLInsertIntoColBeanFromSubqueryMultiObjectArrayFilterParity",
+    "TestEPLInsertIntoColBeanFromSubqueryMultiMapNoFilterParity",
+    "TestEPLInsertIntoColBeanFromSubqueryMultiMapFilterParity"
+   ],
+   "javaRuntimeIds": [
+    "java-runtime-673bf8a555f28f72ec00",
+    "java-runtime-c2a177b1457c833ff9e6",
+    "java-runtime-aa7461088923c02aa6a3",
+    "java-runtime-09a80627d4f929b2b505",
+    "java-runtime-a8ed4509e74c579e3edf",
+    "java-runtime-8248337b7176fb6fa7bd",
+    "java-runtime-0e339607458033235da9",
+    "java-runtime-bffdd5c85ac3775d8d0a"
+   ],
+   "tags": [
+    "correctness",
+    "insert-into",
+    "event-type-column",
+    "subquery",
+    "bean"
+   ],
+   "status": "differential-verified",
+   "javaStaticIds": [],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-673bf8a555f28f72ec00",
+    "java-runtime-c2a177b1457c833ff9e6",
+    "java-runtime-aa7461088923c02aa6a3",
+    "java-runtime-09a80627d4f929b2b505",
+    "java-runtime-a8ed4509e74c579e3edf",
+    "java-runtime-8248337b7176fb6fa7bd",
+    "java-runtime-0e339607458033235da9",
+    "java-runtime-bffdd5c85ac3775d8d0a"
+   ],
+   "evidence": [
+    "testdata/parity/insertinto-eventcol-subquery-bean.json",
+    "testdata/parity/insertinto-eventcol-subquery-bean.trace.json",
+    "testdata/parity/insertinto-eventcol-subquery-bean.evidence.json",
+    "tools/java-oracle/EPLInsertIntoEventColSubqueryBeanScenarioOracle.java",
+    "tools/java-oracle/run-epl-insert-into-eventcol-subquery-bean.sh",
+    "java-oracle-trace",
+    "go-unit"
+   ]
   }
  ],
  "mappings": [
@@ -32698,15 +32761,19 @@
   {
    "capabilityId": "query.insert-into-route",
    "caseId": "case.epl-insert-into-populate-underlying"
+  },
+  {
+   "capabilityId": "query.insert-into-route",
+   "caseId": "case.insertinto-eventcol-subquery-bean"
   }
  ],
  "summary": {
-  "totalCases": 494,
+  "totalCases": 495,
   "totalCapabilities": 110,
-  "inventoriedCases": 494,
-  "implementedCases": 494,
-  "differentialVerifiedCases": 92,
-  "differentialVerifiedRuntimeIds": 211,
+  "inventoriedCases": 495,
+  "implementedCases": 495,
+  "differentialVerifiedCases": 93,
+  "differentialVerifiedRuntimeIds": 219,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 92,
   "nfrVerifiedCases": 0,
@@ -32716,10 +32783,10 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 2907,
-  "referencedJavaRuntimeIds": 2765,
+  "runtimeAssociationCount": 2915,
+  "referencedJavaRuntimeIds": 2773,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1371,
+  "unreferencedJavaRuntimeIds": 1363,
   "representativeScenarioTotal": 92,
   "representativeScenarioPassing": 92,
   "quality": {

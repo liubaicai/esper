@@ -1,0 +1,73 @@
+{
+ "scenarioId": "insertinto-eventcol-subquery-bean",
+ "javaOracleCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSourceFile": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateEventTypeColumnBean.java",
+ "javaRuntimeIds": [
+  "java-runtime-673bf8a555f28f72ec00",
+  "java-runtime-c2a177b1457c833ff9e6",
+  "java-runtime-aa7461088923c02aa6a3",
+  "java-runtime-09a80627d4f929b2b505",
+  "java-runtime-a8ed4509e74c579e3edf",
+  "java-runtime-8248337b7176fb6fa7bd",
+  "java-runtime-0e339607458033235da9",
+  "java-runtime-bffdd5c85ac3775d8d0a"
+ ],
+ "goTests": [
+  "TestEPLInsertIntoColBeanFromSubquerySingleObjectArrayNoFilterParity",
+  "TestEPLInsertIntoColBeanFromSubquerySingleObjectArrayFilterParity",
+  "TestEPLInsertIntoColBeanFromSubquerySingleMapNoFilterParity",
+  "TestEPLInsertIntoColBeanFromSubquerySingleMapFilterParity",
+  "TestEPLInsertIntoColBeanFromSubqueryMultiObjectArrayNoFilterParity",
+  "TestEPLInsertIntoColBeanFromSubqueryMultiObjectArrayFilterParity",
+  "TestEPLInsertIntoColBeanFromSubqueryMultiMapNoFilterParity",
+  "TestEPLInsertIntoColBeanFromSubqueryMultiMapFilterParity"
+ ],
+ "javaTraceFile": "testdata/parity/insertinto-eventcol-subquery-bean.trace.json",
+ "javaTraceRecordCount": 16,
+ "caseMatchSummary": {
+  "bean-subquery-single-objectarray-nofilter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "bean-subquery-single-objectarray-filter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "bean-subquery-single-map-nofilter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "bean-subquery-single-map-filter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "bean-subquery-multi-objectarray-nofilter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "bean-subquery-multi-objectarray-filter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "bean-subquery-multi-map-nofilter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "bean-subquery-multi-map-filter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  }
+ },
+ "differences": 0,
+ "mutationTested": false,
+ "verification": "differential-verified",
+ "notes": "All 8 cases match between Java oracle trace (16 listener records) and Go test assertions. Field-level values confirmed: single-row scalar subquery into an event-typed column yields the SupportBean_S0 event {id,p00,p01} when exactly one row matches, null when zero rows match the inner where (filter variants: id=1 fails id>=100), and null when more than one row matches (no-filter #length(2) second send -> null-on-multiple, encoded via SubqueryCardinalityMode(SubqueryNullOnMultiple)); multi-row subquery into the array-typed column accumulates every retained SupportBean_S0 row in keepall window order ([{1,x1}] then [{1,x1},{2,x2}]), with the where 1=1 filter variant behaviorally identical to the unfiltered form. Java oracle registers the real SupportBean/SupportBean_S0 bean classes from the fixed esper-common classpath; EventOne is registered as an object-array or map schema with an event-typed (sb) or array-typed (sbarr) column. Internal timer disabled so all 16 records carry epoch-zero timestamps; run script replays byte-identical. Go asserts fragment property values (sb.p00/sb.id, sbarr[i].id/sbarr[i].p00) matching the Java trace field-for-field; bean instance identity (Java assertSame) is preserved by routing the Event envelope unchanged."
+}
