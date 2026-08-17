@@ -1,6 +1,25 @@
 # Esper 9.0.0 Go 移植：执行路线图与遗漏检查
 
-> 文档定位：本文件是 docs/esper-go-port-implementation-plan.md 的执行摘要与路线图。它把详细实施文档浓缩成可快速查阅的目标、现状、阶段、剩余工作和遗漏检查表，用于指导后续切片和验收。详细设计、API 形态和逐轮增量说明仍见实施规划文档。
+> 文档定位：本文件只维护当前阶段、优先级、remaining 和风险。完整范围与架构见 [实施规划](esper-go-port-implementation-plan.md)，日常步骤见 [执行手册](esper-go-port-runbook.md)，差分、合成数据和验收口径见 [质量策略](esper-go-port-quality-strategy.md)，历史见 [CHANGELOG](../CHANGELOG.md)。统计数字以 `testdata/compat/capability-manifest.json` 的已校验 `summary` 为唯一来源。
+
+## 0. 实时状态入口
+
+截至 2026-08-17，manifest v2 的已校验摘要为：
+
+| 维度 | 数值 |
+| --- | --- |
+| Capability | 110 |
+| Case | 493 |
+| Case differential-verified | 91 |
+| Differential-verified runtime | 207 / 4,136 |
+| Runtime 已关联 | 2,761 / 4,136（66.8%） |
+| Runtime 未关联 | 1,375 |
+| Representative scenario | 92 / 92 通过 |
+| Intentionally-different case | 18 |
+| NFR-verified case | 0 |
+| 质量摘要 | Docker passed；stress passed；race pending；performance pending |
+
+该表是阅读便利快照，不应手工推导后继续传播。每次需要最新数字时直接读取 manifest `summary`；只有 manifest 校验通过后才更新本表。
 
 ## 1. 项目目标与完成定义
 
@@ -37,7 +56,9 @@
 - “Flink DataStream 风格”仅指规则构造体验：类型化流、具名算子、链式组合和显式 sink。不表示首版要复制 Flink 的分布式集群运行时、并行度、watermark/checkpoint/savepoint、作业恢复或 exactly-once 语义；除非 Esper 9.0.0 本身有对应可观察契约。
 - 范围严格限定为固定 commit 中已检入的开源 Esper 9.0.0 模块、公共契约、回归场景、单元测试、EsperIO 和示例。NEsper、EsperHA 及商业/企业能力不在本次完成条件内。
 
-## 2. 当前状态（截至 2026-08-14）
+## 2. 历史状态快照（2026-08-14，非权威）
+
+本节保留旧阶段背景，数字和“最新提交”不再作为当前事实来源。当前状态使用第 0 节和 manifest summary，逐切片历史使用 CHANGELOG 与 Git。
 
 ### 2.1 代码与分支
 
@@ -95,19 +116,19 @@
 
 ### 3.1 切片推进
 
-每个 Java execution class 作为一个切片。对每一切片：
+默认工作单元是同一 capability 子域内 1 至 5 个紧密相关 Java executions；capability 子域是里程碑，不强制等于一次提交。具体粒度和流程以 [执行手册](esper-go-port-runbook.md) 为准。每个工作单元：
 
 1. 阅读 Java 测试和对应 runtime，确认行为预言。
 2. 用 Go 链式 API 构造等价规则，编写 _parity_test.go 对照测试。
 3. 将 Java runtime ID 登记到 testdata/compat/capability-manifest.json 的对应 case。
-4. 运行门禁：go vet ./...、go test ./...、go test -race ./...、go test ./internal/compat/...。
-5. 更新 README、Manifest v2 和证据文件，保持统计由机器可读清单推导。
+4. 开发中运行定向测试和相关差分，提交前运行完整工作单元门禁；race、stress、Docker 和 benchmark 在里程碑边界执行。
+5. 更新 Manifest v2、证据和必要文档，保持统计由机器可读清单推导。
 6. 不宣称“全量完成”，只更新覆盖率与 capability 状态。
 
 ### 3.2 测试对账原则
 
 - 行为预言机：Java 测试输出/事件序列/异常类别作为期望。
-- 丢弃性能阈值：时间、性能、JVM query-plan hook 不纳入 parity。
+- JVM 内部 query-plan hook 和 Java 专属微基准不要求逐项 parity；Go 侧性能、资源增长和稳定性仍按质量策略验收。
 - 保留关键行为：输出事件、移除流顺序、时间推进、状态快照、异常类别、生命周期。
 - 链式 API 唯一：Go 测试不拼接 EPL 字符串；用 From/Join/JoinMany/FromMethodOn/Select/Where/GroupBy/Having/OrderBy/Output/InsertInto/RouteTo 等 builder 表达规则。
 - MySQL 按需：SQL/DB 相关测试需要本地 Docker MySQL；核心/窗口/表达式/Context 测试不依赖 MySQL。
@@ -118,7 +139,7 @@
 - 静态候选清单在 testdata/compat/static-manifest.json（目前几乎为空）。
 - 非 Regression 源资产在 testdata/compat/source-test-manifest.json（目前几乎为空）。
 - Capability/case 映射在 testdata/compat/capability-manifest.json。
-- README.md 维护覆盖率数字与本轮增量说明。
+- README 只保留公开摘要；manifest 维护机器统计，roadmap 维护当前优先级，CHANGELOG 维护逐轮历史。
 
 ## 4. 阶段与里程碑
 
@@ -128,19 +149,19 @@
 
 ### 4.2 Phase 1 — 核心能力闭合（进行中）
 
-目标：把现有 implemented 但尚未差分验证的核心查询能力补齐，使差分证据覆盖面接近 60%。
+目标：持续把高风险、共享性强的 `implemented` 能力转换为有持久化 evidence 的 `differential-verified`，同时关闭未关联 runtime；不以单一百分比作为阶段退出条件。
 
 重点领域：
 
-- epl 剩余 533 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
-- infra 剩余 317 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
+- epl 剩余 412 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- infra 剩余 248 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合高级特性（filtered、math-context、访问聚合、rollup 组合）。
 - context 分区 selector、嵌套、生命周期、事务边界。
 - infra 表/命名窗口剩余 mutation/merge/transaction 场景。
 - expression 剩余类型、函数、脚本、枚举集合高级组合。
 - event、expr、resultset、context、view 和 rowrecog 的未关联 runtime 按当前清单继续拆分。
-- multithread 并发测试仍有 56 个未关联 runtime。
+- multithread 并发测试仍有 56 个未关联 runtime；它们优先进入 race/stress 里程碑，而不是仅做静态映射。
 
 ### 4.3 Phase 2 — 高级模式与连接器
 
@@ -164,15 +185,15 @@
 - 完整 Java/Go 行为差分审计。
 - 竞态、模糊、内存、性能基准。
 - 用户文档、API 参考、examples/ 扩展。
-- 合并到主分支并发布。
+- `master` 上完成最终验收并发布。
 ## 5. 剩余工作优先级
 
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 Java/Go persisted differential evidence；当前已有 51 个代表性场景（`context-hash-segmented`、`filter-window-aggregate-output`、`join-length-window`、`output-policy-iterator`、`pattern-timer-interval`、`subquery-length-window`、`named-window-mutation`、`table-mutation`、`variable-deploy`、`context-output-termination`、`deployment-restart-window`、`high-cardinality-context`、`time-window-long-running`、`dataflow-connector-output`、`output-after-last`、`rollup-output-every`、`rollup-output-every-sorted`、`rollup-output-last`、`rollup-output-last-sorted`、`rollup-output-first`、`rollup-output-first-sorted`、`rollup-output-snapshot-order-limit`、`rollup-output-snapshot`、`rollup-output-last-market`、`rollup-output-first-market`、`rollup-output-no-limit-market`、`rollup-output-default-market`、`rollup-output-all`、`rollup-output-all-sorted`、`rollup-output-first-having`、`resultset-aggregate-default`、`resultset-aggregate-last`、`resultset-aggregate-no-output`、`resultset-aggregate-time-window`、`resultset-aggregate-last-time-window`、`resultset-aggregate-first-time-window`、`resultset-aggregate-snapshot-time-window`、`resultset-aggregate-all-events`、`resultset-having-every-events`、`resultset-aggregate-max-time-window`、`resultset-aggregate-join`、`resultset-aggregate-all-time-window`、`resultset-aggregate-all-having`、`resultset-aggregate-join-events`、`match-recognize-simple`、`unidirectional-aggregate-join`、`output-first-having`、`context-keyed-subquery`、`rowrecog-aggregation`、`resultset-grouped-time-window`、`resultset-row-per-group-simple`）。
+2. 扩展 persisted differential evidence。当前有 91 个 differential-verified case（207 个 runtime）和 92/92 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
-4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；后续需在 CI 中固化并保持显式 skip。
+4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；暂不建设 CI，后续按执行手册定期本地 Docker 重放，并保持普通测试中的显式环境型 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。
 
 ### 5.2 P1 — 下一批高价值切片
@@ -181,12 +202,12 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 533 | subselect、insertinto、database、dataflow、方法源 |
-| infra | 317 | 表、Named Window、mutation、transaction |
-| resultset | 293 | 聚合、输出、排序、分组 |
-| expr | 219 | 表达式函数、类型、脚本、枚举集合 |
-| context | 166 | Context 分区、嵌套、生命周期 |
-| view | 70 | 视图高级组合 |
+| epl | 412 | subselect、insertinto、database、dataflow、方法源 |
+| infra | 248 | 表、Named Window、mutation、transaction |
+| resultset | 198 | 聚合、输出、排序、分组 |
+| expr | 172 | 表达式函数、类型、脚本、枚举集合 |
+| context | 45 | Context 分区、嵌套、生命周期 |
+| view | 40 | 视图高级组合 |
 | event | 170 | 事件表示和 Serde 完整矩阵 |
 | multithread | 56 | 并发回归 |
 | rowrecog | 34 | Match Recognize |
@@ -212,13 +233,13 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 533 | subselect、insertinto、database、dataflow、方法源 |
-| infra | 317 | 表、Named Window、mutation、transaction |
-| resultset | 293 | 聚合、输出、排序、分组 |
-| expr | 219 | 表达式函数、类型、脚本、枚举集合 |
+| epl | 412 | subselect、insertinto、database、dataflow、方法源 |
+| infra | 248 | 表、Named Window、mutation、transaction |
+| resultset | 198 | 聚合、输出、排序、分组 |
+| expr | 172 | 表达式函数、类型、脚本、枚举集合 |
 | event | 170 | 事件表示和 Serde 完整矩阵 |
-| context | 166 | Context 分区、嵌套、生命周期 |
-| view | 70 | 视图高级组合 |
+| context | 45 | Context 分区、嵌套、生命周期 |
+| view | 40 | 视图高级组合 |
 | multithread | 56 | 并发回归 |
 | rowrecog | 34 | Match Recognize |
 
@@ -227,8 +248,8 @@
 - static-manifest.json 目前几乎为空，需要把静态/编译期候选登记进去。
 - source-test-manifest.json 目前几乎为空，需要把非 Regression 源资产（单元测试、集成测试）登记进去。
 - epl/expr/resultset 等 capability 拆分过粗，需要继续细分为可验收的 case。
-- 17 个 intentionally-different case 需要保持书面差异理由和测试证据。
-- 当前未关联的 1,856 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
+- 18 个 intentionally-different case 需要保持书面差异理由和测试证据。
+- 当前未关联的 1,375 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
 
 ### 6.3 能力与边界遗漏
 
@@ -260,12 +281,15 @@
 
 ## 8. 门禁与质量标准
 
-每完成一个切片必须执行并全部通过：
+完整规则以 [质量策略](esper-go-port-quality-strategy.md) 为准。开发迭代、工作单元提交和里程碑收口使用不同成本的门禁，避免每个小 execution 都重复运行全部高成本测试，也禁止把验证推迟到整个项目结束。
+
+每个工作单元提交前至少执行并全部通过：
 
     go vet ./...
     go test ./... -count=1 -timeout 180s
-    go test -race ./...
     go test ./internal/compat/... -count=1
+
+`go test -race ./...`、域级完整差分、stress、相关 Docker 和 benchmark 在 capability 子域里程碑收口时执行。
 
 质量标准：
 

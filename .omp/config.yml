@@ -1,0 +1,20 @@
+async:
+  enabled: true
+
+task:
+  batch: true
+  eager: preferred
+  enableEffort: true
+  maxConcurrency: 4
+  maxRecursionDepth: 1
+  softRequestBudget: 150
+  isolation:
+    mode: auto
+    apply: true
+    merge: patch
+
+checkpoint:
+  enabled: true
+
+memory:
+  backend: local
