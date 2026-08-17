@@ -1,0 +1,71 @@
+{
+  "id": "istream-rstream-keywords",
+  "version": "esper-parity/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "goTests": [
+    "TestEPLOtherRStreamOnlyParity",
+    "TestEPLOtherRStreamInsertIntoParity",
+    "TestEPLOtherRStreamInsertIntoRStreamParity",
+    "TestEPLOtherRStreamJoinParity",
+    "TestEPLOtherIStreamOnlyParity",
+    "TestEPLOtherIStreamInsertIntoRStreamParity",
+    "TestEPLOtherIStreamJoinParity"
+  ],
+  "javaRuntimes": [
+    "EPLOtherRStreamOnly",
+    "EPLOtherRStreamInsertInto",
+    "EPLOtherRStreamInsertIntoRStream",
+    "EPLOtherRStreamJoin",
+    "EPLOtherIStreamOnly",
+    "EPLOtherIStreamInsertIntoRStream",
+    "EPLOtherIStreamJoin"
+  ],
+  "scenario": "testdata/parity/istream-rstream-keywords.json",
+  "trace": "testdata/parity/istream-rstream-keywords.trace.json",
+  "caseResults": {
+    "rstream-only": {
+      "expected": 1,
+      "actual": 1,
+      "match": true,
+      "detail": "select rstream * over length(3): silent until 4th event expires first"
+    },
+    "rstream-insert-into": {
+      "expected": 5,
+      "actual": 5,
+      "match": true,
+      "detail": "insert into strips rstream: consumer sees all 4 inserts, s0 fires expiry"
+    },
+    "rstream-insert-into-rstream": {
+      "expected": 2,
+      "actual": 2,
+      "match": true,
+      "detail": "insert rstream into: only removals forwarded to consumer"
+    },
+    "rstream-join": {
+      "expected": 1,
+      "actual": 1,
+      "match": true,
+      "detail": "rstream join: fires when first a expires from length(2)"
+    },
+    "istream-only": {
+      "expected": 2,
+      "actual": 2,
+      "match": true,
+      "detail": "select istream * over length(1): inserts only, expiries suppressed"
+    },
+    "istream-insert-into-rstream": {
+      "expected": 3,
+      "actual": 3,
+      "match": true,
+      "detail": "istream source + insert rstream into: s0 fires inserts, consumer gets expiry"
+    },
+    "istream-join": {
+      "expected": 1,
+      "actual": 1,
+      "match": true,
+      "detail": "istream join: fires once on match, silent on expiry"
+    }
+  },
+  "differences": 0,
+  "notes": "istream/rstream selector semantics verified: remove-stream-only fires on window expiry as new data, insert-into without rstream keyword strips selector (consumer sees inserts), insert rstream into forwards only removals, join selectors filter insert/remove join output. OM/Compile variants are compile-API duplicates of RStreamOnly; RStreamOutputSnapshot is a compile-deploy-undeploy smoke test without observable rows, excluded from this slice. Java insert-into with independent select-selector vs route-mode is modeled in Go as two statements over the same windowed source (selector listener + routing statement)."
+}

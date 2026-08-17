@@ -3989,7 +3989,17 @@
       ],
       "verification": [
         "inventoried",
-        "implemented"
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-0e4714c5a90f9e774235",
+        "java-runtime-26cbb822fec0dd23e976",
+        "java-runtime-2fd326ba46db2a7e03c4",
+        "java-runtime-490347196f7e74a39fd0",
+        "java-runtime-bdda0ee0cc72ee5d18a1",
+        "java-runtime-ccc0bd023a72659c1a43",
+        "java-runtime-d268f6c45cd4375e9c1c"
       ]
     },
     {
@@ -30742,6 +30752,53 @@
         "java-runtime-803e092256cda66d2f0e",
         "java-runtime-e54e4c73c8eec446581f"
       ]
+    },
+    {
+      "id": "case.istream-rstream-keywords",
+      "javaRuntimeIds": [
+        "java-runtime-d268f6c45cd4375e9c1c",
+        "java-runtime-0e4714c5a90f9e774235",
+        "java-runtime-26cbb822fec0dd23e976",
+        "java-runtime-2fd326ba46db2a7e03c4",
+        "java-runtime-490347196f7e74a39fd0",
+        "java-runtime-bdda0ee0cc72ee5d18a1",
+        "java-runtime-ccc0bd023a72659c1a43"
+      ],
+      "javaNames": [
+        "EPLOtherRStreamOnly",
+        "EPLOtherRStreamInsertInto",
+        "EPLOtherRStreamInsertIntoRStream",
+        "EPLOtherRStreamJoin",
+        "EPLOtherIStreamOnly",
+        "EPLOtherIStreamInsertIntoRStream",
+        "EPLOtherIStreamJoin"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherIStreamRStreamKeywords.java"
+      ],
+      "status": "differential-verified",
+      "verification": [
+        "inventoried",
+        "differential-verified"
+      ],
+      "evidence": [
+        "testdata/parity/istream-rstream-keywords.evidence.json"
+      ],
+      "scenario": "testdata/parity/istream-rstream-keywords.json",
+      "trace": "testdata/parity/istream-rstream-keywords.trace.json",
+      "goRefs": [
+        "internal/esper/epl_other_istream_rstream_parity_test.go"
+      ],
+      "capability": "eplother.stream-selector",
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-d268f6c45cd4375e9c1c",
+        "java-runtime-0e4714c5a90f9e774235",
+        "java-runtime-26cbb822fec0dd23e976",
+        "java-runtime-2fd326ba46db2a7e03c4",
+        "java-runtime-490347196f7e74a39fd0",
+        "java-runtime-bdda0ee0cc72ee5d18a1",
+        "java-runtime-ccc0bd023a72659c1a43"
+      ]
     }
   ],
   "mappings": [
@@ -33080,28 +33137,32 @@
     {
       "capabilityId": "resultset.aggregate-group-by",
       "caseId": "case.row-for-all"
+    },
+    {
+      "capabilityId": "eplother.stream-selector",
+      "caseId": "case.istream-rstream-keywords"
     }
   ],
   "summary": {
-    "totalCases": 501,
+    "totalCases": 502,
     "totalCapabilities": 110,
-    "inventoriedCases": 501,
+    "inventoriedCases": 502,
     "implementedCases": 500,
-    "differentialVerifiedCases": 99,
-    "differentialVerifiedRuntimeIds": 246,
+    "differentialVerifiedCases": 100,
+    "differentialVerifiedRuntimeIds": 253,
     "intentionallyDifferentCases": 18,
     "representativeVerifiedCases": 92,
     "nfrVerifiedCases": 0,
     "inventoriedCapabilities": 110,
     "implementedCapabilities": 109,
-    "differentialVerifiedCapabilities": 11,
+    "differentialVerifiedCapabilities": 12,
     "intentionallyDifferentCapabilities": 7,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2942,
-    "referencedJavaRuntimeIds": 2800,
+    "runtimeAssociationCount": 2949,
+    "referencedJavaRuntimeIds": 2807,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1336,
+    "unreferencedJavaRuntimeIds": 1329,
     "representativeScenarioTotal": 92,
     "representativeScenarioPassing": 92,
     "quality": {

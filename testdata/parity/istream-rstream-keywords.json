@@ -1,0 +1,61 @@
+{
+  "id": "istream-rstream-keywords",
+  "description": "EPLOtherIStreamRStreamKeywords istream/rstream selector scenarios: RStreamOnly, RStreamInsertInto, RStreamInsertIntoRStream, RStreamJoin, IStreamOnly, IStreamInsertIntoRStream, IStreamJoin",
+  "javaRuntimes": [
+    "EPLOtherRStreamOnly",
+    "EPLOtherRStreamInsertInto",
+    "EPLOtherRStreamInsertIntoRStream",
+    "EPLOtherRStreamJoin",
+    "EPLOtherIStreamOnly",
+    "EPLOtherIStreamInsertIntoRStream",
+    "EPLOtherIStreamJoin"
+  ],
+  "cases": [
+    {"case": "rstream-only"},
+    {"case": "rstream-insert-into"},
+    {"case": "rstream-insert-into-rstream"},
+    {"case": "rstream-join"},
+    {"case": "istream-only"},
+    {"case": "istream-insert-into-rstream"},
+    {"case": "istream-join"}
+  ],
+  "steps": [
+    {"op": "case", "case": "rstream-only"},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "d", "intPrimitive": 2},
+
+    {"op": "case", "case": "rstream-insert-into"},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "c", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "d", "intPrimitive": 2},
+
+    {"op": "case", "case": "rstream-insert-into-rstream"},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "c", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "d", "intPrimitive": 2},
+
+    {"op": "case", "case": "rstream-join"},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 1},
+    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 1},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 3},
+
+    {"op": "case", "case": "istream-only"},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 2},
+
+    {"op": "case", "case": "istream-insert-into-rstream"},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 2},
+
+    {"op": "case", "case": "istream-join"},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 1},
+    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 1},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 3}
+  ]
+}
