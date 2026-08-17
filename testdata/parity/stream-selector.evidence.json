@@ -1,0 +1,43 @@
+{
+  "version": "esper-parity/v1",
+  "id": "stream-selector",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "java": "17.0.19",
+  "scenario": "testdata/parity/stream-selector.json",
+  "trace": "testdata/parity/stream-selector.trace.json",
+  "javaRuntimeIds": [
+    "java-runtime-70753b738456d049f005",
+    "java-runtime-bc1c24102a3db1950ec8",
+    "java-runtime-4a8e3f2dc067ae2b7602",
+    "java-runtime-f7193a89174e1e9c9ca0"
+  ],
+  "goTests": [
+    "TestEPLOtherNoJoinWildcardWithAliasParity",
+    "TestEPLOtherJoinWildcardWithAliasParity",
+    "TestEPLOtherAloneJoinAliasParity",
+    "TestEPLOtherAloneJoinNoAliasParity"
+  ],
+  "differences": 0,
+  "caseMatchSummary": {
+    "alone-join-alias": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "alone-join-noalias": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "join-wildcard-alias": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "nojoin-wildcard-alias": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    }
+  }
+}

@@ -30614,6 +30614,53 @@
         "java-runtime-98a351db3777f8b53fc6",
         "java-runtime-41c99f4279b018f64589"
       ]
+    },
+    {
+      "id": "case.stream-selector",
+      "javaRuntimeIds": [
+        "java-runtime-70753b738456d049f005",
+        "java-runtime-bc1c24102a3db1950ec8",
+        "java-runtime-4a8e3f2dc067ae2b7602",
+        "java-runtime-f7193a89174e1e9c9ca0"
+      ],
+      "javaNames": [
+        "EPLOtherNoJoinWildcardWithAlias",
+        "EPLOtherJoinWildcardWithAlias",
+        "EPLOtherAloneJoinAlias",
+        "EPLOtherAloneJoinNoAlias"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExprStreamSelector.java"
+      ],
+      "goTests": [
+        "TestEPLOtherNoJoinWildcardWithAliasParity",
+        "TestEPLOtherJoinWildcardWithAliasParity",
+        "TestEPLOtherAloneJoinAliasParity",
+        "TestEPLOtherAloneJoinNoAliasParity"
+      ],
+      "tags": [],
+      "status": "differential-verified",
+      "evidence": [
+        "testdata/parity/stream-selector.json",
+        "testdata/parity/stream-selector.trace.json",
+        "testdata/parity/stream-selector.evidence.json",
+        "tools/java-oracle/EPLOtherStreamSelectorScenarioOracle.java",
+        "tools/java-oracle/run-stream-selector.sh",
+        "java-oracle-trace",
+        "go-unit"
+      ],
+      "difference": null,
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-70753b738456d049f005",
+        "java-runtime-bc1c24102a3db1950ec8",
+        "java-runtime-4a8e3f2dc067ae2b7602",
+        "java-runtime-f7193a89174e1e9c9ca0"
+      ]
     }
   ],
   "mappings": [
@@ -32940,15 +32987,19 @@
     {
       "capabilityId": "query.subquery-basic",
       "caseId": "case.subselect-exists"
+    },
+    {
+      "capabilityId": "eplother.stream-selector",
+      "caseId": "case.stream-selector"
     }
   ],
   "summary": {
-    "totalCases": 498,
+    "totalCases": 499,
     "totalCapabilities": 110,
-    "inventoriedCases": 498,
-    "implementedCases": 498,
-    "differentialVerifiedCases": 96,
-    "differentialVerifiedRuntimeIds": 236,
+    "inventoriedCases": 499,
+    "implementedCases": 499,
+    "differentialVerifiedCases": 97,
+    "differentialVerifiedRuntimeIds": 240,
     "intentionallyDifferentCases": 18,
     "representativeVerifiedCases": 92,
     "nfrVerifiedCases": 0,
@@ -32958,10 +33009,10 @@
     "intentionallyDifferentCapabilities": 7,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2932,
-    "referencedJavaRuntimeIds": 2790,
+    "runtimeAssociationCount": 2936,
+    "referencedJavaRuntimeIds": 2794,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1346,
+    "unreferencedJavaRuntimeIds": 1342,
     "representativeScenarioTotal": 0,
     "representativeScenarioPassing": 0,
     "quality": {}

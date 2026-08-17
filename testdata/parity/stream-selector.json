@@ -1,0 +1,32 @@
+{
+  "id": "stream-selector",
+  "description": "EPLOtherSelectExprStreamSelector stream wildcard (stream.*) scenarios: NoJoinWildcardWithAlias, JoinWildcardWithAlias, AloneJoinAlias, AloneJoinNoAlias",
+  "javaRuntimes": [
+    "EPLOtherNoJoinWildcardWithAlias",
+    "EPLOtherJoinWildcardWithAlias",
+    "EPLOtherAloneJoinAlias",
+    "EPLOtherAloneJoinNoAlias"
+  ],
+  "cases": [
+    {"case": "nojoin-wildcard-alias"},
+    {"case": "join-wildcard-alias"},
+    {"case": "alone-join-alias"},
+    {"case": "alone-join-noalias"}
+  ],
+  "steps": [
+    {"op": "case", "case": "nojoin-wildcard-alias"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 15},
+
+    {"op": "case", "case": "join-wildcard-alias"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 13},
+    {"op": "send", "type": "SupportMarketDataBean", "symbol": "E2", "volume": 0, "price": 0},
+
+    {"op": "case", "case": "alone-join-alias"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+    {"op": "send", "type": "SupportMarketDataBean", "symbol": "E1", "volume": 0, "price": 0},
+
+    {"op": "case", "case": "alone-join-noalias"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+    {"op": "send", "type": "SupportMarketDataBean", "symbol": "E1", "volume": 100, "price": 0}
+  ]
+}
