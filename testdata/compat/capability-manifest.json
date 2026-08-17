@@ -4212,7 +4212,8 @@
         "internal/esper/trigger.go",
         "internal/esper/variable.go",
         "internal/esper/variable_deploy_parity_test.go",
-        "internal/app/parity/variable_deploy.go"
+        "internal/app/parity/variable_deploy.go",
+        "internal/esper/epl_variables_onset_parity_test.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -4229,10 +4230,15 @@
         "representative-verified"
       ],
       "differentialVerifiedRuntimeIds": [
-        "java-runtime-78f23a1b470f6bd625c4"
+        "java-runtime-1588aa4d361615645c7e",
+        "java-runtime-2735f44aed732350be1b",
+        "java-runtime-60c4c5dc59ffbf4277b3",
+        "java-runtime-78f23a1b470f6bd625c4",
+        "java-runtime-91f1de1b06fddf87b2b1"
       ],
       "representativeScenarioIds": [
-        "variable-deploy"
+        "variable-deploy",
+        "variables-onset"
       ]
     },
     {
@@ -30799,6 +30805,58 @@
         "java-runtime-bdda0ee0cc72ee5d18a1",
         "java-runtime-ccc0bd023a72659c1a43"
       ]
+    },
+    {
+      "id": "case.epl-variable-onset-extended",
+      "status": "differential-verified",
+      "javaNames": [
+        "EPLVariableOnSetCompile",
+        "EPLVariableOnSetObjectModel",
+        "EPLVariableOnSetSimpleSceneTwo",
+        "EPLVariableOnSetSubquery"
+      ],
+      "javaRuntimeIds": [
+        "java-runtime-2735f44aed732350be1b",
+        "java-runtime-60c4c5dc59ffbf4277b3",
+        "java-runtime-91f1de1b06fddf87b2b1",
+        "java-runtime-1588aa4d361615645c7e"
+      ],
+      "evidence": [
+        "testdata/parity/variables-onset.json",
+        "testdata/parity/variables-onset.trace.json",
+        "testdata/parity/variables-onset.evidence.json"
+      ],
+      "goTests": [
+        "TestVariableOnSetTypedSelectParity",
+        "TestVariableOnSetSimpleSceneTwoParity",
+        "TestVariableOnSetSubqueryParity"
+      ],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "notes": "Compile/ObjectModel share one semantic scenario (typed on-set + dependent select); SimpleSceneTwo covers @public multi-module variables + irstream select; Subquery covers subquery on set RHS with empty-result null assignment. RUNTIMEOPS variants and array-index assignment executions excluded (require array-index assignment targets not yet in Go API).",
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesOnSet.java"
+      ],
+      "tags": [
+        "variable",
+        "on-set",
+        "subquery",
+        "differential",
+        "representative"
+      ],
+      "difference": "None",
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-2735f44aed732350be1b",
+        "java-runtime-60c4c5dc59ffbf4277b3",
+        "java-runtime-91f1de1b06fddf87b2b1",
+        "java-runtime-1588aa4d361615645c7e"
+      ],
+      "representativeScenarioIds": [
+        "variables-onset"
+      ]
     }
   ],
   "mappings": [
@@ -33141,35 +33199,27 @@
     {
       "capabilityId": "eplother.stream-selector",
       "caseId": "case.istream-rstream-keywords"
+    },
+    {
+      "capabilityId": "epl.variable-onset",
+      "caseId": "case.epl-variable-onset-extended"
     }
   ],
   "summary": {
-    "totalCases": 502,
-    "totalCapabilities": 110,
-    "inventoriedCases": 502,
-    "implementedCases": 500,
-    "differentialVerifiedCases": 100,
-    "differentialVerifiedRuntimeIds": 253,
-    "intentionallyDifferentCases": 18,
-    "representativeVerifiedCases": 92,
-    "nfrVerifiedCases": 0,
-    "inventoriedCapabilities": 110,
-    "implementedCapabilities": 109,
-    "differentialVerifiedCapabilities": 12,
-    "intentionallyDifferentCapabilities": 7,
-    "representativeVerifiedCapabilities": 11,
-    "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2949,
-    "referencedJavaRuntimeIds": 2807,
+    "capabilities": 110,
+    "cases": 503,
+    "associations": 2953,
+    "referencedJavaRuntimeIds": 2811,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1329,
-    "representativeScenarioTotal": 92,
-    "representativeScenarioPassing": 92,
-    "quality": {
-      "race": "pending",
-      "docker": "passed",
-      "stress": "passed",
-      "performance": "pending"
+    "unreferencedJavaRuntimeIds": 1325,
+    "differentialVerifiedCases": 101,
+    "differentialVerifiedRuntimeIds": 283,
+    "capabilityVerificationCounts": {
+      "inventoried": 110,
+      "implemented": 109,
+      "differential-verified": 12,
+      "representative-verified": 11,
+      "intentionally-different": 7
     }
   }
 }

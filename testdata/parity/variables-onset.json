@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "name": "variables-onset",
+  "javaRuntimeIds": [
+    "java-runtime-2735f44aed732350be1b",
+    "java-runtime-60c4c5dc59ffbf4277b3",
+    "java-runtime-91f1de1b06fddf87b2b1",
+    "java-runtime-1588aa4d361615645c7e"
+  ],
+  "javaNames": [
+    "EPLVariableOnSetCompile",
+    "EPLVariableOnSetObjectModel",
+    "EPLVariableOnSetSimpleSceneTwo",
+    "EPLVariableOnSetSubquery"
+  ],
+  "cases": [
+    {
+      "name": "typed-select",
+      "runtimeIds": [
+        "java-runtime-2735f44aed732350be1b",
+        "java-runtime-60c4c5dc59ffbf4277b3"
+      ],
+      "steps": [
+        {"op": "send", "type": "SupportBean_A", "id": "E1"},
+        {"op": "send", "type": "SupportBean", "theString": "S1", "intPrimitive": 3, "intBoxed": 4},
+        {"op": "send", "type": "SupportBean_A", "id": "E2"}
+      ]
+    },
+    {
+      "name": "scene-two",
+      "runtimeIds": ["java-runtime-91f1de1b06fddf87b2b1"],
+      "steps": [
+        {"op": "send", "type": "SupportMarketDataBean", "symbol": "E1"},
+        {"op": "send", "type": "SupportBean", "theString": "", "intPrimitive": 20},
+        {"op": "send", "type": "SupportMarketDataBean", "symbol": "E2"},
+        {"op": "send", "type": "SupportBean", "theString": "", "intPrimitive": 1000},
+        {"op": "send", "type": "SupportMarketDataBean", "symbol": "E3"}
+      ]
+    },
+    {
+      "name": "subquery",
+      "runtimeIds": ["java-runtime-1588aa4d361615645c7e"],
+      "steps": [
+        {"op": "send", "type": "SupportBean_S0", "id": 1},
+        {"op": "send", "type": "SupportBean_S1", "id": 0, "p10": "x", "p11": "y"},
+        {"op": "send", "type": "SupportBean_S0", "id": 1, "p00": "1", "p01": "2"}
+      ]
+    }
+  ]
+}

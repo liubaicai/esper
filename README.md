@@ -22,10 +22,10 @@ Esper Go 是 Esper 9.0.0 的 Go 移植。规则使用可分析、类型安全的
 | 维度 | 数值 |
 | --- | --- |
 | Java runtime inventory | 4,136 |
-| 已关联 runtime | 2,807（67.9%） |
-| Differential-verified runtime | 253 |
-| Capability / case | 110 / 502 |
-| Differential-verified case | 100 |
+| 已关联 runtime | 2,811（68.0%） |
+| Differential-verified runtime | 283 |
+| Capability / case | 110 / 503 |
+| Differential-verified case | 101 |
 
 Runtime 关联率只表示已有处置记录，不是 Java/Go parity 通过率。只有带可重放 scenario、Java/Go trace 和零差异 evidence 的 runtime 才计入 differential-verified。
 
