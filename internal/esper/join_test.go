@@ -814,13 +814,12 @@ func TestLeftOuterJoinTransitionsFromUnmatchedToMatched(t *testing.T) {
 	if err := engine.Send(context.Background(), "Payment", joinPayment{OrderID: "O-2", Amount: 3}); err != nil {
 		t.Fatal(err)
 	}
-	if len(batches) != 2 || len(batches[1].Old) != 1 || len(batches[1].New) != 1 {
+	if len(batches) != 2 || len(batches[1].Old) != 0 || len(batches[1].New) != 1 {
 		t.Fatalf("outer transition = %#v", batches)
 	}
-	oldRow, _ := batches[1].Old[0].Row()
 	newRow, _ := batches[1].New[0].Row()
-	if !oldRow.Get("amount").IsNull() || newRow.Get("amount").Any() != float64(3) {
-		t.Fatalf("outer old/new rows = %#v / %#v", oldRow.AsMap(), newRow.AsMap())
+	if newRow.Get("amount").Any() != float64(3) {
+		t.Fatalf("outer new row = %#v", newRow.AsMap())
 	}
 }
 
@@ -904,11 +903,10 @@ func TestJoinWhereFiltersPostJoinOuterRowsAndOldNewTransitions(t *testing.T) {
 	if err := engine.Send(context.Background(), "JoinWherePayment", joinPayment{OrderID: "O1", Amount: 3}); err != nil {
 		t.Fatal(err)
 	}
-	oldRow, oldOK := Row{}, false
-	if len(batches) == 2 && len(batches[1].Old) == 1 {
-		oldRow, oldOK = batches[1].Old[0].Row()
-	}
-	if !oldOK || len(batches[1].New) != 0 || !oldRow.Get("amount").IsNull() {
+	// The matched transition (O1, 3) fails the where clause (amount must be
+	// null), and the unmatched intermediate row is not a removal in Java's
+	// outer join, so the transition produces no output at all.
+	if len(batches) != 1 {
 		t.Fatalf("post-join where outer transition = %#v", batches)
 	}
 }
@@ -1222,7 +1220,7 @@ func TestMultiJoinLeftOuterEmitsUnmatchedAndMatchedTransitions(t *testing.T) {
 	if err := engine.Send(context.Background(), "Shipment", joinShipment{OrderID: "O-5", Carrier: "go"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(batches) != 2 || len(batches[1].Old) != 1 || len(batches[1].New) != 1 {
+	if len(batches) != 2 || len(batches[1].Old) != 0 || len(batches[1].New) != 1 {
 		t.Fatalf("matched three-way transition = %#v", batches)
 	}
 	newRow, ok := batches[1].New[0].Row()
@@ -1293,7 +1291,7 @@ func TestMultiJoinFullOuterEmitsUnmatchedEverySource(t *testing.T) {
 		t.Fatalf("right full-outer row = %#v", row.AsMap())
 	}
 	send("FullOuterOrder", joinOrder{OrderID: "F-1"})
-	if len(batches) != 3 || len(batches[2].Old) != 2 || len(batches[2].New) != 1 {
+	if len(batches) != 3 || len(batches[2].Old) != 0 || len(batches[2].New) != 1 {
 		t.Fatalf("full-outer completion transition = %#v", batches)
 	}
 	row, ok = batches[2].New[0].Row()

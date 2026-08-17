@@ -299,12 +299,11 @@ func TestContextJoinWhereKeepsOuterNullFilteringPartitionLocal(t *testing.T) {
 		t.Fatalf("context Join Where second row = %#v", batches[1].New[0])
 	}
 	send("ContextJoinWherePayment", joinPayment{OrderID: "O1", Amount: 3})
-	if len(batches) != 3 || len(batches[2].Old) != 1 || len(batches[2].New) != 0 {
+	// The matched transition fails the where clause (amount must be null) and
+	// the unmatched intermediate row is not a removal in Java's outer join,
+	// so the transition produces no output.
+	if len(batches) != 2 {
 		t.Fatalf("context Join Where filtered transition = %#v", batches)
-	}
-	old, ok := batches[2].Old[0].Row()
-	if !ok || old.Get("orderID").Any() != "O1" || !old.Get("amount").IsNull() {
-		t.Fatalf("context Join Where old row = %#v", batches[2].Old[0])
 	}
 	if deployment.Statements()[0].ContextPartitionCount() != 2 {
 		t.Fatalf("context Join Where partitions = %d", deployment.Statements()[0].ContextPartitionCount())

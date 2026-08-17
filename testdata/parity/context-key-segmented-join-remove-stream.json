@@ -1,0 +1,110 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-join-remove-stream",
+ "steps": [
+  {
+   "op": "case",
+   "case": "join-remove-stream"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "Start",
+    "sessionId": "0"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "Middle",
+    "sessionId": "0"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "End",
+    "sessionId": "0"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "Start",
+    "sessionId": "1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "Middle",
+    "sessionId": "1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "End",
+    "sessionId": "1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "Start",
+    "sessionId": "2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "Middle",
+    "sessionId": "2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "End",
+    "sessionId": "2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "Start",
+    "sessionId": "3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportWebEvent",
+   "payload": {
+    "pageName": "End",
+    "sessionId": "3"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:30Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:01:00Z"
+  }
+ ]
+}

@@ -10022,3 +10022,129 @@ func TestRunContextKeySegmentedJoinWhereClauseOnPartitionKeyDiffRejectsTraceMuta
 		})
 	}
 }
+
+func TestRunContextKeySegmentedJoinRemoveStreamDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-join-remove-stream.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-join-remove-stream.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-join-remove-stream.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-join-remove-stream-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedJoinRemoveStreamDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "missing-removal",
+			mutate: func(trace *compat.Trace) {
+				// The expiry of session 3's Start must emit the removal; a
+				// window-expiry bug would drop it.
+				indices := recordIndicesOfCase(trace, "join-remove-stream")
+				trace.Records = trace.Records[:indices[0]]
+			},
+		},
+		{
+			name: "complete-session-leak",
+			mutate: func(trace *compat.Trace) {
+				// Complete sessions (Start+Middle+End) produce no removal;
+				// an outer-join bug would emit their expiry.
+				indices := recordIndicesOfCase(trace, "join-remove-stream")
+				record := trace.Records[indices[0]]
+				record.Sequence++
+				record.New = append(record.New, compat.ResultRecord{Kind: "row", Fields: map[string]any{
+					"pageNameA": "Start", "sessionIdA": "0", "pageNameB": map[string]any{"state": "null"}, "pageNameC": "End",
+				}})
+				trace.Records = append(trace.Records, record)
+			},
+		},
+		{
+			name: "insert-replacement-leak",
+			mutate: func(trace *compat.Trace) {
+				// Java's outer join emits no removal when an intermediate
+				// null-padded row is replaced; an insert-phase record
+				// would be a leak.
+				indices := recordIndicesOfCase(trace, "join-remove-stream")
+				record := trace.Records[indices[0]]
+				record.Sequence++
+				record.New = append(record.New, compat.ResultRecord{Kind: "row", Fields: map[string]any{
+					"pageNameA": "Start", "sessionIdA": "0", "pageNameB": map[string]any{"state": "null"}, "pageNameC": map[string]any{"state": "null"},
+				}})
+				trace.Records = append(trace.Records, record)
+			},
+		},
+		{
+			name: "wrong-partner",
+			mutate: func(trace *compat.Trace) {
+				// The removal carries End as the C side; a wrong window
+				// would show Middle.
+				indices := recordIndicesOfCase(trace, "join-remove-stream")
+				trace.Records[indices[0]].New[0].Fields["pageNameC"] = "Middle"
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "other"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-join-remove-stream.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-join-remove-stream.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-join-remove-stream.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-join-remove-stream-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

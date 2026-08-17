@@ -10488,6 +10488,24 @@ func joinSourceIsEventDriven(base *streamNode) bool {
 	}
 }
 
+// outerJoinDefinition reports whether a join definition has any outer
+// semantics, either through its top-level kind (two-stream joins) or through
+// any chained edge (multi-stream chained joins carry per-edge kinds).
+func outerJoinDefinition(definition *joinDefinition) bool {
+	if definition == nil {
+		return false
+	}
+	if definition.kind == JoinLeftOuter || definition.kind == JoinRightOuter || definition.kind == JoinFullOuter {
+		return true
+	}
+	for _, edge := range definition.edges {
+		if edge.kind == JoinLeftOuter || edge.kind == JoinRightOuter || edge.kind == JoinFullOuter {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *statementRuntime) insertJoin(definition *joinDefinition, event Event, now time.Time) (joinDelta, error) {
 	return r.updateJoin(definition, now, []Event{event}, nil)
 }
@@ -10700,6 +10718,14 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	}
 	after := joinKeyedTuples(definition, r.joinState, now, r)
 	delta := diffJoinKeyedTuples(before, after)
+	if len(newEvents) > 0 && len(oldEvents) == 0 && outerJoinDefinition(definition) {
+		// Esper's outer-join output emits only the new tuple when a
+		// null-padded intermediate row is replaced by a matching row: the
+		// intermediate tuple is not a removal, so an rstream listener never
+		// sees it and the remove stream stays empty on inserts. Immediate
+		// window evictions below still report their real removals.
+		delta.oldTuples = nil
+	}
 	for _, events := range immediatelyEvictedBySide {
 		for _, ev := range events {
 			for _, tuple := range delta.newTuples {

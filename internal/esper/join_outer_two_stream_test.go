@@ -158,7 +158,7 @@ func TestTwoStreamOuterJoinVariantsMatchesEsper(t *testing.T) {
 					t.Fatalf("left outer right-only event emitted = %#v", batches)
 				}
 				sendPayment("A")
-				row = assertBatch(1, 1, 1)
+				row = assertBatch(1, 0, 1)
 				if row.Get("leftKey").Any() != "A" || row.Get("rightAmount").Any() != float64(1) {
 					t.Fatalf("left outer matched row = %#v", row.AsMap())
 				}
@@ -173,7 +173,7 @@ func TestTwoStreamOuterJoinVariantsMatchesEsper(t *testing.T) {
 					t.Fatalf("right outer left-only event emitted = %#v", batches)
 				}
 				sendOrder("A")
-				row = assertBatch(1, 1, 1)
+				row = assertBatch(1, 0, 1)
 				if row.Get("leftKey").Any() != "A" || row.Get("rightAmount").Any() != float64(1) {
 					t.Fatalf("right outer matched row = %#v", row.AsMap())
 				}
@@ -189,7 +189,7 @@ func TestTwoStreamOuterJoinVariantsMatchesEsper(t *testing.T) {
 					t.Fatalf("full outer right-only row = %#v", row.AsMap())
 				}
 				sendPayment("A")
-				row = assertBatch(2, 1, 1)
+				row = assertBatch(2, 0, 1)
 				if row.Get("leftKey").Any() != "A" || row.Get("rightAmount").Any() != float64(1) {
 					t.Fatalf("full outer matched row = %#v", row.AsMap())
 				}
@@ -255,7 +255,7 @@ func TestTwoStreamOuterCompositeAndCoercionMatchesEsper(t *testing.T) {
 		t.Fatalf("non-matching composite right changed output = %#v", batches)
 	}
 	sendRight(joinOuterCompositeRight{ID: 3, P10: "A_1", P11: "B_1", IntPrimitive: 20, DoublePrimitive: 10})
-	if len(batches) != 2 || len(batches[1].Old) != 1 || len(batches[1].New) != 1 {
+	if len(batches) != 2 || len(batches[1].Old) != 0 || len(batches[1].New) != 1 {
 		t.Fatalf("composite/coercion transition = %#v", batches)
 	}
 	row := joinOuterRow(t, batches[1].New[0])
@@ -380,11 +380,11 @@ func TestTwoStreamOuterRangeAndArrayMatchesEsper(t *testing.T) {
 		sendLeft("IA1", []int{1, 2})
 		sendRight("MA1", []int{3, 4})
 		sendRight("MA2", []int{1, 2})
-		if len(batches) != 3 || len(batches[2].Old) != 1 || joinOuterRow(t, batches[2].New[0]).Get("rightID").Any() != "MA2" {
+		if len(batches) != 3 || len(batches[2].Old) != 0 || joinOuterRow(t, batches[2].New[0]).Get("rightID").Any() != "MA2" {
 			t.Fatalf("array full outer first match = %#v", batches)
 		}
 		sendLeft("IA3", []int{3, 4})
-		if len(batches) != 4 || len(batches[3].Old) != 1 || joinOuterRow(t, batches[3].New[0]).Get("leftID").Any() != "IA3" || joinOuterRow(t, batches[3].New[0]).Get("rightID").Any() != "MA1" {
+		if len(batches) != 4 || len(batches[3].Old) != 0 || joinOuterRow(t, batches[3].New[0]).Get("leftID").Any() != "IA3" || joinOuterRow(t, batches[3].New[0]).Get("rightID").Any() != "MA1" {
 			t.Fatalf("array full outer second match = %#v", batches)
 		}
 	})
