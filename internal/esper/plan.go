@@ -1327,9 +1327,21 @@ func (e *Environment) validateRoute(query Query) error {
 			}
 			return fmt.Errorf("route projection %q is not a field of target schema %q", selection.Name, target.Name())
 		}
-		if field.Type != nil && field.Type != typeOf[any]() && selection.Expr.Type() != nil &&
-			!field.Type.AssignableTo(selection.Expr.Type()) && !selection.Expr.Type().AssignableTo(field.Type) && !numericTypes(field.Type, selection.Expr.Type()) {
-			return fmt.Errorf("route projection %q has type %s, target expects %s", selection.Name, selection.Expr.Type(), field.Type)
+		// The runtime route assignment dereferences pointer fields and boxes
+		// values into them, so the shared field/expression compatibility rule
+		// applies here rather than bare assignability. A pointer-typed
+		// expression (nullable boxed value) routes into a value field as the
+		// dereferenced value with null producing the field zero value, so the
+		// expression element type is also tested.
+		exprType := selection.Expr.Type()
+		if exprType != nil && exprType.Kind() == reflect.Pointer {
+			elem := exprType.Elem()
+			if fieldExpressionTypesCompatible(field.Type, elem) || field.Type == elem {
+				continue
+			}
+		}
+		if !fieldExpressionTypesCompatible(field.Type, exprType) {
+			return fmt.Errorf("route projection %q has type %s, target expects %s", selection.Name, exprType, field.Type)
 		}
 	}
 	return nil

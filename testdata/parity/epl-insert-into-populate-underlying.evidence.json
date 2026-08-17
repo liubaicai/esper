@@ -1,0 +1,81 @@
+{
+ "scenarioId": "epl-insert-into-populate-underlying",
+ "javaOracleCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSourceFile": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateUnderlying.java",
+ "javaRuntimeIds": [
+  "java-runtime-fb0797f4b2c67cbcbcfe",
+  "java-runtime-8b69defe88bb5d9753c1",
+  "java-runtime-d64fffb49d0b5ce85aa3",
+  "java-runtime-1ee35de773565ac40475"
+ ],
+ "goTests": [
+  "TestEPLInsertIntoPopulateBeanSimpleSelectNamesParity",
+  "TestEPLInsertIntoPopulateBeanSimpleInsertNamesParity",
+  "TestEPLInsertIntoPopulateBeanSimpleBoxedConversionParity",
+  "TestEPLInsertIntoBeanWildcardParity",
+  "TestEPLInsertIntoPopulateBeanObjectsArraysMapsParity",
+  "TestEPLInsertIntoPopulateBeanObjectsNestedParity",
+  "TestEPLInsertIntoPopulateBeanObjectsNullValueParity",
+  "TestEPLInsertIntoPopulateUnderlyingMapParity",
+  "TestEPLInsertIntoPopulateUnderlyingObjectArrayParity",
+  "TestEPLInsertIntoPopulateUnderlyingAvroParity"
+ ],
+ "javaTraceFile": "testdata/parity/epl-insert-into-populate-underlying.trace.json",
+ "javaTraceRecordCount": 11,
+ "caseMatchSummary": {
+  "populate-bean-simple-select-names": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "populate-bean-simple-insert-names": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "populate-bean-simple-boxed-conversion": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "bean-wildcard": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "populate-bean-objects-arrays-maps": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "populate-bean-objects-nested": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "populate-bean-objects-null-value": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "populate-underlying-map": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "populate-underlying-objectarray": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "populate-underlying-avro": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  }
+ },
+ "differences": 0,
+ "mutationTested": false,
+ "verification": "differential-verified",
+ "notes": "All 10 cases match between Java oracle trace (11 listener records) and Go test assertions. Field-level values confirmed: 12-column simple projections (theString/intPrimitive/intBoxed/longPrimitive/longBoxed/boolPrimitive/charPrimitive/bytePrimitive/floatPrimitive/doublePrimitive/shortPrimitive/enumValue), wildcard 4-property map copy (boolPrimitive included via declared MySupportMap property), boxed Integer->Long/Float->Double conversion, arrays/maps/nested-bean population, null-value primitive default sequence (0 then 20), and map/ObjectArray/Avro provided-underlying routing (intVal=1000, stringVal=E1, doubleVal=1001). Java oracle registers the real SupportBean/SupportBeanComplexProps bean classes from the fixed esper-common classpath, so trace values reflect the original bean assertions exactly. Go struct targets represent unprojected non-pointer properties as Go zero values (struct-vs-map representation, matching Java bean primitive defaults); nullable pointer properties arrive as null as in the Java trace."
+}

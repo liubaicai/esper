@@ -1,0 +1,142 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-insert-into-populate-underlying",
+ "steps": [
+  {
+   "op": "case",
+   "case": "populate-bean-simple-select-names"
+  },
+  {
+   "op": "send",
+   "eventType": "MyMap",
+   "payload": {}
+  },
+  {
+   "op": "case",
+   "case": "populate-bean-simple-insert-names"
+  },
+  {
+   "op": "send",
+   "eventType": "MyMap",
+   "payload": {}
+  },
+  {
+   "op": "case",
+   "case": "populate-bean-simple-boxed-conversion"
+  },
+  {
+   "op": "send",
+   "eventType": "MyMap",
+   "payload": {
+    "intBoxed": 4,
+    "floatBoxed": 0.0
+   }
+  },
+  {
+   "op": "case",
+   "case": "bean-wildcard"
+  },
+  {
+   "op": "send",
+   "eventType": "MySupportMap",
+   "payload": {
+    "intPrimitive": 4,
+    "longBoxed": 100,
+    "theString": "E1",
+    "boolPrimitive": true
+   }
+  },
+  {
+   "op": "case",
+   "case": "populate-bean-objects-arrays-maps"
+  },
+  {
+   "op": "send",
+   "eventType": "MyMap",
+   "payload": {
+    "intArr": [
+     -1,
+     -2
+    ],
+    "mapProp": {
+     "mykey": "myval"
+    }
+   }
+  },
+  {
+   "op": "case",
+   "case": "populate-bean-objects-nested"
+  },
+  {
+   "op": "send",
+   "eventType": "MyMap",
+   "payload": {
+    "nested": {
+     "nestedValue": "111",
+     "nestedNestedValue": "222"
+    }
+   }
+  },
+  {
+   "op": "case",
+   "case": "populate-bean-objects-null-value"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 0,
+    "intBoxed": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 1,
+    "intBoxed": 20
+   }
+  },
+  {
+   "op": "case",
+   "case": "populate-underlying-avro"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1000,
+    "doubleBoxed": 1001.0
+   }
+  },
+  {
+   "op": "case",
+   "case": "populate-underlying-map"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1000,
+    "doubleBoxed": 1001.0
+   }
+  },
+  {
+   "op": "case",
+   "case": "populate-underlying-objectarray"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1000,
+    "doubleBoxed": 1001.0
+   }
+  }
+ ]
+}

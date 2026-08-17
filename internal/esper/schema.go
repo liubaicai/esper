@@ -3221,6 +3221,20 @@ func assignReflectValue(target reflect.Type, update any) (reflect.Value, error) 
 	if value.Type().AssignableTo(target) {
 		return value, nil
 	}
+	// A non-nil pointer value assigning into a value-typed target carries
+	// the boxed element, matching Esper unboxing on assignment (a nil boxed
+	// value becomes the target zero value).
+	if value.Kind() == reflect.Pointer {
+		if value.IsNil() {
+			return reflect.Zero(target), nil
+		}
+		if value.Elem().Type().AssignableTo(target) {
+			return value.Elem(), nil
+		}
+		if value.Elem().Type().ConvertibleTo(target) && numericTypes(value.Elem().Type(), target) {
+			return value.Elem().Convert(target), nil
+		}
+	}
 	if value.Type().ConvertibleTo(target) && numericTypes(value.Type(), target) {
 		return value.Convert(target), nil
 	}

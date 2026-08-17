@@ -4535,7 +4535,7 @@ func projectMapToSchema(target Schema, values map[string]any) (any, error) {
 		if value, ok := values[field.Name]; ok {
 			if field.Type != nil && field.Type != typeOf[any]() && value != nil {
 				valueType := reflect.TypeOf(value)
-				if valueType != nil && !valueType.AssignableTo(field.Type) && numericTypes(field.Type, valueType) {
+				if valueType != nil && !valueType.AssignableTo(field.Type) {
 					if converted, err := assignReflectValue(field.Type, value); err == nil {
 						value = converted.Interface()
 					}
