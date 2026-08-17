@@ -1,0 +1,36 @@
+{
+  "version": "esper-parity/v1",
+  "id": "variables-use",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "java": "17.0.19",
+  "scenario": "testdata/parity/variables-use.json",
+  "trace": "testdata/parity/variables-use.trace.json",
+  "javaRuntimeIds": [
+    "java-runtime-5a38cfa84dadd7dd6f61",
+    "java-runtime-849ebec4996c28823d57",
+    "java-runtime-5a91cdbc149502c6fb7a"
+  ],
+  "goTests": [
+    "TestEPLVariableUseVariableInFilterParity",
+    "TestEPLVariableUseVariableInFilterBooleanParity",
+    "TestEPLVariableUseSimpleSameModuleParity"
+  ],
+  "differences": 0,
+  "caseMatchSummary": {
+    "simple-same-module": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    },
+    "variable-in-filter": {
+      "expected": 2,
+      "actual": 2,
+      "match": true
+    },
+    "variable-in-filter-boolean": {
+      "expected": 4,
+      "actual": 4,
+      "match": true
+    }
+  }
+}

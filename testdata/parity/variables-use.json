@@ -1,0 +1,37 @@
+{
+  "id": "variables-use",
+  "description": "EPLVariablesUse variable-in-filter scenarios: VariableInFilter, VariableInFilterBoolean, SimpleSameModule",
+  "javaRuntimes": [
+    "EPLVariableUseVariableInFilter",
+    "EPLVariableUseVariableInFilterBoolean",
+    "EPLVariableUseSimpleSameModule"
+  ],
+  "cases": [
+    {"case": "variable-in-filter"},
+    {"case": "variable-in-filter-boolean"},
+    {"case": "simple-same-module"}
+  ],
+  "steps": [
+    {"op": "case", "case": "variable-in-filter"},
+    {"op": "send", "type": "SupportBean", "theString": "", "intPrimitive": 1},
+    {"op": "send", "type": "SupportBean_S0", "id": 100, "p00": "a", "p01": "b"},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 3},
+    {"op": "send", "type": "SupportBean_S0", "id": 100, "p00": "e", "p01": "c"},
+    {"op": "send", "type": "SupportBean", "theString": "e", "intPrimitive": 6},
+    {"op": "send", "type": "SupportBean", "theString": "c", "intPrimitive": 5},
+
+    {"op": "case", "case": "variable-in-filter-boolean"},
+    {"op": "send", "type": "SupportBean", "theString": "x", "intPrimitive": 1},
+    {"op": "send", "type": "SupportBean_S0", "id": 100, "p00": "a", "p01": "b"},
+    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
+    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 3},
+    {"op": "send", "type": "SupportBean", "theString": "c", "intPrimitive": 4},
+    {"op": "send", "type": "SupportBean_S0", "id": 100, "p00": "e", "p01": "c"},
+    {"op": "send", "type": "SupportBean", "theString": "c", "intPrimitive": 5},
+    {"op": "send", "type": "SupportBean", "theString": "e", "intPrimitive": 6},
+
+    {"op": "case", "case": "simple-same-module"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0}
+  ]
+}

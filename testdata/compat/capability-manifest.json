@@ -30661,6 +30661,49 @@
         "java-runtime-4a8e3f2dc067ae2b7602",
         "java-runtime-f7193a89174e1e9c9ca0"
       ]
+    },
+    {
+      "id": "case.variables-use",
+      "javaRuntimeIds": [
+        "java-runtime-5a38cfa84dadd7dd6f61",
+        "java-runtime-849ebec4996c28823d57",
+        "java-runtime-5a91cdbc149502c6fb7a"
+      ],
+      "javaNames": [
+        "EPLVariableUseVariableInFilter",
+        "EPLVariableUseVariableInFilterBoolean",
+        "EPLVariableUseSimpleSameModule"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesUse.java"
+      ],
+      "goTests": [
+        "TestEPLVariableUseVariableInFilterParity",
+        "TestEPLVariableUseVariableInFilterBooleanParity",
+        "TestEPLVariableUseSimpleSameModuleParity"
+      ],
+      "tags": [],
+      "status": "differential-verified",
+      "evidence": [
+        "testdata/parity/variables-use.json",
+        "testdata/parity/variables-use.trace.json",
+        "testdata/parity/variables-use.evidence.json",
+        "tools/java-oracle/EPLVariablesUseScenarioOracle.java",
+        "tools/java-oracle/run-variables-use.sh",
+        "java-oracle-trace",
+        "go-unit"
+      ],
+      "difference": null,
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-5a38cfa84dadd7dd6f61",
+        "java-runtime-849ebec4996c28823d57",
+        "java-runtime-5a91cdbc149502c6fb7a"
+      ]
     }
   ],
   "mappings": [
@@ -32991,15 +33034,19 @@
     {
       "capabilityId": "eplother.stream-selector",
       "caseId": "case.stream-selector"
+    },
+    {
+      "capabilityId": "epl.variable-onset",
+      "caseId": "case.variables-use"
     }
   ],
   "summary": {
-    "totalCases": 499,
+    "totalCases": 500,
     "totalCapabilities": 110,
-    "inventoriedCases": 499,
-    "implementedCases": 499,
-    "differentialVerifiedCases": 97,
-    "differentialVerifiedRuntimeIds": 240,
+    "inventoriedCases": 500,
+    "implementedCases": 500,
+    "differentialVerifiedCases": 98,
+    "differentialVerifiedRuntimeIds": 243,
     "intentionallyDifferentCases": 18,
     "representativeVerifiedCases": 92,
     "nfrVerifiedCases": 0,
@@ -33009,10 +33056,10 @@
     "intentionallyDifferentCapabilities": 7,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2936,
-    "referencedJavaRuntimeIds": 2794,
+    "runtimeAssociationCount": 2939,
+    "referencedJavaRuntimeIds": 2797,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1342,
+    "unreferencedJavaRuntimeIds": 1339,
     "representativeScenarioTotal": 0,
     "representativeScenarioPassing": 0,
     "quality": {}
