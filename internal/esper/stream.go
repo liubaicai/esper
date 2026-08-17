@@ -758,6 +758,7 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		statementPrioritySet:       spec.statementPrioritySet,
 		statementDrop:              spec.statementDrop,
 		subscriberDisallowed:       spec.subscriberDisallowed,
+		eventPrecedence:            spec.eventPrecedence,
 	}
 }
 
@@ -1554,6 +1555,7 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 		statementPrioritySet:       spec.statementPrioritySet,
 		statementDrop:              spec.statementDrop,
 		subscriberDisallowed:       spec.subscriberDisallowed,
+		eventPrecedence:            spec.eventPrecedence,
 	}
 }
 
@@ -2816,6 +2818,7 @@ type querySpec struct {
 	updatePriority             int
 	updatePrioritySet          bool
 	updateDrop                 bool
+	eventPrecedence            Expr
 }
 
 // QueryOption configures statement metadata and output policy. Options are
@@ -2960,6 +2963,14 @@ func RouteTo(eventType string) QueryOption {
 	return func(spec *querySpec) { spec.routeTarget = strings.TrimSpace(eventType) }
 }
 
+// EventPrecedence attaches an integer-valued expression to an insert-into
+// route. Higher precedence values are processed before lower values; events
+// with equal precedence maintain FIFO order within the same route cycle.
+// This mirrors Esper's event-precedence clause for insert-into ordering.
+func EventPrecedence(precedence Expr) QueryOption {
+	return func(spec *querySpec) { spec.eventPrecedence = precedence }
+}
+
 // IntoTable configures an aggregate query to maintain a registered table as
 // its materialized current state. It is the fluent-API equivalent of an
 // Esper into-table declaration; the table is synchronized even when the
@@ -3013,7 +3024,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -3071,6 +3082,7 @@ type Query struct {
 	statementPrioritySet       bool
 	statementDrop              bool
 	subscriberDisallowed       bool
+	eventPrecedence            Expr
 }
 
 func (q Query) Name() string   { return q.name }

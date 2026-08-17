@@ -1,0 +1,45 @@
+{
+  "scenarioId": "insertinto-event-precedence",
+  "javaOracleCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSourceFile": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoEventPrecedence.java",
+  "javaRuntimeIds": [
+    "java-runtime-b06231c928bc854b7b09",
+    "java-runtime-a9064a1af26ef450b58f",
+    "java-runtime-83ed465ce8a8ff29e1a0",
+    "java-runtime-d96c25e6af1350fca5db"
+  ],
+  "goTests": [
+    "TestEPLInsertIntoEventPrecConstantInsertIntoParity",
+    "TestEPLInsertIntoEventPrecConstantInfraMergeInsertIntoTableParity",
+    "TestEPLInsertIntoEventPrecConstantInfraMergeInsertIntoWindowParity",
+    "TestEPLInsertIntoEventPrecConstantOnSplitParity"
+  ],
+  "javaTraceFile": "testdata/parity/insertinto-event-precedence.trace.json",
+  "javaTraceRecordCount": 21,
+  "caseMatchSummary": {
+    "constant-insertinto": {
+      "expected": 6,
+      "actual": 6,
+      "match": true
+    },
+    "constant-merge-table": {
+      "expected": 3,
+      "actual": 3,
+      "match": true
+    },
+    "constant-merge-window": {
+      "expected": 3,
+      "actual": 3,
+      "match": true
+    },
+    "constant-on-split": {
+      "expected": 3,
+      "actual": 3,
+      "match": true
+    }
+  },
+  "differences": 0,
+  "mutationTested": false,
+  "verification": "differential-verified",
+  "notes": "All 4 cases match between Java oracle trace and Go test assertions. constant-insertinto: consumer receives events in precedence order (5,4,3,2,1,0); window iteration order also follows precedence order (5,4,3,2,1,0) \u2014 verified by Java oracle only (Go implementation does not support inserting into a named window from a regular select statement). constant-merge-table: insert-into actions execute in precedence order (c,a,b). constant-merge-window: insert-into actions execute in precedence order (c,a,b). constant-on-split: split-stream branches execute in precedence order (3,2,1). Go implementation: (1) regular insert-into routes events with precedence via EventPrecedence option; (2) merge-into table/window routes insert-into actions with precedence via ThenInsertIntoWithPrecedence; (3) split-stream routes branches with precedence via SplitIntoWithPrecedence/SplitIntoWhenWithPrecedence."
+}

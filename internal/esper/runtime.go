@@ -344,7 +344,7 @@ type Engine struct {
 	savedDataflowInstances             map[string]*DataflowInstance
 	pendingStatementDispatches         []statementDispatch
 	pendingNamedWindowDispatches       []namedWindowDispatch
-	pendingRoutedEvents                []Event
+	pendingRoutedEvents                []routedEvent
 	closed                             bool
 	nextID                             uint64
 	inboundPool                        *asyncTaskPool
@@ -3659,7 +3659,9 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		}
 		dispatches = append(dispatches, e.pendingStatementDispatches...)
 		e.pendingStatementDispatches = nil
-		routedQueue = append(routedQueue, e.pendingRoutedEvents...)
+		for _, re := range e.pendingRoutedEvents {
+			routedQueue = append(routedQueue, re.event)
+		}
 		e.pendingRoutedEvents = nil
 		if !matched {
 			unmatchedEvents = append(unmatchedEvents, current)
@@ -4295,6 +4297,15 @@ type namedWindowDispatch struct {
 	delta  NamedWindowDelta
 }
 
+// routedEvent pairs a routed insert-into event with its event-precedence
+// value. Higher precedence values are processed first; events with equal
+// precedence maintain FIFO order within the same route cycle.
+type routedEvent struct {
+	event      Event
+	precedence int
+	hasPrec    bool
+}
+
 // queueNamedWindowDeltaLocked applies a state mutation to all statements that
 // consume named windows while the engine's event transaction is still under
 // its lock. Listener delivery is deferred until the caller releases the lock,
@@ -4335,21 +4346,96 @@ func (e *Engine) queueStatementRoutesLocked(statement *Statement, batch ResultBa
 		return nil
 	}
 	results := routeResults(statement.plan.query.selector, batch)
+	precedenceExpr := statement.plan.query.eventPrecedence
 	for _, result := range results {
 		event, err := e.routeResultLocked(statement, result, now)
 		if err != nil {
 			return err
 		}
-		e.pendingRoutedEvents = append(e.pendingRoutedEvents, event)
+		re := routedEvent{event: event}
+		if precedenceExpr != nil {
+			// Evaluate the event-precedence expression against the original
+			// (pre-routing) result row/event, matching Esper's behavior.
+			precVal := evaluatePrecedenceExpr(precedenceExpr, result, e)
+			re.precedence = precVal
+			re.hasPrec = true
+		}
+		e.insertRoutedEventLocked(re)
 	}
 	return nil
+}
+
+// insertRoutedEventLocked inserts a routed event into pendingRoutedEvents in
+// descending precedence order. Events without a precedence expression use
+// precedence 0 (lowest). Within the same precedence, FIFO order is preserved
+// (stable insertion after all equal-precedence items).
+func (e *Engine) insertRoutedEventLocked(re routedEvent) {
+	if !re.hasPrec {
+		// No precedence expression: append at end (FIFO, lowest priority).
+		e.pendingRoutedEvents = append(e.pendingRoutedEvents, re)
+		return
+	}
+	// Binary search for insertion point: insert after all items with
+	// precedence >= re.precedence (descending order, stable for ties).
+	lo, hi := 0, len(e.pendingRoutedEvents)
+	for lo < hi {
+		mid := (lo + hi) / 2
+		if e.pendingRoutedEvents[mid].precedence >= re.precedence {
+			lo = mid + 1
+		} else {
+			hi = mid
+		}
+	}
+	e.pendingRoutedEvents = append(e.pendingRoutedEvents, routedEvent{})
+	copy(e.pendingRoutedEvents[lo+1:], e.pendingRoutedEvents[lo:])
+	e.pendingRoutedEvents[lo] = re
+}
+
+// evaluatePrecedenceExpr evaluates an event-precedence expression against a
+// result row or event. Returns the integer precedence value.
+func evaluatePrecedenceExpr(expr Expr, result Result, engine *Engine) int {
+	if expr == nil {
+		return 0
+	}
+	var evalCtx EvalContext
+	evalCtx.Engine = engine
+	if evt, ok := result.Event(); ok {
+		evalCtx.Event = evt
+	} else if rowEvt, ok := result.RowEvent(); ok {
+		evalCtx.Event = rowEvt
+	}
+	// For constant (literal) expressions, the eval context doesn't matter.
+	// For field references, the source event (or row event) provides scope.
+	val := expr.eval(evalCtx)
+	if val.IsMissing() || val.IsNull() {
+		return 0
+	}
+	switch v := val.Any().(type) {
+	case int:
+		return v
+	case int8:
+		return int(v)
+	case int16:
+		return int(v)
+	case int32:
+		return int(v)
+	case int64:
+		return int(v)
+	case float64:
+		return int(v)
+	default:
+		return 0
+	}
 }
 
 func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.Time, variables map[string]Value, dispatches *[]statementDispatch) error {
 	if e == nil || dispatches == nil {
 		return nil
 	}
-	routedQueue := append([]Event(nil), e.pendingRoutedEvents...)
+	routedQueue := make([]Event, 0, len(e.pendingRoutedEvents))
+	for _, re := range e.pendingRoutedEvents {
+		routedQueue = append(routedQueue, re.event)
+	}
 	e.pendingRoutedEvents = nil
 	processed := 0
 	for len(routedQueue) > 0 {
@@ -4392,7 +4478,9 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		}
 		*dispatches = append(*dispatches, e.pendingStatementDispatches...)
 		e.pendingStatementDispatches = nil
-		routedQueue = append(routedQueue, e.pendingRoutedEvents...)
+		for _, re := range e.pendingRoutedEvents {
+			routedQueue = append(routedQueue, re.event)
+		}
 		e.pendingRoutedEvents = nil
 	}
 	return nil

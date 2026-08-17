@@ -1,0 +1,29 @@
+{
+  "id": "insertinto-event-precedence",
+  "description": "EPLInsertIntoEventPrecedence constant-precedence scenarios: ConstantInsertInto, ConstantInfraMergeInsertInto (table + named window)",
+  "javaRuntimes": [
+    "EPLInsertIntoEventPrecConstantInsertInto",
+    "EPLInsertIntoEventPrecConstantInfraMergeInsertInto(namedWindow=false)",
+    "EPLInsertIntoEventPrecConstantInfraMergeInsertInto(namedWindow=true)",
+    "EPLInsertIntoEventPrecConstantOnSplit"
+  ],
+  "cases": [
+    {"case": "constant-insertinto"},
+    {"case": "constant-merge-table"},
+    {"case": "constant-merge-window"},
+    {"case": "constant-on-split"}
+  ],
+  "steps": [
+    {"op": "case", "case": "constant-insertinto"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+
+    {"op": "case", "case": "constant-merge-table"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+
+    {"op": "case", "case": "constant-merge-window"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+
+    {"op": "case", "case": "constant-on-split"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0}
+  ]
+}

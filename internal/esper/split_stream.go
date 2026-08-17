@@ -15,6 +15,7 @@ type SplitStreamBranch struct {
 	Target     string
 	Condition  Expr
 	Selections []Selection
+	Precedence Expr
 	source     *streamNode
 	env        *Environment
 }
@@ -64,6 +65,23 @@ func SplitIntoWhen(condition Expr, target string, selections ...Selection) Split
 	return branch
 }
 
+// SplitIntoWithPrecedence creates an unconditional split branch with an
+// event-precedence expression. Higher precedence values are processed first;
+// branches without precedence are processed last.
+func SplitIntoWithPrecedence(precedence Expr, target string, selections ...Selection) SplitStreamBranch {
+	branch := SplitInto(target, selections...)
+	branch.Precedence = precedence
+	return branch
+}
+
+// SplitIntoWhenWithPrecedence creates a conditional split branch with an
+// event-precedence expression.
+func SplitIntoWhenWithPrecedence(condition Expr, precedence Expr, target string, selections ...Selection) SplitStreamBranch {
+	branch := SplitIntoWithPrecedence(precedence, target, selections...)
+	branch.Condition = condition
+	return branch
+}
+
 // SplitFirst routes only the first matching branch. If no branch matches, the
 // trigger statement emits the original event. This is Esper split-stream's
 // default/output-first behavior expressed as a typed fluent plan.
@@ -84,6 +102,7 @@ func (s TriggerStream[T]) splitStream(all bool, branches []SplitStreamBranch) Tr
 			Target:     strings.TrimSpace(branch.Target),
 			Condition:  branch.Condition,
 			Selections: append([]Selection(nil), branch.Selections...),
+			Precedence: branch.Precedence,
 			source:     cloneStreamNode(branch.source),
 			env:        branch.env,
 		}
@@ -334,7 +353,12 @@ func (s *Statement) deliverSplitStreamEvent(ctx context.Context, branch SplitStr
 		return NewError(ErrorDependency, "split-stream requires an engine")
 	}
 	if _, ok := s.engine.env.NamedWindow(branch.Target); !ok {
-		s.engine.pendingRoutedEvents = append(s.engine.pendingRoutedEvents, routed)
+		re := routedEvent{event: routed}
+		if branch.Precedence != nil {
+			re.precedence = evaluatePrecedenceExpr(branch.Precedence, resultEvent(routed), s.engine)
+			re.hasPrec = true
+		}
+		s.engine.insertRoutedEventLocked(re)
 		return nil
 	}
 	window, ok := s.engine.ensureNamedWindowLocked(branch.Target)

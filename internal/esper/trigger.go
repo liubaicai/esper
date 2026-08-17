@@ -115,6 +115,9 @@ type TableMergeAction struct {
 	InsertTarget     string
 	InsertSelections []Selection
 	InsertIntoTarget bool
+	// Precedence is an optional integer expression evaluated per routed
+	// merge-insert event. Higher values are processed before lower values.
+	Precedence Expr
 }
 
 // ThenUpdate creates one conditional update action for a matched merge
@@ -145,6 +148,19 @@ func ThenInsertIntoWhen(condition Expr, target string, selections ...Selection) 
 		Condition:        condition,
 		InsertTarget:     strings.TrimSpace(target),
 		InsertSelections: append([]Selection(nil), selections...),
+	}
+}
+
+// ThenInsertIntoWithPrecedence creates an unconditional merge action that
+// routes a named projection into another registered event type with the
+// given event-precedence expression. Higher precedence values are processed
+// before lower values in the route queue.
+func ThenInsertIntoWithPrecedence(precedence Expr, target string, selections ...Selection) TableMergeAction {
+	return TableMergeAction{
+		Condition:        Literal(true),
+		InsertTarget:     strings.TrimSpace(target),
+		InsertSelections: append([]Selection(nil), selections...),
+		Precedence:       precedence,
 	}
 }
 
@@ -1917,7 +1933,21 @@ func queueMergeInsertEvent(engine *Engine, action TableMergeAction, evaluation E
 	if err != nil {
 		return err
 	}
-	engine.pendingRoutedEvents = append(engine.pendingRoutedEvents, event)
+	re := routedEvent{event: event}
+	if action.Precedence != nil {
+		val := action.Precedence.eval(evaluation)
+		if !val.IsMissing() && !val.IsNull() {
+			switch v := val.Any().(type) {
+			case int:
+				re.precedence = v
+				re.hasPrec = true
+			case int64:
+				re.precedence = int(v)
+				re.hasPrec = true
+			}
+		}
+	}
+	engine.insertRoutedEventLocked(re)
 	return nil
 }
 
