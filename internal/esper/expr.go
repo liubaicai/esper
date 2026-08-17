@@ -436,6 +436,16 @@ func Leaving(predicate ...Expression[bool]) Expression[bool] {
 	})
 }
 
+// IStream reports whether the current result is being emitted on the insert
+// stream. It is the inverse of Leaving and the Go-style counterpart of
+// Esper's istream() built-in function: true for insert-stream events and
+// false for remove-stream events.
+func IStream() Expression[bool] {
+	return makeExpr[bool]("istream", "istream()", nil, func(ctx EvalContext) Value {
+		return Present(!ctx.IsLeaving)
+	})
+}
+
 // Field creates an analyzable property expression. The source event type T is
 // a compile-time marker; V is the expected property result type.
 func Field[T, V any](name string) Expression[V] {

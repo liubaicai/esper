@@ -3299,6 +3299,14 @@ func Leaving(predicate ...Expression[bool]) Expression[bool] {
 	return internalengine.Leaving(predicate...)
 }
 
+// IStream reports whether the current result is being emitted on the insert
+// stream. It is the inverse of Leaving and the Go-style counterpart of
+// Esper's istream() built-in function: true for insert-stream events and
+// false for remove-stream events.
+func IStream() Expression[bool] {
+	return internalengine.IStream()
+}
+
 func LengthBatch(size int) LengthBatchWindowSpec {
 	return internalengine.LengthBatch(size)
 }
