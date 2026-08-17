@@ -1,0 +1,67 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-88b756bf18da9ee916b1"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+  ],
+  "javaExecutions": [
+    "ContextKeySegmentedPatternFilter"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-pattern-filter",
+    "steps": [
+      {
+        "op": "case",
+        "case": "pattern-filter"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "F1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "F1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "X1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "X1",
+          "intPrimitive": 0
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-pattern-filter",
+    "records": []
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-pattern-filter",
+    "records": null
+  },
+  "status": "passing",
+  "differences": []
+}

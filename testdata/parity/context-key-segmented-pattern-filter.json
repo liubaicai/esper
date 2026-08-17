@@ -1,0 +1,42 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-key-segmented-pattern-filter",
+ "steps": [
+  {
+   "op": "case",
+   "case": "pattern-filter"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "F1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "F1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "X1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "X1",
+    "intPrimitive": 0
+   }
+  }
+ ]
+}

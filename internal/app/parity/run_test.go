@@ -10148,3 +10148,134 @@ func TestRunContextKeySegmentedJoinRemoveStreamDiffRejectsTraceMutations(t *test
 		})
 	}
 }
+
+func TestRunContextKeySegmentedPatternFilterDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-pattern-filter.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-pattern-filter.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-pattern-filter.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-pattern-filter-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedPatternFilterDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "spurious-match",
+			mutate: func(trace *compat.Trace) {
+				// The pattern can never match within a partition; a bug
+				// that pairs F1 with X1 would emit a record.
+				trace.Records = append(trace.Records, compat.TraceRecord{
+					Case: "pattern-filter", Operation: "listener", Statement: "s0", Sequence: 1,
+					Time: "1970-01-01T00:00:00Z",
+					New: []compat.ResultRecord{{Kind: "row", Fields: map[string]any{
+						"a_theString": "F1", "b_theString": "X1",
+					}}},
+				})
+			},
+		},
+		{
+			name: "cross-partition-match",
+			mutate: func(trace *compat.Trace) {
+				// A cross-partition leak pairing F1 (F1 partition) with
+				// X1 (X1 partition) would emit a record.
+				trace.Records = append(trace.Records, compat.TraceRecord{
+					Case: "pattern-filter", Operation: "listener", Statement: "s0", Sequence: 1,
+					Time: "1970-01-01T00:00:00Z",
+					New: []compat.ResultRecord{{Kind: "row", Fields: map[string]any{
+						"a_theString": "F1", "b_theString": "X1",
+					}}},
+				})
+			},
+		},
+		{
+			name: "loose-predicate",
+			mutate: func(trace *compat.Trace) {
+				// A loosened event2 predicate (any event) would match
+				// F1->F1; that must be detected.
+				trace.Records = append(trace.Records, compat.TraceRecord{
+					Case: "pattern-filter", Operation: "listener", Statement: "s0", Sequence: 1,
+					Time: "1970-01-01T00:00:00Z",
+					New: []compat.ResultRecord{{Kind: "row", Fields: map[string]any{
+						"a_theString": "F1", "b_theString": "F1",
+					}}},
+				})
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				// No-op for an empty trace: append then drop keeps identity;
+				// instead corrupt the case list by adding a bogus record.
+				trace.Records = append(trace.Records, compat.TraceRecord{
+					Case: "pattern-filter", Operation: "listener", Statement: "s0", Sequence: 1,
+					Time: "1970-01-01T00:00:00Z",
+					New:  []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"a_theString": "x"}}},
+				})
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records, compat.TraceRecord{
+					Case: "other", Operation: "listener", Statement: "s0", Sequence: 1,
+					Time: "1970-01-01T00:00:00Z",
+					New:  []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"a_theString": "x"}}},
+				})
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-pattern-filter.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-pattern-filter.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-pattern-filter.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-pattern-filter-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
