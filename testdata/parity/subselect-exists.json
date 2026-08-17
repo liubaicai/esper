@@ -1,0 +1,215 @@
+{
+  "id": "subselect-exists",
+  "description": "EPLSubselectExists EXISTS/NOT EXISTS subquery scenarios: InSelect, SceneOne, Filtered, TwoExistsFiltered, NotExists",
+  "javaRuntimes": [
+    "EPLSubselectExistsInSelect",
+    "EPLSubselectExistsSceneOne",
+    "EPLSubselectExistsFiltered",
+    "EPLSubselectTwoExistsFiltered",
+    "EPLSubselectNotExists"
+  ],
+  "cases": [
+    {
+      "case": "exists-in-select"
+    },
+    {
+      "case": "exists-scene-one"
+    },
+    {
+      "case": "exists-filtered"
+    },
+    {
+      "case": "two-exists-filtered"
+    },
+    {
+      "case": "not-exists"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "exists-in-select"
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": -1
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 2
+    },
+    {
+      "op": "case",
+      "case": "exists-scene-one"
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": -1
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": -2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 3
+    },
+    {
+      "op": "case",
+      "case": "exists-filtered"
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": -1
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": -2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": -2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": 1
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": 2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": 3
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 3
+    },
+    {
+      "op": "case",
+      "case": "two-exists-filtered"
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S2",
+      "id": 3
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 3
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": 3
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 3
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": 1
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": 2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S2",
+      "id": 1
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 1
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 0
+    },
+    {
+      "op": "case",
+      "case": "not-exists"
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": -1
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 1
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S1",
+      "id": -2
+    },
+    {
+      "op": "send",
+      "type": "SupportBean_S0",
+      "id": 3
+    }
+  ]
+}

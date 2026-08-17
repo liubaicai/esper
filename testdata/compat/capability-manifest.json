@@ -30563,6 +30563,57 @@
         "java-runtime-83ed465ce8a8ff29e1a0",
         "java-runtime-d96c25e6af1350fca5db"
       ]
+    },
+    {
+      "id": "case.subselect-exists",
+      "javaRuntimeIds": [
+        "java-runtime-06ee960c34caf25b6852",
+        "java-runtime-3ec7a4b16844a2a86478",
+        "java-runtime-3c25177339d1cdff080e",
+        "java-runtime-98a351db3777f8b53fc6",
+        "java-runtime-41c99f4279b018f64589"
+      ],
+      "javaNames": [
+        "EPLSubselectExistsInSelect",
+        "EPLSubselectExistsSceneOne",
+        "EPLSubselectExistsFiltered",
+        "EPLSubselectTwoExistsFiltered",
+        "EPLSubselectNotExists"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectExists.java"
+      ],
+      "goTests": [
+        "TestEPLSubselectExistsInSelectParity",
+        "TestEPLSubselectExistsSceneOneParity",
+        "TestEPLSubselectExistsFilteredParity",
+        "TestEPLSubselectTwoExistsFilteredParity",
+        "TestEPLSubselectNotExistsParity"
+      ],
+      "tags": [],
+      "status": "differential-verified",
+      "evidence": [
+        "testdata/parity/subselect-exists.json",
+        "testdata/parity/subselect-exists.trace.json",
+        "testdata/parity/subselect-exists.evidence.json",
+        "tools/java-oracle/EPLSubselectExistsScenarioOracle.java",
+        "tools/java-oracle/run-subselect-exists.sh",
+        "java-oracle-trace",
+        "go-unit"
+      ],
+      "difference": null,
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-06ee960c34caf25b6852",
+        "java-runtime-3ec7a4b16844a2a86478",
+        "java-runtime-3c25177339d1cdff080e",
+        "java-runtime-98a351db3777f8b53fc6",
+        "java-runtime-41c99f4279b018f64589"
+      ]
     }
   ],
   "mappings": [
@@ -32885,15 +32936,19 @@
     {
       "capabilityId": "query.insert-into-route",
       "caseId": "case.insertinto-event-precedence"
+    },
+    {
+      "capabilityId": "query.subquery-basic",
+      "caseId": "case.subselect-exists"
     }
   ],
   "summary": {
-    "totalCases": 497,
+    "totalCases": 498,
     "totalCapabilities": 110,
-    "inventoriedCases": 497,
-    "implementedCases": 497,
-    "differentialVerifiedCases": 95,
-    "differentialVerifiedRuntimeIds": 231,
+    "inventoriedCases": 498,
+    "implementedCases": 498,
+    "differentialVerifiedCases": 96,
+    "differentialVerifiedRuntimeIds": 236,
     "intentionallyDifferentCases": 18,
     "representativeVerifiedCases": 92,
     "nfrVerifiedCases": 0,
@@ -32903,10 +32958,10 @@
     "intentionallyDifferentCapabilities": 7,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2927,
-    "referencedJavaRuntimeIds": 2785,
+    "runtimeAssociationCount": 2932,
+    "referencedJavaRuntimeIds": 2790,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1351,
+    "unreferencedJavaRuntimeIds": 1346,
     "representativeScenarioTotal": 0,
     "representativeScenarioPassing": 0,
     "quality": {}

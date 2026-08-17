@@ -1,0 +1,52 @@
+{
+  "scenarioId": "subselect-exists",
+  "javaOracleCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSourceFile": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectExists.java",
+  "javaRuntimeIds": [
+    "java-runtime-06ee960c34caf25b6852",
+    "java-runtime-3ec7a4b16844a2a86478",
+    "java-runtime-3c25177339d1cdff080e",
+    "java-runtime-98a351db3777f8b53fc6",
+    "java-runtime-41c99f4279b018f64589"
+  ],
+  "goTests": [
+    "TestEPLSubselectExistsInSelectParity",
+    "TestEPLSubselectExistsSceneOneParity",
+    "TestEPLSubselectExistsFilteredParity",
+    "TestEPLSubselectTwoExistsFilteredParity",
+    "TestEPLSubselectNotExistsParity"
+  ],
+  "javaTraceFile": "testdata/parity/subselect-exists.trace.json",
+  "javaTraceRecordCount": 9,
+  "caseMatchSummary": {
+    "exists-in-select": {
+      "expected": 2,
+      "actual": 2,
+      "match": true
+    },
+    "exists-scene-one": {
+      "expected": 2,
+      "actual": 2,
+      "match": true
+    },
+    "exists-filtered": {
+      "expected": 2,
+      "actual": 2,
+      "match": true
+    },
+    "two-exists-filtered": {
+      "expected": 2,
+      "actual": 2,
+      "match": true
+    },
+    "not-exists": {
+      "expected": 1,
+      "actual": 1,
+      "match": true
+    }
+  },
+  "differences": 0,
+  "mutationTested": false,
+  "verification": "differential-verified",
+  "notes": "All 5 cases match between Java oracle trace and Go test assertions. exists-in-select: exists(subquery) returns false when S1 window empty, true when non-empty. exists-scene-one: where exists filters S0 events when S1 window empty. exists-filtered: correlated exists (s1.id=s0.id) filters by outer event id. two-exists-filtered: two exists conditions must both be satisfied. not-exists: where not exists passes S0 events when S1 window empty. The OM and Compile variants (EPLSubselectExistsInSelectOM, EPLSubselectExistsInSelectCompile, EPLSubselectNotExistsOM, EPLSubselectNotExistsCompile) are SODA/EPL text compilation, which the Go implementation does not support (by design); they are intentionally-different."
+}
