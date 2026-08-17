@@ -1,0 +1,80 @@
+{
+    "version": "esper-parity/v1",
+    "id": "expr-filter-optimizable-or-rewrite",
+    "steps": [
+        {"op": "case", "case": "two-or"},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 0}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "b", "intPrimitive": 1}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "c", "intPrimitive": 0}},
+
+        {"op": "case", "case": "three-or"},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 0, "longPrimitive": 0}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "b", "intPrimitive": 1, "longPrimitive": 0}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "c", "intPrimitive": 0, "longPrimitive": 2}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "v", "intPrimitive": 0, "longPrimitive": 0}},
+
+        {"op": "case", "case": "three-with-overlap"},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 1}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "b", "intPrimitive": 0}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "x", "intPrimitive": 1}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "x", "intPrimitive": 0}},
+
+        {"op": "case", "case": "four-or"},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 1, "longPrimitive": 10, "doublePrimitive": 100}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 0, "longPrimitive": 0, "doublePrimitive": 0}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "x", "intPrimitive": 1, "longPrimitive": 0, "doublePrimitive": 0}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "x", "intPrimitive": 0, "longPrimitive": 10, "doublePrimitive": 0}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "x", "intPrimitive": 0, "longPrimitive": 0, "doublePrimitive": 100}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "x", "intPrimitive": 0, "longPrimitive": 0, "doublePrimitive": 0}},
+
+        {"op": "case", "case": "with-and"},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 1}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "b", "intPrimitive": 2}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 0}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "x", "intPrimitive": 1}},
+
+        {"op": "case", "case": "inner-or"},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 1, "longPrimitive": 0}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 0, "longPrimitive": 10}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 1, "longPrimitive": 10}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "x", "intPrimitive": 1, "longPrimitive": 0}},
+        {"op": "send", "eventType": "SupportBean", "payload": {"theString": "a", "intPrimitive": 2, "longPrimitive": 20}},
+
+        {"op": "case", "case": "not-equals-or"},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 3, "b": 1, "c": 0}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 3, "b": 0, "c": 1}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 0, "b": 1, "c": 0}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 1, "b": 1, "c": 0}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 2, "b": 1, "c": 0}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 3, "b": 0, "c": 0}},
+
+        {"op": "case", "case": "not-equals-consolidate"},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 3}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 4}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 0}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 1}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 2}},
+
+        {"op": "case", "case": "boolean-simple"},
+        {"op": "send", "eventType": "StringAlpha", "payload": {"a": "a1", "b": "b"}},
+        {"op": "send", "eventType": "StringAlpha", "payload": {"a": "a1", "c": "c"}},
+        {"op": "send", "eventType": "StringAlpha", "payload": {"a": "x", "b": "b"}},
+        {"op": "send", "eventType": "StringAlpha", "payload": {"a": "a1"}},
+
+        {"op": "case", "case": "boolean-and"},
+        {"op": "send", "eventType": "StringAlpha", "payload": {"a": "a", "b": "b"}},
+        {"op": "send", "eventType": "StringAlpha", "payload": {"a": "A1", "b": "b"}},
+        {"op": "send", "eventType": "StringAlpha", "payload": {"a": "a", "b": "B1"}},
+        {"op": "send", "eventType": "StringAlpha", "payload": {"a": "A1", "b": "B1"}},
+        {"op": "send", "eventType": "StringAlpha", "payload": {"a": "x", "b": "b"}},
+        {"op": "send", "eventType": "StringAlpha", "payload": {"a": "a", "b": "x"}},
+
+        {"op": "case", "case": "and-or-multi"},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 1, "b": 1, "c": 0, "d": 1, "e": 0}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 1, "b": 0, "c": 1, "d": 0, "e": 1}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 1, "b": 1, "c": 0, "d": 0, "e": 1}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 1, "b": 0, "c": 1, "d": 1, "e": 0}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 1, "b": 0, "c": 0, "d": 1, "e": 0}},
+        {"op": "send", "eventType": "IntAlpha", "payload": {"a": 0, "b": 1, "c": 0, "d": 1, "e": 0}}
+    ]
+}

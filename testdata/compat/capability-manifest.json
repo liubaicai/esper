@@ -30230,6 +30230,109 @@
         "inventoried",
         "implemented"
       ]
+    },
+    {
+      "id": "case.expr-filter-optimizable-or-rewrite",
+      "javaRuntimeIds": [
+        "java-runtime-00a312cd1bb69a7088e1",
+        "java-runtime-1b5dcf3331cde8a00373",
+        "java-runtime-227de691654a3cee058a",
+        "java-runtime-3878aeec037efa2f0247",
+        "java-runtime-5b6d3b82597abf7b6b88",
+        "java-runtime-5f4c40a88a04d2a89736",
+        "java-runtime-6843f6959619fd62f910",
+        "java-runtime-70aecbf0e4230755d494",
+        "java-runtime-719279760f299581672c",
+        "java-runtime-76d33fb0cb3db60ce133",
+        "java-runtime-7beb4aa2a883409abdfc",
+        "java-runtime-93335ba3dd981f8c43b8",
+        "java-runtime-b2b9a1733065a8a49b5c",
+        "java-runtime-b2c6a4b728d1e33b9ad4",
+        "java-runtime-baf826a6a0feaa2f2b42",
+        "java-runtime-c01872c5eb5bff2d88f2",
+        "java-runtime-ccaec65dd92d0c9a7114",
+        "java-runtime-d4c1858af8b71b93d6fd",
+        "java-runtime-e6148b3ccd464bb39e0e",
+        "java-runtime-edf73f29db5a3b70c790",
+        "java-runtime-f942c075cde8ddc67e24"
+      ],
+      "javaNames": [
+        "ExprFilterOrRewriteAndRewriteInnerOr",
+        "ExprFilterOrRewriteAndRewriteNotEqualsConsolidate",
+        "ExprFilterOrRewriteAndRewriteNotEqualsLimitedExpr",
+        "ExprFilterOrRewriteAndRewriteNotEqualsOr",
+        "ExprFilterOrRewriteAndRewriteNotEqualsWithOrConsolidateSecond",
+        "ExprFilterOrRewriteBooleanExprAnd",
+        "ExprFilterOrRewriteBooleanExprSimple",
+        "ExprFilterOrRewriteContextPartitionedCategory",
+        "ExprFilterOrRewriteContextPartitionedHash",
+        "ExprFilterOrRewriteContextPartitionedInitiated",
+        "ExprFilterOrRewriteContextPartitionedInitiatedSameEvent",
+        "ExprFilterOrRewriteContextPartitionedSegmented",
+        "ExprFilterOrRewriteHint",
+        "ExprFilterOrRewriteOrRewriteAndOrMulti",
+        "ExprFilterOrRewriteOrRewriteEightOr",
+        "ExprFilterOrRewriteOrRewriteFourOr",
+        "ExprFilterOrRewriteOrRewriteThreeOr",
+        "ExprFilterOrRewriteOrRewriteThreeWithOverlap",
+        "ExprFilterOrRewriteOrRewriteWithAnd",
+        "ExprFilterOrRewriteSubquery",
+        "ExprFilterOrRewriteTwoOr"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableOrRewrite.java"
+      ],
+      "goTests": [
+        "TestExprFilterOrRewriteTwoOrParity",
+        "TestExprFilterOrRewriteThreeOrParity",
+        "TestExprFilterOrRewriteThreeWithOverlapParity",
+        "TestExprFilterOrRewriteFourOrParity",
+        "TestExprFilterOrRewriteWithAndParity",
+        "TestExprFilterOrRewriteAndOrMultiParity",
+        "TestExprFilterOrRewriteInnerOrParity",
+        "TestExprFilterOrRewriteNotEqualsOrParity",
+        "TestExprFilterOrRewriteNotEqualsConsolidateParity",
+        "TestExprFilterOrRewriteBooleanExprSimpleParity",
+        "TestExprFilterOrRewriteEightOrParity",
+        "TestExprFilterOrRewriteBooleanExprAndParity"
+      ],
+      "tags": [
+        "correctness"
+      ],
+      "status": "differential-verified",
+      "javaStaticIds": [],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-227de691654a3cee058a",
+        "java-runtime-baf826a6a0feaa2f2b42",
+        "java-runtime-6843f6959619fd62f910",
+        "java-runtime-76d33fb0cb3db60ce133",
+        "java-runtime-c01872c5eb5bff2d88f2",
+        "java-runtime-7beb4aa2a883409abdfc",
+        "java-runtime-b2b9a1733065a8a49b5c",
+        "java-runtime-e6148b3ccd464bb39e0e",
+        "java-runtime-719279760f299581672c",
+        "java-runtime-5f4c40a88a04d2a89736",
+        "java-runtime-ccaec65dd92d0c9a7114",
+        "java-runtime-70aecbf0e4230755d494",
+        "java-runtime-1b5dcf3331cde8a00373",
+        "java-runtime-edf73f29db5a3b70c790",
+        "java-runtime-b2c6a4b728d1e33b9ad4",
+        "java-runtime-93335ba3dd981f8c43b8",
+        "java-runtime-5b6d3b82597abf7b6b88",
+        "java-runtime-d4c1858af8b71b93d6fd",
+        "java-runtime-3878aeec037efa2f0247",
+        "java-runtime-00a312cd1bb69a7088e1",
+        "java-runtime-f942c075cde8ddc67e24"
+      ],
+      "evidence": [
+        "java-oracle-trace",
+        "go-unit"
+      ]
     }
   ],
   "mappings": [
@@ -32532,15 +32635,19 @@
     {
       "capabilityId": "context.partition",
       "caseId": "case.context-key-segmented-nw-pattern"
+    },
+    {
+      "capabilityId": "expr.filter-expressions",
+      "caseId": "case.expr-filter-optimizable-or-rewrite"
     }
   ],
   "summary": {
-    "totalCases": 492,
+    "totalCases": 493,
     "totalCapabilities": 110,
-    "inventoriedCases": 492,
-    "implementedCases": 492,
-    "differentialVerifiedCases": 90,
-    "differentialVerifiedRuntimeIds": 186,
+    "inventoriedCases": 493,
+    "implementedCases": 493,
+    "differentialVerifiedCases": 91,
+    "differentialVerifiedRuntimeIds": 207,
     "intentionallyDifferentCases": 18,
     "representativeVerifiedCases": 92,
     "nfrVerifiedCases": 0,
@@ -32550,10 +32657,10 @@
     "intentionallyDifferentCapabilities": 7,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2882,
-    "referencedJavaRuntimeIds": 2740,
+    "runtimeAssociationCount": 2903,
+    "referencedJavaRuntimeIds": 2761,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1396,
+    "unreferencedJavaRuntimeIds": 1375,
     "representativeScenarioTotal": 92,
     "representativeScenarioPassing": 92,
     "quality": {
