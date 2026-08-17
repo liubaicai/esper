@@ -1294,6 +1294,105 @@ func SubqueryRowWithOptions(source RecordStream, selections []Selection, options
 	})
 }
 
+// subqueryRowToUnderlying converts a map-based subquery projection row into
+// the underlying value shape expected by the given schema. Object-array
+// schemas need positional []any; map and bean schemas accept map[string]any.
+func subqueryRowToUnderlying(schema Schema, row map[string]any) (any, error) {
+	if schema.kind == SchemaObjectArray {
+		fields := schema.Fields()
+		underlying := make([]any, len(fields))
+		for index, field := range fields {
+			underlying[index] = row[field.Name]
+		}
+		return underlying, nil
+	}
+	return row, nil
+}
+
+// SubqueryRowAsEvent projects named columns from a single-row subquery and
+// materializes the result as an Event of the named schema type.  This bridges
+// the gap between SubqueryRow (which returns Expression[map[string]any]) and
+// insert-into routes whose target column type is Event.  When the inner
+// source returns zero rows the result is null; one row is materialized; more
+// than one row yields null (strict single-row cardinality).
+func SubqueryRowAsEvent(env *Environment, schemaName string, source RecordStream, selections ...Selection) Expression[Event] {
+	return SubqueryRowAsEventWithOptions(env, schemaName, source, selections, SubqueryCardinalityMode(SubqueryNullOnMultiple))
+}
+
+// SubqueryRowAsEventWithOptions applies predicate, ordering and cardinality
+// options before materializing the single-row subquery result as an Event.
+func SubqueryRowAsEventWithOptions(env *Environment, schemaName string, source RecordStream, selections []Selection, options ...SubqueryOption) Expression[Event] {
+	definition := newSubqueryColumnsDefinition(source, selections, options...)
+	return makeSubqueryExpr[Event]("subquery-row-as-event", "rowAsEvent("+schemaName+","+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		if len(values) == 0 {
+			return Null()
+		}
+		row, ok := values[0].Any().(map[string]any)
+		if !ok {
+			return Null()
+		}
+		schema, found := env.Schema(schemaName)
+		if !found {
+			return Null()
+		}
+		underlying, err := subqueryRowToUnderlying(schema, row)
+		if err != nil {
+			return Null()
+		}
+		now := time.Time{}
+		if ctx.Engine != nil {
+			now = ctx.Engine.Now()
+		}
+		event, err := newEvent(schema, underlying, now)
+		if err != nil {
+			return Null()
+		}
+		return Present(event)
+	})
+}
+
+// SubqueryRowsAsEvent projects named columns from a multi-row subquery and
+// materializes every row as an Event of the named schema type.  The result
+// is Expression[[]Event] which can be routed into an array-typed event column.
+func SubqueryRowsAsEvent(env *Environment, schemaName string, source RecordStream, selections ...Selection) Expression[[]Event] {
+	return SubqueryRowsAsEventWithOptions(env, schemaName, source, selections)
+}
+
+// SubqueryRowsAsEventWithOptions applies predicate, ordering, offset and
+// limit options before materializing the multi-row subquery result as Events.
+func SubqueryRowsAsEventWithOptions(env *Environment, schemaName string, source RecordStream, selections []Selection, options ...SubqueryOption) Expression[[]Event] {
+	definition := newSubqueryColumnsDefinition(source, selections, options...)
+	return makeSubqueryExpr[[]Event]("subquery-rows-as-event", "rowsAsEvent("+schemaName+","+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		schema, found := env.Schema(schemaName)
+		if !found {
+			return Null()
+		}
+		now := time.Time{}
+		if ctx.Engine != nil {
+			now = ctx.Engine.Now()
+		}
+		events := make([]Event, 0, len(values))
+		for _, value := range values {
+			row, ok := value.Any().(map[string]any)
+			if !ok {
+				return Null()
+			}
+			underlying, err := subqueryRowToUnderlying(schema, row)
+			if err != nil {
+				return Null()
+			}
+			event, err := newEvent(schema, underlying, now)
+			if err != nil {
+				return Null()
+			}
+			events = append(events, event)
+		}
+		return Present(events)
+	})
+}
+
 // SubqueryRows returns every projected row from a multi-column subquery. Each
 // Selection alias becomes one map key, preserving the declared selection order
 // only in the AST; callers that need deterministic presentation can keep the

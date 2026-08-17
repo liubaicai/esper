@@ -1,0 +1,71 @@
+{
+ "scenarioId": "insertinto-eventcol-subquery-nonbean",
+ "javaOracleCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSourceFile": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateEventTypeColumnNonBean.java",
+ "javaRuntimeIds": [
+  "java-runtime-5d1d80c71e3ff6ecb4ed",
+  "java-runtime-42f641d62fb33599cdf3",
+  "java-runtime-45a9781858a357d139ec",
+  "java-runtime-f2f9fbfea46e0a1488f2",
+  "java-runtime-98c2143ddbcd1fabf69c",
+  "java-runtime-3c16cb7b5aea7cc551f4",
+  "java-runtime-ebed0ec5bb756f5bff87",
+  "java-runtime-49c937650cfc43598179"
+ ],
+ "goTests": [
+  "TestEPLInsertIntoColNonBeanFromSubquerySingleParity",
+  "TestEPLInsertIntoColNonBeanFromSubquerySingleFilterParity",
+  "TestEPLInsertIntoColNonBeanFromSubquerySingleMapParity",
+  "TestEPLInsertIntoColNonBeanFromSubquerySingleMapFilterParity",
+  "TestEPLInsertIntoColNonBeanFromSubqueryMultiParity",
+  "TestEPLInsertIntoColNonBeanFromSubqueryMultiMapParity",
+  "TestEPLInsertIntoColNonBeanFromSubqueryMultiFilterParity",
+  "TestEPLInsertIntoColNonBeanFromSubqueryMultiFilterMapParity"
+ ],
+ "javaTraceFile": "testdata/parity/insertinto-eventcol-subquery-nonbean.trace.json",
+ "javaTraceRecordCount": 16,
+ "caseMatchSummary": {
+  "nonbean-subquery-single-objectarray-nofilter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "nonbean-subquery-single-objectarray-filter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "nonbean-subquery-single-map-nofilter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "nonbean-subquery-single-map-filter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "nonbean-subquery-multi-objectarray-nofilter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "nonbean-subquery-multi-map-nofilter": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "nonbean-subquery-multifilter-objectarray": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "nonbean-subquery-multifilter-map": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  }
+ },
+ "differences": 0,
+ "verification": "differential-verified"
+}

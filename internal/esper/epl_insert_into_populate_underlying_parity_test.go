@@ -758,4 +758,737 @@ func TestEPLInsertIntoPopulateUnderlyingAvroParity(t *testing.T) {
 	}
 }
 
+type iipuNonBeanS0 struct {
+	ID  int    `esper:"id"`
+	P00 string `esper:"p00"`
+	P01 string `esper:"p01"`
+}
+
+// TestEPLInsertIntoColNonBeanFromSubquerySingleParity covers the
+// EPLInsertIntoColNonBeanFromSubquerySingle runtimes: a non-bean variant that
+// uses a multi-column subquery to project named columns into an event-typed
+// column of the insert-into target. The subquery returns a map which must be
+// materialized as an Event of the target schema type. Java runtimes:
+// objectarray without filter, objectarray with filter, map without filter,
+// map with filter. The Go chain uses SubqueryRowAsEvent to bridge the gap.
+func TestEPLInsertIntoColNonBeanFromSubquerySingleParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[iipuNonBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+
+	eventZero, err := RegisterObjectArray(env, "EventZero", []FieldSpec{
+		FieldDef("e0_0", reflect.TypeOf("")),
+		FieldDef("e0_1", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = RegisterObjectArray(env, "EventOne", []FieldSpec{
+		FieldDef("ez", reflect.TypeOf(Event{})),
+	}, WithNestedPropertySchema("ez", eventZero))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	iipuRegisterCommon(t, env)
+
+	s0 := From[iipuNonBeanS0](env, "SupportBean_S0").Window(LengthWindow(1)).AsRecord()
+	projection := SubqueryRowAsEvent(env, "EventZero", s0,
+		Alias("e0_0", Field[iipuNonBeanS0, string]("p00")),
+		Alias("e0_1", Field[iipuNonBeanS0, string]("p01")),
+	)
+	plan, err := env.Build(
+		Select(From[iipuSupportBean](env, "SupportBean"),
+			Alias("ez", projection),
+		).InsertInto("EventOne", StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := iipuSubscribe(t, deployment)
+
+	// Send event 1: id=1, p00="x1", p01="y1" — no filter, subquery matches
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{P00: "x1", P01: "y1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E1", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	ez0, ok := (*got)[0].Get("ez").Any().(Event)
+	if !ok {
+		t.Fatalf("expected ez to be Event, got %T: %#v", (*got)[0].Get("ez").Any(), (*got)[0].Get("ez").Any())
+	}
+	if v := ez0.Get("e0_0"); v.Any() != "x1" {
+		t.Fatalf("ez.e0_0 = %v, want x1", v.Any())
+	}
+	if v := ez0.Get("e0_1"); v.Any() != "y1" {
+		t.Fatalf("ez.e0_1 = %v, want y1", v.Any())
+	}
+
+	// Send event 2: id=100, p00="x2", p01="y2"
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 100, P00: "x2", P01: "y2"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E2", IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(*got))
+	}
+	ez1, ok := (*got)[1].Get("ez").Any().(Event)
+	if !ok {
+		t.Fatalf("expected ez to be Event, got %T", (*got)[1].Get("ez").Any())
+	}
+	if v := ez1.Get("e0_0"); v.Any() != "x2" {
+		t.Fatalf("ez.e0_0 = %v, want x2", v.Any())
+	}
+	if v := ez1.Get("e0_1"); v.Any() != "y2" {
+		t.Fatalf("ez.e0_1 = %v, want y2", v.Any())
+	}
+}
+
+// TestEPLInsertIntoColNonBeanFromSubqueryMultiParity covers
+// EPLInsertIntoColNonBeanFromSubqueryMulti: a non-bean variant that uses a
+// multi-column subquery to produce an array of events. Java runtime IDs:
+// java-runtime-98c2143ddbcd1fabf69c (objectarray),
+// java-runtime-3c16cb7b5aea7cc551f4 (map).
+func TestEPLInsertIntoColNonBeanFromSubqueryMultiParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[iipuNonBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+
+	eventZero, err := RegisterObjectArray(env, "EventZero", []FieldSpec{
+		FieldDef("e0_0", reflect.TypeOf("")),
+		FieldDef("e0_1", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = RegisterObjectArray(env, "EventOne", []FieldSpec{
+		FieldDef("e1_0", reflect.TypeOf("")),
+		FieldDef("ez", reflect.TypeOf([]Event{})),
+	}, WithNestedPropertySchema("ez", eventZero))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	iipuRegisterCommon(t, env)
+
+	inner := From[iipuNonBeanS0](env, "SupportBean_S0").Window(KeepAll()).AsRecord()
+	projection := SubqueryRowsAsEvent(env, "EventZero", inner,
+		Alias("e0_0", Field[iipuNonBeanS0, string]("p00")),
+		Alias("e0_1", Field[iipuNonBeanS0, string]("p01")),
+	)
+	plan, err := env.Build(
+		Select(From[iipuSupportBean](env, "SupportBean"),
+			Alias("e1_0", Field[iipuSupportBean, string]("theString")),
+			Alias("ez", projection),
+		).InsertInto("EventOne", StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := iipuSubscribe(t, deployment)
+
+	// Send event 1: 1 S0 event then 1 SB event
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{P00: "x1", P01: "y1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E1", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	if v := (*got)[0].Get("e1_0"); v.Any() != "E1" {
+		t.Fatalf("e1_0 = %v, want E1", v.Any())
+	}
+	ezArr0, ok := (*got)[0].Get("ez").Any().([]Event)
+	if !ok {
+		t.Fatalf("expected ez to be []Event, got %T: %#v", (*got)[0].Get("ez").Any(), (*got)[0].Get("ez").Any())
+	}
+	if len(ezArr0) != 1 {
+		t.Fatalf("expected 1 event in ez array, got %d", len(ezArr0))
+	}
+	if v := ezArr0[0].Get("e0_0"); v.Any() != "x1" {
+		t.Fatalf("ez[0].e0_0 = %v, want x1", v.Any())
+	}
+	if v := ezArr0[0].Get("e0_1"); v.Any() != "y1" {
+		t.Fatalf("ez[0].e0_1 = %v, want y1", v.Any())
+	}
+
+	// Send event 2: another S0 event then SB event — array grows
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 2, P00: "x2", P01: "y2"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E2", IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(*got))
+	}
+	ezArr1, ok := (*got)[1].Get("ez").Any().([]Event)
+	if !ok {
+		t.Fatalf("expected ez to be []Event on second result, got %T", (*got)[1].Get("ez").Any())
+	}
+	if len(ezArr1) != 2 {
+		t.Fatalf("expected 2 events in ez array, got %d", len(ezArr1))
+	}
+	if v := ezArr1[0].Get("e0_0"); v.Any() != "x1" {
+		t.Fatalf("ez[0].e0_0 = %v, want x1", v.Any())
+	}
+	if v := ezArr1[1].Get("e0_0"); v.Any() != "x2" {
+		t.Fatalf("ez[1].e0_0 = %v, want x2", v.Any())
+	}
+}
+
+// TestEPLInsertIntoColNonBeanFromSubquerySingleFilterParity covers
+// EPLInsertIntoColNonBeanFromSubquerySingle with filter=true: the subquery
+// has "where id >= 100" so events below 100 produce a null fragment.
+// Java runtime IDs: java-runtime-42f641d62fb33599cdf3 (objectarray filter),
+// java-runtime-f2f9fbfea46e0a1488f2 (map filter).
+func TestEPLInsertIntoColNonBeanFromSubquerySingleFilterParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[iipuNonBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+
+	eventZero, err := RegisterObjectArray(env, "EventZero", []FieldSpec{
+		FieldDef("e0_0", reflect.TypeOf("")),
+		FieldDef("e0_1", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = RegisterObjectArray(env, "EventOne", []FieldSpec{
+		FieldDef("ez", reflect.TypeOf(Event{})),
+	}, WithNestedPropertySchema("ez", eventZero))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	iipuRegisterCommon(t, env)
+	s0 := From[iipuNonBeanS0](env, "SupportBean_S0").Window(LengthWindow(1)).AsRecord()
+	projection := SubqueryRowAsEventWithOptions(env, "EventZero", s0,
+		[]Selection{
+			Alias("e0_0", Field[iipuNonBeanS0, string]("p00")),
+			Alias("e0_1", Field[iipuNonBeanS0, string]("p01")),
+		},
+		SubqueryCardinalityMode(SubqueryNullOnMultiple),
+		SubqueryWhere(GreaterOrEqual[int](Field[iipuNonBeanS0, int]("id"), Literal(100))),
+	)
+	plan, err := env.Build(
+		Select(From[iipuSupportBean](env, "SupportBean"),
+			Alias("ez", projection),
+		).InsertInto("EventOne", StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := iipuSubscribe(t, deployment)
+
+	// Event 1: id=1 — filter rejects, ez is null
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 1, P00: "x1", P01: "y1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E1", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	if v := (*got)[0].Get("ez"); !v.IsNull() {
+		t.Fatalf("expected ez null for filtered-out id=1, got %v", v.Any())
+	}
+
+	// Event 2: id=100 — filter accepts, ez = x2/y2
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 100, P00: "x2", P01: "y2"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E2", IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(*got))
+	}
+	ez1, ok := (*got)[1].Get("ez").Any().(Event)
+	if !ok {
+		t.Fatalf("expected ez to be Event for id=100, got %T", (*got)[1].Get("ez").Any())
+	}
+	if v := ez1.Get("e0_0"); v.Any() != "x2" {
+		t.Fatalf("ez.e0_0 = %v, want x2", v.Any())
+	}
+	if v := ez1.Get("e0_1"); v.Any() != "y2" {
+		t.Fatalf("ez.e0_1 = %v, want y2", v.Any())
+	}
+
+	// Event 3: id=2 — filter rejects again
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 2, P00: "x3", P01: "y3"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E3", IntPrimitive: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 3 {
+		t.Fatalf("expected 3 results, got %d", len(*got))
+	}
+	if v := (*got)[2].Get("ez"); !v.IsNull() {
+		t.Fatalf("expected ez null for filtered-out id=2, got %v", v.Any())
+	}
+}
+
+// TestEPLInsertIntoColNonBeanFromSubqueryMultiFilterParity covers
+// EPLInsertIntoColNonBeanFromSubqueryMultiFilter: the subquery has
+// "where id between 10 and 20" so only matching events appear in the array.
+// Java runtime IDs: java-runtime-ebed0ec5bb756f5bff87 (objectarray),
+// java-runtime-49c937650cfc43598179 (map).
+func TestEPLInsertIntoColNonBeanFromSubqueryMultiFilterParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[iipuNonBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+
+	eventZero, err := RegisterObjectArray(env, "EventZero", []FieldSpec{
+		FieldDef("e0_0", reflect.TypeOf("")),
+		FieldDef("e0_1", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = RegisterObjectArray(env, "EventOne", []FieldSpec{
+		FieldDef("ez", reflect.TypeOf([]Event{})),
+	}, WithNestedPropertySchema("ez", eventZero))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	iipuRegisterCommon(t, env)
+
+	inner := From[iipuNonBeanS0](env, "SupportBean_S0").Window(KeepAll()).AsRecord()
+	projection := SubqueryRowsAsEventWithOptions(env, "EventZero", inner,
+		[]Selection{
+			Alias("e0_0", Field[iipuNonBeanS0, string]("p00")),
+			Alias("e0_1", Field[iipuNonBeanS0, string]("p01")),
+		},
+		SubqueryWhere(And(
+			GreaterOrEqual[int](Field[iipuNonBeanS0, int]("id"), Literal(10)),
+			LessOrEqual[int](Field[iipuNonBeanS0, int]("id"), Literal(20)),
+		)),
+	)
+	plan, err := env.Build(
+		Select(From[iipuSupportBean](env, "SupportBean"),
+			Alias("ez", projection),
+		).InsertInto("EventOne", StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := iipuSubscribe(t, deployment)
+
+	// Event 1: id=1 — outside [10,20], ez is null/empty
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 1, P00: "x1", P01: "y1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E1", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	ezVal := (*got)[0].Get("ez")
+	if arr, ok := ezVal.Any().([]Event); ok && len(arr) > 0 {
+		t.Fatalf("expected empty or null ez for id=1 outside filter, got %d events", len(arr))
+	}
+
+	// Event 2: id=10 and id=20 — inside [10,20], ez has 2 events
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 10, P00: "x2"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 20, P00: "x3"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E2", IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(*got))
+	}
+	ezArr, ok := (*got)[1].Get("ez").Any().([]Event)
+	if !ok {
+		t.Fatalf("expected ez to be []Event, got %T", (*got)[1].Get("ez").Any())
+	}
+	if len(ezArr) != 2 {
+		t.Fatalf("expected 2 events in ez array, got %d", len(ezArr))
+	}
+	if v := ezArr[0].Get("e0_0"); v.Any() != "x2" {
+		t.Fatalf("ez[0].e0_0 = %v, want x2", v.Any())
+	}
+	if v := ezArr[1].Get("e0_0"); v.Any() != "x3" {
+		t.Fatalf("ez[1].e0_0 = %v, want x3", v.Any())
+	}
+}
+
+// TestEPLInsertIntoColNonBeanFromSubquerySingleMapParity covers the map
+// variant of EPLInsertIntoColNonBeanFromSubquerySingle. Java runtime IDs:
+// java-runtime-45a9781858a357d139ec (map nofilter),
+// java-runtime-f2f9fbfea46e0a1488f2 (map filter).
+func TestEPLInsertIntoColNonBeanFromSubquerySingleMapParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[iipuNonBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+
+	eventZero, err := RegisterMap(env, "EventZero", []FieldSpec{
+		FieldDef("e0_0", reflect.TypeOf("")),
+		FieldDef("e0_1", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = RegisterMap(env, "EventOne", []FieldSpec{
+		FieldDef("ez", reflect.TypeOf(Event{})),
+	}, WithNestedPropertySchema("ez", eventZero))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	iipuRegisterCommon(t, env)
+
+	s0 := From[iipuNonBeanS0](env, "SupportBean_S0").Window(LengthWindow(1)).AsRecord()
+	projection := SubqueryRowAsEvent(env, "EventZero", s0,
+		Alias("e0_0", Field[iipuNonBeanS0, string]("p00")),
+		Alias("e0_1", Field[iipuNonBeanS0, string]("p01")),
+	)
+	plan, err := env.Build(
+		Select(From[iipuSupportBean](env, "SupportBean"),
+			Alias("ez", projection),
+		).InsertInto("EventOne", StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := iipuSubscribe(t, deployment)
+
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 1, P00: "x1", P01: "y1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E1", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	ez0, ok := (*got)[0].Get("ez").Any().(Event)
+	if !ok {
+		t.Fatalf("expected ez to be Event, got %T", (*got)[0].Get("ez").Any())
+	}
+	if v := ez0.Get("e0_0"); v.Any() != "x1" {
+		t.Fatalf("ez.e0_0 = %v, want x1", v.Any())
+	}
+	if v := ez0.Get("e0_1"); v.Any() != "y1" {
+		t.Fatalf("ez.e0_1 = %v, want y1", v.Any())
+	}
+}
+
+// TestEPLInsertIntoColNonBeanFromSubqueryMultiMapParity covers the map
+// variant of EPLInsertIntoColNonBeanFromSubqueryMulti. Java runtime ID:
+// java-runtime-3c16cb7b5aea7cc551f4 (map).
+func TestEPLInsertIntoColNonBeanFromSubqueryMultiMapParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[iipuNonBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+
+	eventZero, err := RegisterMap(env, "EventZero", []FieldSpec{
+		FieldDef("e0_0", reflect.TypeOf("")),
+		FieldDef("e0_1", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = RegisterMap(env, "EventOne", []FieldSpec{
+		FieldDef("e1_0", reflect.TypeOf("")),
+		FieldDef("ez", reflect.TypeOf([]Event{})),
+	}, WithNestedPropertySchema("ez", eventZero))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	iipuRegisterCommon(t, env)
+
+	inner := From[iipuNonBeanS0](env, "SupportBean_S0").Window(KeepAll()).AsRecord()
+	projection := SubqueryRowsAsEvent(env, "EventZero", inner,
+		Alias("e0_0", Field[iipuNonBeanS0, string]("p00")),
+		Alias("e0_1", Field[iipuNonBeanS0, string]("p01")),
+	)
+	plan, err := env.Build(
+		Select(From[iipuSupportBean](env, "SupportBean"),
+			Alias("e1_0", Field[iipuSupportBean, string]("theString")),
+			Alias("ez", projection),
+		).InsertInto("EventOne", StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := iipuSubscribe(t, deployment)
+
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 1, P00: "x1", P01: "y1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E1", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	if v := (*got)[0].Get("e1_0"); v.Any() != "E1" {
+		t.Fatalf("e1_0 = %v, want E1", v.Any())
+	}
+	ezArr, ok := (*got)[0].Get("ez").Any().([]Event)
+	if !ok {
+		t.Fatalf("expected ez to be []Event, got %T", (*got)[0].Get("ez").Any())
+	}
+	if len(ezArr) != 1 {
+		t.Fatalf("expected 1 event in ez array, got %d", len(ezArr))
+	}
+	if v := ezArr[0].Get("e0_0"); v.Any() != "x1" {
+		t.Fatalf("ez[0].e0_0 = %v, want x1", v.Any())
+	}
+}
+
+// TestEPLInsertIntoColNonBeanFromSubquerySingleMapFilterParity covers the
+// map variant of EPLInsertIntoColNonBeanFromSubquerySingle with filter=true.
+// Java runtime ID: java-runtime-f2f9fbfea46e0a1488f2 (map filter).
+func TestEPLInsertIntoColNonBeanFromSubquerySingleMapFilterParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[iipuNonBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+
+	eventZero, err := RegisterMap(env, "EventZero", []FieldSpec{
+		FieldDef("e0_0", reflect.TypeOf("")),
+		FieldDef("e0_1", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = RegisterMap(env, "EventOne", []FieldSpec{
+		FieldDef("ez", reflect.TypeOf(Event{})),
+	}, WithNestedPropertySchema("ez", eventZero))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	iipuRegisterCommon(t, env)
+
+	s0 := From[iipuNonBeanS0](env, "SupportBean_S0").Window(LengthWindow(1)).AsRecord()
+	projection := SubqueryRowAsEventWithOptions(env, "EventZero", s0,
+		[]Selection{
+			Alias("e0_0", Field[iipuNonBeanS0, string]("p00")),
+			Alias("e0_1", Field[iipuNonBeanS0, string]("p01")),
+		},
+		SubqueryCardinalityMode(SubqueryNullOnMultiple),
+		SubqueryWhere(GreaterOrEqual[int](Field[iipuNonBeanS0, int]("id"), Literal(100))),
+	)
+	plan, err := env.Build(
+		Select(From[iipuSupportBean](env, "SupportBean"),
+			Alias("ez", projection),
+		).InsertInto("EventOne", StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := iipuSubscribe(t, deployment)
+
+	// id=1: filter rejects, ez is null
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 1, P00: "x1", P01: "y1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E1", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	if v := (*got)[0].Get("ez"); !v.IsNull() {
+		t.Fatalf("expected ez null for filtered-out id=1, got %v", v.Any())
+	}
+
+	// id=100: filter accepts
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 100, P00: "x2", P01: "y2"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E2", IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(*got))
+	}
+	ez1, ok := (*got)[1].Get("ez").Any().(Event)
+	if !ok {
+		t.Fatalf("expected ez to be Event for id=100, got %T", (*got)[1].Get("ez").Any())
+	}
+	if v := ez1.Get("e0_0"); v.Any() != "x2" {
+		t.Fatalf("ez.e0_0 = %v, want x2", v.Any())
+	}
+}
+
+// TestEPLInsertIntoColNonBeanFromSubqueryMultiFilterMapParity covers the
+// map variant of EPLInsertIntoColNonBeanFromSubqueryMultiFilter.
+// Java runtime ID: java-runtime-49c937650cfc43598179 (map).
+func TestEPLInsertIntoColNonBeanFromSubqueryMultiFilterMapParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[iipuNonBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+
+	eventZero, err := RegisterMap(env, "EventZero", []FieldSpec{
+		FieldDef("e0_0", reflect.TypeOf("")),
+		FieldDef("e0_1", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = RegisterMap(env, "EventOne", []FieldSpec{
+		FieldDef("ez", reflect.TypeOf([]Event{})),
+	}, WithNestedPropertySchema("ez", eventZero))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	iipuRegisterCommon(t, env)
+
+	inner := From[iipuNonBeanS0](env, "SupportBean_S0").Window(KeepAll()).AsRecord()
+	projection := SubqueryRowsAsEventWithOptions(env, "EventZero", inner,
+		[]Selection{
+			Alias("e0_0", Field[iipuNonBeanS0, string]("p00")),
+			Alias("e0_1", Field[iipuNonBeanS0, string]("p01")),
+		},
+		SubqueryWhere(And(
+			GreaterOrEqual[int](Field[iipuNonBeanS0, int]("id"), Literal(10)),
+			LessOrEqual[int](Field[iipuNonBeanS0, int]("id"), Literal(20)),
+		)),
+	)
+	plan, err := env.Build(
+		Select(From[iipuSupportBean](env, "SupportBean"),
+			Alias("ez", projection),
+		).InsertInto("EventOne", StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := iipuSubscribe(t, deployment)
+
+	// id=1: outside [10,20], ez is null/empty
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 1, P00: "x1", P01: "y1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E1", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	ezVal := (*got)[0].Get("ez")
+	if arr, ok := ezVal.Any().([]Event); ok && len(arr) > 0 {
+		t.Fatalf("expected empty or null ez for id=1 outside filter, got %d events", len(arr))
+	}
+
+	// id=10 and id=20: inside [10,20], ez has 2 events
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 10, P00: "x2"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuNonBeanS0{ID: 20, P00: "x3"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), iipuSupportBean{TheString: "E2", IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(*got))
+	}
+	ezArr, ok := (*got)[1].Get("ez").Any().([]Event)
+	if !ok {
+		t.Fatalf("expected ez to be []Event, got %T", (*got)[1].Get("ez").Any())
+	}
+	if len(ezArr) != 2 {
+		t.Fatalf("expected 2 events in ez array, got %d", len(ezArr))
+	}
+	if v := ezArr[0].Get("e0_0"); v.Any() != "x2" {
+		t.Fatalf("ez[0].e0_0 = %v, want x2", v.Any())
+	}
+	if v := ezArr[1].Get("e0_0"); v.Any() != "x3" {
+		t.Fatalf("ez[1].e0_0 = %v, want x3", v.Any())
+	}
+}
+
 func float64Ptr(value float64) *float64 { return &value }

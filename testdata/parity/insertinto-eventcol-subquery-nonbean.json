@@ -1,0 +1,55 @@
+{
+ "version": "esper-parity/v1",
+ "id": "insertinto-eventcol-subquery-nonbean",
+ "steps": [
+  {"op": "case", "case": "nonbean-subquery-single-objectarray-nofilter"},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "x1", "p01": "y1"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 100, "p00": "x2", "p01": "y2"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+
+  {"op": "case", "case": "nonbean-subquery-single-objectarray-filter"},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "x1", "p01": "y1"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 100, "p00": "x2", "p01": "y2"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+
+  {"op": "case", "case": "nonbean-subquery-single-map-nofilter"},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "x1", "p01": "y1"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 100, "p00": "x2", "p01": "y2"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+
+  {"op": "case", "case": "nonbean-subquery-single-map-filter"},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "x1", "p01": "y1"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 100, "p00": "x2", "p01": "y2"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+
+  {"op": "case", "case": "nonbean-subquery-multi-objectarray-nofilter"},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "x1", "p01": "y1"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 2, "p00": "x2", "p01": "y2"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+
+  {"op": "case", "case": "nonbean-subquery-multi-map-nofilter"},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "x1", "p01": "y1"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 2, "p00": "x2", "p01": "y2"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+
+  {"op": "case", "case": "nonbean-subquery-multifilter-objectarray"},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "x1", "p01": "y1"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 10, "p00": "x2"}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 20, "p00": "x3"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+
+  {"op": "case", "case": "nonbean-subquery-multifilter-map"},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "x1", "p01": "y1"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 10, "p00": "x2"}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 20, "p00": "x3"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}}
+ ]
+}
