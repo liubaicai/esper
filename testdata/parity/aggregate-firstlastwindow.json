@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "name": "aggregate-firstlastwindow",
+  "javaRuntimeIds": [
+    "java-runtime-5c73ecba5097e8425b7f",
+    "java-runtime-e4b69ac483b580cbbf07",
+    "java-runtime-eb23cb37438e324a71ed",
+    "java-runtime-f04c46c8d88698c3726a",
+    "java-runtime-b03302bb599098d90c20"
+  ],
+  "javaNames": [
+    "ResultSetAggregateUnboundedSimple",
+    "ResultSetAggregateWindowedGrouped",
+    "ResultSetAggregateBatchWindow",
+    "ResultSetAggregateBatchWindowGrouped",
+    "ResultSetAggregateWindowAndSumWGroup"
+  ],
+  "cases": [
+    {
+      "name": "unbounded-simple",
+      "runtimeIds": ["java-runtime-5c73ecba5097e8425b7f"],
+      "steps": [
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 0},
+        {"op": "send", "type": "SupportBean", "theString": "E3", "intPrimitive": 0}
+      ]
+    },
+    {
+      "name": "windowed-grouped",
+      "runtimeIds": ["java-runtime-e4b69ac483b580cbbf07"],
+      "steps": [
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 10},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 11},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 12},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 13},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 14},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 15},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 16}
+      ]
+    },
+    {
+      "name": "batch-window",
+      "runtimeIds": ["java-runtime-eb23cb37438e324a71ed"],
+      "steps": [
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 0},
+        {"op": "send", "type": "SupportBean", "theString": "E3", "intPrimitive": 0},
+        {"op": "send", "type": "SupportBean", "theString": "E4", "intPrimitive": 0},
+        {"op": "send", "type": "SupportBean", "theString": "E5", "intPrimitive": 0},
+        {"op": "send", "type": "SupportBean", "theString": "E6", "intPrimitive": 0}
+      ]
+    },
+    {
+      "name": "batch-window-grouped",
+      "runtimeIds": ["java-runtime-f04c46c8d88698c3726a"],
+      "steps": [
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 10},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 20},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 11},
+        {"op": "send", "type": "SupportBean", "theString": "E3", "intPrimitive": 30},
+        {"op": "send", "type": "SupportBean", "theString": "E3", "intPrimitive": 31},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 12},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 13},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 14},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 15},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 16},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 17},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 18}
+      ]
+    },
+    {
+      "name": "window-and-sum-wgroup",
+      "runtimeIds": ["java-runtime-b03302bb599098d90c20"],
+      "steps": [
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 10, "longPrimitive": 5},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 100, "longPrimitive": 20},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 15, "longPrimitive": 2},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 18, "longPrimitive": 3},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 19, "longPrimitive": 4},
+        {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 17, "longPrimitive": -1},
+        {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 1, "longPrimitive": 1000}
+      ]
+    }
+  ]
+}

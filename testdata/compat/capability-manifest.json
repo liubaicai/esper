@@ -802,7 +802,8 @@
         "internal/esper/join_test.go",
         "internal/esper/infra_table_access_aggregation_state_parity_test.go",
         "internal/esper/infra_table_access_dot_method_parity_test.go",
-        "internal/esper/infra_table_on_merge_parity_test.go"
+        "internal/esper/infra_table_on_merge_parity_test.go",
+        "internal/esper/resultset_aggregate_firstlastwindow_parity_test.go"
       ],
       "phase": 3,
       "status": "implemented",
@@ -813,7 +814,18 @@
       ],
       "verification": [
         "inventoried",
-        "implemented"
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-5c73ecba5097e8425b7f",
+        "java-runtime-b03302bb599098d90c20",
+        "java-runtime-e4b69ac483b580cbbf07",
+        "java-runtime-eb23cb37438e324a71ed",
+        "java-runtime-f04c46c8d88698c3726a"
+      ],
+      "representativeScenarioIds": [
+        "aggregate-firstlastwindow"
       ]
     },
     {
@@ -30857,6 +30869,65 @@
       "representativeScenarioIds": [
         "variables-onset"
       ]
+    },
+    {
+      "id": "case.resultset-aggregate-firstlastwindow",
+      "status": "differential-verified",
+      "javaNames": [
+        "ResultSetAggregateUnboundedSimple",
+        "ResultSetAggregateWindowedGrouped",
+        "ResultSetAggregateBatchWindow",
+        "ResultSetAggregateBatchWindowGrouped",
+        "ResultSetAggregateWindowAndSumWGroup"
+      ],
+      "javaRuntimeIds": [
+        "java-runtime-5c73ecba5097e8425b7f",
+        "java-runtime-e4b69ac483b580cbbf07",
+        "java-runtime-eb23cb37438e324a71ed",
+        "java-runtime-f04c46c8d88698c3726a",
+        "java-runtime-b03302bb599098d90c20"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFirstLastWindow.java"
+      ],
+      "goTests": [
+        "TestResultSetAggregateUnboundedSimpleParity",
+        "TestResultSetAggregateWindowedGroupedParity",
+        "TestResultSetAggregateBatchWindowParity",
+        "TestResultSetAggregateBatchWindowGroupedParity",
+        "TestResultSetAggregateWindowAndSumWGroupParity"
+      ],
+      "tags": [
+        "aggregate",
+        "first",
+        "last",
+        "window",
+        "grouped",
+        "differential",
+        "representative"
+      ],
+      "evidence": [
+        "testdata/parity/aggregate-firstlastwindow.json",
+        "testdata/parity/aggregate-firstlastwindow.trace.json",
+        "testdata/parity/aggregate-firstlastwindow.evidence.json"
+      ],
+      "difference": "None",
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-5c73ecba5097e8425b7f",
+        "java-runtime-e4b69ac483b580cbbf07",
+        "java-runtime-eb23cb37438e324a71ed",
+        "java-runtime-f04c46c8d88698c3726a",
+        "java-runtime-b03302bb599098d90c20"
+      ],
+      "representativeScenarioIds": [
+        "aggregate-firstlastwindow"
+      ],
+      "notes": "UnboundedSimple uses FirstEver/LastEver (Java unbounded first/last = ever-semantics). WindowedGrouped covers plain variant only (reclaim-group hints unsupported in Go). BatchWindow verifies irstream new/old pairs. BatchWindowGrouped and WindowAndSumWGroup verify empty-group null row emission. Star and LastMaxMixedOnSelect executions deferred (need API additions for firstever(*) wildcard and aggregate selections in on-select)."
     }
   ],
   "mappings": [
@@ -33203,21 +33274,25 @@
     {
       "capabilityId": "epl.variable-onset",
       "caseId": "case.epl-variable-onset-extended"
+    },
+    {
+      "capabilityId": "resultset.aggregate-access",
+      "caseId": "case.resultset-aggregate-firstlastwindow"
     }
   ],
   "summary": {
     "capabilities": 110,
-    "cases": 503,
-    "associations": 2953,
-    "referencedJavaRuntimeIds": 2811,
+    "cases": 504,
+    "associations": 2958,
+    "referencedJavaRuntimeIds": 2816,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1325,
-    "differentialVerifiedCases": 101,
-    "differentialVerifiedRuntimeIds": 283,
+    "unreferencedJavaRuntimeIds": 1320,
+    "differentialVerifiedCases": 102,
+    "differentialVerifiedRuntimeIds": 288,
     "capabilityVerificationCounts": {
       "inventoried": 110,
       "implemented": 109,
-      "differential-verified": 12,
+      "differential-verified": 13,
       "representative-verified": 11,
       "intentionally-different": 7
     }

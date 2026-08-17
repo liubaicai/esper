@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "scenarioId": "aggregate-firstlastwindow",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "goCommit": "WORKTREE",
+  "oracleCommand": "tools/java-oracle/run-aggregate-firstlastwindow.sh --esper-root /root/app/esper --scenario testdata/parity/aggregate-firstlastwindow.json --output testdata/parity/aggregate-firstlastwindow.trace.json",
+  "caseResults": {
+    "unbounded-simple": {
+      "records": 3,
+      "differences": 0,
+      "status": "match"
+    },
+    "windowed-grouped": {
+      "records": 7,
+      "differences": 0,
+      "status": "match"
+    },
+    "batch-window": {
+      "records": 3,
+      "differences": 0,
+      "status": "match"
+    },
+    "batch-window-grouped": {
+      "records": 2,
+      "differences": 0,
+      "status": "match"
+    },
+    "window-and-sum-wgroup": {
+      "records": 7,
+      "differences": 0,
+      "status": "match"
+    }
+  },
+  "totalRecords": 22,
+  "totalDifferences": 0,
+  "status": "differential-verified"
+}
