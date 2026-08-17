@@ -1,0 +1,33 @@
+{
+  "id": "row-for-all",
+  "description": "ResultSetQueryTypeRowForAll ungrouped aggregate scenarios: SumMinMax, Simple, MinMaxWindowed",
+  "javaRuntimes": [
+    "ResultSetQueryTypeRowForAllSumMinMax",
+    "ResultSetQueryTypeRowForAllSimple",
+    "ResultSetQueryTypeRowForAllMinMaxWindowed"
+  ],
+  "cases": [
+    {"case": "sum-min-max"},
+    {"case": "simple"},
+    {"case": "min-max-windowed"}
+  ],
+  "steps": [
+    {"op": "case", "case": "sum-min-max"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 10},
+    {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 100},
+    {"op": "send", "type": "SupportBean", "theString": "E3", "intPrimitive": 11},
+    {"op": "send", "type": "SupportBean", "theString": "E4", "intPrimitive": 9},
+    {"op": "send", "type": "SupportBean", "theString": "E5", "intPrimitive": 120},
+    {"op": "send", "type": "SupportBean", "theString": "E6", "intPrimitive": 100},
+
+    {"op": "case", "case": "simple"},
+    {"op": "send", "type": "SupportMarketDataBean", "symbol": "M", "price": 100},
+    {"op": "send", "type": "SupportMarketDataBean", "symbol": "M", "price": 200},
+    {"op": "send", "type": "SupportMarketDataBean", "symbol": "M", "price": 150},
+
+    {"op": "case", "case": "min-max-windowed"},
+    {"op": "send", "type": "SupportMarketDataBean", "symbol": "M", "price": 100},
+    {"op": "send", "type": "SupportMarketDataBean", "symbol": "M", "price": 200},
+    {"op": "send", "type": "SupportMarketDataBean", "symbol": "M", "price": 150}
+  ]
+}

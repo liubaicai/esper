@@ -1,0 +1,39 @@
+{
+  "id": "row-for-all",
+  "version": "esper-parity/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "goTests": [
+    "TestResultSetQueryTypeRowForAllSumMinMaxParity",
+    "TestResultSetQueryTypeRowForAllSimpleParity",
+    "TestResultSetQueryTypeRowForAllMinMaxWindowedParity"
+  ],
+  "javaRuntimes": [
+    "ResultSetQueryTypeRowForAllSumMinMax",
+    "ResultSetQueryTypeRowForAllSimple",
+    "ResultSetQueryTypeRowForAllMinMaxWindowed"
+  ],
+  "scenario": "testdata/parity/row-for-all.json",
+  "trace": "testdata/parity/row-for-all.trace.json",
+  "caseResults": {
+    "sum-min-max": {
+      "expected": 6,
+      "actual": 6,
+      "match": true,
+      "detail": "sum/min/max over 6 events, ungrouped, no window"
+    },
+    "simple": {
+      "expected": 3,
+      "actual": 3,
+      "match": true,
+      "detail": "irstream avg/sum/min/max/median/stddev/avedev/count/countDistinct over 3 events, ungrouped, no window"
+    },
+    "min-max-windowed": {
+      "expected": 3,
+      "actual": 3,
+      "match": true,
+      "detail": "irstream min/max over length(2) window, 3 events with sliding eviction"
+    }
+  },
+  "differences": 0,
+  "notes": "Ungrouped (row-for-all) aggregate semantics verified: running sum/min/max, full aggregate set with irstream old/new, windowed min/max with sliding eviction."
+}

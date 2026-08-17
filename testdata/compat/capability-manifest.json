@@ -3913,32 +3913,35 @@
         "representative-verified"
       ],
       "differentialVerifiedRuntimeIds": [
-        "java-runtime-132314df55366e67ec84",
-        "java-runtime-34a8b14ea96443475b9c",
-        "java-runtime-decf2ff614722c1273d1",
-        "java-runtime-bd4672ec90862ee08790",
-        "java-runtime-3e89e6297511b7dfe531",
-        "java-runtime-52135d56e04dfb024bfe",
-        "java-runtime-9061246c4c67a2c25364",
-        "java-runtime-11c5505c0b19dd86671c",
-        "java-runtime-d7060e63eda2baaf87f5",
-        "java-runtime-7c5309b323dde51e021e",
-        "java-runtime-99a674653d406c745332",
-        "java-runtime-c2e751ee09e3300d3dba",
-        "java-runtime-d3ba0dd07bb4e54ef9af",
-        "java-runtime-b46b070a7b151e7b4ecc",
-        "java-runtime-3a98c0c727c06ec21cfd",
-        "java-runtime-9d82a6fe2510f171a8f4",
+        "java-runtime-6c590766c3ba03239c04",
         "java-runtime-548e5460f3bc34ee8cbb",
-        "java-runtime-1e0ad81982656cd82bcd",
-        "java-runtime-1d3a41d9dab78e4757e0",
-        "java-runtime-16db4dbf1209b932f029",
-        "java-runtime-8bc3878f4730fbf2fd21",
-        "java-runtime-569b2b4848133878bfdc",
         "java-runtime-327ce9d41c4e5489cc38",
+        "java-runtime-decf2ff614722c1273d1",
         "java-runtime-fd011003ea3fe327b12c",
+        "java-runtime-1d3a41d9dab78e4757e0",
+        "java-runtime-7c5309b323dde51e021e",
+        "java-runtime-9d82a6fe2510f171a8f4",
         "java-runtime-1debb0e930f955641300",
-        "java-runtime-dc2ac7e7293a204aa102"
+        "java-runtime-16db4dbf1209b932f029",
+        "java-runtime-d3ba0dd07bb4e54ef9af",
+        "java-runtime-9061246c4c67a2c25364",
+        "java-runtime-34a8b14ea96443475b9c",
+        "java-runtime-132314df55366e67ec84",
+        "java-runtime-52135d56e04dfb024bfe",
+        "java-runtime-b46b070a7b151e7b4ecc",
+        "java-runtime-803e092256cda66d2f0e",
+        "java-runtime-d7060e63eda2baaf87f5",
+        "java-runtime-11c5505c0b19dd86671c",
+        "java-runtime-dc2ac7e7293a204aa102",
+        "java-runtime-8bc3878f4730fbf2fd21",
+        "java-runtime-3a98c0c727c06ec21cfd",
+        "java-runtime-569b2b4848133878bfdc",
+        "java-runtime-c2e751ee09e3300d3dba",
+        "java-runtime-99a674653d406c745332",
+        "java-runtime-1e0ad81982656cd82bcd",
+        "java-runtime-bd4672ec90862ee08790",
+        "java-runtime-e54e4c73c8eec446581f",
+        "java-runtime-3e89e6297511b7dfe531"
       ],
       "representativeScenarioIds": [
         "output-policy-iterator",
@@ -30704,6 +30707,41 @@
         "java-runtime-849ebec4996c28823d57",
         "java-runtime-5a91cdbc149502c6fb7a"
       ]
+    },
+    {
+      "id": "case.row-for-all",
+      "javaRuntimeIds": [
+        "java-runtime-6c590766c3ba03239c04",
+        "java-runtime-803e092256cda66d2f0e",
+        "java-runtime-e54e4c73c8eec446581f"
+      ],
+      "javaNames": [
+        "ResultSetQueryTypeRowForAllSumMinMax",
+        "ResultSetQueryTypeRowForAllSimple",
+        "ResultSetQueryTypeRowForAllMinMaxWindowed"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAll.java"
+      ],
+      "status": "differential-verified",
+      "verification": [
+        "inventoried",
+        "differential-verified"
+      ],
+      "evidence": [
+        "testdata/parity/row-for-all.evidence.json"
+      ],
+      "scenario": "testdata/parity/row-for-all.json",
+      "trace": "testdata/parity/row-for-all.trace.json",
+      "goRefs": [
+        "internal/esper/resultset_row_for_all_parity_test.go"
+      ],
+      "capability": "resultset.aggregate-group-by",
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-6c590766c3ba03239c04",
+        "java-runtime-803e092256cda66d2f0e",
+        "java-runtime-e54e4c73c8eec446581f"
+      ]
     }
   ],
   "mappings": [
@@ -33038,15 +33076,19 @@
     {
       "capabilityId": "epl.variable-onset",
       "caseId": "case.variables-use"
+    },
+    {
+      "capabilityId": "resultset.aggregate-group-by",
+      "caseId": "case.row-for-all"
     }
   ],
   "summary": {
-    "totalCases": 500,
+    "totalCases": 501,
     "totalCapabilities": 110,
-    "inventoriedCases": 500,
+    "inventoriedCases": 501,
     "implementedCases": 500,
-    "differentialVerifiedCases": 98,
-    "differentialVerifiedRuntimeIds": 243,
+    "differentialVerifiedCases": 99,
+    "differentialVerifiedRuntimeIds": 246,
     "intentionallyDifferentCases": 18,
     "representativeVerifiedCases": 92,
     "nfrVerifiedCases": 0,
@@ -33056,12 +33098,17 @@
     "intentionallyDifferentCapabilities": 7,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 2939,
-    "referencedJavaRuntimeIds": 2797,
+    "runtimeAssociationCount": 2942,
+    "referencedJavaRuntimeIds": 2800,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1339,
-    "representativeScenarioTotal": 0,
-    "representativeScenarioPassing": 0,
-    "quality": {}
+    "unreferencedJavaRuntimeIds": 1336,
+    "representativeScenarioTotal": 92,
+    "representativeScenarioPassing": 92,
+    "quality": {
+      "race": "pending",
+      "docker": "passed",
+      "stress": "passed",
+      "performance": "pending"
+    }
   }
 }
