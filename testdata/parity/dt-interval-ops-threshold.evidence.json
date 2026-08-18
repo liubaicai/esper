@@ -16,17 +16,49 @@
   "traceComparison": {
     "javaTrace": "testdata/parity/dt-interval-ops-threshold.trace.json",
     "goTrace": "go-test assertions inline (where-filter fired flags and select-clause projected booleans)",
-    "records": 24,
+    "records": 23,
     "zeroDifference": true,
     "perCase": [
-      {"case": "before-w-variable", "steps": 3, "match": true},
-      {"case": "before-in-select-clause", "steps": 3, "match": true},
-      {"case": "before-where-with-bean", "steps": 4, "match": true},
-      {"case": "before-two-thresholds", "steps": 4, "match": true},
-      {"case": "before-swapped-thresholds", "steps": 2, "match": true},
-      {"case": "after-threshold", "steps": 2, "match": true},
-      {"case": "after-negative-thresholds", "steps": 4, "match": true},
-      {"case": "time-period-w-year-non-const", "steps": 1, "match": true}
+      {
+        "case": "before-w-variable",
+        "steps": 3,
+        "match": true
+      },
+      {
+        "case": "before-in-select-clause",
+        "steps": 3,
+        "match": true
+      },
+      {
+        "case": "before-where-with-bean",
+        "steps": 4,
+        "match": true
+      },
+      {
+        "case": "before-two-thresholds",
+        "steps": 4,
+        "match": true
+      },
+      {
+        "case": "before-swapped-thresholds",
+        "steps": 2,
+        "match": true
+      },
+      {
+        "case": "after-threshold",
+        "steps": 2,
+        "match": true
+      },
+      {
+        "case": "after-negative-thresholds",
+        "steps": 4,
+        "match": true
+      },
+      {
+        "case": "time-period-w-year-non-const",
+        "steps": 1,
+        "match": true
+      }
     ]
   },
   "differences": [],
