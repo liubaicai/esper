@@ -14,8 +14,6 @@ type subselectQuantifiedBean struct {
 	IntPrimitive int    `esper:"intPrimitive"`
 }
 
-const subselectQuantifiedJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
-
 var subselectQuantifiedJavaSources = []string{
 	"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAllAnySomeExpr.java",
 }

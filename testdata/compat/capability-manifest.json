@@ -31511,7 +31511,7 @@
     "java-runtime-0d291fddb8228d4ec1cf"
    ],
    "remaining": [
-    "EPLSubselectInvalid (java-runtime-b24dc67d324d702d8961): compile-time error-only execution; typed Go builder rejects int-array vs int comparison at build time (approved difference)"
+    "EPLSubselectInvalid (java-runtime-b24dc67d324d702d8961) and the embedded intArr > all compile check in EPLSubselectRelationalOpAll: compile-time error-only behavior; typed Go builder rejects int-array vs int comparison at build time (approved difference)"
    ]
   }
  ],

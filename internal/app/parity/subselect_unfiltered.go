@@ -36,8 +36,6 @@ type subselectUnfilteredBean struct {
 	IntPrimitive int    `esper:"intPrimitive"`
 }
 
-const subselectUnfilteredJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
-
 var subselectUnfilteredJavaSources = []string{
 	"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectUnfiltered.java",
 }
