@@ -1469,6 +1469,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "subselect-aggregated-multirow" || *mode == "subselect-aggregated-multirow-diff" {
+		trace, err := runSubselectMultirowScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "subselect-aggregated-multirow-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, subselectMultirowJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, subselectMultirowJavaSources),
+				splitMetadata(*javaExecutions, subselectMultirowJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "subselect-quantified" || *mode == "subselect-quantified-diff" {
 		trace, err := runSubselectQuantifiedScenario(context.Background(), scenario)
 		if err != nil {

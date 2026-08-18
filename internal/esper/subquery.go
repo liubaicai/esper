@@ -1452,9 +1452,15 @@ func SubqueryGroupRows(source RecordStream, key Expr, selections []Selection, op
 	return makeSubqueryExpr[[]map[string]any]("subquery-group-rows", "group-rows("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		values := evaluateSubqueryValues(definition, ctx)
 		if len(values) == 0 {
-			// Java Esper's grouped multirow subselect returns null when no
-			// group survives where+having (groupKeys.isEmpty -> constantNull),
-			// and .take(n) over null stays null.
+			// Java Esper's grouped multirow subselect returns null when the
+			// where clause filters every inner row (no group keys ->
+			// constantNull), but an EMPTY collection when groups exist and
+			// having removes them all (SubselectForgeRow...GroupedWHaving
+			// eventsPerKey.isEmpty path). .take(n) over null stays null and
+			// over [] yields [].
+			if subqueryWhereHasCandidate(definition, ctx) {
+				return Present([]map[string]any{})
+			}
 			return Null()
 		}
 		rows := make([]map[string]any, 0, len(values))
@@ -1496,7 +1502,11 @@ func SubqueryGroupRow(source RecordStream, key Expr, selections []Selection, opt
 	return makeSubqueryExpr[map[string]any]("subquery-group-row", "group-row("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		values := evaluateSubqueryValues(definition, ctx)
 		if len(values) != 1 {
-			return Null()
+			// The frozen oracle shows Esper 9 delivers an EMPTY MAP (not
+			// null) for the un-enumerated grouped row subselect whenever the
+			// multi-row restriction fails: zero where-passing rows, zero
+			// having-surviving groups, or 2+ groups all render as {}.
+			return Present(map[string]any{})
 		}
 		group, ok := values[0].Any().(subqueryGroupValue)
 		if !ok {
@@ -2476,6 +2486,27 @@ func evaluateSubqueryProjection(definition *subqueryDefinition, evaluation EvalC
 		}
 	}
 	return Present(row)
+}
+
+// subqueryWhereHasCandidate reports whether the grouped subquery definition
+// produces at least one group key before having is applied — i.e. whether
+// the where clause accepted at least one inner row. Java distinguishes this
+// case: no accepted rows yields null (constantNull), while having removing
+// all groups yields an empty collection/row.
+func subqueryWhereHasCandidate(definition *subqueryDefinition, outer EvalContext) bool {
+	if definition == nil {
+		return false
+	}
+	// Evaluate the same definition (same pointer, so the subquery runtime
+	// registry's per-definition event snapshot still applies) with having
+	// temporarily disabled: any surviving group means the where clause
+	// accepted at least one inner row. Evaluation is single-threaded per
+	// statement, so the temporary swap is safe.
+	having := definition.having
+	definition.having = nil
+	count := len(evaluateSubqueryValues(definition, outer))
+	definition.having = having
+	return count > 0
 }
 
 func subqueryValuesEqual(left, right Value) bool {

@@ -1556,7 +1556,19 @@
    ],
    "differentialVerifiedRuntimeIds": [
     "java-runtime-60f4742e4d330725c1e5",
-    "java-runtime-9aa54450b89fbc94ab73"
+    "java-runtime-9aa54450b89fbc94ab73",
+    "java-runtime-7439294a50e35300e1f5",
+    "java-runtime-8b69ed212525b9fe6858",
+    "java-runtime-3588e48d4e4c6ce21ebb",
+    "java-runtime-565c9b30d531a846f0fc",
+    "java-runtime-4443d12f747068acf95b",
+    "java-runtime-3b7148f2961227ed1393",
+    "java-runtime-fe88aa9f7b78478355ae",
+    "java-runtime-43ca7182e3e88cd6cbd3",
+    "java-runtime-03633b6922f9aa57bd0e",
+    "java-runtime-5143812b917f2fdb46a2",
+    "java-runtime-2b6ae595427b46dd84fa",
+    "java-runtime-ab74e2ffba8b7d8188d3"
    ],
    "representativeScenarioIds": [
     "subquery-length-window",
@@ -31555,6 +31567,76 @@
    "remaining": [
     "EPLSubselectInvalid (java-runtime-b56574d4a9334797d5e1): compile-time error-only execution (7 invalid compiles: mixed agg/non-agg, duplicate names, filter-context and wildcard shapes); Go typed builder rejects the representable shapes at Build time with intentionally different message text (approved difference)"
    ]
+  },
+  {
+   "id": "case.subquery-aggregated-multirow",
+   "javaRuntimeIds": [
+    "java-runtime-7439294a50e35300e1f5",
+    "java-runtime-8b69ed212525b9fe6858",
+    "java-runtime-3588e48d4e4c6ce21ebb",
+    "java-runtime-565c9b30d531a846f0fc",
+    "java-runtime-4443d12f747068acf95b",
+    "java-runtime-3b7148f2961227ed1393",
+    "java-runtime-fe88aa9f7b78478355ae",
+    "java-runtime-43ca7182e3e88cd6cbd3",
+    "java-runtime-03633b6922f9aa57bd0e",
+    "java-runtime-5143812b917f2fdb46a2",
+    "java-runtime-2b6ae595427b46dd84fa",
+    "java-runtime-ab74e2ffba8b7d8188d3"
+   ],
+   "javaNames": [
+    "EPLSubselectMultirowGroupedNoDataWindowUncorrelated",
+    "EPLSubselectMultirowGroupedCorrelatedWithEnumMethod",
+    "EPLSubselectMultirowGroupedUncorrelatedWithEnumerationMethod",
+    "EPLSubselectMultirowGroupedCorrelatedWHaving",
+    "EPLSubselectMultirowGroupedNamedWindowSubqueryIndexShared",
+    "EPLSubselectMulticolumnGroupedUncorrelatedUnfiltered",
+    "EPLSubselectMultirowGroupedUncorrelatedIteratorAndExpressionDef",
+    "EPLSubselectMulticolumnGroupedContextPartitioned",
+    "EPLSubselectMulticolumnGroupedWHaving",
+    "EPLSubselectMulticolumnGroupBy",
+    "EPLSubselectMultirowGroupedMultikeyWArray",
+    "EPLSubselectMultirowGroupedIndexSharedMultikeyWArray"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedMultirowAndColumn.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunSubselectAggregatedMultirowDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunSubselectAggregatedMultirowDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "subselect",
+    "grouped",
+    "multirow",
+    "multicolumn"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/subselect-aggregated-multirow.evidence.json"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7439294a50e35300e1f5",
+    "java-runtime-8b69ed212525b9fe6858",
+    "java-runtime-3588e48d4e4c6ce21ebb",
+    "java-runtime-565c9b30d531a846f0fc",
+    "java-runtime-4443d12f747068acf95b",
+    "java-runtime-3b7148f2961227ed1393",
+    "java-runtime-fe88aa9f7b78478355ae",
+    "java-runtime-43ca7182e3e88cd6cbd3",
+    "java-runtime-03633b6922f9aa57bd0e",
+    "java-runtime-5143812b917f2fdb46a2",
+    "java-runtime-2b6ae595427b46dd84fa",
+    "java-runtime-ab74e2ffba8b7d8188d3"
+   ],
+   "remaining": [
+    "EPLSubselectMulticolumnInvalid (java-runtime-5c74e423f659bd6713f1): compile-time error-only execution (5 invalid compiles); typed Go builder rejects the representable shapes at Build time with intentionally different message text (approved difference)"
+   ]
   }
  ],
  "mappings": [
@@ -33949,15 +34031,19 @@
   {
    "capabilityId": "query.subquery-basic",
    "caseId": "case.subquery-multicolumn-rows"
+  },
+  {
+   "capabilityId": "query.subquery-basic",
+   "caseId": "case.subquery-aggregated-multirow"
   }
  ],
  "summary": {
-  "cases": 515,
-  "differentialVerifiedCases": 113,
-  "differentialVerifiedRuntimeIds": 359,
-  "referencedJavaRuntimeIds": 2871,
+  "cases": 516,
+  "differentialVerifiedCases": 114,
+  "differentialVerifiedRuntimeIds": 340,
+  "referencedJavaRuntimeIds": 2875,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1265,
+  "unreferencedJavaRuntimeIds": 1261,
   "representativeScenarioPass": 93,
   "intentionallyDifferentCases": 0,
   "nfrVerifiedCases": 0

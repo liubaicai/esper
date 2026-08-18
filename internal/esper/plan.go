@@ -1266,6 +1266,46 @@ func expressionContainsKind(node *exprNode, kind string) bool {
 	return false
 }
 
+// expressionFieldNames collects the inner-event field names an expression
+// reads, recursing into subqueries. Used by grouped subselect validation to
+// check that non-aggregate columns derive from the group-by key.
+func expressionFieldNames(node *exprNode) map[string]struct{} {
+	names := map[string]struct{}{}
+	var walk func(node *exprNode)
+	walk = func(node *exprNode) {
+		if node == nil {
+			return
+		}
+		if node.kind == "field" {
+			names[node.fieldName] = struct{}{}
+		}
+		for _, child := range node.children {
+			walk(child)
+		}
+		if node.subquery != nil {
+			if node.subquery.predicate != nil {
+				walk(node.subquery.predicate.node())
+			}
+			if node.subquery.projection != nil {
+				walk(node.subquery.projection.node())
+			}
+			for _, selection := range node.subquery.columns {
+				if selection.Expr != nil {
+					walk(selection.Expr.node())
+				}
+			}
+			if node.subquery.groupBy != nil {
+				walk(node.subquery.groupBy.node())
+			}
+			if node.subquery.having != nil {
+				walk(node.subquery.having.node())
+			}
+		}
+	}
+	walk(node)
+	return names
+}
+
 func (e *Environment) validateRoute(query Query) error {
 	if query.routeTarget == "" {
 		return nil
@@ -2450,10 +2490,20 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 			return NewError(ErrorInvalidRule, "subquery group-by key cannot use previous or prior access")
 		}
 		if definition.groupedRowProjection && len(definition.columns) > 0 {
-			groupKeyDescription := definition.groupBy.Description()
+			keyFields := expressionFieldNames(definition.groupBy.node())
 			for _, selection := range definition.columns {
-				if !isAggregateExpression(selection.Expr) && selection.Expr.Description() != groupKeyDescription {
-					return NewError(ErrorInvalidRule, fmt.Sprintf("subquery column %q must be an aggregate or match the group-by key", selection.Name))
+				if isAggregateExpression(selection.Expr) {
+					continue
+				}
+				// Java allows non-aggregate columns that are functions of
+				// the group key (e.g. theString||'x', intPrimitive*1000) in
+				// grouped multi-column subselects: every inner field the
+				// column reads must be a group-by key field.
+				columnFields := expressionFieldNames(selection.Expr.node())
+				for name := range columnFields {
+					if _, ok := keyFields[name]; !ok {
+						return NewError(ErrorInvalidRule, fmt.Sprintf("subquery column %q must be an aggregate or derive from the group-by key", selection.Name))
+					}
 				}
 			}
 		}

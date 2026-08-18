@@ -10660,3 +10660,106 @@ func TestRunSubselectMulticolumnDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunSubselectAggregatedMultirowDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-multirow.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "subselect-aggregated-multirow.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-multirow.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "subselect-aggregated-multirow-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunSubselectAggregatedMultirowDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "nodatawindow-empty-null",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["subq"] = []any{}
+			},
+		},
+		{
+			name: "nodatawindow-second-group-sum",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["subq"] = []any{map[string]any{"c0": "G1", "c1": int64(10)}}
+			},
+		},
+		{
+			name: "context-partition-inner-first-row",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[52].New[0].Fields["subq"] = map[string]any{}
+			},
+		},
+		{
+			name: "whaving-single-group",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[58].New[0].Fields["subq"] = map[string]any{"c0": "E2", "c1": int64(12)}
+			},
+		},
+		{
+			name: "indexshare-array-key-sum",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[67].New[0].Fields["e1"] = []any{map[string]any{"c0": []any{int64(1), int64(2)}, "c1": int64(22)}, map[string]any{"c0": []any{int64(1)}, "c1": int64(41)}}
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-multirow.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "subselect-aggregated-multirow.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-aggregated-multirow.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "subselect-aggregated-multirow-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %s unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var output compat.DifferentialEvidence
+			if err := json.Unmarshal(data, &output); err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

@@ -5670,7 +5670,22 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 // local in Esper, and they observe inner-stream events even when the event is
 // not an outer-stream event for the statement itself.
 func (s *Statement) acceptContextSubqueryEventLocked(event Event, now time.Time, variables map[string]Value) error {
-	if s == nil || s.engine == nil || len(s.runtime.partitions) == 0 {
+	if s == nil || s.engine == nil || s.runtime.subqueryRegistry == nil || !s.runtime.subqueryRegistry.acceptsEvent(event) {
+		return nil
+	}
+	// An inner-stream event of a keyed context creates its partition when
+	// none exists yet: Esper allocates the partition on any event of a
+	// context-declared stream, so a partition-local subquery over that
+	// stream observes the event even when it is not an outer-stream event.
+	if len(s.runtime.partitions) == 0 {
+		definition, definitionOK := s.engine.env.Context(s.plan.query.contextName)
+		if definitionOK && definition.kind == ContextKeySegmented && len(definition.contextKeysForEvent(event)) > 0 {
+			if _, _, err := s.partitionRuntime(event, now, variables); err != nil {
+				return err
+			}
+		}
+	}
+	if len(s.runtime.partitions) == 0 {
 		return nil
 	}
 	// Every context partition is created from the same statement plan. If the

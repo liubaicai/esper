@@ -13,7 +13,7 @@
 | Case differential-verified | 113 |
 | Differential-verified runtime | 359 / 4,136 |
 | Runtime 已关联 | 2,871 / 4,136（69.3%） |
-| Runtime 未关联 | 1,265 |
+| Runtime 未关联 | 1,261 |
 | Representative scenario | 93 / 93 通过 |
 | Intentionally-different case | 18 |
 | NFR-verified case | 0 |
