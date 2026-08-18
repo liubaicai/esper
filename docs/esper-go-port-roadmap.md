@@ -11,9 +11,9 @@
 | Capability | 110 |
 | Case | 512 |
 | Case differential-verified | 110 |
-| Differential-verified runtime | 334 / 4,136 |
-| Runtime 已关联 | 2,862 / 4,136（69.2%） |
-| Runtime 未关联 | 1,274 |
+| Differential-verified runtime | 336 / 4,136 |
+| Runtime 已关联 | 2,864 / 4,136（69.3%） |
+| Runtime 未关联 | 1,272 |
 | Representative scenario | 92 / 92 通过 |
 | Intentionally-different case | 18 |
 | NFR-verified case | 0 |

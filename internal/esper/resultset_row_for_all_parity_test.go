@@ -370,3 +370,203 @@ func assertFloat(t *testing.T, row Result, name string, expected float64) {
 		t.Fatalf("%s = %v, want %v", name, got, expected)
 	}
 }
+
+// TestResultSetQueryTypeRowForAllWWindowAggParity covers
+// ResultSetQueryTypeRowForAllWWindowAgg: select irstream theString,
+// sum(intPrimitive), window(*) from SupportBean#length(2). When the window
+// overflows, both the new row and the removed (old) row carry the recomputed
+// aggregate and the post-eviction window contents.
+// Java runtime: java-runtime-287708385b40a014c3fc.
+func TestResultSetQueryTypeRowForAllWWindowAggParity(t *testing.T) {
+	env := newRowForAllEnv(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	plan, err := env.Build(
+		From[rowForAllBean](env, "SupportBean").Window(LengthWindow(2)).Aggregate(
+			Alias("c0", Field[rowForAllBean, string]("theString")),
+			Alias("c1", Sum[int](Field[rowForAllBean, int]("intPrimitive"))),
+			Alias("c2", WindowEvents()),
+		).Query(StatementName("s0"), WithOldStream()),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newGot, oldGot := rowForAllSubscribe(t, deployment)
+
+	assertRow := func(label string, row Result, theString string, sum int, window []rowForAllBean) {
+		t.Helper()
+		if got := row.Get("c0").Any(); got != theString {
+			t.Fatalf("%s c0 = %v, want %v", label, got, theString)
+		}
+		if got, ok := row.Get("c1").Any().(int); !ok || got != sum {
+			t.Fatalf("%s c1 = %v, want %v", label, row.Get("c1").Any(), sum)
+		}
+		events, ok := row.Get("c2").Any().([]Event)
+		if !ok {
+			t.Fatalf("%s c2 is not []Event: %T", label, row.Get("c2").Any())
+		}
+		if len(events) != len(window) {
+			t.Fatalf("%s c2 length = %d, want %v", label, len(events), window)
+		}
+		for i := range window {
+			got := EventValue[rowForAllBean]().eval(EvalContext{Event: events[i]})
+			bean, ok := got.Any().(rowForAllBean)
+			if !ok || bean != window[i] {
+				t.Fatalf("%s c2[%d] = %v, want %v", label, i, got.Any(), window[i])
+			}
+		}
+	}
+
+	for _, tc := range []struct {
+		theString string
+		intValue  int
+	}{
+		{"E1", 10}, {"E2", 100}, {"E3", 11}, {"E4", 9},
+	} {
+		*newGot = (*newGot)[:0]
+		*oldGot = (*oldGot)[:0]
+		if err := engine.SendEvent(context.Background(), rowForAllBean{TheString: tc.theString, IntPrimitive: tc.intValue}); err != nil {
+			t.Fatal(err)
+		}
+		switch tc.theString {
+		case "E1":
+			assertRow("E1 new", (*newGot)[0], "E1", 10, []rowForAllBean{{"E1", 10}})
+		case "E2":
+			assertRow("E2 new", (*newGot)[0], "E2", 110, []rowForAllBean{{"E1", 10}, {"E2", 100}})
+		case "E3":
+			assertRow("E3 new", (*newGot)[0], "E3", 111, []rowForAllBean{{"E2", 100}, {"E3", 11}})
+			assertRow("E3 old", (*oldGot)[0], "E1", 111, []rowForAllBean{{"E2", 100}, {"E3", 11}})
+		case "E4":
+			assertRow("E4 new", (*newGot)[0], "E4", 20, []rowForAllBean{{"E3", 11}, {"E4", 9}})
+			assertRow("E4 old", (*oldGot)[0], "E2", 20, []rowForAllBean{{"E3", 11}, {"E4", 9}})
+		}
+	}
+}
+
+// TestResultSetQueryTypeRowForAllNamedWindowWindowParity covers
+// ResultSetQueryTypeRowForAllNamedWindowWindow: create window ABCWin#keepall
+// as SupportBean; insert into ABCWin select * from SupportBean; on
+// SupportBean_A delete from ABCWin where theString = id; select irstream
+// theString, window(intPrimitive) from ABCWin.
+// Java runtime: java-runtime-a86df6b7b7185701f64b.
+func TestResultSetQueryTypeRowForAllNamedWindowWindowParity(t *testing.T) {
+	env := newRowForAllEnv(t)
+	if _, err := RegisterStruct[rowForAllBeanA](env, "SupportBean_A"); err != nil {
+		t.Fatal(err)
+	}
+	schema, ok := env.Schema("SupportBean")
+	if !ok {
+		t.Fatal("SupportBean schema missing")
+	}
+	if _, err := CreateNamedWindow(env, "ABCWin", schema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+
+	insertPlan, err := env.Build(OnEvent(From[rowForAllBean](env, "SupportBean")).InsertIntoNamedWindow("ABCWin",
+		SetColumn("theString", Field[rowForAllBean, string]("theString")),
+		SetColumn("intPrimitive", Field[rowForAllBean, int]("intPrimitive")),
+	).Query(StatementName("insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	queryPlan, err := env.Build(FromNamedWindow(env, "ABCWin").Aggregate(
+		Alias("c0", Field[any, string]("theString")),
+		Alias("c1", WindowValues[int](Field[any, int]("intPrimitive"))),
+	).Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deletePlan, err := env.Build(OnEvent(From[rowForAllBeanA](env, "SupportBean_A")).DeleteFromNamedWindow("ABCWin",
+		Equal[string](NamedWindowField[string]("theString"), Field[rowForAllBeanA, string]("id")),
+	).Query(StatementName("delete")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	queryDeployment, err := engine.Deploy(context.Background(), queryPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, plan := range []Plan{insertPlan, deletePlan} {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	newGot, oldGot := rowForAllSubscribe(t, queryDeployment)
+
+	assertRow := func(label string, row Result, theString string, window []int) {
+		t.Helper()
+		if got := row.Get("c0").Any(); got != theString {
+			t.Fatalf("%s c0 = %v, want %v", label, got, theString)
+		}
+		gotWindow, ok := row.Get("c1").Any().([]int)
+		if !ok || len(gotWindow) != len(window) {
+			t.Fatalf("%s c1 = %v, want %v", label, row.Get("c1").Any(), window)
+		}
+		for i := range window {
+			if gotWindow[i] != window[i] {
+				t.Fatalf("%s c1 = %v, want %v", label, gotWindow, window)
+			}
+		}
+	}
+
+	steps := []struct {
+		action     string
+		theString  string
+		intValue   int
+		expectNew  bool
+		expectOld  bool
+		wantString string
+		wantWindow []int
+	}{
+		{"send", "E1", 10, true, false, "E1", []int{10}},
+		{"send", "E2", 100, true, false, "E2", []int{10, 100}},
+		{"delete", "E2", 0, false, true, "E2", []int{10}},
+		{"send", "E3", 50, true, false, "E3", []int{10, 50}},
+		{"delete", "E1", 0, false, true, "E1", []int{50}},
+		{"send", "E4", -1, true, false, "E4", []int{50, -1}},
+	}
+	for _, step := range steps {
+		*newGot = (*newGot)[:0]
+		*oldGot = (*oldGot)[:0]
+		if step.action == "send" {
+			if err := engine.SendEvent(context.Background(), rowForAllBean{TheString: step.theString, IntPrimitive: step.intValue}); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if err := engine.SendEvent(context.Background(), rowForAllBeanA{ID: step.theString}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if len(*newGot) != boolToInt(step.expectNew) {
+			t.Fatalf("%s/%s: new count = %d, want %d", step.action, step.theString, len(*newGot), boolToInt(step.expectNew))
+		}
+		if len(*oldGot) != boolToInt(step.expectOld) {
+			t.Fatalf("%s/%s: old count = %d, want %d", step.action, step.theString, len(*oldGot), boolToInt(step.expectOld))
+		}
+		if step.expectNew {
+			assertRow(step.theString+" new", (*newGot)[0], step.wantString, step.wantWindow)
+		}
+		if step.expectOld {
+			assertRow(step.theString+" old", (*oldGot)[0], step.wantString, step.wantWindow)
+		}
+	}
+}
+
+type rowForAllBeanA struct {
+	ID string `esper:"id"`
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}

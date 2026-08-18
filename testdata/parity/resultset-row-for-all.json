@@ -1,0 +1,188 @@
+{
+ "version": "esper-parity/scenario-v1",
+ "scenario": "resultset-row-for-all",
+ "cases": [
+  {
+   "case": "w-window-agg",
+   "epl": "@Name('s0') select irstream theString as c0, sum(intPrimitive) as c1, window(*) as c2 from SupportBean#length(2)",
+   "send": [
+    {
+     "type": "SupportBean",
+     "theString": "E1",
+     "intPrimitive": 10,
+     "new": {
+      "c0": "E1",
+      "c1": 10,
+      "c2": [
+       {
+        "theString": "E1",
+        "intPrimitive": 10
+       }
+      ]
+     },
+     "old": null
+    },
+    {
+     "type": "SupportBean",
+     "theString": "E2",
+     "intPrimitive": 100,
+     "new": {
+      "c0": "E2",
+      "c1": 110,
+      "c2": [
+       {
+        "theString": "E1",
+        "intPrimitive": 10
+       },
+       {
+        "theString": "E2",
+        "intPrimitive": 100
+       }
+      ]
+     },
+     "old": null
+    },
+    {
+     "type": "SupportBean",
+     "theString": "E3",
+     "intPrimitive": 11,
+     "new": {
+      "c0": "E3",
+      "c1": 111,
+      "c2": [
+       {
+        "theString": "E2",
+        "intPrimitive": 100
+       },
+       {
+        "theString": "E3",
+        "intPrimitive": 11
+       }
+      ]
+     },
+     "old": {
+      "c0": "E1",
+      "c1": 111,
+      "c2": [
+       {
+        "theString": "E2",
+        "intPrimitive": 100
+       },
+       {
+        "theString": "E3",
+        "intPrimitive": 11
+       }
+      ]
+     }
+    },
+    {
+     "type": "SupportBean",
+     "theString": "E4",
+     "intPrimitive": 9,
+     "new": {
+      "c0": "E4",
+      "c1": 20,
+      "c2": [
+       {
+        "theString": "E3",
+        "intPrimitive": 11
+       },
+       {
+        "theString": "E4",
+        "intPrimitive": 9
+       }
+      ]
+     },
+     "old": {
+      "c0": "E2",
+      "c1": 20,
+      "c2": [
+       {
+        "theString": "E3",
+        "intPrimitive": 11
+       },
+       {
+        "theString": "E4",
+        "intPrimitive": 9
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "case": "named-window-window",
+   "pre": "create window ABCWin#keepall() as SupportBean;\ninsert into ABCWin select * from SupportBean;\non SupportBean_A delete from ABCWin where theString = id;",
+   "epl": "@Name('s0') select irstream theString as c0, window(intPrimitive) as c1 from ABCWin;",
+   "send": [
+    {
+     "type": "SupportBean",
+     "theString": "E1",
+     "intPrimitive": 10,
+     "new": {
+      "c0": "E1",
+      "c1": [
+       10
+      ]
+     }
+    },
+    {
+     "type": "SupportBean",
+     "theString": "E2",
+     "intPrimitive": 100,
+     "new": {
+      "c0": "E2",
+      "c1": [
+       10,
+       100
+      ]
+     }
+    },
+    {
+     "type": "SupportBean_A",
+     "id": "E2",
+     "old": {
+      "c0": "E2",
+      "c1": [
+       10
+      ]
+     }
+    },
+    {
+     "type": "SupportBean",
+     "theString": "E3",
+     "intPrimitive": 50,
+     "new": {
+      "c0": "E3",
+      "c1": [
+       10,
+       50
+      ]
+     }
+    },
+    {
+     "type": "SupportBean_A",
+     "id": "E1",
+     "old": {
+      "c0": "E1",
+      "c1": [
+       50
+      ]
+     }
+    },
+    {
+     "type": "SupportBean",
+     "theString": "E4",
+     "intPrimitive": -1,
+     "new": {
+      "c0": "E4",
+      "c1": [
+       50,
+       -1
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

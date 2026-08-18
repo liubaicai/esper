@@ -1,11 +1,10 @@
-import com.espertech.esper.common.client.EPCompiled;
 import com.espertech.esper.common.client.EventBean;
 import com.espertech.esper.common.client.configuration.Configuration;
 import com.espertech.esper.common.client.json.minimaljson.Json;
 import com.espertech.esper.common.client.json.minimaljson.JsonArray;
 import com.espertech.esper.common.client.json.minimaljson.JsonObject;
 import com.espertech.esper.common.client.json.minimaljson.JsonValue;
-import com.espertech.esper.common.internal.support.SupportBean;
+import com.espertech.esper.common.client.EPCompiled;
 import com.espertech.esper.compiler.client.CompilerArguments;
 import com.espertech.esper.compiler.client.EPCompilerProvider;
 import com.espertech.esper.runtime.client.DeploymentOptions;
@@ -13,169 +12,232 @@ import com.espertech.esper.runtime.client.EPDeployment;
 import com.espertech.esper.runtime.client.EPRuntime;
 import com.espertech.esper.runtime.client.EPRuntimeProvider;
 import com.espertech.esper.runtime.client.EPStatement;
-
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Java oracle for ResultSetQueryTypeRowForAll ungrouped aggregate scenarios.
- *
- * Covers SumMinMax, Simple, and MinMaxWindowed by replaying deterministic
- * event sequences and recording observable output including old (remove) stream.
+ * Direct Esper 9.0.0 oracle for the resultset-row-for-all parity scenario
+ * (ResultSetQueryTypeRowForAll observable executions: Simple, SumMinMax,
+ * MinMaxWindowed, WWindowAgg, NamedWindowWindow). Map event types;
+ * sendEventMap; each send step captures actual new/old row properties and
+ * emits one JSON record comparing them against the scenario expectation.
  */
-public class ResultSetRowForAllScenarioOracle {
-
+public final class ResultSetRowForAllScenarioOracle {
     public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println("usage: ResultSetRowForAllScenarioOracle <scenario.json>");
-            System.exit(2);
-        }
-        String scenarioText = Files.readString(Path.of(args[0]), StandardCharsets.UTF_8);
-        JsonObject scenario = Json.parse(scenarioText).asObject();
-        JsonArray allSteps = scenario.get("steps").asArray();
-        List<JsonObject> records = new ArrayList<>();
-
-        for (JsonValue caseVal : scenario.get("cases").asArray()) {
-            String caseName = caseVal.asObject().getString("case", "");
-            runCase(allSteps, caseName, records);
-        }
+        String scenarioFile = args.length > 0 ? args[0] : "testdata/parity/resultset-row-for-all.json";
+        JsonObject scenario = Json.parse(new FileReader(scenarioFile)).asObject();
 
         JsonObject root = new JsonObject();
         root.add("version", "esper-parity/v1");
-        root.add("id", scenario.getString("id", ""));
+        root.add("id", scenario.getString("scenario", "resultset-row-for-all"));
+        root.add("scenario", scenario.getString("scenario", "resultset-row-for-all"));
         root.add("javaCommit", "9e1b9f1cc9117fea4bf33ab043762c045d73839c");
         root.add("java", System.getProperty("java.version"));
         JsonArray recordsArr = new JsonArray();
-        for (JsonObject record : records) {
-            recordsArr.add(record);
+        for (JsonValue caseVal : scenario.get("cases").asArray()) {
+            runCase(caseVal.asObject(), recordsArr);
         }
         root.add("records", recordsArr);
         System.out.println(root.toString());
     }
 
-    private static void runCase(JsonArray allSteps, String caseName, List<JsonObject> records) throws Exception {
-        Configuration config = new Configuration();
-        config.getCommon().addEventType(SupportBean.class);
-        Map<String, Object> marketType = new HashMap<>();
-        marketType.put("symbol", String.class);
-        marketType.put("price", Double.class);
-        config.getCommon().addEventType("SupportMarketDataBean", marketType);
-        EPRuntime runtime = EPRuntimeProvider.getRuntime("ResultSetRowForAllScenarioOracle", config);
-        try {
-            String epl = buildEPL(caseName);
-            EPCompiled compiled = EPCompilerProvider.getCompiler().compile(epl, new CompilerArguments(config));
-            EPDeployment deployment = runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
+    private static void runCase(JsonObject caseDef, JsonArray records) throws Exception {
+        String caseName = caseDef.getString("case", "");
+        String epl = caseDef.getString("epl", "");
+        String pre = caseDef.getString("pre", "");
 
-            EPStatement stmt = null;
+        Configuration config = new Configuration();
+        config.getRuntime().getThreading().setInternalTimerEnabled(false);
+
+        Map<String, Object> sbType = new HashMap<>();
+        sbType.put("theString", String.class);
+        sbType.put("intPrimitive", Integer.class);
+        config.getCommon().addEventType("SupportBean", sbType);
+
+        Map<String, Object> mdType = new HashMap<>();
+        mdType.put("symbol", String.class);
+        mdType.put("price", Double.class);
+        config.getCommon().addEventType("SupportMarketDataBean", mdType);
+
+        Map<String, Object> saType = new HashMap<>();
+        saType.put("id", String.class);
+        config.getCommon().addEventType("SupportBean_A", saType);
+
+        EPRuntime runtime = EPRuntimeProvider.getRuntime("parity-rowforall-" + caseName, config);
+        try {
+            String module = pre.isEmpty() ? epl : pre + "\n" + epl;
+            EPCompiled compiled = EPCompilerProvider.getCompiler().compile(module, new CompilerArguments(config));
+            EPDeployment deployment = runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
+            EPStatement found = null;
             for (EPStatement candidate : deployment.getStatements()) {
                 if ("s0".equals(candidate.getName())) {
-                    stmt = candidate;
+                    found = candidate;
                     break;
                 }
             }
-            if (stmt == null) {
-                throw new IllegalStateException("statement s0 not found");
+            if (found == null) {
+                throw new IllegalStateException("statement 's0' not found in deployment");
             }
-
-            int[] seq = new int[] {0};
-            stmt.addListener((newData, oldData, statement, rt) -> {
-                if (newData != null || oldData != null) {
-                    seq[0]++;
-                    JsonObject record = new JsonObject();
-                    record.add("case", caseName);
-                    record.add("sequence", seq[0]);
-                    if (newData != null) {
-                        JsonArray newArr = new JsonArray();
-                        for (EventBean event : newData) {
-                            JsonObject newItem = new JsonObject();
-                            JsonObject fields = new JsonObject();
-                            for (String prop : event.getEventType().getPropertyNames()) {
-                                Object value = event.get(prop);
-                                fields.add(prop, value == null ? null : value.toString());
-                            }
-                            newItem.add("fields", fields);
-                            newArr.add(newItem);
-                        }
-                        record.add("new", newArr);
+            final EPStatement statement = found;
+            final List<Map<String, Object>> newProps = new ArrayList<>();
+            final List<Map<String, Object>> oldProps = new ArrayList<>();
+            statement.addListener((newEvents, oldEvents, stmt, runtimeRef) -> {
+                newProps.clear();
+                oldProps.clear();
+                if (newEvents != null) {
+                    for (EventBean event : newEvents) {
+                        newProps.add(propsOf(event));
                     }
-                    if (oldData != null) {
-                        JsonArray oldArr = new JsonArray();
-                        for (EventBean event : oldData) {
-                            JsonObject oldItem = new JsonObject();
-                            JsonObject fields = new JsonObject();
-                            for (String prop : event.getEventType().getPropertyNames()) {
-                                Object value = event.get(prop);
-                                fields.add(prop, value == null ? null : value.toString());
-                            }
-                            oldItem.add("fields", fields);
-                            oldArr.add(oldItem);
-                        }
-                        record.add("old", oldArr);
+                }
+                if (oldEvents != null) {
+                    for (EventBean event : oldEvents) {
+                        oldProps.add(propsOf(event));
                     }
-                    records.add(record);
                 }
             });
 
-            boolean inCase = false;
-            for (JsonValue stepVal : allSteps) {
-                JsonObject step = stepVal.asObject();
-                String op = step.getString("op", "");
-                if ("case".equals(op)) {
-                    inCase = caseName.equals(step.getString("case", ""));
-                    continue;
-                }
-                if (!inCase) {
-                    continue;
-                }
-                if ("send".equals(op)) {
-                    String type = step.getString("type", "");
-                    switch (type) {
-                        case "SupportBean": {
-                            SupportBean bean = new SupportBean();
-                            bean.setTheString(step.getString("theString", ""));
-                            bean.setIntPrimitive(step.getInt("intPrimitive", 0));
-                            runtime.getEventService().sendEventBean(bean, type);
-                            break;
+            int step = 0;
+            for (JsonValue sendVal : caseDef.get("send").asArray()) {
+                JsonObject sendObj = sendVal.asObject();
+                String type = sendObj.getString("type", "SupportMarketDataBean");
+                Map<String, Object> event = new HashMap<>();
+                for (String key : sendObj.names()) {
+                    if (key.equals("type") || key.equals("new") || key.equals("old")) {
+                        continue;
+                    }
+                    JsonValue v = sendObj.get(key);
+                    if (v.isNull()) {
+                        event.put(key, null);
+                    } else if (v.isString()) {
+                        event.put(key, v.asString());
+                    } else if (v.isNumber()) {
+                        double dv = v.asDouble();
+                        if (key.equals("intPrimitive")) {
+                            event.put(key, (int) dv);
+                        } else if (key.equals("price")) {
+                            event.put(key, dv);
+                        } else {
+                            event.put(key, dv);
                         }
-                        case "SupportMarketDataBean": {
-                            Map<String, Object> marketEvent = new HashMap<>();
-                            marketEvent.put("symbol", step.getString("symbol", ""));
-                            marketEvent.put("price", step.getDouble("price", 0.0));
-                            runtime.getEventService().sendEventMap(marketEvent, type);
-                            break;
-                        }
-                        default:
-                            throw new IllegalStateException("unknown type: " + type);
                     }
                 }
-            }
+                newProps.clear();
+                oldProps.clear();
+                runtime.getEventService().sendEventMap(event, type);
 
-            runtime.getDeploymentService().undeployAll();
+                JsonObject row = new JsonObject();
+                row.add("case", caseName);
+                row.add("step", step++);
+                JsonObject expected = (sendObj.get("new") == null || sendObj.get("new").isNull()) ? null : sendObj.get("new").asObject();
+                JsonObject expectedOld = (sendObj.get("old") == null || sendObj.get("old").isNull()) ? null : sendObj.get("old").asObject();
+                row.add("received", single(newProps, expected));
+                row.add("receivedOld", single(oldProps, expectedOld));
+                row.add("expected", expected == null ? (JsonValue) Json.value(null) : normalized(expected));
+                row.add("expectedOld", expectedOld == null ? (JsonValue) Json.value(null) : normalized(expectedOld));
+                records.add(row);
+            }
         } finally {
             runtime.destroy();
         }
     }
 
-    private static String buildEPL(String caseName) {
-        return switch (caseName) {
-            case "sum-min-max" ->
-                "@name('s0') select theString as c0, sum(intPrimitive) as c1, " +
-                "min(intPrimitive) as c2, max(intPrimitive) as c3 from SupportBean";
-            case "simple" ->
-                "@name('s0') select irstream avg(price) as avgPrice, sum(price) as sumPrice, " +
-                "min(price) as minPrice, max(price) as maxPrice, median(price) as medianPrice, " +
-                "stddev(price) as stddevPrice, avedev(price) as avedevPrice, " +
-                "count(*) as datacount, count(distinct price) as countDistinctPrice " +
-                "from SupportMarketDataBean";
-            case "min-max-windowed" ->
-                "@name('s0') select irstream min(price) as minPrice, max(price) as maxPrice " +
-                "from SupportMarketDataBean#length(2)";
-            default -> throw new IllegalStateException("unknown case: " + caseName);
-        };
+    private static JsonObject raw(Map<String, Object> actual) {
+        JsonObject out = new JsonObject();
+        for (Map.Entry<String, Object> e : actual.entrySet()) {
+            Object v = e.getValue();
+            if (v == null) {
+                out.add(e.getKey(), Json.value(null));
+            } else if (v instanceof Number) {
+                out.add(e.getKey(), Json.value(((Number) v).doubleValue()));
+            } else if (v instanceof Object[]) {
+                JsonArray arr = new JsonArray();
+                for (Object item : (Object[]) v) {
+                    if (item instanceof Number) {
+                        arr.add(((Number) item).doubleValue());
+                    } else if (item == null) {
+                        arr.add(Json.value(null));
+                    } else {
+                        arr.add(String.valueOf(item));
+                    }
+                }
+                out.add(e.getKey(), arr);
+            } else {
+                out.add(e.getKey(), String.valueOf(v));
+            }
+        }
+        return out;
+    }
+
+    private static Map<String, Object> propsOf(EventBean event) {
+        Map<String, Object> props = new HashMap<>();
+        for (String name : event.getEventType().getPropertyNames()) {
+            props.put(name, event.get(name));
+        }
+        return props;
+    }
+
+    private static JsonObject normalized(JsonObject expected) {
+        JsonObject out = new JsonObject();
+        for (String name : expected.names()) {
+            JsonValue v = expected.get(name);
+            out.add(name, v);
+        }
+        return out;
+    }
+
+    private static JsonObject single(List<Map<String, Object>> props, JsonObject expected) {
+        // Compare only the fields named in the expectation. A missing
+        // expectation means "no assertion": emit the raw first-row properties
+        // (probe mode) instead of failing.
+        JsonObject out = new JsonObject();
+        if (expected == null) {
+            if (props.isEmpty()) {
+                return out;
+            }
+            return raw(props.get(0));
+        }
+        if (props.size() != 1) {
+            throw new IllegalStateException("expected exactly 1 event, got " + props.size());
+        }
+        Map<String, Object> actual = props.get(0);
+        for (String name : expected.names()) {
+            Object v = actual.get(name);
+            if (v == null) {
+                out.add(name, Json.value(null));
+            } else if (v instanceof Number) {
+                out.add(name, Json.value(((Number) v).doubleValue()));
+            } else if (v instanceof Object[]) {
+                JsonArray arr = new JsonArray();
+                for (Object item : (Object[]) v) {
+                    if (item instanceof Number) {
+                        arr.add(((Number) item).doubleValue());
+                    } else if (item == null) {
+                        arr.add(Json.value(null));
+                    } else if (item instanceof Map) {
+                        JsonObject o = new JsonObject();
+                        for (Map.Entry<?, ?> e : ((Map<?, ?>) item).entrySet()) {
+                            Object val = e.getValue();
+                            if (val instanceof Number) {
+                                o.add(String.valueOf(e.getKey()), Json.value(((Number) val).doubleValue()));
+                            } else if (val == null) {
+                                o.add(String.valueOf(e.getKey()), Json.value(null));
+                            } else {
+                                o.add(String.valueOf(e.getKey()), String.valueOf(val));
+                            }
+                        }
+                        arr.add(o);
+                    } else {
+                        arr.add(String.valueOf(item));
+                    }
+                }
+                out.add(name, arr);
+            } else {
+                out.add(name, String.valueOf(v));
+            }
+        }
+        return out;
     }
 }

@@ -1,0 +1,31 @@
+{
+ "id": "resultset-row-for-all-window",
+ "version": "esper-parity/v1",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "goTests": [
+  "TestResultSetQueryTypeRowForAllWWindowAggParity",
+  "TestResultSetQueryTypeRowForAllNamedWindowWindowParity"
+ ],
+ "javaRuntimes": [
+  "ResultSetQueryTypeRowForAllWWindowAgg",
+  "ResultSetQueryTypeRowForAllNamedWindowWindow"
+ ],
+ "scenario": "testdata/parity/resultset-row-for-all.json",
+ "trace": "testdata/parity/resultset-row-for-all.trace.json",
+ "caseResults": {
+  "w-window-agg": {
+   "expected": 4,
+   "actual": 4,
+   "match": true,
+   "detail": "irstream theString/sum(intPrimitive)/window(*) over length(2) window; eviction posts one old row per leaving event with plain columns from the leaving event and aggregates over post-removal state"
+  },
+  "named-window-window": {
+   "expected": 6,
+   "actual": 6,
+   "match": true,
+   "detail": "keepall named window consumer with irstream theString/window(intPrimitive); insert posts only a new row, on-delete posts only the leaving row with the post-removal window"
+  }
+ },
+ "differences": 0,
+ "notes": "Java ResultSetProcessorRowForAll mixed-shape irstream contract: a select that reads the current event outside aggregates emits an old row only per leaving event (window eviction or named-window delete), never on first insert; aggregate columns evaluate over post-removal state."
+}

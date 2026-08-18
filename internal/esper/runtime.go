@@ -16461,7 +16461,12 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	// insert batch (e.g. a window eviction caused by a new event) or when an
 	// output/forced boundary explicitly requests current state.
 	emitNew := delta.hadInput || delta.forced || len(delta.newEvents) > 0
-	if len(definition.groupBy) == 0 && len(delta.oldEvents) > 0 {
+	if containsNamedWindow(plan.query.input, nil) && len(delta.newEvents) == 0 && aggregateDefinitionIsRowForEvent(definition) {
+		// Named-window consumers follow ResultSetProcessorAggregateGrouped
+		// semantics: a delete posts only the leaving row, never a re-emitted
+		// current row.
+		emitNew = false
+	} else if len(definition.groupBy) == 0 && len(delta.oldEvents) > 0 {
 		// Ungrouped aggregate result sets post the current row whenever a
 		// removal changes the aggregate state, including pure time-expiry
 		// batches with no incoming event (Java EPLInsertInto ungrouped
@@ -16590,18 +16595,40 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		// Rollup/cube result sets (multiple grouping sets), ungrouped
 		// aggregates, grouped joins, named-window consumers and grouped
 		// row-per-group result sets post the previous row as old whenever the
-		// group is affected. Aggregate-grouped view irstream (a select that
-		// reads a non-group event property) follows
-		// ResultSetProcessorAggregateGroupedImpl: one old row per leaving
-		// event, evaluated after the removal is applied; ordinary updates
-		// carry no old row.
-		if group.emitted && (plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) && !aggregateGroupedRowPerEvent {
+		if group.emitted && (plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) && !aggregateGroupedRowPerEvent && !aggregateDefinitionIsRowForEvent(definition) {
 			oldEntries = append(oldEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, group.previous)),
 				group:  group,
 				key:    key,
 			})
 		}
+		if aggregateDefinitionIsRowForEvent(definition) && len(delta.newEvents) == 0 && len(delta.oldEvents) > 0 {
+			// Named-window deletes (no incoming events): one old row per
+			// leaving event with plain columns from the leaving event and
+			// aggregates over the post-removal state; no new row.
+			postRemoval, postVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+			for _, leaving := range delta.oldEvents {
+				oldValues := append([]Value(nil), postRemoval...)
+				for index, selection := range definition.selections {
+					if isAggregateExpression(selection.Expr) {
+						continue
+					}
+					oldValues[index] = selection.Expr.eval(EvalContext{Event: leaving, Now: now, Variables: r.variables})
+				}
+				if postVisible || len(oldValues) > 0 {
+					oldEntries = append(oldEntries, aggregateResultEntry{
+						result: resultRow(newRow(plan.resultSchema, oldValues)),
+						group:  group,
+						key:    key,
+					})
+				}
+			}
+		}
+		// group is affected. Aggregate-grouped view irstream (a select that
+		// reads a non-group event property) follows
+		// ResultSetProcessorAggregateGroupedImpl: one old row per leaving
+		// event, evaluated after the removal is applied; ordinary updates
+		// carry no old row.
 		if aggregateDefinitionIsRowForEvent(definition) && len(delta.newEvents) > 0 && len(group.events) > 0 {
 			for _, current := range delta.newEvents {
 				values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
@@ -16611,6 +16638,31 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 						group:  group,
 						key:    key,
 					})
+				}
+			}
+			if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
+				// Java ResultSetProcessorRowForAll with a plain column reading the
+				// current event (w-window-agg/named-window-window contract): an
+				// old row is emitted only per leaving event, with aggregate columns
+				// evaluated against the post-removal state and plain columns
+				// against the leaving event itself. Insert-only updates carry no
+				// old row.
+				postRemoval, postVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+				for _, leaving := range delta.oldEvents {
+					oldValues := append([]Value(nil), postRemoval...)
+					for index, selection := range definition.selections {
+						if isAggregateExpression(selection.Expr) {
+							continue
+						}
+						oldValues[index] = selection.Expr.eval(EvalContext{Event: leaving, Now: now, Variables: r.variables})
+					}
+					if postVisible || len(oldValues) > 0 {
+						oldEntries = append(oldEntries, aggregateResultEntry{
+							result: resultRow(newRow(plan.resultSchema, oldValues)),
+							group:  group,
+							key:    key,
+						})
+					}
 				}
 			}
 			previous, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
@@ -16678,7 +16730,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				key:    key,
 			})
 		}
-		if visible && !emittedBefore && len(definition.groupBy) == 0 && plan.query.selector == SelectIRStream {
+		if visible && !emittedBefore && len(definition.groupBy) == 0 && plan.query.selector == SelectIRStream && !aggregateDefinitionReadsNonKeyEvent(definition) {
 			// Ungrouped irstream aggregates pair the first new row with an
 			// old row whose aggregate columns evaluate over the empty group
 			// (Java ResultSetProcessorRowForAll: sum/avg/min/max are null and

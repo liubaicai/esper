@@ -30747,12 +30747,16 @@
    "javaRuntimeIds": [
     "java-runtime-6c590766c3ba03239c04",
     "java-runtime-803e092256cda66d2f0e",
-    "java-runtime-e54e4c73c8eec446581f"
+    "java-runtime-e54e4c73c8eec446581f",
+    "java-runtime-287708385b40a014c3fc",
+    "java-runtime-a86df6b7b7185701f64b"
    ],
    "javaNames": [
     "ResultSetQueryTypeRowForAllSumMinMax",
     "ResultSetQueryTypeRowForAllSimple",
-    "ResultSetQueryTypeRowForAllMinMaxWindowed"
+    "ResultSetQueryTypeRowForAllMinMaxWindowed",
+    "ResultSetQueryTypeRowForAllWWindowAgg",
+    "ResultSetQueryTypeRowForAllNamedWindowWindow"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAll.java"
@@ -30763,10 +30767,11 @@
     "differential-verified"
    ],
    "evidence": [
-    "testdata/parity/row-for-all.evidence.json"
+    "testdata/parity/row-for-all.evidence.json",
+    "testdata/parity/resultset-row-for-all.evidence.json"
    ],
-   "scenario": "testdata/parity/row-for-all.json",
-   "trace": "testdata/parity/row-for-all.trace.json",
+   "scenario": "testdata/parity/resultset-row-for-all.json",
+   "trace": "testdata/parity/resultset-row-for-all.trace.json",
    "goRefs": [
     "internal/esper/resultset_row_for_all_parity_test.go"
    ],
@@ -30774,7 +30779,9 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-6c590766c3ba03239c04",
     "java-runtime-803e092256cda66d2f0e",
-    "java-runtime-e54e4c73c8eec446581f"
+    "java-runtime-e54e4c73c8eec446581f",
+    "java-runtime-287708385b40a014c3fc",
+    "java-runtime-a86df6b7b7185701f64b"
    ]
   },
   {
@@ -33732,10 +33739,10 @@
  "summary": {
   "cases": 512,
   "differentialVerifiedCases": 110,
-  "differentialVerifiedRuntimeIds": 334,
-  "referencedJavaRuntimeIds": 2862,
+  "differentialVerifiedRuntimeIds": 336,
+  "referencedJavaRuntimeIds": 2864,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1274,
+  "unreferencedJavaRuntimeIds": 1272,
   "representativeScenarioPass": 92,
   "intentionallyDifferentCases": 0,
   "nfrVerifiedCases": 0
