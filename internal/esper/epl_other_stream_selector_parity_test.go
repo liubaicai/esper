@@ -405,3 +405,311 @@ func TestEPLOtherAloneJoinNoAliasParity(t *testing.T) {
 		t.Fatalf("unexpected s0 event column in noalias expansion: %#v", reverseRow.Get("s0").Any())
 	}
 }
+
+// TestEPLOtherAloneNoJoinAliasParity covers EPLOtherAloneNoJoinAlias:
+// select theString.* as s0 from SupportBean#length(3) as theString.
+// The result has one column "s0" holding the SupportBean event itself.
+// Java runtime: java-runtime-bb3332c825b24eb5046a.
+func TestEPLOtherAloneNoJoinAliasParity(t *testing.T) {
+	env := newStreamSelectorEnv(t)
+	engine := NewEngine(env)
+
+	source := From[streamSelectorBean](env, "SupportBean").Window(LengthWindow(3))
+	plan, err := env.Build(
+		Select(source,
+			Alias("s0", EventValue[Event]()),
+		).Query(StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := streamSelectorSubscribe(t, deployment)
+
+	bean := streamSelectorBean{TheString: "E1", IntPrimitive: 0}
+	if err := engine.SendEvent(context.Background(), bean); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	row := (*got)[0]
+	// s0 should be the event object itself (identity check)
+	s0Event, ok := row.Get("s0").Any().(Event)
+	if !ok {
+		t.Fatalf("s0 is not an Event: %T", row.Get("s0").Any())
+	}
+	underlying, ok := s0Event.Underlying().(streamSelectorBean)
+	if !ok {
+		t.Fatalf("s0 underlying is not streamSelectorBean: %T", s0Event.Underlying())
+	}
+	if underlying.TheString != "E1" {
+		t.Fatalf("s0 underlying theString = %#v", underlying.TheString)
+	}
+}
+
+// TestEPLOtherNoJoinNoAliasWithPropertiesParity covers EPLOtherNoJoinNoAliasWithProperties:
+// select intPrimitive as a, string.*, intPrimitive as b from SupportBean#length(3) as string.
+// The result expands string.* into individual properties (theString, intPrimitive, etc.)
+// plus explicit a and b columns.
+// Java runtime: java-runtime-04453c1c3c73e4a9ba36.
+func TestEPLOtherNoJoinNoAliasWithPropertiesParity(t *testing.T) {
+	env := newStreamSelectorEnv(t)
+	engine := NewEngine(env)
+
+	source := From[streamSelectorBean](env, "SupportBean").Window(LengthWindow(3))
+	plan, err := env.Build(
+		Select(source,
+			Alias("a", Field[streamSelectorBean, int]("intPrimitive")),
+			Alias("theString", Field[streamSelectorBean, string]("theString")),
+			Alias("intPrimitive", Field[streamSelectorBean, int]("intPrimitive")),
+			Alias("b", Field[streamSelectorBean, int]("intPrimitive")),
+		).Query(StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := streamSelectorSubscribe(t, deployment)
+
+	bean := streamSelectorBean{TheString: "E1", IntPrimitive: 10}
+	if err := engine.SendEvent(context.Background(), bean); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	row := (*got)[0]
+	if row.Get("a").Any() != 10 {
+		t.Fatalf("a = %#v", row.Get("a").Any())
+	}
+	if row.Get("theString").Any() != "E1" {
+		t.Fatalf("theString = %#v", row.Get("theString").Any())
+	}
+	if row.Get("intPrimitive").Any() != 10 {
+		t.Fatalf("intPrimitive = %#v", row.Get("intPrimitive").Any())
+	}
+	if row.Get("b").Any() != 10 {
+		t.Fatalf("b = %#v", row.Get("b").Any())
+	}
+}
+
+// TestEPLOtherNoJoinWildcardNoAliasParity covers EPLOtherNoJoinWildcardNoAlias:
+// select *, win.* from SupportBean#length(3) as win.
+// The result has all SupportBean properties (both * and win.* expand identically).
+// The underlying type is the original bean (same underlying identity).
+// Java runtime: java-runtime-6dbc99a56abddbf3d38a.
+func TestEPLOtherNoJoinWildcardNoAliasParity(t *testing.T) {
+	env := newStreamSelectorEnv(t)
+	engine := NewEngine(env)
+
+	source := From[streamSelectorBean](env, "SupportBean").Window(LengthWindow(3))
+	plan, err := env.Build(
+		Select(source,
+			Alias("theString", Field[streamSelectorBean, string]("theString")),
+			Alias("intPrimitive", Field[streamSelectorBean, int]("intPrimitive")),
+			Alias("event", EventValue[Event]()),
+		).Query(StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := streamSelectorSubscribe(t, deployment)
+
+	bean := streamSelectorBean{TheString: "E1", IntPrimitive: 16}
+	if err := engine.SendEvent(context.Background(), bean); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(*got))
+	}
+	row := (*got)[0]
+	if row.Get("theString").Any() != "E1" {
+		t.Fatalf("theString = %#v", row.Get("theString").Any())
+	}
+	if row.Get("intPrimitive").Any() != 16 {
+		t.Fatalf("intPrimitive = %#v", row.Get("intPrimitive").Any())
+	}
+	// Verify underlying identity: the event wraps the same bean
+	event, ok := row.Get("event").Any().(Event)
+	if !ok {
+		t.Fatalf("event is not an Event: %T", row.Get("event").Any())
+	}
+	underlying, ok := event.Underlying().(streamSelectorBean)
+	if !ok {
+		t.Fatalf("event underlying is not streamSelectorBean: %T", event.Underlying())
+	}
+	if underlying.TheString != "E1" || underlying.IntPrimitive != 16 {
+		t.Fatalf("event underlying = %#v", underlying)
+	}
+}
+
+// TestEPLOtherJoinNoAliasWithPropertiesParity covers EPLOtherJoinNoAliasWithProperties:
+// select intPrimitive, s1.*, symbol as sym from SupportBean#length(3) as s0,
+// SupportMarketDataBean#keepall as s1.
+// The result expands s1.* into individual properties plus intPrimitive and sym.
+// Java runtime: java-runtime-dccd7d03c70875f69975.
+func TestEPLOtherJoinNoAliasWithPropertiesParity(t *testing.T) {
+	env := newStreamSelectorEnv(t)
+	engine := NewEngine(env)
+
+	left := From[streamSelectorBean](env, "SupportBean").Window(LengthWindow(3))
+	right := From[streamSelectorMarket](env, "SupportMarketDataBean").Window(KeepAll())
+	plan, err := env.Build(
+		JoinMany(
+			JoinSource(left),
+			JoinSource(right),
+		).Select(
+			SelectFrom(0, "intPrimitive", Field[streamSelectorBean, int]("intPrimitive")),
+			SelectFrom(1, "symbol", Field[streamSelectorMarket, string]("symbol")),
+			SelectFrom(1, "volume", Field[streamSelectorMarket, int64]("volume")),
+			SelectFrom(1, "price", Field[streamSelectorMarket, float64]("price")),
+			SelectFrom(0, "theString", Field[streamSelectorBean, string]("theString")),
+			SelectFrom(1, "sym", Field[streamSelectorMarket, string]("symbol")),
+			SelectFrom(0, "s0", EventValue[Event]()),
+			SelectFrom(1, "s1", EventValue[Event]()),
+		).Query(StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := streamSelectorSubscribe(t, deployment)
+
+	bean := streamSelectorBean{TheString: "E1", IntPrimitive: 11}
+	if err := engine.SendEvent(context.Background(), bean); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 0 {
+		t.Fatalf("expected 0 results before market event, got %d", len(*got))
+	}
+
+	marketEvent := streamSelectorMarket{Symbol: "E1", Volume: 0, Price: 0}
+	if err := engine.SendEvent(context.Background(), marketEvent); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result after join, got %d", len(*got))
+	}
+	row := (*got)[0]
+	if row.Get("intPrimitive").Any() != 11 {
+		t.Fatalf("intPrimitive = %#v", row.Get("intPrimitive").Any())
+	}
+	if row.Get("sym").Any() != "E1" {
+		t.Fatalf("sym = %#v", row.Get("sym").Any())
+	}
+	if row.Get("symbol").Any() != "E1" {
+		t.Fatalf("symbol = %#v", row.Get("symbol").Any())
+	}
+	// s1 should be the market event
+	s1Event, ok := row.Get("s1").Any().(Event)
+	if !ok {
+		t.Fatalf("s1 is not an Event: %T", row.Get("s1").Any())
+	}
+	s1Underlying, ok := s1Event.Underlying().(streamSelectorMarket)
+	if !ok {
+		t.Fatalf("s1 underlying is not streamSelectorMarket: %T", s1Event.Underlying())
+	}
+	if s1Underlying.Symbol != "E1" {
+		t.Fatalf("s1 underlying symbol = %#v", s1Underlying.Symbol)
+	}
+}
+
+// TestEPLOtherJoinWildcardNoAliasParity covers EPLOtherJoinWildcardNoAlias:
+// select *, s1.* from SupportBean#length(3) as s0, SupportMarketDataBean#keepall as s1.
+// The result has 7 properties: s0 (SupportBean), s1 (SupportMarketDataBean),
+// theString, intPrimitive, symbol, volume, price.
+// Java runtime: java-runtime-6556dd46777be4afa86f.
+func TestEPLOtherJoinWildcardNoAliasParity(t *testing.T) {
+	env := newStreamSelectorEnv(t)
+	engine := NewEngine(env)
+
+	left := From[streamSelectorBean](env, "SupportBean").Window(LengthWindow(3))
+	right := From[streamSelectorMarket](env, "SupportMarketDataBean").Window(KeepAll())
+	plan, err := env.Build(
+		JoinMany(
+			JoinSource(left),
+			JoinSource(right),
+		).Select(
+			SelectSourceEvent(0, "s0"),
+			SelectSourceEvent(1, "s1"),
+			SelectFrom(0, "theString", Field[streamSelectorBean, string]("theString")),
+			SelectFrom(0, "intPrimitive", Field[streamSelectorBean, int]("intPrimitive")),
+			SelectFrom(1, "symbol", Field[streamSelectorMarket, string]("symbol")),
+			SelectFrom(1, "volume", Field[streamSelectorMarket, int64]("volume")),
+			SelectFrom(1, "price", Field[streamSelectorMarket, float64]("price")),
+		).Query(StatementName("s0")),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close(context.Background())
+
+	got := streamSelectorSubscribe(t, deployment)
+
+	bean := streamSelectorBean{TheString: "E1", IntPrimitive: 13}
+	if err := engine.SendEvent(context.Background(), bean); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 0 {
+		t.Fatalf("expected 0 results before market event, got %d", len(*got))
+	}
+
+	market := streamSelectorMarket{Symbol: "E2", Volume: 0, Price: 0}
+	if err := engine.SendEvent(context.Background(), market); err != nil {
+		t.Fatal(err)
+	}
+	if len(*got) != 1 {
+		t.Fatalf("expected 1 result after join, got %d", len(*got))
+	}
+	row := (*got)[0]
+	// s0 and s1 should be the source events
+	s0Event, ok := row.Get("s0").Any().(Event)
+	if !ok {
+		t.Fatalf("s0 is not an Event: %T", row.Get("s0").Any())
+	}
+	if s0Event.Underlying().(streamSelectorBean).TheString != "E1" {
+		t.Fatalf("s0 underlying theString = %#v", s0Event.Underlying())
+	}
+	s1Event, ok := row.Get("s1").Any().(Event)
+	if !ok {
+		t.Fatalf("s1 is not an Event: %T", row.Get("s1").Any())
+	}
+	if s1Event.Underlying().(streamSelectorMarket).Symbol != "E2" {
+		t.Fatalf("s1 underlying symbol = %#v", s1Event.Underlying())
+	}
+	if row.Get("theString").Any() != "E1" {
+		t.Fatalf("theString = %#v", row.Get("theString").Any())
+	}
+	if row.Get("symbol").Any() != "E2" {
+		t.Fatalf("symbol = %#v", row.Get("symbol").Any())
+	}
+	if row.Get("volume").Any() != int64(0) {
+		t.Fatalf("volume = %#v", row.Get("volume").Any())
+	}
+}

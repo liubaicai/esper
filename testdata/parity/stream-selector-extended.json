@@ -1,0 +1,38 @@
+{
+  "scenario": "stream-selector-extended",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "java": "17",
+  "cases": [
+    {
+      "case": "alone-no-join-alias",
+      "epl": "@name('s0') select theString.* as s0 from SupportBean#length(3) as theString",
+      "send": [{"type": "SupportBean", "theString": "E1", "intPrimitive": 0}]
+    },
+    {
+      "case": "no-join-no-alias-with-properties",
+      "epl": "@name('s0') select intPrimitive as a, string.*, intPrimitive as b from SupportBean#length(3) as string",
+      "send": [{"type": "SupportBean", "theString": "E1", "intPrimitive": 10}]
+    },
+    {
+      "case": "no-join-wildcard-no-alias",
+      "epl": "@name('s0') select *, win.* from SupportBean#length(3) as win",
+      "send": [{"type": "SupportBean", "theString": "E1", "intPrimitive": 16}]
+    },
+    {
+      "case": "join-no-alias-with-properties",
+      "epl": "@name('s0') select intPrimitive, s1.*, symbol as sym from SupportBean#length(3) as s0, SupportMarketDataBean#keepall as s1",
+      "send": [
+        {"type": "SupportBean", "theString": "E1", "intPrimitive": 11},
+        {"type": "SupportMarketDataBean", "symbol": "E1", "volume": 0, "price": 0.0}
+      ]
+    },
+    {
+      "case": "join-wildcard-no-alias",
+      "epl": "@name('s0') select *, s1.* from SupportBean#length(3) as s0, SupportMarketDataBean#keepall as s1",
+      "send": [
+        {"type": "SupportBean", "theString": "E1", "intPrimitive": 13},
+        {"type": "SupportMarketDataBean", "symbol": "E2", "volume": 0, "price": 0.0}
+      ]
+    }
+  ]
+}

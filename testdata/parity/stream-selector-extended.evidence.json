@@ -1,0 +1,53 @@
+{
+  "version": "esper-parity/evidence-v1",
+  "scenario": "stream-selector-extended",
+  "goTests": [
+    "TestEPLOtherAloneNoJoinAliasParity",
+    "TestEPLOtherNoJoinNoAliasWithPropertiesParity",
+    "TestEPLOtherNoJoinWildcardNoAliasParity",
+    "TestEPLOtherJoinNoAliasWithPropertiesParity",
+    "TestEPLOtherJoinWildcardNoAliasParity"
+  ],
+  "javaRuntimeIds": [
+    "java-runtime-4e3a14053213c9ffd08d",
+    "java-runtime-04453c1c3c73e4a9ba36",
+    "java-runtime-6dbc99a56abddbf3d38a",
+    "java-runtime-dccd7d03c70875f69975",
+    "java-runtime-6556dd46777be4afa86f"
+  ],
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "caseResults": [
+    {
+      "case": "alone-no-join-alias",
+      "javaRecords": 1,
+      "goRecords": 1,
+      "match": true
+    },
+    {
+      "case": "no-join-no-alias-with-properties",
+      "javaRecords": 1,
+      "goRecords": 1,
+      "match": true
+    },
+    {
+      "case": "no-join-wildcard-no-alias",
+      "javaRecords": 1,
+      "goRecords": 1,
+      "match": true
+    },
+    {
+      "case": "join-no-alias-with-properties",
+      "javaRecords": 1,
+      "goRecords": 1,
+      "match": true
+    },
+    {
+      "case": "join-wildcard-no-alias",
+      "javaRecords": 1,
+      "goRecords": 1,
+      "match": true
+    }
+  ],
+  "differences": [],
+  "zeroDifference": true
+}
