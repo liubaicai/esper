@@ -31126,6 +31126,57 @@
     "java-runtime-e4935b367a7e3c693b88",
     "java-runtime-e84ef276399c7a200a78"
    ]
+  },
+  {
+   "id": "case.expr-filter-optimizable-boolean-rebool",
+   "javaRuntimeIds": [
+    "java-runtime-8941f4303767754556dd",
+    "java-runtime-72b50080e9866acde01c",
+    "java-runtime-0810493a13196a06434c",
+    "java-runtime-90af560a2f7c379a988b",
+    "java-runtime-31bec69937923c05bf89"
+   ],
+   "javaNames": [
+    "ExprFilterOptReboolWithEquals",
+    "ExprFilterOptReboolMultiple",
+    "ExprFilterOptReboolNoValueConcat",
+    "ExprFilterOptReboolConstValueRegexpLHS",
+    "ExprFilterOptReboolConstValueRegexpRHS"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableBooleanLimitedExpr.java"
+   ],
+   "goTests": [
+    "TestExprFilterOptReboolWithEqualsParity",
+    "TestExprFilterOptReboolMultipleParity",
+    "TestExprFilterOptReboolNoValueConcatParity",
+    "TestExprFilterOptReboolConstValueRegexpLHSParity",
+    "TestExprFilterOptReboolConstValueRegexpRHSParity"
+   ],
+   "tags": [],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/filter-rebool-optimizable.json",
+    "testdata/parity/filter-rebool-optimizable.trace.json",
+    "testdata/parity/filter-rebool-optimizable.evidence.json",
+    "tools/java-oracle/FilterReboolScenarioOracle.java",
+    "tools/java-oracle/run-filter-rebool-optimizable.sh",
+    "java-oracle-trace",
+    "go-unit"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-8941f4303767754556dd",
+    "java-runtime-72b50080e9866acde01c",
+    "java-runtime-0810493a13196a06434c",
+    "java-runtime-90af560a2f7c379a988b",
+    "java-runtime-31bec69937923c05bf89"
+   ]
   }
  ],
  "mappings": [
@@ -33492,15 +33543,19 @@
   {
    "capabilityId": "expr.filter-expressions",
    "caseId": "case.expr-filter-optimizable-value-limited"
+  },
+  {
+   "capabilityId": "expr.filter-expressions",
+   "caseId": "case.expr-filter-optimizable-boolean-rebool"
   }
  ],
  "summary": {
-  "cases": 508,
-  "differentialVerifiedCases": 106,
-  "differentialVerifiedRuntimeIds": 307,
-  "referencedJavaRuntimeIds": 2835,
+  "cases": 509,
+  "differentialVerifiedCases": 107,
+  "differentialVerifiedRuntimeIds": 312,
+  "referencedJavaRuntimeIds": 2840,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1301,
+  "unreferencedJavaRuntimeIds": 1296,
   "representativeScenarioPass": 92,
   "intentionallyDifferentCases": 0,
   "nfrVerifiedCases": 0

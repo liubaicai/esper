@@ -1,0 +1,57 @@
+{
+  "version": "esper-parity/evidence-v1",
+  "scenario": "filter-rebool-optimizable",
+  "goTests": [
+    "TestExprFilterOptReboolWithEqualsParity",
+    "TestExprFilterOptReboolMultipleParity",
+    "TestExprFilterOptReboolNoValueConcatParity",
+    "TestExprFilterOptReboolConstValueRegexpLHSParity",
+    "TestExprFilterOptReboolConstValueRegexpRHSParity"
+  ],
+  "javaRuntimeIds": [
+    "java-runtime-8941f4303767754556dd",
+    "java-runtime-72b50080e9866acde01c",
+    "java-runtime-0810493a13196a06434c",
+    "java-runtime-90af560a2f7c379a988b",
+    "java-runtime-31bec69937923c05bf89"
+  ],
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "traceComparison": {
+    "javaTrace": "testdata/parity/filter-rebool-optimizable.trace.json",
+    "goTrace": "go-test assertions inline (subscribeRebool per-statement fired flags)",
+    "records": 14,
+    "zeroDifference": true,
+    "perCase": [
+      {
+        "case": "rebool-with-equals",
+        "steps": 4,
+        "match": true
+      },
+      {
+        "case": "rebool-multiple",
+        "steps": 3,
+        "match": true
+      },
+      {
+        "case": "rebool-no-value-concat",
+        "steps": 2,
+        "match": true
+      },
+      {
+        "case": "rebool-const-regexp-lhs",
+        "steps": 2,
+        "match": true
+      },
+      {
+        "case": "rebool-const-regexp-rhs",
+        "steps": 3,
+        "match": true
+      }
+    ]
+  },
+  "differences": [],
+  "notes": [
+    "Java filter-index plan assertions (REBOOL operator, index sharing, SupportFilterPlanHook) are engine-internal with no observable Go equivalent; observable selection behavior verified instead.",
+    "Go uses Then(PatternFrom(...)) for the mixed-type pattern in rebool-with-equals; both PatternFrom steps carry their own source schema."
+  ]
+}

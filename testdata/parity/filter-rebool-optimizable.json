@@ -1,0 +1,50 @@
+{
+  "version": "esper-parity/scenario-v1",
+  "scenario": "filter-rebool-optimizable",
+  "cases": [
+    {
+      "case": "rebool-with-equals",
+      "epl": "@name('s0') select * from pattern[s0=SupportBean_S0 -> SupportBean(intPrimitive+5=s0.id and theString='a')]",
+      "send": [
+        {"type": "SupportBean_S0", "id": 10},
+        {"type": "SupportBean", "theString": "a", "intPrimitive": 10, "received": false},
+        {"type": "SupportBean", "theString": "b", "intPrimitive": 5, "received": false},
+        {"type": "SupportBean", "theString": "a", "intPrimitive": 5, "received": true}
+      ]
+    },
+    {
+      "case": "rebool-multiple",
+      "epl": "@name('s0') select * from SupportBean_S0(p00 regexp '.*X' and p01 regexp '.*Y');\n@name('s1') select * from SupportBean_S0(p01 regexp '.*Y' and p00 regexp '.*X');",
+      "send": [
+        {"type": "SupportBean_S0", "p00": "AX", "p01": "AZ", "received": false},
+        {"type": "SupportBean_S0", "p00": "AY", "p01": "AX", "received": false},
+        {"type": "SupportBean_S0", "p00": "AX", "p01": "BY", "received": true}
+      ]
+    },
+    {
+      "case": "rebool-no-value-concat",
+      "epl": "@name('s0') select * from SupportBean_S0(p00 || p01 = p02 || p03);\n@name('s1') select * from SupportBean_S0(p00 || p01 = p02 || p03);",
+      "send": [
+        {"type": "SupportBean_S0", "p00": "a", "p01": "b", "p02": "a", "p03": "b", "received": true},
+        {"type": "SupportBean_S0", "p00": "a", "p01": "b", "p02": "a", "p03": "c", "received": false}
+      ]
+    },
+    {
+      "case": "rebool-const-regexp-lhs",
+      "epl": "@name('s0') select * from SupportBean('abc' regexp theString);\n@name('s1') select * from SupportBean('abc' regexp theString);",
+      "send": [
+        {"type": "SupportBean", "theString": ".*bc", "received": true},
+        {"type": "SupportBean", "theString": ".*d", "received": false}
+      ]
+    },
+    {
+      "case": "rebool-const-regexp-rhs",
+      "epl": "@name('s0') select * from SupportBean(theString regexp '.*a.*');\n@name('s1') select * from SupportBean(theString regexp '.*a.*');\n@name('s2') select * from SupportBean(theString regexp '.*b.*');",
+      "send": [
+        {"type": "SupportBean", "theString": "garden", "received": [true, true, false]},
+        {"type": "SupportBean", "theString": "house", "received": [false, false, false]},
+        {"type": "SupportBean", "theString": "grub", "received": [false, false, true]}
+      ]
+    }
+  ]
+}
