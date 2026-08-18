@@ -1,0 +1,39 @@
+{
+  "version": "esper-parity/evidence-v1",
+  "scenario": "dt-interval-ops-threshold",
+  "goTests": [
+    "TestExprDTIntervalThresholdParity",
+    "TestExprDTIntervalBeforeInSelectClauseParity",
+    "TestExprDTIntervalTimePeriodUnitsParity"
+  ],
+  "javaRuntimeIds": [
+    "java-runtime-90acb833cacfcc15bc5d",
+    "java-runtime-d3480b360fc494237ec7",
+    "java-runtime-dd66747a433d48b14c38",
+    "java-runtime-472cb29d507ae5c936dc"
+  ],
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "traceComparison": {
+    "javaTrace": "testdata/parity/dt-interval-ops-threshold.trace.json",
+    "goTrace": "go-test assertions inline (where-filter fired flags and select-clause projected booleans)",
+    "records": 24,
+    "zeroDifference": true,
+    "perCase": [
+      {"case": "before-w-variable", "steps": 3, "match": true},
+      {"case": "before-in-select-clause", "steps": 3, "match": true},
+      {"case": "before-where-with-bean", "steps": 4, "match": true},
+      {"case": "before-two-thresholds", "steps": 4, "match": true},
+      {"case": "before-swapped-thresholds", "steps": 2, "match": true},
+      {"case": "after-threshold", "steps": 2, "match": true},
+      {"case": "after-negative-thresholds", "steps": 4, "match": true},
+      {"case": "time-period-w-year-non-const", "steps": 1, "match": true}
+    ]
+  },
+  "differences": [],
+  "notes": [
+    "Go API additions: BeforeThreshold(startDelta, endDelta) and AfterThreshold(startDelta, endDelta) in expr_dt_interval.go, ported from IntervalComputerConstantBefore/After.computeIntervalBefore/After including the WithDeltaExpr range-swap when startDelta > endDelta.",
+    "Variable thresholds (somenumber) and substitution-parameter thresholds bind Go constants directly, matching prior filter-val slice conventions.",
+    "The microseconds time-period form resolves to 0.001ms in Esper; at identical instants the long-ms delta 0 satisfies the collapsed [0, threshold] range, so BeforeThreshold(0,0) reproduces the Java true result while all larger units yield false (Java-confirmed via oracle).",
+    "Calendar-op executions (ExprDTIntervalCalendarOps, ExprDTIntervalPointInTimeWCalendarOps) and ExprDTIntervalInvalid (invalid-EPL compile assertions) remain future work."
+  ]
+}

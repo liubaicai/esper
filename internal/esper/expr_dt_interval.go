@@ -114,6 +114,36 @@ var Starts = intervalComputer{"starts", func(ls, le, rs, re int64) bool { return
 // Java: IntervalComputerStartedByNoParam.
 var StartedBy = intervalComputer{"startedBy", func(ls, le, rs, re int64) bool { return ls == rs && le > re }}
 
+// BeforeThreshold reports whether the left interval ends before the right
+// interval starts by a delta within [startDelta, endDelta] milliseconds.
+// Java: IntervalComputerConstantBefore.computeIntervalBefore with the
+// range swapped when startDelta exceeds endDelta (WithDeltaExpr semantics).
+func BeforeThreshold(startDelta, endDelta int64) intervalComputer {
+	return intervalComputer{"before", func(ls, le, rs, re int64) bool {
+		lo, hi := startDelta, endDelta
+		if lo > hi {
+			lo, hi = hi, lo
+		}
+		delta := rs - le
+		return lo <= delta && delta <= hi
+	}}
+}
+
+// AfterThreshold reports whether the left interval starts after the right
+// interval ends by a delta within [startDelta, endDelta] milliseconds.
+// Java: IntervalComputerConstantAfter.computeIntervalAfter with the range
+// swapped when startDelta exceeds endDelta.
+func AfterThreshold(startDelta, endDelta int64) intervalComputer {
+	return intervalComputer{"after", func(ls, le, rs, re int64) bool {
+		lo, hi := startDelta, endDelta
+		if lo > hi {
+			lo, hi = hi, lo
+		}
+		delta := ls - re
+		return lo <= delta && delta <= hi
+	}}
+}
+
 // toInt64Value coerces a present Value to int64 without allocating.
 func toInt64Value(v Value) (int64, bool) {
 	switch n := v.Any().(type) {

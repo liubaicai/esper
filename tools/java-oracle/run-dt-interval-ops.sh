@@ -86,7 +86,7 @@ parent=$(dirname "$output")
 mkdir -p "$parent"
 "$java_bin" -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Duser.language=en \
     -Duser.country=US -Duser.variant= -cp "$classpath" \
-    DTIntervalOpsScenarioOracle > "$output"
+    DTIntervalOpsScenarioOracle "$scenario" > "$output"
 
 if ! jq -e '.version == "esper-parity/v1" and (.scenario | length > 0) and (.records | type == "array")' "$output" >/dev/null 2>&1; then
   echo "Oracle trace validation failed" >&2; exit 1

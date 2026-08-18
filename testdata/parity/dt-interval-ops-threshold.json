@@ -1,0 +1,226 @@
+{
+ "version": "esper-parity/scenario-v1",
+ "scenario": "dt-interval-ops-threshold",
+ "cases": [
+  {
+   "case": "before-w-variable",
+   "op": "before",
+   "params": [
+    1
+   ],
+   "bStart": 1022749200000,
+   "bEnd": 1022749200000,
+   "send": [
+    {
+     "aStart": 1022749200000,
+     "aEnd": 1022749200000,
+     "received": false
+    },
+    {
+     "aStart": 1022749199999,
+     "aEnd": 1022749199999,
+     "received": true
+    },
+    {
+     "aStart": 1022749199000,
+     "aEnd": 1022749199000,
+     "received": true
+    }
+   ]
+  },
+  {
+   "case": "before-in-select-clause",
+   "select": "a.before(b) as c0, a.before(b) as c1",
+   "bStart": 1022749200000,
+   "bEnd": 1022749200000,
+   "send": [
+    {
+     "aStart": 1022749199000,
+     "aEnd": 1022749199000,
+     "values": [
+      true,
+      true
+     ]
+    },
+    {
+     "aStart": 1022749199950,
+     "aEnd": 1022749199950,
+     "values": [
+      true,
+      true
+     ]
+    },
+    {
+     "aStart": 1022749200000,
+     "aEnd": 1022749200000,
+     "values": [
+      false,
+      false
+     ]
+    }
+   ]
+  },
+  {
+   "case": "before-where-with-bean",
+   "op": "before",
+   "params": [
+    1
+   ],
+   "bStart": 1022749200000,
+   "bEnd": 1022749200000,
+   "send": [
+    {
+     "aStart": 1022749199000,
+     "aEnd": 1022749199000,
+     "received": true
+    },
+    {
+     "aStart": 1022749199999,
+     "aEnd": 1022749199999,
+     "received": true
+    },
+    {
+     "aStart": 1022749200000,
+     "aEnd": 1022749200000,
+     "received": false
+    },
+    {
+     "aStart": 1022749200001,
+     "aEnd": 1022749200001,
+     "received": false
+    }
+   ]
+  },
+  {
+   "case": "before-two-thresholds",
+   "op": "before",
+   "params": [
+    1,
+    1000000000
+   ],
+   "bStart": 1022749200000,
+   "bEnd": 1022749200000,
+   "send": [
+    {
+     "aStart": 1022749199000,
+     "aEnd": 1022749199000,
+     "received": true
+    },
+    {
+     "aStart": 1022749199999,
+     "aEnd": 1022749199999,
+     "received": true
+    },
+    {
+     "aStart": 1022749200000,
+     "aEnd": 1022749200000,
+     "received": false
+    },
+    {
+     "aStart": 1022749200001,
+     "aEnd": 1022749200001,
+     "received": false
+    }
+   ]
+  },
+  {
+   "case": "before-swapped-thresholds",
+   "op": "before",
+   "params": [
+    1000000000,
+    1
+   ],
+   "bStart": 1022749200000,
+   "bEnd": 1022749200000,
+   "send": [
+    {
+     "aStart": 1022749199999,
+     "aEnd": 1022749199999,
+     "received": true
+    },
+    {
+     "aStart": 1022749200000,
+     "aEnd": 1022749200000,
+     "received": false
+    }
+   ]
+  },
+  {
+   "case": "after-threshold",
+   "op": "after",
+   "params": [
+    1,
+    1000000000
+   ],
+   "bStart": 1022749200000,
+   "bEnd": 1022749201000,
+   "send": [
+    {
+     "aStart": 1022749201000,
+     "aEnd": 1022749201500,
+     "received": false
+    },
+    {
+     "aStart": 1022749201001,
+     "aEnd": 1022749201500,
+     "received": true
+    }
+   ]
+  },
+  {
+   "case": "after-negative-thresholds",
+   "op": "after",
+   "params": [
+    -100,
+    -500
+   ],
+   "bStart": 1022749200000,
+   "bEnd": 1022749201000,
+   "send": [
+    {
+     "aStart": 1022749200499,
+     "aEnd": 1022749200600,
+     "received": false
+    },
+    {
+     "aStart": 1022749200500,
+     "aEnd": 1022749200600,
+     "received": true
+    },
+    {
+     "aStart": 1022749200900,
+     "aEnd": 1022749200950,
+     "received": true
+    },
+    {
+     "aStart": 1022749200901,
+     "aEnd": 1022749200950,
+     "received": false
+    }
+   ]
+  },
+  {
+   "case": "time-period-w-year-non-const",
+   "select": "a.before(b, 1 years) as c0, a.before(b, 1 month) as c1, a.before(b, 1 weeks) as c2, a.before(b, 1 days) as c3, a.before(b, 1 hours) as c4, a.before(b, 1 minutes) as c5, a.before(b, 1 seconds) as c6, a.before(b, 1 milliseconds) as c7, a.before(b, 1 microseconds) as c8",
+   "bStart": 1022749200000,
+   "bEnd": 1022749200000,
+   "send": [
+    {
+     "aStart": 1022749200000,
+     "aEnd": 1022749200000,
+     "values": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -62,17 +62,35 @@ public final class DTIntervalOpsScenarioOracle {
         mapCfg.setEndTimestampPropertyName("en");
         config.getCommon().addMapConfiguration("A", mapCfg);
         config.getCommon().addMapConfiguration("B", mapCfg);
-        String epl = "@name('s0') select * from A#lastevent as a, B#lastevent as b where a." + op + "(b)";
+        JsonValue paramsVal = caseDef.get("params");
+        String paramText = "";
+        if (paramsVal != null && paramsVal.isArray()) {
+            for (JsonValue p : paramsVal.asArray()) {
+                paramText += ", " + p.toString();
+            }
+        }
+        String select = caseDef.getString("select", "");
+        String epl;
+        if (select.isEmpty()) {
+            epl = "@name('s0') select * from A#lastevent as a, B#lastevent as b where a." + op + "(b" + paramText + ")";
+        } else {
+            epl = "@name('s0') select " + select + " from A#lastevent as a, B#lastevent as b";
+        }
         EPRuntime runtime = EPRuntimeProvider.getRuntime("dt-interval-" + caseName, config);
         try {
             EPCompiled compiled = EPCompilerProvider.getCompiler().compile(epl, new CompilerArguments(config));
             EPDeployment deployment = runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
             final boolean[] fired = {false};
+            final java.util.List<Object> lastValues = new java.util.ArrayList<>();
             for (EPStatement stmt : deployment.getStatements()) {
                 if ("s0".equals(stmt.getName())) {
                     stmt.addListener((newEvents, oldEvents, stmtRef, runtimeRef) -> {
+                        fired[0] = newEvents != null && newEvents.length > 0;
+                        lastValues.clear();
                         if (newEvents != null && newEvents.length > 0) {
-                            fired[0] = true;
+                            for (String prop : newEvents[0].getEventType().getPropertyNames()) {
+                                lastValues.add(newEvents[0].get(prop));
+                            }
                         }
                     });
                 }
@@ -88,17 +106,30 @@ public final class DTIntervalOpsScenarioOracle {
                 JsonObject sendObj = sendVal.asObject();
                 long aStart = (long) sendObj.getDouble("aStart", 0);
                 long aEnd = (long) sendObj.getDouble("aEnd", 0);
-                boolean expected = sendObj.getBoolean("received", false);
                 Map<String, Object> aEvent = new HashMap<>();
                 aEvent.put("st", aStart);
                 aEvent.put("en", aEnd);
                 fired[0] = false;
+                lastValues.clear();
                 runtime.getEventService().sendEventMap(aEvent, "A");
                 JsonObject row = new JsonObject();
                 row.add("case", caseName);
                 row.add("step", step++);
-                row.add("received", fired[0]);
-                row.add("expected", expected);
+                if (select.isEmpty()) {
+                    row.add("received", fired[0]);
+                    row.add("expected", sendObj.getBoolean("received", false));
+                } else {
+                    JsonArray values = new JsonArray();
+                    JsonArray expectedValues = new JsonArray();
+                    for (Object v : lastValues) {
+                        values.add(v == null ? Json.value(null) : Json.value((Boolean) v));
+                    }
+                    for (JsonValue ev : sendObj.get("values").asArray()) {
+                        expectedValues.add(ev);
+                    }
+                    row.add("received", values);
+                    row.add("expected", expectedValues);
+                }
                 records.add(row);
             }
         } finally {

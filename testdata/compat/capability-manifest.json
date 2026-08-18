@@ -31248,6 +31248,52 @@
     "java-runtime-a706db6229e97d723f3f",
     "java-runtime-d9a1d367adf58cbc3e72"
    ]
+  },
+  {
+   "id": "case.expr-dt-interval-ops-threshold",
+   "javaRuntimeIds": [
+    "java-runtime-472cb29d507ae5c936dc",
+    "java-runtime-90acb833cacfcc15bc5d",
+    "java-runtime-d3480b360fc494237ec7",
+    "java-runtime-dd66747a433d48b14c38"
+   ],
+   "javaNames": [
+    "ExprDTIntervalBeforeWVariable",
+    "ExprDTIntervalTimePeriodWYearNonConst",
+    "ExprDTIntervalBeforeInSelectClause",
+    "ExprDTIntervalBeforeWhereClauseWithBean"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTIntervalOps.java"
+   ],
+   "goTests": [
+    "TestExprDTIntervalThresholdParity",
+    "TestExprDTIntervalBeforeInSelectClauseParity",
+    "TestExprDTIntervalTimePeriodUnitsParity"
+   ],
+   "tags": [],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/dt-interval-ops-threshold.json",
+    "testdata/parity/dt-interval-ops-threshold.trace.json",
+    "testdata/parity/dt-interval-ops-threshold.evidence.json",
+    "tools/java-oracle/DTIntervalOpsScenarioOracle.java",
+    "tools/java-oracle/run-dt-interval-ops.sh",
+    "java-oracle-trace",
+    "go-unit"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-472cb29d507ae5c936dc",
+    "java-runtime-90acb833cacfcc15bc5d",
+    "java-runtime-d3480b360fc494237ec7",
+    "java-runtime-dd66747a433d48b14c38"
+   ]
   }
  ],
  "mappings": [
@@ -33622,15 +33668,19 @@
   {
    "capabilityId": "expr.core",
    "caseId": "case.expr-dt-interval-ops-where"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-dt-interval-ops-threshold"
   }
  ],
  "summary": {
-  "cases": 510,
-  "differentialVerifiedCases": 108,
-  "differentialVerifiedRuntimeIds": 325,
-  "referencedJavaRuntimeIds": 2853,
+  "cases": 511,
+  "differentialVerifiedCases": 109,
+  "differentialVerifiedRuntimeIds": 329,
+  "referencedJavaRuntimeIds": 2857,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1283,
+  "unreferencedJavaRuntimeIds": 1279,
   "representativeScenarioPass": 92,
   "intentionallyDifferentCases": 0,
   "nfrVerifiedCases": 0
