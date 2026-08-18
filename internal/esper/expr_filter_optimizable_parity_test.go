@@ -11,14 +11,15 @@ import (
 // suite. It carries the string/int/long/bool/boxed fields used by the
 // deploy-time constant, OR-rewrite, typeof and method-context executions.
 type filterOptimizableBean struct {
-	TheString     string   `esper:"theString"`
-	IntPrimitive  int      `esper:"intPrimitive"`
-	IntBoxed      *int     `esper:"intBoxed"`
-	LongPrimitive int64    `esper:"longPrimitive"`
-	LongBoxed     *int64   `esper:"longBoxed"`
-	BoolPrimitive bool     `esper:"boolPrimitive"`
-	BigDecimal    *big.Rat `esper:"bigDecimal"`
-	EnumValue     string   `esper:"enumValue"`
+	TheString       string   `esper:"theString"`
+	DoublePrimitive float64  `esper:"doublePrimitive"`
+	IntPrimitive    int      `esper:"intPrimitive"`
+	IntBoxed        *int     `esper:"intBoxed"`
+	LongPrimitive   int64    `esper:"longPrimitive"`
+	LongBoxed       *int64   `esper:"longBoxed"`
+	BoolPrimitive   bool     `esper:"boolPrimitive"`
+	BigDecimal      *big.Rat `esper:"bigDecimal"`
+	EnumValue       string   `esper:"enumValue"`
 }
 
 func newFilterOptimizableEnv(t *testing.T) *Environment {

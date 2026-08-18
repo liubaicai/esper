@@ -31075,6 +31075,57 @@
     "java-runtime-dccd7d03c70875f69975",
     "java-runtime-6556dd46777be4afa86f"
    ]
+  },
+  {
+   "id": "case.expr-filter-optimizable-value-limited",
+   "javaRuntimeIds": [
+    "java-runtime-6496d639e7c6b50edcf1",
+    "java-runtime-ba629b5ddf09069603e0",
+    "java-runtime-c67597367418782859c4",
+    "java-runtime-e4935b367a7e3c693b88",
+    "java-runtime-e84ef276399c7a200a78"
+   ],
+   "javaNames": [
+    "ExprFilterOptValEqualsIsConstant",
+    "ExprFilterOptValEqualsConstantVariable",
+    "ExprFilterOptValEqualsSubstitutionParams",
+    "ExprFilterOptValEqualsCoercion",
+    "ExprFilterOptValRelOpCoercion"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableValueLimitedExpr.java"
+   ],
+   "goTests": [
+    "TestExprFilterOptValEqualsIsConstantParity",
+    "TestExprFilterOptValEqualsConstantVariableParity",
+    "TestExprFilterOptValEqualsSubstitutionParamsParity",
+    "TestExprFilterOptValEqualsCoercionParity",
+    "TestExprFilterOptValRelOpCoercionParity"
+   ],
+   "tags": [],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/filter-val-optimizable.json",
+    "testdata/parity/filter-val-optimizable.trace.json",
+    "testdata/parity/filter-val-optimizable.evidence.json",
+    "tools/java-oracle/FilterValOptimizableScenarioOracle.java",
+    "tools/java-oracle/run-filter-val-optimizable.sh",
+    "java-oracle-trace",
+    "go-unit"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-6496d639e7c6b50edcf1",
+    "java-runtime-ba629b5ddf09069603e0",
+    "java-runtime-c67597367418782859c4",
+    "java-runtime-e4935b367a7e3c693b88",
+    "java-runtime-e84ef276399c7a200a78"
+   ]
   }
  ],
  "mappings": [
@@ -33437,15 +33488,19 @@
   {
    "capabilityId": "eplother.stream-selector",
    "caseId": "case.stream-selector-extended"
+  },
+  {
+   "capabilityId": "expr.filter-expressions",
+   "caseId": "case.expr-filter-optimizable-value-limited"
   }
  ],
  "summary": {
-  "cases": 507,
-  "differentialVerifiedCases": 105,
-  "differentialVerifiedRuntimeIds": 302,
-  "referencedJavaRuntimeIds": 2830,
+  "cases": 508,
+  "differentialVerifiedCases": 106,
+  "differentialVerifiedRuntimeIds": 307,
+  "referencedJavaRuntimeIds": 2835,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1306,
+  "unreferencedJavaRuntimeIds": 1301,
   "representativeScenarioPass": 92,
   "intentionallyDifferentCases": 0,
   "nfrVerifiedCases": 0

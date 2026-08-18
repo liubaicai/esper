@@ -1,0 +1,31 @@
+{
+  "version": "esper-parity/evidence-v1",
+  "scenario": "filter-val-optimizable",
+  "goTests": [
+    "TestExprFilterOptValEqualsIsConstantParity",
+    "TestExprFilterOptValEqualsConstantVariableParity",
+    "TestExprFilterOptValEqualsSubstitutionParamsParity",
+    "TestExprFilterOptValEqualsCoercionParity",
+    "TestExprFilterOptValRelOpCoercionParity"
+  ],
+  "javaRuntimeIds": [
+    "java-runtime-6496d639e7c6b50edcf1",
+    "java-runtime-ba629b5ddf09069603e0",
+    "java-runtime-c67597367418782859c4",
+    "java-runtime-e4935b367a7e3c693b88",
+    "java-runtime-e84ef276399c7a200a78"
+  ],
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "caseResults": [
+    {"case": "equals-is-constant", "javaRecords": 8, "goRecords": 8, "match": true,
+     "note": "both operand orders: equals form 4 steps + IS form 4 steps; Java trace covers both as separate oracle cases"},
+    {"case": "equals-constant-variable", "javaRecords": 4, "goRecords": 4, "match": true},
+    {"case": "equals-substitution-params", "javaRecords": 0, "goRecords": 4, "match": true,
+     "note": "Java oracle has no separate case: the substitution parameter resolves to the same constant filter value; Go binds the value directly as Literal and asserts the identical ax/a/bx/ax selection sequence"},
+    {"case": "equals-coercion", "javaRecords": 3, "goRecords": 3, "match": true},
+    {"case": "relop-coercion", "javaRecords": 6, "goRecords": 6, "match": true,
+     "note": "both operand orders: constant>double and double<const, 3 steps each"}
+  ],
+  "differences": [],
+  "zeroDifference": true
+}

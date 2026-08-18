@@ -1,0 +1,64 @@
+{
+  "scenario": "filter-val-optimizable",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "cases": [
+    {
+      "case": "equals-is-constant",
+      "epl": "@name('s0') select * from SupportBean(theString = 'a' || 'x')",
+      "send": [
+        {"type": "SupportBean", "theString": "ax", "intPrimitive": 0, "received": true},
+        {"type": "SupportBean", "theString": "a", "intPrimitive": 0, "received": false},
+        {"type": "SupportBean", "theString": "bx", "intPrimitive": 0, "received": false},
+        {"type": "SupportBean", "theString": "ax", "intPrimitive": 0, "received": true}
+      ]
+    },
+    {
+      "case": "equals-is-constant-is-form",
+      "epl": "@name('s0') select * from SupportBean('a' || 'x' is theString)",
+      "send": [
+        {"type": "SupportBean", "theString": "ax", "intPrimitive": 0, "received": true},
+        {"type": "SupportBean", "theString": "a", "intPrimitive": 0, "received": false},
+        {"type": "SupportBean", "theString": "bx", "intPrimitive": 0, "received": false},
+        {"type": "SupportBean", "theString": "ax", "intPrimitive": 0, "received": true}
+      ]
+    },
+    {
+      "case": "equals-constant-variable",
+      "epl": "@name('s0') select * from SupportBean(theString = MYCONST || 'x')",
+      "pre": "create constant variable string MYCONST = 'a';",
+      "send": [
+        {"type": "SupportBean", "theString": "ax", "intPrimitive": 0, "received": true},
+        {"type": "SupportBean", "theString": "a", "intPrimitive": 0, "received": false},
+        {"type": "SupportBean", "theString": "bx", "intPrimitive": 0, "received": false},
+        {"type": "SupportBean", "theString": "ax", "intPrimitive": 0, "received": true}
+      ]
+    },
+    {
+      "case": "equals-coercion",
+      "epl": "@name('s0') select * from SupportBean(doublePrimitive = Integer.parseInt('10') + Long.parseLong('20'))",
+      "send": [
+        {"type": "SupportBean", "theString": "E", "intPrimitive": 0, "doublePrimitive": 30.0, "received": true},
+        {"type": "SupportBean", "theString": "E", "intPrimitive": 0, "doublePrimitive": 20.0, "received": false},
+        {"type": "SupportBean", "theString": "E", "intPrimitive": 0, "doublePrimitive": 30.0, "received": true}
+      ]
+    },
+    {
+      "case": "relop-coercion-gt",
+      "epl": "@name('s0') select * from SupportBean(Integer.parseInt('10') > doublePrimitive)",
+      "send": [
+        {"type": "SupportBean", "theString": "E", "intPrimitive": 0, "doublePrimitive": 3.0, "received": true},
+        {"type": "SupportBean", "theString": "E", "intPrimitive": 0, "doublePrimitive": 20.0, "received": false},
+        {"type": "SupportBean", "theString": "E", "intPrimitive": 0, "doublePrimitive": 4.0, "received": true}
+      ]
+    },
+    {
+      "case": "relop-coercion-lt",
+      "epl": "@name('s0') select * from SupportBean(doublePrimitive < Integer.parseInt('10'))",
+      "send": [
+        {"type": "SupportBean", "theString": "E", "intPrimitive": 0, "doublePrimitive": 3.0, "received": true},
+        {"type": "SupportBean", "theString": "E", "intPrimitive": 0, "doublePrimitive": 20.0, "received": false},
+        {"type": "SupportBean", "theString": "E", "intPrimitive": 0, "doublePrimitive": 4.0, "received": true}
+      ]
+    }
+  ]
+}
