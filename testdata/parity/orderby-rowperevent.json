@@ -1,0 +1,280 @@
+{
+  "schema": 1,
+  "name": "orderby-rowperevent",
+  "javaRuntimeIds": [
+    "java-runtime-4062c635fee60616832d",
+    "java-runtime-626fca57d0ecba86d417",
+    "java-runtime-27a7dc3a105e6be636ed",
+    "java-runtime-ce93dcda0d01ea6ad37a",
+    "java-runtime-7e99e40b7d00e8eb6485"
+  ],
+  "javaNames": [
+    "ResultSetRowPerEventSum",
+    "ResultSetAliases",
+    "ResultSetAggOrderWithSum",
+    "ResultSetRowPerEventSumHaving",
+    "ResultSetRowPerEventJoin"
+  ],
+  "cases": [
+    {
+      "case": "row-per-event-sum",
+      "description": "select symbol, sum(price) from SupportMarketDataBean#length(10) output every 6 events order by symbol",
+      "steps": [
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "IBM",
+          "price": 3.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "IBM",
+          "price": 4.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CMU",
+          "price": 1.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CMU",
+          "price": 2.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CAT",
+          "price": 5.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CAT",
+          "price": 6.0,
+          "volume": 0
+        }
+      ],
+      "epl": "@name('s0') select symbol, sum(price) from SupportMarketDataBean#length(10) output every 6 events order by symbol"
+    },
+    {
+      "case": "aliases",
+      "description": "select symbol as mySymbol, sum(price) as mySum from SupportMarketDataBean#length(10) output every 6 events order by mySymbol",
+      "steps": [
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "IBM",
+          "price": 3.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "IBM",
+          "price": 4.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CMU",
+          "price": 1.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CMU",
+          "price": 2.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CAT",
+          "price": 5.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CAT",
+          "price": 6.0,
+          "volume": 0
+        }
+      ],
+      "epl": "@name('s0') select symbol as mySymbol, sum(price) as mySum from SupportMarketDataBean#length(10) output every 6 events order by mySymbol"
+    },
+    {
+      "case": "agg-order-with-sum",
+      "description": "select symbol, sum(price) from SupportMarketDataBean#length(10) output every 6 events order by symbol, sum(price)",
+      "steps": [
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "IBM",
+          "price": 3.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "IBM",
+          "price": 4.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CMU",
+          "price": 1.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CMU",
+          "price": 2.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CAT",
+          "price": 5.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CAT",
+          "price": 6.0,
+          "volume": 0
+        }
+      ],
+      "epl": "@name('s0') select symbol, sum(price) from SupportMarketDataBean#length(10) output every 6 events order by symbol, sum(price)"
+    },
+    {
+      "case": "row-per-event-sum-having",
+      "description": "select symbol, sum(price) from SupportMarketDataBean#length(10) having sum(price) > 0 output every 6 events order by symbol",
+      "steps": [
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "IBM",
+          "price": 3.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "IBM",
+          "price": 4.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CMU",
+          "price": 1.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CMU",
+          "price": 2.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CAT",
+          "price": 5.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CAT",
+          "price": 6.0,
+          "volume": 0
+        }
+      ],
+      "epl": "@name('s0') select symbol, sum(price) from SupportMarketDataBean#length(10) having sum(price) > 0 output every 6 events order by symbol"
+    },
+    {
+      "case": "row-per-event-join",
+      "description": "select symbol, sum(price) from SupportMarketDataBean#length(10) one, SupportBeanString#length(100) two where one.symbol = two.theString output every 6 events order by symbol, sum(price)",
+      "steps": [
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "IBM",
+          "price": 3.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "IBM",
+          "price": 4.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CMU",
+          "price": 1.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CMU",
+          "price": 2.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CAT",
+          "price": 5.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportMarketDataBean",
+          "symbol": "CAT",
+          "price": 6.0,
+          "volume": 0
+        },
+        {
+          "op": "send",
+          "type": "SupportBeanString",
+          "theString": "CAT"
+        },
+        {
+          "op": "send",
+          "type": "SupportBeanString",
+          "theString": "IBM"
+        },
+        {
+          "op": "send",
+          "type": "SupportBeanString",
+          "theString": "CMU"
+        }
+      ],
+      "epl": "@name('s0') select symbol, sum(price) from SupportMarketDataBean#length(10) one, SupportBeanString#length(100) two where one.symbol = two.theString output every 6 events order by symbol, sum(price)"
+    }
+  ]
+}

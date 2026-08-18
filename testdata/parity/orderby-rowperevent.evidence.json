@@ -1,0 +1,53 @@
+{
+  "version": "esper-parity/evidence-v1",
+  "scenario": "orderby-rowperevent",
+  "goTests": [
+    "TestResultSetRowPerEventSumParity",
+    "TestResultSetAliasesParity",
+    "TestResultSetAggOrderWithSumParity",
+    "TestResultSetRowPerEventSumHavingParity",
+    "TestResultSetRowPerEventJoinParity"
+  ],
+  "javaRuntimeIds": [
+    "java-runtime-4062c635fee60616832d",
+    "java-runtime-626fca57d0ecba86d417",
+    "java-runtime-27a7dc3a105e6be636ed",
+    "java-runtime-ce93dcda0d01ea6ad37a",
+    "java-runtime-7e99e40b7d00e8eb6485"
+  ],
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "caseResults": [
+    {
+      "case": "row-per-event-sum",
+      "javaRecords": 1,
+      "goRecords": 1,
+      "match": true
+    },
+    {
+      "case": "aliases",
+      "javaRecords": 1,
+      "goRecords": 1,
+      "match": true
+    },
+    {
+      "case": "agg-order-with-sum",
+      "javaRecords": 1,
+      "goRecords": 1,
+      "match": true
+    },
+    {
+      "case": "row-per-event-sum-having",
+      "javaRecords": 1,
+      "goRecords": 1,
+      "match": true
+    },
+    {
+      "case": "row-per-event-join",
+      "javaRecords": 1,
+      "goRecords": 1,
+      "match": true
+    }
+  ],
+  "differences": [],
+  "zeroDifference": true
+}

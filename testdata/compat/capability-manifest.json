@@ -30990,6 +30990,40 @@
         "aggregate-firstlastwindow-ext"
       ],
       "notes": "Subquery: window(sb.*) in subquery over length(2) evaluated at trigger time. OutputRateLimiting: output every 2 events with per-event aggregate snapshots (all-rows output, not output-last). LateInitialize: named window consumer deployed after inserts sees pre-existing rows. MixedNamedWindow: on-delete empties group producing null-aggregate row."
+    },
+    {
+      "name": "orderby-rowperevent",
+      "capability": "resultset.orderby-simple",
+      "javaRuntimeIds": [
+        "java-runtime-4062c635fee60616832d",
+        "java-runtime-626fca57d0ecba86d417",
+        "java-runtime-27a7dc3a105e6be636ed",
+        "java-runtime-ce93dcda0d01ea6ad37a",
+        "java-runtime-7e99e40b7d00e8eb6485"
+      ],
+      "implemented": true,
+      "differentialVerified": true,
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence"
+      ],
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "status": "differential-verified",
+      "id": "case.resultset-orderby-rowperevent",
+      "differentialVerifiedRuntimeIDs": [
+        "java-runtime-4062c635fee60616832d",
+        "java-runtime-626fca57d0ecba86d417",
+        "java-runtime-27a7dc3a105e6be636ed",
+        "java-runtime-ce93dcda0d01ea6ad37a",
+        "java-runtime-7e99e40b7d00e8eb6485"
+      ]
     }
   ],
   "mappings": [
@@ -33344,23 +33378,21 @@
     {
       "capabilityId": "resultset.aggregate-access",
       "caseId": "case.resultset-aggregate-firstlastwindow-ext"
+    },
+    {
+      "capabilityId": "resultset.orderby-simple",
+      "caseId": "case.resultset-orderby-rowperevent"
     }
   ],
   "summary": {
-    "capabilities": 110,
-    "cases": 505,
-    "associations": 2962,
-    "referencedJavaRuntimeIds": 2820,
+    "cases": 506,
+    "differentialVerifiedCases": 104,
+    "differentialVerifiedRuntimeIds": 297,
+    "referencedJavaRuntimeIds": 2825,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 1316,
-    "differentialVerifiedCases": 103,
-    "differentialVerifiedRuntimeIds": 292,
-    "capabilityVerificationCounts": {
-      "inventoried": 110,
-      "implemented": 109,
-      "differential-verified": 13,
-      "representative-verified": 11,
-      "intentionally-different": 7
-    }
+    "unreferencedJavaRuntimeIds": 1311,
+    "representativeScenarioPass": 92,
+    "intentionallyDifferentCases": 0,
+    "nfrVerifiedCases": 0
   }
 }
