@@ -81,7 +81,7 @@ var (
 	}
 )
 
-// runSubselectUnfilteredScenario replays 17 executions of EPLSubselectUnfiltered:
+// runSubselectUnfilteredScenario replays 16 executions of EPLSubselectUnfiltered (15 scenario cases; StreamPriorOM/Compile share one replay):
 // unfiltered scalar subselects in select, where and computed expressions over
 // lastevent, length, keepall windows; self-referencing insert-into subselect,
 // custom function calls, prior() access, multi-subselect projections and join

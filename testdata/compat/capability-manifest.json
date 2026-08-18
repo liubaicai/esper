@@ -8019,10 +8019,10 @@
     "EPLSubselectComputedResult",
     "EPLSubselectFilterInside",
     "EPLSubselectWhereClauseWithExpression",
-    "EPLSubselectWhereClauseReturningTrue",
     "EPLSubselectUnfilteredStreamPriorOM",
     "EPLSubselectUnfilteredStreamPriorCompile",
     "EPLSubselectTwoSubqSelect",
+    "EPLSubselectWhereClauseReturningTrue",
     "EPLSubselectJoinUnfiltered"
    ],
    "javaSourceFiles": [

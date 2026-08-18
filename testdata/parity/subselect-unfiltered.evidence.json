@@ -1,2119 +1,2299 @@
 {
-  "version": "esper-differential/v1",
-  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
-  "javaRuntimeIds": [
-    "java-runtime-bd3151d2bfe783c68a4c",
-    "java-runtime-52465ccf64152468573b",
-    "java-runtime-35bb4012ba6240eb2b5e",
-    "java-runtime-30b11d518bcfb0d33da6",
-    "java-runtime-a39f50e203d9cc1c40be",
-    "java-runtime-30b43737a275b2cd8d47",
-    "java-runtime-789637b3336f1f52fec8",
-    "java-runtime-45f056d567635a3db88a",
-    "java-runtime-b34d4694cf0d68157126",
-    "java-runtime-64658966cf5bbc74764d",
-    "java-runtime-09c51a2dd32cd67ca1f8",
-    "java-runtime-464e8cfb8d6dac9f204c",
-    "java-runtime-259562d83a7bc9a095bb",
-    "java-runtime-d6cb26490b44ad3b14e8",
-    "java-runtime-c2ce866415b8744b057d",
-    "java-runtime-a953d3319b660ffd75ce"
-  ],
-  "javaSourceFiles": [
-    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectUnfiltered.java"
-  ],
-  "javaExecutions": [
-    "EPLSubselectUnfilteredExpression",
-    "EPLSubselectUnfilteredUnlimitedStream",
-    "EPLSubselectUnfilteredLengthWindow",
-    "EPLSubselectUnfilteredAsAfterSubselect",
-    "EPLSubselectUnfilteredWithAsWithinSubselect",
-    "EPLSubselectUnfilteredNoAs",
-    "EPLSubselectUnfilteredLastEvent",
-    "EPLSubselectSelfSubselect",
-    "EPLSubselectComputedResult",
-    "EPLSubselectFilterInside",
-    "EPLSubselectWhereClauseWithExpression",
-    "EPLSubselectWhereClauseReturningTrue",
-    "EPLSubselectUnfilteredStreamPriorOM",
-    "EPLSubselectUnfilteredStreamPriorCompile",
-    "EPLSubselectTwoSubqSelect",
-    "EPLSubselectJoinUnfiltered"
-  ],
-  "scenario": {
-    "version": "esper-parity/v1",
-    "id": "subselect-unfiltered",
-    "steps": [
-      {
-        "op": "case",
-        "case": "expression"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": -1,
-          "p10": "a",
-          "p11": "b"
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "case",
-        "case": "unlimited-stream"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 10
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 999
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 3
-        }
-      },
-      {
-        "op": "case",
-        "case": "length-window"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 10
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 999
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 3
-        }
-      },
-      {
-        "op": "case",
-        "case": "as-after-subselect"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 10
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 999
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 3
-        }
-      },
-      {
-        "op": "case",
-        "case": "with-as-within-subselect"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 10
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 999
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 3
-        }
-      },
-      {
-        "op": "case",
-        "case": "no-as"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 10
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 999
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 3
-        }
-      },
-      {
-        "op": "case",
-        "case": "last-event"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean",
-        "payload": {
-          "theString": "E1",
-          "intPrimitive": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 11,
-          "p00": "S01"
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean",
-        "payload": {
-          "theString": "E2",
-          "intPrimitive": 2
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean",
-        "payload": {
-          "theString": "E3",
-          "intPrimitive": 3
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 12,
-          "p00": "S02"
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean",
-        "payload": {
-          "theString": "E4",
-          "intPrimitive": 4
-        }
-      },
-      {
-        "op": "case",
-        "case": "self-subselect"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "case",
-        "case": "computed-result"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 10
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "case",
-        "case": "filter-inside"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 1,
-          "p10": "X"
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 1,
-          "p10": "A"
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "case",
-        "case": "where-clause-expression"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 10,
-          "p10": "X"
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "case",
-        "case": "where-clause-true"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 10
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "case",
-        "case": "stream-prior"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 10
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 3
-        }
-      },
-      {
-        "op": "case",
-        "case": "two-subq-select"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 10
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 999
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 3
-        }
-      },
-      {
-        "op": "case",
-        "case": "join-unfiltered"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 0
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S3",
-        "payload": {
-          "id": -1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S4",
-        "payload": {
-          "id": -2
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 2
-        }
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S1",
-        "payload": {
-          "id": 2
-        }
+ "version": "esper-differential/v1",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimeIds": [
+  "java-runtime-bd3151d2bfe783c68a4c",
+  "java-runtime-52465ccf64152468573b",
+  "java-runtime-35bb4012ba6240eb2b5e",
+  "java-runtime-30b11d518bcfb0d33da6",
+  "java-runtime-a39f50e203d9cc1c40be",
+  "java-runtime-30b43737a275b2cd8d47",
+  "java-runtime-789637b3336f1f52fec8",
+  "java-runtime-45f056d567635a3db88a",
+  "java-runtime-b34d4694cf0d68157126",
+  "java-runtime-64658966cf5bbc74764d",
+  "java-runtime-09c51a2dd32cd67ca1f8",
+  "java-runtime-464e8cfb8d6dac9f204c",
+  "java-runtime-259562d83a7bc9a095bb",
+  "java-runtime-d6cb26490b44ad3b14e8",
+  "java-runtime-c2ce866415b8744b057d",
+  "java-runtime-a953d3319b660ffd75ce"
+ ],
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectUnfiltered.java"
+ ],
+ "javaExecutions": [
+  "EPLSubselectUnfilteredExpression",
+  "EPLSubselectUnfilteredUnlimitedStream",
+  "EPLSubselectUnfilteredLengthWindow",
+  "EPLSubselectUnfilteredAsAfterSubselect",
+  "EPLSubselectUnfilteredWithAsWithinSubselect",
+  "EPLSubselectUnfilteredNoAs",
+  "EPLSubselectUnfilteredLastEvent",
+  "EPLSubselectSelfSubselect",
+  "EPLSubselectComputedResult",
+  "EPLSubselectFilterInside",
+  "EPLSubselectWhereClauseWithExpression",
+  "EPLSubselectUnfilteredStreamPriorOM",
+  "EPLSubselectUnfilteredStreamPriorCompile",
+  "EPLSubselectTwoSubqSelect",
+  "EPLSubselectWhereClauseReturningTrue",
+  "EPLSubselectJoinUnfiltered"
+ ],
+ "scenario": {
+  "version": "esper-parity/v1",
+  "id": "subselect-unfiltered",
+  "steps": [
+   {
+    "op": "case",
+    "case": "expression"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": -1,
+     "p10": "a",
+     "p11": "b"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "case",
+    "case": "unlimited-stream"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 999
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 3
+    }
+   },
+   {
+    "op": "case",
+    "case": "length-window"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 999
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 3
+    }
+   },
+   {
+    "op": "case",
+    "case": "as-after-subselect"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 999
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 3
+    }
+   },
+   {
+    "op": "case",
+    "case": "with-as-within-subselect"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 999
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 3
+    }
+   },
+   {
+    "op": "case",
+    "case": "no-as"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 999
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 3
+    }
+   },
+   {
+    "op": "case",
+    "case": "last-event"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean",
+    "payload": {
+     "theString": "E1",
+     "intPrimitive": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 11,
+     "p00": "S01"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean",
+    "payload": {
+     "theString": "E2",
+     "intPrimitive": 2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean",
+    "payload": {
+     "theString": "E3",
+     "intPrimitive": 3
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 12,
+     "p00": "S02"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean",
+    "payload": {
+     "theString": "E4",
+     "intPrimitive": 4
+    }
+   },
+   {
+    "op": "case",
+    "case": "self-subselect"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "case",
+    "case": "computed-result"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "case",
+    "case": "filter-inside"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 1,
+     "p10": "X"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 1,
+     "p10": "A"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "case",
+    "case": "where-clause-expression"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 10,
+     "p10": "X"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "case",
+    "case": "where-clause-true"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "case",
+    "case": "stream-prior"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 3
+    }
+   },
+   {
+    "op": "case",
+    "case": "two-subq-select"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 999
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 3
+    }
+   },
+   {
+    "op": "case",
+    "case": "join-unfiltered"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S3",
+    "payload": {
+     "id": -1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 1
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S4",
+    "payload": {
+     "id": -2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S4",
+    "payload": {
+     "id": -2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 3
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 3
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S3",
+    "payload": {
+     "id": -2
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S0",
+    "payload": {
+     "id": 3
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_S1",
+    "payload": {
+     "id": 3
+    }
+   }
+  ]
+ },
+ "javaTrace": {
+  "version": "esper-parity/v1",
+  "id": "subselect-unfiltered",
+  "records": [
+   {
+    "case": "expression",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "value": {
+        "state": "null"
+       }
       }
+     }
     ]
-  },
-  "javaTrace": {
-    "version": "esper-parity/v1",
-    "id": "subselect-unfiltered",
-    "records": [
-      {
-        "case": "expression",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "value": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "expression",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "value": "ab"
-            }
-          }
-        ]
-      },
-      {
-        "case": "unlimited-stream",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "unlimited-stream",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "unlimited-stream",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "unlimited-stream",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "length-window",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "length-window",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "length-window",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "length-window",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "as-after-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "as-after-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "as-after-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "as-after-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 999
-            }
-          }
-        ]
-      },
-      {
-        "case": "with-as-within-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "myId": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "with-as-within-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "myId": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "with-as-within-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "myId": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "with-as-within-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "myId": 999
-            }
-          }
-        ]
-      },
-      {
-        "case": "no-as",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "no-as",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "no-as",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "no-as",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": 999
-            }
-          }
-        ]
-      },
-      {
-        "case": "last-event",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "col": {
-                "state": "null"
-              },
-              "theString": "E1"
-            }
-          }
-        ]
-      },
-      {
-        "case": "last-event",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "col": "S01",
-              "theString": "E2"
-            }
-          }
-        ]
-      },
-      {
-        "case": "last-event",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "col": "S01",
-              "theString": "E3"
-            }
-          }
-        ]
-      },
-      {
-        "case": "last-event",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "col": "S02",
-              "theString": "E4"
-            }
-          }
-        ]
-      },
-      {
-        "case": "self-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "value": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "self-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "value": 1
-            }
-          }
-        ]
-      },
-      {
-        "case": "computed-result",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "computed-result",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 1000
-            }
-          }
-        ]
-      },
-      {
-        "case": "computed-result",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 1000
-            }
-          }
-        ]
-      },
-      {
-        "case": "filter-inside",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "filter-inside",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 1
-            }
-          }
-        ]
-      },
-      {
-        "case": "where-clause-expression",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": 0
-            }
-          }
-        ]
-      },
-      {
-        "case": "where-clause-true",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": 2
-            }
-          }
-        ]
-      },
-      {
-        "case": "stream-prior",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "stream-prior",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "stream-prior",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "stream-prior",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "two-subq-select",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1_0": {
-                "state": "null"
-              },
-              "idS1_1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "two-subq-select",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1_0": 11,
-              "idS1_1": 12
-            }
-          }
-        ]
-      },
-      {
-        "case": "two-subq-select",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1_0": 11,
-              "idS1_1": 12
-            }
-          }
-        ]
-      },
-      {
-        "case": "two-subq-select",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1_0": 1000,
-              "idS1_1": 1001
-            }
-          }
-        ]
-      },
-      {
-        "case": "join-unfiltered",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS3": {
-                "state": "null"
-              },
-              "idS4": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "join-unfiltered",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS3": -1,
-              "idS4": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "join-unfiltered",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS3": -1,
-              "idS4": -2
-            }
-          }
-        ]
+   },
+   {
+    "case": "expression",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "value": "ab"
       }
+     }
     ]
-  },
-  "goTrace": {
-    "version": "esper-parity/v1",
-    "id": "subselect-unfiltered",
-    "records": [
-      {
-        "case": "expression",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "value": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "expression",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "value": "ab"
-            }
-          }
-        ]
-      },
-      {
-        "case": "unlimited-stream",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "unlimited-stream",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "unlimited-stream",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "unlimited-stream",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "length-window",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "length-window",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "length-window",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "length-window",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "as-after-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "as-after-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "as-after-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "as-after-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 999
-            }
-          }
-        ]
-      },
-      {
-        "case": "with-as-within-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "myId": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "with-as-within-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "myId": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "with-as-within-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "myId": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "with-as-within-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "myId": 999
-            }
-          }
-        ]
-      },
-      {
-        "case": "no-as",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "no-as",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "no-as",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "no-as",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": 999
-            }
-          }
-        ]
-      },
-      {
-        "case": "last-event",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "col": {
-                "state": "null"
-              },
-              "theString": "E1"
-            }
-          }
-        ]
-      },
-      {
-        "case": "last-event",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "col": "S01",
-              "theString": "E2"
-            }
-          }
-        ]
-      },
-      {
-        "case": "last-event",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "col": "S01",
-              "theString": "E3"
-            }
-          }
-        ]
-      },
-      {
-        "case": "last-event",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "col": "S02",
-              "theString": "E4"
-            }
-          }
-        ]
-      },
-      {
-        "case": "self-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "value": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "self-subselect",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "value": 1
-            }
-          }
-        ]
-      },
-      {
-        "case": "computed-result",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "computed-result",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 1000
-            }
-          }
-        ]
-      },
-      {
-        "case": "computed-result",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 1000
-            }
-          }
-        ]
-      },
-      {
-        "case": "filter-inside",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "filter-inside",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 1
-            }
-          }
-        ]
-      },
-      {
-        "case": "where-clause-expression",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": 0
-            }
-          }
-        ]
-      },
-      {
-        "case": "where-clause-true",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "id": 2
-            }
-          }
-        ]
-      },
-      {
-        "case": "stream-prior",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "stream-prior",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "stream-prior",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "stream-prior",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1": 10
-            }
-          }
-        ]
-      },
-      {
-        "case": "two-subq-select",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1_0": {
-                "state": "null"
-              },
-              "idS1_1": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "two-subq-select",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1_0": 11,
-              "idS1_1": 12
-            }
-          }
-        ]
-      },
-      {
-        "case": "two-subq-select",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1_0": 11,
-              "idS1_1": 12
-            }
-          }
-        ]
-      },
-      {
-        "case": "two-subq-select",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS1_0": 1000,
-              "idS1_1": 1001
-            }
-          }
-        ]
-      },
-      {
-        "case": "join-unfiltered",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS3": {
-                "state": "null"
-              },
-              "idS4": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "join-unfiltered",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS3": -1,
-              "idS4": {
-                "state": "null"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "case": "join-unfiltered",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "idS3": -1,
-              "idS4": -2
-            }
-          }
-        ]
+   },
+   {
+    "case": "unlimited-stream",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
       }
+     }
     ]
-  },
-  "status": "passing",
-  "differences": []
+   },
+   {
+    "case": "unlimited-stream",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "unlimited-stream",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "unlimited-stream",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "length-window",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "length-window",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "length-window",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "length-window",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "as-after-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "as-after-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "as-after-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "as-after-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 999
+      }
+     }
+    ]
+   },
+   {
+    "case": "with-as-within-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "myId": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "with-as-within-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "myId": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "with-as-within-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "myId": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "with-as-within-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "myId": 999
+      }
+     }
+    ]
+   },
+   {
+    "case": "no-as",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "no-as",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "no-as",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "no-as",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": 999
+      }
+     }
+    ]
+   },
+   {
+    "case": "last-event",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "col": {
+        "state": "null"
+       },
+       "theString": "E1"
+      }
+     }
+    ]
+   },
+   {
+    "case": "last-event",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "col": "S01",
+       "theString": "E2"
+      }
+     }
+    ]
+   },
+   {
+    "case": "last-event",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "col": "S01",
+       "theString": "E3"
+      }
+     }
+    ]
+   },
+   {
+    "case": "last-event",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "col": "S02",
+       "theString": "E4"
+      }
+     }
+    ]
+   },
+   {
+    "case": "self-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "value": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "self-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "value": 1
+      }
+     }
+    ]
+   },
+   {
+    "case": "computed-result",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "computed-result",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 1000
+      }
+     }
+    ]
+   },
+   {
+    "case": "computed-result",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 1000
+      }
+     }
+    ]
+   },
+   {
+    "case": "filter-inside",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "filter-inside",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 1
+      }
+     }
+    ]
+   },
+   {
+    "case": "where-clause-expression",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": 0
+      }
+     }
+    ]
+   },
+   {
+    "case": "where-clause-true",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": 2
+      }
+     }
+    ]
+   },
+   {
+    "case": "stream-prior",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "stream-prior",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "stream-prior",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "stream-prior",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "two-subq-select",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1_0": {
+        "state": "null"
+       },
+       "idS1_1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "two-subq-select",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1_0": 11,
+       "idS1_1": 12
+      }
+     }
+    ]
+   },
+   {
+    "case": "two-subq-select",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1_0": 11,
+       "idS1_1": 12
+      }
+     }
+    ]
+   },
+   {
+    "case": "two-subq-select",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1_0": 1000,
+       "idS1_1": 1001
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": {
+        "state": "null"
+       },
+       "idS4": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": -1,
+       "idS4": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": -1,
+       "idS4": -2
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": -1,
+       "idS4": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 5,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": {
+        "state": "null"
+       },
+       "idS4": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 6,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": {
+        "state": "null"
+       },
+       "idS4": {
+        "state": "null"
+       }
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": {
+        "state": "null"
+       },
+       "idS4": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "goTrace": {
+  "version": "esper-parity/v1",
+  "id": "subselect-unfiltered",
+  "records": [
+   {
+    "case": "expression",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "value": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "expression",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "value": "ab"
+      }
+     }
+    ]
+   },
+   {
+    "case": "unlimited-stream",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "unlimited-stream",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "unlimited-stream",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "unlimited-stream",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "length-window",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "length-window",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "length-window",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "length-window",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "as-after-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "as-after-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "as-after-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "as-after-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 999
+      }
+     }
+    ]
+   },
+   {
+    "case": "with-as-within-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "myId": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "with-as-within-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "myId": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "with-as-within-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "myId": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "with-as-within-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "myId": 999
+      }
+     }
+    ]
+   },
+   {
+    "case": "no-as",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "no-as",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "no-as",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "no-as",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": 999
+      }
+     }
+    ]
+   },
+   {
+    "case": "last-event",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "col": {
+        "state": "null"
+       },
+       "theString": "E1"
+      }
+     }
+    ]
+   },
+   {
+    "case": "last-event",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "col": "S01",
+       "theString": "E2"
+      }
+     }
+    ]
+   },
+   {
+    "case": "last-event",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "col": "S01",
+       "theString": "E3"
+      }
+     }
+    ]
+   },
+   {
+    "case": "last-event",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "col": "S02",
+       "theString": "E4"
+      }
+     }
+    ]
+   },
+   {
+    "case": "self-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "value": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "self-subselect",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "value": 1
+      }
+     }
+    ]
+   },
+   {
+    "case": "computed-result",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "computed-result",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 1000
+      }
+     }
+    ]
+   },
+   {
+    "case": "computed-result",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 1000
+      }
+     }
+    ]
+   },
+   {
+    "case": "filter-inside",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "filter-inside",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 1
+      }
+     }
+    ]
+   },
+   {
+    "case": "where-clause-expression",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": 0
+      }
+     }
+    ]
+   },
+   {
+    "case": "where-clause-true",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "id": 2
+      }
+     }
+    ]
+   },
+   {
+    "case": "stream-prior",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "stream-prior",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "stream-prior",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "stream-prior",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1": 10
+      }
+     }
+    ]
+   },
+   {
+    "case": "two-subq-select",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1_0": {
+        "state": "null"
+       },
+       "idS1_1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "two-subq-select",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1_0": 11,
+       "idS1_1": 12
+      }
+     }
+    ]
+   },
+   {
+    "case": "two-subq-select",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1_0": 11,
+       "idS1_1": 12
+      }
+     }
+    ]
+   },
+   {
+    "case": "two-subq-select",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS1_0": 1000,
+       "idS1_1": 1001
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": {
+        "state": "null"
+       },
+       "idS4": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": -1,
+       "idS4": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 3,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": -1,
+       "idS4": -2
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 4,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": -1,
+       "idS4": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 5,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": {
+        "state": "null"
+       },
+       "idS4": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "join-unfiltered",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 6,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": {
+        "state": "null"
+       },
+       "idS4": {
+        "state": "null"
+       }
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "idS3": {
+        "state": "null"
+       },
+       "idS4": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "status": "passing",
+ "differences": []
 }

@@ -10341,7 +10341,7 @@ func TestRunSubselectUnfilteredDiffRejectsTraceMutations(t *testing.T) {
 		{
 			name: "self-subselect-count",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[22].New[0].Fields["value"] = map[string]any{"state": "null"}
+				trace.Records[26].New[0].Fields["value"] = int64(1)
 			},
 		},
 		{

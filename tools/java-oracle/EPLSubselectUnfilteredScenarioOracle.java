@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * Java oracle for EPLSubselectUnfiltered unfiltered scalar subselect scenarios.
  *
- * Covers 17 behavioral executions by replaying deterministic event sequences
+ * Covers 16 behavioral executions by replaying deterministic event sequences
  * and recording the observable listener output. StartStopStatement and
  * InvalidSubselect are excluded (lifecycle/error-only, covered by Go parity tests).
  */
@@ -106,28 +106,27 @@ public class EPLSubselectUnfilteredScenarioOracle {
             int[] seq = new int[] {0};
             for (EPStatement stmt : s0Statements) {
                 stmt.addListener((newData, oldData, statement, rt) -> {
-                    if (newData != null) {
+                    if (newData != null && newData.length > 0) {
+                        seq[0]++;
+                        JsonObject record = new JsonObject();
+                        record.add("case", caseName);
+                        record.add("operation", "listener");
+                        record.add("statement", statement.getName());
+                        record.add("sequence", seq[0]);
+                        record.add("time", java.time.Instant.ofEpochMilli(rt.getEventService().getCurrentTime()).toString());
+                        JsonArray newArr = new JsonArray();
                         for (EventBean event : newData) {
-                            seq[0]++;
-                            JsonObject record = new JsonObject();
-                            record.add("case", caseName);
-                            record.add("operation", "listener");
-                            record.add("statement", statement.getName());
-                            record.add("sequence", seq[0]);
-                            record.add("time", java.time.Instant.ofEpochMilli(rt.getEventService().getCurrentTime()).toString());
-                            JsonArray newArr = new JsonArray();
                             JsonObject newItem = new JsonObject();
                             newItem.add("kind", "row");
                             JsonObject fields = new JsonObject();
                             for (String prop : event.getEventType().getPropertyNames()) {
-                                Object value = event.get(prop);
                                 fields.add(prop, normalize(event.get(prop)));
                             }
                             newItem.add("fields", fields);
                             newArr.add(newItem);
-                            record.add("new", newArr);
-                            records.add(record);
                         }
+                        record.add("new", newArr);
+                        records.add(record);
                     }
                 });
             }
