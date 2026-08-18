@@ -607,6 +607,13 @@ func normalizeValue(value esper.Value) any {
 		}
 		return map[string]any{"kind": "row", "fields": fields}
 	}
+	if nested, ok := value.Any().(map[string]any); ok {
+		fields := make(map[string]any, len(nested))
+		for name, field := range nested {
+			fields[name] = normalizeValue(esper.Present(field))
+		}
+		return fields
+	}
 	return value.Any()
 }
 

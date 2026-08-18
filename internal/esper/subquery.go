@@ -1283,7 +1283,13 @@ func SubqueryRowWithOptions(source RecordStream, selections []Selection, options
 	definition := newSubqueryColumnsDefinition(source, selections, options...)
 	return makeSubqueryExpr[map[string]any]("subquery-row", "row("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		values := evaluateSubqueryValues(definition, ctx)
-		if len(values) == 0 || (definition.cardinality != SubqueryFirst && len(values) > 1) {
+		if len(values) == 0 {
+			// Java Esper materializes an empty map (not null) when a
+			// multi-column subselect has no matching rows; nested property
+			// access then yields null per column.
+			return Present(map[string]any{})
+		}
+		if definition.cardinality != SubqueryFirst && len(values) > 1 {
 			return Null()
 		}
 		row, ok := values[0].Any().(map[string]any)

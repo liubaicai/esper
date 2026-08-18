@@ -1,0 +1,56 @@
+{
+ "version": "esper-parity/v1",
+ "id": "subselect-multicolumn",
+ "description": "Multi-column subselects (aggregated row map, plain columns, correlated aggregation with window) replaying EPLSubselectMulticolumn executions over SupportBean_S0 outer and SupportBean/SupportBean_S1 inner streams; EPLSubselectInvalid is excluded (compile-time-only, approved difference)",
+ "javaRuntimes": [
+  "java-runtime-b2e8b1dca51c23129cfb",
+  "java-runtime-ddbf36446a70a786217d",
+  "java-runtime-584cf85f99af593afb75"
+ ],
+ "cases": [
+  {
+   "case": "multicolumn-agg",
+   "runtimeId": "java-runtime-b2e8b1dca51c23129cfb"
+  },
+  {
+   "case": "columns-uncorrelated",
+   "runtimeId": "java-runtime-ddbf36446a70a786217d"
+  },
+  {
+   "case": "columns-uncorrelated-om",
+   "runtimeId": "java-runtime-ddbf36446a70a786217d"
+  },
+  {
+   "case": "correlated-aggregation",
+   "runtimeId": "java-runtime-584cf85f99af593afb75"
+  }
+ ],
+ "steps": [
+  {"op":"case","case":"multicolumn-agg"},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":1,"p00":"G1"}},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":200,"p10":"G2"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":2,"p00":"G2"}},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":210,"p10":"G2"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":3,"p00":"G2"}},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":220,"p10":"G2"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":4,"p00":"G2"}},
+  {"op":"case","case":"columns-uncorrelated"},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":1}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"E1","intPrimitive":10}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":2}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"E2","intPrimitive":20}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":3}},
+  {"op":"case","case":"columns-uncorrelated-om"},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":1}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"E1","intPrimitive":10}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":2}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"E2","intPrimitive":20}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":3}},
+  {"op":"case","case":"correlated-aggregation"},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":1,"p00":"T1"}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"T1","intPrimitive":10}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":2,"p00":"T1"}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"T1","intPrimitive":20}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":3,"p00":"T1"}}
+ ]
+}

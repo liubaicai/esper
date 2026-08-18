@@ -31513,6 +31513,48 @@
    "remaining": [
     "EPLSubselectInvalid (java-runtime-b24dc67d324d702d8961) and the embedded intArr > all compile check in EPLSubselectRelationalOpAll: compile-time error-only behavior; typed Go builder rejects int-array vs int comparison at build time (approved difference)"
    ]
+  },
+  {
+   "id": "case.subquery-multicolumn-rows",
+   "javaRuntimeIds": [
+    "java-runtime-b2e8b1dca51c23129cfb",
+    "java-runtime-ddbf36446a70a786217d",
+    "java-runtime-584cf85f99af593afb75"
+   ],
+   "javaNames": [
+    "EPLSubselectMulticolumnAgg",
+    "EPLSubselectColumnsUncorrelated",
+    "EPLSubselectCorrelatedAggregation"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectMulticolumn.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunSubselectMulticolumnDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunSubselectMulticolumnDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "subselect",
+    "multicolumn",
+    "row-map"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/subselect-multicolumn.evidence.json"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b2e8b1dca51c23129cfb",
+    "java-runtime-ddbf36446a70a786217d",
+    "java-runtime-584cf85f99af593afb75"
+   ],
+   "remaining": [
+    "EPLSubselectInvalid (java-runtime-b56574d4a9334797d5e1): compile-time error-only execution (7 invalid compiles: mixed agg/non-agg, duplicate names, filter-context and wildcard shapes); Go typed builder rejects the representable shapes at Build time with intentionally different message text (approved difference)"
+   ]
   }
  ],
  "mappings": [
@@ -33903,15 +33945,19 @@
   {
    "capabilityId": "query.subquery-basic",
    "caseId": "case.subquery-quantified-comparisons"
+  },
+  {
+   "capabilityId": "query.subquery-basic",
+   "caseId": "case.subquery-multicolumn-rows"
   }
  ],
  "summary": {
-  "cases": 514,
-  "differentialVerifiedCases": 112,
-  "differentialVerifiedRuntimeIds": 356,
-  "referencedJavaRuntimeIds": 2868,
+  "cases": 515,
+  "differentialVerifiedCases": 113,
+  "differentialVerifiedRuntimeIds": 359,
+  "referencedJavaRuntimeIds": 2871,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1268,
+  "unreferencedJavaRuntimeIds": 1265,
   "representativeScenarioPass": 93,
   "intentionallyDifferentCases": 0,
   "nfrVerifiedCases": 0

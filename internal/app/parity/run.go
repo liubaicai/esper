@@ -1453,6 +1453,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "subselect-multicolumn" || *mode == "subselect-multicolumn-diff" {
+		trace, err := runSubselectMulticolumnScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "subselect-multicolumn-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, subselectMulticolumnJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, subselectMulticolumnJavaSources),
+				splitMetadata(*javaExecutions, subselectMulticolumnJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "subselect-quantified" || *mode == "subselect-quantified-diff" {
 		trace, err := runSubselectQuantifiedScenario(context.Background(), scenario)
 		if err != nil {

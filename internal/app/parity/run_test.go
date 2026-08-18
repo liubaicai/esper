@@ -10533,3 +10533,130 @@ func TestRunSubselectQuantifiedDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunSubselectMulticolumnDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "subselect-multicolumn.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "subselect-multicolumn.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-multicolumn.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "subselect-multicolumn-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunSubselectMulticolumnDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "multicolumn-agg-empty-window-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["s1totals"] = map[string]any{"v1": int64(1)}
+			},
+		},
+		{
+			name: "multicolumn-agg-sum-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["s1totals"] = map[string]any{"v1": int64(1), "v2": int64(201)}
+			},
+		},
+		{
+			name: "columns-uncorrelated-empty-subrow",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["subrow"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "columns-uncorrelated-lastevent",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["subrow"] = map[string]any{"v1": "E2", "v2": int64(20)}
+			},
+		},
+		{
+			name: "columns-uncorrelated-om-fresh-state",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].New[0].Fields["subrow"] = map[string]any{}
+			},
+		},
+		{
+			name: "correlated-empty-all-null",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].New[0].Fields["subrow"] = map[string]any{"v1": int64(0)}
+			},
+		},
+		{
+			name: "correlated-sum-plus-one",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[11].New[0].Fields["subrow"] = map[string]any{"v1": int64(10), "v2": int64(10)}
+			},
+		},
+		{
+			name: "correlated-window-array",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[12].New[0].Fields["subrow"] = map[string]any{"v3": []any{int64(10)}}
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:12]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].Case = "multicolumn-agg"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "subselect-multicolumn.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "subselect-multicolumn.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-multicolumn.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "subselect-multicolumn-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
