@@ -409,7 +409,7 @@ func TestEPLOtherAloneJoinNoAliasParity(t *testing.T) {
 // TestEPLOtherAloneNoJoinAliasParity covers EPLOtherAloneNoJoinAlias:
 // select theString.* as s0 from SupportBean#length(3) as theString.
 // The result has one column "s0" holding the SupportBean event itself.
-// Java runtime: java-runtime-bb3332c825b24eb5046a.
+// Java runtime: java-runtime-4e3a14053213c9ffd08d.
 func TestEPLOtherAloneNoJoinAliasParity(t *testing.T) {
 	env := newStreamSelectorEnv(t)
 	engine := NewEngine(env)
