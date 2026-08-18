@@ -1271,14 +1271,21 @@ func SubqueryEvents(source RecordStream, options ...SubqueryOption) Expression[[
 
 // SubqueryRow returns the first projected row from a multi-column subquery.
 // The row is a Go-native map keyed by the explicit Selection aliases; null or
-// missing inner values are represented by nil map values. Use SubqueryRows
-// when the inner source may return more than one row.
+// missing inner values are represented by nil map values. When the subquery
+// matches zero rows the result is an empty map (Java Esper's EmptyMap), whose
+// nested property reads yield Missing where Java yields null — no observable
+// trace distinguishes the two today. Use SubqueryRows when the inner source
+// may return more than one row.
 func SubqueryRow(source RecordStream, selections ...Selection) Expression[map[string]any] {
 	return SubqueryRowWithOptions(source, selections)
 }
 
 // SubqueryRowWithOptions adds the ordinary subquery predicate, ordering,
-// offset/limit and scalar-cardinality options to a multi-column row.
+// offset/limit and scalar-cardinality options to a multi-column row. When the
+// subquery matches zero rows the result is an empty map rather than null,
+// matching Java Esper's EmptyMap materialization for ungrouped multi-column
+// subselects (grouped subqueries follow the SQL-standard null-on-multi-group
+// rule instead).
 func SubqueryRowWithOptions(source RecordStream, selections []Selection, options ...SubqueryOption) Expression[map[string]any] {
 	definition := newSubqueryColumnsDefinition(source, selections, options...)
 	return makeSubqueryExpr[map[string]any]("subquery-row", "row("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
