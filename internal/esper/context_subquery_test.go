@@ -558,11 +558,20 @@ func TestContextGroupedMultirowSubqueryKeepsPartitionLocalGroups(t *testing.T) {
 			t.Fatalf("context grouped %s = %#v, want %#v", symbol, row.Get("groups"), want)
 		}
 	}
+	assertGroupsNull := func(row Row, symbol string) {
+		t.Helper()
+		if row.Get("symbol").Any() != symbol {
+			t.Fatalf("context grouped symbol = %#v, want %q", row.Get("symbol"), symbol)
+		}
+		if !row.Get("groups").IsNull() {
+			t.Fatalf("context grouped %s = %#v, want null (Java groupKeys.isEmpty -> constantNull)", symbol, row.Get("groups"))
+		}
+	}
 
-	assertGroups(sendOuter("A"), "A", []map[string]any{})
+	assertGroupsNull(sendOuter("A"), "A")
 	sendReference("G1", 10)
 	assertGroups(sendOuter("A"), "A", []map[string]any{{"group": "G1", "total": int64(10)}})
-	assertGroups(sendOuter("B"), "B", []map[string]any{})
+	assertGroupsNull(sendOuter("B"), "B")
 	sendReference("G2", 20)
 	assertGroups(sendOuter("B"), "B", []map[string]any{{"group": "G2", "total": int64(20)}})
 	assertGroups(sendOuter("A"), "A", []map[string]any{{"group": "G1", "total": int64(10)}, {"group": "G2", "total": int64(20)}})

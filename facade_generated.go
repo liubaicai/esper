@@ -55,6 +55,18 @@ func AddOf[T Numeric](left, right Expr) Expression[T] {
 	return internalengine.AddOf[T](left, right)
 }
 
+// After reports whether the left interval starts after the right interval
+// ends (strict): leftStart > rightEnd. Java: IntervalComputerAfterNoParam.
+var After = internalengine.After
+
+// AfterThreshold reports whether the left interval starts after the right
+// interval ends by a delta within [startDelta, endDelta] milliseconds.
+// Java: IntervalComputerConstantAfter.computeIntervalAfter with the range
+// swapped when startDelta exceeds endDelta.
+func AfterThreshold(startDelta, endDelta int64) IntervalComputer {
+	return internalengine.AfterThreshold(startDelta, endDelta)
+}
+
 func Aggregate[T any](s Stream[T], selections ...Selection) AggregateStream {
 	return internalengine.Aggregate[T](s, selections...)
 }
@@ -328,6 +340,18 @@ type AvroRecord = internalengine.AvroRecord
 
 const BeaconSourceKind = internalengine.BeaconSourceKind
 
+// Before reports whether the left interval ends before the right interval
+// starts (strict): leftEnd < rightStart. Java: IntervalComputerBeforeNoParam.
+var Before = internalengine.Before
+
+// BeforeThreshold reports whether the left interval ends before the right
+// interval starts by a delta within [startDelta, endDelta] milliseconds.
+// Java: IntervalComputerConstantBefore.computeIntervalBefore with the
+// range swapped when startDelta exceeds endDelta (WithDeltaExpr semantics).
+func BeforeThreshold(startDelta, endDelta int64) IntervalComputer {
+	return internalengine.BeforeThreshold(startDelta, endDelta)
+}
+
 func Between[T Ordered](value, lower, upper Expression[T]) Expression[bool] {
 	return internalengine.Between[T](value, lower, upper)
 }
@@ -526,6 +550,10 @@ func Coalesce[T any](values ...Expression[T]) Expression[T] {
 func CoalesceOf[T any](values ...Expr) Expression[T] {
 	return internalengine.CoalesceOf[T](values...)
 }
+
+// Coincides reports identical start and end points.
+// Java: IntervalComputerCoincidesNoParam.
+var Coincides = internalengine.Coincides
 
 // CompileBatch compiles every typed item and collects all failures. It returns
 // Plans only when the entire batch succeeds; partial successful Plans are not
@@ -1946,6 +1974,11 @@ func DurationSum(parts ...Expression[time.Duration]) Expression[time.Duration] {
 	return internalengine.DurationSum(parts...)
 }
 
+// During reports the left interval fully inside the right interval
+// (strict): rightStart < leftStart && leftEnd < rightEnd.
+// Java: IntervalComputerDuringNoParam.
+var During = internalengine.During
+
 const EPStatementSourceKind = internalengine.EPStatementSourceKind
 
 // Emit creates a value on the conventional output port.
@@ -2448,6 +2481,14 @@ func EventIdentityEquals(left, right Expr) Expression[bool] {
 	return internalengine.EventIdentityEquals(left, right)
 }
 
+// EventPrecedence attaches an integer-valued expression to an insert-into
+// route. Higher precedence values are processed before lower values; events
+// with equal precedence maintain FIFO order within the same route cycle.
+// This mirrors Esper's event-precedence clause for insert-into ordering.
+func EventPrecedence(precedence Expr) QueryOption {
+	return internalengine.EventPrecedence(precedence)
+}
+
 // EventPropertyGetter is a schema-bound, read-only property accessor. It is
 // the Go counterpart of Esper's EventPropertyGetter, while exposing Value so
 // callers retain the Missing/Null/Present distinction.
@@ -2629,6 +2670,15 @@ const FilterKind = internalengine.FilterKind
 // marker does not implicitly cancel a running dataflow; operators decide how
 // to flush their state, matching Esper's signal semantics.
 type FinalMarker = internalengine.FinalMarker
+
+// FinishedBy is the inverse of Finishes: same end, left starts earlier.
+// Java: IntervalComputerFinishedByNoParam.
+var FinishedBy = internalengine.FinishedBy
+
+// Finishes reports that both intervals share an end while the right starts
+// earlier: rightStart < leftStart && leftEnd == rightEnd.
+// Java: IntervalComputerFinishesNoParam.
+var Finishes = internalengine.Finishes
 
 // First returns the first non-null value in insertion order. An optional
 // zero-based index mirrors Esper's first(value, index) form while keeping the
@@ -2966,6 +3016,14 @@ type HistoricalProvider = internalengine.HistoricalProvider
 // provider can bind fields from Trigger or variables to a prepared query.
 type HistoricalRequest = internalengine.HistoricalRequest
 
+// IStream reports whether the current result is being emitted on the insert
+// stream. It is the inverse of Leaving and the Go-style counterpart of
+// Esper's istream() built-in function: true for insert-stream events and
+// false for remove-stream events.
+func IStream() Expression[bool] {
+	return internalengine.IStream()
+}
+
 func IfThenElse[T any](condition Expression[bool], whenTrue, whenFalse Expression[T]) Expression[T] {
 	return internalengine.IfThenElse[T](condition, whenTrue, whenFalse)
 }
@@ -2992,6 +3050,10 @@ func InSlice[T comparable](value Expression[T], candidates Expression[[]T]) Expr
 func IncludeTriggerEvent() ExpressionBatchOption {
 	return internalengine.IncludeTriggerEvent()
 }
+
+// Includes reports the right interval fully inside the left interval
+// (strict). Java: IntervalComputerIncludesNoParam.
+var Includes = internalengine.Includes
 
 const IndexAccessEquality = internalengine.IndexAccessEquality
 
@@ -3086,6 +3148,21 @@ const IntersectWindowMode = internalengine.IntersectWindowMode
 func IntersectWindows(windows ...WindowSpec) CompositeWindowSpec {
 	return internalengine.IntersectWindows(windows...)
 }
+
+// Interval computes a boolean relationship between two interval bounds.
+// The comparison is an explicit expression node (not an opaque callback) so
+// it composes with And/Or/Not and stays describable in plans.
+func Interval(computer IntervalComputer, left, right IntervalBounds) Expression[bool] {
+	return internalengine.Interval(computer, left, right)
+}
+
+// IntervalBounds identifies one side of an interval comparison: a start and
+// an end epoch-millisecond expression evaluated against the same stream row.
+// Building blocks are plain field expressions (Field[T,"startField"]) so the
+// planner retains full schema knowledge.
+type IntervalBounds = internalengine.IntervalBounds
+
+type IntervalComputer = internalengine.IntervalComputer
 
 // IntoTable configures an aggregate query to maintain a registered table as
 // its materialized current state. It is the fluent-API equivalent of an
@@ -3297,14 +3374,6 @@ func LastEver[T any](expression Expression[T]) AggregateExpression[T] {
 // not have a stream transition (such as a direct expression check).
 func Leaving(predicate ...Expression[bool]) Expression[bool] {
 	return internalengine.Leaving(predicate...)
-}
-
-// IStream reports whether the current result is being emitted on the insert
-// stream. It is the inverse of Leaving and the Go-style counterpart of
-// Esper's istream() built-in function: true for insert-stream events and
-// false for remove-stream events.
-func IStream() Expression[bool] {
-	return internalengine.IStream()
 }
 
 func LengthBatch(size int) LengthBatchWindowSpec {
@@ -3538,6 +3607,14 @@ func MaxOf[T Ordered](values ...Expr) Expression[T] {
 func Median[T Numeric](expression Expression[T]) AggregateExpression[float64] {
 	return internalengine.Median[T](expression)
 }
+
+// Meets reports that the left end equals the right start.
+// Java: IntervalComputerMeetsNoParam.
+var Meets = internalengine.Meets
+
+// MetBy is the inverse of Meets: the right end equals the left start.
+// Java: IntervalComputerMetByNoParam.
+var MetBy = internalengine.MetBy
 
 // Method invokes a zero- or multi-argument exported Go method on a value
 // expression. It is the explicit Go counterpart of chained event-method
@@ -4740,6 +4817,15 @@ func OutputWhenWith(base OutputPolicy, condition Expr, assignments ...OutputVari
 	return internalengine.OutputWhenWith(base, condition, assignments...)
 }
 
+// OverlappedBy is the inverse of Overlaps: the right starts first.
+// Java: IntervalComputerOverlappedByNoParam.
+var OverlappedBy = internalengine.OverlappedBy
+
+// Overlaps reports a partial overlap where the left starts first:
+// leftStart < rightStart && rightStart < leftEnd && leftEnd < rightEnd.
+// Java: IntervalComputerOverlapsNoParam.
+var Overlaps = internalengine.Overlaps
+
 // Param is a concise alias for Parameter for fluent rules that prefer the
 // shorter spelling.
 func Param[T any](name string) Expression[T] {
@@ -5905,6 +5991,19 @@ func SplitIntoWhen(condition Expr, target string, selections ...Selection) Split
 	return internalengine.SplitIntoWhen(condition, target, selections...)
 }
 
+// SplitIntoWhenWithPrecedence creates a conditional split branch with an
+// event-precedence expression.
+func SplitIntoWhenWithPrecedence(condition Expr, precedence Expr, target string, selections ...Selection) SplitStreamBranch {
+	return internalengine.SplitIntoWhenWithPrecedence(condition, precedence, target, selections...)
+}
+
+// SplitIntoWithPrecedence creates an unconditional split branch with an
+// event-precedence expression. Higher precedence values are processed first;
+// branches without precedence are processed last.
+func SplitIntoWithPrecedence(precedence Expr, target string, selections ...Selection) SplitStreamBranch {
+	return internalengine.SplitIntoWithPrecedence(precedence, target, selections...)
+}
+
 // SplitStreamBranch is one ordered branch of an on-event split. A nil
 // Condition is unconditional and an empty Selections slice forwards the
 // complete source event. The target event type remains explicit because Go
@@ -5915,6 +6014,14 @@ type SplitStreamBranch = internalengine.SplitStreamBranch
 // from the trigger stream. It is the Go counterpart of an EPL split-stream
 // branch that carries its own contained-event from-clause.
 type SplitStreamBranchBuilder = internalengine.SplitStreamBranchBuilder
+
+// StartedBy is the inverse of Starts: same start, left ends later.
+// Java: IntervalComputerStartedByNoParam.
+var StartedBy = internalengine.StartedBy
+
+// Starts reports the same start with the left ending earlier.
+// Java: IntervalComputerStartsNoParam.
+var Starts = internalengine.Starts
 
 func StartsWith(value, prefix Expression[string]) Expression[bool] {
 	return internalengine.StartsWith(value, prefix)
@@ -6332,6 +6439,17 @@ func SubqueryGroupKey(expression Expr) SubqueryOption {
 
 type SubqueryGroupOption = internalengine.SubqueryGroupOption
 
+// SubqueryGroupRow projects a multi-column row from a grouped subquery and
+// applies the SQL-standard multi-row restriction Esper uses for un-enumerated
+// grouped subselects: the result is the single group's row when exactly one
+// group survives where+having, and null otherwise (zero groups or two or
+// more). Java reference: SubselectForgeRowUnfilteredSelectedGroupedNoHaving
+// (size != 1 -> null) and ...WHaving (null on 0 or >=2 having-passing
+// groups).
+func SubqueryGroupRow(source RecordStream, key Expr, selections []Selection, options ...SubqueryGroupOption) Expression[map[string]any] {
+	return internalengine.SubqueryGroupRow(source, key, selections, options...)
+}
+
 // SubqueryGroupRows returns one multi-column map row per accepted group. The
 // key is kept in the group evaluation context, while each Selection is
 // evaluated against that group so scalar key columns and aggregate columns
@@ -6430,14 +6548,37 @@ type SubqueryResultMetadata = internalengine.SubqueryResultMetadata
 
 // SubqueryRow returns the first projected row from a multi-column subquery.
 // The row is a Go-native map keyed by the explicit Selection aliases; null or
-// missing inner values are represented by nil map values. Use SubqueryRows
-// when the inner source may return more than one row.
+// missing inner values are represented by nil map values. When the subquery
+// matches zero rows the result is an empty map (Java Esper's EmptyMap), whose
+// nested property reads yield Missing where Java yields null — no observable
+// trace distinguishes the two today. Use SubqueryRows when the inner source
+// may return more than one row.
 func SubqueryRow(source RecordStream, selections ...Selection) Expression[map[string]any] {
 	return internalengine.SubqueryRow(source, selections...)
 }
 
+// SubqueryRowAsEvent projects named columns from a single-row subquery and
+// materializes the result as an Event of the named schema type.  This bridges
+// the gap between SubqueryRow (which returns Expression[map[string]any]) and
+// insert-into routes whose target column type is Event.  When the inner
+// source returns zero rows the result is null; one row is materialized; more
+// than one row yields null (strict single-row cardinality).
+func SubqueryRowAsEvent(env *Environment, schemaName string, source RecordStream, selections ...Selection) Expression[Event] {
+	return internalengine.SubqueryRowAsEvent(env, schemaName, source, selections...)
+}
+
+// SubqueryRowAsEventWithOptions applies predicate, ordering and cardinality
+// options before materializing the single-row subquery result as an Event.
+func SubqueryRowAsEventWithOptions(env *Environment, schemaName string, source RecordStream, selections []Selection, options ...SubqueryOption) Expression[Event] {
+	return internalengine.SubqueryRowAsEventWithOptions(env, schemaName, source, selections, options...)
+}
+
 // SubqueryRowWithOptions adds the ordinary subquery predicate, ordering,
-// offset/limit and scalar-cardinality options to a multi-column row.
+// offset/limit and scalar-cardinality options to a multi-column row. When the
+// subquery matches zero rows the result is an empty map rather than null,
+// matching Java Esper's EmptyMap materialization for ungrouped multi-column
+// subselects (grouped subqueries follow the SQL-standard null-on-multi-group
+// rule instead).
 func SubqueryRowWithOptions(source RecordStream, selections []Selection, options ...SubqueryOption) Expression[map[string]any] {
 	return internalengine.SubqueryRowWithOptions(source, selections, options...)
 }
@@ -6448,6 +6589,19 @@ func SubqueryRowWithOptions(source RecordStream, selections []Selection, options
 // returned slice order and use the aliases for lookup.
 func SubqueryRows(source RecordStream, selections ...Selection) Expression[[]map[string]any] {
 	return internalengine.SubqueryRows(source, selections...)
+}
+
+// SubqueryRowsAsEvent projects named columns from a multi-row subquery and
+// materializes every row as an Event of the named schema type.  The result
+// is Expression[[]Event] which can be routed into an array-typed event column.
+func SubqueryRowsAsEvent(env *Environment, schemaName string, source RecordStream, selections ...Selection) Expression[[]Event] {
+	return internalengine.SubqueryRowsAsEvent(env, schemaName, source, selections...)
+}
+
+// SubqueryRowsAsEventWithOptions applies predicate, ordering, offset and
+// limit options before materializing the multi-row subquery result as Events.
+func SubqueryRowsAsEventWithOptions(env *Environment, schemaName string, source RecordStream, selections []Selection, options ...SubqueryOption) Expression[[]Event] {
+	return internalengine.SubqueryRowsAsEventWithOptions(env, schemaName, source, selections, options...)
 }
 
 // SubqueryRowsWithOptions applies predicate, ordering, offset and limit before
@@ -6757,6 +6911,14 @@ func ThenInsertIntoTargetWhen(condition Expr, assignments ...TableAssignment) Ta
 // ThenInsertIntoWhen creates a conditional side-stream route action.
 func ThenInsertIntoWhen(condition Expr, target string, selections ...Selection) TableMergeAction {
 	return internalengine.ThenInsertIntoWhen(condition, target, selections...)
+}
+
+// ThenInsertIntoWithPrecedence creates an unconditional merge action that
+// routes a named projection into another registered event type with the
+// given event-precedence expression. Higher precedence values are processed
+// before lower values in the route queue.
+func ThenInsertIntoWithPrecedence(precedence Expr, target string, selections ...Selection) TableMergeAction {
+	return internalengine.ThenInsertIntoWithPrecedence(precedence, target, selections...)
 }
 
 // ThenUpdate creates one conditional update action for a matched merge

@@ -26,7 +26,7 @@ type IntervalBounds struct {
 // Interval computes a boolean relationship between two interval bounds.
 // The comparison is an explicit expression node (not an opaque callback) so
 // it composes with And/Or/Not and stays describable in plans.
-func Interval(computer intervalComputer, left, right IntervalBounds) Expression[bool] {
+func Interval(computer IntervalComputer, left, right IntervalBounds) Expression[bool] {
 	children := []*exprNode{left.Start.node(), left.End.node(), right.Start.node(), right.End.node()}
 	name := computer.name
 	return makeExpr[bool]("dt-interval-"+name,
@@ -54,72 +54,72 @@ func Interval(computer intervalComputer, left, right IntervalBounds) Expression[
 		})
 }
 
-type intervalComputer struct {
+type IntervalComputer struct {
 	name    string
 	compute func(leftStart, leftEnd, rightStart, rightEnd int64) bool
 }
 
 // Before reports whether the left interval ends before the right interval
 // starts (strict): leftEnd < rightStart. Java: IntervalComputerBeforeNoParam.
-var Before = intervalComputer{"before", func(ls, le, rs, re int64) bool { return le < rs }}
+var Before = IntervalComputer{"before", func(ls, le, rs, re int64) bool { return le < rs }}
 
 // After reports whether the left interval starts after the right interval
 // ends (strict): leftStart > rightEnd. Java: IntervalComputerAfterNoParam.
-var After = intervalComputer{"after", func(ls, le, rs, re int64) bool { return ls > re }}
+var After = IntervalComputer{"after", func(ls, le, rs, re int64) bool { return ls > re }}
 
 // Coincides reports identical start and end points.
 // Java: IntervalComputerCoincidesNoParam.
-var Coincides = intervalComputer{"coincides", func(ls, le, rs, re int64) bool { return ls == rs && le == re }}
+var Coincides = IntervalComputer{"coincides", func(ls, le, rs, re int64) bool { return ls == rs && le == re }}
 
 // During reports the left interval fully inside the right interval
 // (strict): rightStart < leftStart && leftEnd < rightEnd.
 // Java: IntervalComputerDuringNoParam.
-var During = intervalComputer{"during", func(ls, le, rs, re int64) bool { return rs < ls && le < re }}
+var During = IntervalComputer{"during", func(ls, le, rs, re int64) bool { return rs < ls && le < re }}
 
 // Includes reports the right interval fully inside the left interval
 // (strict). Java: IntervalComputerIncludesNoParam.
-var Includes = intervalComputer{"includes", func(ls, le, rs, re int64) bool { return ls < rs && re < le }}
+var Includes = IntervalComputer{"includes", func(ls, le, rs, re int64) bool { return ls < rs && re < le }}
 
 // Finishes reports that both intervals share an end while the right starts
 // earlier: rightStart < leftStart && leftEnd == rightEnd.
 // Java: IntervalComputerFinishesNoParam.
-var Finishes = intervalComputer{"finishes", func(ls, le, rs, re int64) bool { return rs < ls && le == re }}
+var Finishes = IntervalComputer{"finishes", func(ls, le, rs, re int64) bool { return rs < ls && le == re }}
 
 // FinishedBy is the inverse of Finishes: same end, left starts earlier.
 // Java: IntervalComputerFinishedByNoParam.
-var FinishedBy = intervalComputer{"finishedBy", func(ls, le, rs, re int64) bool { return ls < rs && le == re }}
+var FinishedBy = IntervalComputer{"finishedBy", func(ls, le, rs, re int64) bool { return ls < rs && le == re }}
 
 // Meets reports that the left end equals the right start.
 // Java: IntervalComputerMeetsNoParam.
-var Meets = intervalComputer{"meets", func(ls, le, rs, re int64) bool { return le == rs }}
+var Meets = IntervalComputer{"meets", func(ls, le, rs, re int64) bool { return le == rs }}
 
 // MetBy is the inverse of Meets: the right end equals the left start.
 // Java: IntervalComputerMetByNoParam.
-var MetBy = intervalComputer{"metBy", func(ls, le, rs, re int64) bool { return re == ls }}
+var MetBy = IntervalComputer{"metBy", func(ls, le, rs, re int64) bool { return re == ls }}
 
 // Overlaps reports a partial overlap where the left starts first:
 // leftStart < rightStart && rightStart < leftEnd && leftEnd < rightEnd.
 // Java: IntervalComputerOverlapsNoParam.
-var Overlaps = intervalComputer{"overlaps", func(ls, le, rs, re int64) bool { return ls < rs && rs < le && le < re }}
+var Overlaps = IntervalComputer{"overlaps", func(ls, le, rs, re int64) bool { return ls < rs && rs < le && le < re }}
 
 // OverlappedBy is the inverse of Overlaps: the right starts first.
 // Java: IntervalComputerOverlappedByNoParam.
-var OverlappedBy = intervalComputer{"overlappedBy", func(ls, le, rs, re int64) bool { return rs < ls && ls < re && re < le }}
+var OverlappedBy = IntervalComputer{"overlappedBy", func(ls, le, rs, re int64) bool { return rs < ls && ls < re && re < le }}
 
 // Starts reports the same start with the left ending earlier.
 // Java: IntervalComputerStartsNoParam.
-var Starts = intervalComputer{"starts", func(ls, le, rs, re int64) bool { return ls == rs && le < re }}
+var Starts = IntervalComputer{"starts", func(ls, le, rs, re int64) bool { return ls == rs && le < re }}
 
 // StartedBy is the inverse of Starts: same start, left ends later.
 // Java: IntervalComputerStartedByNoParam.
-var StartedBy = intervalComputer{"startedBy", func(ls, le, rs, re int64) bool { return ls == rs && le > re }}
+var StartedBy = IntervalComputer{"startedBy", func(ls, le, rs, re int64) bool { return ls == rs && le > re }}
 
 // BeforeThreshold reports whether the left interval ends before the right
 // interval starts by a delta within [startDelta, endDelta] milliseconds.
 // Java: IntervalComputerConstantBefore.computeIntervalBefore with the
 // range swapped when startDelta exceeds endDelta (WithDeltaExpr semantics).
-func BeforeThreshold(startDelta, endDelta int64) intervalComputer {
-	return intervalComputer{"before", func(ls, le, rs, re int64) bool {
+func BeforeThreshold(startDelta, endDelta int64) IntervalComputer {
+	return IntervalComputer{"before", func(ls, le, rs, re int64) bool {
 		lo, hi := startDelta, endDelta
 		if lo > hi {
 			lo, hi = hi, lo
@@ -133,8 +133,8 @@ func BeforeThreshold(startDelta, endDelta int64) intervalComputer {
 // interval ends by a delta within [startDelta, endDelta] milliseconds.
 // Java: IntervalComputerConstantAfter.computeIntervalAfter with the range
 // swapped when startDelta exceeds endDelta.
-func AfterThreshold(startDelta, endDelta int64) intervalComputer {
-	return intervalComputer{"after", func(ls, le, rs, re int64) bool {
+func AfterThreshold(startDelta, endDelta int64) IntervalComputer {
+	return IntervalComputer{"after", func(ls, le, rs, re int64) bool {
 		lo, hi := startDelta, endDelta
 		if lo > hi {
 			lo, hi = hi, lo

@@ -310,11 +310,11 @@ func TestNamedExpressionGroupedSubquerySnapshotAndEnumChainMatchEsper(t *testing
 	if len(rows) != 1 {
 		t.Fatalf("empty named expression rows = %d", len(rows))
 	}
-	if got := rows[0].Get("groups"); !got.IsPresent() || !reflect.DeepEqual(got.Any(), []map[string]any{}) {
-		t.Fatalf("empty groups = %#v", got)
+	if got := rows[0].Get("groups"); !got.IsNull() {
+		t.Fatalf("empty groups = %#v, want null (Java groupKeys.isEmpty -> constantNull)", got)
 	}
-	if got := rows[0].Get("limited"); !got.IsPresent() || !reflect.DeepEqual(got.Any(), []map[string]any{}) {
-		t.Fatalf("empty limited groups = %#v", got)
+	if got := rows[0].Get("limited"); !got.IsNull() {
+		t.Fatalf("empty limited groups = %#v, want null (.take over null stays null)", got)
 	}
 
 	insert("E1", 20)

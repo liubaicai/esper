@@ -1451,6 +1451,12 @@ func SubqueryGroupRows(source RecordStream, key Expr, selections []Selection, op
 	definition.groupedRowProjection = true
 	return makeSubqueryExpr[[]map[string]any]("subquery-group-rows", "group-rows("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		values := evaluateSubqueryValues(definition, ctx)
+		if len(values) == 0 {
+			// Java Esper's grouped multirow subselect returns null when no
+			// group survives where+having (groupKeys.isEmpty -> constantNull),
+			// and .take(n) over null stays null.
+			return Null()
+		}
 		rows := make([]map[string]any, 0, len(values))
 		for _, value := range values {
 			group, ok := value.Any().(subqueryGroupValue)
@@ -1464,6 +1470,43 @@ func SubqueryGroupRows(source RecordStream, key Expr, selections []Selection, op
 			rows = append(rows, row)
 		}
 		return Present(rows)
+	})
+}
+
+// SubqueryGroupRow projects a multi-column row from a grouped subquery and
+// applies the SQL-standard multi-row restriction Esper uses for un-enumerated
+// grouped subselects: the result is the single group's row when exactly one
+// group survives where+having, and null otherwise (zero groups or two or
+// more). Java reference: SubselectForgeRowUnfilteredSelectedGroupedNoHaving
+// (size != 1 -> null) and ...WHaving (null on 0 or >=2 having-passing
+// groups).
+func SubqueryGroupRow(source RecordStream, key Expr, selections []Selection, options ...SubqueryGroupOption) Expression[map[string]any] {
+	config := SubqueryGroupConfig{}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	definition := newSubqueryColumnsDefinition(source, selections)
+	definition.predicate = config.Where
+	definition.groupBy = key
+	definition.having = config.Having
+	definition.grouped = true
+	definition.groupedRowProjection = true
+	return makeSubqueryExpr[map[string]any]("subquery-group-row", "group-row("+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
+		values := evaluateSubqueryValues(definition, ctx)
+		if len(values) != 1 {
+			return Null()
+		}
+		group, ok := values[0].Any().(subqueryGroupValue)
+		if !ok {
+			return Null()
+		}
+		row, ok := group.value.Any().(map[string]any)
+		if !ok {
+			return Null()
+		}
+		return Present(row)
 	})
 }
 

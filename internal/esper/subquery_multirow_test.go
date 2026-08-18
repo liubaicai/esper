@@ -379,8 +379,8 @@ func TestSubqueryGroupedSnapshotExposesIteratorView(t *testing.T) {
 	}
 
 	row := sendTrigger()
-	if groupsValue, ok := row.Get("groups").Any().([]map[string]any); !ok || !reflect.DeepEqual(groupsValue, []map[string]any{}) {
-		t.Fatalf("empty grouped iterator groups = %#v", row.Get("groups"))
+	if !row.Get("groups").IsNull() {
+		t.Fatalf("empty grouped iterator groups = %#v, want null (Java groupKeys.isEmpty -> constantNull)", row.Get("groups"))
 	}
 	if snapshot := snapshotRow(); !reflect.DeepEqual(snapshot.AsMap(), row.AsMap()) {
 		t.Fatalf("empty grouped iterator snapshot = %#v, listener = %#v", snapshot.AsMap(), row.AsMap())

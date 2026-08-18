@@ -61,7 +61,7 @@ func TestExprDTIntervalOpsParity(t *testing.T) {
 
 	cases := []struct {
 		name string
-		op   intervalComputer
+		op   IntervalComputer
 		send []dtIntervalEvent
 		want []bool
 	}{

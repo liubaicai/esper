@@ -32,7 +32,7 @@ const dtThresholdSeed int64 = 1022749200000 // 2002-05-30T09:00:00.000 UTC
 func TestExprDTIntervalThresholdParity(t *testing.T) {
 	cases := []struct {
 		name string
-		op   intervalComputer
+		op   IntervalComputer
 		b    dtIntervalEvent
 		send []dtIntervalEvent
 		want []bool
@@ -207,7 +207,7 @@ func TestExprDTIntervalTimePeriodUnitsParity(t *testing.T) {
 
 	units := []struct {
 		name string
-		op   intervalComputer
+		op   IntervalComputer
 		want bool
 	}{
 		// 1 year..1 millisecond: threshold [1, MAX]; delta 0 < 1 -> false.

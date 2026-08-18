@@ -20,6 +20,22 @@ const engineImport = "github.com/liubaicai/esper/internal/esper"
 
 var allowedVariables = map[string]struct{}{
 	"MathContextDECIMAL32": {},
+	// Interval computers are stateless function values used as expression
+	// builders (dt interval algebra); exposing the value is the facade
+	// contract.
+	"Before":       {},
+	"After":        {},
+	"Coincides":    {},
+	"During":       {},
+	"Includes":     {},
+	"Finishes":     {},
+	"FinishedBy":   {},
+	"Meets":        {},
+	"MetBy":        {},
+	"Overlaps":     {},
+	"OverlappedBy": {},
+	"Starts":       {},
+	"StartedBy":    {},
 }
 
 type symbol struct {
