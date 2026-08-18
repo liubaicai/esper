@@ -25,6 +25,23 @@ commit/push；主 agent 集成后统一运行定向验证、差分和完整本�
 再调用 `parity-reviewer` 独立审查。具体任务必须使用
 `# Target / # Change / # Acceptance` 契约和 strict 结构化回传。
 
+以“已验证工作单元吞吐量”而不是单个 agent 利用率优化调度，并维持最多
+一个未来工作单元的只读预取队列。工作单元 N 完成集成和定向验证后，必须
+用同一个 `task` batch 同时启动：N 的 `parity-reviewer`、N+1 的 Java
+契约调查、N+1 的 Go 实现面调查。review 期间主 agent 继续完成 N+1 的
+只读契约整理；只要仍有安全的只读工作，就不得立即进入 `hub wait`。
+若只能启动 singleton task，必须先说明不存在可安全并行的 sibling task。
+
+契约冻结后，允许一个 shared-core writer 与一个 `parity-asset-worker`
+并行，前提是文件所有权完全不重叠：前者独占共享 runtime/API 语义，后者
+只写明确分配的 Java oracle、scenario 输入或独立 Go parity test。trace、
+evidence、manifest、roadmap 和 CHANGELOG 仍由主 agent 在集成验证后统一
+生成或更新。N 审查期间不得开始 N+1 的写入，避免污染 reviewer 的 diff。
+同一 work unit 的修复结果回传给原 worker/reviewer 复核，不为同一范围重复
+启动失去上下文的新 agent。共享同一 runtime surface、oracle harness 和
+验证命令的紧密 executions 应在风险允许时合并，摊薄 review 和门禁成本；
+不得为了制造更多 work unit 而把一个自然闭环拆成多个微小提交。
+
 任何已有门禁失败时停止新增功能，先恢复绿色基线。不得通过 Skip、删除
 测试、放宽断言、修改 oracle 迎合 Go、伪造 evidence 或滥用
 `intentionally-different` 绕过失败。`implemented` 不等于 parity；只有

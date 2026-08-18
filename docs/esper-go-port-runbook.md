@@ -118,25 +118,31 @@
 
 ## 4. OMP 并行任务
 
-并行的目标是缩短调查和独立组件实现的等待时间，不是最大化活跃 agent 数。项目配置允许最多 4 个并发子 agent；正常工作单元使用 2 至 3 个，4 路仅用于只读调查或完全独立的组件。
+并行的目标是提高单位时间内完成验证并提交的工作单元数，不是最大化活跃 agent 数。项目配置允许最多 4 个并发子 agent；正常工作单元使用 2 至 3 个，4 路仅用于只读调查或完全独立的组件。调度维持“当前工作单元 N + 最多一个只读预取工作单元 N+1”，禁止无限预读造成事实过期。
 
 标准拓扑：
 
-1. 主 agent 选择工作单元并冻结跨任务契约；
-2. 一个 `task` batch 并行运行 `java-oracle-scout` 和内置 `scout`；
-3. 主 agent 合并调查，解决不确定项并划定文件所有权；
-4. 共享核心只允许主 agent 或一个 `go-slice-worker` 写入；
-5. 独立组件才使用 `isolated: true`，最多两个 writer；
-6. 主 agent 集成、定向验证并更新中央事实；
-7. `parity-reviewer` 只读审查集成 diff；
-8. 主 agent 统一执行全量门禁、提交和推送。
+1. 主 agent 选择工作单元 N；用一个 `task` batch 并行运行 `java-oracle-scout` 和内置 `scout`；
+2. 主 agent 合并调查，冻结 observable contract、文件所有权和定向验证命令；
+3. 共享核心只允许主 agent 或一个 `go-slice-worker` 写入；契约和文件边界完全冻结时，可同时启动一个 `parity-asset-worker` 编写互不重叠的 oracle/scenario/test 源文件；
+4. 主 agent 集成、生成 trace/evidence、运行定向验证并更新中央事实；
+5. 在启动审查前选择 N+1；用同一个 batch 同时启动 N 的 `parity-reviewer`、N+1 的 Java contract scout 和 Go surface scout；
+6. review 运行期间，主 agent 只读整理 N+1 契约和风险；不得开始 N+1 写入，避免污染 N 的集成 diff；
+7. N 的 review 返回后，主 agent验证并修复 findings，统一执行全量门禁、提交和推送；
+8. N 提交后，使用已经冻结的 N+1 契约立即进入实现阶段。
+
+每次准备调用 `hub wait` 前，主 agent 必须先检查：是否还能选择 N+1、合并 scout 结果、冻结只读契约、检查 N 的 diff 或准备验证命令。只要存在上述安全工作，就继续推进而不是等待。确实没有安全 sibling task 时允许 singleton task，但必须在启动前记录原因。
+
+审查和完整门禁有固定成本。共享同一 runtime surface、oracle harness 和验证命令的紧密 executions，应在风险允许时组成一个自然闭环工作单元，不要人为拆成多个微小提交。worker 或 reviewer 返回 finding 后，使用同一个 agent follow-up；除非任务边界发生实质变化，不重新启动一个丢失上下文的 agent。
 
 适合并行：
 
 - Java execution/runtime ID/可观测契约调查；
 - Go helper、调用方、既有 scenario/evidence 和历史调查；
 - 相互独立的 connector、事件表示、oracle tooling 或 benchmark harness；
-- 当前实现执行期间，对下一个候选工作单元做只读预研。
+- 契约冻结后，一个 shared-core writer 与一个文件不重叠的 parity asset writer；
+- 当前实现或审查期间，对下一个候选工作单元做只读预研；
+- 工作单元 N 的集成审查与 N+1 的 Java/Go 双路调查。
 
 默认不并行：
 
@@ -144,6 +150,7 @@
 - 多个任务同时修改 manifest、roadmap、CHANGELOG 或 Goal；
 - 依赖同一个未提交公共 API 的实现；
 - 多个 worker 同时生成或重写同一 scenario/trace/evidence；
+- 工作单元 N 审查期间开始 N+1 写入，使 reviewer 看到混合 diff；
 - 需要频繁协调才能确定接口的任务。
 
 并行约束：
@@ -152,7 +159,11 @@
 - 每个 task 使用 `# Target / # Change / # Acceptance`，明确 Java executions、允许和禁改文件及 observable acceptance；
 - 使用 agent 自带 output schema，并将 `schemaMode` 设为 `strict`；
 - 子 agent 不运行 formatter、lint、build、tests，不 commit/push，不更新中央事实文件；
+- 子 agent 不手写生成的 Java/Go trace 或 evidence；主 agent 运行工具并验证来源后生成；
 - 主 agent 审查所有自动应用 patch，只格式化受影响文件，再统一运行定向和全量门禁；
+- 有两个或更多安全任务时必须用同一个 batch 启动；singleton task 必须说明为何没有安全 sibling；
+- reviewer 启动后不得立即等待；先消耗 N+1 的安全只读工作，预取深度最多一个工作单元；
+- 同一 work unit 的修复回传给原 worker/reviewer，避免重复冷启动和重新读取；
 - OMP 自动文本合并不代表语义安全；共享状态机、顺序和生命周期仍遵守单写者规则；
 - 具体批处理模板见 [OMP 工作流](esper-go-port-omp-workflows.md)。
 

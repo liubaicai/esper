@@ -28,6 +28,22 @@ There may be only one writer for a shared `internal/esper` semantic surface.
 Use isolated writing agents only for independent components with a frozen
 contract. OMP text conflict resolution is not proof of semantic correctness.
 
+Optimize for verified work-unit throughput with a two-unit pipeline. Keep at
+most one future work unit prefetched read-only. Once work unit N is integrated
+and narrowly validated, launch one batch containing N's `parity-reviewer`, the
+Java contract scout for N+1, and the Go surface scout for N+1. While that batch
+runs, the primary agent may consolidate N+1's read-only contract, but must not
+start N+1 writes until N passes review and is committed. Do not call `hub wait`
+while safe read-only pipeline work remains.
+
+After a contract is frozen, one shared-core writer and one
+`parity-asset-worker` may run concurrently only when their allowed files are
+disjoint. The asset lane may author assigned oracle/scenario/test sources; it
+must not hand-author generated traces or evidence. A singleton task is allowed
+only when no safe sibling task exists, and the primary agent must state that
+reason before spawning it. `maxConcurrency` is a ceiling, not evidence that a
+turn was parallel.
+
 Subagents start blank. Give them `local://` references instead of pasting large
 documents. Every task must use `# Target`, `# Change`, and `# Acceptance`.
 Subagents skip formatters, linters, builds, tests, commits, and pushes; the

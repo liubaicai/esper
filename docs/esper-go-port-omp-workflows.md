@@ -22,22 +22,36 @@ OMP 会自动加载最近的 `.omp/AGENTS.md`、`.omp/RULES.md`、项目配置�
 | --- | --- | --- | --- |
 | `java-oracle-scout` | Java execution、runtime ID 和可观测契约 | 否 | 1 至 2 |
 | 内置 `scout` | Go API/helper、既有测试/evidence、Git 历史定位 | 否 | 1 至 2 |
-| `go-slice-worker` | 明确文件边界内的独立实现或测试资产 | 是 | 共享核心 1；独立组件最多 2 |
+| `go-slice-worker` | 明确文件边界内的共享 runtime/API 实现 | 是 | 共享核心最多 1 |
+| `parity-asset-worker` | 契约冻结后的 oracle/scenario/独立 parity test 源文件 | 是 | 与 shared-core writer 文件不重叠时最多 1 |
 | `parity-reviewer` | 集成后的 Java/Go parity 与证据审查 | 否 | 1，且只在集成后运行 |
 
 主 agent 始终拥有：工作单元选择、跨任务契约、共享核心、manifest、evidence 最终状态、roadmap、CHANGELOG、格式化、测试、提交和推送。子 agent 不做这些收口动作。
 
 ## 3. 标准执行拓扑
 
-1. 主 agent 从 roadmap/manifest 选择一个闭环工作单元，记录允许修改文件、禁改文件、Java executions、runtime IDs 和定向验证命令。
+1. 主 agent 从 roadmap/manifest 选择工作单元 N，记录允许修改文件、禁改文件、Java executions、runtime IDs 和定向验证命令。
 2. 用一个 `task` batch 同时启动 Java oracle 调查和 Go 现状调查。大上下文只用 `local://<path>` 引用。
-3. 主 agent 合并调查结果，冻结输入/output/error/lifecycle 契约和文件所有权；存在冲突或未知项时先解决，不启动实现。
-4. 共享核心由主 agent 或一个 `go-slice-worker` 单写。独立组件可用 `isolated: true` 并行，成功 patch 自动应用后仍必须逐文件审查。
-5. 子 agent 不运行 formatter、lint、build 或 tests。主 agent 集成后先运行最窄定向测试和差分；失败时把精确错误回传给原 worker 修复，不重新启动一个失去上下文的 worker。
-6. 定向验证通过后，主 agent 更新 manifest/evidence 和必要文档，再启动 `parity-reviewer` 审查完整 work-unit diff。
-7. 修复所有 P0/P1/P2 parity 或证据问题，统一执行提交前门禁。只有全绿后才提交并推送 `master`。
+3. 主 agent 合并调查结果，冻结 input/output/error/lifecycle 契约和文件所有权；存在冲突或未知项时先解决，不启动实现。
+4. 共享核心由主 agent 或一个 `go-slice-worker` 单写。若 oracle/scenario/test 的接口和文件边界也已冻结，可同时启动一个 `parity-asset-worker`；两个 writer 必须使用 `isolated: true` 且文件零重叠。
+5. 子 agent 不运行 formatter、lint、build 或 tests。主 agent 集成后生成 trace/evidence，运行最窄定向测试和差分；失败时把精确错误回传给原 worker 修复，不重新启动失去上下文的 worker。
+6. 定向验证通过后，主 agent 更新 manifest/evidence 和必要文档，并选择下一个候选工作单元 N+1。
+7. 用一个 batch 同时启动：N 的 `parity-reviewer`、N+1 的 `java-oracle-scout`、N+1 的内置 `scout`。主 agent 在 batch 运行期间只读整理 N+1 契约，不开始 N+1 写入。
+8. 修复 N 的所有 P0/P1/P2 finding，判断并处理 P3，统一执行提交前门禁。只有全绿后才提交并推送 `master`，然后立即进入已预取的 N+1。
 
 OMP 可以自动合并并发文本修改，但不能证明共享状态机、顺序、timer 或生命周期的语义正确。不要以“能自动解冲突”为理由并行修改共享核心。
+
+### 3.1 调度不变量
+
+- 并发目标是缩短 work-unit cycle time；`maxConcurrency: 4` 只是上限。
+- 有两个安全任务时必须在一个 batch 中启动，不能拆成连续 singleton task。
+- singleton task 只允许在没有安全 sibling 时使用，主 agent 先记录原因。
+- reviewer 运行时保留 N 的干净 diff；N+1 只读预取，深度最多一个工作单元。
+- 调用 `hub wait` 前先完成所有安全只读工作；不得启动 reviewer 后立即进入轮询等待。
+- 同时写入最多两路：一个 shared-core writer 和一个文件不重叠的 asset writer。
+- 同一 work unit 的 finding 回传给原 worker/reviewer，不重复冷启动同角色 agent。
+- 共享 runtime surface 和 oracle harness 的紧密 executions 组成一个自然工作单元，摊薄 review/门禁成本。
+- trace/evidence、manifest、roadmap、CHANGELOG、格式化、测试、提交和推送始终由主 agent 收口。
 
 ## 4. 可复用 task 模板
 
@@ -65,20 +79,28 @@ OMP 可以自动合并并发文本修改，但不能证明共享状态机、顺�
 }
 ```
 
-### 4.2 隔离实现 task
+### 4.2 并行实现 batch
 
-只有跨任务接口已冻结、允许文件和禁改文件清楚时才使用。共享核心工作单元一次只派一个 writer。
+只有跨任务接口已冻结、允许文件和禁改文件清楚时才使用。共享核心始终只有一个 writer；第二个 writer 仅处理文件不重叠的 parity assets。若没有独立资产工作，则主 agent 说明原因并只启动 core worker，或自己单写共享核心。
 
 ```json
 {
-  "context": "# Goal\n实现已冻结的工作单元契约。\n# Constraints\n读取 local://docs/esper-go-port-runbook.md 和当前契约/evidence；不运行 formatter、lint、build、tests；不修改 manifest、roadmap、CHANGELOG 或 Goal；不 commit/push。\n# Contract\n列出输入、输出、ordering、Null/Missing、time、lifecycle、error phase 和允许修改文件。",
+  "context": "# Goal\n并行实现工作单元 N 的已冻结契约。\n# Constraints\n读取 local://docs/esper-go-port-runbook.md 和当前契约；两个 task 文件零重叠；不运行 formatter、lint、build、tests；不修改 manifest、roadmap、CHANGELOG、Goal、生成 trace/evidence；不 commit/push。\n# Contract\n列出输入、输出、ordering、Null/Missing、time、lifecycle、error phase，并分别列出 CoreFiles 与 AssetFiles。",
   "tasks": [
     {
-      "name": "ImplementSlice",
+      "name": "CoreImplementation",
       "agent": "go-slice-worker",
       "effort": "hi",
       "isolated": true,
-      "task": "# Target\n列出精确文件和 symbols；列出明确非目标与禁改文件。\n# Change\n按已冻结契约实现 Go API/runtime/scenario/test 资产，复用既有模式。\n# Acceptance\n代码与测试资产完整，无 TODO/stub；结构化返回 changed files、assumptions、risks 和主 agent 应运行的定向测试。",
+      "task": "# Target\n只修改 CoreFiles 中的精确 production files 和 symbols；AssetFiles 及中央事实文件禁止修改。\n# Change\n按已冻结契约实现 Go API/runtime 语义，复用既有模式。\n# Acceptance\nproduction 代码完整，无 TODO/stub；结构化返回 changed files、assumptions、risks 和主 agent 应运行的定向测试。",
+      "schemaMode": "strict"
+    },
+    {
+      "name": "ParityAssets",
+      "agent": "parity-asset-worker",
+      "effort": "hi",
+      "isolated": true,
+      "task": "# Target\n只修改 AssetFiles 中明确分配的 Java oracle、scenario 输入或独立 Go parity test；CoreFiles 禁止修改。\n# Change\n按冻结契约编写可由主 agent 执行和验证的 parity 源资产；不得手写生成 trace/evidence。\n# Acceptance\n资产覆盖指定 executions/runtime IDs；结构化返回 changed files、assumptions、risks 及生成/测试命令。",
       "schemaMode": "strict"
     }
   ]
@@ -87,22 +109,38 @@ OMP 可以自动合并并发文本修改，但不能证明共享状态机、顺�
 
 需要两个实现 task 时，必须在 batch `# Contract` 中先定义双方接口，并保证二者不依赖同一个未提交 API、不写同一状态机、不同时更新中央事实文件。
 
-### 4.3 集成审查 task
+### 4.3 审查 N + 预取 N+1 batch
 
 ```json
 {
-  "context": "# Goal\n审查当前工作单元集成 diff 的行为 parity 与证据完整性。\n# Constraints\n只读；不运行测试；Java 固定 commit 是 oracle。读取 local://docs/esper-go-port-quality-strategy.md、目标 Java source、Go diff、scenario/traces/evidence 和 manifest 条目。\n# Contract\n只报告可定位、可复现、由本工作单元引入的问题。",
+  "context": "# Goal\n审查已集成的工作单元 N，同时为候选工作单元 N+1 冻结只读契约。\n# Constraints\n全部只读且不运行测试；N 和 N+1 边界必须明确。Java 固定 commit 是 oracle。N reviewer 读取质量策略、目标 Java source、Go diff、scenario/traces/evidence 和 manifest；N+1 scouts 只读取 roadmap/manifest 与候选相关文件。\n# Contract\nN 只报告可定位、可复现、由 N 引入的问题；N+1 返回 executions/runtime IDs、observable contract、最小 Go 实现面和文件冲突风险。",
   "tasks": [
     {
-      "name": "ParityReview",
+      "name": "ReviewCurrent",
       "agent": "parity-reviewer",
       "effort": "hi",
-      "task": "# Target\n审查完整工作单元 diff 和对应 Java executions。\n# Change\n核对 producer/consumer、值与顺序、Null/Missing/type、time、lifecycle、error phase、scenario/trace/evidence 和 manifest 状态。\n# Acceptance\nstrict 返回 pass/fail；每个 finding 必须有文件、行、证据和修复要求。",
+      "task": "# Target\n审查工作单元 N 的完整集成 diff 和对应 Java executions。\n# Change\n核对 producer/consumer、值与顺序、Null/Missing/type、time、lifecycle、error phase、scenario/trace/evidence 和 manifest 状态。\n# Acceptance\nstrict 返回 pass/fail；每个 finding 必须有文件、行、证据和修复要求。",
+      "schemaMode": "strict"
+    },
+    {
+      "name": "NextJavaContract",
+      "agent": "java-oracle-scout",
+      "effort": "med",
+      "task": "# Target\n只读调查候选工作单元 N+1 的指定 Java executions。\n# Change\n提取 runtime IDs、输入序列、输出顺序、状态/time/lifecycle/error 契约和边界。\n# Acceptance\n返回可冻结的 Java observable contract，明确所有不确定项。",
+      "schemaMode": "strict"
+    },
+    {
+      "name": "NextGoSurface",
+      "agent": "scout",
+      "effort": "lo",
+      "task": "# Target\n只读定位候选工作单元 N+1 的 Go API/runtime/helper/tests/evidence 和直接调用方。\n# Change\n给出最小实现面、可复用资产、回归面及与 N 未提交 diff 的文件冲突。\n# Acceptance\n返回带路径的 CoreFiles/AssetFiles 候选边界；不提出无关重构。",
       "schemaMode": "strict"
     }
   ]
 }
 ```
+
+若 roadmap/manifest 暂时没有安全的 N+1，允许只启动 `ReviewCurrent`，但主 agent 必须在调用前记录候选为空或依赖 N 未提交结果的具体原因。reviewer 运行期间仍先完成 N 的只读 diff/验证命令检查，再进入等待。
 
 ## 5. 主 agent 验证与提交
 
