@@ -1,0 +1,75 @@
+{
+  "version": "esper-parity/scenario-v1",
+  "scenario": "dt-interval-ops",
+  "cases": [
+    {"case": "before", "op": "before", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": 0, "aEnd": 200, "received": false},
+      {"aStart": -500, "aEnd": -100, "received": true},
+      {"aStart": -100, "aEnd": 0, "received": false},
+      {"aStart": 900, "aEnd": 1200, "received": false}
+    ]},
+    {"case": "after", "op": "after", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": 1200, "aEnd": 1500, "received": true},
+      {"aStart": 1000, "aEnd": 1200, "received": false},
+      {"aStart": 500, "aEnd": 900, "received": false}
+    ]},
+    {"case": "coincides", "op": "coincides", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": 0, "aEnd": 1000, "received": true},
+      {"aStart": 0, "aEnd": 1001, "received": false},
+      {"aStart": 1, "aEnd": 1000, "received": false}
+    ]},
+    {"case": "during", "op": "during", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": 100, "aEnd": 900, "received": true},
+      {"aStart": 0, "aEnd": 900, "received": false},
+      {"aStart": 100, "aEnd": 1000, "received": false},
+      {"aStart": -100, "aEnd": 1100, "received": false}
+    ]},
+    {"case": "finishes", "op": "finishes", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": 100, "aEnd": 1000, "received": true},
+      {"aStart": 0, "aEnd": 1000, "received": false},
+      {"aStart": 100, "aEnd": 999, "received": false}
+    ]},
+    {"case": "finishedBy", "op": "finishedBy", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": -100, "aEnd": 1000, "received": true},
+      {"aStart": 0, "aEnd": 1000, "received": false},
+      {"aStart": -100, "aEnd": 999, "received": false}
+    ]},
+    {"case": "includes", "op": "includes", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": -100, "aEnd": 1100, "received": true},
+      {"aStart": 0, "aEnd": 1100, "received": false},
+      {"aStart": -100, "aEnd": 1000, "received": false}
+    ]},
+    {"case": "meets", "op": "meets", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": -200, "aEnd": 0, "received": true},
+      {"aStart": -200, "aEnd": -1, "received": false},
+      {"aStart": 100, "aEnd": 300, "received": false}
+    ]},
+    {"case": "metBy", "op": "metBy", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": 1000, "aEnd": 1200, "received": true},
+      {"aStart": 1001, "aEnd": 1200, "received": false},
+      {"aStart": 500, "aEnd": 700, "received": false}
+    ]},
+    {"case": "overlaps", "op": "overlaps", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": -100, "aEnd": 500, "received": true},
+      {"aStart": -100, "aEnd": 0, "received": false},
+      {"aStart": 0, "aEnd": 500, "received": false},
+      {"aStart": 500, "aEnd": 1200, "received": false}
+    ]},
+    {"case": "overlappedBy", "op": "overlappedBy", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": 500, "aEnd": 1200, "received": true},
+      {"aStart": 1000, "aEnd": 1200, "received": false},
+      {"aStart": 500, "aEnd": 1000, "received": false},
+      {"aStart": -100, "aEnd": 500, "received": false}
+    ]},
+    {"case": "starts", "op": "starts", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": 0, "aEnd": 500, "received": true},
+      {"aStart": 0, "aEnd": 1000, "received": false},
+      {"aStart": 1, "aEnd": 500, "received": false}
+    ]},
+    {"case": "startedBy", "op": "startedBy", "bStart": 0, "bEnd": 1000, "send": [
+      {"aStart": 0, "aEnd": 1200, "received": true},
+      {"aStart": 0, "aEnd": 1000, "received": false},
+      {"aStart": 0, "aEnd": 900, "received": false}
+    ]}
+  ]
+}

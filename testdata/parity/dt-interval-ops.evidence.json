@@ -1,0 +1,48 @@
+{
+  "version": "esper-parity/evidence-v1",
+  "scenario": "dt-interval-ops",
+  "goTests": ["TestExprDTIntervalOpsParity"],
+  "javaRuntimeIds": [
+    "java-runtime-d9a1d367adf58cbc3e72",
+    "java-runtime-5faf7e21d34b62b817da",
+    "java-runtime-6bfe22f39179b852ffc6",
+    "java-runtime-0b433ef7a54f23fbe592",
+    "java-runtime-267b8adf5d9d88dc025f",
+    "java-runtime-05ccdeb4452a67eedf53",
+    "java-runtime-a706db6229e97d723f3f",
+    "java-runtime-4f528156acde446ee4bc",
+    "java-runtime-9763034f955be3c39731",
+    "java-runtime-5382b8fdaf27ebf5549b",
+    "java-runtime-67cfbf9b5ab8a66e4eb0",
+    "java-runtime-7f521477b7d4c3bca248",
+    "java-runtime-918e33ab1e3121523cc5"
+  ],
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "traceComparison": {
+    "javaTrace": "testdata/parity/dt-interval-ops.trace.json",
+    "goTrace": "go-test assertions inline (subtests per operator, fired flag per send)",
+    "records": 43,
+    "zeroDifference": true,
+    "perCase": [
+      {"case": "before", "steps": 4, "match": true},
+      {"case": "after", "steps": 3, "match": true},
+      {"case": "coincides", "steps": 3, "match": true},
+      {"case": "during", "steps": 4, "match": true},
+      {"case": "finishes", "steps": 3, "match": true},
+      {"case": "finishedBy", "steps": 3, "match": true},
+      {"case": "includes", "steps": 3, "match": true},
+      {"case": "meets", "steps": 3, "match": true},
+      {"case": "metBy", "steps": 3, "match": true},
+      {"case": "overlaps", "steps": 4, "match": true},
+      {"case": "overlappedBy", "steps": 4, "match": true},
+      {"case": "starts", "steps": 3, "match": true},
+      {"case": "startedBy", "steps": 3, "match": true}
+    ]
+  },
+  "differences": [],
+  "notes": [
+    "Go API: Interval(op, IntervalBounds{Start, End}, IntervalBounds{Start, End}) with Before/After/Coincides/During/Includes/Finishes/FinishedBy/Meets/MetBy/Overlaps/OverlappedBy/Starts/StartedBy computers; semantics ported 1:1 from IntervalComputerForgeFactory no-param computers.",
+    "Java SupportDateTimeFieldType variants (long/util-date/calendar/localdatetime/zoneddatetime) all reduce to the same epoch-millis comparison; the Go chain binds int64 start/end fields directly (documented API scope).",
+    "Threshold/variable-parameter forms (a.before(b, 100 milliseconds) etc.) are separate executions and remain future work."
+  ]
+}

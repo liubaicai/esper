@@ -31177,6 +31177,77 @@
     "java-runtime-90af560a2f7c379a988b",
     "java-runtime-31bec69937923c05bf89"
    ]
+  },
+  {
+   "id": "case.expr-dt-interval-ops-where",
+   "javaRuntimeIds": [
+    "java-runtime-05ccdeb4452a67eedf53",
+    "java-runtime-0b433ef7a54f23fbe592",
+    "java-runtime-267b8adf5d9d88dc025f",
+    "java-runtime-4f528156acde446ee4bc",
+    "java-runtime-5382b8fdaf27ebf5549b",
+    "java-runtime-5faf7e21d34b62b817da",
+    "java-runtime-67cfbf9b5ab8a66e4eb0",
+    "java-runtime-6bfe22f39179b852ffc6",
+    "java-runtime-7f521477b7d4c3bca248",
+    "java-runtime-918e33ab1e3121523cc5",
+    "java-runtime-9763034f955be3c39731",
+    "java-runtime-a706db6229e97d723f3f",
+    "java-runtime-d9a1d367adf58cbc3e72"
+   ],
+   "javaNames": [
+    "ExprDTIntervalBeforeWhereClause",
+    "ExprDTIntervalAfterWhereClause",
+    "ExprDTIntervalCoincidesWhereClause",
+    "ExprDTIntervalDuringWhereClause",
+    "ExprDTIntervalFinishesWhereClause",
+    "ExprDTIntervalFinishedByWhereClause",
+    "ExprDTIntervalIncludesByWhereClause",
+    "ExprDTIntervalMeetsWhereClause",
+    "ExprDTIntervalMetByWhereClause",
+    "ExprDTIntervalOverlapsWhereClause",
+    "ExprDTIntervalOverlappedByWhereClause",
+    "ExprDTIntervalStartsWhereClause",
+    "ExprDTIntervalStartedByWhereClause"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTIntervalOps.java"
+   ],
+   "goTests": [
+    "TestExprDTIntervalOpsParity"
+   ],
+   "tags": [],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/dt-interval-ops.json",
+    "testdata/parity/dt-interval-ops.trace.json",
+    "testdata/parity/dt-interval-ops.evidence.json",
+    "tools/java-oracle/DTIntervalOpsScenarioOracle.java",
+    "tools/java-oracle/run-dt-interval-ops.sh",
+    "java-oracle-trace",
+    "go-unit"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-05ccdeb4452a67eedf53",
+    "java-runtime-0b433ef7a54f23fbe592",
+    "java-runtime-267b8adf5d9d88dc025f",
+    "java-runtime-4f528156acde446ee4bc",
+    "java-runtime-5382b8fdaf27ebf5549b",
+    "java-runtime-5faf7e21d34b62b817da",
+    "java-runtime-67cfbf9b5ab8a66e4eb0",
+    "java-runtime-6bfe22f39179b852ffc6",
+    "java-runtime-7f521477b7d4c3bca248",
+    "java-runtime-918e33ab1e3121523cc5",
+    "java-runtime-9763034f955be3c39731",
+    "java-runtime-a706db6229e97d723f3f",
+    "java-runtime-d9a1d367adf58cbc3e72"
+   ]
   }
  ],
  "mappings": [
@@ -33547,15 +33618,19 @@
   {
    "capabilityId": "expr.filter-expressions",
    "caseId": "case.expr-filter-optimizable-boolean-rebool"
+  },
+  {
+   "capabilityId": "expr.core",
+   "caseId": "case.expr-dt-interval-ops-where"
   }
  ],
  "summary": {
-  "cases": 509,
-  "differentialVerifiedCases": 107,
-  "differentialVerifiedRuntimeIds": 312,
-  "referencedJavaRuntimeIds": 2840,
+  "cases": 510,
+  "differentialVerifiedCases": 108,
+  "differentialVerifiedRuntimeIds": 325,
+  "referencedJavaRuntimeIds": 2853,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1296,
+  "unreferencedJavaRuntimeIds": 1283,
   "representativeScenarioPass": 92,
   "intentionallyDifferentCases": 0,
   "nfrVerifiedCases": 0

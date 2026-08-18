@@ -9,11 +9,11 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 509 |
-| Case differential-verified | 107 |
-| Differential-verified runtime | 312 / 4,136 |
-| Runtime 已关联 | 2,840 / 4,136（68.7%） |
-| Runtime 未关联 | 1,296 |
+| Case | 510 |
+| Case differential-verified | 108 |
+| Differential-verified runtime | 325 / 4,136 |
+| Runtime 已关联 | 2,853 / 4,136（69.0%） |
+| Runtime 未关联 | 1,283 |
 | Representative scenario | 92 / 92 通过 |
 | Intentionally-different case | 18 |
 | NFR-verified case | 0 |
