@@ -31468,6 +31468,51 @@
     "java-runtime-93515ff2a2f83c9dc747",
     "java-runtime-94a2be557857d83a0b1b"
    ]
+  },
+  {
+   "id": "case.subquery-quantified-comparisons",
+   "javaRuntimeIds": [
+    "java-runtime-b79aed44a6781acea60e",
+    "java-runtime-f59ce457c593e1f327d6",
+    "java-runtime-34a01c2e4da4d05de0cd",
+    "java-runtime-0d291fddb8228d4ec1cf"
+   ],
+   "javaNames": [
+    "EPLSubselectRelationalOpAll",
+    "EPLSubselectRelationalOpSome",
+    "EPLSubselectEqualsNotEqualsAll",
+    "EPLSubselectEqualsAnyOrSome"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAllAnySomeExpr.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunSubselectQuantifiedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunSubselectQuantifiedDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "subselect",
+    "quantified",
+    "all-any-some"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/subselect-quantified.evidence.json"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b79aed44a6781acea60e",
+    "java-runtime-f59ce457c593e1f327d6",
+    "java-runtime-34a01c2e4da4d05de0cd",
+    "java-runtime-0d291fddb8228d4ec1cf"
+   ],
+   "remaining": [
+    "EPLSubselectInvalid (java-runtime-b24dc67d324d702d8961): compile-time error-only execution; typed Go builder rejects int-array vs int comparison at build time (approved difference)"
+   ]
   }
  ],
  "mappings": [
@@ -33854,15 +33899,19 @@
   {
    "capabilityId": "epl.subselect.unfiltered",
    "caseId": "case.subselect-unfiltered"
+  },
+  {
+   "capabilityId": "query.subquery-basic",
+   "caseId": "case.subquery-quantified-comparisons"
   }
  ],
  "summary": {
-  "cases": 513,
-  "differentialVerifiedCases": 111,
-  "differentialVerifiedRuntimeIds": 352,
-  "referencedJavaRuntimeIds": 2864,
+  "cases": 514,
+  "differentialVerifiedCases": 112,
+  "differentialVerifiedRuntimeIds": 356,
+  "referencedJavaRuntimeIds": 2868,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1272,
+  "unreferencedJavaRuntimeIds": 1268,
   "representativeScenarioPass": 93,
   "intentionallyDifferentCases": 0,
   "nfrVerifiedCases": 0
