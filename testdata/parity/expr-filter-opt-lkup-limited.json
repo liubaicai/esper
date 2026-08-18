@@ -1,0 +1,194 @@
+{
+ "version": "esper-parity/scenario-v1",
+ "scenario": "expr-filter-opt-lkup-limited",
+ "cases": [
+  {
+   "case": "constant-equals-null",
+   "epl": "@name('s0') select * from SupportBean(null = 'a');",
+   "send": [
+    {
+     "theString": "E1",
+     "received": false
+    }
+   ]
+  },
+  {
+   "case": "equals-coercion",
+   "epl": "@name('s0') select * from SupportBean(doublePrimitive + doubleBoxed = Integer.parseInt('10'));",
+   "send": [
+    {
+     "doublePrimitive": 5,
+     "doubleBoxed": 5,
+     "received": true
+    },
+    {
+     "doublePrimitive": 10,
+     "doubleBoxed": 0,
+     "received": true
+    },
+    {
+     "doublePrimitive": 0,
+     "doubleBoxed": 10,
+     "received": true
+    },
+    {
+     "doublePrimitive": 0,
+     "doubleBoxed": 9,
+     "received": false
+    }
+   ]
+  },
+  {
+   "case": "equals-one-stmt",
+   "pre": "",
+   "epl": "@name('s0') select * from pattern[s0=SupportBean_S0 -> every SupportBean_S1(p10 || p11 = 'ax')];",
+   "send": [
+    {
+     "type": "SupportBean_S0",
+     "id": 1
+    },
+    {
+     "type": "SupportBean_S1",
+     "p10": "a",
+     "p11": "x",
+     "received": true
+    },
+    {
+     "type": "SupportBean_S1",
+     "p10": "a",
+     "p11": "y",
+     "received": false
+    },
+    {
+     "type": "SupportBean_S1",
+     "p10": "b",
+     "p11": "x",
+     "received": false
+    },
+    {
+     "type": "SupportBean_S1",
+     "p10": "a",
+     "p11": "x",
+     "received": true
+    }
+   ]
+  },
+  {
+   "case": "in-set-of-value",
+   "epl": "@name('s0') select * from pattern[a=SupportBean_S0 -> b=SupportBean_S1 -> c=SupportBean_S2 -> every SupportBean(longPrimitive+longBoxed in (a.id, b.id, c.id))];",
+   "send": [
+    {
+     "type": "SupportBean_S0",
+     "id": 10
+    },
+    {
+     "type": "SupportBean_S1",
+     "id": 200
+    },
+    {
+     "type": "SupportBean_S2",
+     "id": 3000
+    },
+    {
+     "longPrimitive": 0,
+     "longBoxed": 9,
+     "received": false
+    },
+    {
+     "longPrimitive": 9,
+     "longBoxed": 1,
+     "received": true
+    },
+    {
+     "longPrimitive": 199,
+     "longBoxed": 1,
+     "received": true
+    },
+    {
+     "longPrimitive": 2090,
+     "longBoxed": 910,
+     "received": true
+    }
+   ]
+  },
+  {
+   "case": "in-range-w-coercion",
+   "epl": "@name('s0') select * from pattern[a=SupportBean_S0 -> b=SupportBean_S1 -> every SupportBean(longPrimitive+longBoxed in [a.id - 2 : b.id + 2])];",
+   "send": [
+    {
+     "type": "SupportBean_S0",
+     "id": 10
+    },
+    {
+     "type": "SupportBean_S1",
+     "id": 200
+    },
+    {
+     "longPrimitive": 3,
+     "longBoxed": 4,
+     "received": false
+    },
+    {
+     "longPrimitive": 5,
+     "longBoxed": 3,
+     "received": true
+    },
+    {
+     "longPrimitive": 1,
+     "longBoxed": 99,
+     "received": true
+    },
+    {
+     "longPrimitive": 101,
+     "longBoxed": 101,
+     "received": true
+    },
+    {
+     "longPrimitive": 200,
+     "longBoxed": 3,
+     "received": false
+    }
+   ]
+  },
+  {
+   "case": "not-in-range-w-coercion",
+   "epl": "@name('s0') select * from pattern[a=SupportBean_S0 -> b=SupportBean_S1 -> every SupportBean(longPrimitive+longBoxed not in [a.id - 2 : b.id + 2])];",
+   "send": [
+    {
+     "type": "SupportBean_S0",
+     "id": 10
+    },
+    {
+     "type": "SupportBean_S1",
+     "id": 200
+    },
+    {
+     "longPrimitive": 3,
+     "longBoxed": 4,
+     "received": true
+    },
+    {
+     "longPrimitive": 5,
+     "longBoxed": 3,
+     "received": false
+    },
+    {
+     "longPrimitive": 1,
+     "longBoxed": 99,
+     "received": false
+    },
+    {
+     "longPrimitive": 101,
+     "longBoxed": 101,
+     "received": false
+    },
+    {
+     "longStep": true,
+     "longPrimitive": 200,
+     "longBoxed": 3,
+     "received": true
+    }
+   ]
+  }
+ ]
+}

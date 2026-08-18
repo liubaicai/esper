@@ -13,6 +13,7 @@ import (
 type filterOptimizableBean struct {
 	TheString       string   `esper:"theString"`
 	DoublePrimitive float64  `esper:"doublePrimitive"`
+	DoubleBoxed     *float64 `esper:"doubleBoxed"`
 	IntPrimitive    int      `esper:"intPrimitive"`
 	IntBoxed        *int     `esper:"intBoxed"`
 	LongPrimitive   int64    `esper:"longPrimitive"`

@@ -1,0 +1,64 @@
+{
+  "version": "esper-parity/evidence-v1",
+  "scenario": "expr-filter-opt-lkup-limited",
+  "goTests": [
+    "TestExprFilterOptLkupConstantEqualsNullParity",
+    "TestExprFilterOptLkupEqualsCoercionParity",
+    "TestExprFilterOptLkupEqualsOneStmtParity",
+    "TestExprFilterOptLkupInSetOfValueParity",
+    "TestExprFilterOptLkupInRangeWCoercionParity"
+  ],
+  "javaRuntimeIds": [
+    "java-runtime-61170f8386522145cdeb",
+    "java-runtime-80f51700913a463ab267",
+    "java-runtime-85175d99c086015482b2",
+    "java-runtime-93515ff2a2f83c9dc747",
+    "java-runtime-94a2be557857d83a0b1b"
+  ],
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "traceComparison": {
+    "javaTrace": "testdata/parity/expr-filter-opt-lkup-limited.trace.json",
+    "goTrace": "go-test assertions inline (listener fired flags per send step)",
+    "records": 31,
+    "zeroDifference": true,
+    "perCase": [
+      {
+        "case": "constant-equals-null",
+        "steps": 1,
+        "match": true
+      },
+      {
+        "case": "equals-coercion",
+        "steps": 4,
+        "match": true
+      },
+      {
+        "case": "equals-one-stmt",
+        "steps": 5,
+        "match": true
+      },
+      {
+        "case": "in-set-of-value",
+        "steps": 7,
+        "match": true
+      },
+      {
+        "case": "in-range-w-coercion",
+        "steps": 7,
+        "match": true
+      },
+      {
+        "case": "not-in-range-w-coercion",
+        "steps": 7,
+        "match": true
+      }
+    ]
+  },
+  "differences": [],
+  "notes": [
+    "Java runtime 80f517009 (InRangeWCoercion) covers both the in and not-in closed-range EPL forms in one execution; the Go test exercises both variants as subtests.",
+    "The Go pattern chains tag the final stream (\"s\") because the typed pattern API requires a tag and predicate per step; Java leaves the terminal filter untagged, which has no observable selection difference.",
+    "Java executions additionally assert internal filter-index plan shape (assertFilterSvcSingle with EQUAL / IN_LIST_OF_VALUES / RANGE_CLOSED / NOT_RANGE_CLOSED on the computed lookupable) and filter-service index sharing; these are engine-internal planning artifacts with no observable Go equivalent and are out of scope for this slice.",
+    "Remaining executions of ExprFilterOptimizableLookupableLimitedExpr (CurrentTimestampWEquals, CurrentTimestampCompare, Disqualify, EqualsOneStmtWPatternSharingIndex, EqualsMultiStmtSharingIndex) depend on current_timestamp() pattern filters, filter-plan hooks, variables/tables/declared expressions/scripts, and index-sharing introspection; left for future slices."
+  ]
+}
