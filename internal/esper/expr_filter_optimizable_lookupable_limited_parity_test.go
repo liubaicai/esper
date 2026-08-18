@@ -238,9 +238,8 @@ func TestExprFilterOptLkupInSetOfValueParity(t *testing.T) {
 // ExprFilterOptLkupInRangeWCoercion: pattern[a=S0 -> b=S1 -> every
 // SupportBean(longPrimitive + longBoxed in [a.id - 2 : b.id + 2])] plus its
 // not-in variant. Bounds are computed from pattern tags.
-// Java runtimes: java-runtime-94a2be557857d83a0b1b (in), java-runtime-530153bd9 covers
-// Disqualify and is not part of this slice; the not-in variant shares the
-// InRangeWCoercion execution (same runtime, second epl form).
+// Java runtime: java-runtime-80f51700913a463ab267 (both the in and the
+// not-in closed-range EPL forms are asserted by this single execution).
 func TestExprFilterOptLkupInRangeWCoercionParity(t *testing.T) {
 	for _, form := range []struct {
 		name string
