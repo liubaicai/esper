@@ -9,13 +9,13 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 517 |
-| Case differential-verified | 115 |
-| Differential-verified runtime | 348 / 4,136 |
-| Runtime 已关联 | 2,885 / 4,136（69.8%） |
-| Runtime 未关联 | 1,251 |
+| Case | 518 |
+| Case differential-verified | 116 |
+| Differential-verified runtime | 351 / 4,136 |
+| Runtime 已关联 | 2,888 / 4,136（69.8%） |
+| Runtime 未关联 | 1,248 |
 | Representative scenario | 93 / 93 通过 |
-| Intentionally-different case | 18 |
+| Intentionally-different case | 0 |
 | NFR-verified case | 0 |
 | 质量摘要 | Docker passed；stress passed；race pending；performance pending |
 

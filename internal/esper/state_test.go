@@ -57,6 +57,38 @@ func TestTableUpsertSnapshotAndIndexes(t *testing.T) {
 	}
 }
 
+func TestTableMutationSnapshotRestoresRootIndexLookups(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := CreateTable(env, "lookup-snapshot", []TableColumn{
+		PrimaryKeyColumn[string]("symbol"),
+		TableColumnOf[int64]("value"),
+	}, UniqueIndex("value-index", "value")); err != nil {
+		t.Fatal(err)
+	}
+	table, ok := NewEngine(env).Table("lookup-snapshot")
+	if !ok {
+		t.Fatal("lookup-snapshot table is missing")
+	}
+	ctx := context.Background()
+	if _, err := table.Insert(ctx, map[string]any{"symbol": "A", "value": int64(1)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := table.Lookup(ctx, "value-index", int64(1)); err != nil {
+		t.Fatal(err)
+	}
+	snapshot := table.snapshotMutationState()
+	if _, err := table.Lookup(ctx, "value-index", int64(1)); err != nil {
+		t.Fatal(err)
+	}
+	if got := table.state.indexLookups.Load(); got <= snapshot.indexLookups {
+		t.Fatalf("table lookup counter did not advance before restore: before=%d after=%d", snapshot.indexLookups, got)
+	}
+	table.restoreMutationState(snapshot)
+	if got := table.state.indexLookups.Load(); got != snapshot.indexLookups {
+		t.Fatalf("root table lookup counter = %d, want %d after restore", got, snapshot.indexLookups)
+	}
+}
+
 func TestTableUpdateRekeysPrimaryKeyInPlaceAndPreservesIndexes(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := CreateTable(env, "rekey", []TableColumn{

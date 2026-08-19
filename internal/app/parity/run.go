@@ -125,6 +125,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "epl-insert-into-transpose-pattern" || *mode == "epl-insert-into-transpose-pattern-diff" {
+		trace, err := runTransposePatternScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-insert-into-transpose-pattern-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, transposePatternJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, transposePatternJavaSources),
+				splitMetadata(*javaExecutions, transposePatternJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "subquery" || *mode == "subquery-diff" {
 		trace, err := runSubqueryScenario(context.Background(), scenario)
 		if err != nil {

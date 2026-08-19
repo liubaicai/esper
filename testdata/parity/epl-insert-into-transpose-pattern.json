@@ -1,0 +1,70 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-insert-into-transpose-pattern",
+ "steps": [
+  {
+   "op": "case",
+   "case": "this-as-column"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanWithThis",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanWithThis",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanWithThis",
+   "payload": {
+    "theString": "C",
+    "intPrimitive": 30
+   }
+  },
+  {
+   "op": "case",
+   "case": "pattern-pojo"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_B",
+   "payload": {
+    "id": "B1"
+   }
+  },
+  {
+   "op": "case",
+   "case": "pattern-map"
+  },
+  {
+   "op": "send",
+   "eventType": "AEventMap",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "BEventMap",
+   "payload": {
+    "id": "B1"
+   }
+  }
+ ]
+}

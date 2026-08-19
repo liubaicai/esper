@@ -30730,6 +30730,56 @@
    ]
   },
   {
+   "id": "case.epl-insert-into-transpose-pattern",
+   "javaRuntimeIds": [
+    "java-runtime-b449bbd35d5ff2ee128d",
+    "java-runtime-42af77eea911eeaed74f",
+    "java-runtime-491c5cf7a48b7d584c16"
+   ],
+   "javaNames": [
+    "EPLInsertIntoThisAsColumn",
+    "EPLInsertIntoTransposePOJOEventPattern",
+    "EPLInsertIntoTransposeMapEventPattern"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoTransposePattern.java"
+   ],
+   "goTests": [
+    "TestEPLInsertIntoThisAsColumnParity",
+    "TestEPLInsertIntoTransposePOJOEventPatternParity",
+    "TestEPLInsertIntoTransposeMapEventPatternParity"
+   ],
+   "tags": [
+    "correctness",
+    "insert-into",
+    "stream-routing",
+    "event-representation",
+    "transpose",
+    "pattern"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-insert-into-transpose-pattern.json",
+    "testdata/parity/epl-insert-into-transpose-pattern.trace.json",
+    "testdata/parity/epl-insert-into-transpose-pattern.evidence.json",
+    "tools/java-oracle/EPLInsertIntoTransposePatternScenarioOracle.java",
+    "tools/java-oracle/run-epl-insert-into-transpose-pattern.sh",
+    "java-oracle-trace",
+    "go-unit"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b449bbd35d5ff2ee128d",
+    "java-runtime-42af77eea911eeaed74f",
+    "java-runtime-491c5cf7a48b7d584c16"
+   ]
+  },
+  {
    "id": "case.epl-insert-into-transpose-stream",
    "javaRuntimeIds": [
     "java-runtime-02d711374dfb7f329757",
@@ -34033,6 +34083,10 @@
    "caseId": "case.epl-insert-into-transpose-stream"
   },
   {
+   "capabilityId": "query.insert-into-route",
+   "caseId": "case.epl-insert-into-transpose-pattern"
+  },
+  {
    "capabilityId": "query.subquery-basic",
    "caseId": "case.subselect-exists"
   },
@@ -34110,12 +34164,12 @@
   }
  ],
  "summary": {
-  "cases": 517,
-  "differentialVerifiedCases": 115,
-  "differentialVerifiedRuntimeIds": 348,
-  "referencedJavaRuntimeIds": 2885,
+  "cases": 518,
+  "differentialVerifiedCases": 116,
+  "differentialVerifiedRuntimeIds": 351,
+  "referencedJavaRuntimeIds": 2888,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1251,
+  "unreferencedJavaRuntimeIds": 1248,
   "representativeScenarioPass": 93,
   "intentionallyDifferentCases": 0,
   "nfrVerifiedCases": 0

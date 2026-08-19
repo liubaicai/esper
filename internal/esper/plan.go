@@ -127,6 +127,23 @@ func (e *Environment) Schema(name string) (Schema, bool) {
 	return schema, ok
 }
 
+// routeTargetSchema resolves the two Esper insert-into target namespaces:
+// registered event schemas and named windows. Named windows intentionally do
+// not appear in Environment.schemas because they are current-state stores,
+// but insert-into statements may target either namespace.
+func (e *Environment) routeTargetSchema(moduleName, targetName string) (Schema, bool, bool) {
+	if e == nil {
+		return Schema{}, false, false
+	}
+	if definition, ok := e.NamedWindowInModule(moduleName, targetName); ok {
+		return definition.schema, true, true
+	}
+	if schema, ok := e.Schema(strings.TrimSpace(targetName)); ok {
+		return schema, false, true
+	}
+	return Schema{}, false, false
+}
+
 // acceptsEventType reports whether an event declared as eventType can enter a
 // source declared as targetType. Event inheritance is structural and may be
 // multi-level or branched; a parent source therefore receives events of every
@@ -1310,7 +1327,7 @@ func (e *Environment) validateRoute(query Query) error {
 	if query.routeTarget == "" {
 		return nil
 	}
-	target, ok := e.Schema(query.routeTarget)
+	target, _, ok := e.routeTargetSchema(query.moduleName, query.routeTarget)
 	if !ok {
 		return NewError(ErrorUnknownName, fmt.Sprintf("route target %q is not registered", query.routeTarget))
 	}
@@ -3924,7 +3941,7 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 					return Schema{}, err
 				}
 			}
-			target, ok := e.Schema(query.routeTarget)
+			target, _, ok := e.routeTargetSchema(query.moduleName, query.routeTarget)
 			if !ok {
 				return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("route target %q is not registered", query.routeTarget))
 			}

@@ -1501,6 +1501,9 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 	statements := e.dispatchStatementsLocked()
 	dispatches := make([]statementDispatch, 0, len(statements))
 	for _, statement := range statements {
+		if !statementConsumesNamedWindow(statement.plan.query, window) {
+			continue
+		}
 		batch, changed, processErr := e.processNamedWindowWithMetricsLocked(ctx, statement, now, window, delta, variables)
 		if processErr != nil {
 			e.mu.Unlock()
@@ -1521,7 +1524,7 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 			}
 		}
 	}
-	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches); err != nil {
+	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, nil, nil); err != nil {
 		e.mu.Unlock()
 		return err
 	}
@@ -3657,12 +3660,10 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 				}
 			}
 		}
-		dispatches = append(dispatches, e.pendingStatementDispatches...)
-		e.pendingStatementDispatches = nil
-		for _, re := range e.pendingRoutedEvents {
-			routedQueue = append(routedQueue, re.event)
+		if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, &unmatchedEvents); err != nil {
+			e.mu.Unlock()
+			return err
 		}
-		e.pendingRoutedEvents = nil
 		if !matched {
 			unmatchedEvents = append(unmatchedEvents, current)
 		}
@@ -4051,6 +4052,9 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 			e.recordNamedWindowMetricInputLocked(window, delta)
 			namedWindowDispatches = append(namedWindowDispatches, namedWindowDispatch{window: window, delta: delta})
 			for _, statement := range statements {
+				if !statementConsumesNamedWindow(statement.plan.query, window) {
+					continue
+				}
 				batch, changed, processErr := e.processNamedWindowWithMetricsLocked(ctx, statement, at, window, delta, variables)
 				if processErr != nil {
 					e.mu.Unlock()
@@ -4090,7 +4094,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 			}
 		}
 	}
-	if err := e.processPendingRoutedEventsLocked(ctx, at, variables, &dispatches); err != nil {
+	if err := e.processPendingRoutedEventsLocked(ctx, at, variables, &dispatches, nil, nil); err != nil {
 		e.mu.Unlock()
 		return err
 	}
@@ -4299,11 +4303,15 @@ type namedWindowDispatch struct {
 
 // routedEvent pairs a routed insert-into event with its event-precedence
 // value. Higher precedence values are processed first; events with equal
-// precedence maintain FIFO order within the same route cycle.
+// precedence maintain FIFO order within the same route cycle. A non-nil
+// namedWindow identifies a target whose insertion is committed by the pending
+// route processor after precedence ordering is resolved.
 type routedEvent struct {
-	event      Event
-	precedence int
-	hasPrec    bool
+	event       Event
+	precedence  int
+	hasPrec     bool
+	namedWindow *NamedWindow
+	owner       *Statement
 }
 
 // queueNamedWindowDeltaLocked applies a state mutation to all statements that
@@ -4317,7 +4325,7 @@ func (e *Engine) queueNamedWindowDeltaLocked(ctx context.Context, now time.Time,
 	e.recordNamedWindowMetricInputLocked(window, delta)
 	statements := e.dispatchStatementsLocked()
 	for _, statement := range statements {
-		if statement == owner || !containsNamedWindow(statement.plan.query.input, statement.plan.query.join) {
+		if statement == owner || !statementConsumesNamedWindow(statement.plan.query, window) {
 			continue
 		}
 		batch, changed, err := e.processNamedWindowWithMetricsLocked(ctx, statement, now, window, delta, variables)
@@ -4348,19 +4356,19 @@ func (e *Engine) queueStatementRoutesLocked(statement *Statement, batch ResultBa
 	results := routeResults(statement.plan.query.selector, batch)
 	precedenceExpr := statement.plan.query.eventPrecedence
 	for _, result := range results {
-		event, err := e.routeResultLocked(statement, result, now)
+		routed, err := e.routeResultLocked(statement, result, now)
 		if err != nil {
 			return err
 		}
-		re := routedEvent{event: event}
+		routed.owner = statement
 		if precedenceExpr != nil {
 			// Evaluate the event-precedence expression against the original
 			// (pre-routing) result row/event, matching Esper's behavior.
 			precVal := evaluatePrecedenceExpr(precedenceExpr, result, e)
-			re.precedence = precVal
-			re.hasPrec = true
+			routed.precedence = precVal
+			routed.hasPrec = true
 		}
-		e.insertRoutedEventLocked(re)
+		e.insertRoutedEventLocked(routed)
 	}
 	return nil
 }
@@ -4428,14 +4436,15 @@ func evaluatePrecedenceExpr(expr Expr, result Result, engine *Engine) int {
 	}
 }
 
-func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.Time, variables map[string]Value, dispatches *[]statementDispatch) error {
+func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.Time, variables map[string]Value, dispatches *[]statementDispatch, processedEvents *[]Event, unmatchedEvents *[]Event) error {
 	if e == nil || dispatches == nil {
 		return nil
 	}
-	routedQueue := make([]Event, 0, len(e.pendingRoutedEvents))
-	for _, re := range e.pendingRoutedEvents {
-		routedQueue = append(routedQueue, re.event)
+	if len(e.pendingStatementDispatches) > 0 {
+		*dispatches = append(*dispatches, e.pendingStatementDispatches...)
+		e.pendingStatementDispatches = nil
 	}
+	routedQueue := append([]routedEvent(nil), e.pendingRoutedEvents...)
 	e.pendingRoutedEvents = nil
 	processed := 0
 	for len(routedQueue) > 0 {
@@ -4448,16 +4457,40 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		processed++
 		current := routedQueue[0]
 		routedQueue = routedQueue[1:]
-		e.recordRuntimeInputLocked()
-		for _, statement := range orderUpdateStatementsFirst(e.dispatchStatementsLocked()) {
-			needsAccepted := e.statementMetrics != nil || len(statement.plan.query.statementMetadata.auditCategories) > 0
-			accepted := needsAccepted && statement.matchesEventFilter(current, now, variables)
-			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted)
+		if current.namedWindow != nil {
+			// Materialization is deferred until this ordered route-queue position.
+			// This keeps named-window insertion and consumer delivery aligned with
+			// event-precedence ordering used for ordinary routed events.
+			delta, err := current.namedWindow.insertWithVariables(ctx, now, current.event.Underlying(), variables)
 			if err != nil {
 				return err
 			}
+			if err := e.queueNamedWindowDeltaLocked(ctx, now, current.namedWindow, delta, variables, current.owner); err != nil {
+				return err
+			}
+			*dispatches = append(*dispatches, e.pendingStatementDispatches...)
+			e.pendingStatementDispatches = nil
+			routedQueue = append(routedQueue, e.pendingRoutedEvents...)
+			e.pendingRoutedEvents = nil
+			continue
+		}
+		if processedEvents != nil {
+			*processedEvents = append(*processedEvents, current.event)
+		}
+		e.recordRuntimeInputLocked()
+		matched := false
+		for _, statement := range orderUpdateStatementsFirst(e.dispatchStatementsLocked()) {
+			needsAccepted := e.statementMetrics != nil || len(statement.plan.query.statementMetadata.auditCategories) > 0
+			accepted := needsAccepted && statement.matchesEventFilter(current.event, now, variables)
+			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current.event, variables, accepted)
+			if err != nil {
+				return err
+			}
+			if accepted || changed {
+				matched = true
+			}
 			if replaced, replacedOK := statement.takeReplacedEvent(); replacedOK {
-				current = replaced
+				current.event = replaced
 			}
 			if statement.takeDroppedEvent() {
 				break
@@ -4476,11 +4509,12 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 				break
 			}
 		}
+		if unmatchedEvents != nil && !matched {
+			*unmatchedEvents = append(*unmatchedEvents, current.event)
+		}
 		*dispatches = append(*dispatches, e.pendingStatementDispatches...)
 		e.pendingStatementDispatches = nil
-		for _, re := range e.pendingRoutedEvents {
-			routedQueue = append(routedQueue, re.event)
-		}
+		routedQueue = append(routedQueue, e.pendingRoutedEvents...)
 		e.pendingRoutedEvents = nil
 	}
 	return nil
@@ -4504,75 +4538,86 @@ func (e *Engine) applyStatementOutputAssignmentsLocked(ctx context.Context, stat
 	return nil
 }
 
-func (e *Engine) routeResultLocked(statement *Statement, result Result, now time.Time) (Event, error) {
+func (e *Engine) routeResultLocked(statement *Statement, result Result, now time.Time) (routedEvent, error) {
 	if statement == nil {
-		return Event{}, NewError(ErrorDependency, "route requires a statement")
+		return routedEvent{}, NewError(ErrorDependency, "route requires a statement")
 	}
 	return e.routeResultToTargetLocked(statement, result, statement.plan.query.routeTarget, now)
 }
 
-func (e *Engine) routeResultToTargetLocked(statement *Statement, result Result, targetName string, now time.Time) (Event, error) {
+func (e *Engine) routeResultToTargetLocked(statement *Statement, result Result, targetName string, now time.Time) (routedEvent, error) {
 	if e == nil || e.env == nil || statement == nil {
-		return Event{}, NewError(ErrorDependency, "route requires an engine, environment and statement")
+		return routedEvent{}, NewError(ErrorDependency, "route requires an engine, environment and statement")
 	}
 	targetName = strings.TrimSpace(targetName)
-	target, ok := e.env.Schema(targetName)
+	target, named, ok := e.env.routeTargetSchema(statement.plan.query.moduleName, targetName)
 	if !ok {
-		return Event{}, NewError(ErrorUnknownName, fmt.Sprintf("route target %q is not registered", targetName))
+		return routedEvent{}, NewError(ErrorUnknownName, fmt.Sprintf("route target %q is not registered", targetName))
 	}
+	var underlying any
 	if source, ok := result.Event(); ok {
 		if target.kind == SchemaVariant {
 			if !e.env.variantAcceptsEventType(target, source.TypeName()) {
-				return Event{}, NewError(ErrorTypeMismatch, fmt.Sprintf("event type %q is not a valid member of variant schema %q", source.TypeName(), target.Name()))
+				return routedEvent{}, NewError(ErrorTypeMismatch, fmt.Sprintf("event type %q is not a valid member of variant schema %q", source.TypeName(), target.Name()))
 			}
-			routed, err := newEvent(target, source, now)
+			underlying = source
+		} else {
+			var projectErr error
+			underlying, projectErr = projectEventUnderlying(target, source)
+			if projectErr != nil {
+				return routedEvent{}, projectErr
+			}
+		}
+	} else {
+		row, ok := result.Row()
+		if !ok {
+			return routedEvent{}, NewError(ErrorTypeMismatch, fmt.Sprintf("route target %q received an empty result", targetName))
+		}
+		if target.kind == SchemaVariant && target.variantMode == VariantPredefined {
+			return routedEvent{}, NewError(ErrorTypeMismatch, fmt.Sprintf("projected row cannot route to predefined variant %q without a member identity", targetName))
+		}
+		if target.kind == SchemaVariant && target.variantMode == VariantAny {
+			derivedName := "route:" + targetName
+			if len(statement.plan.hash) >= 12 {
+				derivedName += ":" + statement.plan.hash[:12]
+			}
+			derived, err := NewMapSchema(derivedName, row.Schema().Fields(), AllowDynamicFields())
 			if err != nil {
-				return Event{}, WrapError(ErrorTypeMismatch, "route."+targetName, err)
+				return routedEvent{}, err
 			}
-			return routed, nil
+			routed, err := newEvent(derived, row.AsMap(), now)
+			if err != nil {
+				return routedEvent{}, err
+			}
+			routed.streamType = targetName
+			underlying = routed
+		} else {
+			var projectErr error
+			underlying, projectErr = projectRowUnderlying(target, row)
+			if projectErr != nil {
+				return routedEvent{}, projectErr
+			}
 		}
-		underlying, err := projectEventUnderlying(target, source)
-		if err != nil {
-			return Event{}, err
-		}
-		routed, err := newEvent(target, underlying, now)
-		if err != nil {
-			return Event{}, WrapError(ErrorTypeMismatch, "route."+targetName, err)
-		}
-		return routed, nil
-	}
-	row, ok := result.Row()
-	if !ok {
-		return Event{}, NewError(ErrorTypeMismatch, fmt.Sprintf("route target %q received an empty result", targetName))
-	}
-	if target.kind == SchemaVariant && target.variantMode == VariantPredefined {
-		return Event{}, NewError(ErrorTypeMismatch, fmt.Sprintf("projected row cannot route to predefined variant %q without member identity", targetName))
-	}
-	if target.kind == SchemaVariant && target.variantMode == VariantAny {
-		derivedName := "route:" + targetName
-		if len(statement.plan.hash) >= 12 {
-			derivedName += ":" + statement.plan.hash[:12]
-		}
-		derived, err := NewMapSchema(derivedName, row.Schema().Fields(), AllowDynamicFields())
-		if err != nil {
-			return Event{}, err
-		}
-		routed, err := newEvent(derived, row.AsMap(), now)
-		if err != nil {
-			return Event{}, err
-		}
-		routed.streamType = targetName
-		return routed, nil
-	}
-	underlying, err := projectRowUnderlying(target, row)
-	if err != nil {
-		return Event{}, err
 	}
 	routed, err := newEvent(target, underlying, now)
 	if err != nil {
-		return Event{}, WrapError(ErrorTypeMismatch, "route."+targetName, err)
+		return routedEvent{}, WrapError(ErrorTypeMismatch, "route."+targetName, err)
 	}
-	return routed, nil
+	if !named {
+		if target.kind == SchemaVariant && target.variantMode == VariantAny {
+			routed.streamType = targetName
+		}
+		return routedEvent{event: routed}, nil
+	}
+	window, ok := e.ensureNamedWindowLockedInModule(statement.plan.query.moduleName, targetName)
+	if !ok {
+		return routedEvent{}, NewError(ErrorUnknownName, fmt.Sprintf("route named window %q is not available", targetName))
+	}
+	offered, err := window.newInsertEvent(now, routed.Underlying())
+	if err != nil {
+		return routedEvent{}, err
+	}
+	return routedEvent{event: offered, namedWindow: window}, nil
 }
 
 func projectEventUnderlying(target Schema, source Event) (any, error) {
@@ -5395,6 +5440,478 @@ func newStatementRuntime(query Query) statementRuntime {
 		runtime.distinctCounts = make(map[string]int)
 	}
 	return runtime
+}
+func cloneStoredEvent(value storedEvent) storedEvent {
+	value.lineage = cloneMethodLineage(value.lineage)
+	return value
+}
+
+func cloneStoredEvents(values []storedEvent) []storedEvent {
+	if values == nil {
+		return nil
+	}
+	result := make([]storedEvent, len(values))
+	for index, value := range values {
+		result[index] = cloneStoredEvent(value)
+	}
+	return result
+}
+
+func cloneWindowRuntimeState(source *windowRuntimeState, seen map[*windowRuntimeState]*windowRuntimeState) *windowRuntimeState {
+	if source == nil {
+		return nil
+	}
+	if existing := seen[source]; existing != nil {
+		return existing
+	}
+	result := *source
+	seen[source] = &result
+	result.entries = cloneStoredEvents(source.entries)
+	result.pendingNew = cloneStoredEvents(source.pendingNew)
+	result.arrival = append([]Event(nil), source.arrival...)
+	result.keyOrder = append([]string(nil), source.keyOrder...)
+	if source.keyed != nil {
+		result.keyed = make(map[string]storedEvent, len(source.keyed))
+		for key, value := range source.keyed {
+			result.keyed[key] = cloneStoredEvent(value)
+		}
+	}
+	if source.groups != nil {
+		result.groups = make(map[string]*windowRuntimeState, len(source.groups))
+		for key, group := range source.groups {
+			result.groups[key] = cloneWindowRuntimeState(group, seen)
+		}
+	}
+	result.groupOrder = append([]string(nil), source.groupOrder...)
+	if source.children != nil {
+		result.children = make([]*windowRuntimeState, len(source.children))
+		for index, child := range source.children {
+			result.children[index] = cloneWindowRuntimeState(child, seen)
+		}
+	}
+	return &result
+}
+
+func cloneAggregateGroup(source *aggregateGroup) *aggregateGroup {
+	if source == nil {
+		return nil
+	}
+	result := *source
+	result.events = append([]Event(nil), source.events...)
+	result.everEvents = append([]Event(nil), source.everEvents...)
+	result.leavingEvents = append([]Event(nil), source.leavingEvents...)
+	result.groupingSet = append([]int(nil), source.groupingSet...)
+	result.previous = append([]Value(nil), source.previous...)
+	// Aggregate plug-in state has no clone contract. Staged runtimes rebuild
+	// plug-in state from the cloned group on the next evaluation; retaining the
+	// original interface value would leak mutations across a failed route.
+	result.pluginStates = nil
+	result.multiPluginStates = nil
+	return &result
+}
+
+func cloneAggregateRuntimeState(source *aggregateRuntimeState) *aggregateRuntimeState {
+	if source == nil {
+		return nil
+	}
+	result := &aggregateRuntimeState{
+		groups:        make(map[string]*aggregateGroup, len(source.groups)),
+		allEvents:     append([]Event(nil), source.allEvents...),
+		allEverEvents: append([]Event(nil), source.allEverEvents...),
+		groupOrder:    append([]string(nil), source.groupOrder...),
+	}
+	for key, group := range source.groups {
+		result.groups[key] = cloneAggregateGroup(group)
+	}
+	return result
+}
+
+func clonePatternProgressState(source *patternProgress, seen map[*patternProgress]*patternProgress) *patternProgress {
+	if source == nil {
+		return nil
+	}
+	if existing := seen[source]; existing != nil {
+		return existing
+	}
+	result := *source
+	seen[source] = &result
+	result.spawnTags = clonePatternTags(source.spawnTags)
+	result.spawnTagValues = clonePatternTagValues(source.spawnTagValues)
+	result.schedulePeriod = clonePatternTimerScheduleRuntime(source.schedulePeriod)
+	result.left = clonePatternProgressState(source.left, seen)
+	result.right = clonePatternProgressState(source.right, seen)
+	result.child = clonePatternProgressState(source.child, seen)
+	result.leftList = clonePatternSideMatches(source.leftList)
+	result.rightList = clonePatternSideMatches(source.rightList)
+	result.tags = clonePatternTags(source.tags)
+	result.tagValues = clonePatternTagValues(source.tagValues)
+	if source.distinct != nil {
+		result.distinct = make(map[string]struct{}, len(source.distinct))
+		for key := range source.distinct {
+			result.distinct[key] = struct{}{}
+		}
+	}
+	if source.distinctAt != nil {
+		result.distinctAt = make(map[string]time.Time, len(source.distinctAt))
+		for key, value := range source.distinctAt {
+			result.distinctAt[key] = value
+		}
+	}
+	return &result
+}
+
+func cloneResultDeep(source Result) Result {
+	result := source
+	if source.event != nil {
+		event := *source.event
+		result.event = &event
+	}
+	if source.row != nil {
+		row := *source.row
+		row.values = append([]Value(nil), source.row.values...)
+		result.row = &row
+	}
+	if source.rowEvent != nil {
+		event := *source.rowEvent
+		result.rowEvent = &event
+	}
+	result.joinEvents = append([]Event(nil), source.joinEvents...)
+	return result
+}
+
+func cloneResultBatchDeep(source *ResultBatch) *ResultBatch {
+	if source == nil {
+		return nil
+	}
+	result := *source
+	result.New = make([]Result, len(source.New))
+	for index, value := range source.New {
+		result.New[index] = cloneResultDeep(value)
+	}
+	result.Old = make([]Result, len(source.Old))
+	for index, value := range source.Old {
+		result.Old[index] = cloneResultDeep(value)
+	}
+	result.outputKeysNew = append([]string(nil), source.outputKeysNew...)
+	result.outputKeysOld = append([]string(nil), source.outputKeysOld...)
+	result.inputKeysNew = append([]string(nil), source.inputKeysNew...)
+	result.removedGroupKeys = append([]string(nil), source.removedGroupKeys...)
+	return &result
+}
+
+func clonePatternRuntimeState(source *patternRuntimeState, progressSeen map[*patternProgress]*patternProgress) *patternRuntimeState {
+	if source == nil {
+		return nil
+	}
+	result := *source
+	if source.active != nil {
+		result.active = make([]patternMatch, len(source.active))
+		for index, match := range source.active {
+			result.active[index] = match
+			result.active[index].state = clonePatternProgressState(match.state, progressSeen)
+			result.active[index].tags = clonePatternTags(match.tags)
+			result.active[index].tagValues = clonePatternTagValues(match.tagValues)
+		}
+	}
+	result.emittedEvents = append([]Event(nil), source.emittedEvents...)
+	result.iterableRows = make([]Result, len(source.iterableRows))
+	for index, row := range source.iterableRows {
+		result.iterableRows[index] = cloneResultDeep(row)
+	}
+	result.timerIntervalVariables = cloneValues(source.timerIntervalVariables)
+	result.schedulePeriod = clonePatternTimerScheduleRuntime(source.schedulePeriod)
+	if source.distinct != nil {
+		result.distinct = make(map[string]struct{}, len(source.distinct))
+		for key := range source.distinct {
+			result.distinct[key] = struct{}{}
+		}
+	}
+	if source.distinctAt != nil {
+		result.distinctAt = make(map[string]time.Time, len(source.distinctAt))
+		for key, value := range source.distinctAt {
+			result.distinctAt[key] = value
+		}
+	}
+	return &result
+}
+
+func cloneRowRecogMatchState(source rowRecogMatch) rowRecogMatch {
+	source.captures = cloneRowRecogCaptures(source.captures)
+	return source
+}
+
+func cloneRowRecogPartitionState(source *rowRecogPartitionState) *rowRecogPartitionState {
+	if source == nil {
+		return nil
+	}
+	result := *source
+	result.events = append([]Event(nil), source.events...)
+	result.previousByEvent = make(map[string][]Event, len(source.previousByEvent))
+	for key, events := range source.previousByEvent {
+		result.previousByEvent[key] = append([]Event(nil), events...)
+	}
+	result.previousRolling = append([]Event(nil), source.previousRolling...)
+	result.emitted = make(map[string]struct{}, len(source.emitted))
+	for key := range source.emitted {
+		result.emitted[key] = struct{}{}
+	}
+	result.emittedMatches = make(map[string]rowRecogMatch, len(source.emittedMatches))
+	for key, match := range source.emittedMatches {
+		result.emittedMatches[key] = cloneRowRecogMatchState(match)
+	}
+	result.intervalClosed = cloneStringSet(source.intervalClosed)
+	result.closedBranches = cloneStringSet(source.closedBranches)
+	result.alternateNotified = cloneStringSet(source.alternateNotified)
+	result.intervalNotified = cloneStringSet(source.intervalNotified)
+	result.intervalFinal = make(map[string][]rowRecogMatch, len(source.intervalFinal))
+	for key, matches := range source.intervalFinal {
+		copied := make([]rowRecogMatch, len(matches))
+		for index, match := range matches {
+			copied[index] = cloneRowRecogMatchState(match)
+		}
+		result.intervalFinal[key] = copied
+	}
+	result.activeStarts = cloneStringSet(source.activeStarts)
+	result.activeStateCounts = cloneInt64Map(source.activeStateCounts)
+	result.activePaths = make(map[string][]rowRecogNFAPath, len(source.activePaths))
+	for key, paths := range source.activePaths {
+		copied := make([]rowRecogNFAPath, len(paths))
+		for index, path := range paths {
+			copied[index] = path
+			copied[index].captures = cloneRowRecogCaptures(path.captures)
+		}
+		result.activePaths[key] = copied
+	}
+	result.allowedMatchStarts = cloneStringSet(source.allowedMatchStarts)
+	result.allowedMatchKeys = cloneStringSet(source.allowedMatchKeys)
+	result.blockedStarts = cloneStringSet(source.blockedStarts)
+	result.fastABStarC = append([]rowRecogFastABStarCPath(nil), source.fastABStarC...)
+	return &result
+}
+
+func cloneRowRecogRuntimeState(source *rowRecogRuntimeState) *rowRecogRuntimeState {
+	if source == nil {
+		return nil
+	}
+	result := &rowRecogRuntimeState{partitions: make(map[string]*rowRecogPartitionState, len(source.partitions))}
+	for key, partition := range source.partitions {
+		result.partitions[key] = cloneRowRecogPartitionState(partition)
+	}
+	return result
+}
+
+func cloneOutputRuntimeState(source *outputRuntimeState) *outputRuntimeState {
+	if source == nil {
+		return nil
+	}
+	result := *source
+	result.pending = cloneResultBatchDeep(source.pending)
+	result.whenPending = cloneResultBatchDeep(source.whenPending)
+	result.cronPending = cloneResultBatchDeep(source.cronPending)
+	result.firstEveryCounts = cloneIntMap(source.firstEveryCounts)
+	result.firstEveryNext = cloneTimeMap(source.firstEveryNext)
+	result.lastEveryOutputRows = cloneResultMap(source.lastEveryOutputRows)
+	result.allEveryOutputRows = cloneResultMap(source.allEveryOutputRows)
+	result.allEveryOrderCopy(source)
+	result.allEveryReps = cloneResultMap(source.allEveryReps)
+	result.allEveryRepsOrder = append([]string(nil), source.allEveryRepsOrder...)
+	result.allEverySeen = cloneStringSet(source.allEverySeen)
+	result.snapshotBoundary = cloneAggregateSnapshotBoundary(source.snapshotBoundary)
+	result.lastOutputGroupRows = cloneResultMap(source.lastOutputGroupRows)
+	return &result
+}
+
+func (r *outputRuntimeState) allEveryOrderCopy(source *outputRuntimeState) {
+	if r == nil || source == nil {
+		return
+	}
+	r.allEveryOutputOrder = append([]string(nil), source.allEveryOutputOrder...)
+}
+
+func cloneAggregateSnapshotBoundary(source *aggregateSnapshotBoundary) *aggregateSnapshotBoundary {
+	if source == nil {
+		return nil
+	}
+	result := &aggregateSnapshotBoundary{preExpiryAllEvents: append([]Event(nil), source.preExpiryAllEvents...)}
+	if source.exact != nil {
+		result.exact = make(map[string]Event, len(source.exact))
+		for key, event := range source.exact {
+			result.exact[key] = event
+		}
+	}
+	return result
+}
+
+func cloneResultMap(source map[string]Result) map[string]Result {
+	if source == nil {
+		return nil
+	}
+	result := make(map[string]Result, len(source))
+	for key, value := range source {
+		result[key] = cloneResultDeep(value)
+	}
+	return result
+}
+
+func cloneIntMap(source map[string]int) map[string]int {
+	if source == nil {
+		return nil
+	}
+	result := make(map[string]int, len(source))
+	for key, value := range source {
+		result[key] = value
+	}
+	return result
+}
+
+func cloneTimeMap(source map[string]time.Time) map[string]time.Time {
+	if source == nil {
+		return nil
+	}
+	result := make(map[string]time.Time, len(source))
+	for key, value := range source {
+		result[key] = value
+	}
+	return result
+}
+
+func cloneStringSet(source map[string]struct{}) map[string]struct{} {
+	if source == nil {
+		return nil
+	}
+	result := make(map[string]struct{}, len(source))
+	for key := range source {
+		result[key] = struct{}{}
+	}
+	return result
+}
+
+func cloneValuesWithSubqueryRefs(source map[string]Value, registries map[*subqueryRuntimeRegistry]*subqueryRuntimeRegistry) map[string]Value {
+	if source == nil {
+		return nil
+	}
+	result := cloneValues(source)
+	for key, value := range result {
+		ref, ok := value.Any().(*subqueryRuntimeRef)
+		if !ok || ref == nil || ref.registry == nil {
+			continue
+		}
+		if cloned := registries[ref.registry]; cloned != nil {
+			result[key] = Present(&subqueryRuntimeRef{registry: cloned})
+		}
+	}
+	return result
+}
+
+func cloneSubqueryRuntimeRegistry(source *subqueryRuntimeRegistry, runtimes map[*statementRuntime]*statementRuntime, registries map[*subqueryRuntimeRegistry]*subqueryRuntimeRegistry) *subqueryRuntimeRegistry {
+	if source == nil {
+		return nil
+	}
+	if existing := registries[source]; existing != nil {
+		return existing
+	}
+	result := &subqueryRuntimeRegistry{env: source.env, engine: source.engine, states: make(map[*subqueryDefinition]*subqueryRuntimeState, len(source.states))}
+	registries[source] = result
+	for definition, state := range source.states {
+		if state == nil {
+			result.states[definition] = nil
+			continue
+		}
+		copyState := &subqueryRuntimeState{definition: state.definition, events: append([]Event(nil), state.events...)}
+		copyState.runtime = cloneStatementRuntimePointer(state.runtime, runtimes, registries)
+		result.states[definition] = copyState
+	}
+	for _, state := range result.states {
+		if state != nil && state.runtime != nil {
+			state.runtime.variables = cloneValuesWithSubqueryRefs(state.runtime.variables, registries)
+		}
+	}
+	return result
+}
+
+func cloneStatementRuntimePointer(source *statementRuntime, runtimes map[*statementRuntime]*statementRuntime, registries map[*subqueryRuntimeRegistry]*subqueryRuntimeRegistry) *statementRuntime {
+	if source == nil {
+		return nil
+	}
+	if existing := runtimes[source]; existing != nil {
+		return existing
+	}
+	result := *source
+	runtimes[source] = &result
+	result.windows = make(map[*streamNode]*windowRuntimeState, len(source.windows))
+	windowSeen := make(map[*windowRuntimeState]*windowRuntimeState)
+	for node, state := range source.windows {
+		result.windows[node] = cloneWindowRuntimeState(state, windowSeen)
+	}
+	result.windowExprDurations = make(map[*streamNode]time.Duration, len(source.windowExprDurations))
+	for node, duration := range source.windowExprDurations {
+		result.windowExprDurations[node] = duration
+	}
+	result.joinState = cloneJoinRuntimeState(source.joinState)
+	result.aggregateState = cloneAggregateRuntimeState(source.aggregateState)
+	result.derivedStates = make(map[*streamNode]*aggregateRuntimeState, len(source.derivedStates))
+	for node, state := range source.derivedStates {
+		result.derivedStates[node] = cloneAggregateRuntimeState(state)
+	}
+	progressSeen := make(map[*patternProgress]*patternProgress)
+	result.patternState = clonePatternRuntimeState(source.patternState, progressSeen)
+	result.patternJoinStates = make(map[*streamNode]*patternJoinRuntime, len(source.patternJoinStates))
+	for node, state := range source.patternJoinStates {
+		if state == nil {
+			result.patternJoinStates[node] = nil
+			continue
+		}
+		copyState := *state
+		copyState.runtime = cloneStatementRuntimePointer(state.runtime, runtimes, registries)
+		copyState.tags = append([]string(nil), state.tags...)
+		result.patternJoinStates[node] = &copyState
+	}
+	result.patternAggregateGroup = append([]Event(nil), source.patternAggregateGroup...)
+	result.patternAggregateTags = make([]map[string]Event, len(source.patternAggregateTags))
+	for index, tags := range source.patternAggregateTags {
+		result.patternAggregateTags[index] = clonePatternTags(tags)
+	}
+	result.contextStartPatternState = clonePatternRuntimeState(source.contextStartPatternState, progressSeen)
+	result.contextEndPatternState = clonePatternRuntimeState(source.contextEndPatternState, progressSeen)
+	result.contextPatternTags = clonePatternTags(source.contextPatternTags)
+	result.contextPatternTagValues = clonePatternTagValues(source.contextPatternTagValues)
+	result.rowRecogState = cloneRowRecogRuntimeState(source.rowRecogState)
+	result.outputState = cloneOutputRuntimeState(source.outputState)
+	result.distinctCounts = cloneIntMap(source.distinctCounts)
+	result.namedWindowArrival = append([]Event(nil), source.namedWindowArrival...)
+	result.priorArrival = append([]Event(nil), source.priorArrival...)
+	result.partitions = make(map[string]*statementRuntime, len(source.partitions))
+	for key, partition := range source.partitions {
+		result.partitions[key] = cloneStatementRuntimePointer(partition, runtimes, registries)
+	}
+	result.contextProperties = cloneValues(source.contextProperties)
+	result.variables = cloneValuesWithSubqueryRefs(source.variables, registries)
+	result.methodDependencies = make(map[string]Event, len(source.methodDependencies))
+	for key, event := range source.methodDependencies {
+		result.methodDependencies[key] = event
+	}
+	result.pendingOutputAssignments = append([]VariableAssignment(nil), source.pendingOutputAssignments...)
+	result.subqueryRegistry = cloneSubqueryRuntimeRegistry(source.subqueryRegistry, runtimes, registries)
+	if source.subqueryRegistry != nil && result.subqueryRegistry != nil {
+		for key, value := range result.variables {
+			ref, ok := value.Any().(*subqueryRuntimeRef)
+			if ok && ref != nil && ref.registry == source.subqueryRegistry {
+				result.variables[key] = Present(&subqueryRuntimeRef{registry: result.subqueryRegistry})
+			}
+		}
+	}
+	result.seq = &atomic.Uint64{}
+	if source.seq != nil {
+		result.seq.Store(source.seq.Load())
+	}
+	return &result
+}
+
+func cloneStatementRuntime(source *statementRuntime) statementRuntime {
+	if source == nil {
+		return statementRuntime{}
+	}
+	return *cloneStatementRuntimePointer(source, make(map[*statementRuntime]*statementRuntime), make(map[*subqueryRuntimeRegistry]*subqueryRuntimeRegistry))
 }
 
 func (r *statementRuntime) drainOutputAssignments() []VariableAssignment {

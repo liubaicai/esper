@@ -377,10 +377,10 @@ type tableMutationSnapshot struct {
 	indexEntries  map[string][]tableIndexEntry
 	version       uint64
 	nextIdentity  uint64
+	indexLookups  uint64
 	scopes        map[string]tableStateMutationSnapshot
 	allocatorNext uint64
 }
-
 type tableStateMutationSnapshot struct {
 	rows         map[string]TableRow
 	order        []string
@@ -388,14 +388,13 @@ type tableStateMutationSnapshot struct {
 	indexEntries map[string][]tableIndexEntry
 	version      uint64
 	nextIdentity uint64
+	indexLookups uint64
 }
 
 func snapshotTableState(state *tableState) tableStateMutationSnapshot {
 	if state == nil {
 		return tableStateMutationSnapshot{}
 	}
-	state.mu.RLock()
-	defer state.mu.RUnlock()
 	snapshot := tableStateMutationSnapshot{
 		rows:         make(map[string]TableRow, len(state.rows)),
 		order:        append([]string(nil), state.order...),
@@ -403,6 +402,7 @@ func snapshotTableState(state *tableState) tableStateMutationSnapshot {
 		indexEntries: make(map[string][]tableIndexEntry, len(state.indexEntries)),
 		version:      state.version,
 		nextIdentity: state.nextIdentity,
+		indexLookups: state.indexLookups.Load(),
 	}
 	for key, row := range state.rows {
 		snapshot.rows[key] = cloneTableRow(row)
@@ -453,6 +453,7 @@ func restoreTableState(state *tableState, snapshot tableStateMutationSnapshot) {
 	}
 	state.version = snapshot.version
 	state.nextIdentity = snapshot.nextIdentity
+	state.indexLookups.Store(snapshot.indexLookups)
 }
 
 func (t *Table) snapshotMutationState() tableMutationSnapshot {
@@ -469,6 +470,7 @@ func (t *Table) snapshotMutationState() tableMutationSnapshot {
 	snapshot.indexEntries = root.indexEntries
 	snapshot.version = root.version
 	snapshot.nextIdentity = root.nextIdentity
+	snapshot.indexLookups = root.indexLookups
 	t.scopesMu.RLock()
 	states := make(map[string]*tableState, len(t.scopedState))
 	for scope, state := range t.scopedState {
@@ -491,6 +493,7 @@ func (t *Table) restoreMutationState(snapshot tableMutationSnapshot) {
 	root := tableStateMutationSnapshot{
 		rows: snapshot.rows, order: snapshot.order, indexes: snapshot.indexes,
 		indexEntries: snapshot.indexEntries, version: snapshot.version, nextIdentity: snapshot.nextIdentity,
+		indexLookups: snapshot.indexLookups,
 	}
 	restoreTableState(t.state, root)
 	t.scopesMu.Lock()
@@ -2877,6 +2880,13 @@ type namedWindowMutationSnapshot struct {
 	keyed             map[string]storedEvent
 	keyOrder          []string
 	contextProperties map[string]Value
+	timeBatchBoundary time.Time
+	extBatchBoundary  time.Time
+	maxExtTimestamp   time.Time
+	batchLast         []Event
+	entrySeq          uint64
+	indexLookups      uint64
+	compositeChildren []namedWindowMutationSnapshot
 }
 
 func (w *NamedWindow) snapshotMutationState() namedWindowMutationSnapshot {
@@ -2890,11 +2900,23 @@ func (w *NamedWindow) snapshotMutationState() namedWindowMutationSnapshot {
 		entries:           append([]storedEvent(nil), state.entries...),
 		keyOrder:          append([]string(nil), state.keyOrder...),
 		contextProperties: cloneValues(state.contextProperties),
+		timeBatchBoundary: state.timeBatchBoundary,
+		extBatchBoundary:  state.extBatchBoundary,
+		maxExtTimestamp:   state.maxExtTimestamp,
+		entrySeq:          state.entrySeq,
+		indexLookups:      state.indexLookups.Load(),
 	}
 	if state.keyed != nil {
 		snapshot.keyed = make(map[string]storedEvent, len(state.keyed))
 		for key, entry := range state.keyed {
 			snapshot.keyed[key] = entry
+		}
+	}
+	if len(state.compositeChildren) > 0 {
+		snapshot.compositeChildren = make([]namedWindowMutationSnapshot, len(state.compositeChildren))
+		for index, child := range state.compositeChildren {
+			wrapped := &NamedWindow{state: child}
+			snapshot.compositeChildren[index] = wrapped.snapshotMutationState()
 		}
 	}
 	return snapshot
@@ -2906,7 +2928,6 @@ func (w *NamedWindow) restoreMutationState(snapshot namedWindowMutationSnapshot)
 	}
 	state := w.state
 	state.mu.Lock()
-	defer state.mu.Unlock()
 	state.entries = append([]storedEvent(nil), snapshot.entries...)
 	if snapshot.keyed != nil {
 		state.keyed = make(map[string]storedEvent, len(snapshot.keyed))
@@ -2918,7 +2939,23 @@ func (w *NamedWindow) restoreMutationState(snapshot namedWindowMutationSnapshot)
 	}
 	state.keyOrder = append([]string(nil), snapshot.keyOrder...)
 	state.contextProperties = cloneValues(snapshot.contextProperties)
+	state.timeBatchBoundary = snapshot.timeBatchBoundary
+	state.extBatchBoundary = snapshot.extBatchBoundary
+	state.maxExtTimestamp = snapshot.maxExtTimestamp
+	state.batchLast = append([]Event(nil), snapshot.batchLast...)
+	state.entrySeq = snapshot.entrySeq
+	state.indexLookups.Store(snapshot.indexLookups)
+	children := append([]*namedWindowRuntime(nil), state.compositeChildren...)
+	state.mu.Unlock()
+	for index, childSnapshot := range snapshot.compositeChildren {
+		if index >= len(children) || children[index] == nil {
+			continue
+		}
+		(&NamedWindow{state: children[index]}).restoreMutationState(childSnapshot)
+	}
+	state.mu.Lock()
 	rebuildNamedWindowIndexesLocked(state)
+	state.mu.Unlock()
 }
 
 func (w *NamedWindow) DeleteWhere(ctx context.Context, predicate func(Event) bool) (NamedWindowDelta, error) {

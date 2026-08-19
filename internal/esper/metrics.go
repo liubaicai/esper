@@ -704,8 +704,12 @@ func statementConsumesNamedWindow(query Query, window *NamedWindow) bool {
 	}
 	name := window.state.def.Name()
 	matches := func(node *streamNode) bool {
-		base, err := sourceNode(node)
-		return err == nil && base != nil && base.kind == streamNamedWindow && base.sourceName == name
+		for current := node; current != nil; current = current.input {
+			if current.kind == streamNamedWindow && current.sourceName == name {
+				return true
+			}
+		}
+		return false
 	}
 	if query.join != nil {
 		for _, source := range joinDefinitionSources(query.join) {

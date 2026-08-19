@@ -711,6 +711,341 @@ func TestFireAndForgetRouteIsExplicitAndPreservesProjectionOrder(t *testing.T) {
 	}
 }
 
+func TestFireAndForgetRouteToNamedWindowDispatchesConsumers(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{
+		FieldDef("symbol", reflect.TypeOf("")),
+		FieldDef("price", reflect.TypeOf(float64(0))),
+	}
+	sourceSchema, err := RegisterMap(env, "FAFNamedRouteSource", fields)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFNamedRouteSource", sourceSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	targetSchema, err := RegisterMap(env, "FAFNamedRouteTarget", fields)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFNamedRouteTarget", targetSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	routePlan, err := env.Build(FromNamedWindow(env, "FAFNamedRouteSource").InsertInto(
+		"FAFNamedRouteTarget", StatementName("faf-named-route"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromNamedWindow(env, "FAFNamedRouteTarget").Query(StatementName("faf-named-consumer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var received []string
+	if _, err := consumerDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			event, ok := result.Event()
+			if !ok {
+				return fmt.Errorf("named-window FAF consumer result is not an event: %#v", result)
+			}
+			received = append(received, event.Get("symbol").Any().(string))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	for _, event := range []map[string]any{
+		{"symbol": "A", "price": 10.5},
+		{"symbol": "B", "price": 11.5},
+	} {
+		if err := engine.InsertNamedWindow(ctx, "FAFNamedRouteSource", event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	readOnly, err := engine.ExecuteFireAndForget(ctx, routePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(readOnly.Results()) != 2 || len(received) != 0 {
+		t.Fatalf("named-window FAF read-only result/consumer delivery = %d/%d", len(readOnly.Results()), len(received))
+	}
+	if err := engine.RouteFireAndForget(ctx, routePlan, readOnly); err != nil {
+		t.Fatal(err)
+	}
+	window, ok := engine.NamedWindow("FAFNamedRouteTarget")
+	if !ok {
+		t.Fatal("named-window FAF target is missing")
+	}
+	rows, err := window.Snapshot(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || !reflect.DeepEqual(received, []string{"A", "B"}) {
+		t.Fatalf("named-window FAF target/consumer delivery = %d/%v", len(rows), received)
+	}
+}
+
+func TestRouteFireAndForgetRollsBackNamedWindowOnRouteFailure(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("symbol", reflect.TypeOf(""))}
+	if _, err := RegisterMap(env, "FAFRouteRollbackSource", fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFRouteRollbackSource", mustSchema(env, "FAFRouteRollbackSource"), NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFRouteRollbackTarget", mustSchema(env, "FAFRouteRollbackSource"), NamedWindowRetention(KeepAll()), NamedWindowUniqueIndex("unique-symbol", "symbol")); err != nil {
+		t.Fatal(err)
+	}
+	routePlan, err := env.Build(FromNamedWindow(env, "FAFRouteRollbackSource").InsertInto("FAFRouteRollbackTarget", StatementName("faf-route-rollback")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	for i := 0; i < 2; i++ {
+		if err := engine.InsertNamedWindow(ctx, "FAFRouteRollbackSource", map[string]any{"symbol": "A"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := engine.ExecuteFireAndForget(ctx, routePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.RouteFireAndForget(ctx, routePlan, result); err == nil {
+		t.Fatal("duplicate FAF route unexpectedly succeeded")
+	}
+	target, _ := engine.NamedWindow("FAFRouteRollbackTarget")
+	rows, err := target.Snapshot(ctx)
+	if err != nil || len(rows) != 0 {
+		t.Fatalf("failed FAF route left target rows = %#v, err=%v", rows, err)
+	}
+}
+
+func TestRouteFireAndForgetRollsBackConsumerRuntimeOnRouteFailure(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("symbol", reflect.TypeOf(""))}
+	if _, err := RegisterMap(env, "FAFConsumerRollbackSource", fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFConsumerRollbackSource", mustSchema(env, "FAFConsumerRollbackSource"), NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFConsumerRollbackTarget", mustSchema(env, "FAFConsumerRollbackSource"), NamedWindowRetention(KeepAll()), NamedWindowUniqueIndex("unique-symbol", "symbol")); err != nil {
+		t.Fatal(err)
+	}
+	routePlan, err := env.Build(FromNamedWindow(env, "FAFConsumerRollbackSource").InsertInto("FAFConsumerRollbackTarget", StatementName("faf-consumer-rollback-route")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromNamedWindow(env, "FAFConsumerRollbackTarget").Aggregate(
+		Alias("count", CountAll()),
+	).Query(StatementName("faf-consumer-rollback-consumer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var counts []int64
+	if _, err := consumerDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if ok {
+				counts = append(counts, row.Get("count").Any().(int64))
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	for index := 0; index < 2; index++ {
+		if err := engine.InsertNamedWindow(ctx, "FAFConsumerRollbackSource", map[string]any{"symbol": "A"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := engine.ExecuteFireAndForget(ctx, routePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.RouteFireAndForget(ctx, routePlan, result); err == nil {
+		t.Fatal("duplicate FAF route unexpectedly succeeded")
+	}
+	target, _ := engine.NamedWindow("FAFConsumerRollbackTarget")
+	rows, err := target.Snapshot(ctx)
+	if err != nil || len(rows) != 0 {
+		t.Fatalf("failed FAF route left target rows = %#v, err=%v", rows, err)
+	}
+	if len(counts) != 0 {
+		t.Fatalf("failed FAF route delivered consumer rows = %#v", counts)
+	}
+	source, _ := engine.NamedWindow("FAFConsumerRollbackSource")
+	if _, err := source.DeleteWhere(ctx, func(Event) bool { return true }); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.InsertNamedWindow(ctx, "FAFConsumerRollbackSource", map[string]any{"symbol": "B"}); err != nil {
+		t.Fatal(err)
+	}
+	result, err = engine.ExecuteFireAndForget(ctx, routePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.RouteFireAndForget(ctx, routePlan, result); err != nil {
+		t.Fatal(err)
+	}
+	if len(counts) != 1 || counts[0] != 1 {
+		t.Fatalf("post-rollback consumer aggregate = %#v, want [1]", counts)
+	}
+}
+
+func TestRouteFireAndForgetRejectsOpaqueAggregateConsumer(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("symbol", reflect.TypeOf(""))}
+	if _, err := RegisterMap(env, "FAFOpaqueConsumerSource", fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFOpaqueConsumerSource", mustSchema(env, "FAFOpaqueConsumerSource"), NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "FAFOpaqueConsumerTarget", fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFOpaqueConsumerTarget", mustSchema(env, "FAFOpaqueConsumerTarget"), NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	if err := RegisterAggregatePluginFactory[int64](env, "faf-opaque-consumer", func(AggregatePluginFactoryContext) AggregatePluginState[int64] {
+		return &testAggregatePluginNoInputState{}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	routePlan, err := env.Build(FromNamedWindow(env, "FAFOpaqueConsumerSource").InsertInto(
+		"FAFOpaqueConsumerTarget", StatementName("faf-opaque-route"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromNamedWindow(env, "FAFOpaqueConsumerTarget").Aggregate(
+		Alias("value", PluginAggregateFactoryRef[int64](env, "faf-opaque-consumer", nil)),
+	).Query(StatementName("faf-opaque-consumer-statement")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = consumerDeployment.Undeploy(context.Background()) }()
+	if err := engine.InsertNamedWindow(context.Background(), "FAFOpaqueConsumerSource", map[string]any{"symbol": "A"}); err != nil {
+		t.Fatal(err)
+	}
+	result, err := engine.ExecuteFireAndForget(context.Background(), routePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.RouteFireAndForget(context.Background(), routePlan, result); err == nil || !strings.Contains(err.Error(), "opaque aggregate plugins") {
+		t.Fatalf("opaque consumer route error = %v", err)
+	}
+	target, _ := engine.NamedWindow("FAFOpaqueConsumerTarget")
+	rows, err := target.Snapshot(context.Background())
+	if err != nil || len(rows) != 0 {
+		t.Fatalf("opaque consumer rejection left target rows = %#v, err=%v", rows, err)
+	}
+}
+
+func TestRouteFireAndForgetRejectsEventPrecedence(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("symbol", reflect.TypeOf(""))}
+	if _, err := RegisterMap(env, "FAFPrecedenceSource", fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "FAFPrecedenceTarget", fields); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(FromAny(env, "FAFPrecedenceSource").InsertInto("FAFPrecedenceTarget", StatementName("faf-precedence"), EventPrecedence(Literal(1))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	result := QueryResult{Batch: ResultBatch{New: []Result{resultRow(newRow(plan.resultSchema, []Value{Present("A")}))}}}
+	if err := engine.RouteFireAndForget(context.Background(), plan, result); err == nil || !strings.Contains(err.Error(), "do not allow event-precedence") {
+		t.Fatalf("event-precedence FAF error = %v", err)
+	}
+}
+
+func TestRouteFireAndForgetRejectsContextBoundNamedWindow(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "FAFContextEvent", []FieldSpec{FieldDef("key", reflect.TypeOf(""))}); err != nil {
+		t.Fatal(err)
+	}
+	contextDefinition, err := CreateKeyContext(env, "FAFContext", Field[map[string]any, string]("key"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = contextDefinition
+	schema, _ := env.Schema("FAFContextEvent")
+	if _, err := CreateNamedWindow(env, "FAFContextWindow", schema, NamedWindowContext("FAFContext"), NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(FromAny(env, "FAFContextEvent").InsertInto("FAFContextWindow", StatementName("faf-context-target")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := NewEngine(env).RouteFireAndForget(context.Background(), plan, QueryResult{Batch: ResultBatch{New: []Result{resultRow(newRow(plan.resultSchema, []Value{Present("A")}))}}}); err == nil || !strings.Contains(err.Error(), "context-bound named-window") {
+		t.Fatalf("context-bound target error = %v", err)
+	}
+}
+
+func TestInsertIntoNamedWindowDoesNotDeliverToOtherWindowConsumers(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("symbol", reflect.TypeOf(""))}
+	for _, name := range []string{"RouteGuardW1", "RouteGuardW2"} {
+		if _, err := RegisterMap(env, name, fields); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := CreateNamedWindow(env, name, mustSchema(env, name), NamedWindowRetention(KeepAll())); err != nil {
+			t.Fatal(err)
+		}
+	}
+	plans := make([]Plan, 0, 2)
+	for index, name := range []string{"RouteGuardW1", "RouteGuardW2"} {
+		plan, err := env.Build(FromNamedWindow(env, name).Query(StatementName(fmt.Sprintf("route-guard-%d", index+1))))
+		if err != nil {
+			t.Fatal(err)
+		}
+		plans = append(plans, plan)
+	}
+	engine := NewEngine(env)
+	counts := make([]int, len(plans))
+	for index, plan := range plans {
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		count := &counts[index]
+		if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+			*count += len(batch.New)
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := engine.InsertNamedWindow(context.Background(), "RouteGuardW1", map[string]any{"symbol": "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(counts, []int{1, 0}) {
+		t.Fatalf("cross-window consumer delivery = %v", counts)
+	}
+}
 func TestFireAndForgetRouteWithParametersAndRejectsImplicitSideEffect(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := CreateTable(env, "FAFRouteTable", []TableColumn{

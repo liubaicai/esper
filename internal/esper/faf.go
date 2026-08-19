@@ -205,8 +205,11 @@ func (e *Engine) executeFireAndForgetAndRoute(ctx context.Context, plan Plan, se
 }
 
 // RouteFireAndForget routes a previously evaluated FAF result according to
-// the plan's selector and route target. It is useful when the caller needs to
-// inspect, persist or compare a snapshot before opting into the side effect.
+// the plan's selector and route target. Context-bound plans and named-window
+// targets are rejected because context partition allocation mutates descriptor,
+// temporal, ownership and lifecycle state outside the route event graph; those
+// paths remain unsupported until they have a complete transactional snapshot
+// contract.
 // Result conversion is completed before the first event is sent, so a bad
 // runtime projection cannot partially route a batch.
 func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result QueryResult) error {
@@ -219,8 +222,19 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 	if err := e.validateOwnedPlan(plan, nil); err != nil {
 		return err
 	}
-	if plan.query.routeTarget == "" {
-		return NewError(ErrorInvalidRule, "fire-and-forget route target is not configured")
+	if plan.query.contextName != "" {
+		return NewError(ErrorInvalidRule, "fire-and-forget routes do not allow context-bound plans")
+	}
+	if _, named, ok := e.env.routeTargetSchema(plan.query.moduleName, plan.query.routeTarget); ok && named {
+		if definition, exists := e.env.NamedWindowInModule(plan.query.moduleName, plan.query.routeTarget); exists && definition.Context() != "" {
+			return NewError(ErrorInvalidRule, "fire-and-forget routes do not allow context-bound named-window targets")
+		}
+	}
+	if queryContainsOpaqueAggregatePlugin(plan.query) {
+		return NewError(ErrorInvalidRule, "fire-and-forget routes do not allow opaque aggregate plugins")
+	}
+	if plan.query.eventPrecedence != nil {
+		return NewError(ErrorInvalidRule, "fire-and-forget routes do not allow event-precedence")
 	}
 
 	results := routeResults(plan.query.selector, result.Batch)
@@ -231,34 +245,74 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 	if now.IsZero() {
 		now = e.Now()
 	}
-	// routeResultLocked is shared with live statements and intentionally runs
-	// under the engine lock because it reads the environment/schema registry.
+
 	e.mu.Lock()
+	if e.closed {
+		e.mu.Unlock()
+		return NewError(ErrorState, "engine is closed")
+	}
+	if e.activeStatementsContainOpaqueAggregatePluginLocked() {
+		e.mu.Unlock()
+		return NewError(ErrorInvalidRule, "fire-and-forget routes do not allow opaque aggregate plugins")
+	}
+	snapshot := e.snapshotFireAndForgetRouteLocked()
+	e.clearFireAndForgetPendingMutationLocked()
 	routeStatement := &Statement{engine: e, plan: plan}
-	routed := make([]Event, 0, len(results))
+	routed := make([]routedEvent, 0, len(results))
+	rollback := func() {
+		snapshot.restore(e)
+	}
+	// Convert every result before queueing or committing any route. A failed
+	// projection therefore cannot leave a stale route or a partial target.
 	for _, item := range results {
-		event, routeErr := e.routeResultLocked(routeStatement, item, now)
+		routedEvent, routeErr := e.routeResultLocked(routeStatement, item, now)
 		if routeErr != nil {
+			rollback()
 			e.mu.Unlock()
 			return routeErr
 		}
-		routed = append(routed, event)
+		routedEvent.owner = routeStatement
+		routed = append(routed, routedEvent)
 	}
+	for _, routedEvent := range routed {
+		e.insertRoutedEventLocked(routedEvent)
+	}
+	dispatches := make([]statementDispatch, 0, len(e.pendingStatementDispatches))
+	processedEvents := make([]Event, 0, len(routed))
+	variables := cloneValues(e.variables)
+	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, nil); err != nil {
+		rollback()
+		e.mu.Unlock()
+		return err
+	}
+	dispatches = append(dispatches, e.pendingStatementDispatches...)
+	namedWindowDispatches := append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...)
+	variableChanges := e.takeVariableChangesLocked()
+	contextEvents := e.takeContextEventsLocked()
+	auditRecords, auditListeners := e.takeAuditDispatchLocked()
+	e.pendingStatementDispatches = nil
+	e.pendingNamedWindowDispatches = nil
+	e.pendingRoutedEvents = nil
+	e.pendingContextEvents = nil
+	e.pendingVariableChanges = nil
 	e.mu.Unlock()
-
-	target, ok := e.env.Schema(plan.query.routeTarget)
-	if !ok {
-		return NewError(ErrorUnknownName, fmt.Sprintf("route target %q is not registered", plan.query.routeTarget))
+	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
+		return err
 	}
-	for _, event := range routed {
-		if err := contextErr(ctx); err != nil {
+	e.dispatchVariableChanges(variableChanges)
+	e.dispatchContextEvents(contextEvents)
+	e.dispatchMatchRecognizeStateLimitEvents()
+	e.dispatchPatternSubexpressionLimitEvents()
+	if err := dispatchAll(ctx, dispatches); err != nil {
+		return err
+	}
+	for _, dispatch := range namedWindowDispatches {
+		if err := dispatch.window.dispatch(ctx, dispatch.delta); err != nil {
 			return err
 		}
-		var underlying any = event.Underlying()
-		if target.kind == SchemaVariant {
-			underlying = event
-		}
-		if err := e.Route(ctx, plan.query.routeTarget, underlying); err != nil {
+	}
+	for _, processed := range processedEvents {
+		if err := e.dispatchDataflowEvent(ctx, processed); err != nil {
 			return err
 		}
 	}
@@ -502,7 +556,7 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 	}
 
 	dispatches := make([]statementDispatch, 0, len(e.pendingStatementDispatches))
-	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches); err != nil {
+	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, nil, nil); err != nil {
 		rollback()
 		e.mu.Unlock()
 		return QueryResult{}, err
@@ -646,6 +700,78 @@ func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, p
 	return tableMutationResult{newEvents: append([]Event(nil), delta.New...)}, nil
 }
 
+func queryContainsOpaqueAggregatePlugin(query Query) bool {
+	found := false
+	_ = visitQueryExpressions(nil, query, func(expression Expr) error {
+		if expression != nil && exprNodeContainsOpaqueAggregatePlugin(expression.node()) {
+			found = true
+		}
+		return nil
+	})
+	return found
+}
+
+func exprNodeContainsOpaqueAggregatePlugin(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	switch node.kind {
+	case "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory",
+		"aggregate-plugin-factory-ref", "aggregate-plugin-access-ref",
+		"aggregate-multi-plugin", "aggregate-multi-plugin-ref":
+		return true
+	}
+	for _, child := range node.children {
+		if exprNodeContainsOpaqueAggregatePlugin(child) {
+			return true
+		}
+	}
+	for _, child := range node.expressionArguments {
+		if exprNodeContainsOpaqueAggregatePlugin(child) {
+			return true
+		}
+	}
+	if exprNodeContainsOpaqueAggregatePlugin(node.expressionBody) {
+		return true
+	}
+	if node.subquery != nil {
+		if node.subquery.predicate != nil && exprNodeContainsOpaqueAggregatePlugin(node.subquery.predicate.node()) {
+			return true
+		}
+		if node.subquery.projection != nil && exprNodeContainsOpaqueAggregatePlugin(node.subquery.projection.node()) {
+			return true
+		}
+		for _, selection := range node.subquery.columns {
+			if selection.Expr != nil && exprNodeContainsOpaqueAggregatePlugin(selection.Expr.node()) {
+				return true
+			}
+		}
+		if node.subquery.groupBy != nil && exprNodeContainsOpaqueAggregatePlugin(node.subquery.groupBy.node()) {
+			return true
+		}
+		if node.subquery.having != nil && exprNodeContainsOpaqueAggregatePlugin(node.subquery.having.node()) {
+			return true
+		}
+		for _, order := range node.subquery.orderBy {
+			if order.Expression != nil && exprNodeContainsOpaqueAggregatePlugin(order.Expression.node()) {
+				return true
+			}
+		}
+	}
+	return false
+}
+func (e *Engine) activeStatementsContainOpaqueAggregatePluginLocked() bool {
+	if e == nil {
+		return false
+	}
+	for _, statement := range e.statements {
+		if statement != nil && queryContainsOpaqueAggregatePlugin(statement.plan.query) {
+			return true
+		}
+	}
+	return false
+}
+
 type fireAndForgetNamedWindowSnapshot struct {
 	states     map[*namedWindowRuntime]namedWindowMutationSnapshot
 	partitions map[*namedWindowRuntime]map[string]*namedWindowRuntime
@@ -695,6 +821,7 @@ func cloneContextPartitionIDs(ids map[string]map[string]int) map[string]map[stri
 }
 
 func cloneContextPartitionNextIDs(ids map[string]int) map[string]int {
+
 	if ids == nil {
 		return make(map[string]int)
 	}
@@ -703,6 +830,322 @@ func cloneContextPartitionNextIDs(ids map[string]int) map[string]int {
 		result[contextName] = id
 	}
 	return result
+}
+
+func cloneContextPartitionInstanceNextIDs(ids map[string]uint64) map[string]uint64 {
+	if ids == nil {
+		return make(map[string]uint64)
+	}
+	result := make(map[string]uint64, len(ids))
+	for contextName, id := range ids {
+		result[contextName] = id
+	}
+	return result
+}
+
+func cloneContextVariables(values map[string]map[string]map[string]Value) map[string]map[string]map[string]Value {
+	if values == nil {
+		return make(map[string]map[string]map[string]Value)
+	}
+	result := make(map[string]map[string]map[string]Value, len(values))
+	for contextName, partitions := range values {
+		partitionCopy := make(map[string]map[string]Value, len(partitions))
+		for partitionKey, variables := range partitions {
+			partitionCopy[partitionKey] = cloneValues(variables)
+		}
+		result[contextName] = partitionCopy
+	}
+	return result
+}
+
+type fireAndForgetStatementSnapshot struct {
+	statement                *Statement
+	runtime                  statementRuntime
+	pendingOutputAssignments []VariableAssignment
+	replacedEvent            *Event
+	droppedEvent             bool
+}
+
+type fireAndForgetRouteSnapshot struct {
+	namedWindows                 map[string]*NamedWindow
+	namedWindowStates            map[*NamedWindow]fireAndForgetNamedWindowSnapshot
+	tables                       map[*Table]tableMutationSnapshot
+	variables                    map[string]Value
+	contextVariables             map[string]map[string]map[string]Value
+	contextPartitionRefs         map[string]map[string]int
+	contextPartitionIDs          map[string]map[string]int
+	contextPartitionNextIDs      map[string]int
+	contextPartitionInstanceNext map[string]uint64
+	contextPartitionDescriptors  map[string]map[string]ContextPartitionDescriptor
+	contextTemporalOrigins       map[string]time.Time
+	contextTemporalArmed         map[string]time.Time
+	contextTemporalArmedAt       map[string]time.Time
+	contextTemporalActiveStart   map[string]time.Time
+	contextTableOwnership        map[string]map[string]map[uint64]tableContextRowOwnership
+	contextCreated               map[string]bool
+
+	contextStatementRefs         map[string]int
+	nextID                       uint64
+	runtimeMetrics               *runtimeMetricsState
+	statementMetrics             *statementMetricsState
+	rowRecogPool                 *rowRecogStatePool
+	statements                   []fireAndForgetStatementSnapshot
+	pendingStatementDispatches   []statementDispatch
+	pendingNamedWindowDispatches []namedWindowDispatch
+	pendingRoutedEvents          []routedEvent
+	pendingContextEvents         []contextNotification
+	pendingVariableChanges       []VariableChangeEvent
+	pendingMatchRecognizeLimits  []MatchRecognizeStateLimitEvent
+	pendingPatternLimits         []PatternSubexpressionLimitEvent
+	pendingPatternRuntimeLimits  []PatternRuntimeSubexpressionLimitEvent
+	pendingAuditRecords          []AuditRecord
+}
+
+func cloneContextDescriptors(source map[string]map[string]ContextPartitionDescriptor) map[string]map[string]ContextPartitionDescriptor {
+	if source == nil {
+		return nil
+	}
+	result := make(map[string]map[string]ContextPartitionDescriptor, len(source))
+	for contextName, descriptors := range source {
+		copyDescriptors := make(map[string]ContextPartitionDescriptor, len(descriptors))
+		for key, descriptor := range descriptors {
+			descriptor.properties = cloneValues(descriptor.properties)
+			copyDescriptors[key] = descriptor
+		}
+		result[contextName] = copyDescriptors
+	}
+	return result
+}
+
+func cloneRuntimeMetricsState(source *runtimeMetricsState) *runtimeMetricsState {
+	if source == nil {
+		return nil
+	}
+	result := *source
+	result.listeners = make(map[uint64]RuntimeMetricListener, len(source.listeners))
+	for id, listener := range source.listeners {
+		result.listeners[id] = listener
+	}
+	return &result
+}
+
+func cloneStatementMetricsState(source *statementMetricsState) *statementMetricsState {
+	if source == nil {
+		return nil
+	}
+	result := *source
+	result.config.groups = append([]StatementMetricGroupConfig(nil), source.config.groups...)
+	result.groups = make([]*statementMetricGroupState, len(source.groups))
+	groups := make(map[*statementMetricGroupState]*statementMetricGroupState, len(source.groups))
+	for index, group := range source.groups {
+		if group == nil {
+			continue
+		}
+		copyGroup := *group
+		copyGroup.entries = nil
+		result.groups[index] = &copyGroup
+		groups[group] = &copyGroup
+	}
+	result.groupByName = make(map[string]*statementMetricGroupState, len(source.groupByName))
+	for name, group := range source.groupByName {
+		result.groupByName[name] = groups[group]
+	}
+	result.entries = make(map[statementMetricKey]*statementMetricEntry, len(source.entries))
+	for key, entry := range source.entries {
+		if entry == nil {
+			continue
+		}
+		copyEntry := *entry
+		copyEntry.group = groups[entry.group]
+		result.entries[key] = &copyEntry
+		if copyEntry.group != nil {
+			copyEntry.group.entries = append(copyEntry.group.entries, &copyEntry)
+		}
+	}
+	result.listeners = make(map[uint64]StatementMetricListener, len(source.listeners))
+	for id, listener := range source.listeners {
+		result.listeners[id] = listener
+	}
+	return &result
+}
+
+func cloneRowRecogStatePool(source *rowRecogStatePool) *rowRecogStatePool {
+	if source == nil {
+		return nil
+	}
+	result := *source
+	result.counts = cloneInt64Map(source.counts)
+	result.registered = make(map[string]struct{}, len(source.registered))
+	for owner := range source.registered {
+		result.registered[owner] = struct{}{}
+	}
+	return &result
+}
+
+func snapshotFireAndForgetStatementsLocked(e *Engine) []fireAndForgetStatementSnapshot {
+	if e == nil {
+		return nil
+	}
+	statements := make([]fireAndForgetStatementSnapshot, 0, len(e.statements))
+	for _, statement := range e.statements {
+		if statement == nil {
+			continue
+		}
+		statement.mu.Lock()
+		original := fireAndForgetStatementSnapshot{
+			statement:                statement,
+			runtime:                  statement.runtime,
+			pendingOutputAssignments: append([]VariableAssignment(nil), statement.pendingOutputAssignments...),
+			droppedEvent:             statement.droppedEvent,
+		}
+		if statement.replacedEvent != nil {
+			event := *statement.replacedEvent
+			original.replacedEvent = &event
+		}
+		staged := cloneStatementRuntime(&statement.runtime)
+		statement.runtime = staged
+		statement.pendingOutputAssignments = append([]VariableAssignment(nil), original.pendingOutputAssignments...)
+		if original.replacedEvent != nil {
+			event := *original.replacedEvent
+			statement.replacedEvent = &event
+		} else {
+			statement.replacedEvent = nil
+		}
+		statement.droppedEvent = original.droppedEvent
+		statement.mu.Unlock()
+		statements = append(statements, original)
+	}
+	return statements
+}
+
+func restoreFireAndForgetStatementsLocked(statements []fireAndForgetStatementSnapshot) {
+	for _, snapshot := range statements {
+		if snapshot.statement == nil {
+			continue
+		}
+		snapshot.statement.mu.Lock()
+		snapshot.statement.runtime = snapshot.runtime
+		snapshot.statement.pendingOutputAssignments = append([]VariableAssignment(nil), snapshot.pendingOutputAssignments...)
+		if snapshot.replacedEvent != nil {
+			event := *snapshot.replacedEvent
+			snapshot.statement.replacedEvent = &event
+		} else {
+			snapshot.statement.replacedEvent = nil
+		}
+		snapshot.statement.droppedEvent = snapshot.droppedEvent
+		snapshot.statement.mu.Unlock()
+	}
+}
+
+func (e *Engine) snapshotFireAndForgetRouteLocked() fireAndForgetRouteSnapshot {
+	snapshot := fireAndForgetRouteSnapshot{
+		namedWindows:                 make(map[string]*NamedWindow, len(e.namedWindows)),
+		namedWindowStates:            make(map[*NamedWindow]fireAndForgetNamedWindowSnapshot, len(e.namedWindows)),
+		tables:                       make(map[*Table]tableMutationSnapshot, len(e.tables)),
+		variables:                    cloneValues(e.variables),
+		contextVariables:             cloneContextVariables(e.contextVariables),
+		contextPartitionRefs:         cloneContextPartitionIDs(e.contextPartitionRefs),
+		contextPartitionIDs:          cloneContextPartitionIDs(e.contextPartitionIDs),
+		contextPartitionNextIDs:      cloneContextPartitionNextIDs(e.contextPartitionNextIDs),
+		contextPartitionInstanceNext: cloneContextPartitionInstanceNextIDs(e.contextPartitionInstanceNextIDs),
+		contextPartitionDescriptors:  cloneContextDescriptors(e.contextPartitionDescriptors),
+		contextTemporalOrigins:       cloneTimeMap(e.contextTemporalOrigins),
+		contextTemporalArmed:         cloneTimeMap(e.contextTemporalArmed),
+		contextTemporalArmedAt:       cloneTimeMap(e.contextTemporalArmedAt),
+		contextTemporalActiveStart:   cloneTimeMap(e.contextTemporalActiveStart),
+		contextTableOwnership:        cloneTableContextOwnership(e.contextTableOwnership),
+		contextCreated:               make(map[string]bool, len(e.contextCreated)),
+		contextStatementRefs:         make(map[string]int, len(e.contextStatementRefs)),
+		nextID:                       e.nextID,
+		runtimeMetrics:               cloneRuntimeMetricsState(e.runtimeMetrics),
+		statementMetrics:             cloneStatementMetricsState(e.statementMetrics),
+		rowRecogPool:                 cloneRowRecogStatePool(e.matchRecognizeStatePool),
+		pendingStatementDispatches:   append([]statementDispatch(nil), e.pendingStatementDispatches...),
+		pendingNamedWindowDispatches: append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...),
+		pendingRoutedEvents:          append([]routedEvent(nil), e.pendingRoutedEvents...),
+		pendingContextEvents:         append([]contextNotification(nil), e.pendingContextEvents...),
+		pendingVariableChanges:       append([]VariableChangeEvent(nil), e.pendingVariableChanges...),
+		pendingMatchRecognizeLimits:  append([]MatchRecognizeStateLimitEvent(nil), e.pendingMatchRecognizeStateLimits...),
+		pendingPatternLimits:         append([]PatternSubexpressionLimitEvent(nil), e.pendingPatternSubexpressionLimits...),
+		pendingPatternRuntimeLimits:  append([]PatternRuntimeSubexpressionLimitEvent(nil), e.pendingPatternRuntimeLimits...),
+		pendingAuditRecords:          append([]AuditRecord(nil), e.pendingAuditRecords...),
+	}
+	for name, created := range e.contextCreated {
+		snapshot.contextCreated[name] = created
+	}
+	for name, refs := range e.contextStatementRefs {
+		snapshot.contextStatementRefs[name] = refs
+	}
+	for key, table := range e.tables {
+		if table != nil {
+			snapshot.tables[table] = table.snapshotMutationState()
+		}
+		_ = key
+	}
+	for key, window := range e.namedWindows {
+		snapshot.namedWindows[key] = window
+		if window != nil {
+			snapshot.namedWindowStates[window] = snapshotNamedWindowForFireAndForget(window)
+		}
+	}
+	snapshot.statements = snapshotFireAndForgetStatementsLocked(e)
+	return snapshot
+}
+
+func (snapshot fireAndForgetRouteSnapshot) restore(e *Engine) {
+	if e == nil {
+		return
+	}
+	for window, state := range snapshot.namedWindowStates {
+		state.restore()
+		_ = window
+	}
+	for table, state := range snapshot.tables {
+		table.restoreMutationState(state)
+	}
+	for key, window := range e.namedWindows {
+		if _, exists := snapshot.namedWindows[key]; !exists && window != nil {
+			e.removeNamedWindowMetricsLocked(namedWindowMetricName(window.Definition()))
+		}
+	}
+	e.namedWindows = make(map[string]*NamedWindow, len(snapshot.namedWindows))
+	for key, window := range snapshot.namedWindows {
+		e.namedWindows[key] = window
+	}
+	e.variables = cloneValues(snapshot.variables)
+	e.contextVariables = cloneContextVariables(snapshot.contextVariables)
+	e.contextPartitionRefs = cloneContextPartitionIDs(snapshot.contextPartitionRefs)
+	e.contextPartitionIDs = cloneContextPartitionIDs(snapshot.contextPartitionIDs)
+	e.contextPartitionNextIDs = cloneContextPartitionNextIDs(snapshot.contextPartitionNextIDs)
+	e.contextPartitionInstanceNextIDs = cloneContextPartitionInstanceNextIDs(snapshot.contextPartitionInstanceNext)
+	e.contextPartitionDescriptors = cloneContextDescriptors(snapshot.contextPartitionDescriptors)
+	e.contextTemporalOrigins = cloneTimeMap(snapshot.contextTemporalOrigins)
+	e.contextTemporalArmed = cloneTimeMap(snapshot.contextTemporalArmed)
+	e.contextTemporalArmedAt = cloneTimeMap(snapshot.contextTemporalArmedAt)
+	e.contextTemporalActiveStart = cloneTimeMap(snapshot.contextTemporalActiveStart)
+	e.contextTableOwnership = cloneTableContextOwnership(snapshot.contextTableOwnership)
+	e.contextCreated = make(map[string]bool, len(snapshot.contextCreated))
+	for name, created := range snapshot.contextCreated {
+		e.contextCreated[name] = created
+	}
+	e.contextStatementRefs = make(map[string]int, len(snapshot.contextStatementRefs))
+	for name, refs := range snapshot.contextStatementRefs {
+		e.contextStatementRefs[name] = refs
+	}
+	e.nextID = snapshot.nextID
+	e.runtimeMetrics = cloneRuntimeMetricsState(snapshot.runtimeMetrics)
+	e.statementMetrics = cloneStatementMetricsState(snapshot.statementMetrics)
+	e.matchRecognizeStatePool = cloneRowRecogStatePool(snapshot.rowRecogPool)
+	restoreFireAndForgetStatementsLocked(snapshot.statements)
+	e.pendingStatementDispatches = append([]statementDispatch(nil), snapshot.pendingStatementDispatches...)
+	e.pendingNamedWindowDispatches = append([]namedWindowDispatch(nil), snapshot.pendingNamedWindowDispatches...)
+	e.pendingRoutedEvents = append([]routedEvent(nil), snapshot.pendingRoutedEvents...)
+	e.pendingContextEvents = append([]contextNotification(nil), snapshot.pendingContextEvents...)
+	e.pendingVariableChanges = append([]VariableChangeEvent(nil), snapshot.pendingVariableChanges...)
+	e.pendingMatchRecognizeStateLimits = append([]MatchRecognizeStateLimitEvent(nil), snapshot.pendingMatchRecognizeLimits...)
+	e.pendingPatternSubexpressionLimits = append([]PatternSubexpressionLimitEvent(nil), snapshot.pendingPatternLimits...)
+	e.pendingPatternRuntimeLimits = append([]PatternRuntimeSubexpressionLimitEvent(nil), snapshot.pendingPatternRuntimeLimits...)
+	e.pendingAuditRecords = append([]AuditRecord(nil), snapshot.pendingAuditRecords...)
 }
 
 func snapshotNamedWindowForFireAndForget(window *NamedWindow) fireAndForgetNamedWindowSnapshot {
@@ -801,6 +1244,7 @@ func (e *Engine) clearFireAndForgetPendingMutationLocked() {
 	e.pendingVariableChanges = nil
 	e.pendingMatchRecognizeStateLimits = nil
 	e.pendingPatternSubexpressionLimits = nil
+	e.pendingPatternRuntimeLimits = nil
 	e.pendingAuditRecords = nil
 }
 
