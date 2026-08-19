@@ -31771,6 +31771,62 @@
    "remaining": [
     "EPLSubselectMulticolumnInvalid (java-runtime-5c74e423f659bd6713f1): compile-time error-only execution (5 invalid compiles); typed Go builder rejects the representable shapes at Build time with intentionally different message text (approved difference)"
    ]
+  },
+  {
+   "id": "case.infra-nwtable-subquery",
+   "javaRuntimeIds": [
+    "java-runtime-cf539c3cb3727c0a0e6e",
+    "java-runtime-a88f8ac757f9b7de47a6",
+    "java-runtime-5d7bf128b2789f223a55",
+    "java-runtime-6134b1502baf01472daf"
+   ],
+   "javaNames": [
+    "InfraSubquerySceneOne{namedWindow=true}",
+    "InfraSubquerySceneOne{namedWindow=false}",
+    "InfraSubquerySelfCheck{namedWindow=true}",
+    "InfraSubquerySelfCheck{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubquery.java"
+   ],
+   "goTests": [
+    "TestInfraNWTableSubquerySceneOneParity",
+    "TestInfraNWTableSubquerySelfCheckParity"
+   ],
+   "tags": [
+    "correctness",
+    "query",
+    "subquery",
+    "named-window",
+    "table",
+    "correlated",
+    "anti-subquery",
+    "delete",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/infra-nwtable-subquery.json",
+    "testdata/parity/infra-nwtable-subquery.trace.json",
+    "testdata/parity/infra-nwtable-subquery.evidence.json",
+    "tools/java-oracle/InfraNWTableSubqueryScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-subquery.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-cf539c3cb3727c0a0e6e",
+    "java-runtime-a88f8ac757f9b7de47a6",
+    "java-runtime-5d7bf128b2789f223a55",
+    "java-runtime-6134b1502baf01472daf"
+   ]
   }
  ],
  "mappings": [
@@ -34177,15 +34233,19 @@
   {
    "capabilityId": "query.subquery-basic",
    "caseId": "case.subquery-aggregated-multirow"
+  },
+  {
+   "capabilityId": "query.subquery-basic",
+   "caseId": "case.infra-nwtable-subquery"
   }
  ],
-"summary": {
- "totalCases": 518,
+ "summary": {
+ "totalCases": 519,
  "totalCapabilities": 110,
- "inventoriedCases": 518,
- "implementedCases": 516,
- "differentialVerifiedCases": 117,
- "differentialVerifiedRuntimeIds": 358,
+ "inventoriedCases": 519,
+ "implementedCases": 517,
+ "differentialVerifiedCases": 118,
+ "differentialVerifiedRuntimeIds": 362,
  "intentionallyDifferentCases": 18,
  "representativeVerifiedCases": 93,
  "nfrVerifiedCases": 0,
@@ -34195,10 +34255,10 @@
  "intentionallyDifferentCapabilities": 7,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
- "runtimeAssociationCount": 3056,
- "referencedJavaRuntimeIds": 2890,
+ "runtimeAssociationCount": 3060,
+ "referencedJavaRuntimeIds": 2894,
  "totalJavaRuntimeIds": 4136,
- "unreferencedJavaRuntimeIds": 1246,
+ "unreferencedJavaRuntimeIds": 1242,
  "representativeScenarioTotal": 93,
  "representativeScenarioPassing": 93
 }

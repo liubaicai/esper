@@ -1,0 +1,47 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-nwtable-subquery",
+  "steps": [
+    {"op": "case", "case": "scene-one-named-window"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A1", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "B2", "intPrimitive": 2}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "C3", "intPrimitive": 3}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "A1"}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "B2"}},
+
+    {"op": "case", "case": "scene-one-table"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A1", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "B2", "intPrimitive": 2}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "C3", "intPrimitive": 3}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "A1"}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "B2"}},
+
+    {"op": "case", "case": "self-check-named-window"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intBoxed": 1}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intBoxed": 2}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intBoxed": 3}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intBoxed": 4}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean_A", "payload": {"id": "E2"}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intBoxed": 5}},
+    {"op": "snapshot", "statement": "create"},
+
+    {"op": "case", "case": "self-check-table"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intBoxed": 1}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intBoxed": 2}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intBoxed": 3}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intBoxed": 4}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean_A", "payload": {"id": "E2"}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intBoxed": 5}},
+    {"op": "snapshot", "statement": "create"}
+  ]
+}

@@ -1,0 +1,1113 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-cf539c3cb3727c0a0e6e",
+    "java-runtime-a88f8ac757f9b7de47a6",
+    "java-runtime-5d7bf128b2789f223a55",
+    "java-runtime-6134b1502baf01472daf"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubquery.java"
+  ],
+  "javaExecutions": [
+    "InfraSubquerySceneOne{namedWindow=true}",
+    "InfraSubquerySceneOne{namedWindow=false}",
+    "InfraSubquerySelfCheck{namedWindow=true}",
+    "InfraSubquerySelfCheck{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subquery",
+    "steps": [
+      {
+        "op": "case",
+        "case": "scene-one-named-window"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "B2"
+        }
+      },
+      {
+        "op": "case",
+        "case": "scene-one-table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "B2"
+        }
+      },
+      {
+        "op": "case",
+        "case": "self-check-named-window"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intBoxed": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intBoxed": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intBoxed": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intBoxed": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intBoxed": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "case",
+        "case": "self-check-table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intBoxed": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intBoxed": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intBoxed": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intBoxed": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intBoxed": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subquery",
+    "records": [
+      {
+        "case": "scene-one-named-window",
+        "operation": "listener",
+        "statement": "Subq",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one-named-window",
+        "operation": "listener",
+        "statement": "Subq",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one-table",
+        "operation": "listener",
+        "statement": "Subq",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one-table",
+        "operation": "listener",
+        "statement": "Subq",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subquery",
+    "records": [
+      {
+        "case": "scene-one-named-window",
+        "operation": "listener",
+        "statement": "Subq",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one-named-window",
+        "operation": "listener",
+        "statement": "Subq",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one-table",
+        "operation": "listener",
+        "statement": "Subq",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one-table",
+        "operation": "listener",
+        "statement": "Subq",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "self-check-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

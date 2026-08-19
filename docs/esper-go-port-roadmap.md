@@ -9,15 +9,15 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 518 |
-| Case differential-verified | 117 |
-| Differential-verified runtime | 358 / 4,136 |
-| Runtime 已关联 | 2,890 / 4,136（69.9%） |
-| Runtime 未关联 | 1,246 |
+| Case | 519 |
+| Case differential-verified | 118 |
+| Differential-verified runtime | 362 / 4,136 |
+| Runtime 已关联 | 2,894 / 4,136（70.0%） |
+| Runtime 未关联 | 1,242 |
 | Representative scenario | 93 / 93 通过 |
 | Intentionally-different case | 18 |
 | NFR-verified case | 0 |
-| 质量摘要 | Docker passed；stress passed；race pending；performance pending |
+| 质量摘要 | Docker passed；stress passed；race passed；performance pending |
 
 该表是阅读便利快照，不应手工推导后继续传播。每次需要最新数字时直接读取 manifest `summary`；只有 manifest 校验通过后才更新本表。
 
