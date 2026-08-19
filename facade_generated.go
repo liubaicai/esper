@@ -7170,6 +7170,22 @@ func ToArray[T any](values Expr) Expression[[]T] {
 	return internalengine.ToArray[T](values)
 }
 
+// Transpose marks a single expression result as the underlying event of an
+// insert-into route. It is the Go fluent counterpart of Esper's transpose()
+// select-clause function: the wrapped value becomes the routed event's
+// underlying object instead of being projected into named columns.
+//
+// The expression is valid only as the sole projection of an insert-into route
+// (or one transpose alongside non-transpose properties when the target event
+// type was auto-created as a Wrapper/Pair, which the Go API models as a
+// pre-registered Map target). These restrictions are enforced by Build; a
+// bare non-route Transpose evaluates to the wrapped value with no side effect,
+// mirroring Esper's treatment of transpose in a where-clause or as a non-top
+// level expression.
+func Transpose[T any](expression Expression[T]) Expression[Event] {
+	return internalengine.Transpose[T](expression)
+}
+
 type TriggerQuery = internalengine.TriggerQuery
 
 type TriggerStream[T any] = internalengine.TriggerStream[T]

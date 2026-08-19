@@ -1,0 +1,97 @@
+{
+ "scenarioId": "epl-insert-into-transpose-stream",
+ "javaOracleCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSourceFile": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoTransposeStream.java",
+ "javaRuntimeIds": [
+  "java-runtime-02d711374dfb7f329757",
+  "java-runtime-c667bb8d3dabac4238f8",
+  "java-runtime-d3220f91b49d423f15d6",
+  "java-runtime-8ab48d77b45d6d38fd42",
+  "java-runtime-aef71ab1bc6a0d48f2df",
+  "java-runtime-fee5f7e9a61131ac2e3a",
+  "java-runtime-bbabb76978292c0ec5b4",
+  "java-runtime-97bbfc3e2d43eec0e9fd"
+ ],
+ "goTests": [
+  "TestEPLInsertIntoTransposeCreateSchemaPOJOParity",
+  "TestEPLInsertIntoTransposeMapAndObjectArrayAndOthersParity",
+  "TestEPLInsertIntoTransposeFunctionToStreamWithPropsParity",
+  "TestEPLInsertIntoTransposeFunctionToStreamParity",
+  "TestEPLInsertIntoTransposeSingleColumnInsertParity",
+  "TestEPLInsertIntoTransposeEventJoinMapParity",
+  "TestEPLInsertIntoTransposeEventJoinPOJOParity",
+  "TestEPLInsertIntoTransposePOJOPropertyStreamParity"
+ ],
+ "goInvalidTests": [
+  "TestEPLInsertIntoTransposeSingleColumnInsertInvalidBuild",
+  "TestEPLInsertIntoInvalidTransposeBuild"
+ ],
+ "javaTraceFile": "testdata/parity/epl-insert-into-transpose-stream.trace.json",
+ "javaTraceRecordCount": 25,
+ "caseMatchSummary": {
+  "create-schema-pojo": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "map": {
+   "expected": 3,
+   "actual": 3,
+   "match": true
+  },
+  "objectarray": {
+   "expected": 3,
+   "actual": 3,
+   "match": true
+  },
+  "avro": {
+   "expected": 3,
+   "actual": 3,
+   "match": true
+  },
+  "json": {
+   "expected": 3,
+   "actual": 3,
+   "match": true
+  },
+  "jsonprovided": {
+   "expected": 3,
+   "actual": 3,
+   "match": true
+  },
+  "function-to-stream-with-props": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "function-to-stream": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "single-column-insert": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
+  },
+  "event-join-map": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "event-join-pojo": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "pojo-property-stream": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  }
+ },
+ "differences": 0,
+ "mutationTested": false,
+ "verification": "differential-verified",
+ "notes": "All 12 cases match between the Java oracle trace (25 listener records) and the Go parity assertions. Exec 0 routes transpose(SupportBeanTwo) into astream/bstream consumers with stringTwo=E1/intPrimitiveTwo=1 (2 records). Exec 1 across Map/ObjectArray/Avro/JSON/JsonProvided routes p0/p1 (E1,1; E2,2 via the first producer; E3,3 via the second producer) into the consumer (3 records per representation, 15 total). Exec 2 routes the SupportBean payload with dummy=1/theString=OI1/intPrimitive=10 into the Map target MyStream (1 record). Exec 3 routes the payload bean into OtherStream: s0 observes OI1, then the second producer observes OI2 (2 records). Exec 4 routes the SupportBean payload into itself (same-s0 observes OI1) and the numeric SupportBeanNumeric payload {intOne=10,intTwo=11} into numeric-s0 (2 records). Exec 6/7 joins produce exactly one a.id/b.id record (A1/B1). Exec 8 routes the inneritem column into MyStreamComplex with inneritem.nestedValue=nestedValue (1 record). The Java oracle uses the real SupportBean/SupportBeanComplexProps beans from the fixed esper-common classpath plus UDF single-row functions wired exactly like the regression suite (generateMap/OA/Avro/Json, custom/customOne/customTwo), so routed values match the original Java assertions record-for-record; Go structs expose the asserted subset of the bean property surface, matching each collector's observed fields."
+}

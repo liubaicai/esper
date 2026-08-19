@@ -30730,6 +30730,74 @@
    ]
   },
   {
+   "id": "case.epl-insert-into-transpose-stream",
+   "javaRuntimeIds": [
+    "java-runtime-02d711374dfb7f329757",
+    "java-runtime-c667bb8d3dabac4238f8",
+    "java-runtime-d3220f91b49d423f15d6",
+    "java-runtime-8ab48d77b45d6d38fd42",
+    "java-runtime-aef71ab1bc6a0d48f2df",
+    "java-runtime-fee5f7e9a61131ac2e3a",
+    "java-runtime-bbabb76978292c0ec5b4",
+    "java-runtime-97bbfc3e2d43eec0e9fd",
+    "java-runtime-699333da3ee37518415a",
+    "java-runtime-d0c4e373409e2703b6ef"
+   ],
+   "javaNames": [
+    "EPLInsertIntoTransposeStream"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoTransposeStream.java"
+   ],
+   "goTests": [
+    "TestEPLInsertIntoTransposeCreateSchemaPOJOParity",
+    "TestEPLInsertIntoTransposeMapAndObjectArrayAndOthersParity",
+    "TestEPLInsertIntoTransposeFunctionToStreamWithPropsParity",
+    "TestEPLInsertIntoTransposeFunctionToStreamParity",
+    "TestEPLInsertIntoTransposeSingleColumnInsertParity",
+    "TestEPLInsertIntoTransposeEventJoinMapParity",
+    "TestEPLInsertIntoTransposeEventJoinPOJOParity",
+    "TestEPLInsertIntoTransposePOJOPropertyStreamParity",
+    "TestEPLInsertIntoTransposeSingleColumnInsertInvalidBuild",
+    "TestEPLInsertIntoInvalidTransposeBuild"
+   ],
+   "tags": [
+    "correctness",
+    "insert-into",
+    "stream-routing",
+    "event-representation",
+    "transpose",
+    "json",
+    "jsonprovided"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-insert-into-transpose-stream.json",
+    "testdata/parity/epl-insert-into-transpose-stream.trace.json",
+    "testdata/parity/epl-insert-into-transpose-stream.evidence.json",
+    "tools/java-oracle/EPLInsertIntoTransposeStreamScenarioOracle.java",
+    "tools/java-oracle/run-epl-insert-into-transpose-stream.sh",
+    "java-oracle-trace",
+    "go-unit"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-02d711374dfb7f329757",
+    "java-runtime-c667bb8d3dabac4238f8",
+    "java-runtime-d3220f91b49d423f15d6",
+    "java-runtime-8ab48d77b45d6d38fd42",
+    "java-runtime-aef71ab1bc6a0d48f2df",
+    "java-runtime-fee5f7e9a61131ac2e3a",
+    "java-runtime-bbabb76978292c0ec5b4",
+    "java-runtime-97bbfc3e2d43eec0e9fd"
+   ]
+  },
+  {
    "id": "case.subselect-exists",
    "javaRuntimeIds": [
     "java-runtime-06ee960c34caf25b6852",
@@ -33961,6 +34029,10 @@
    "caseId": "case.insertinto-event-precedence"
   },
   {
+   "capabilityId": "query.insert-into-route",
+   "caseId": "case.epl-insert-into-transpose-stream"
+  },
+  {
    "capabilityId": "query.subquery-basic",
    "caseId": "case.subselect-exists"
   },
@@ -34038,12 +34110,12 @@
   }
  ],
  "summary": {
-  "cases": 516,
-  "differentialVerifiedCases": 114,
-  "differentialVerifiedRuntimeIds": 340,
-  "referencedJavaRuntimeIds": 2875,
+  "cases": 517,
+  "differentialVerifiedCases": 115,
+  "differentialVerifiedRuntimeIds": 348,
+  "referencedJavaRuntimeIds": 2885,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1261,
+  "unreferencedJavaRuntimeIds": 1251,
   "representativeScenarioPass": 93,
   "intentionallyDifferentCases": 0,
   "nfrVerifiedCases": 0

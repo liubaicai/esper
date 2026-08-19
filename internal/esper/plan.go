@@ -1356,7 +1356,46 @@ func (e *Environment) validateRoute(query Query) error {
 	if target.kind == SchemaVariant && target.variantMode == VariantPredefined {
 		return fmt.Errorf("projected rows cannot route to predefined variant %q without a member identity", target.Name())
 	}
+	// Transpose routing applies to a plain record projection (no aggregate,
+	// join, pattern, match-recognize or trigger select). The transpose
+	// function must occur alone in the select clause unless the companion
+	// columns coexist inside a Wrapper-type target, which the Go API models
+	// as a pre-registered Map target accepting the payload, merged by
+	// property name. These errors are validated before the per-selection
+	// field loop so transpose selections (which carry no column name) are
+	// not mistaken for named projections.
+	if query.aggregate == nil && query.join == nil && query.pattern == nil && query.rowRecog == nil && query.trigger == nil && len(query.selections) > 0 {
+		transposeCount := 0
+		transposeIndex := -1
+		for index, selection := range query.selections {
+			if isTransposeExpression(selection.Expr) {
+				transposeCount++
+				transposeIndex = index
+			}
+		}
+		switch {
+		case transposeCount >= 2:
+			return fmt.Errorf("a column name must be supplied for all but one stream if multiple streams are selected via the stream.* notation")
+		case transposeCount == 1:
+			transpose := query.selections[transposeIndex]
+			if err := e.validateTransposeExpression(target, transpose.Expr, len(query.selections) > 1); err != nil {
+				return err
+			}
+			if len(query.selections) > 1 {
+				// Additional properties are routed only into a Map target
+				// whose container properties are untyped, mirroring Esper's
+				// auto-created Wrapper/Pair acceptance of named columns
+				// alongside a transpose payload.
+				if target.kind != SchemaMap || target.goType != nil {
+					return fmt.Errorf("cannot transpose additional properties in the select-clause to target event type %q with underlying type %s, the transpose function must occur alone in the select clause", target.Name(), transposeUnderlyingTypeName(target))
+				}
+			}
+		}
+	}
 	for index, selection := range selections {
+		if isTransposeExpression(selection.Expr) {
+			continue
+		}
 		if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
 			return fmt.Errorf("route projection %d requires a name and expression", index)
 		}
@@ -1385,6 +1424,121 @@ func (e *Environment) validateRoute(query Query) error {
 		}
 	}
 	return nil
+}
+
+// isTransposeExpression reports whether a selection is an insert-into
+// transpose projection. The runtime detects transpose purely from the
+// expression kind, so Build and the projection path share this single
+// predicate and a plan carries no additional transpose state.
+func isTransposeExpression(expression Expr) bool {
+	return expression != nil && expression.node() != nil && expression.node().kind == "transpose"
+}
+
+// transposeUnderlyingTypeName describes the routed target's underlying
+// representation for transpose error messages. It mirrors the Java
+// insertIntoTargetType.getUnderlyingEPType().getTypeName() spelling: an
+// Avro-backed target reports *esper.AvroRecord, a struct-backed target
+// reports its Go type, an object-array target reports []any, a JSON target
+// reports string, and a Map target reports map[string]any.
+func transposeUnderlyingTypeName(target Schema) string {
+	if target.kind == SchemaAvro {
+		return reflect.PointerTo(typeOf[AvroRecord]()).String()
+	}
+	if target.goType != nil {
+		return target.goType.String()
+	}
+	switch target.kind {
+	case SchemaObjectArray:
+		return typeOf[[]any]().String()
+	case SchemaJSON:
+		return typeOf[string]().String()
+	default:
+		return typeOf[map[string]any]().String()
+	}
+}
+
+// validateTransposeExpression freezes the transpose payload/target coercion
+// matrix at Build time. The transpose child expression is evaluated per event
+// and its dynamic value must be convertible to the target event's underlying
+// representation, mirroring SelectExprProcessorHelper's native-expression
+// coercion branches:
+//
+//   - struct/bean target: the payload must be assignable to the target Go
+//     type, directly or through a pointer element (CoerceNative);
+//   - Avro target: a map or *AvroRecord payload is field-coerced to the target
+//     schema (CoerceAvro; Go models the generic GenericData.Record as a map);
+//   - object-array target: an []any payload is coerced directly (CoerceOA);
+//   - JSON target: a string payload is parsed against the JSON schema
+//     (CoerceJson);
+//   - Map target: an untyped map payload is retained (CoerceMap);
+//   - anything else fails the expression-returned-value message, including a
+//     struct payload routed to a Map or Avro target other than the Wrapper
+//     props merge below.
+//
+// When the transpose coexists with named columns (withAdditionalProperties),
+// the target must be the Go model of an auto-created Esper Wrapper/Pair: a
+// Map target whose properties merge with the payload by name, so any payload
+// representation is accepted.
+//
+// A null payload (`transpose(null)`) is rejected like Java's null-type
+// message; a Transpose with no children is a single-parameter error which the
+// Go single-argument signature can only express as Transpose(nil).
+func (e *Environment) validateTransposeExpression(target Schema, expression Expr, withAdditionalProperties bool) error {
+	node := expression.node()
+	if node == nil {
+		return fmt.Errorf("esper: transpose function requires a single parameter expression")
+	}
+	if len(node.children) != 1 {
+		return fmt.Errorf("esper: transpose function requires a single parameter expression")
+	}
+	child := node.children[0]
+	if child != nil && child.kind == "null" {
+		return fmt.Errorf("cannot transpose a null-type value")
+	}
+	if withAdditionalProperties {
+		return nil
+	}
+	payloadType := node.children[0].typ
+	if payloadType != nil && payloadType.Kind() == reflect.Pointer {
+		payloadType = payloadType.Elem()
+	}
+	targetType := target.goType
+	if targetType != nil && targetType.Kind() == reflect.Pointer {
+		targetType = targetType.Elem()
+	}
+	switch target.kind {
+	case SchemaStruct:
+		if payloadType != nil && targetType != nil && (payloadType.AssignableTo(targetType) || payloadType.AssignableTo(reflect.PointerTo(targetType))) {
+			return nil
+		}
+	case SchemaAvro:
+		if payloadType == typeOf[map[string]any]() {
+			return nil
+		}
+		if payloadType != nil && (payloadType.AssignableTo(typeOf[AvroRecord]()) || payloadType.AssignableTo(reflect.PointerTo(typeOf[AvroRecord]()))) {
+			return nil
+		}
+	case SchemaObjectArray:
+		if payloadType == typeOf[[]any]() {
+			return nil
+		}
+	case SchemaJSON:
+		if payloadType == typeOf[string]() {
+			return nil
+		}
+	default:
+		if payloadType == nil || payloadType == typeOf[any]() || payloadType == typeOf[map[string]any]() {
+			return nil
+		}
+	}
+	return fmt.Errorf("expression-returned value of type %s cannot be converted to target event type %q with underlying type %s", expressionTypeName(payloadType), target.Name(), transposeUnderlyingTypeName(target))
+}
+
+func expressionTypeName(typ reflect.Type) string {
+	if typ == nil {
+		return "<null>"
+	}
+	return typ.String()
 }
 
 func (e *Environment) validateContext(definition ContextDefinition, node *streamNode) error {
@@ -3751,6 +3905,35 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 		}
 		return newProjectionResultSchema("result:"+query.name, fields, projectionSelections)
 	}
+	if query.routeTarget != "" && query.aggregate == nil && query.join == nil && query.pattern == nil && query.rowRecog == nil && query.trigger == nil && len(query.selections) > 0 {
+		hasTranspose := false
+		for _, selection := range query.selections {
+			if isTransposeExpression(selection.Expr) {
+				hasTranspose = true
+				break
+			}
+		}
+		if hasTranspose {
+			// A transpose route's projection is the routed target event itself,
+			// so the result schema is the target schema. The transpose payload
+			// expression and any companion properties still bind their fields
+			// against the source, so validate them here as the projection path
+			// would, then expose the target schema to the listener.
+			for _, selection := range query.selections {
+				if err := e.validateExprFields(query.input, selection.Expr); err != nil {
+					return Schema{}, err
+				}
+			}
+			target, ok := e.Schema(query.routeTarget)
+			if !ok {
+				return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("route target %q is not registered", query.routeTarget))
+			}
+			return target, nil
+		}
+	}
+	if err := validateTransposeSelectShape(query.selections); err != nil {
+		return Schema{}, err
+	}
 	if len(query.selections) == 0 {
 		return Schema{}, nil
 	}
@@ -3773,6 +3956,31 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 		fields = append(fields, FieldSpec{Name: selection.Name, Type: selection.Expr.Type()})
 	}
 	return newProjectionResultSchema("result:"+query.name, fields, query.selections)
+}
+
+// validateTransposeSelectShape rejects a top-level transpose selection whose
+// payload cannot be statically typed, mirroring Java's select-clause
+// validation in SelectExprProcessorHelper: transpose(null) produces the
+// null-type message and a transpose with an incomplete parameter list
+// produces the single-parameter message. Non-top-level transpose expressions
+// (for example inside an `is null` predicate in a where or select clause)
+// remain valid and are not inspected here; the insert-into route also
+// validates payload/target coercion separately in validateTransposeExpression.
+func validateTransposeSelectShape(selections []Selection) error {
+	for _, selection := range selections {
+		if !isTransposeExpression(selection.Expr) {
+			continue
+		}
+		node := selection.Expr.node()
+		if node == nil || len(node.children) != 1 {
+			return fmt.Errorf("esper: transpose function requires a single parameter expression")
+		}
+		child := node.children[0]
+		if child != nil && child.kind == "null" {
+			return fmt.Errorf("cannot transpose a null-type value")
+		}
+	}
+	return nil
 }
 
 func newProjectionResultSchema(name string, fields []FieldSpec, selections []Selection) (Schema, error) {

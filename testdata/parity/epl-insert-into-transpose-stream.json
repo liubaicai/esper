@@ -1,0 +1,55 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-insert-into-transpose-stream",
+ "steps": [
+  {"op": "case", "case": "create-schema-pojo"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+
+  {"op": "case", "case": "map"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+
+  {"op": "case", "case": "objectarray"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+
+  {"op": "case", "case": "avro"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+
+  {"op": "case", "case": "json"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+
+  {"op": "case", "case": "jsonprovided"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+
+  {"op": "case", "case": "function-to-stream-with-props"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "I1", "intPrimitive": 1}},
+
+  {"op": "case", "case": "function-to-stream"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "I1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "I2", "intPrimitive": 2}},
+
+  {"op": "case", "case": "single-column-insert"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "I1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "I2", "intPrimitive": 10}},
+
+  {"op": "case", "case": "event-join-map"},
+  {"op": "send", "eventType": "AEventTE", "payload": {"id": "A1"}},
+  {"op": "send", "eventType": "BEventTE", "payload": {"id": "B1"}},
+
+  {"op": "case", "case": "event-join-pojo"},
+  {"op": "send", "eventType": "SupportBean_A", "payload": {"id": "A1"}},
+  {"op": "send", "eventType": "SupportBean_B", "payload": {"id": "B1"}},
+
+  {"op": "case", "case": "pojo-property-stream"},
+  {"op": "send", "eventType": "SupportBeanComplexProps", "payload": {"nestedValue": "nestedValue", "nestedNestedValue": null}}
+ ]
+}

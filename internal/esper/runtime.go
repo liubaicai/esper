@@ -17917,6 +17917,17 @@ func projectResults(events []Event, query Query, resultSchema Schema, now time.T
 		return nil
 	}
 	events = orderEvents(events, query.orderBy, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)
+	if transpose, transposeIndex, ok := transposeRouteInfo(query); ok {
+		results := make([]Result, 0, len(events))
+		for _, event := range events {
+			projected, err := projectTransposeRoute(event, query, resultSchema, transpose, transposeIndex, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)
+			if err != nil || !projected.hasValue {
+				continue
+			}
+			results = append(results, resultEvent(projected.event))
+		}
+		return results
+	}
 	results := make([]Result, 0, len(events))
 	for _, event := range events {
 		if len(query.selections) == 0 {
@@ -17931,6 +17942,239 @@ func projectResults(events []Event, query Query, resultSchema Schema, now time.T
 		results = append(results, resultRowWithEvent(row, event))
 	}
 	return results
+}
+
+// transposeRouteInfo identifies a transpose insert-into route within a plain
+// record projection. It returns the transpose selection index and whether the
+// query is a transpose route. Consumers whose projection contains no transpose
+// (join or property routes) take the ordinary path.
+func transposeRouteInfo(query Query) (Selection, int, bool) {
+	if query.aggregate != nil || query.join != nil || query.pattern != nil || query.rowRecog != nil || query.trigger != nil || query.routeTarget == "" {
+		return Selection{}, -1, false
+	}
+	for index, selection := range query.selections {
+		if isTransposeExpression(selection.Expr) {
+			return selection, index, true
+		}
+	}
+	return Selection{}, -1, false
+}
+
+type transposedRouteProjection struct {
+	event    Event
+	hasValue bool
+}
+
+// projectTransposeRoute materializes one incoming event into the transpose
+// route target. The transpose payload is evaluated and lifted out of its
+// marker; additional properties are merged by name into a Map target. The
+// payload value is then coerced to the target's underlying representation and
+// wrapped in a target Event, mirroring SelectExprProcessorHelper's native
+// transpose coercion. A nil payload drops the row (no routed event).
+func projectTransposeRoute(event Event, query Query, resultSchema Schema, transpose Selection, transposeIndex int, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) (transposedRouteProjection, error) {
+	ctx := projectionEvalContext(event, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)
+	payloadValue := transpose.Expr.eval(ctx)
+	marker, ok := payloadValue.Any().(transposeValue)
+	if !ok || marker.value == nil {
+		return transposedRouteProjection{}, nil
+	}
+	// Additional named columns evaluate next to the transpose and merge into a
+	// Map target by property name, mirroring Esper's Wrapper/Pair shape for
+	// auto-created insert-into targets (approved: the Go API pre-registers the
+	// Map target). Values shadow neither each other; a duplicate name keeps the
+	// first (the transpose payload is authoritative for declared fields).
+	props := make(map[string]any, len(query.selections))
+	for index, selection := range query.selections {
+		if index == transposeIndex || isTransposeExpression(selection.Expr) {
+			continue
+		}
+		if strings.TrimSpace(selection.Name) == "" {
+			continue
+		}
+		props[selection.Name] = selection.Expr.eval(ctx).Any()
+	}
+	underlying, err := buildTransposeUnderlying(resultSchema, marker.value, props)
+	if err != nil {
+		return transposedRouteProjection{}, err
+	}
+	routed, err := newEvent(resultSchema, underlying, now)
+	if err != nil {
+		return transposedRouteProjection{}, err
+	}
+	return transposedRouteProjection{event: routed, hasValue: true}, nil
+}
+
+// buildTransposeUnderlying coerces a transpose payload into a target schema's
+// underlying value. The target kinds mirror the validated Build matrix: a
+// struct target takes the payload directly (native coercion), an object-array
+// target takes an []any payload, an Avro target accepts a map or *AvroRecord
+// payload, and a JSON target parses a string payload. A Map target with no
+// companion properties takes the map payload directly, while a Map target with
+// companion columns rebuilds a fresh map that interpolates the source payload
+// into the declared container, mirroring the Wrapper merge.
+func buildTransposeUnderlying(target Schema, payload any, props map[string]any) (any, error) {
+	if target.kind == SchemaObjectArray {
+		if values, ok := payload.([]any); ok {
+			if len(props) == 0 {
+				return values, nil
+			}
+			ordered := make([]any, len(target.fields))
+			copy(ordered, values)
+			for name, value := range props {
+				if index, exists := target.fieldIndex[name]; exists && index < len(ordered) {
+					ordered[index] = value
+				}
+			}
+			return ordered, nil
+		}
+		return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("object-array transpose payload is %T, want []any", payload))
+	}
+	if target.kind == SchemaAvro {
+		if record, ok := payload.(*AvroRecord); ok {
+			if len(props) == 0 {
+				return record, nil
+			}
+			merged := record.Clone()
+			for name, value := range props {
+				if err := merged.Set(name, value); err != nil {
+					return nil, err
+				}
+			}
+			return merged, nil
+		}
+		if values, ok := payload.(map[string]any); ok {
+			merged := make(map[string]any, len(values)+len(props))
+			for name, value := range values {
+				merged[name] = value
+			}
+			for name, value := range props {
+				merged[name] = value
+			}
+			return merged, nil
+		}
+		return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("avro transpose payload is %T, want map[string]any or *AvroRecord", payload))
+	}
+	if target.kind == SchemaJSON {
+		if text, ok := payload.(string); ok {
+			if len(props) > 0 {
+				return nil, NewError(ErrorTypeMismatch, "JSON transpose payload cannot combine with additional properties")
+			}
+			parsed, err := ParseJSONWithOptions(target, []byte(text), time.Time{})
+			if err != nil {
+				return nil, err
+			}
+			return parsed.Underlying(), nil
+		}
+		return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("json transpose payload is %T, want string", payload))
+	}
+	if target.goType != nil {
+		// Struct/bean or typed-JSON target: the payload is the native object.
+		if len(props) > 0 {
+			return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("transpose payload to struct target %q cannot combine with additional properties", target.Name()))
+		}
+		return payload, nil
+	}
+	// Map target (and untyped JSON/XML fall-throughs): retain the map payload
+	// or merge additional properties into a fresh map.
+	if values, ok := payload.(map[string]any); ok {
+		if len(props) == 0 {
+			return values, nil
+		}
+		merged := make(map[string]any, len(values)+len(props))
+		for name, value := range values {
+			merged[name] = value
+		}
+		for name, value := range props {
+			merged[name] = value
+		}
+		return projectMapToSchema(target, merged)
+	}
+	if len(props) > 0 {
+		// Wrapper merge: a bean/record transpose payload coexists with named
+		// columns only inside a Map target. Build restricted this shape to Map
+		// targets with an untyped container, so flatten the payload by property
+		// name and overlay the companion columns (Esper's auto-created
+		// Wrapper/Pair semantics).
+		values, ok := transposePayloadFields(payload)
+		if !ok {
+			return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("map transpose payload is %T, want map[string]any", payload))
+		}
+		for name, value := range props {
+			values[name] = value
+		}
+		return projectMapToSchema(target, values)
+	}
+	return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("map transpose payload is %T, want map[string]any", payload))
+}
+
+// transposePayloadFields flattens a transpose payload into its property map
+// for a Map/object-array/Avro Wrapper merge. Map and *AvroRecord payloads are
+// copied by name; a struct payload (the Go equivalent of an Esper bean
+// transpose into an auto-created Wrapper) is flattened through its esper tags
+// so the companion columns can coexist by property name.
+func transposePayloadFields(payload any) (map[string]any, bool) {
+	switch value := payload.(type) {
+	case map[string]any:
+		return cloneAnyMap(value), true
+	case *AvroRecord:
+		return value.AsMap(), true
+	case AvroRecord:
+		return value.AsMap(), true
+	}
+	reflected := reflect.ValueOf(payload)
+	for reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {
+		if reflected.IsNil() {
+			return nil, false
+		}
+		reflected = reflected.Elem()
+	}
+	if !reflected.IsValid() || reflected.Kind() != reflect.Struct {
+		return nil, false
+	}
+	result := make(map[string]any)
+	collectTransposeStructFields(reflected, result)
+	return result, true
+}
+
+func collectTransposeStructFields(value reflect.Value, out map[string]any) {
+	typ := value.Type()
+	for index := range typ.NumField() {
+		field := typ.Field(index)
+		if field.PkgPath != "" {
+			continue
+		}
+		tag := field.Tag.Get("esper")
+		if tag == "-" {
+			continue
+		}
+		name, _ := parseFieldTag(tag)
+		if name == "" {
+			name, _ = parseFieldTag(field.Tag.Get("json"))
+		}
+		if name == "-" {
+			continue
+		}
+		if name == "" {
+			name = field.Name
+		}
+		fieldValue := fieldValueInterface(value.Field(index))
+		if _, exists := out[name]; !exists {
+			out[name] = fieldValue
+		}
+	}
+}
+
+func fieldValueInterface(value reflect.Value) any {
+	if !value.IsValid() {
+		return nil
+	}
+	if (value.Kind() == reflect.Pointer || value.Kind() == reflect.Interface) && value.IsNil() {
+		return nil
+	}
+	if !value.CanInterface() {
+		return nil
+	}
+	return value.Interface()
 }
 
 func orderEvents(events []Event, keys []SortKey, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) []Event {

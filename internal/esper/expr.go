@@ -593,6 +593,39 @@ func EventValue[T any]() Expression[T] {
 	})
 }
 
+// transposeValue is the evaluation payload produced by a Transpose selection.
+// The transpose route materializes the marked value into the registered route
+// target schema during projection; the marker itself carries no environment or
+// schema reference so eval stays pure.
+type transposeValue struct {
+	value any
+}
+
+// Transpose marks a single expression result as the underlying event of an
+// insert-into route. It is the Go fluent counterpart of Esper's transpose()
+// select-clause function: the wrapped value becomes the routed event's
+// underlying object instead of being projected into named columns.
+//
+// The expression is valid only as the sole projection of an insert-into route
+// (or one transpose alongside non-transpose properties when the target event
+// type was auto-created as a Wrapper/Pair, which the Go API models as a
+// pre-registered Map target). These restrictions are enforced by Build; a
+// bare non-route Transpose evaluates to the wrapped value with no side effect,
+// mirroring Esper's treatment of transpose in a where-clause or as a non-top
+// level expression.
+func Transpose[T any](expression Expression[T]) Expression[Event] {
+	if expression == nil {
+		return makeExpr[Event]("transpose", "transpose(<nil>)", nil, func(EvalContext) Value {
+			return Present(transposeValue{value: nil})
+		})
+	}
+	return makeExpr[Event]("transpose", "transpose("+expression.Description()+")",
+		[]*exprNode{expression.node()},
+		func(ctx EvalContext) Value {
+			return Present(transposeValue{value: expression.eval(ctx).Any()})
+		})
+}
+
 // materializeEventValueAs maps a map-backed event onto T. This is the
 // window(*) counterpart of SendRecord's typed materialization: an aggregate
 // may retain map-represented events (matching Esper map event types) while a
