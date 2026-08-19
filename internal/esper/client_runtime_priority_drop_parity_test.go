@@ -108,6 +108,55 @@ func TestClientRuntimeNamedWindowDropParity(t *testing.T) {
 	insertClientRuntimePriorityWindow(t, engine, "E1", &got, 3, 2)
 }
 
+func TestClientRuntimeNamedWindowFilteredDropDoesNotBlockParity(t *testing.T) {
+	env, engine := newClientRuntimePriorityWindow(t)
+	var got []string
+	dropPlan, err := env.Build(OnRecord(FromNamedWindow(env, "MyWindow").Filter(
+		Equal[string](NamedWindowField[string]("symbol"), Literal("reject")),
+	)).SelectFromNamedWindow("MyWindow", Literal(true),
+		Alias("symbol", NamedWindowField[string]("symbol")),
+	).Query(StatementName("filtered-drop"), StatementPriority(10), StatementDrop()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dropDeployment, err := engine.Deploy(context.Background(), dropPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dropDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			got = append(got, "drop:"+result.Get("symbol").Any().(string))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	lowPlan, err := env.Build(OnRecord(FromNamedWindow(env, "MyWindow")).SelectFromNamedWindow("MyWindow", Literal(true),
+		Alias("symbol", NamedWindowField[string]("symbol")),
+	).Query(StatementName("low")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lowDeployment, err := engine.Deploy(context.Background(), lowPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := lowDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			got = append(got, "low:"+result.Get("symbol").Any().(string))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.SendEvent(context.Background(), runtimeTestTrade{Symbol: "accept"}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(got, []string{"low:accept"}) {
+		t.Fatalf("filtered drop output = %v, want [low:accept]", got)
+	}
+}
+
 func TestClientRuntimePriorityParity(t *testing.T) {
 	env, engine := newRuntimeTest(t)
 	var got []int

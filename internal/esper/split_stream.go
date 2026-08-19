@@ -377,7 +377,7 @@ func (s *Statement) deliverSplitStreamEvent(ctx context.Context, branch SplitStr
 	if err != nil {
 		return err
 	}
-	return s.engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, variables, s)
+	return s.engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, &variables, s)
 }
 
 func (s *Statement) splitStreamEvent(branch SplitStreamBranch, source Event, evaluation EvalContext, now time.Time) (Event, error) {

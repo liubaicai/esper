@@ -31827,6 +31827,61 @@
     "java-runtime-5d7bf128b2789f223a55",
     "java-runtime-6134b1502baf01472daf"
    ]
+  },
+  {
+   "id": "case.infra-nwtable-subquery-delete-aggregate",
+   "javaRuntimeIds": [
+    "java-runtime-0d6d178d950b8f02c75a",
+    "java-runtime-b3cb688e8cb105fa1cea",
+    "java-runtime-44eff67d7f2520f31f05",
+    "java-runtime-1d5e53c021e683fb3a59"
+   ],
+   "javaNames": [
+    "InfraSubqueryDeleteInsertReplace{namedWindow=true}",
+    "InfraSubqueryDeleteInsertReplace{namedWindow=false}",
+    "InfraUncorrelatedSubqueryAggregation{namedWindow=true}",
+    "InfraUncorrelatedSubqueryAggregation{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubquery.java"
+   ],
+   "goTests": [
+    "TestInfraNWTableSubqueryDeleteInsertReplaceParity",
+    "TestInfraNWTableSubqueryUncorrelatedAggregationParity"
+   ],
+   "tags": [
+    "correctness",
+    "query",
+    "subquery",
+    "named-window",
+    "table",
+    "delete",
+    "aggregate",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/infra-nwtable-subquery-delete-aggregate.json",
+    "testdata/parity/infra-nwtable-subquery-delete-aggregate.trace.json",
+    "testdata/parity/infra-nwtable-subquery-delete-aggregate.evidence.json",
+    "tools/java-oracle/InfraNWTableSubqueryDeleteAggregateScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-subquery-delete-aggregate.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0d6d178d950b8f02c75a",
+    "java-runtime-b3cb688e8cb105fa1cea",
+    "java-runtime-44eff67d7f2520f31f05",
+    "java-runtime-1d5e53c021e683fb3a59"
+   ]
   }
  ],
  "mappings": [
@@ -34183,6 +34238,10 @@
    "caseId": "case.epl-variable-onset-extended"
   },
   {
+   "capabilityId": "query.subquery-basic",
+   "caseId": "case.infra-nwtable-subquery-delete-aggregate"
+  },
+  {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-firstlastwindow"
   },
@@ -34239,26 +34298,26 @@
    "caseId": "case.infra-nwtable-subquery"
   }
  ],
- "summary": {
- "totalCases": 519,
- "totalCapabilities": 110,
- "inventoriedCases": 519,
- "implementedCases": 517,
- "differentialVerifiedCases": 118,
- "differentialVerifiedRuntimeIds": 362,
- "intentionallyDifferentCases": 18,
- "representativeVerifiedCases": 93,
- "nfrVerifiedCases": 0,
- "inventoriedCapabilities": 110,
- "implementedCapabilities": 109,
- "differentialVerifiedCapabilities": 14,
- "intentionallyDifferentCapabilities": 7,
- "representativeVerifiedCapabilities": 11,
- "nfrVerifiedCapabilities": 0,
- "runtimeAssociationCount": 3060,
- "referencedJavaRuntimeIds": 2894,
- "totalJavaRuntimeIds": 4136,
- "unreferencedJavaRuntimeIds": 1242,
+"summary": {
+"totalCases": 520,
+"totalCapabilities": 110,
+"inventoriedCases": 520,
+"implementedCases": 518,
+"differentialVerifiedCases": 119,
+"differentialVerifiedRuntimeIds": 366,
+"intentionallyDifferentCases": 18,
+"representativeVerifiedCases": 93,
+"nfrVerifiedCases": 0,
+"inventoriedCapabilities": 110,
+"implementedCapabilities": 109,
+"differentialVerifiedCapabilities": 14,
+"intentionallyDifferentCapabilities": 7,
+"representativeVerifiedCapabilities": 11,
+"nfrVerifiedCapabilities": 0,
+"runtimeAssociationCount": 3064,
+"referencedJavaRuntimeIds": 2898,
+"totalJavaRuntimeIds": 4136,
+"unreferencedJavaRuntimeIds": 1238,
  "representativeScenarioTotal": 93,
  "representativeScenarioPassing": 93
 }

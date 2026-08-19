@@ -173,9 +173,10 @@ type Stream[T any] struct {
 // RecordStream is the dynamic Row transition used by projections whose result
 // type is not known to a Go method receiver.
 type RecordStream struct {
-	env        *Environment
-	node       *streamNode
-	selections []Selection
+	env               *Environment
+	node              *streamNode
+	selections        []Selection
+	namedWindowDirect bool
 }
 
 type AggregateStream struct {
@@ -1142,9 +1143,7 @@ func (s Stream[T]) Window(window WindowSpec) Stream[T] {
 }
 
 // AsRecord exposes a typed stream through the dynamic RecordStream view while
-// preserving the same source graph. It is useful when a typed contained or
-// method source becomes the input of a subquery API whose result shape is
-// intentionally dynamic.
+// preserving the same source graph and direct named-window role.
 func (s Stream[T]) AsRecord() RecordStream {
 	return RecordStream{env: s.env, node: s.node}
 }
@@ -1268,9 +1267,8 @@ func (u UpdateStreamQuery) Query(options ...QueryOption) Query {
 func Select[T any](s Stream[T], selections ...Selection) RecordStream {
 	return RecordStream{env: s.env, node: s.node, selections: append([]Selection(nil), selections...)}
 }
-
 func (s RecordStream) Filter(predicate Expression[bool]) RecordStream {
-	return RecordStream{env: s.env, node: &streamNode{kind: streamFilter, input: s.node, predicate: predicate}, selections: append([]Selection(nil), s.selections...)}
+	return RecordStream{env: s.env, node: &streamNode{kind: streamFilter, input: s.node, predicate: predicate}, selections: append([]Selection(nil), s.selections...), namedWindowDirect: s.namedWindowDirect}
 }
 
 // Having applies a non-aggregated having predicate to an unaggregated query.
@@ -1278,7 +1276,7 @@ func (s RecordStream) Filter(predicate Expression[bool]) RecordStream {
 // filter, so the builder lowers it to the same filter semantics as Where.
 // Grouped and aggregate having remains available on AggregateStream.
 func (s RecordStream) Having(predicate Expression[bool]) RecordStream {
-	return RecordStream{env: s.env, node: &streamNode{kind: streamFilter, input: s.node, predicate: predicate}, selections: append([]Selection(nil), s.selections...)}
+	return RecordStream{env: s.env, node: &streamNode{kind: streamFilter, input: s.node, predicate: predicate}, selections: append([]Selection(nil), s.selections...), namedWindowDirect: s.namedWindowDirect}
 }
 
 // Select appends a typed projection to an untyped record source such as a
@@ -1287,15 +1285,27 @@ func (s RecordStream) Having(predicate Expression[bool]) RecordStream {
 func (s RecordStream) Select(selections ...Selection) RecordStream {
 	projected := append([]Selection(nil), s.selections...)
 	projected = append(projected, selections...)
-	return RecordStream{env: s.env, node: s.node, selections: projected}
+	return RecordStream{env: s.env, node: s.node, selections: projected, namedWindowDirect: s.namedWindowDirect}
 }
 
 func (s RecordStream) Window(window WindowSpec) RecordStream {
-	return RecordStream{env: s.env, node: &streamNode{kind: streamWindow, input: s.node, window: window}, selections: append([]Selection(nil), s.selections...)}
+	return RecordStream{env: s.env, node: &streamNode{kind: streamWindow, input: s.node, window: window}, selections: append([]Selection(nil), s.selections...), namedWindowDirect: s.namedWindowDirect}
 }
 
 func (s RecordStream) Query(options ...QueryOption) Query {
-	return newQuery(s.env, s.node, s.selections, options...)
+	query := newQuery(s.env, s.node, s.selections, options...)
+	query.namedWindowDirect = s.namedWindowDirect
+	return query
+}
+
+// CreateNamedWindowQuery marks this explicitly constructed named-window
+// statement as the direct tail-child equivalent of Esper's create-window
+// statement. Ordinary FromNamedWindow queries remain deferred consumers.
+// Build validates that the role is used only with a named-window source.
+func (s RecordStream) CreateNamedWindowQuery(options ...QueryOption) Query {
+	query := s.Query(options...)
+	query.namedWindowDirect = true
+	return query
 }
 
 // OnDemandStream is the fluent target-side view used to build a one-shot
@@ -2907,7 +2917,12 @@ func StatementPriority(priority int) QueryOption {
 // window delta. The drop statement's own listeners and routes still receive
 // its result. Use UpdateDrop for update-istream preprocessing.
 func StatementDrop() QueryOption {
-	return func(spec *querySpec) { spec.statementDrop = true }
+	return func(spec *querySpec) {
+		spec.statementDrop = true
+		if !spec.statementPrioritySet {
+			spec.statementPriority = 1
+		}
+	}
 }
 
 // DisallowSubscriber compiles a statement without the single-subscriber
@@ -3024,7 +3039,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, namedWindowDirect: false, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -3062,6 +3077,7 @@ type Query struct {
 	patternWhere               Expr
 	routeTarget                string
 	tableTarget                string
+	namedWindowDirect          bool
 	name                       string
 	statementUserObject        any
 	statementMetadata          statementMetadata
@@ -3295,6 +3311,9 @@ func appendQueryModifiers(parts []string, query Query) []string {
 	}
 	if query.statementDrop {
 		parts = append(parts, "statement-drop")
+	}
+	if query.namedWindowDirect {
+		parts = append(parts, "direct-named-window")
 	}
 	if query.subscriberDisallowed {
 		parts = append(parts, "subscriber-disallowed")

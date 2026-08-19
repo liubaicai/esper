@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -778,6 +779,246 @@ func TestFireAndForgetRouteIsExplicitAndPreservesProjectionOrder(t *testing.T) {
 	}
 	if len(routed) != 4 || routed[2].Get("price").Any() != 10.5 || routed[3].Get("price").Any() != 11.5 {
 		t.Fatalf("convenience FAF routed events = %#v", routed)
+	}
+}
+
+func TestFireAndForgetRouteListenerErrorStillDrainsQueuedRoute(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("value", typeOf[int64]())}
+	if _, err := RegisterMap(env, "FAFRouteErrorSource", fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "FAFRouteErrorTarget", fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "FAFRouteErrorFollow", fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFRouteErrorWindow", mustSchema(env, "FAFRouteErrorSource"), NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	routePlan, err := env.Build(FromNamedWindow(env, "FAFRouteErrorWindow").InsertInto(
+		"FAFRouteErrorTarget", StatementName("faf-route-error"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetPlan, err := env.Build(FromAny(env, "FAFRouteErrorTarget").Query(StatementName("faf-route-error-target")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	followPlan, err := env.Build(FromAny(env, "FAFRouteErrorFollow").Query(StatementName("faf-route-error-follow")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	followed := 0
+	followDeployment, err := engine.Deploy(ctx, followPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := followDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		followed += len(batch.New)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	targetDeployment, err := engine.Deploy(ctx, targetPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetStatement := targetDeployment.Statements()[0]
+	if _, err := targetStatement.Subscribe(func(ctx context.Context, _ ResultBatch) error {
+		return engine.Route(ctx, "FAFRouteErrorFollow", map[string]any{"value": int64(2)})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := targetStatement.Subscribe(func(_ context.Context, _ ResultBatch) error {
+		return NewError(ErrorState, "intentional FAF route listener failure")
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.InsertNamedWindow(ctx, "FAFRouteErrorWindow", map[string]any{"value": int64(1)}); err != nil {
+		t.Fatal(err)
+	}
+	result, err := engine.ExecuteFireAndForget(ctx, routePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = engine.RouteFireAndForget(ctx, routePlan, result)
+	if err == nil || !strings.Contains(err.Error(), "intentional FAF route listener failure") {
+		t.Fatalf("FAF route listener error = %v", err)
+	}
+	if followed != 1 {
+		t.Fatalf("queued FAF route count = %d, want 1", followed)
+	}
+}
+
+func TestFireAndForgetRouteDrainContinuesAfterRouteError(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("value", typeOf[int64]())}
+	for _, name := range []string{"DrainErrorSource", "DrainErrorInitial", "DrainErrorA", "DrainErrorB", "DrainErrorFollow"} {
+		if _, err := RegisterMap(env, name, fields); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sourceSchema, ok := env.Schema("DrainErrorSource")
+	if !ok {
+		t.Fatal("drain-error source schema missing")
+	}
+	if _, err := CreateNamedWindow(env, "DrainErrorWindow", sourceSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	routePlan, err := env.Build(FromNamedWindow(env, "DrainErrorWindow").InsertInto(
+		"DrainErrorInitial", StatementName("drain-error-route"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	followed := 0
+	for _, target := range []string{"DrainErrorA", "DrainErrorB", "DrainErrorFollow"} {
+		plan, buildErr := env.Build(FromAny(env, target).Query(StatementName("drain-error-" + target)))
+		if buildErr != nil {
+			t.Fatal(buildErr)
+		}
+		deployment, deployErr := engine.Deploy(ctx, plan)
+		if deployErr != nil {
+			t.Fatal(deployErr)
+		}
+		statement := deployment.Statements()[0]
+		switch target {
+		case "DrainErrorA":
+			if _, subscribeErr := statement.Subscribe(func(_ context.Context, _ ResultBatch) error {
+				return NewError(ErrorState, "drain A failure")
+			}); subscribeErr != nil {
+				t.Fatal(subscribeErr)
+			}
+		case "DrainErrorB":
+			if _, subscribeErr := statement.Subscribe(func(_ context.Context, batch ResultBatch) error {
+				followed += len(batch.New)
+				return nil
+			}); subscribeErr != nil {
+				t.Fatal(subscribeErr)
+			}
+		case "DrainErrorFollow":
+			if _, subscribeErr := statement.Subscribe(func(_ context.Context, batch ResultBatch) error {
+				followed += len(batch.New)
+				return nil
+			}); subscribeErr != nil {
+				t.Fatal(subscribeErr)
+			}
+		}
+	}
+	initialPlan, err := env.Build(FromAny(env, "DrainErrorInitial").Query(StatementName("drain-error-initial")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialDeployment, err := engine.Deploy(ctx, initialPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialStatement := initialDeployment.Statements()[0]
+	if _, err := initialStatement.Subscribe(func(ctx context.Context, _ ResultBatch) error {
+		if err := engine.Route(ctx, "DrainErrorA", map[string]any{"value": int64(2)}); err != nil {
+			return err
+		}
+		return engine.Route(ctx, "DrainErrorB", map[string]any{"value": int64(3)})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := initialStatement.Subscribe(func(_ context.Context, _ ResultBatch) error {
+		return NewError(ErrorState, "outer drain listener failure")
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.InsertNamedWindow(ctx, "DrainErrorWindow", map[string]any{"value": int64(1)}); err != nil {
+		t.Fatal(err)
+	}
+	result, err := engine.ExecuteFireAndForget(ctx, routePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = engine.RouteFireAndForget(ctx, routePlan, result)
+	if err == nil || !strings.Contains(err.Error(), "outer drain listener failure") || !strings.Contains(err.Error(), "drain A failure") {
+		t.Fatalf("route drain errors = %v", err)
+	}
+	if followed != 1 {
+		t.Fatalf("route after drained error = %d, want 1", followed)
+	}
+}
+
+func TestFireAndForgetRouteDrainIgnoresCancellationAfterAcceptance(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("value", typeOf[int64]())}
+	for _, name := range []string{"DrainCancelSource", "DrainCancelInitial", "DrainCancelFollow"} {
+		if _, err := RegisterMap(env, name, fields); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sourceSchema, ok := env.Schema("DrainCancelSource")
+	if !ok {
+		t.Fatal("drain-cancel source schema missing")
+	}
+	if _, err := CreateNamedWindow(env, "DrainCancelWindow", sourceSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	routePlan, err := env.Build(FromNamedWindow(env, "DrainCancelWindow").InsertInto(
+		"DrainCancelInitial", StatementName("drain-cancel-route"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	followPlan, err := env.Build(FromAny(env, "DrainCancelFollow").Query(StatementName("drain-cancel-follow")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	background := context.Background()
+	followed := 0
+	followDeployment, err := engine.Deploy(background, followPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := followDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		followed += len(batch.New)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	initialPlan, err := env.Build(FromAny(env, "DrainCancelInitial").Query(StatementName("drain-cancel-initial")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialDeployment, err := engine.Deploy(background, initialPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cancelCtx, cancel := context.WithCancel(background)
+	if _, err := initialDeployment.Statements()[0].Subscribe(func(ctx context.Context, _ ResultBatch) error {
+		if err := engine.Route(ctx, "DrainCancelFollow", map[string]any{"value": int64(2)}); err != nil {
+			return err
+		}
+		cancel()
+		return context.Canceled
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.InsertNamedWindow(background, "DrainCancelWindow", map[string]any{"value": int64(1)}); err != nil {
+		t.Fatal(err)
+	}
+	result, err := engine.ExecuteFireAndForget(background, routePlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = engine.RouteFireAndForget(cancelCtx, routePlan, result)
+	if err == nil || !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled route error = %v", err)
+	}
+	if followed != 1 {
+		t.Fatalf("route after accepted cancellation = %d, want 1", followed)
 	}
 }
 

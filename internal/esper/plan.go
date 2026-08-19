@@ -566,7 +566,18 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 			return Plan{}, NewError(ErrorInvalidRule, "pattern consumption policies are not supported with context, joins or actions")
 		}
 	}
-	if query.onDemand != nil {
+	if query.namedWindowDirect {
+		if query.input == nil || query.aggregate != nil || query.join != nil || query.pattern != nil || query.rowRecog != nil || query.trigger != nil || query.contextName != "" || query.tableTarget != "" || query.routeTarget != "" {
+			return Plan{}, NewError(ErrorInvalidRule, "direct named-window query requires a plain named-window source")
+		}
+		base, sourceErr := sourceNode(query.input)
+		if sourceErr != nil || base == nil || base.kind != streamNamedWindow {
+			return Plan{}, NewError(ErrorInvalidRule, "direct named-window query requires a named-window source")
+		}
+		if err := e.validateNode(query.input); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "direct named-window query", err)
+		}
+	} else if query.onDemand != nil {
 		if err := e.validateOnDemand(query); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "on-demand", err)
 		}

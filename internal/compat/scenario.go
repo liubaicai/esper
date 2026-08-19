@@ -137,7 +137,7 @@ type TraceRecord struct {
 	Case       string            `json:"case,omitempty"`
 	Operation  string            `json:"operation"`
 	Statement  string            `json:"statement,omitempty"`
-	Sequence   uint64            `json:"sequence,omitempty"`
+	Sequence   uint64            `json:"sequence"`
 	Time       string            `json:"time,omitempty"`
 	New        []ResultRecord    `json:"new,omitempty"`
 	Old        []ResultRecord    `json:"old,omitempty"`

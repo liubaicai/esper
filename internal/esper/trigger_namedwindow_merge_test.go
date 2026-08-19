@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -915,5 +916,89 @@ func TestNamedWindowMergeTriggeredByNamedWindowDispatchMatchesEsper(t *testing.T
 	}
 	if len(sideStream) != 2 || sideStream[0].Get("c0").Any() != "E1" || sideStream[1].Get("c0").Any() != "E2" || sideStream[0].Get("c1").Any() != true || sideStream[1].Get("c1").Any() != true {
 		t.Fatalf("named-window insert-stream-only side stream = %#v", sideStream)
+	}
+}
+
+// TestNamedWindowConsumerCallbackDrainsNestedNamedWindowWave verifies that a
+// consumer-triggered named-window chain drains to a fixed point before an
+// ordinary routed event is processed.
+func TestNamedWindowConsumerCallbackDrainsNestedNamedWindowWave(t *testing.T) {
+	env := NewEnvironment()
+	fields := []FieldSpec{FieldDef("id", reflect.TypeOf(int(0)))}
+	for _, name := range []string{"NamedWindowCallbackSource", "NamedWindowCallbackMiddle", "NamedWindowCallbackTarget"} {
+		if _, err := RegisterMap(env, name, fields); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := CreateNamedWindow(env, name, mustSchema(env, name), NamedWindowRetention(KeepAll())); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := RegisterMap(env, "NamedWindowCallbackOrdinary", fields); err != nil {
+		t.Fatal(err)
+	}
+
+	source := FromNamedWindow(env, "NamedWindowCallbackSource")
+	sourceToMiddle, err := env.Build(OnRecord(source).InsertIntoNamedWindow(
+		"NamedWindowCallbackMiddle",
+		SetColumn("id", Field[any, int]("id")),
+	).Query(StatementName("named-window-callback-source-middle")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	middleToTarget, err := env.Build(OnRecord(FromNamedWindow(env, "NamedWindowCallbackMiddle")).InsertIntoNamedWindow(
+		"NamedWindowCallbackTarget",
+		SetColumn("id", Field[any, int]("id")),
+	).Query(StatementName("named-window-callback-middle-target")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceToOrdinary, err := env.Build(source.InsertInto(
+		"NamedWindowCallbackOrdinary", StatementName("named-window-callback-source-ordinary"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetConsumer, err := env.Build(FromNamedWindow(env, "NamedWindowCallbackTarget").Query(StatementName("named-window-callback-target-consumer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ordinaryConsumer, err := env.Build(FromAny(env, "NamedWindowCallbackOrdinary").Query(StatementName("named-window-callback-ordinary-consumer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	deployments := make([]*Deployment, 0, 5)
+	for _, plan := range []Plan{sourceToMiddle, middleToTarget, sourceToOrdinary, targetConsumer, ordinaryConsumer} {
+		deployment, deployErr := engine.Deploy(context.Background(), plan)
+		if deployErr != nil {
+			t.Fatal(deployErr)
+		}
+		deployments = append(deployments, deployment)
+	}
+	var order []string
+	if _, err := deployments[3].Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) != 1 {
+			return fmt.Errorf("target callback batch = %#v", batch)
+		}
+		order = append(order, "target-consumer")
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := deployments[4].Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) != 1 {
+			return fmt.Errorf("ordinary callback batch = %#v", batch)
+		}
+		order = append(order, "ordinary-consumer")
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.InsertNamedWindow(context.Background(), "NamedWindowCallbackSource", map[string]any{"id": 1}); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(order, []string{"target-consumer", "ordinary-consumer"}) {
+		t.Fatalf("nested named-window callback order = %#v", order)
 	}
 }

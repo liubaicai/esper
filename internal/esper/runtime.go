@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -343,8 +344,15 @@ type Engine struct {
 	dataflows                          map[*DataflowInstance]struct{}
 	savedDataflowInstances             map[string]*DataflowInstance
 	pendingStatementDispatches         []statementDispatch
+	pendingDirectNamedWindowDispatches []statementDispatch
 	pendingNamedWindowDispatches       []namedWindowDispatch
+	pendingNamedWindowConsumerDeltas   []namedWindowConsumerDelta
+	pendingFrontRoutedEvents           []routedEvent
 	pendingRoutedEvents                []routedEvent
+	pendingExternalRoutes              []externalRoute
+	dispatching                        bool
+	dispatchDepth                      int
+	drainingExternalRoutes             bool
 	closed                             bool
 	nextID                             uint64
 	inboundPool                        *asyncTaskPool
@@ -1464,7 +1472,7 @@ func (e *Engine) InsertNamedWindow(ctx context.Context, name string, underlying 
 	return e.InsertNamedWindowInModule(ctx, "", name, underlying)
 }
 
-func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name string, underlying any) error {
+func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name string, underlying any) (err error) {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
@@ -1476,6 +1484,15 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 		e.mu.Unlock()
 		return NewError(ErrorState, "engine is closed")
 	}
+	outerDispatch := e.dispatchDepth == 0 && !e.drainingExternalRoutes
+	if outerDispatch {
+		e.pendingExternalRoutes = nil
+	}
+	e.dispatchDepth++
+	e.dispatching = true
+	defer func() {
+		e.finishDispatchLifecycle(ctx, outerDispatch, &err)
+	}()
 	window, ok := e.ensureNamedWindowLockedInModule(moduleName, name)
 	if !ok {
 		e.mu.Unlock()
@@ -1485,7 +1502,10 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 	e.refreshVariablesLocked()
 	variables := cloneValues(e.variables)
 	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
@@ -1497,45 +1517,26 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 		e.mu.Unlock()
 		return err
 	}
-	e.recordNamedWindowMetricInputLocked(window, delta)
-	statements := e.dispatchStatementsLocked()
-	dispatches := make([]statementDispatch, 0, len(statements))
-	for _, statement := range statements {
-		if !statementConsumesNamedWindow(statement.plan.query, window) {
-			continue
-		}
-		batch, changed, processErr := e.processNamedWindowWithMetricsLocked(ctx, statement, now, window, delta, variables)
-		if processErr != nil {
-			e.mu.Unlock()
-			return processErr
-		}
-		if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
-			e.mu.Unlock()
-			return err
-		}
-		if changed {
-			dispatches = append(dispatches, statementDispatch{statement: statement, batch: batch})
-			if routeErr := e.queueStatementRoutesLocked(statement, batch, now); routeErr != nil {
-				e.mu.Unlock()
-				return routeErr
-			}
-			if statement.plan.query.statementDrop {
-				break
-			}
-		}
+	if err := e.queueNamedWindowDeltaLocked(ctx, now, window, delta, &variables, nil); err != nil {
+		e.mu.Unlock()
+		return err
 	}
+	dispatches := make([]statementDispatch, 0)
 	processedRoutes := 0
 	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, nil, nil, &processedRoutes); err != nil {
 		e.mu.Unlock()
 		return err
 	}
 	dispatches = append(dispatches, e.pendingStatementDispatches...)
+	e.pendingStatementDispatches = nil
 	nestedNamedWindowDispatches := append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...)
 	variableChanges := e.takeVariableChangesLocked()
 	contextEvents := e.takeContextEventsLocked()
 	auditRecords, auditListeners := e.takeAuditDispatchLocked()
-	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.mu.Unlock()
 	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
@@ -1553,7 +1554,7 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 			return err
 		}
 	}
-	return window.dispatch(ctx, delta)
+	return nil
 }
 
 func cloneValues(values map[string]Value) map[string]Value {
@@ -3062,7 +3063,7 @@ func (e *Engine) seedNamedWindowConsumerLocked(ctx context.Context, statement *S
 		return nil
 	}
 	query := statement.plan.query
-	if query.trigger != nil || query.contextName != "" || query.pattern != nil || query.rowRecog != nil {
+	if query.namedWindowDirect || query.trigger != nil || query.contextName != "" || query.pattern != nil || query.rowRecog != nil {
 		return nil
 	}
 	var sources []*streamNode
@@ -3558,8 +3559,8 @@ func (e *Engine) SetUnmatchedListener(listener UnmatchedListener) {
 	e.mu.Unlock()
 }
 
-func (e *Engine) send(ctx context.Context, eventType string, underlying any, jsonRaw any) error {
-	if err := contextErr(ctx); err != nil {
+func (e *Engine) send(ctx context.Context, eventType string, underlying any, jsonRaw any) (err error) {
+	if err = contextErr(ctx); err != nil {
 		return err
 	}
 	if e == nil || e.env == nil {
@@ -3574,6 +3575,15 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		e.mu.Unlock()
 		return NewError(ErrorState, "engine is closed")
 	}
+	outerDispatch := e.dispatchDepth == 0 && !e.drainingExternalRoutes
+	if outerDispatch {
+		e.pendingExternalRoutes = nil
+	}
+	e.dispatchDepth++
+	e.dispatching = true
+	defer func() {
+		e.finishDispatchLifecycle(ctx, outerDispatch, &err)
+	}()
 	now := e.clock.Now()
 	if schema.Kind() == SchemaVariant {
 		routed, ok := underlying.(Event)
@@ -3599,7 +3609,10 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	e.refreshVariablesLocked()
 	variables := cloneValues(e.variables)
 	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
@@ -3612,7 +3625,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	unmatchedEvents := make([]Event, 0, 1)
 	processedRoutes := 0
 	for len(routedQueue) > 0 {
-		if err := contextErr(ctx); err != nil {
+		if err = contextErr(ctx); err != nil {
 			e.mu.Unlock()
 			return err
 		}
@@ -3634,10 +3647,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 				e.mu.Unlock()
 				return processErr
 			}
-			if accepted {
-				matched = true
-			}
-			if changed {
+			if accepted || changed {
 				matched = true
 			}
 			if replaced, replacedOK := statement.takeReplacedEvent(); replacedOK {
@@ -3646,22 +3656,22 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 			if statement.takeDroppedEvent() {
 				break
 			}
-			if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
+			if err = e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
 				e.mu.Unlock()
 				return err
 			}
 			if changed {
 				dispatches = append(dispatches, statementDispatch{statement: statement, batch: batch})
-				if routeErr := e.queueStatementRoutesLocked(statement, batch, now); routeErr != nil {
+				if err = e.queueStatementRoutesLocked(statement, batch, now); err != nil {
 					e.mu.Unlock()
-					return routeErr
+					return err
 				}
 				if statement.plan.query.statementDrop {
 					break
 				}
 			}
 		}
-		if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, &unmatchedEvents, &processedRoutes); err != nil {
+		if err = e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, &unmatchedEvents, &processedRoutes); err != nil {
 			e.mu.Unlock()
 			return err
 		}
@@ -3675,15 +3685,18 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	unmatchedListener := e.unmatchedListener
 	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.mu.Unlock()
-	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
+	if err = dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
 		return err
 	}
 	if unmatchedListener != nil {
 		for _, unmatched := range unmatchedEvents {
-			if err := unmatchedListener(ctx, unmatched); err != nil {
+			if err = unmatchedListener(ctx, unmatched); err != nil {
 				return fmt.Errorf("esper: unmatched listener for %q: %w", unmatched.TypeName(), err)
 			}
 		}
@@ -3692,16 +3705,16 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	e.dispatchContextEvents(contextEvents)
 	e.dispatchMatchRecognizeStateLimitEvents()
 	e.dispatchPatternSubexpressionLimitEvents()
-	if err := dispatchAll(ctx, dispatches); err != nil {
+	if err = dispatchAll(ctx, dispatches); err != nil {
 		return err
 	}
 	for _, dispatch := range nestedNamedWindowDispatches {
-		if err := dispatch.window.dispatch(ctx, dispatch.delta); err != nil {
+		if err = dispatch.window.dispatch(ctx, dispatch.delta); err != nil {
 			return err
 		}
 	}
 	for _, processed := range processedEvents {
-		if err := e.dispatchDataflowEvent(ctx, processed); err != nil {
+		if err = e.dispatchDataflowEvent(ctx, processed); err != nil {
 			return err
 		}
 	}
@@ -3883,7 +3896,88 @@ func (e *Engine) SendObjectArray(ctx context.Context, eventType string, values [
 }
 
 func (e *Engine) Route(ctx context.Context, eventType string, underlying any) error {
-	return e.Send(ctx, eventType, underlying)
+	if err := contextErr(ctx); err != nil {
+		return err
+	}
+	if e == nil || e.env == nil {
+		return NewError(ErrorDependency, "engine has no environment")
+	}
+	if _, ok := e.env.Schema(eventType); !ok {
+		return NewError(ErrorUnknownName, fmt.Sprintf("event type %q is not registered", eventType))
+	}
+	e.mu.Lock()
+	if e.dispatching {
+		e.pendingExternalRoutes = append(e.pendingExternalRoutes, externalRoute{eventType: eventType, underlying: underlying})
+		e.mu.Unlock()
+		return nil
+	}
+	e.mu.Unlock()
+	return e.send(ctx, eventType, underlying, nil)
+}
+
+func (e *Engine) finishExternalRoutes(ctx context.Context) error {
+	if e == nil {
+		return nil
+	}
+	e.mu.Lock()
+	if e.drainingExternalRoutes {
+		e.mu.Unlock()
+		return nil
+	}
+	e.drainingExternalRoutes = true
+	e.mu.Unlock()
+	// A route accepted while dispatching is committed work. Preserve context
+	// values for the routed callbacks, but do not let cancellation discard the
+	// accepted FIFO queue before it has been attempted.
+	drainCtx := context.Background()
+	if ctx != nil {
+		drainCtx = context.WithoutCancel(ctx)
+	}
+	var routeErrors []error
+	defer func() {
+		e.mu.Lock()
+		e.drainingExternalRoutes = false
+		e.pendingExternalRoutes = nil
+		e.dispatching = false
+		e.mu.Unlock()
+	}()
+	for {
+		e.mu.Lock()
+		if len(e.pendingExternalRoutes) == 0 {
+			e.dispatching = false
+			e.mu.Unlock()
+			return errors.Join(routeErrors...)
+		}
+		route := e.pendingExternalRoutes[0]
+		e.pendingExternalRoutes = e.pendingExternalRoutes[1:]
+		e.dispatching = false
+		e.mu.Unlock()
+		if err := e.send(drainCtx, route.eventType, route.underlying, nil); err != nil {
+			routeErrors = append(routeErrors, err)
+		}
+	}
+}
+
+func (e *Engine) finishDispatchLifecycle(ctx context.Context, outerDispatch bool, dispatchErr *error) {
+	var routeErr error
+	if outerDispatch {
+		routeErr = e.finishExternalRoutes(ctx)
+	}
+	e.mu.Lock()
+	e.dispatchDepth--
+	if e.dispatchDepth == 0 && !e.drainingExternalRoutes {
+		e.dispatching = false
+		e.pendingExternalRoutes = nil
+	}
+	e.mu.Unlock()
+	if dispatchErr == nil {
+		return
+	}
+	if *dispatchErr != nil && routeErr != nil {
+		*dispatchErr = errors.Join(*dispatchErr, routeErr)
+	} else if *dispatchErr == nil {
+		*dispatchErr = routeErr
+	}
 }
 
 // StatementSchedule identifies the nearest pending engine-clock callback for
@@ -4013,7 +4107,7 @@ func (e *Engine) AdvanceTime(ctx context.Context, at time.Time) error {
 	return e.advanceTime(ctx, at, false)
 }
 
-func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedules bool) error {
+func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedules bool) (err error) {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
@@ -4025,6 +4119,15 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 		e.mu.Unlock()
 		return NewError(ErrorState, "engine is closed")
 	}
+	outerDispatch := e.dispatchDepth == 0 && !e.drainingExternalRoutes
+	if outerDispatch {
+		e.pendingExternalRoutes = nil
+	}
+	e.dispatchDepth++
+	e.dispatching = true
+	defer func() {
+		e.finishDispatchLifecycle(ctx, outerDispatch, &err)
+	}()
 	if err := e.clock.Advance(at); err != nil {
 		e.mu.Unlock()
 		return err
@@ -4038,7 +4141,10 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 		}
 	}
 	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
@@ -4046,35 +4152,12 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	e.pendingPatternSubexpressionLimits = nil
 	e.pendingAuditRecords = nil
 	dispatches := make([]statementDispatch, 0, len(statements))
-	namedWindowDispatches := make([]namedWindowDispatch, 0, len(e.namedWindows))
 	for _, name := range sortedNamedWindowNames(e.namedWindows) {
 		window := e.namedWindows[name]
 		if delta := window.expire(at); !delta.empty() {
-			e.recordNamedWindowMetricInputLocked(window, delta)
-			namedWindowDispatches = append(namedWindowDispatches, namedWindowDispatch{window: window, delta: delta})
-			for _, statement := range statements {
-				if !statementConsumesNamedWindow(statement.plan.query, window) {
-					continue
-				}
-				batch, changed, processErr := e.processNamedWindowWithMetricsLocked(ctx, statement, at, window, delta, variables)
-				if processErr != nil {
-					e.mu.Unlock()
-					return processErr
-				}
-				if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
-					e.mu.Unlock()
-					return err
-				}
-				if changed {
-					dispatches = append(dispatches, statementDispatch{statement: statement, batch: batch})
-					if routeErr := e.queueStatementRoutesLocked(statement, batch, at); routeErr != nil {
-						e.mu.Unlock()
-						return routeErr
-					}
-					if statement.plan.query.statementDrop {
-						break
-					}
-				}
+			if err := e.queueNamedWindowDeltaLocked(ctx, at, window, delta, &variables, nil); err != nil {
+				e.mu.Unlock()
+				return err
 			}
 		}
 	}
@@ -4101,12 +4184,15 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 		return err
 	}
 	dispatches = append(dispatches, e.pendingStatementDispatches...)
-	namedWindowDispatches = append(namedWindowDispatches, e.pendingNamedWindowDispatches...)
+	namedWindowDispatches := append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...)
 	variableChanges := e.takeVariableChangesLocked()
 	contextEvents := e.takeContextEventsLocked()
 	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	dataflows := make([]*DataflowInstance, 0, len(e.dataflows))
 	for instance := range e.dataflows {
@@ -4146,11 +4232,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	return nil
 }
 
-// orderUpdateStatementsFirst moves update-istream statements ahead of all
-// other statements for one event dispatch cycle, keeping deployment order
-// within each group. Esper applies update-istream as InternalEventRouter
-// preprocessing when the event enters the stream, so consumers observe the
-// updated event even when the update statement was deployed after them.
+// orderUpdateStatementsFirst moves update-istream entries ahead of other statements.
 func orderUpdateStatementsFirst(statements []*Statement) []*Statement {
 	hasUpdate := false
 	for _, statement := range statements {
@@ -4290,7 +4372,13 @@ func (e *Engine) dispatchDataflowEvent(ctx context.Context, event Event) error {
 			return instance.completeDataflowFailure(err)
 		}
 	}
+
 	return nil
+}
+
+type externalRoute struct {
+	eventType  string
+	underlying any
 }
 
 type statementDispatch struct {
@@ -4302,51 +4390,214 @@ type namedWindowDispatch struct {
 	window *NamedWindow
 	delta  NamedWindowDelta
 }
+type namedWindowConsumerDelta struct {
+	window *NamedWindow
+	delta  NamedWindowDelta
+	owner  *Statement
+}
+
+func cloneNamedWindowDelta(delta NamedWindowDelta) NamedWindowDelta {
+	return NamedWindowDelta{
+		New:      append([]Event(nil), delta.New...),
+		Old:      append([]Event(nil), delta.Old...),
+		Time:     delta.Time,
+		External: delta.External,
+	}
+}
+
+func cloneNamedWindowConsumerDeltas(source []namedWindowConsumerDelta) []namedWindowConsumerDelta {
+	if len(source) == 0 {
+		return nil
+	}
+	result := make([]namedWindowConsumerDelta, len(source))
+	for index, item := range source {
+		result[index] = item
+		result[index].delta = cloneNamedWindowDelta(item.delta)
+	}
+	return result
+}
+
+func (e *Engine) drainPendingStatementDispatchesLocked(dispatches *[]statementDispatch) {
+	if e == nil || dispatches == nil || len(e.pendingStatementDispatches) == 0 {
+		return
+	}
+	*dispatches = append(*dispatches, e.pendingStatementDispatches...)
+	e.pendingStatementDispatches = nil
+}
+
+func (e *Engine) drainPendingDirectNamedWindowDispatchesLocked(dispatches *[]statementDispatch) {
+	if e == nil || dispatches == nil || len(e.pendingDirectNamedWindowDispatches) == 0 {
+		return
+	}
+	*dispatches = append(*dispatches, e.pendingDirectNamedWindowDispatches...)
+	e.pendingDirectNamedWindowDispatches = nil
+}
+func (e *Engine) directNamedWindowStatementsLocked(window *NamedWindow) []*Statement {
+	if e == nil || window == nil {
+		return nil
+	}
+	result := make([]*Statement, 0, 1)
+	for _, statement := range e.dispatchStatementsLocked() {
+		if statement == nil || !statement.plan.query.namedWindowDirect || !statementConsumesNamedWindow(statement.plan.query, window) {
+			continue
+		}
+		result = append(result, statement)
+	}
+	return result
+}
+
+func (e *Engine) queueDirectNamedWindowDispatchesLocked(ctx context.Context, now time.Time, window *NamedWindow, delta NamedWindowDelta, variables *map[string]Value) error {
+	if variables == nil {
+		empty := make(map[string]Value)
+		variables = &empty
+	}
+	for _, statement := range e.directNamedWindowStatementsLocked(window) {
+		batch, changed, err := e.processNamedWindowWithMetricsLocked(ctx, statement, now, window, delta, *variables)
+		if err != nil {
+			return err
+		}
+		if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, variables); err != nil {
+			return err
+		}
+		if changed {
+			e.pendingDirectNamedWindowDispatches = append(e.pendingDirectNamedWindowDispatches, statementDispatch{statement: statement, batch: batch})
+		}
+	}
+	return nil
+}
+
+func namedWindowDeltaMatchesStatementFilter(statement *Statement, delta NamedWindowDelta, now time.Time, variables map[string]Value) bool {
+	if statement == nil {
+		return false
+	}
+	for _, event := range delta.New {
+		if statement.matchesEventFilter(event, now, variables) {
+			return true
+		}
+	}
+	for _, event := range delta.Old {
+		if statement.matchesEventFilter(event, now, variables) {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *Engine) flushNamedWindowConsumerWaveLocked(ctx context.Context, now time.Time, variables *map[string]Value, dispatches *[]statementDispatch) error {
+	if e == nil || variables == nil || dispatches == nil {
+		return nil
+	}
+	statements := e.dispatchStatementsLocked()
+	for len(e.pendingNamedWindowConsumerDeltas) > 0 {
+		raw := append([]namedWindowConsumerDelta(nil), e.pendingNamedWindowConsumerDeltas...)
+		e.pendingNamedWindowConsumerDeltas = nil
+
+		// statementDrop is a preemption barrier for the complete dispatch
+		// batch. Compute it before aggregating raw deltas so later mutations in
+		// this same wave cannot restart lower-priority consumers.
+		dropBarrier := len(statements)
+		for index, statement := range statements {
+			if statement == nil || !statement.plan.query.statementDrop {
+				continue
+			}
+			for _, item := range raw {
+				if item.window == nil || item.delta.empty() || item.owner == statement || !statementConsumesNamedWindow(statement.plan.query, item.window) {
+					continue
+				}
+				if namedWindowDeltaMatchesStatementFilter(statement, item.delta, now, *variables) {
+					dropBarrier = index
+					break
+				}
+			}
+			if dropBarrier != len(statements) {
+				break
+			}
+		}
+
+		type consumerWave struct {
+			window    *NamedWindow
+			statement *Statement
+			delta     NamedWindowDelta
+		}
+		waves := make([]consumerWave, 0, len(raw))
+		for _, item := range raw {
+			if item.window == nil || item.delta.empty() {
+				continue
+			}
+			for index, statement := range statements {
+				if index > dropBarrier {
+					break
+				}
+				if statement == item.owner || statement.plan.query.namedWindowDirect || !statementConsumesNamedWindow(statement.plan.query, item.window) {
+					continue
+				}
+				found := -1
+				for waveIndex := range waves {
+					if waves[waveIndex].window == item.window && waves[waveIndex].statement == statement {
+						found = waveIndex
+						break
+					}
+				}
+				if found < 0 {
+					waves = append(waves, consumerWave{window: item.window, statement: statement, delta: cloneNamedWindowDelta(item.delta)})
+				} else {
+					waves[found].delta.New = append(waves[found].delta.New, item.delta.New...)
+					waves[found].delta.Old = append(waves[found].delta.Old, item.delta.Old...)
+					waves[found].delta.External = waves[found].delta.External || item.delta.External
+					waves[found].delta.Time = item.delta.Time
+				}
+			}
+		}
+		for _, wave := range waves {
+			batch, changed, err := e.processNamedWindowWithMetricsLocked(ctx, wave.statement, now, wave.window, wave.delta, *variables)
+			if err != nil {
+				return err
+			}
+			if err := e.applyStatementOutputAssignmentsLocked(ctx, wave.statement, variables); err != nil {
+				return err
+			}
+			if !changed {
+				continue
+			}
+			*dispatches = append(*dispatches, statementDispatch{statement: wave.statement, batch: batch})
+			if err := e.queueStatementRoutesLocked(wave.statement, batch, now); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// routedEvent pairs a routed insert-into event with its event-precedence
 
 // routedEvent pairs a routed insert-into event with its event-precedence
 // value. Higher precedence values are processed first; events with equal
-// precedence maintain FIFO order within the same route cycle. A non-nil
-// namedWindow identifies a target whose insertion is committed by the pending
-// route processor after precedence ordering is resolved.
+// precedence maintain FIFO order within their queue. Named Window routes are
+// front work and therefore drain before ordinary back-queue routes.
 type routedEvent struct {
 	event       Event
 	precedence  int
 	hasPrec     bool
+	front       bool
 	namedWindow *NamedWindow
 	owner       *Statement
 }
 
-// queueNamedWindowDeltaLocked applies a state mutation to all statements that
-// consume named windows while the engine's event transaction is still under
-// its lock. Listener delivery is deferred until the caller releases the lock,
-// matching the ordering used by InsertNamedWindow and AdvanceTime.
-func (e *Engine) queueNamedWindowDeltaLocked(ctx context.Context, now time.Time, window *NamedWindow, delta NamedWindowDelta, variables map[string]Value, owner *Statement) error {
+// queueNamedWindowDeltaLocked records one raw mutation boundary. Direct
+// create-window statements are fed separately from ordinary deferred consumers.
+func (e *Engine) queueNamedWindowDeltaLocked(ctx context.Context, now time.Time, window *NamedWindow, delta NamedWindowDelta, variables *map[string]Value, owner *Statement) error {
 	if e == nil || window == nil || delta.empty() {
 		return nil
 	}
 	e.recordNamedWindowMetricInputLocked(window, delta)
-	statements := e.dispatchStatementsLocked()
-	for _, statement := range statements {
-		if statement == owner || !statementConsumesNamedWindow(statement.plan.query, window) {
-			continue
-		}
-		batch, changed, err := e.processNamedWindowWithMetricsLocked(ctx, statement, now, window, delta, variables)
-		if err != nil {
-			return err
-		}
-		if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
-			return err
-		}
-		if changed {
-			e.pendingStatementDispatches = append(e.pendingStatementDispatches, statementDispatch{statement: statement, batch: batch})
-			if err := e.queueStatementRoutesLocked(statement, batch, now); err != nil {
-				return err
-			}
-			if statement.plan.query.statementDrop {
-				break
-			}
-		}
+	if err := e.queueDirectNamedWindowDispatchesLocked(ctx, now, window, delta, variables); err != nil {
+		return err
 	}
+	e.pendingNamedWindowConsumerDeltas = append(e.pendingNamedWindowConsumerDeltas, namedWindowConsumerDelta{
+		window: window,
+		delta:  cloneNamedWindowDelta(delta),
+		owner:  owner,
+	})
 	e.pendingNamedWindowDispatches = append(e.pendingNamedWindowDispatches, namedWindowDispatch{window: window, delta: delta})
 	return nil
 }
@@ -4363,11 +4614,11 @@ func (e *Engine) queueStatementRoutesLocked(statement *Statement, batch ResultBa
 			return err
 		}
 		routed.owner = statement
+		routed.front = routed.namedWindow != nil
 		if precedenceExpr != nil {
-			// Evaluate the event-precedence expression against the original
-			// (pre-routing) result row/event, matching Esper's behavior.
-			precVal := evaluatePrecedenceExpr(precedenceExpr, result, e)
-			routed.precedence = precVal
+			// Precedence is evaluated against the target event after route
+			// projection and schema coercion, matching Esper's output router.
+			routed.precedence = evaluatePrecedenceExpr(precedenceExpr, resultEvent(routed.event), e)
 			routed.hasPrec = true
 		}
 		e.insertRoutedEventLocked(routed)
@@ -4375,30 +4626,40 @@ func (e *Engine) queueStatementRoutesLocked(statement *Statement, batch ResultBa
 	return nil
 }
 
-// insertRoutedEventLocked inserts a routed event into pendingRoutedEvents in
-// descending precedence order. Events without a precedence expression use
-// precedence 0 (lowest). Within the same precedence, FIFO order is preserved
-// (stable insertion after all equal-precedence items).
-func (e *Engine) insertRoutedEventLocked(re routedEvent) {
-	if !re.hasPrec {
-		// No precedence expression: append at end (FIFO, lowest priority).
-		e.pendingRoutedEvents = append(e.pendingRoutedEvents, re)
-		return
-	}
-	// Binary search for insertion point: insert after all items with
-	// precedence >= re.precedence (descending order, stable for ties).
-	lo, hi := 0, len(e.pendingRoutedEvents)
+func routedPrecedence(event routedEvent) int {
+	return event.precedence
+}
+
+func insertRoutedEventSorted(queue []routedEvent, event routedEvent) []routedEvent {
+	precedence := routedPrecedence(event)
+	lo, hi := 0, len(queue)
 	for lo < hi {
 		mid := (lo + hi) / 2
-		if e.pendingRoutedEvents[mid].precedence >= re.precedence {
+		if routedPrecedence(queue[mid]) >= precedence {
 			lo = mid + 1
 		} else {
 			hi = mid
 		}
 	}
-	e.pendingRoutedEvents = append(e.pendingRoutedEvents, routedEvent{})
-	copy(e.pendingRoutedEvents[lo+1:], e.pendingRoutedEvents[lo:])
-	e.pendingRoutedEvents[lo] = re
+	queue = append(queue, routedEvent{})
+	copy(queue[lo+1:], queue[lo:])
+	queue[lo] = event
+	return queue
+}
+
+func (e *Engine) insertRoutedEventLocked(re routedEvent) {
+	if e == nil {
+		return
+	}
+	// Missing precedence and explicit zero share the same numeric priority.
+	// Stable insertion after equal values preserves FIFO order.
+	re.precedence = routedPrecedence(re)
+	re.hasPrec = true
+	if re.front {
+		e.pendingFrontRoutedEvents = insertRoutedEventSorted(e.pendingFrontRoutedEvents, re)
+		return
+	}
+	e.pendingRoutedEvents = insertRoutedEventSorted(e.pendingRoutedEvents, re)
 }
 
 // evaluatePrecedenceExpr evaluates an event-precedence expression against a
@@ -4442,43 +4703,57 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 	if e == nil || dispatches == nil {
 		return nil
 	}
-	if len(e.pendingStatementDispatches) > 0 {
-		*dispatches = append(*dispatches, e.pendingStatementDispatches...)
-		e.pendingStatementDispatches = nil
-	}
 	if processedRoutes == nil {
 		localProcessedRoutes := 0
 		processedRoutes = &localProcessedRoutes
 	}
-	routedQueue := append([]routedEvent(nil), e.pendingRoutedEvents...)
-	e.pendingRoutedEvents = nil
-	for len(routedQueue) > 0 {
+	for len(e.pendingFrontRoutedEvents) > 0 || len(e.pendingRoutedEvents) > 0 || len(e.pendingNamedWindowConsumerDeltas) > 0 || len(e.pendingDirectNamedWindowDispatches) > 0 || len(e.pendingStatementDispatches) > 0 {
 		if err := contextErr(ctx); err != nil {
 			return err
+		}
+		// Statement output produced while preprocessing a mutation belongs before
+		// the direct create-window child and before any routed work.
+		if len(e.pendingStatementDispatches) > 0 {
+			e.drainPendingStatementDispatchesLocked(dispatches)
+			continue
+		}
+		// Front work is preemptive. A front route generated by a previous
+		// consumer wave must run before direct or ordinary window dispatch.
+		if len(e.pendingFrontRoutedEvents) == 0 && len(e.pendingDirectNamedWindowDispatches) > 0 {
+			e.drainPendingDirectNamedWindowDispatchesLocked(dispatches)
+			continue
+		}
+		if len(e.pendingFrontRoutedEvents) == 0 && len(e.pendingNamedWindowConsumerDeltas) > 0 {
+			if err := e.flushNamedWindowConsumerWaveLocked(ctx, now, &variables, dispatches); err != nil {
+				return err
+			}
+			continue
 		}
 		if *processedRoutes >= maxRoutedEventsPerSend {
 			return NewError(ErrorState, fmt.Sprintf("route event limit %d exceeded", maxRoutedEventsPerSend))
 		}
-		*processedRoutes = *processedRoutes + 1
-		current := routedQueue[0]
-		routedQueue = routedQueue[1:]
+		(*processedRoutes)++
+
+		var current routedEvent
+		if len(e.pendingFrontRoutedEvents) > 0 {
+			current = e.pendingFrontRoutedEvents[0]
+			e.pendingFrontRoutedEvents = e.pendingFrontRoutedEvents[1:]
+		} else {
+			current = e.pendingRoutedEvents[0]
+			e.pendingRoutedEvents = e.pendingRoutedEvents[1:]
+		}
 		if current.namedWindow != nil {
-			// Materialization is deferred until this ordered route-queue position.
-			// event-precedence ordering used for ordinary routed events.
 			insertUnderlying := namedWindowInsertUnderlying(current.namedWindow, current.event)
 			delta, err := current.namedWindow.insertWithVariables(ctx, now, insertUnderlying, variables)
 			if err != nil {
 				return err
 			}
-			if err := e.queueNamedWindowDeltaLocked(ctx, now, current.namedWindow, delta, variables, current.owner); err != nil {
+			if err := e.queueNamedWindowDeltaLocked(ctx, now, current.namedWindow, delta, &variables, current.owner); err != nil {
 				return err
 			}
-			*dispatches = append(*dispatches, e.pendingStatementDispatches...)
-			e.pendingStatementDispatches = nil
-			routedQueue = append(routedQueue, e.pendingRoutedEvents...)
-			e.pendingRoutedEvents = nil
 			continue
 		}
+
 		if processedEvents != nil {
 			*processedEvents = append(*processedEvents, current.event)
 		}
@@ -4517,10 +4792,6 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		if unmatchedEvents != nil && !matched {
 			*unmatchedEvents = append(*unmatchedEvents, current.event)
 		}
-		*dispatches = append(*dispatches, e.pendingStatementDispatches...)
-		e.pendingStatementDispatches = nil
-		routedQueue = append(routedQueue, e.pendingRoutedEvents...)
-		e.pendingRoutedEvents = nil
 	}
 	return nil
 }
@@ -4533,7 +4804,6 @@ func (e *Engine) applyStatementOutputAssignmentsLocked(ctx context.Context, stat
 	if len(assignments) == 0 {
 		return nil
 	}
-
 	if err := e.setVariablesLocked(ctx, assignments); err != nil {
 		return err
 	}

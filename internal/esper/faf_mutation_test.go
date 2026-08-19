@@ -2,10 +2,143 @@ package esper
 
 import (
 	"context"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 )
+
+func TestOnDemandNamedWindowCallbackRouteDefersUntilCallbackReturns(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "FAFCallbackWindowEvent", []FieldSpec{
+		FieldDef("value", typeOf[int64]()),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "FAFCallbackTargetEvent", []FieldSpec{
+		FieldDef("value", typeOf[int64]()),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFCallbackWindow", mustSchema(env, "FAFCallbackWindowEvent"), NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	var order []string
+	targetPlan, err := env.Build(FromAny(env, "FAFCallbackTargetEvent").Query(StatementName("faf-callback-target")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetDeployment, err := engine.Deploy(ctx, targetPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := targetDeployment.Statements()[0].Subscribe(func(_ context.Context, _ ResultBatch) error {
+		order = append(order, "routed")
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromNamedWindow(env, "FAFCallbackWindow").Query(StatementName("faf-callback-consumer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerDeployment, err := engine.Deploy(ctx, consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := consumerDeployment.Statements()[0].Subscribe(func(ctx context.Context, _ ResultBatch) error {
+		order = append(order, "before-route")
+		if err := engine.Route(ctx, "FAFCallbackTargetEvent", map[string]any{"value": int64(2)}); err != nil {
+			return err
+		}
+		order = append(order, "after-route")
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(FromNamedWindow(env, "FAFCallbackWindow").OnDemand().Insert(
+		SetColumn("value", Literal[int64](1)),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.ExecuteFireAndForget(ctx, insertPlan); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := order, []string{"before-route", "after-route", "routed"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("FAF callback route order = %v, want %v", got, want)
+	}
+}
+
+func TestOnDemandNamedWindowListenerErrorStillDrainsQueuedRoute(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "FAFMutationErrorEvent", []FieldSpec{FieldDef("value", typeOf[int64]())}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterMap(env, "FAFMutationErrorTarget", []FieldSpec{FieldDef("value", typeOf[int64]())}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "FAFMutationErrorWindow", mustSchema(env, "FAFMutationErrorEvent"), NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+	followed := 0
+	followPlan, err := env.Build(FromAny(env, "FAFMutationErrorTarget").Query(StatementName("faf-mutation-error-target")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	followDeployment, err := engine.Deploy(ctx, followPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := followDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		followed += len(batch.New)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromNamedWindow(env, "FAFMutationErrorWindow").Query(StatementName("faf-mutation-error-consumer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerDeployment, err := engine.Deploy(ctx, consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerStatement := consumerDeployment.Statements()[0]
+	if _, err := consumerStatement.Subscribe(func(ctx context.Context, _ ResultBatch) error {
+		if err := engine.Route(ctx, "FAFMutationErrorTarget", map[string]any{"value": int64(2)}); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := consumerStatement.Subscribe(func(_ context.Context, _ ResultBatch) error {
+		return NewError(ErrorState, "intentional FAF mutation listener failure")
+	}); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(FromNamedWindow(env, "FAFMutationErrorWindow").OnDemand().Insert(
+		SetColumn("value", Literal[int64](1)),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = func() error {
+		_, callErr := engine.ExecuteFireAndForget(ctx, plan)
+		return callErr
+	}()
+	if err == nil || !strings.Contains(err.Error(), "intentional FAF mutation listener failure") {
+		t.Fatalf("FAF mutation listener error = %v", err)
+	}
+	if followed != 1 {
+		t.Fatalf("queued FAF mutation route count = %d, want 1", followed)
+	}
+}
 
 func TestOnDemandNamedWindowMutationMatchesEsper(t *testing.T) {
 	env := NewEnvironment()

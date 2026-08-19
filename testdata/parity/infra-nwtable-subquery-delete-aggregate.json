@@ -1,0 +1,41 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-nwtable-subquery-delete-aggregate",
+  "steps": [
+    {"op": "case", "case": "delete-replace-named-window"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intBoxed": 1}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intBoxed": 2}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intBoxed": 3}},
+    {"op": "snapshot", "statement": "create"},
+
+    {"op": "case", "case": "delete-replace-table"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intBoxed": 1}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intBoxed": 2}},
+    {"op": "snapshot", "statement": "create"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intBoxed": 3}},
+    {"op": "snapshot", "statement": "create"},
+
+    {"op": "case", "case": "aggregate-named-window"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "M1"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "S1", "longPrimitive": 5}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "M2"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "S2", "longPrimitive": 10}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "M3"}},
+    {"op": "deploy", "statement": "selectTwo"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "S3", "longPrimitive": 8}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "M4"}},
+
+    {"op": "case", "case": "aggregate-table"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "M1"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "S1", "longPrimitive": 5}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "M2"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "S2", "longPrimitive": 10}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "M3"}},
+    {"op": "deploy", "statement": "selectTwo"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "S3", "longPrimitive": 8}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "M4"}}
+  ]
+}

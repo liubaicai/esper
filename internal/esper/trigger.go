@@ -2109,7 +2109,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, variables, owner); err != nil {
+		if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, &variables, owner); err != nil {
 			return tableMutationResult{}, err
 		}
 		// The feeding trigger publishes the row it offered to the window;
@@ -2211,7 +2211,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, variables, owner); err != nil {
+		if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, &variables, owner); err != nil {
 			return tableMutationResult{}, err
 		}
 		return tableMutationResult{oldEvents: append([]Event(nil), delta.Old...), newEvents: append([]Event(nil), delta.New...)}, nil
@@ -2235,7 +2235,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, variables, owner); err != nil {
+		if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, &variables, owner); err != nil {
 			return tableMutationResult{}, err
 		}
 		return tableMutationResult{oldEvents: append([]Event(nil), delta.Old...)}, nil
@@ -2265,7 +2265,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, variables, owner); err != nil {
+		if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, &variables, owner); err != nil {
 			return tableMutationResult{}, err
 		}
 		return tableMutationResult{oldEvents: append([]Event(nil), delta.Old...), newEvents: append([]Event(nil), delta.New...)}, nil
@@ -2342,7 +2342,7 @@ func executeInsertFromNamedWindowAction(ctx context.Context, engine *Engine, def
 			offeredEvents = append(offeredEvents, offered)
 		}
 	}
-	if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, combined, variables, owner); err != nil {
+	if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, combined, &variables, owner); err != nil {
 		return tableMutationResult{}, err
 	}
 	return tableMutationResult{oldEvents: append([]Event(nil), combined.Old...), newEvents: offeredEvents}, nil

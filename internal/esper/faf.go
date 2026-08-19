@@ -212,7 +212,7 @@ func (e *Engine) executeFireAndForgetAndRoute(ctx context.Context, plan Plan, se
 // contract.
 // Result conversion is completed before the first event is sent, so a bad
 // runtime projection cannot partially route a batch.
-func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result QueryResult) error {
+func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result QueryResult) (err error) {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
@@ -255,6 +255,15 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 		e.mu.Unlock()
 		return NewError(ErrorState, "engine is closed")
 	}
+	outerDispatch := e.dispatchDepth == 0 && !e.drainingExternalRoutes
+	if outerDispatch {
+		e.pendingExternalRoutes = nil
+	}
+	e.dispatchDepth++
+	e.dispatching = true
+	defer func() {
+		e.finishDispatchLifecycle(ctx, outerDispatch, &err)
+	}()
 	if e.activeStatementsContainOpaqueAggregatePluginLocked() {
 		e.mu.Unlock()
 		return NewError(ErrorInvalidRule, "fire-and-forget routes do not allow opaque aggregate plugins")
@@ -276,6 +285,7 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 			return routeErr
 		}
 		routedEvent.owner = routeStatement
+		routedEvent.front = routedEvent.namedWindow != nil
 		routed = append(routed, routedEvent)
 	}
 	for _, routedEvent := range routed {
@@ -296,10 +306,14 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 	contextEvents := e.takeContextEventsLocked()
 	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
+
 	e.mu.Unlock()
 	if err := dispatchAuditRecords(ctx, auditRecords, auditListeners); err != nil {
 		return err
@@ -468,7 +482,7 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 // Named Window deltas are fed through consuming statements before listeners
 // are dispatched; Table mutations return no rows, matching Esper's FAF table
 // result contract.
-func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, selector ContextPartitionSelector, parameters ParameterValues) (QueryResult, error) {
+func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, selector ContextPartitionSelector, parameters ParameterValues) (result QueryResult, err error) {
 	if err := contextErr(ctx); err != nil {
 		return QueryResult{}, err
 	}
@@ -485,11 +499,18 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 		e.mu.Unlock()
 		return QueryResult{}, NewError(ErrorState, "engine is closed")
 	}
+	outerDispatch := e.dispatchDepth == 0 && !e.drainingExternalRoutes
+	if outerDispatch {
+		e.pendingExternalRoutes = nil
+	}
+	e.dispatchDepth++
+	e.dispatching = true
+	defer func() {
+		e.finishDispatchLifecycle(ctx, outerDispatch, &err)
+	}()
 	now := e.clock.Now()
 	e.refreshVariablesLocked()
 	variables := variablesWithEngineLockState(bindParameterValues(cloneValues(e.variables), parameters), e, true)
-	e.clearFireAndForgetPendingMutationLocked()
-
 	if source.kind == streamNamedWindow {
 		if _, ok := e.ensureNamedWindowLockedInModule(source.moduleName, source.sourceName); !ok {
 			e.mu.Unlock()
@@ -497,13 +518,13 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 		}
 	}
 	targetSnapshot := e.snapshotFireAndForgetMutationLocked(source)
+	e.clearFireAndForgetPendingMutationLocked()
 	rollback := func() {
-		targetSnapshot.restore(e)
 		e.clearFireAndForgetPendingMutationLocked()
+		targetSnapshot.restore(e)
 	}
 
 	var mutation tableMutationResult
-	var err error
 	if plan.query.contextName != "" {
 		mutation, err = e.executeContextFireAndForgetMutationLocked(ctx, plan, selector, now, variables)
 	} else if plan.query.onDemand.action == onDemandInsert && len(plan.query.onDemand.rows) > 0 {
@@ -572,7 +593,10 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 	contextEvents := e.takeContextEventsLocked()
 	auditRecords, auditListeners := e.takeAuditDispatchLocked()
 	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil
@@ -698,7 +722,7 @@ func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, p
 		delta.New = append(delta.New, rowDelta.New...)
 		delta.Old = append(delta.Old, rowDelta.Old...)
 	}
-	if err := e.queueNamedWindowDeltaLocked(ctx, now, window, delta, variables, nil); err != nil {
+	if err := e.queueNamedWindowDeltaLocked(ctx, now, window, delta, &variables, nil); err != nil {
 		window.restoreMutationState(snapshot)
 		return tableMutationResult{}, err
 	}
@@ -781,15 +805,23 @@ type fireAndForgetNamedWindowSnapshot struct {
 	states     map[*namedWindowRuntime]namedWindowMutationSnapshot
 	partitions map[*namedWindowRuntime]map[string]*namedWindowRuntime
 }
-
 type fireAndForgetMutationSnapshot struct {
-	table                   *Table
-	tableState              tableMutationSnapshot
-	window                  *NamedWindow
-	namedWindow             fireAndForgetNamedWindowSnapshot
-	contextTableOwnership   map[string]map[string]map[uint64]tableContextRowOwnership
-	contextPartitionIDs     map[string]map[string]int
-	contextPartitionNextIDs map[string]int
+	table                              *Table
+	tableState                         tableMutationSnapshot
+	window                             *NamedWindow
+	namedWindow                        fireAndForgetNamedWindowSnapshot
+	contextTableOwnership              map[string]map[string]map[uint64]tableContextRowOwnership
+	contextPartitionIDs                map[string]map[string]int
+	contextPartitionNextIDs            map[string]int
+	pendingStatementDispatches         []statementDispatch
+	pendingDirectNamedWindowDispatches []statementDispatch
+	pendingNamedWindowDispatches       []namedWindowDispatch
+	pendingNamedWindowConsumerDeltas   []namedWindowConsumerDelta
+	pendingFrontRoutedEvents           []routedEvent
+	pendingRoutedEvents                []routedEvent
+	pendingVariableChanges             []VariableChangeEvent
+	pendingContextEvents               []contextNotification
+	pendingAuditRecords                []AuditRecord
 }
 
 func cloneTableContextOwnership(ownership map[string]map[string]map[uint64]tableContextRowOwnership) map[string]map[string]map[uint64]tableContextRowOwnership {
@@ -889,21 +921,24 @@ type fireAndForgetRouteSnapshot struct {
 	contextTableOwnership        map[string]map[string]map[uint64]tableContextRowOwnership
 	contextCreated               map[string]bool
 
-	contextStatementRefs         map[string]int
-	nextID                       uint64
-	runtimeMetrics               *runtimeMetricsState
-	statementMetrics             *statementMetricsState
-	rowRecogPool                 *rowRecogStatePool
-	statements                   []fireAndForgetStatementSnapshot
-	pendingStatementDispatches   []statementDispatch
-	pendingNamedWindowDispatches []namedWindowDispatch
-	pendingRoutedEvents          []routedEvent
-	pendingContextEvents         []contextNotification
-	pendingVariableChanges       []VariableChangeEvent
-	pendingMatchRecognizeLimits  []MatchRecognizeStateLimitEvent
-	pendingPatternLimits         []PatternSubexpressionLimitEvent
-	pendingPatternRuntimeLimits  []PatternRuntimeSubexpressionLimitEvent
-	pendingAuditRecords          []AuditRecord
+	contextStatementRefs               map[string]int
+	nextID                             uint64
+	runtimeMetrics                     *runtimeMetricsState
+	statementMetrics                   *statementMetricsState
+	rowRecogPool                       *rowRecogStatePool
+	statements                         []fireAndForgetStatementSnapshot
+	pendingStatementDispatches         []statementDispatch
+	pendingDirectNamedWindowDispatches []statementDispatch
+	pendingNamedWindowDispatches       []namedWindowDispatch
+	pendingNamedWindowConsumerDeltas   []namedWindowConsumerDelta
+	pendingFrontRoutedEvents           []routedEvent
+	pendingRoutedEvents                []routedEvent
+	pendingVariableChanges             []VariableChangeEvent
+	pendingMatchRecognizeLimits        []MatchRecognizeStateLimitEvent
+	pendingPatternLimits               []PatternSubexpressionLimitEvent
+	pendingPatternRuntimeLimits        []PatternRuntimeSubexpressionLimitEvent
+	pendingContextEvents               []contextNotification
+	pendingAuditRecords                []AuditRecord
 }
 
 func cloneContextDescriptors(source map[string]map[string]ContextPartitionDescriptor) map[string]map[string]ContextPartitionDescriptor {
@@ -1044,36 +1079,39 @@ func restoreFireAndForgetStatementsLocked(statements []fireAndForgetStatementSna
 
 func (e *Engine) snapshotFireAndForgetRouteLocked() fireAndForgetRouteSnapshot {
 	snapshot := fireAndForgetRouteSnapshot{
-		namedWindows:                 make(map[string]*NamedWindow, len(e.namedWindows)),
-		namedWindowStates:            make(map[*NamedWindow]fireAndForgetNamedWindowSnapshot, len(e.namedWindows)),
-		tables:                       make(map[*Table]tableMutationSnapshot, len(e.tables)),
-		variables:                    cloneValues(e.variables),
-		contextVariables:             cloneContextVariables(e.contextVariables),
-		contextPartitionRefs:         cloneContextPartitionIDs(e.contextPartitionRefs),
-		contextPartitionIDs:          cloneContextPartitionIDs(e.contextPartitionIDs),
-		contextPartitionNextIDs:      cloneContextPartitionNextIDs(e.contextPartitionNextIDs),
-		contextPartitionInstanceNext: cloneContextPartitionInstanceNextIDs(e.contextPartitionInstanceNextIDs),
-		contextPartitionDescriptors:  cloneContextDescriptors(e.contextPartitionDescriptors),
-		contextTemporalOrigins:       cloneTimeMap(e.contextTemporalOrigins),
-		contextTemporalArmed:         cloneTimeMap(e.contextTemporalArmed),
-		contextTemporalArmedAt:       cloneTimeMap(e.contextTemporalArmedAt),
-		contextTemporalActiveStart:   cloneTimeMap(e.contextTemporalActiveStart),
-		contextTableOwnership:        cloneTableContextOwnership(e.contextTableOwnership),
-		contextCreated:               make(map[string]bool, len(e.contextCreated)),
-		contextStatementRefs:         make(map[string]int, len(e.contextStatementRefs)),
-		nextID:                       e.nextID,
-		runtimeMetrics:               cloneRuntimeMetricsState(e.runtimeMetrics),
-		statementMetrics:             cloneStatementMetricsState(e.statementMetrics),
-		rowRecogPool:                 cloneRowRecogStatePool(e.matchRecognizeStatePool),
-		pendingStatementDispatches:   append([]statementDispatch(nil), e.pendingStatementDispatches...),
-		pendingNamedWindowDispatches: append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...),
-		pendingRoutedEvents:          append([]routedEvent(nil), e.pendingRoutedEvents...),
-		pendingContextEvents:         append([]contextNotification(nil), e.pendingContextEvents...),
-		pendingVariableChanges:       append([]VariableChangeEvent(nil), e.pendingVariableChanges...),
-		pendingMatchRecognizeLimits:  append([]MatchRecognizeStateLimitEvent(nil), e.pendingMatchRecognizeStateLimits...),
-		pendingPatternLimits:         append([]PatternSubexpressionLimitEvent(nil), e.pendingPatternSubexpressionLimits...),
-		pendingPatternRuntimeLimits:  append([]PatternRuntimeSubexpressionLimitEvent(nil), e.pendingPatternRuntimeLimits...),
-		pendingAuditRecords:          append([]AuditRecord(nil), e.pendingAuditRecords...),
+		namedWindows:                       make(map[string]*NamedWindow, len(e.namedWindows)),
+		namedWindowStates:                  make(map[*NamedWindow]fireAndForgetNamedWindowSnapshot, len(e.namedWindows)),
+		tables:                             make(map[*Table]tableMutationSnapshot, len(e.tables)),
+		variables:                          cloneValues(e.variables),
+		contextVariables:                   cloneContextVariables(e.contextVariables),
+		contextPartitionRefs:               cloneContextPartitionIDs(e.contextPartitionRefs),
+		contextPartitionIDs:                cloneContextPartitionIDs(e.contextPartitionIDs),
+		contextPartitionNextIDs:            cloneContextPartitionNextIDs(e.contextPartitionNextIDs),
+		contextPartitionInstanceNext:       cloneContextPartitionInstanceNextIDs(e.contextPartitionInstanceNextIDs),
+		contextPartitionDescriptors:        cloneContextDescriptors(e.contextPartitionDescriptors),
+		contextTemporalOrigins:             cloneTimeMap(e.contextTemporalOrigins),
+		contextTemporalArmed:               cloneTimeMap(e.contextTemporalArmed),
+		contextTemporalArmedAt:             cloneTimeMap(e.contextTemporalArmedAt),
+		contextTemporalActiveStart:         cloneTimeMap(e.contextTemporalActiveStart),
+		contextTableOwnership:              cloneTableContextOwnership(e.contextTableOwnership),
+		contextCreated:                     make(map[string]bool, len(e.contextCreated)),
+		contextStatementRefs:               make(map[string]int, len(e.contextStatementRefs)),
+		nextID:                             e.nextID,
+		runtimeMetrics:                     cloneRuntimeMetricsState(e.runtimeMetrics),
+		statementMetrics:                   cloneStatementMetricsState(e.statementMetrics),
+		rowRecogPool:                       cloneRowRecogStatePool(e.matchRecognizeStatePool),
+		pendingStatementDispatches:         append([]statementDispatch(nil), e.pendingStatementDispatches...),
+		pendingDirectNamedWindowDispatches: append([]statementDispatch(nil), e.pendingDirectNamedWindowDispatches...),
+		pendingNamedWindowDispatches:       append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...),
+		pendingNamedWindowConsumerDeltas:   cloneNamedWindowConsumerDeltas(e.pendingNamedWindowConsumerDeltas),
+		pendingFrontRoutedEvents:           append([]routedEvent(nil), e.pendingFrontRoutedEvents...),
+		pendingRoutedEvents:                append([]routedEvent(nil), e.pendingRoutedEvents...),
+		pendingVariableChanges:             append([]VariableChangeEvent(nil), e.pendingVariableChanges...),
+		pendingMatchRecognizeLimits:        append([]MatchRecognizeStateLimitEvent(nil), e.pendingMatchRecognizeStateLimits...),
+		pendingPatternLimits:               append([]PatternSubexpressionLimitEvent(nil), e.pendingPatternSubexpressionLimits...),
+		pendingPatternRuntimeLimits:        append([]PatternRuntimeSubexpressionLimitEvent(nil), e.pendingPatternRuntimeLimits...),
+		pendingContextEvents:               append([]contextNotification(nil), e.pendingContextEvents...),
+		pendingAuditRecords:                append([]AuditRecord(nil), e.pendingAuditRecords...),
 	}
 	for name, created := range e.contextCreated {
 		snapshot.contextCreated[name] = created
@@ -1143,13 +1181,16 @@ func (snapshot fireAndForgetRouteSnapshot) restore(e *Engine) {
 	e.matchRecognizeStatePool = cloneRowRecogStatePool(snapshot.rowRecogPool)
 	restoreFireAndForgetStatementsLocked(snapshot.statements)
 	e.pendingStatementDispatches = append([]statementDispatch(nil), snapshot.pendingStatementDispatches...)
+	e.pendingDirectNamedWindowDispatches = append([]statementDispatch(nil), snapshot.pendingDirectNamedWindowDispatches...)
 	e.pendingNamedWindowDispatches = append([]namedWindowDispatch(nil), snapshot.pendingNamedWindowDispatches...)
+	e.pendingNamedWindowConsumerDeltas = cloneNamedWindowConsumerDeltas(snapshot.pendingNamedWindowConsumerDeltas)
+	e.pendingFrontRoutedEvents = append([]routedEvent(nil), snapshot.pendingFrontRoutedEvents...)
 	e.pendingRoutedEvents = append([]routedEvent(nil), snapshot.pendingRoutedEvents...)
-	e.pendingContextEvents = append([]contextNotification(nil), snapshot.pendingContextEvents...)
 	e.pendingVariableChanges = append([]VariableChangeEvent(nil), snapshot.pendingVariableChanges...)
 	e.pendingMatchRecognizeStateLimits = append([]MatchRecognizeStateLimitEvent(nil), snapshot.pendingMatchRecognizeLimits...)
 	e.pendingPatternSubexpressionLimits = append([]PatternSubexpressionLimitEvent(nil), snapshot.pendingPatternLimits...)
 	e.pendingPatternRuntimeLimits = append([]PatternRuntimeSubexpressionLimitEvent(nil), snapshot.pendingPatternRuntimeLimits...)
+	e.pendingContextEvents = append([]contextNotification(nil), snapshot.pendingContextEvents...)
 	e.pendingAuditRecords = append([]AuditRecord(nil), snapshot.pendingAuditRecords...)
 }
 
@@ -1204,9 +1245,18 @@ func (snapshot fireAndForgetNamedWindowSnapshot) restore() {
 
 func (e *Engine) snapshotFireAndForgetMutationLocked(source *streamNode) fireAndForgetMutationSnapshot {
 	snapshot := fireAndForgetMutationSnapshot{
-		contextTableOwnership:   cloneTableContextOwnership(e.contextTableOwnership),
-		contextPartitionIDs:     cloneContextPartitionIDs(e.contextPartitionIDs),
-		contextPartitionNextIDs: cloneContextPartitionNextIDs(e.contextPartitionNextIDs),
+		contextTableOwnership:              cloneTableContextOwnership(e.contextTableOwnership),
+		contextPartitionIDs:                cloneContextPartitionIDs(e.contextPartitionIDs),
+		contextPartitionNextIDs:            cloneContextPartitionNextIDs(e.contextPartitionNextIDs),
+		pendingStatementDispatches:         append([]statementDispatch(nil), e.pendingStatementDispatches...),
+		pendingDirectNamedWindowDispatches: append([]statementDispatch(nil), e.pendingDirectNamedWindowDispatches...),
+		pendingNamedWindowDispatches:       append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...),
+		pendingNamedWindowConsumerDeltas:   cloneNamedWindowConsumerDeltas(e.pendingNamedWindowConsumerDeltas),
+		pendingFrontRoutedEvents:           append([]routedEvent(nil), e.pendingFrontRoutedEvents...),
+		pendingRoutedEvents:                append([]routedEvent(nil), e.pendingRoutedEvents...),
+		pendingVariableChanges:             append([]VariableChangeEvent(nil), e.pendingVariableChanges...),
+		pendingContextEvents:               append([]contextNotification(nil), e.pendingContextEvents...),
+		pendingAuditRecords:                append([]AuditRecord(nil), e.pendingAuditRecords...),
 	}
 	if e == nil || source == nil {
 		return snapshot
@@ -1236,6 +1286,15 @@ func (snapshot fireAndForgetMutationSnapshot) restore(e *Engine) {
 	e.contextTableOwnership = cloneTableContextOwnership(snapshot.contextTableOwnership)
 	e.contextPartitionIDs = cloneContextPartitionIDs(snapshot.contextPartitionIDs)
 	e.contextPartitionNextIDs = cloneContextPartitionNextIDs(snapshot.contextPartitionNextIDs)
+	e.pendingStatementDispatches = append([]statementDispatch(nil), snapshot.pendingStatementDispatches...)
+	e.pendingDirectNamedWindowDispatches = append([]statementDispatch(nil), snapshot.pendingDirectNamedWindowDispatches...)
+	e.pendingNamedWindowDispatches = append([]namedWindowDispatch(nil), snapshot.pendingNamedWindowDispatches...)
+	e.pendingNamedWindowConsumerDeltas = cloneNamedWindowConsumerDeltas(snapshot.pendingNamedWindowConsumerDeltas)
+	e.pendingFrontRoutedEvents = append([]routedEvent(nil), snapshot.pendingFrontRoutedEvents...)
+	e.pendingRoutedEvents = append([]routedEvent(nil), snapshot.pendingRoutedEvents...)
+	e.pendingVariableChanges = append([]VariableChangeEvent(nil), snapshot.pendingVariableChanges...)
+	e.pendingContextEvents = append([]contextNotification(nil), snapshot.pendingContextEvents...)
+	e.pendingAuditRecords = append([]AuditRecord(nil), snapshot.pendingAuditRecords...)
 }
 
 func (e *Engine) clearFireAndForgetPendingMutationLocked() {
@@ -1243,7 +1302,10 @@ func (e *Engine) clearFireAndForgetPendingMutationLocked() {
 		return
 	}
 	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
 	e.pendingVariableChanges = nil

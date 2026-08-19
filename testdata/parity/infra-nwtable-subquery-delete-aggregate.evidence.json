@@ -1,0 +1,943 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-0d6d178d950b8f02c75a",
+    "java-runtime-b3cb688e8cb105fa1cea",
+    "java-runtime-44eff67d7f2520f31f05",
+    "java-runtime-1d5e53c021e683fb3a59"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubquery.java"
+  ],
+  "javaExecutions": [
+    "InfraSubqueryDeleteInsertReplace{namedWindow=true}",
+    "InfraSubqueryDeleteInsertReplace{namedWindow=false}",
+    "InfraUncorrelatedSubqueryAggregation{namedWindow=true}",
+    "InfraUncorrelatedSubqueryAggregation{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subquery-delete-aggregate",
+    "steps": [
+      {
+        "op": "case",
+        "case": "delete-replace-named-window"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intBoxed": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intBoxed": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intBoxed": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "case",
+        "case": "delete-replace-table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intBoxed": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intBoxed": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intBoxed": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "case",
+        "case": "aggregate-named-window"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "longPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S2",
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M3"
+        }
+      },
+      {
+        "op": "deploy",
+        "statement": "selectTwo"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S3",
+          "longPrimitive": 8
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M4"
+        }
+      },
+      {
+        "op": "case",
+        "case": "aggregate-table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "longPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S2",
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M3"
+        }
+      },
+      {
+        "op": "deploy",
+        "statement": "selectTwo"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S3",
+          "longPrimitive": 8
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M4"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subquery-delete-aggregate",
+    "records": [
+      {
+        "case": "delete-replace-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-named-window",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-named-window",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-named-window",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": 15
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-named-window",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": 23
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-named-window",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": 23
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-table",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-table",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-table",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": 15
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-table",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": 23
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": 23
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subquery-delete-aggregate",
+    "records": [
+      {
+        "case": "delete-replace-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-named-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "delete-replace-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-named-window",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-named-window",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-named-window",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": 15
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-named-window",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": 23
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-named-window",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": 23
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-table",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-table",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-table",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": 15
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-table",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": 23
+            }
+          }
+        ]
+      },
+      {
+        "case": "aggregate-table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": 23
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
