@@ -372,7 +372,8 @@ func (s *Statement) deliverSplitStreamEvent(ctx context.Context, branch SplitStr
 	if !exists {
 		return nil
 	}
-	delta, err := target.insertWithVariables(ctx, now, routed.Underlying(), variables)
+	insertUnderlying := namedWindowInsertUnderlying(window, routed)
+	delta, err := target.insertWithVariables(ctx, now, insertUnderlying, variables)
 	if err != nil {
 		return err
 	}

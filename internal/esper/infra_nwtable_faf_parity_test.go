@@ -201,6 +201,146 @@ func TestInfraFAFThreeStreamJoinSnapshotParity(t *testing.T) {
 	}
 }
 
+type infraFAFSceneTwoEvent struct {
+	TheString string `esper:"theString"`
+	IntBoxed  int    `esper:"intBoxed"`
+}
+
+func TestInfraFAFSceneTwoSnapshotParity(t *testing.T) {
+	type expectedRow struct {
+		key   string
+		value int
+	}
+
+	for _, namedWindow := range []bool{true, false} {
+		name := "named-window"
+		if !namedWindow {
+			name = "table"
+		}
+		t.Run(name, func(t *testing.T) {
+			env := NewEnvironment()
+			if _, err := RegisterStruct[infraFAFSceneTwoEvent](env, "SupportBean"); err != nil {
+				t.Fatal(err)
+			}
+
+			if namedWindow {
+				schema, err := RegisterMap(env, "InfraFAFSceneTwoSchema", []FieldSpec{
+					FieldDef("key", typeOf[string]()),
+					FieldDef("value", typeOf[int]()),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateNamedWindow(env, "MyInfra", schema, NamedWindowRetention(KeepAll())); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := CreateTable(env, "MyInfra", []TableColumn{
+				PrimaryKeyColumn[string]("key"),
+				TableColumnOf[int]("value"),
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			source := From[infraFAFSceneTwoEvent](env, "SupportBean")
+			assignments := []TableAssignment{
+				SetColumn("key", Field[infraFAFSceneTwoEvent, string]("theString")),
+				SetColumn("value", Field[infraFAFSceneTwoEvent, int]("intBoxed")),
+			}
+			var insertPlan Plan
+			var err error
+			if namedWindow {
+				insertPlan, err = env.Build(OnEvent(source).InsertIntoNamedWindow("MyInfra", assignments...).Query(StatementName("insert")))
+			} else {
+				insertPlan, err = env.Build(OnEvent(source).InsertIntoTable("MyInfra", assignments...).Query(StatementName("insert")))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			positiveSource := FromNamedWindow(env, "MyInfra")
+			if !namedWindow {
+				positiveSource = FromTable(env, "MyInfra")
+			}
+			positivePlan, err := env.Build(positiveSource.Filter(
+				Greater[int](Field[any, int]("value"), Literal[int](0)),
+			).Query(StatementName("faf-positive")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			negativePlan, err := env.Build(positiveSource.Filter(
+				Less[int](Field[any, int]("value"), Literal[int](0)),
+			).Query(StatementName("faf-negative")))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			engine := NewEngine(env)
+			defer func() { _ = engine.Close(context.Background()) }()
+			if _, err := engine.Deploy(context.Background(), insertPlan); err != nil {
+				t.Fatal(err)
+			}
+			for _, event := range []infraFAFSceneTwoEvent{
+				{TheString: "G1", IntBoxed: 10},
+				{TheString: "G2", IntBoxed: -1},
+				{TheString: "G3", IntBoxed: -2},
+				{TheString: "G4", IntBoxed: 21},
+			} {
+				if err := engine.SendEvent(context.Background(), event); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			readRows := func(plan Plan) []Result {
+				result, err := engine.ExecuteFireAndForget(context.Background(), plan)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return result.Results()
+			}
+			assertRows := func(label string, rows []Result, want []expectedRow, ordered bool) {
+				if len(rows) != len(want) {
+					t.Fatalf("%s rows = %#v, want %d rows", label, rows, len(want))
+				}
+				toExpected := func(row Result) expectedRow {
+					key, ok := row.Get("key").Any().(string)
+					if !ok {
+						t.Fatalf("%s key = %#v, want string", label, row.Get("key").Any())
+					}
+					value, ok := row.Get("value").Any().(int)
+					if !ok {
+						t.Fatalf("%s value = %#v, want int", label, row.Get("value").Any())
+					}
+					return expectedRow{key: key, value: value}
+				}
+				if ordered {
+					for index, expected := range want {
+						if got := toExpected(rows[index]); got != expected {
+							t.Fatalf("%s row %d = %#v, want %#v", label, index, got, expected)
+						}
+					}
+					return
+				}
+				seen := make(map[expectedRow]bool, len(rows))
+				for _, row := range rows {
+					seen[toExpected(row)] = true
+				}
+				for _, expected := range want {
+					if !seen[expected] {
+						t.Fatalf("%s missing row %#v in %#v", label, expected, rows)
+					}
+				}
+			}
+
+			positiveWant := []expectedRow{{key: "G1", value: 10}, {key: "G4", value: 21}}
+			negativeWant := []expectedRow{{key: "G2", value: -1}, {key: "G3", value: -2}}
+			assertRows("positive", readRows(positivePlan), positiveWant, namedWindow)
+			assertRows("positive repeat", readRows(positivePlan), positiveWant, namedWindow)
+			assertRows("negative", readRows(negativePlan), negativeWant, false)
+			assertRows("negative repeat", readRows(negativePlan), negativeWant, false)
+		})
+	}
+}
+
 func setupInfraFAFEventStore(t *testing.T, namedWindow bool) (*Environment, *Engine, RecordStream) {
 	t.Helper()
 	env := NewEnvironment()

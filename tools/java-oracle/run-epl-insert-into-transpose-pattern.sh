@@ -67,7 +67,8 @@ esac
 # Verify commit
 actual_commit=$(cd "$esper_root" && git rev-parse HEAD)
 if [ "$actual_commit" != "$expected_commit" ]; then
-    echo "WARNING: Esper commit mismatch: expected $expected_commit, got $actual_commit" >&2
+    echo "ERROR: Esper commit mismatch: expected $expected_commit, got $actual_commit" >&2
+    exit 2
 fi
 
 # Resolve scenario/output to absolute paths; the oracle runs with the Esper

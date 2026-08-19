@@ -1,0 +1,94 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-faf-scene-two",
+  "steps": [
+    {
+      "op": "case",
+      "case": "named-window"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G1",
+        "intBoxed": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G2",
+        "intBoxed": -1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G3",
+        "intBoxed": -2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G4",
+        "intBoxed": 21
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "faf-positive"
+    },
+    {
+      "op": "snapshot",
+      "statement": "faf-negative"
+    },
+    {
+      "op": "case",
+      "case": "table"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G1",
+        "intBoxed": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G2",
+        "intBoxed": -1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G3",
+        "intBoxed": -2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "G4",
+        "intBoxed": 21
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "faf-positive"
+    },
+    {
+      "op": "snapshot",
+      "statement": "faf-negative"
+    }
+  ]
+}

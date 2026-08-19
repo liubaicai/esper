@@ -4,18 +4,18 @@
 
 ## 0. 实时状态入口
 
-截至 2026-08-18，manifest v2 的已校验摘要为：
+截至 2026-08-19，manifest v2 的已校验摘要为：
 
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
 | Case | 518 |
-| Case differential-verified | 116 |
-| Differential-verified runtime | 351 / 4,136 |
-| Runtime 已关联 | 2,888 / 4,136（69.8%） |
-| Runtime 未关联 | 1,248 |
+| Case differential-verified | 117 |
+| Differential-verified runtime | 358 / 4,136 |
+| Runtime 已关联 | 2,890 / 4,136（69.9%） |
+| Runtime 未关联 | 1,246 |
 | Representative scenario | 93 / 93 通过 |
-| Intentionally-different case | 0 |
+| Intentionally-different case | 18 |
 | NFR-verified case | 0 |
 | 质量摘要 | Docker passed；stress passed；race pending；performance pending |
 

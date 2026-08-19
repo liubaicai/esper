@@ -222,6 +222,10 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 	if err := e.validateOwnedPlan(plan, nil); err != nil {
 		return err
 	}
+	if plan.query.routeTarget == "" {
+		return NewError(ErrorInvalidRule, "fire-and-forget route target is not configured")
+	}
+
 	if plan.query.contextName != "" {
 		return NewError(ErrorInvalidRule, "fire-and-forget routes do not allow context-bound plans")
 	}
@@ -280,7 +284,8 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 	dispatches := make([]statementDispatch, 0, len(e.pendingStatementDispatches))
 	processedEvents := make([]Event, 0, len(routed))
 	variables := cloneValues(e.variables)
-	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, nil); err != nil {
+	processedRoutes := 0
+	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, nil, &processedRoutes); err != nil {
 		rollback()
 		e.mu.Unlock()
 		return err
@@ -554,9 +559,9 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 			batch.Sequence = 1
 		}
 	}
-
 	dispatches := make([]statementDispatch, 0, len(e.pendingStatementDispatches))
-	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, nil, nil); err != nil {
+	processedRoutes := 0
+	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, nil, nil, &processedRoutes); err != nil {
 		rollback()
 		e.mu.Unlock()
 		return QueryResult{}, err

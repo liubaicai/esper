@@ -3554,6 +3554,13 @@ func (w *NamedWindow) newInsertEvent(now time.Time, underlying any) (Event, erro
 	return event, nil
 }
 
+func namedWindowInsertUnderlying(window *NamedWindow, event Event) any {
+	if window != nil && window.state != nil && window.state.def.schema.kind == SchemaVariant {
+		return event
+	}
+	return event.Underlying()
+}
+
 func (w *NamedWindow) insertWithVariables(ctx context.Context, now time.Time, underlying any, variables map[string]Value) (NamedWindowDelta, error) {
 	if w == nil || w.state == nil {
 		return NamedWindowDelta{}, NewError(ErrorState, "nil named window")

@@ -674,7 +674,7 @@ func (e *Engine) processNamedWindowWithMetricsLocked(ctx context.Context, statem
 		return ResultBatch{}, false, nil
 	}
 	matchedWindow := statementConsumesNamedWindow(statement.plan.query, window)
-	if !containsNamedWindow(statement.plan.query.input, statement.plan.query.join) {
+	if !matchedWindow {
 		return statement.processNamedWindow(ctx, now, delta, variables)
 	}
 	input := len(delta.New)
@@ -702,10 +702,10 @@ func statementConsumesNamedWindow(query Query, window *NamedWindow) bool {
 	if window == nil || window.state == nil {
 		return false
 	}
-	name := window.state.def.Name()
+	windowKey := catalogKey(window.state.def.moduleName, window.state.def.Name())
 	matches := func(node *streamNode) bool {
 		for current := node; current != nil; current = current.input {
-			if current.kind == streamNamedWindow && current.sourceName == name {
+			if current.kind == streamNamedWindow && catalogKey(current.moduleName, current.sourceName) == windowKey {
 				return true
 			}
 		}

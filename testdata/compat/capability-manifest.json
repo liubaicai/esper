@@ -7327,6 +7327,7 @@
     "TestInsertIntoRoutesAggregateProjectionAndOnlyNewStream",
     "TestInsertIntoRoutesPatternProjection",
     "TestInsertIntoRoutesNamedWindowConsumerEvents",
+    "TestInsertIntoRoutesVariantMemberIntoNamedWindow",
     "TestInsertIntoRoutesRemoveStreamFromWindowEviction",
     "TestInsertIntoRouteHonorsOutputSortAndBatchPolicy",
     "TestInsertIntoRouteRejectsUnboundedCycle",
@@ -7390,7 +7391,9 @@
     "java-runtime-cf0faaf1edc942acda93",
     "java-runtime-f77af62c7de3ead5f3ec",
     "java-runtime-30543f487b8e9e31a67b",
-    "java-runtime-dbc2157e2d63e2f120a2"
+    "java-runtime-dbc2157e2d63e2f120a2",
+    "java-runtime-04b48c1da9e5a7b3355a",
+    "java-runtime-d4ef17a6d0f527d8ecad"
    ],
    "javaNames": [
     "InfraSelectWildcard",
@@ -7411,7 +7414,9 @@
     "InfraInsertMultirow{namedWindow=false}",
     "InfraInsertMultirowRollback{namedWindow=true}",
     "InfraInsertMultirowRollback{namedWindow=false}",
-    "InfraInsertMultirowInvalid"
+    "InfraInsertMultirowInvalid",
+    "InfraSelectWildcardSceneTwo{namedWindow=true}",
+    "InfraSelectWildcardSceneTwo{namedWindow=false}"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableFAF.java"
@@ -7433,7 +7438,8 @@
     "TestOnDemandMultirowInsertMatchesEsper",
     "TestOnDemandMultirowInsertValidationMatchesEsper",
     "TestOnDemandMultirowInsertRollsBackNamedWindowAndTable",
-    "TestInfraFAFContextScopedTableIndexCandidateParity"
+    "TestInfraFAFContextScopedTableIndexCandidateParity",
+    "TestInfraFAFSceneTwoSnapshotParity"
    ],
    "tags": [
     "correctness",
@@ -7449,16 +7455,26 @@
     "multi-row",
     "rollback"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-maven-regression",
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/infra-faf-scene-two.json",
+    "testdata/parity/infra-faf-scene-two.trace.json",
+    "testdata/parity/infra-faf-scene-two.evidence.json",
+    "tools/java-oracle/InfraFAFSceneTwoScenarioOracle.java",
+    "tools/java-oracle/run-infra-faf-scene-two.sh"
    ],
-   "difference": "Go uses FromNamedWindow/FromTable plus OnDemand().Insert/InsertRows/UpdateAll/UpdateWhere/DeleteWhere/DeleteAll for typed one-shot rules, and covers the Java wildcard/filter/distinct/count/aggregate/IN/join/join-where slice for both target kinds, including row-for-event aggregate output and Table-versus-Named-Window mutation result contracts. UpdateAll evaluates assignments per target in declaration order and supports Initial*Field; Table primary-key changes are applied as an atomic in-place re-key that preserves insertion order and rebuilds hash/unique/B-tree index membership, rejecting primary-key and unique-secondary collisions without changing state. Positional InsertValues rows are evaluated with engine-backed subqueries, capped at 1000 rows, committed as one Named Window delta or atomic Table batch, and restored on unique/primary-key failure; NamedWindowUniqueIndex separates strict duplicate rejection from Unique retention replacement. Named and positional FAF substitution parameters now have separate typed fluent constructors, immutable one-shot and PreparedQuery binding APIs, repeated-value/type validation, contiguous 1-based position checks, and the Java missing/mixed/typed invalid matrix. Context-scoped delete/update/delete-all supports fluent WithContext, hash-bucket or descriptor-hash/category selector filtering, partition-local Table scans, context-bound Named Window state and the Java old-row/empty-table result contract; Table rows retain an internal stable identity and Engine-owned table/context/row ownership so partition and selector properties survive context-field and primary-key updates, with delete and DestroyContext cleanup. FAF target mutation snapshots restore Table/Named Window target state, Context partition runtime/ownership and pending mutation queues after mid-batch primary-key/unique failure or routed-processing error; this is not a global cross-statement transaction and does not roll back already-applied cross-target routed side effects or external listener/resources. Index-plan hooks, representation matrix, FAF subquery/resolve/historical sources beyond the mapped insert-value case, broader invalid diagnostics, live context-insert ownership, concurrent transaction semantics and exact shared trace remain open. Java SODA is represented by the immutable fluent Plan rather than a text/model parser, and exact Java diagnostic text is not a compatibility contract.",
+   "difference": "Go uses FromNamedWindow/FromTable plus OnDemand().Insert/InsertRows/UpdateAll/UpdateWhere/DeleteWhere/DeleteAll for typed one-shot rules, and covers the Java wildcard/filter/distinct/count/aggregate/IN/join/join-where slice for both target kinds, including row-for-event aggregate output and Table-versus-Named-Window mutation result contracts. UpdateAll evaluates assignments per target in declaration order and supports Initial*Field; Table primary-key changes are applied as an atomic in-place re-key that preserves insertion order and rebuilds hash/unique/B-tree index membership, rejecting primary-key and unique-secondary collisions without changing state. Positional InsertValues rows are evaluated with engine-backed subqueries, capped at 1000 rows, committed as one Named Window delta or atomic Table batch, and restored on unique/primary-key failure; NamedWindowUniqueIndex separates strict duplicate rejection from Unique retention replacement. Named and positional FAF substitution parameters now have separate typed fluent constructors, immutable one-shot and PreparedQuery binding APIs, repeated-value/type validation, contiguous 1-based position checks, and the Java missing/mixed/typed invalid matrix. Context-scoped delete/update/delete-all supports fluent WithContext, hash-bucket or descriptor-hash/category selector filtering, partition-local Table scans, context-bound Named Window state and the Java old-row/empty-table result contract; Table rows retain an internal stable identity and Engine-owned table/context/row ownership so partition and selector properties survive context-field and primary-key updates, with delete and DestroyContext cleanup. FAF target mutation snapshots restore Table/Named Window target state, Context partition runtime/ownership and pending mutation queues after mid-batch primary-key/unique failure or routed-processing error; this is not a global cross-statement transaction and does not roll back already-applied cross-target routed side effects or external listener/resources. Index-plan hooks, representation matrix, FAF subquery/resolve/historical sources beyond the mapped insert-value case, broader invalid diagnostics, live context-insert ownership, concurrent transaction semantics and exact shared trace remain open. Java SODA is represented by the immutable fluent Plan rather than a text/model parser, and exact Java diagnostic text is not a compatibility contract. SceneTwo read-only wildcard FAF snapshots for module-less named-window and table forms now have pinned Java/Go traces and zero-difference evidence.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-04b48c1da9e5a7b3355a",
+    "java-runtime-d4ef17a6d0f527d8ecad"
    ]
   },
   {
@@ -31270,7 +31286,7 @@
    ],
    "status": "differential-verified",
    "id": "case.resultset-orderby-rowperevent",
-   "differentialVerifiedRuntimeIDs": [
+   "differentialVerifiedRuntimeIds": [
     "java-runtime-4062c635fee60616832d",
     "java-runtime-626fca57d0ecba86d417",
     "java-runtime-27a7dc3a105e6be636ed",
@@ -34163,15 +34179,27 @@
    "caseId": "case.subquery-aggregated-multirow"
   }
  ],
- "summary": {
-  "cases": 518,
-  "differentialVerifiedCases": 116,
-  "differentialVerifiedRuntimeIds": 351,
-  "referencedJavaRuntimeIds": 2888,
-  "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1248,
-  "representativeScenarioPass": 93,
-  "intentionallyDifferentCases": 0,
-  "nfrVerifiedCases": 0
- }
+"summary": {
+ "totalCases": 518,
+ "totalCapabilities": 110,
+ "inventoriedCases": 518,
+ "implementedCases": 516,
+ "differentialVerifiedCases": 117,
+ "differentialVerifiedRuntimeIds": 358,
+ "intentionallyDifferentCases": 18,
+ "representativeVerifiedCases": 93,
+ "nfrVerifiedCases": 0,
+ "inventoriedCapabilities": 110,
+ "implementedCapabilities": 109,
+ "differentialVerifiedCapabilities": 14,
+ "intentionallyDifferentCapabilities": 7,
+ "representativeVerifiedCapabilities": 11,
+ "nfrVerifiedCapabilities": 0,
+ "runtimeAssociationCount": 3056,
+ "referencedJavaRuntimeIds": 2890,
+ "totalJavaRuntimeIds": 4136,
+ "unreferencedJavaRuntimeIds": 1246,
+ "representativeScenarioTotal": 93,
+ "representativeScenarioPassing": 93
+}
 }

@@ -424,6 +424,76 @@ func TestInsertIntoRouteRejectsUnboundedCycle(t *testing.T) {
 	}
 }
 
+func TestInsertIntoRoutesVariantMemberIntoNamedWindow(t *testing.T) {
+	env := NewEnvironment()
+	member, err := RegisterStruct[variantOrder](env, "RouteVariantOrder")
+	if err != nil {
+		t.Fatal(err)
+	}
+	variant, err := RegisterVariant(env, "RouteVariantEvent", member)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "RouteVariantWindow", variant, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+
+	routePlan, err := env.Build(From[variantOrder](env, "RouteVariantOrder").InsertInto(
+		"RouteVariantWindow", StatementName("route-variant-window"),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromNamedWindow(env, "RouteVariantWindow").Query(StatementName("route-variant-consumer")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	if _, err := engine.Deploy(context.Background(), routePlan); err != nil {
+		t.Fatal(err)
+	}
+	consumerDeployment, err := engine.Deploy(context.Background(), consumerPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var received []Event
+	if _, err := consumerDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			event, ok := result.Event()
+			if !ok {
+				t.Fatalf("variant named-window result is not an event: %#v", result)
+			}
+			received = append(received, event)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := engine.SendEvent(context.Background(), variantOrder{ID: "VW1", Common: "routed", Amount: 42}); err != nil {
+		t.Fatal(err)
+	}
+	if len(received) != 1 {
+		t.Fatalf("variant named-window consumer events = %#v", received)
+	}
+	if received[0].TypeName() != "RouteVariantWindow" || received[0].Schema().Name() != "RouteVariantOrder" || received[0].Get("id").Any() != "VW1" {
+		t.Fatalf("variant named-window consumer event = %#v", received[0])
+	}
+
+	window, ok := engine.NamedWindow("RouteVariantWindow")
+	if !ok {
+		t.Fatal("variant named window is missing")
+	}
+	rows, err := window.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].TypeName() != "RouteVariantWindow" || rows[0].Schema().Name() != "RouteVariantOrder" || rows[0].Get("amount").Any() != int64(42) {
+		t.Fatalf("variant named-window snapshot = %#v", rows)
+	}
+}
+
 func TestInsertIntoRoutesNamedWindowConsumerEvents(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[runtimeTestTrade](env, "RouteTrade"); err != nil {
@@ -1126,5 +1196,8 @@ func TestFireAndForgetRouteWithParametersAndRejectsImplicitSideEffect(t *testing
 	}
 	if err := engine.RouteFireAndForget(context.Background(), targetPlan, readOnly); err == nil {
 		t.Fatal("a plan without RouteTo must be rejected")
+	}
+	if err := engine.RouteFireAndForget(context.Background(), targetPlan, QueryResult{}); err == nil || !strings.Contains(err.Error(), "route target is not configured") {
+		t.Fatalf("empty no-route FAF error = %v", err)
 	}
 }

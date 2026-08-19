@@ -1524,7 +1524,8 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 			}
 		}
 	}
-	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, nil, nil); err != nil {
+	processedRoutes := 0
+	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, nil, nil, &processedRoutes); err != nil {
 		e.mu.Unlock()
 		return err
 	}
@@ -3660,7 +3661,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 				}
 			}
 		}
-		if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, &unmatchedEvents); err != nil {
+		if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, &unmatchedEvents, &processedRoutes); err != nil {
 			e.mu.Unlock()
 			return err
 		}
@@ -4094,7 +4095,8 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 			}
 		}
 	}
-	if err := e.processPendingRoutedEventsLocked(ctx, at, variables, &dispatches, nil, nil); err != nil {
+	processedRoutes := 0
+	if err := e.processPendingRoutedEventsLocked(ctx, at, variables, &dispatches, nil, nil, &processedRoutes); err != nil {
 		e.mu.Unlock()
 		return err
 	}
@@ -4436,7 +4438,7 @@ func evaluatePrecedenceExpr(expr Expr, result Result, engine *Engine) int {
 	}
 }
 
-func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.Time, variables map[string]Value, dispatches *[]statementDispatch, processedEvents *[]Event, unmatchedEvents *[]Event) error {
+func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.Time, variables map[string]Value, dispatches *[]statementDispatch, processedEvents *[]Event, unmatchedEvents *[]Event, processedRoutes *int) error {
 	if e == nil || dispatches == nil {
 		return nil
 	}
@@ -4444,24 +4446,27 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		*dispatches = append(*dispatches, e.pendingStatementDispatches...)
 		e.pendingStatementDispatches = nil
 	}
+	if processedRoutes == nil {
+		localProcessedRoutes := 0
+		processedRoutes = &localProcessedRoutes
+	}
 	routedQueue := append([]routedEvent(nil), e.pendingRoutedEvents...)
 	e.pendingRoutedEvents = nil
-	processed := 0
 	for len(routedQueue) > 0 {
 		if err := contextErr(ctx); err != nil {
 			return err
 		}
-		if processed >= maxRoutedEventsPerSend {
+		if *processedRoutes >= maxRoutedEventsPerSend {
 			return NewError(ErrorState, fmt.Sprintf("route event limit %d exceeded", maxRoutedEventsPerSend))
 		}
-		processed++
+		*processedRoutes = *processedRoutes + 1
 		current := routedQueue[0]
 		routedQueue = routedQueue[1:]
 		if current.namedWindow != nil {
 			// Materialization is deferred until this ordered route-queue position.
-			// This keeps named-window insertion and consumer delivery aligned with
 			// event-precedence ordering used for ordinary routed events.
-			delta, err := current.namedWindow.insertWithVariables(ctx, now, current.event.Underlying(), variables)
+			insertUnderlying := namedWindowInsertUnderlying(current.namedWindow, current.event)
+			delta, err := current.namedWindow.insertWithVariables(ctx, now, insertUnderlying, variables)
 			if err != nil {
 				return err
 			}
@@ -4480,7 +4485,7 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		e.recordRuntimeInputLocked()
 		matched := false
 		for _, statement := range orderUpdateStatementsFirst(e.dispatchStatementsLocked()) {
-			needsAccepted := e.statementMetrics != nil || len(statement.plan.query.statementMetadata.auditCategories) > 0
+			needsAccepted := unmatchedEvents != nil || e.statementMetrics != nil || len(statement.plan.query.statementMetadata.auditCategories) > 0
 			accepted := needsAccepted && statement.matchesEventFilter(current.event, now, variables)
 			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current.event, variables, accepted)
 			if err != nil {
@@ -4613,7 +4618,8 @@ func (e *Engine) routeResultToTargetLocked(statement *Statement, result Result, 
 	if !ok {
 		return routedEvent{}, NewError(ErrorUnknownName, fmt.Sprintf("route named window %q is not available", targetName))
 	}
-	offered, err := window.newInsertEvent(now, routed.Underlying())
+	insertUnderlying := namedWindowInsertUnderlying(window, routed)
+	offered, err := window.newInsertEvent(now, insertUnderlying)
 	if err != nil {
 		return routedEvent{}, err
 	}
@@ -6432,6 +6438,9 @@ func sourceNodeAcceptsEvent(env *Environment, node *streamNode, event Event) boo
 	}
 	if source.kind == streamHistorical || source.kind == streamMethod {
 		return true
+	}
+	if source.kind == streamNamedWindow {
+		return event.StreamType() == source.sourceName || event.TypeName() == source.sourceName
 	}
 	if env != nil && source.kind == streamSource {
 		if schema, err := env.sourceSchema(source); err == nil && schema.kind == SchemaVariant {
