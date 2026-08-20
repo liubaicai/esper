@@ -37,6 +37,9 @@ func TestLikeAndRegexpExpressionsMatchJavaWildcardNumericEscapeAndNullSemantics(
 	if got := RegexpMatchOf(Literal("TBT-ABC"), Literal(`\w*-ABC`)).eval(EvalContext{}); !got.Equal(Present(true)) {
 		t.Fatalf("escaped regexp = %v, want true", got)
 	}
+	if got := RegexpMatchOf(Literal("BA"), Literal("A")).eval(EvalContext{}); !got.Equal(Present(false)) {
+		t.Fatalf("regexp substring match = %v, want false", got)
+	}
 	if got := LikeOf(NullLiteral[string](), Literal("x%")).eval(EvalContext{}); !got.IsNull() {
 		t.Fatalf("null like = %v, want null", got)
 	}

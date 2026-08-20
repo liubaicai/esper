@@ -132,7 +132,7 @@ func regexpExpression(value, pattern Expr) Expression[bool] {
 		if !leftOK || !patternOK {
 			return Null()
 		}
-		compiled, err := regexp.Compile(patternText)
+		compiled, err := regexp.Compile(likePattern(patternText))
 		if err != nil {
 			return Null()
 		}

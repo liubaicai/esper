@@ -1,3 +1,13 @@
+> 最新补充：Draft 4.202（2026-08-20），新增 `expr-core-like-regexp`
+> differential-verified 场景：固定 Java `ExprCoreLikeRegexp` 的四个
+> execution 与 Go 类型化 LIKE/REGEXP replay 产生 19 条 listener records、
+> 0 differences，覆盖 `%`/`_` 全字符串匹配、动态 pattern、Java 数值文本、
+> REGEXP full-match、Null 传播和 substring discriminator；并修复 Go
+> REGEXP 的 substring 匹配缺陷。新增固定 commit Java oracle、runner、
+> scenario、trace、evidence 与 value/order/null/record/time mutation checks；
+> manifest 达到 128 个 differential-verified case、393 个 differential
+> runtime IDs，其余六个 inventoried execution 保持 implemented-only。
+
 > 最新补充：Draft 4.201（2026-08-20），新增 `expr-core-relop`
 > differential-verified 场景：固定 Java `ExprCoreRelOp` 的两个
 > execution 与 Go 类型化混合关系运算 replay 产生 30 条 listener

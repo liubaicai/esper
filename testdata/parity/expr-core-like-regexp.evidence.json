@@ -1,0 +1,876 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-376f347aa8fc8367fcbc",
+    "java-runtime-09f15b6eb39cbee59b0d",
+    "java-runtime-7dc8b98263cf5e9e4c3f",
+    "java-runtime-8a8794063a0b9c4bfd0e"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreLikeRegexp.java"
+  ],
+  "javaExecutions": [
+    "ExprCoreLikeWConstants",
+    "ExprCoreLikeWExprs",
+    "ExprCoreRegexpWConstants",
+    "ExprCoreRegexpWExprs"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-like-regexp",
+    "steps": [
+      {
+        "op": "case",
+        "case": "like-constants"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Bxx",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Ayyy",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "BA",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "case",
+        "case": "like-expressions"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": "%XXaXX",
+          "p01": "%a%",
+          "p02": "%1%",
+          "p03": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": "%XXcXX",
+          "p01": "%b%",
+          "p02": "%2%",
+          "p03": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": "%XXcXX",
+          "p01": "%c%",
+          "p02": "%3%",
+          "p03": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": null,
+          "p01": "%a%",
+          "p02": "%4%",
+          "p03": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": "text",
+          "p01": null,
+          "p02": null,
+          "p03": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "regexp-constants"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Joe",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "TheJackWhite",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Jack",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "case",
+        "case": "regexp-expressions"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": "XXAXX",
+          "p01": ".*A.*",
+          "p02": ".*1.*",
+          "p03": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": "XXaXX",
+          "p01": ".*B.*",
+          "p02": ".*2.*",
+          "p03": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": "XXCXX",
+          "p01": ".*C.*",
+          "p02": ".*3.*",
+          "p03": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": "BA",
+          "p01": "A",
+          "p02": "1",
+          "p03": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": null,
+          "p01": "A",
+          "p02": "1",
+          "p03": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 413,
+          "p00": "x",
+          "p01": null,
+          "p02": "x",
+          "p03": null
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-like-regexp",
+    "records": [
+      {
+        "case": "like-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": false
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-like-regexp",
+    "records": [
+      {
+        "case": "like-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "like-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "regexp-expressions",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": false
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

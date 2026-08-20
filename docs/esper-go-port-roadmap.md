@@ -4,6 +4,21 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.202（2026-08-20），新增 `expr-core-like-regexp`
+> differential-verified 场景，对照固定 Java `ExprCoreLikeRegexp` 的四个
+> execution（`ExprCoreLikeWConstants`
+> `java-runtime-376f347aa8fc8367fcbc`、`ExprCoreLikeWExprs`
+> `java-runtime-09f15b6eb39cbee59b0d`、`ExprCoreRegexpWConstants`
+> `java-runtime-7dc8b98263cf5e9e4c3f`、`ExprCoreRegexpWExprs`
+> `java-runtime-8a8794063a0b9c4bfd0e`），四个 isolated case、19 条
+> listener records、0 differences。Go 侧复用类型化 LIKE/REGEXP builders，
+> 覆盖 `%`/`_` 全字符串匹配、动态 pattern、Java 数值文本、REGEXP
+> full-match、Null 和 substring discriminator；并修复 REGEXP 原先的
+> substring 匹配缺陷。固定 Java oracle、runner、scenario、trace、evidence
+> 与 value/order/null/record/time mutation tests 已纳入兼容资产；manifest
+> 更新为 128 个 differential-verified case、393 个 differential runtime
+> IDs；其余六个 LIKE/REGEXP inventoried execution 仍为 implemented-only。
+
 > 最新补充：Draft 4.201（2026-08-20），新增 `expr-core-relop`
 > differential-verified 场景，对照固定 Java `ExprCoreRelOp` 的两个
 > execution（`ExprCoreRelOpTypes`
@@ -256,7 +271,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 persisted differential evidence。当前有 121 个 differential-verified case（370 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
+2. 扩展 persisted differential evidence。当前有 128 个 differential-verified case（393 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；暂不建设 CI，后续按执行手册定期本地 Docker 重放，并保持普通测试中的显式环境型 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。

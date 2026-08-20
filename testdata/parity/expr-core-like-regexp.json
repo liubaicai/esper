@@ -1,0 +1,207 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-like-regexp",
+  "steps": [
+    {
+      "op": "case",
+      "case": "like-constants"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "Bxx",
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "Ayyy",
+        "intPrimitive": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "BA",
+        "intPrimitive": 12
+      }
+    },
+    {
+      "op": "case",
+      "case": "like-expressions"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": "%XXaXX",
+        "p01": "%a%",
+        "p02": "%1%",
+        "p03": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": "%XXcXX",
+        "p01": "%b%",
+        "p02": "%2%",
+        "p03": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": "%XXcXX",
+        "p01": "%c%",
+        "p02": "%3%",
+        "p03": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": null,
+        "p01": "%a%",
+        "p02": "%4%",
+        "p03": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": "text",
+        "p01": null,
+        "p02": null,
+        "p03": null
+      }
+    },
+    {
+      "op": "case",
+      "case": "regexp-constants"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "Joe",
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "TheJackWhite",
+        "intPrimitive": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "Jack",
+        "intPrimitive": 2
+      }
+    },
+    {
+      "op": "case",
+      "case": "regexp-expressions"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": "XXAXX",
+        "p01": ".*A.*",
+        "p02": ".*1.*",
+        "p03": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": "XXaXX",
+        "p01": ".*B.*",
+        "p02": ".*2.*",
+        "p03": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": "XXCXX",
+        "p01": ".*C.*",
+        "p02": ".*3.*",
+        "p03": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": "BA",
+        "p01": "A",
+        "p02": "1",
+        "p03": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": null,
+        "p01": "A",
+        "p02": "1",
+        "p03": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 413,
+        "p00": "x",
+        "p01": null,
+        "p02": "x",
+        "p03": null
+      }
+    }
+  ]
+}

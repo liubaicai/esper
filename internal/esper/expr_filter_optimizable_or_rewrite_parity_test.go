@@ -758,9 +758,9 @@ func TestExprFilterOrRewriteBooleanExprSimpleParity(t *testing.T) {
 	plan, err := env.Build(
 		From[filterOptStringAlphaBean](env, "SupportBean_StringAlphabetic").Filter(
 			And(
-				RegexpMatch(
+				Like(
 					Field[filterOptStringAlphaBean, string]("a"),
-					Literal("^a"),
+					Literal("a%"),
 				),
 				Or(
 					Equal[string](Field[filterOptStringAlphaBean, string]("b"), Literal("b")),
@@ -932,11 +932,11 @@ func TestExprFilterOrRewriteBooleanExprAndParity(t *testing.T) {
 			And(
 				Or(
 					Equal[string](Field[filterOptStringAlphaBean, string]("a"), Literal("a")),
-					RegexpMatch(Field[filterOptStringAlphaBean, string]("a"), Literal("^A")),
+					Like(Field[filterOptStringAlphaBean, string]("a"), Literal("A%")),
 				),
 				Or(
 					Equal[string](Field[filterOptStringAlphaBean, string]("b"), Literal("b")),
-					RegexpMatch(Field[filterOptStringAlphaBean, string]("b"), Literal("^B")),
+					Like(Field[filterOptStringAlphaBean, string]("b"), Literal("B%")),
 				),
 			),
 		).Query(StatementName("s0")),

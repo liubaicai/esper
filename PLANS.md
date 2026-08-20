@@ -35,82 +35,91 @@ activity or a single coverage percentage.
 
 - Updated: 2026-08-20
 - Baseline: `master` is clean and matches `origin/master` at pushed commit
-  `96a2aadf3`; the next semantic change must preserve that baseline.
-- Status: coalesce is committed and pushed. Relop replay implementation,
-  independent review, targeted validation, and all local milestone gates are
-  complete; final delivery remains.
-- Current work unit: `expr.core` / `case.expr-core-relop`
-- Exact next action: create one semantic commit, push `master`, and verify the
-  remote ref without tracked edits.
-- Worktree notes: only the expected relop implementation, parity assets,
-  central facts, and this checkpoint are modified/untracked; do not modify
-  `/root/app/esper` or `goal.txt`.
+  `a448dbd4f`; the next semantic change must preserve that baseline.
+- Status: relop is committed and pushed. The like/regexp replay is
+  zero-difference, independently reviewed, and all local gates pass; the
+  semantic commit and push remain.
+- Current work unit: `expr.core` / `case.expr-core-like-regexp`
+- Exact next action: perform the final staged diff audit, create one semantic
+  commit, push `master`, and verify the remote ref without tracked edits.
+- Worktree notes: expected like/regexp implementation, parity assets, central
+  facts, this checkpoint, and the Java-contract correction in
+  `expr_filter_optimizable_or_rewrite_parity_test.go` are modified/untracked;
+  do not modify `/root/app/esper` or `goal.txt`. Previous commit identity is
+  owned by Git.
 
 ## Delegation checkpoint
 
-- Collaboration facility: available; relop scout fan-out started concurrently
-  before implementation.
-- Java oracle scout: `01a01e04-304f-7631-ae3f-7449fcef4e76` (`Nash`), completed.
-  Confirmed nine independent value statements plus one Null statement, 30
-  listener records, fields `c0..c3`/`c0..c7`, boxed Boolean results, fresh
-  deploy/undeploy boundaries, and no timers/windows/old-stream rows.
-- Go surface scout: `01a01e04-2f3d-7272-9680-e0c785039915` (`McClintock`),
-  completed. Confirmed the existing four mixed relational builders and exact
-  numeric/string/Null coverage; no production semantic change is expected.
-- Independent parity reviewer: `01a01e1c-33d8-73a2-9ea6-1a58bda362c7`
-  (`Tesla`), completed read-only review. It found one medium scenario-shape
-  validation gap; the primary agent tightened Go and shell validation to the
-  exact ten-case order/three-send contract and added a malformed-shape test.
-  No semantic, trace, metadata, or manifest mismatch remained.
-- Previous coalesce scouts/review: retained in Git history and the prior
-  semantic checkpoint; the unit was pushed as `96a2aadf3`.
-- Serial exception: none; both required relop scouts were started through the
-  collaboration facility with disjoint read-only scopes.
+- Collaboration facility: available; the like/regexp scouts were started
+  concurrently before implementation.
+- Java oracle scout: `01a01e35-f5b6-7661-8fa8-2162b48b42b8` (`Hypatia`),
+  completed. Confirmed the four-execution ordinal 0-3 slice, runtime IDs
+  `376f347aa8fc8367fcbc`, `09f15b6eb39cbee59b0d`,
+  `7dc8b98263cf5e9e4c3f`, and `8a8794063a0b9c4bfd0e`; ten source-derived
+  listener rows with fixed field/order contracts; Java full-match REGEXP,
+  numeric formatting, and no timers/old stream.
+- Go surface scout: `01a01e35-f46f-77d0-ab28-1a4eb60c567a` (`Volta`),
+  completed. Confirmed existing typed Like/Regexp APIs and Null/Missing/
+  typed-nil handling; no API-shape change is needed. Identified a likely
+  production gap: Go `regexp.MatchString` searches substrings while Java
+  `Pattern.matcher(...).matches()` requires a full match; the replay includes
+  a distinguishing input before any production fix.
+- Independent parity reviewer: `01a01e4f-3e36-7811-97f5-1daffab14ce9`
+  (`Erdos`), completed read-only review with one P1 finding. The finding was
+  resolved by correcting three unchanged filter parity test expressions from
+  `RegexpMatch(^prefix)` to the Java-source-equivalent `Like(prefix%)`; the
+  reviewer confirmed no remaining findings on follow-up.
+- N+1 Java contract scout: `01a01e4f-3b78-7e72-81df-74beac83c9a5`
+  (`Russell`), completed read-only `expr-core-in-between` scope; identified a
+  safe five-execution candidate and its exact runtime IDs.
+- N+1 Go surface scout: `01a01e4f-3cd5-7eb0-a713-5b17da488e25`
+  (`Kierkegaard`), completed read-only `expr-core-in-between` scope; confirmed
+  reusable typed builders and flagged endpoint-plan-identity/nullability risks.
+- Previous relop scouts/review: retained in Git history; relop was pushed as
+  `a448dbd4f`.
+- Serial exception: none; both required like/regexp scouts were started
+  through the collaboration facility with disjoint read-only scopes.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, mixed relational operators and Null
+- Capability/subdomain: `expr.core`, LIKE/REGEXP matching and Null
   propagation
 - Java source and executions/runtime IDs:
--  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreRelOp.java`;
-  `ExprCoreRelOpTypes` / `java-runtime-615cb125ab25e488f40c`;
-  `ExprCoreRelOpNull` / `java-runtime-402d95bd69d700735100`.
-- Differential scope: both executions are replayed with ten deterministic
-  case markers: `relop-string`, `relop-int`, `relop-long`, `relop-float`,
-  `relop-double`, `relop-big-decimal`, `relop-int-big-decimal`,
-  `relop-big-integer`, `relop-int-big-integer`, and `relop-null`. Each value
-  marker sends three events and emits one new row; the Null marker sends E1,
-  E2, and E3. This yields 30 ordered records. There is no separate compile-
-  error runtime; invalid-builder behavior remains Go-unit evidence.
-- Observable contract: mixed relational predicates must preserve Java's
-  numeric/string comparison, result field order and boxed Boolean type,
-  Null/Missing and typed-nil propagation, record order, and fresh
-  execution-local lifecycle boundaries. Value rows are `[false,false,true,true]`,
-  `[true,false,true,false]`, and `[true,true,false,false]`; Null rows are
-  `[null,true,null,null,null,false,true,true]`,
-  `[null,true,null,null,null,true,false,false]`, and eight Nulls. No time
-  advances, old-stream rows, windows, or timers occur.
-  The exact EPL/SODA/compile syntax and parser diagnostics remain outside the
-  typed fluent API. The replay must use fixed inputs and include normal mixed
-  values, Null/Missing values, coercion-sensitive boundaries, record order, and
-  the relevant invalid/build boundary.
-- Allowed production files: existing typed relational code under
+-  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreLikeRegexp.java`;
+  `ExprCoreLikeWConstants` / `java-runtime-376f347aa8fc8367fcbc`;
+  `ExprCoreLikeWExprs` / `java-runtime-09f15b6eb39cbee59b0d`;
+  `ExprCoreRegexpWConstants` / `java-runtime-7dc8b98263cf5e9e4c3f`;
+  `ExprCoreRegexpWExprs` / `java-runtime-8a8794063a0b9c4bfd0e`.
+- Differential scope: four ordered isolated cases for the executions above.
+  The scenario includes the Java source inputs plus Null and a regex
+  substring/full-match discriminator inside the dynamic REGEXP statement.
+  The invalid compile execution, escaped-character case, numeric/Null case,
+  and SODA/compile duplicate remain implemented-only for later units or Go
+  unit evidence; no runtime IDs are claimed for them here.
+- Observable contract: full-string SQL-like `%`/`_` matching, Java-compatible
+  numeric text conversion, dynamic value/pattern operands, Java full-match
+  REGEXP semantics, Null/Missing/typed-nil propagation, boxed Boolean result
+  fields, field and listener order, and fresh lifecycle boundaries. Fixed
+  inputs include matches, non-matches, Null values, numeric values, and a
+  dynamic pattern that must reject a substring-only match. No timers, windows,
+  old-stream rows, or time advances are expected.
+- Allowed production files: existing typed LIKE/REGEXP code under
   `internal/esper` only if differential replay proves a semantic regression;
   prefer no production change.
 - Allowed Go test/parity files: a new
-  `internal/app/parity/expr_core_relop.go`, focused additions only if needed
-  under `internal/esper`, and minimal dispatcher/test additions in
+  `internal/app/parity/expr_core_like_regexp.go`, focused additions only if
+  needed under `internal/esper`, and minimal dispatcher/test additions in
   `internal/app/parity/run.go` and `run_test.go`.
 - Allowed parity asset files:
-  `tools/java-oracle/ExprCoreRelOpScenarioOracle.java`,
-  `tools/java-oracle/run-expr-core-relop.sh`, and
-  `testdata/parity/expr-core-relop.{json,trace.json,evidence.json}`.
+  `tools/java-oracle/ExprCoreLikeRegexpScenarioOracle.java`,
+  `tools/java-oracle/run-expr-core-like-regexp.sh`, and
+  `testdata/parity/expr-core-like-regexp.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: changes under `/root/app/esper`; unrelated
   semantic surfaces; `goal.txt`; generated evidence before trace validation;
   and central facts outside this unit's manifest/roadmap/CHANGELOG updates.
   `PLANS.md`, the manifest, roadmap, CHANGELOG, traces, and evidence remain
   primary-agent owned. Scouts do not format, build, test, commit, or push.
-- Targeted validation: the pinned Java oracle runner; focused relational
+- Targeted validation: the pinned Java oracle runner; focused LIKE/REGEXP
   Esper tests; focused parity replay and mutation tests; and
   `go test ./internal/compat ./internal/app/manifest -count=1`.
 - Milestone gates required: changed-file `gofmt`, `go vet ./...`,
@@ -146,39 +155,48 @@ activity or a single coverage percentage.
 - 2026-08-20: The previous coalesce unit was delivered as `96a2aadf3`, with
   six zero-difference runtimes and 22 replay records; its invalid compile case
   remains implemented-only.
-- 2026-08-20: `case.expr-core-relop` is the next natural expression unit: two
-  implemented-only runtimes with existing typed mixed relational builders and
-  focused tests. Nash confirmed the ten-marker/30-record Java contract;
-  McClintock confirmed no production semantic gap in the Go surface.
+- 2026-08-20: `case.expr-core-relop` was delivered as `a448dbd4f` with two
+  zero-difference runtime IDs and 30 replay records. Its scenario-shape review
+  tightened exact case order and send counts.
+- 2026-08-20: `case.expr-core-like-regexp` reached zero-difference replay:
+  four differential runtime IDs, four isolated cases, and 19 ordered records.
+  The checked-in Java and Go traces both hash to
+  `086c1aa32be7ae5bf2b23ec9750853c911187e3512eac9edd8e32d8917ea6f2f`;
+  the full-match fix is covered by a unit assertion and dynamic REGEXP input.
+- 2026-08-20: After targeted validation, independent reviewer Erdos and the
+  two `expr-core-in-between` read-only scouts Russell/Kierkegaard were started
+  concurrently. Erdos found and then cleared one P1 test-modeling issue;
+  Russell/Kierkegaard identified a safe five-execution N+1 slice and its
+  endpoint-plan-identity/nullability risks without modifying files.
 
 ## Validation evidence
 
 - Investigation baseline on 2026-08-20: `/root/app/esper` is fixed at
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; `master` was clean and matched
-  `origin/master` at `96a2aadf366bdcb77814224aea09cc76e395f81b`. The manifest
-  then reported 522 cases, 126 differential-verified cases, 387 differential
-  runtimes, 2,901 referenced runtimes, and 1,235 unreferenced runtime IDs.
-- Current unit result: relop replay, review, and complete local validation are
-  complete. The pinned Java runner produced 30 records; the checked-in Java
-  trace and Go replay both hash to
-  `04af6cdc70dc929c85aa308374521cc47c91f6145566e4845784ef49041ad34f`.
-  Differential evidence reports `passing` with zero differences and exact
-  runtime/source/execution metadata. Focused relational Esper/parity/compat/
-  manifest tests, the malformed-scenario and trace mutation checks,
-  `go vet ./...`, `go test ./... -count=1 -timeout 240s`,
-  `go test -race ./internal/app/parity ./internal/esper -count=1 -timeout 600s`,
-  `make check`, `jq`, `sh -n`, and `git diff --check` all pass.
-- Final diff audit: only the expected relop parity implementation, dispatcher
-  and tests, fixed Java oracle/runner, scenario/trace/evidence, manifest,
-  roadmap, CHANGELOG, and this checkpoint are changed; no `internal/esper`
-  production semantic file, `/root/app/esper`, or `goal.txt` was modified.
+  `origin/master` at `a448dbd4fd59f7b97ded37f7f6e1f090ed7c1a0b`. Manifest
+  summary reports 522 cases, 127 differential-verified cases, 389
+  differential runtimes, 2,901 referenced runtimes, and 1,235 unreferenced
+  runtime IDs. The like/regexp target is implemented-only with ten runtime
+  IDs and existing Go unit coverage; no differential trace or evidence is
+  present.
+- Current unit result: the pinned Java runner produced 19 records; checked-in
+  Java and Go traces are byte-identical; differential evidence is `passing`
+  with zero differences and exact four-runtime/source/execution metadata.
+  Focused LIKE/REGEXP Esper tests, parity replay/evidence/malformed-shape and
+  six trace mutation tests, compat/manifest tests, `sh -n`, JSON validation,
+  and `git diff --check` pass. The two pre-existing filter parity failures
+  were reproduced on clean `a448dbd4f`, then corrected to use the Java
+  source's LIKE semantics. After that correction, `go vet ./...`,
+  `go test ./... -count=1 -timeout 240s`, `make check`, and
+  `make test-race` all pass. The independent parity reviewer confirmed no
+  remaining findings.
 
 ## Delivery
 
 - The previous unit is committed and pushed to `origin/master` at
-  `96a2aadf3`; Git history is the authoritative source for its identity. The
-  relop unit may be committed only after independent review and all required
-  gates pass.
+  `a448dbd4f`; Git history is the authoritative source for its identity. The
+  like/regexp unit may be committed only after independent review and all
+  required gates pass.
 - Do not create another tracked checkpoint update after this unit's semantic
   commit. Verify the pushed ref without editing tracked files.
 
