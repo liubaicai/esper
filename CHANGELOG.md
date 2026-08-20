@@ -871,3 +871,4 @@ SQL FAF 的 `EPLDatabaseFAF` 10 个 Java execution 已有 `database_faf_parity_t
   value, order, field-name, and time mutations are rejected. Evidence is in
   `testdata/parity/dt-between.evidence.json` and the case is linked to
   `expr.core` in the capability manifest.
+> 最新补充：Draft 4.199（2026-08-20），新增 `expr-core-logical` differential-verified 场景，对照固定 Java `ExprCoreAndOrNot` 的三个 execution（`ExprCoreAndOrNotCombined` `java-runtime-e48bf14356e3aeb838b5`、`ExprCoreNotWithVariable` `java-runtime-c63d599754acde7bb4dc`、`ExprCoreAndOrNotNull` `java-runtime-b9d938f2dc52682b77c0`），三个 isolated case、13 条 listener records、0 differences。Go 侧复用类型化 `And`/`Or`/`Not`、`Contains`、nullable `Property` 和部署期变量直接更新，覆盖整数组合谓词、变量更新前后 `not contains`、boxed Boolean 三值真值矩阵、投影顺序和 explicit null。固定 Java oracle、runner、scenario、trace、evidence 和 value/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 125 个 differential-verified case、381 个 differential runtime IDs。

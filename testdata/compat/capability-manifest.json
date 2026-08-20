@@ -10176,7 +10176,10 @@
    ],
    "goTests": [
     "TestLogicalExpressionsMatchJavaThreeValuedTruthTables",
-    "TestLogicalExpressionVariableUpdatesMatchEsper"
+    "TestLogicalExpressionVariableUpdatesMatchEsper",
+    "TestRunExprCoreLogicalDiffWritesPassingEvidence",
+    "TestExprCoreLogicalCheckedInEvidenceMatchesIndependentTraceAndReplay",
+    "TestRunExprCoreLogicalDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10190,17 +10193,30 @@
     "variables",
     "plan-identity"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-source",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-logical.json",
+    "testdata/parity/expr-core-logical.trace.json",
+    "testdata/parity/expr-core-logical.evidence.json",
+    "tools/java-oracle/ExprCoreLogicalScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-logical.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
-   "difference": "Go's typed And/Or/Not preserve Esper three-valued Null propagation for primitive and boxed boolean operands, and Property now dereferences nullable bean fields at the typed boundary; variable-backed logical expressions observe atomic runtime variable updates. Java EPL/SODA syntax and exact boxed type metadata/diagnostics remain outside the fluent builder, while broader filter/pattern/context/FAF combinations remain partial.",
+   "difference": "Go's typed And/Or/Not preserve Esper three-valued Null propagation for primitive and boxed boolean operands, and Property now dereferences nullable bean fields at the typed boundary; variable-backed logical expressions observe atomic runtime variable updates. The three scoped Java executions have persisted zero-difference Java/Go traces covering 13 listener records, projection order, explicit boxed nulls, and the deployment-scoped variable update. Java EPL/SODA syntax and exact boxed type metadata/diagnostics remain outside the fluent builder, while broader filter/pattern/context/FAF combinations remain partial.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-e48bf14356e3aeb838b5",
+    "java-runtime-c63d599754acde7bb4dc",
+    "java-runtime-b9d938f2dc52682b77c0"
+   ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -34464,8 +34480,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 522,
 "implementedCases": 520,
-"differentialVerifiedCases": 124,
-"differentialVerifiedRuntimeIds": 378,
+"differentialVerifiedCases": 125,
+"differentialVerifiedRuntimeIds": 381,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

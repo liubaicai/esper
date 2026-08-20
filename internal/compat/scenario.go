@@ -78,6 +78,13 @@ func (s Scenario) Validate() error {
 			if len(step.Payload) == 0 {
 				return fmt.Errorf("compat: step %d send has no payload", i)
 			}
+		case "set-variable":
+			if strings.TrimSpace(step.Name) == "" {
+				return fmt.Errorf("compat: step %d set-variable has no name", i)
+			}
+			if len(step.Payload) == 0 {
+				return fmt.Errorf("compat: step %d set-variable has no payload", i)
+			}
 		case "advance-time":
 			if _, err := time.Parse(time.RFC3339Nano, step.At); err != nil {
 				return fmt.Errorf("compat: step %d invalid time %q: %w", i, step.At, err)
@@ -227,6 +234,8 @@ func Replay(ctx context.Context, engine *esper.Engine, statement *esper.Statemen
 			if err := engine.AdvanceTime(ctx, at); err != nil {
 				return trace, err
 			}
+		case "set-variable":
+			return trace, fmt.Errorf("compat: Replay set-variable requires a step handler")
 		case "snapshot", "snapshot-selector":
 			return trace, fmt.Errorf("compat: Replay snapshot requires a statement resolver; use ReplayWithStatements")
 		}
@@ -343,7 +352,7 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 			if err := engine.AdvanceTime(ctx, at); err != nil {
 				return trace, err
 			}
-		case "faf", "deploy", "read-variable":
+		case "faf", "deploy", "read-variable", "set-variable":
 			handler := handlers[step.Op]
 			if handler == nil {
 				return trace, fmt.Errorf("compat: no %s handler for step %q", step.Op, step.Statement)

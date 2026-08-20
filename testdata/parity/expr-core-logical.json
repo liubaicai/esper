@@ -1,0 +1,153 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-logical",
+  "steps": [
+    {
+      "op": "case",
+      "case": "and-or-not-combined"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 2,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 3,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "case",
+      "case": "not-with-variable"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "World",
+        "intPrimitive": 0,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "x",
+        "intPrimitive": 0,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "set-variable",
+      "name": "thing",
+      "payload": "5 x 5"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "World",
+        "intPrimitive": 0,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "x",
+        "intPrimitive": 0,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "case",
+      "case": "and-or-not-null"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 0,
+        "boolPrimitive": true,
+        "boolBoxed": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 0,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 0,
+        "boolPrimitive": false,
+        "boolBoxed": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E4",
+        "intPrimitive": 0,
+        "boolPrimitive": true,
+        "boolBoxed": null
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E5",
+        "intPrimitive": 0,
+        "boolPrimitive": true,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E6",
+        "intPrimitive": 0,
+        "boolPrimitive": false,
+        "boolBoxed": true
+      }
+    }
+  ]
+}
