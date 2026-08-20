@@ -29,12 +29,14 @@ public final class ExprCoreExistsCastScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
     private static final String SCENARIO_ID = "expr-core-exists-cast";
     private static final String[] CASES = {
-            "exists-simple", "exists-inner", "exists-om", "exists-compile"
+            "exists-simple", "exists-inner", "exists-om", "exists-compile",
+            "cast-simple", "cast-simple-more-types", "cast-as-parse", "cast-double-null-om"
     };
     private static final String[] EVENT_TYPES = {
-            "SupportBean", "SupportMarkerInterface", "SupportMarkerInterface", "SupportMarkerInterface"
+            "SupportBean", "SupportMarkerInterface", "SupportMarkerInterface", "SupportMarkerInterface",
+            "SupportBean", "SupportBean", "SupportBean", "SupportBeanDynRoot"
     };
-    private static final int[] SEND_COUNTS = {1, 5, 3, 3};
+    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6};
 
     private ExprCoreExistsCastScenarioOracle() {
     }
@@ -120,9 +122,54 @@ public final class ExprCoreExistsCastScenarioOracle {
             requireDouble(payload, "floatBoxed", 9.5);
             return;
         }
-        String[] shapes = caseIndex == 1
-                ? new String[]{"null", "complex", "complex", "nested-support-bean", "support-bean-a"}
-                : new String[]{"support-bean", "null", "string"};
+		if (caseIndex == 4) {
+			requireFieldCount(payload, sendIndex == 0 ? 4 : 4, CASES[caseIndex]);
+			if (sendIndex == 0) {
+				requireString(payload, "theString", "abc");
+				requireNumber(payload, "intPrimitive", 100);
+				requireNumber(payload, "intBoxed", 3);
+				requireDouble(payload, "floatBoxed", 9.5);
+			} else {
+				requireNull(payload, "theString");
+				requireNumber(payload, "intPrimitive", 100);
+				requireNull(payload, "intBoxed");
+				requireNull(payload, "floatBoxed");
+			}
+			return;
+		}
+		if (caseIndex == 5) {
+			requireFieldCount(payload, 3, CASES[caseIndex]);
+			requireString(payload, "theString", "true");
+			requireNumber(payload, "intPrimitive", 1);
+			requireNumber(payload, "doublePrimitive", 1);
+			return;
+		}
+		if (caseIndex == 6) {
+			requireFieldCount(payload, 2, CASES[caseIndex]);
+			requireString(payload, "theString", "12");
+			requireNumber(payload, "intPrimitive", 1);
+			return;
+		}
+		if (caseIndex == 7) {
+			String[] itemTypes = {"int", "byte", "double", "int64", "null", "string"};
+			requireFieldCount(payload, sendIndex == 4 ? 1 : 2, CASES[caseIndex]);
+			requireString(payload, "itemType", itemTypes[sendIndex]);
+			if (sendIndex == 0) {
+				requireNumber(payload, "itemValue", 100);
+			} else if (sendIndex == 1) {
+				requireNumber(payload, "itemValue", 2);
+			} else if (sendIndex == 2) {
+				requireDouble(payload, "itemValue", 77.7777);
+			} else if (sendIndex == 3) {
+				requireNumber(payload, "itemValue", 6);
+			} else if (sendIndex == 5) {
+				requireString(payload, "itemValue", "abc");
+			}
+			return;
+		}
+		String[] shapes = caseIndex == 1
+				? new String[]{"null", "complex", "complex", "nested-support-bean", "support-bean-a"}
+				: new String[]{"support-bean", "null", "string"};
         requireFieldCount(payload, 1, CASES[caseIndex]);
         requireString(payload, "shape", shapes[sendIndex]);
     }
@@ -154,11 +201,19 @@ public final class ExprCoreExistsCastScenarioOracle {
         }
     }
 
+	private static void requireNull(JsonObject payload, String name) {
+		JsonValue value = payload.get(name);
+		if (value == null || !value.isNull()) {
+			throw new IllegalArgumentException("payload null mismatch for " + name);
+		}
+	}
+
     private static void runCase(JsonArray allSteps, String caseName, JsonArray records) throws Exception {
         Configuration configuration = new Configuration();
         configuration.getRuntime().getThreading().setInternalTimerEnabled(false);
         configuration.getCommon().addEventType("SupportBean", SupportBean.class);
         configuration.getCommon().addEventType("SupportMarkerInterface", SupportMarkerInterface.class);
+		configuration.getCommon().addEventType("SupportBeanDynRoot", SupportBeanDynRoot.class);
         String runtimeName = "parity-expr-core-exists-cast-" + caseName;
         EPRuntime runtime = EPRuntimeProvider.getRuntime(runtimeName, configuration);
         try {
@@ -208,6 +263,25 @@ public final class ExprCoreExistsCastScenarioOracle {
         if ("exists-om".equals(caseName) || "exists-compile".equals(caseName)) {
             return "select exists(item?.intBoxed) as t0 from SupportMarkerInterface";
         }
+		if ("cast-simple".equals(caseName)) {
+			return "select cast(theString as string) as c0, cast(intBoxed, int) as c1, " +
+					"cast(floatBoxed, java.lang.Float) as c2, cast(theString, java.lang.String) as c3, " +
+					"cast(intPrimitive, java.lang.Integer) as c4, cast(intPrimitive, long) as c5, " +
+					"cast(intPrimitive, java.lang.Number) as c6, cast(floatBoxed, long) as c7 from SupportBean";
+		}
+		if ("cast-simple-more-types".equals(caseName)) {
+			return "select cast(intPrimitive, float) as c0, cast(intPrimitive, short) as c1, " +
+					"cast(intPrimitive, byte) as c2, cast(theString, char) as c3, " +
+					"cast(theString, boolean) as c4, cast(intPrimitive, BigInteger) as c5, " +
+					"cast(intPrimitive, BigDecimal) as c6, cast(doublePrimitive, BigDecimal) as c7, " +
+					"cast(theString, char) as c8 from SupportBean";
+		}
+		if ("cast-as-parse".equals(caseName)) {
+			return "select cast(theString, int) as t0 from SupportBean";
+		}
+		if ("cast-double-null-om".equals(caseName)) {
+			return "select cast(item?,double) as t0 from SupportBeanDynRoot";
+		}
         throw new IllegalArgumentException("unsupported case " + caseName);
     }
 
@@ -228,6 +302,8 @@ public final class ExprCoreExistsCastScenarioOracle {
                 runtime.getEventService().sendEventBean(toSupportBean(payload), "SupportBean");
             } else if ("SupportMarkerInterface".equals(step.getString("eventType", ""))) {
                 runtime.getEventService().sendEventBean(toDynamicRoot(payload), "SupportMarkerInterface");
+			} else if ("SupportBeanDynRoot".equals(step.getString("eventType", ""))) {
+				runtime.getEventService().sendEventBean(toCastDynamicRoot(payload), "SupportBeanDynRoot");
             } else {
                 throw new IllegalArgumentException("unsupported event type");
             }
@@ -235,11 +311,39 @@ public final class ExprCoreExistsCastScenarioOracle {
     }
 
     private static SupportBean toSupportBean(JsonObject payload) {
-        SupportBean bean = new SupportBean(payload.getString("theString", ""), payload.getInt("intPrimitive", 0));
-        bean.setIntBoxed(payload.getInt("intBoxed", 0));
-        bean.setFloatBoxed((float) payload.getDouble("floatBoxed", 0.0));
+		JsonValue theString = payload.get("theString");
+		SupportBean bean = new SupportBean(theString == null || theString.isNull() ? null : theString.asString(), payload.getInt("intPrimitive", 0));
+		JsonValue intBoxed = payload.get("intBoxed");
+		bean.setIntBoxed(intBoxed == null || intBoxed.isNull() ? null : payload.getInt("intBoxed", 0));
+		JsonValue floatBoxed = payload.get("floatBoxed");
+		bean.setFloatBoxed(floatBoxed == null || floatBoxed.isNull() ? null : (float) payload.getDouble("floatBoxed", 0.0));
+		JsonValue doublePrimitive = payload.get("doublePrimitive");
+		if (doublePrimitive != null && !doublePrimitive.isNull()) {
+			bean.setDoublePrimitive(payload.getDouble("doublePrimitive", 0.0));
+		}
         return bean;
     }
+
+	private static SupportBeanDynRoot toCastDynamicRoot(JsonObject payload) {
+		String itemType = payload.getString("itemType", "");
+		JsonValue itemValue = payload.get("itemValue");
+		switch (itemType) {
+			case "int":
+				return new SupportBeanDynRoot(payload.getInt("itemValue", 0));
+			case "byte":
+				return new SupportBeanDynRoot((byte) payload.getInt("itemValue", 0));
+			case "double":
+				return new SupportBeanDynRoot(payload.getDouble("itemValue", 0.0));
+			case "int64":
+				return new SupportBeanDynRoot((long) payload.getLong("itemValue", 0L));
+			case "null":
+				return new SupportBeanDynRoot(null);
+			case "string":
+				return new SupportBeanDynRoot(itemValue == null ? "" : itemValue.asString());
+			default:
+				throw new IllegalArgumentException("unsupported cast item type " + itemType);
+		}
+	}
 
     private static SupportBeanDynRoot toDynamicRoot(JsonObject payload) {
         String shape = payload.getString("shape", "");

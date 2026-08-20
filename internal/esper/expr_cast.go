@@ -171,7 +171,7 @@ func castAnyToType(source any, target reflect.Type, layout string) Value {
 	if target == reflect.TypeOf(rune(0)) {
 		if text, ok := source.(string); ok {
 			runes := []rune(text)
-			if len(runes) == 1 {
+			if len(runes) > 0 {
 				return Present(runes[0])
 			}
 			return Null()

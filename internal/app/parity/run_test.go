@@ -7867,8 +7867,8 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
 		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
 	}
-	if len(javaTrace.Records) != 12 {
-		t.Fatalf("checked-in Java trace records = %d, want 12", len(javaTrace.Records))
+	if len(javaTrace.Records) != 22 {
+		t.Fatalf("checked-in Java trace records = %d, want 22", len(javaTrace.Records))
 	}
 	statementCounts := map[string]int{}
 	caseCounts := map[string]int{}
@@ -7876,10 +7876,13 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 		statementCounts[record.Statement]++
 		caseCounts[record.Case]++
 	}
-	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 12}) {
+	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 22}) {
 		t.Fatalf("checked-in statement counts = %#v", statementCounts)
 	}
-	wantCaseCounts := map[string]int{"exists-simple": 1, "exists-inner": 5, "exists-om": 3, "exists-compile": 3}
+	wantCaseCounts := map[string]int{
+		"exists-simple": 1, "exists-inner": 5, "exists-om": 3, "exists-compile": 3,
+		"cast-simple": 2, "cast-simple-more-types": 1, "cast-as-parse": 1, "cast-double-null-om": 6,
+	}
 	if !reflect.DeepEqual(caseCounts, wantCaseCounts) {
 		t.Fatalf("checked-in case counts = %#v", caseCounts)
 	}
@@ -7938,6 +7941,12 @@ func TestRunExprCoreExistsCastDiffRejectsTraceMutations(t *testing.T) {
 			name: "value",
 			mutate: func(trace *compat.Trace) {
 				trace.Records[0].New[0].Fields["c0"] = false
+			},
+		},
+		{
+			name: "cast-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[14].New[0].Fields["c3"] = "x"
 			},
 		},
 		{

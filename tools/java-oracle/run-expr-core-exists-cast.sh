@@ -72,11 +72,13 @@ if ! jq -e '
     .id == "expr-core-exists-cast" and
     (.steps | type == "array") and
     ([.steps[] | select(.op == "case") | .case] == [
-        "exists-simple", "exists-inner", "exists-om", "exists-compile"
+        "exists-simple", "exists-inner", "exists-om", "exists-compile",
+        "cast-simple", "cast-simple-more-types", "cast-as-parse", "cast-double-null-om"
     ]) and
-    ([.steps[] | select(.op == "send")] | length) == 12 and
-    ([.steps[] | select(.op == "send" and .eventType == "SupportBean")] | length) == 1 and
-    ([.steps[] | select(.op == "send" and .eventType == "SupportMarkerInterface")] | length) == 11
+    ([.steps[] | select(.op == "send")] | length) == 22 and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBean")] | length) == 5 and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportMarkerInterface")] | length) == 11 and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBeanDynRoot")] | length) == 6
     ' "$scenario" >/dev/null 2>&1; then
     echo "scenario is not a valid expr-core-exists-cast replay: $scenario" >&2
     exit 1
@@ -123,18 +125,25 @@ if ! jq -e '
     .version == "esper-parity/v1" and
     .id == "expr-core-exists-cast" and
     (.records | type == "array") and
-    ((.records | length) == 12) and
+    ((.records | length) == 22) and
     ([.records[] | select(.operation == "listener" and .statement == "s0" and
         (.new | type == "array" and length == 1) and
         ((.old // []) | length == 0) and
-        .new[0].kind == "row")] | length) == 12 and
+        .new[0].kind == "row")] | length) == 22 and
     ([.records[] | select(.case == "exists-simple")] | length) == 1 and
     ([.records[] | select(.case == "exists-inner")] | length) == 5 and
     ([.records[] | select(.case == "exists-om")] | length) == 3 and
     ([.records[] | select(.case == "exists-compile")] | length) == 3 and
+    ([.records[] | select(.case == "cast-simple")] | length) == 2 and
+    ([.records[] | select(.case == "cast-simple-more-types")] | length) == 1 and
+    ([.records[] | select(.case == "cast-as-parse")] | length) == 1 and
+    ([.records[] | select(.case == "cast-double-null-om")] | length) == 6 and
     ([.records[] | select(.case == "exists-simple") | (.new[0].fields | keys)] | unique) == [["c0", "c1", "c2", "c3", "c4"]] and
     ([.records[] | select(.case == "exists-inner") | (.new[0].fields | keys)] | unique) == [["t0", "t1", "t10", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9"]] and
-    ([.records[] | select(.case == "exists-om" or .case == "exists-compile") | (.new[0].fields | keys)] | unique) == [["t0"]]
+    ([.records[] | select(.case == "exists-om" or .case == "exists-compile") | (.new[0].fields | keys)] | unique) == [["t0"]] and
+    ([.records[] | select(.case == "cast-simple") | (.new[0].fields | keys)] | unique) == [["c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7"]] and
+    ([.records[] | select(.case == "cast-simple-more-types") | (.new[0].fields | keys)] | unique) == [["c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"]] and
+    ([.records[] | select(.case == "cast-as-parse" or .case == "cast-double-null-om") | (.new[0].fields | keys)] | unique) == [["t0"]]
     ' "$output" >/dev/null 2>&1; then
     echo "Java oracle produced an invalid trace: $output" >&2
     exit 1

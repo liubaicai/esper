@@ -4,21 +4,21 @@
 
 ## 0. 实时状态入口
 
-> 最新补充：Draft 4.208（2026-08-20），新增 `expr-core-exists-cast`
-> differential-verified 场景，对照固定 Java `ExprCoreExists` 的四个可观测
-> execution（`ExprCoreExistsSimple`
-> `java-runtime-d77c035088ce635538c7`、`ExprCoreExistsInner`
-> `java-runtime-4202039fb2f1ea65fd49`、`ExprCoreCastDoubleAndNullOM`
-> `java-runtime-8fa7f5076dde9d791d08`、`ExprCoreCastStringAndNullCompile`
-> `java-runtime-afd826c7d955eb538001`），四个 isolated case、12 条 listener
-> records、0 differences。Go 侧新增类型化 `OptionalProperty[T]`，让 `?` 路径
-> 在 null/incompatible/missing 中间 receiver 上产生 Missing，同时保持普通
-> Exists 的 terminal Null-as-present 语义；OM/compile source forms 归一为同一
-> typed Go plan 并保持 fresh lifecycle。其余 Cast execution、完整 EPL/SODA/
-> compile parser、日期转换诊断和完整类型矩阵仍为 implemented-only。固定 Java
+> 最新补充：Draft 4.209（2026-08-20），扩展 `expr-core-exists-cast`
+> differential-verified 场景，对照固定 Java `ExprCoreExists` 的四个 execution
+> 与 `ExprCoreCast` 的四个可观测 execution（`ExprCoreCastSimple`
+> `java-runtime-3fc2cde530f321dc3994`、`ExprCoreCastSimpleMoreTypes`
+> `java-runtime-5c9fdd17b5480f9d78e2`、`ExprCoreCastAsParse`
+> `java-runtime-52fb8d57dd380f5efe6e`、`ExprCoreCastDoubleAndNullOM`
+> `java-runtime-45b9d5a2e216f8063b75`），八个 isolated case、22 条 listener
+> records、0 differences。Go 侧复用类型化 `Cast[A,B]`，覆盖 numeric/primitive/
+> boxed/dynamic cast、char 首字符转换、BigInteger/BigDecimal-equivalent 值、
+> string-to-int parse、Null 和 incompatible dynamic values；修复 char cast
+> 多字符输入取首字符。Java EPL/SODA/compile entry details、日期/interface/
+> array/generic/Boolean casts 和完整诊断矩阵仍为 implemented-only。固定 Java
 > oracle、runner、scenario、trace、evidence 与 value/order/null/lifecycle/time
-> mutation tests 已纳入兼容资产；manifest 达到 134 个 differential-verified
-> case、415 个 differential runtime IDs。
+> mutation tests 已纳入兼容资产；manifest 保持 134 个 differential-verified
+> case，更新为 419 个 differential runtime IDs。
 
 > 最新补充：Draft 4.207（2026-08-20），新增 `expr-core-type-name`
 > differential-verified 场景，对照固定 Java `ExprCoreTypeOfFragment` 的一个

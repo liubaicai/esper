@@ -22,6 +22,9 @@ func TestCastExpressionsMatchJavaNumericBooleanBigNumberAndDateSemantics(t *test
 	if got := Cast[string, rune](Literal("x")).eval(EvalContext{}); !got.Equal(Present(rune('x'))) {
 		t.Fatalf("string rune cast = %v, want x", got)
 	}
+	if got := Cast[string, rune](Literal("true")).eval(EvalContext{}); !got.Equal(Present(rune('t'))) {
+		t.Fatalf("multi-character string rune cast = %v, want t", got)
+	}
 	if got := Cast[string, big.Int](Literal("156.78")).eval(EvalContext{}); !got.Equal(Present(exactCastInt("156"))) {
 		t.Fatalf("BigInteger cast = %v, want 156", got)
 	}

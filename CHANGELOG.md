@@ -1,14 +1,15 @@
-> 最新补充：Draft 4.208（2026-08-20），新增 `expr-core-exists-cast`
-> differential-verified 场景：固定 Java `ExprCoreExists` 的四个可观测 execution
-> 与 Go typed Exists/OptionalProperty replay 产生 12 条 listener records、0
-> differences，覆盖 simple property presence、dynamic nested/indexed/mapped
-> paths、nullable terminal values、null/incompatible receivers，以及 OM/compile
-> lifecycle equivalents。新增 `OptionalProperty[T]` 和 `?` path-boundary
-> Null-to-Missing propagation；ordinary Exists 保持 present Null-as-existing
-> semantics。固定 commit 的 Java oracle、runner、scenario、trace、evidence 和
-> value/order/null/lifecycle/time mutation tests 已纳入兼容资产；manifest 更新
-> 为 134 个 differential-verified case、415 个 differential runtime IDs。其余
-> Cast execution 与完整 EPL/SODA/compile parser/type matrix 保持 implemented-only。
+> 最新补充：Draft 4.209（2026-08-20），扩展 `expr-core-exists-cast`
+> differential-verified 场景：固定 Java `ExprCoreExists` 四个 execution 加上
+> `ExprCoreCast` 的 `ExprCoreCastSimple`、`ExprCoreCastSimpleMoreTypes`、
+> `ExprCoreCastAsParse`、`ExprCoreCastDoubleAndNullOM` 四个 execution，与 Go
+> typed Cast replay 产生 22 条 listener records、0 differences。覆盖
+> numeric/primitive/boxed/dynamic cast、char 多字符输入首字符、BigInteger/
+> BigDecimal-equivalent 值、string-to-int parse、Null 与 incompatible dynamic
+> values；修复 Go `Cast` 的 char 首字符语义。固定 commit 的 Java oracle、runner、
+> scenario、trace、evidence 和 value/order/null/lifecycle/time mutation tests
+> 已纳入兼容资产；manifest 保持 134 个 differential-verified case，更新为
+> 419 个 differential runtime IDs。其余 Cast 日期/interface/array/generic/
+> Boolean execution 与完整 parser/type/diagnostic matrix 保持 implemented-only。
 
 > 最新补充：Draft 4.207（2026-08-20），新增 `expr-core-type-name`
 > differential-verified 场景：固定 Java `ExprCoreTypeOfFragment` 的一个可观测

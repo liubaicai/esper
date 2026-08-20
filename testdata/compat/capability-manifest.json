@@ -10401,7 +10401,7 @@
     "java-oracle-trace",
     "go-differential"
    ],
-   "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not), plus typed OptionalProperty[T] navigation for '?' paths that turns null, incompatible and missing intermediate receivers into Missing while preserving terminal nullable Null presence. The strict replay verifies the four source-order Exists/OM/compile executions with 12 listener records and zero Java/Go differences. The remaining Cast executions, Java EPL optional-property/cast syntax, SODA/compile text paths, exact date parser/diagnostic behavior and the remaining full Java type matrix remain outside the fluent builder.",
+   "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not), plus typed OptionalProperty[T] navigation for '?' paths that turns null, incompatible and missing intermediate receivers into Missing while preserving terminal nullable Null presence. The strict replay now verifies the four source-order Exists/OM/compile executions and four typed Cast executions with 22 listener records and zero Java/Go differences. The remaining Cast date/interface/array/generic/Boolean executions, Java EPL optional-property/cast syntax, SODA/compile text paths, exact date parser/diagnostic behavior and the remaining full Java type matrix remain outside the fluent builder.",
    "verification": [
     "inventoried",
     "implemented",
@@ -10411,7 +10411,11 @@
     "java-runtime-d77c035088ce635538c7",
     "java-runtime-4202039fb2f1ea65fd49",
     "java-runtime-8fa7f5076dde9d791d08",
-    "java-runtime-afd826c7d955eb538001"
+    "java-runtime-afd826c7d955eb538001",
+    "java-runtime-3fc2cde530f321dc3994",
+    "java-runtime-5c9fdd17b5480f9d78e2",
+    "java-runtime-52fb8d57dd380f5efe6e",
+    "java-runtime-45b9d5a2e216f8063b75"
    ]
   },
   {
@@ -34649,7 +34653,7 @@
 "inventoriedCases": 522,
 "implementedCases": 520,
 "differentialVerifiedCases": 134,
-"differentialVerifiedRuntimeIds": 415,
+"differentialVerifiedRuntimeIds": 419,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

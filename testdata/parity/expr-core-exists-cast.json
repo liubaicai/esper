@@ -104,6 +104,106 @@
       "payload": {
         "shape": "string"
       }
+    },
+    {
+      "op": "case",
+      "case": "cast-simple"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "abc",
+        "intPrimitive": 100,
+        "intBoxed": 3,
+        "floatBoxed": 9.5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 100,
+        "intBoxed": null,
+        "floatBoxed": null
+      }
+    },
+    {
+      "op": "case",
+      "case": "cast-simple-more-types"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "true",
+        "intPrimitive": 1,
+        "doublePrimitive": 1
+      }
+    },
+    {
+      "op": "case",
+      "case": "cast-as-parse"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "12",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "case",
+      "case": "cast-double-null-om"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "int",
+        "itemValue": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "byte",
+        "itemValue": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "double",
+        "itemValue": 77.7777
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "int64",
+        "itemValue": 6
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "null"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "string",
+        "itemValue": "abc"
+      }
     }
   ]
 }
