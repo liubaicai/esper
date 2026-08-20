@@ -1,3 +1,21 @@
+> 最新补充：Draft 4.212（2026-08-20），扩展 `expr-core-exists-cast`
+> differential-verified 场景：固定 Java `ExprCoreCast` 的
+> `ExprCoreCastInterface` execution
+> （`java-runtime-2012a048edc6511a33e0`），一个 isolated case、5 条
+> listener records、0 differences（累计 45 条）。覆盖 8 个 interface/
+> class 目标的 `cast(item?, T)` 鉴别：SupportBeanDynRoot 双包装、
+> ISupportDImpl→t5、ISupportBCImpl→t2+t4、
+> ISupportAImplSuperGImplPlus→t1/t2/t4/t6/t7、ISupportBaseABImpl→t2+t3；
+> 每目标 cell 用 Java 简单类名 token（非身份 hash）做确定性
+> 差分编码。修复 `internal/esper` 共享语义：`typeOf` 对 interface
+> 类型参数此前解析为空接口 `any`（使任意值“满足”所有 target），
+> 现通过 `reflect.TypeOf((*T)(nil)).Elem()` 恢复静态 interface 类型。
+> 固定 commit 的 Java oracle、runner、scenario、trace、evidence 和
+> value/null/order/mutation tests 已纳入兼容资产；manifest 保持 134 个
+> differential-verified case，更新为 424 个 differential runtime IDs。
+> 其余 Cast 日期/array/generic execution 与完整 parser/type/diagnostic
+> matrix 仍为 implemented-only。
+
 > 最新补充：Draft 4.211（2026-08-20），扩展 `expr-core-exists-cast`
 > differential-verified 场景：固定 Java `ExprCoreCast` 的
 > `ExprCoreCastBigDecimalBigInt` execution，与 Go typed Cast replay 产生

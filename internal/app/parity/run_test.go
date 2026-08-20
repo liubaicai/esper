@@ -7867,8 +7867,8 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
 		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
 	}
-	if len(javaTrace.Records) != 40 {
-		t.Fatalf("checked-in Java trace records = %d, want 40", len(javaTrace.Records))
+	if len(javaTrace.Records) != 45 {
+		t.Fatalf("checked-in Java trace records = %d, want 45", len(javaTrace.Records))
 	}
 	statementCounts := map[string]int{}
 	caseCounts := map[string]int{}
@@ -7876,13 +7876,13 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 		statementCounts[record.Statement]++
 		caseCounts[record.Case]++
 	}
-	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 40}) {
+	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 45}) {
 		t.Fatalf("checked-in statement counts = %#v", statementCounts)
 	}
 	wantCaseCounts := map[string]int{
 		"exists-simple": 1, "exists-inner": 5, "exists-om": 3, "exists-compile": 3,
 		"cast-simple": 2, "cast-simple-more-types": 1, "cast-as-parse": 1, "cast-double-null-om": 6,
-		"cast-string-and-null": 6, "cast-boolean": 3, "cast-w-static-type": 1,
+		"cast-interface": 5, "cast-string-and-null": 6, "cast-boolean": 3, "cast-w-static-type": 1,
 		"cast-bigdecimal-bigint": 8,
 	}
 	if !reflect.DeepEqual(caseCounts, wantCaseCounts) {
@@ -7972,19 +7972,19 @@ func TestRunExprCoreExistsCastDiffRejectsTraceMutations(t *testing.T) {
 		{
 			name: "string-and-null-value",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[24].New[0].Fields["t0"] = "77.777"
+				trace.Records[30].New[0].Fields["t0"] = "77.777"
 			},
 		},
 		{
 			name: "boolean-null",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[30].New[0].Fields["t1"] = false
+				trace.Records[33].New[0].Fields["t1"] = false
 			},
 		},
 		{
 			name: "static-type-value",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[31].New[0].Fields["byteVal"] = "11"
+				trace.Records[36].New[0].Fields["byteVal"] = "11"
 			},
 		},
 		{
@@ -8002,19 +8002,25 @@ func TestRunExprCoreExistsCastDiffRejectsTraceMutations(t *testing.T) {
 		{
 			name: "bigdecimal-exact-decimal",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[34].New[0].Fields["c0"] = "2.5"
+				trace.Records[37].New[0].Fields["c0"] = "2.5"
 			},
 		},
 		{
 			name: "bigdecimal-bigint-truncate",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[35].New[0].Fields["c1"] = "155"
+				trace.Records[38].New[0].Fields["c1"] = "155"
 			},
 		},
 		{
 			name: "bigdecimal-null",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[39].New[0].Fields["c0"] = "0"
+				trace.Records[44].New[0].Fields["c0"] = "0"
+			},
+		},
+		{
+			name: "cast-interface-bean-token",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[22].New[0].Fields["t0"] = "ISupportDImpl"
 			},
 		},
 	}

@@ -108,10 +108,17 @@ func (e typedExpr[T]) expressionMarker()          {}
 func typeOf[T any]() reflect.Type {
 	var zero T
 	typ := reflect.TypeOf(zero)
-	if typ == nil {
-		return reflect.TypeOf((*any)(nil)).Elem()
+	if typ != nil {
+		return typ
 	}
-	return typ
+	// A nil interface value has no dynamic type; recover the static interface
+	// type so interface cast targets resolve to the declared interface rather
+	// than the empty interface (which every value would satisfy).
+	var ptr *T
+	if t := reflect.TypeOf(ptr); t != nil {
+		return t.Elem()
+	}
+	return reflect.TypeOf((*any)(nil)).Elem()
 }
 
 func makeExpr[T any](kind, description string, children []*exprNode, fn func(EvalContext) Value) Expression[T] {

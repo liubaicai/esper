@@ -207,6 +207,45 @@
     },
     {
       "op": "case",
+      "case": "cast-interface"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "shape": "dyn-root"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "shape": "isupportd"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "shape": "isupportbc"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "shape": "isupportplus"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "shape": "isupportbaseab"
+      }
+    },
+    {
+      "op": "case",
       "case": "cast-string-and-null"
     },
     {

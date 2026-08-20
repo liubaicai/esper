@@ -30,6 +30,7 @@ var exprCoreExistsCastJavaRuntimeIDs = []string{
 	"java-runtime-5c9fdd17b5480f9d78e2",
 	"java-runtime-52fb8d57dd380f5efe6e",
 	"java-runtime-45b9d5a2e216f8063b75",
+	"java-runtime-2012a048edc6511a33e0",
 	"java-runtime-9957cb6d9cd9ea836d4d",
 	"java-runtime-0b91403db9a899efde99",
 	"java-runtime-9babbbb6f96faf389bb7",
@@ -45,6 +46,7 @@ var exprCoreExistsCastJavaExecutions = []string{
 	"ExprCoreCastSimpleMoreTypes",
 	"ExprCoreCastAsParse",
 	"ExprCoreCastDoubleAndNullOM",
+	"ExprCoreCastInterface",
 	"ExprCoreCastStringAndNullCompile",
 	"ExprCoreCastWStaticType",
 	"ExprCoreCastBigDecimalBigInt",
@@ -59,6 +61,7 @@ var exprCoreExistsCastCaseOrder = []string{
 	"cast-simple-more-types",
 	"cast-as-parse",
 	"cast-double-null-om",
+	"cast-interface",
 	"cast-string-and-null",
 	"cast-boolean",
 	"cast-w-static-type",
@@ -147,6 +150,13 @@ var exprCoreExistsCastExpectedSends = [][]exprCoreExistsCastExpectedSend{
 			"itemType":  `"string"`,
 			"itemValue": `"abc"`,
 		}},
+	},
+	{
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{"shape": `"dyn-root"`}},
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{"shape": `"isupportd"`}},
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{"shape": `"isupportbc"`}},
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{"shape": `"isupportplus"`}},
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{"shape": `"isupportbaseab"`}},
 	},
 	{
 		{eventType: "SupportBeanDynRoot", payload: map[string]string{
@@ -259,9 +269,10 @@ type exprCoreExistsCastNested struct {
 }
 
 type exprCoreExistsCastComplexProps struct {
-	Indexed []int                     `esper:"indexed"`
-	Mapped  map[string]string         `esper:"mapped"`
-	Nested  *exprCoreExistsCastNested `esper:"nested"`
+	Indexed []int             `esper:"indexed"`
+	Mapped  map[string]string `esper:"mapped"`
+
+	Nested *exprCoreExistsCastNested `esper:"nested"`
 }
 
 type exprCoreExistsCastSupportBeanA struct {
@@ -271,6 +282,118 @@ type exprCoreExistsCastSupportBeanA struct {
 type exprCoreExistsCastDynamicRoot struct {
 	Item any `esper:"item"`
 }
+
+// exprCoreCastInterfaceMarker is the Go counterpart of the Java
+// SupportMarkerInterface empty marker (t0 target). It is implemented only by
+// SupportBeanDynRoot wrappers, matching the Java identity semantics where the
+// outer event class (not the raw item value) satisfies the marker.
+type exprCoreCastInterfaceMarker interface {
+	exprCoreCastInterfaceMarker()
+}
+
+// exprCoreCastInterfaceBaseAB models Java ISupportBaseAB. ISupportA and
+// ISupportB extend it, so any bean satisfying those also satisfies it.
+type exprCoreCastInterfaceBaseAB interface {
+	exprCoreCastInterfaceBaseAB()
+}
+
+// exprCoreCastInterfaceA models Java ISupportA (extends ISupportBaseAB).
+type exprCoreCastInterfaceA interface {
+	exprCoreCastInterfaceBaseAB
+	exprCoreCastInterfaceA()
+}
+
+// exprCoreCastInterfaceC models Java ISupportC (t4 target).
+type exprCoreCastInterfaceC interface {
+	exprCoreCastInterfaceC()
+}
+
+// exprCoreCastInterfaceD models Java ISupportD (t5 target).
+type exprCoreCastInterfaceD interface {
+	exprCoreCastInterfaceD()
+}
+
+// exprCoreCastInterfaceSuperG models Java ISupportAImplSuperG (abstract class
+// implementing ISupportA). In Go this is a marker interface implemented only
+// by the concrete subclass, preserving Java's superclass match (t6 target).
+type exprCoreCastInterfaceSuperG interface {
+	exprCoreCastInterfaceBaseAB
+	exprCoreCastInterfaceA
+	exprCoreCastInterfaceSuperG()
+}
+
+// exprCoreCastInterfaceBaseABImpl is the flattened Go counterpart of the Java
+// ISupportBaseABImpl class target (t3). The unexported marker ensures only the
+// exact ISupportBaseABImpl bean satisfies it — Java class casts are exact-class
+// identity and never succeed through an interface.
+type exprCoreCastInterfaceBaseABImpl interface {
+	exprCoreCastInterfaceBaseAB()
+	exprCoreCastInterfaceBaseABImpl()
+}
+
+// exprCoreCastInterfaceImplPlus is the flattened Go counterpart of the Java
+// ISupportAImplSuperGImplPlus class target (t7). Only the exact ImplPlus bean
+// satisfies it.
+type exprCoreCastInterfaceImplPlus interface {
+	exprCoreCastInterfaceBaseAB()
+	exprCoreCastInterfaceImplPlus()
+}
+
+// exprCoreCastInterfaceDynRoot models a SupportBeanDynRoot wrapper; it is the
+// only value satisfying exprCoreCastInterfaceMarker (send 1 inner bean).
+type exprCoreCastInterfaceDynRoot struct {
+	inner string
+}
+
+func (*exprCoreCastInterfaceDynRoot) exprCoreCastInterfaceMarker() {}
+
+// exprCoreCastInterfaceDImpl models Java ISupportDImpl (implements ISupportD).
+// It satisfies only the t5 target, matching Java's identity matrix.
+type exprCoreCastInterfaceDImpl struct {
+	valueD         string
+	valueBaseD     string
+	valueBaseDBase string
+}
+
+func (*exprCoreCastInterfaceDImpl) exprCoreCastInterfaceD() {}
+
+// exprCoreCastInterfaceBCImpl models Java ISupportBCImpl (implements
+// ISupportB and ISupportC). ISupportB extends ISupportBaseAB, so it satisfies
+// t2 and t4.
+type exprCoreCastInterfaceBCImpl struct {
+	valueB      string
+	valueBaseAB string
+	valueC      string
+}
+
+func (*exprCoreCastInterfaceBCImpl) exprCoreCastInterfaceBaseAB() {}
+func (*exprCoreCastInterfaceBCImpl) exprCoreCastInterfaceC()      {}
+
+// exprCoreCastInterfaceImplPlusBean models Java ISupportAImplSuperGImplPlus
+// (extends ISupportAImplSuperG which implements ISupportA, and implements
+// ISupportB and ISupportC). It satisfies t1, t2, t4, t6, and t7.
+type exprCoreCastInterfaceImplPlusBean struct {
+	valueG      string
+	valueA      string
+	valueBaseAB string
+	valueB      string
+	valueC      string
+}
+
+func (*exprCoreCastInterfaceImplPlusBean) exprCoreCastInterfaceBaseAB()   {}
+func (*exprCoreCastInterfaceImplPlusBean) exprCoreCastInterfaceA()        {}
+func (*exprCoreCastInterfaceImplPlusBean) exprCoreCastInterfaceC()        {}
+func (*exprCoreCastInterfaceImplPlusBean) exprCoreCastInterfaceSuperG()   {}
+func (*exprCoreCastInterfaceImplPlusBean) exprCoreCastInterfaceImplPlus() {}
+
+// exprCoreCastInterfaceBaseABImplBean models Java ISupportBaseABImpl
+// (implements ISupportBaseAB). It satisfies t2 and t3.
+type exprCoreCastInterfaceBaseABImplBean struct {
+	valueBaseAB string
+}
+
+func (*exprCoreCastInterfaceBaseABImplBean) exprCoreCastInterfaceBaseAB()     {}
+func (*exprCoreCastInterfaceBaseABImplBean) exprCoreCastInterfaceBaseABImpl() {}
 
 type exprCoreExistsCastStaticTypeMapEvent struct {
 	AnInt        *string `esper:"anInt"`
@@ -507,6 +630,24 @@ func runExprCoreExistsCastCase(ctx context.Context, scenario compat.Scenario, ca
 		query = esper.Select(input,
 			esper.Alias("t0", esper.Cast[any, float64](esper.Field[map[string]any, any]("item"))),
 		).Query(esper.StatementName("s0"))
+	case "cast-interface":
+		if _, err := esper.RegisterMap(env, "SupportBeanDynRoot", []esper.FieldSpec{
+			esper.FieldDef("item", reflect.TypeOf((*any)(nil)).Elem()),
+		}, esper.AllowDynamicFields()); err != nil {
+			return compat.Trace{}, err
+		}
+		item := esper.Field[map[string]any, any]("item")
+		input := esper.From[map[string]any](env, "SupportBeanDynRoot")
+		query = esper.Select(input,
+			esper.Alias("t0", esper.Cast[any, exprCoreCastInterfaceMarker](item)),
+			esper.Alias("t1", esper.Cast[any, exprCoreCastInterfaceA](item)),
+			esper.Alias("t2", esper.Cast[any, exprCoreCastInterfaceBaseAB](item)),
+			esper.Alias("t3", esper.Cast[any, exprCoreCastInterfaceBaseABImpl](item)),
+			esper.Alias("t4", esper.Cast[any, exprCoreCastInterfaceC](item)),
+			esper.Alias("t5", esper.Cast[any, exprCoreCastInterfaceD](item)),
+			esper.Alias("t6", esper.Cast[any, exprCoreCastInterfaceSuperG](item)),
+			esper.Alias("t7", esper.Cast[any, exprCoreCastInterfaceImplPlus](item)),
+		).Query(esper.StatementName("s0"))
 	case "cast-string-and-null":
 		if _, err := esper.RegisterMap(env, "SupportBeanDynRoot", []esper.FieldSpec{
 			esper.FieldDef("item", reflect.TypeOf((*any)(nil)).Elem()),
@@ -646,11 +787,21 @@ func decodeExprCoreExistsCastPayload(step compat.Step) (any, error) {
 	}
 	if step.EventType == "SupportBeanDynRoot" {
 		var payload struct {
+			Shape     string          `json:"shape"`
 			ItemType  string          `json:"itemType"`
 			ItemValue json.RawMessage `json:"itemValue"`
 		}
 		if err := json.Unmarshal(step.Payload, &payload); err != nil {
 			return nil, fmt.Errorf("expr-core-exists-cast: decode dynamic cast payload: %w", err)
+		}
+		// The cast-interface case encodes the bean shape structurally rather
+		// than through a scalar itemType/itemValue pair.
+		if payload.Shape != "" {
+			item := decodeExprCoreExistsCastInterfaceBean(payload.Shape)
+			if item == nil {
+				return nil, fmt.Errorf("expr-core-exists-cast: unsupported cast-interface shape %q", payload.Shape)
+			}
+			return map[string]any{"item": item}, nil
 		}
 		var item any
 		switch payload.ItemType {
@@ -789,6 +940,25 @@ func decodeExprCoreExistsCastPayload(step compat.Step) (any, error) {
 	return map[string]any{"item": item}, nil
 }
 
+// decodeExprCoreExistsCastInterfaceBean maps a cast-interface scenario shape
+// to the Go bean that models the corresponding Java support-bean instance. It
+// returns nil for an unknown shape so the caller can report an error.
+func decodeExprCoreExistsCastInterfaceBean(shape string) any {
+	switch shape {
+	case "dyn-root":
+		return &exprCoreCastInterfaceDynRoot{inner: "abc"}
+	case "isupportd":
+		return &exprCoreCastInterfaceDImpl{}
+	case "isupportbc":
+		return &exprCoreCastInterfaceBCImpl{}
+	case "isupportplus":
+		return &exprCoreCastInterfaceImplPlusBean{}
+	case "isupportbaseab":
+		return &exprCoreCastInterfaceBaseABImplBean{}
+	}
+	return nil
+}
+
 func normalizeExprCoreExistsCastTrace(trace compat.Trace) compat.Trace {
 	for recordIndex := range trace.Records {
 		for resultIndex := range trace.Records[recordIndex].New {
@@ -844,7 +1014,30 @@ func normalizeExprCoreExistsCastValue(value any) any {
 			current[index] = normalizeExprCoreExistsCastValue(nested)
 		}
 	}
+	if token := exprCoreExistsCastInterfaceBeanToken(value); token != "" {
+		return token
+	}
 	return value
+}
+
+// exprCoreExistsCastInterfaceBeanToken maps a matched cast-interface bean to
+// the deterministic Java simple-class-name token the oracle also renders. Both
+// sides identifying the bean class (rather than an identity-hash) is what makes
+// the bean-present cells byte-exact in the differential diff.
+func exprCoreExistsCastInterfaceBeanToken(value any) string {
+	switch value.(type) {
+	case *exprCoreCastInterfaceDynRoot:
+		return "SupportBeanDynRoot"
+	case *exprCoreCastInterfaceDImpl:
+		return "ISupportDImpl"
+	case *exprCoreCastInterfaceBCImpl:
+		return "ISupportBCImpl"
+	case *exprCoreCastInterfaceImplPlusBean:
+		return "ISupportAImplSuperGImplPlus"
+	case *exprCoreCastInterfaceBaseABImplBean:
+		return "ISupportBaseABImpl"
+	}
+	return ""
 }
 
 func formatExprCoreExistsCastFloat(value float64, bitSize int) string {

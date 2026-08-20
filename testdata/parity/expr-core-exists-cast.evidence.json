@@ -10,6 +10,7 @@
     "java-runtime-5c9fdd17b5480f9d78e2",
     "java-runtime-52fb8d57dd380f5efe6e",
     "java-runtime-45b9d5a2e216f8063b75",
+    "java-runtime-2012a048edc6511a33e0",
     "java-runtime-9957cb6d9cd9ea836d4d",
     "java-runtime-0b91403db9a899efde99",
     "java-runtime-9babbbb6f96faf389bb7",
@@ -28,6 +29,7 @@
     "ExprCoreCastSimpleMoreTypes",
     "ExprCoreCastAsParse",
     "ExprCoreCastDoubleAndNullOM",
+    "ExprCoreCastInterface",
     "ExprCoreCastStringAndNullCompile",
     "ExprCoreCastWStaticType",
     "ExprCoreCastBigDecimalBigInt"
@@ -237,6 +239,45 @@
         "payload": {
           "itemType": "string",
           "itemValue": "abc"
+        }
+      },
+      {
+        "op": "case",
+        "case": "cast-interface"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "shape": "dyn-root"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "shape": "isupportd"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "shape": "isupportbc"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "shape": "isupportplus"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "shape": "isupportbaseab"
         }
       },
       {
@@ -829,6 +870,174 @@
             "kind": "row",
             "fields": {
               "t0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-interface",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "SupportBeanDynRoot",
+              "t1": {
+                "state": "null"
+              },
+              "t2": {
+                "state": "null"
+              },
+              "t3": {
+                "state": "null"
+              },
+              "t4": {
+                "state": "null"
+              },
+              "t5": {
+                "state": "null"
+              },
+              "t6": {
+                "state": "null"
+              },
+              "t7": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-interface",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              },
+              "t2": {
+                "state": "null"
+              },
+              "t3": {
+                "state": "null"
+              },
+              "t4": {
+                "state": "null"
+              },
+              "t5": "ISupportDImpl",
+              "t6": {
+                "state": "null"
+              },
+              "t7": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-interface",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              },
+              "t2": "ISupportBCImpl",
+              "t3": {
+                "state": "null"
+              },
+              "t4": "ISupportBCImpl",
+              "t5": {
+                "state": "null"
+              },
+              "t6": {
+                "state": "null"
+              },
+              "t7": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-interface",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "ISupportAImplSuperGImplPlus",
+              "t2": "ISupportAImplSuperGImplPlus",
+              "t3": {
+                "state": "null"
+              },
+              "t4": "ISupportAImplSuperGImplPlus",
+              "t5": {
+                "state": "null"
+              },
+              "t6": "ISupportAImplSuperGImplPlus",
+              "t7": "ISupportAImplSuperGImplPlus"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-interface",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              },
+              "t2": "ISupportBaseABImpl",
+              "t3": "ISupportBaseABImpl",
+              "t4": {
+                "state": "null"
+              },
+              "t5": {
+                "state": "null"
+              },
+              "t6": {
+                "state": "null"
+              },
+              "t7": {
                 "state": "null"
               }
             }
@@ -1558,6 +1767,174 @@
             "kind": "row",
             "fields": {
               "t0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-interface",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "SupportBeanDynRoot",
+              "t1": {
+                "state": "null"
+              },
+              "t2": {
+                "state": "null"
+              },
+              "t3": {
+                "state": "null"
+              },
+              "t4": {
+                "state": "null"
+              },
+              "t5": {
+                "state": "null"
+              },
+              "t6": {
+                "state": "null"
+              },
+              "t7": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-interface",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              },
+              "t2": {
+                "state": "null"
+              },
+              "t3": {
+                "state": "null"
+              },
+              "t4": {
+                "state": "null"
+              },
+              "t5": "ISupportDImpl",
+              "t6": {
+                "state": "null"
+              },
+              "t7": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-interface",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              },
+              "t2": "ISupportBCImpl",
+              "t3": {
+                "state": "null"
+              },
+              "t4": "ISupportBCImpl",
+              "t5": {
+                "state": "null"
+              },
+              "t6": {
+                "state": "null"
+              },
+              "t7": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-interface",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "ISupportAImplSuperGImplPlus",
+              "t2": "ISupportAImplSuperGImplPlus",
+              "t3": {
+                "state": "null"
+              },
+              "t4": "ISupportAImplSuperGImplPlus",
+              "t5": {
+                "state": "null"
+              },
+              "t6": "ISupportAImplSuperGImplPlus",
+              "t7": "ISupportAImplSuperGImplPlus"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-interface",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              },
+              "t2": "ISupportBaseABImpl",
+              "t3": "ISupportBaseABImpl",
+              "t4": {
+                "state": "null"
+              },
+              "t5": {
+                "state": "null"
+              },
+              "t6": {
+                "state": "null"
+              },
+              "t7": {
                 "state": "null"
               }
             }

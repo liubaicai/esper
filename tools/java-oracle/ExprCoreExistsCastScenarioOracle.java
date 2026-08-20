@@ -10,6 +10,15 @@ import com.espertech.esper.compiler.client.CompilerArguments;
 import com.espertech.esper.compiler.client.EPCompilerProvider;
 import com.espertech.esper.regressionlib.support.bean.SupportBeanComplexProps;
 import com.espertech.esper.regressionlib.support.bean.SupportBeanDynRoot;
+import com.espertech.esper.regressionlib.support.bean.ISupportA;
+import com.espertech.esper.regressionlib.support.bean.ISupportAImplSuperG;
+import com.espertech.esper.regressionlib.support.bean.ISupportAImplSuperGImplPlus;
+import com.espertech.esper.regressionlib.support.bean.ISupportBaseAB;
+import com.espertech.esper.regressionlib.support.bean.ISupportBaseABImpl;
+import com.espertech.esper.regressionlib.support.bean.ISupportBCImpl;
+import com.espertech.esper.regressionlib.support.bean.ISupportC;
+import com.espertech.esper.regressionlib.support.bean.ISupportD;
+import com.espertech.esper.regressionlib.support.bean.ISupportDImpl;
 import com.espertech.esper.regressionlib.support.bean.SupportBean_A;
 import com.espertech.esper.regressionlib.support.bean.SupportMarkerInterface;
 import com.espertech.esper.runtime.client.DeploymentOptions;
@@ -31,15 +40,15 @@ public final class ExprCoreExistsCastScenarioOracle {
     private static final String[] CASES = {
             "exists-simple", "exists-inner", "exists-om", "exists-compile",
             "cast-simple", "cast-simple-more-types", "cast-as-parse", "cast-double-null-om",
-            "cast-string-and-null", "cast-boolean", "cast-w-static-type",
+            "cast-interface", "cast-string-and-null", "cast-boolean", "cast-w-static-type",
             "cast-bigdecimal-bigint"
     };
     private static final String[] EVENT_TYPES = {
             "SupportBean", "SupportMarkerInterface", "SupportMarkerInterface", "SupportMarkerInterface",
             "SupportBean", "SupportBean", "SupportBean", "SupportBeanDynRoot",
-            "SupportBeanDynRoot", "SupportBean", "StaticTypeMapEvent", "MyEvent"
+            "SupportBeanDynRoot", "SupportBeanDynRoot", "SupportBean", "StaticTypeMapEvent", "MyEvent"
     };
-    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 6, 3, 1, 8};
+    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 5, 6, 3, 1, 8};
 
     private ExprCoreExistsCastScenarioOracle() {
     }
@@ -154,7 +163,7 @@ public final class ExprCoreExistsCastScenarioOracle {
 			requireNumber(payload, "intPrimitive", 1);
 			return;
 		}
-		if (caseIndex == 7 || caseIndex == 8) {
+		if (caseIndex == 7 || caseIndex == 9) {
 			String[] itemTypes = {"int", "byte", "double", "int64", "null", "string"};
 			requireFieldCount(payload, sendIndex == 4 ? 1 : 2, CASES[caseIndex]);
 			requireString(payload, "itemType", itemTypes[sendIndex]);
@@ -171,7 +180,13 @@ public final class ExprCoreExistsCastScenarioOracle {
 			}
 			return;
 		}
-		if (caseIndex == 9) {
+		if (caseIndex == 8) {
+			String[] shapes = {"dyn-root", "isupportd", "isupportbc", "isupportplus", "isupportbaseab"};
+			requireFieldCount(payload, 1, CASES[caseIndex]);
+			requireString(payload, "shape", shapes[sendIndex]);
+			return;
+		}
+		if (caseIndex == 10) {
 			requireFieldCount(payload, 4, CASES[caseIndex]);
 			if (sendIndex == 0) {
 				requireString(payload, "theString", "abc");
@@ -191,7 +206,7 @@ public final class ExprCoreExistsCastScenarioOracle {
 			}
 			return;
 		}
-		if (caseIndex == 10) {
+		if (caseIndex == 11) {
 			requireFieldCount(payload, 8, CASES[caseIndex]);
 			requireString(payload, "anInt", "100");
 			requireString(payload, "anDouble", "1.4E-1");
@@ -203,7 +218,7 @@ public final class ExprCoreExistsCastScenarioOracle {
 			requireNumber(payload, "intBoxed", 11);
 			return;
 		}
-		if (caseIndex == 11) {
+		if (caseIndex == 12) {
 			String kind = payload.getString("kind", "");
 			switch (kind) {
 				case "int":
@@ -378,6 +393,17 @@ public final class ExprCoreExistsCastScenarioOracle {
 			String target = "cast-double-null-om".equals(caseName) ? "double" : "java.lang.String";
 			return "select cast(item?," + target + ") as t0 from SupportBeanDynRoot";
 		}
+		if ("cast-interface".equals(caseName)) {
+			return "select cast(item?, " + SupportMarkerInterface.class.getName() + ") as t0, " +
+					" cast(item?, " + ISupportA.class.getName() + ") as t1, " +
+					" cast(item?, " + ISupportBaseAB.class.getName() + ") as t2, " +
+					" cast(item?, " + ISupportBaseABImpl.class.getName() + ") as t3, " +
+					" cast(item?, " + ISupportC.class.getName() + ") as t4, " +
+					" cast(item?, " + ISupportD.class.getName() + ") as t5, " +
+					" cast(item?, " + ISupportAImplSuperG.class.getName() + ") as t6, " +
+					" cast(item?, " + ISupportAImplSuperGImplPlus.class.getName() + ") as t7 " +
+					" from SupportBeanDynRoot";
+		}
 		if ("cast-boolean".equals(caseName)) {
 			return "select cast(boolPrimitive as java.lang.Boolean) as t0, " +
 					"cast(boolBoxed | boolPrimitive, boolean) as t1, " +
@@ -414,7 +440,7 @@ public final class ExprCoreExistsCastScenarioOracle {
             } else if ("SupportMarkerInterface".equals(step.getString("eventType", ""))) {
                 runtime.getEventService().sendEventBean(toDynamicRoot(payload), "SupportMarkerInterface");
             } else if ("SupportBeanDynRoot".equals(step.getString("eventType", ""))) {
-                runtime.getEventService().sendEventBean(toCastDynamicRoot(payload), "SupportBeanDynRoot");
+                runtime.getEventService().sendEventBean("cast-interface".equals(caseName) ? toCastInterfaceRoot(payload) : toCastDynamicRoot(payload), "SupportBeanDynRoot");
             } else if ("StaticTypeMapEvent".equals(step.getString("eventType", ""))) {
                 runtime.getEventService().sendEventMap(toStaticTypeMapEvent(payload), "StaticTypeMapEvent");
             } else if ("MyEvent".equals(step.getString("eventType", ""))) {
@@ -514,6 +540,24 @@ public final class ExprCoreExistsCastScenarioOracle {
 		}
 	}
 
+	private static SupportBeanDynRoot toCastInterfaceRoot(JsonObject payload) {
+		String shape = payload.getString("shape", "");
+		switch (shape) {
+			case "dyn-root":
+				return new SupportBeanDynRoot(new SupportBeanDynRoot("abc"));
+			case "isupportd":
+				return new SupportBeanDynRoot(new ISupportDImpl("", "", ""));
+			case "isupportbc":
+				return new SupportBeanDynRoot(new ISupportBCImpl("", "", ""));
+			case "isupportplus":
+				return new SupportBeanDynRoot(new ISupportAImplSuperGImplPlus());
+			case "isupportbaseab":
+				return new SupportBeanDynRoot(new ISupportBaseABImpl(""));
+			default:
+				throw new IllegalArgumentException("unsupported cast-interface shape " + shape);
+		}
+	}
+
     private static SupportBeanDynRoot toDynamicRoot(JsonObject payload) {
         String shape = payload.getString("shape", "");
         switch (shape) {
@@ -589,6 +633,13 @@ public final class ExprCoreExistsCastScenarioOracle {
             }
             if (value instanceof Boolean) {
                 return Json.value((Boolean) value);
+            }
+            if (value instanceof SupportBeanDynRoot
+                    || value instanceof ISupportDImpl
+                    || value instanceof ISupportBCImpl
+                    || value instanceof ISupportAImplSuperGImplPlus
+                    || value instanceof ISupportBaseABImpl) {
+                return Json.value(value.getClass().getSimpleName());
             }
             return Json.value(String.valueOf(value));
         }
