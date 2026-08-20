@@ -158,7 +158,10 @@ git diff --check
 
 里程碑边界再运行 `make test-race`、域级完整差分、stress、相关 Docker 和 benchmark。不要让多个子 agent 重复运行全量门禁，也不要把所有验证推迟到项目结束。
 
-门禁和审查通过后，主 agent检查 diff 中没有无关文件或秘密，创建一个语义完整提交，推送 `master`，并记录 commit hash 与实际验证命令。
+门禁和审查通过后，主 agent 检查 diff 中没有无关文件或秘密，在提交前记录
+实际验证命令和语义结果，创建一个语义完整提交并推送 `master`。提交后只读
+验证远端 ref；commit hash 以 Git 为准，不为回填 hash 创建 checkpoint-only
+提交。
 
 ## 6. 上下文与监督
 

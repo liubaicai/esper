@@ -113,7 +113,10 @@
 4. 创建一个语义完整、可回退的提交；
 5. 提交信息以 capability/subdomain 开头并说明 Java execution；
 6. 推送 `master`；
-7. 记录 commit hash 和实际执行的验证命令。
+7. 只读验证远端 ref；commit hash 以 Git 为准，不回写 tracked file。
+
+实际验证命令和语义结果必须在第 4 步提交前写入 CHANGELOG/活动计划。提交后
+禁止仅为了记录刚生成的 hash 再修改 `PLANS.md` 或创建 checkpoint-only 提交。
 
 禁止提交或推送已知失败状态。未完成工作不得为了保存进度伪装成已验证状态。
 
@@ -123,7 +126,8 @@
 
 标准拓扑：
 
-1. 主 agent 选择工作单元 N；并行运行 Java oracle scout 和 Go surface scout；
+1. 主 agent 选择工作单元 N；必须通过 agent 工具并行运行 Java oracle scout
+   和 Go surface scout；并行 shell 命令不满足此门禁；
 2. 主 agent 合并调查，冻结 observable contract、文件所有权和定向验证命令；
 3. 共享核心只允许主 agent 或一个 `go-slice-worker` 写入；契约和文件边界完全冻结时，可同时启动一个 `parity-asset-worker` 编写互不重叠的 oracle/scenario/test 源文件；
 4. 主 agent 集成、生成 trace/evidence、运行定向验证并更新中央事实；
@@ -133,6 +137,10 @@
 8. N 提交后，使用已经冻结的 N+1 契约立即进入实现阶段。
 
 每次准备等待子 agent 前，主 agent 必须先检查：是否还能选择 N+1、合并 scout 结果、冻结只读契约、检查 N 的 diff 或准备验证命令。只要存在上述安全工作，就继续推进而不是等待。确实没有安全 sibling task 时允许 singleton task，但必须在启动前记录原因。
+
+实现开始前，活动计划必须能回答：collaboration facility 是否可用、两个 scout
+的 agent ID 和结论是什么，或为什么没有安全独立任务。不能以未验证的“工具
+不可用”为由串行回退。
 
 审查和完整门禁有固定成本。共享同一 runtime surface、oracle harness 和验证命令的紧密 executions，应在风险允许时组成一个自然闭环工作单元，不要人为拆成多个微小提交。worker 或 reviewer 返回 finding 后，使用同一个 agent follow-up；除非任务边界发生实质变化，不重新启动一个丢失上下文的 agent。
 

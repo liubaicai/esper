@@ -14,8 +14,15 @@ roadmap or an append-only history.
   decision, update the relevant section with concrete paths and commands.
 - Keep only the current work unit and at most five one-line recent outcomes.
   Detailed completed history belongs in CHANGELOG and Git.
+- Maintain the delegation checkpoint for the active unit. Parallel shell
+  commands are not subagent delegation. Before implementation, record the
+  Java/Go scout agent IDs or the exact serial-fallback reason; after targeted
+  validation, record the independent reviewer ID and result.
 - On interruption, leave the worktree state, exact next action, failures, and
   unverified assumptions explicit enough for a new Codex task to resume.
+- Record validation and outcome before the semantic commit. Never edit this
+  file after committing only to add the new commit hash; Git owns commit
+  identity and post-push verification is read-only.
 
 ## Outcome
 
@@ -27,16 +34,26 @@ activity or a single coverage percentage.
 ## Active checkpoint
 
 - Updated: 2026-08-20
-- Baseline: `master` at `57c2079bd` (verified clean and matching
-  `origin/master` before this work unit).
+- Baseline: current-evaluation-context started from a clean `master` matching
+  `origin/master`; the next migration task must verify the then-current refs
+  instead of reusing a recorded commit hash.
 - Status: Current-evaluation-context is differential-verified; parity assets,
   manifest/docs, canonical Java/Go traces, all required local gates, semantic
   commit, and push are complete.
 - Current work unit: `expr.core` / `case.expr-core-current-evaluation-context`
 - Exact next action: select the next closed-loop work unit after confirming the
   remote `master` state.
-- Worktree notes: semantic changes are committed; this checkpoint closure is
-  the only pending documentation update; no unrelated files are in scope.
+- Worktree notes: current migration changes are committed and pushed; the next
+  migration task must re-check the worktree before selecting a new unit.
+
+## Delegation checkpoint
+
+- Collaboration facility: must be proven by the next work unit's first scout
+  fan-out; no silent serial fallback.
+- Java oracle scout: pending next work-unit selection.
+- Go surface scout: pending next work-unit selection.
+- Parity reviewer: pending next work-unit targeted validation.
+- Serial exception: none recorded.
 
 ## Work-unit contract
 
@@ -93,8 +110,8 @@ activity or a single coverage percentage.
       where verified facts changed.
 - [x] Run independent parity review, resolve findings, and run complete local
       gates plus the applicable milestone gate.
-- [x] Review the final diff, create one semantic commit, push `master`, and
-      record the commit and actual validation.
+- [x] Review the final diff, record actual validation, create one semantic
+      commit, push `master`, and verify the remote ref without tracked edits.
 
 ## Discoveries and decisions
 
@@ -150,11 +167,10 @@ activity or a single coverage percentage.
 
 ## Delivery
 
-- Current work-unit semantic commit `afe5b0265`: `expr: verify current
-  evaluation context parity`, pushed to `origin/master`.
-- Previous work-unit semantic commit `344f9ddf6` and checkpoint closure
-  `65913ab0d` remain in history; no force-push or semantic-history rewrite is
-  required for this unit.
+- Current-evaluation-context is committed and pushed to `origin/master`; Git
+  history is the authoritative source for its commit identity.
+- Do not create another tracked checkpoint update after a future semantic
+  commit. Verify the pushed ref without editing tracked files.
 
 ## Handoff
 

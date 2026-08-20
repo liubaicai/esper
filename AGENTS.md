@@ -40,12 +40,23 @@ The primary agent owns work-unit selection, the active plan, shared runtime
 integration, generated traces/evidence, manifest status, roadmap, CHANGELOG,
 formatting, tests, review, commits, and pushes.
 
-Delegation is allowed for concrete, bounded tasks that can run independently.
-Use 2 to 3 agents normally and never exceed 4 active agents. Parallelize
-read-only Java/Go investigation and genuinely file-disjoint work after the
-contract is frozen. There may be only one writer for any shared
-`internal/esper` semantic surface. A second writer may edit assigned oracle,
-scenario, or isolated parity-test source files only when ownership is disjoint.
+Delegation is required when concrete, bounded tasks can run independently.
+Before implementing each work unit, use the platform agent facility to start
+the read-only Java oracle scout and Go surface scout concurrently. For Codex,
+use collaboration tools; for OMP, use a batch. Parallel shell commands do not
+satisfy this delegation gate. If the agent facility is unavailable, one scout
+has no safe scope, or the work unit genuinely has no independent task, record
+the exact reason before implementing: Codex uses the `PLANS.md` delegation
+checkpoint and OMP uses the current batch/task contract. Do not silently use
+the serial fallback.
+
+Use 2 to 3 agents normally and never exceed 4 active agents. After targeted
+validation, start an independent read-only parity reviewer. When a safe N+1
+candidate exists, run its Java and Go scouts concurrently with that review.
+Parallelize genuinely file-disjoint writes only after the contract is frozen.
+There may be only one writer for any shared `internal/esper` semantic surface.
+A second writer may edit assigned oracle, scenario, or isolated parity-test
+source files only when ownership is disjoint.
 
 Every delegated task must state `Target`, `Context`, `Allowed files`,
 `Forbidden actions`, and `Deliverable`. Subagents do not update `PLANS.md`,
@@ -57,6 +68,8 @@ available, follow the same stages serially without weakening acceptance.
 Review work unit N while prefetching at most one future unit N+1 read-only.
 Do not start N+1 writes until N passes review and is committed. Reuse the same
 subagent for follow-up on its scope when the runtime supports that continuity.
+Record agent IDs, assigned scopes, results, and any serial exception in the
+active platform checkpoint.
 
 ## Quality gates
 
@@ -81,8 +94,11 @@ stress, Docker integration, and benchmark gates from the quality strategy.
 The repository currently works directly on `master`; do not add GitLab CI or
 branch protection. After a complete work unit passes all required gates and
 independent parity review, create one semantic, revertible commit and push it
-to `master`. Never commit or push a known failing state. Record the commit and
-commands actually run in the active plan and CHANGELOG as appropriate.
+to `master`. Never commit or push a known failing state. Record validation and
+the semantic outcome in tracked files before that commit. After committing, do
+not write the new commit hash back into `PLANS.md`, CHANGELOG, or another
+tracked file; Git is the commit-identity source of truth, and post-push
+verification must not create a checkpoint-only follow-up commit.
 
 Do not add project-level model or provider bindings. Model choice belongs to
 the user's Codex/OMP settings. Never claim complete Esper parity until every

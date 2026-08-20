@@ -13,7 +13,9 @@
 ```text
 按照 goal.txt 继续 Esper 到 Go 的迁移。先读取根 AGENTS.md 和 PLANS.md，
 核对当前 Git、roadmap、manifest 与 evidence，再选择并完成下一个可闭环工作单元。
-持续更新 PLANS.md；所有门禁、独立 parity review、提交和推送规则均按仓库文档执行。
+实现前必须用子 agent 并行完成 Java oracle 和 Go surface 调查；并行 shell 命令
+不能替代子 agent。持续更新 PLANS.md；所有门禁、独立 parity review、提交和
+推送规则均按仓库文档执行。
 ```
 
 Codex 会自动注入适用的 `AGENTS.md`，但不会把 `goal.txt` 或 `PLANS.md` 当成
@@ -31,10 +33,15 @@ contract；每个重要阶段结束后立即更新，不能等到上下文即将
 
 一个工作单元提交后：
 
-1. 把 commit 和实际验证结果记录到 CHANGELOG/Git 对应位置；
+1. 提交前把实际验证结果和语义 outcome 记录到 CHANGELOG/活动计划；
 2. 在 `PLANS.md` 保留一行近期 outcome；
 3. 清空当前契约，基于最新 roadmap/manifest 选择下一单元；
 4. 预取最多一个 N+1，只允许只读调查。
+
+不能在语义提交完成后把刚生成的 commit hash 写回 `PLANS.md`、CHANGELOG 或
+其他 tracked file。Git 是 commit identity 的事实来源；push 后只读核对远端
+ref，不创建 checkpoint-only 跟进提交。下一工作单元需要的新 checkpoint 应在
+下一次语义提交中随实际工作一起提交，而不是单独关闭上一个 checkpoint。
 
 路线图维护跨工作单元的当前优先级，manifest/evidence 维护机器事实，
 CHANGELOG/Git 维护历史。不要把这些内容完整复制到 `PLANS.md`。
@@ -52,10 +59,19 @@ Codex 不读取 `.omp/agents/*.md` 作为自定义角色。主 agent 应使用�
 | Parity asset worker | oracle/scenario/独立 parity test 源资产 | 指定 asset 文件 |
 | Parity reviewer | 集成 diff、Java/Go parity 和证据完整性 | 只读 |
 
-正常使用 2 至 3 个 agent，4 个是上限而非目标。共享 `internal/esper`
-状态机、顺序、时间或生命周期语义只能单写。只有契约冻结且文件零重叠时，
-shared-core writer 与 parity-asset writer 才能并行。Codex 子 agent 共享当前
-文件系统，因此文件边界比角色名称更重要。
+正常使用 2 至 3 个 agent，4 个是上限而非目标。每个工作单元在实现前必须
+通过 collaboration tools 同时启动 Java oracle scout 和 Go surface scout；
+使用 `Promise.all` 或其他方式并发执行 shell/read 命令只算命令并发，不算
+agent 委派。共享 `internal/esper` 状态机、顺序、时间或生命周期语义只能
+单写。只有契约冻结且文件零重叠时，shared-core writer 与 parity-asset
+writer 才能并行。Codex 子 agent 共享当前文件系统，因此文件边界比角色名称
+更重要。
+
+允许串行回退的条件只有三类：collaboration tool 调用明确失败；某一 scout
+没有可独立读取的安全范围；工作单元天然没有独立任务。主 agent 必须在开始
+实现前把具体错误或理由写入 `PLANS.md` 的 delegation checkpoint，不能仅写
+“未使用 agent”或假定工具不可用。scout/reviewer 的 agent ID、范围和结果也
+写入该 checkpoint，便于恢复时审计。
 
 每个子任务使用以下契约，不依赖父会话的隐含上下文：
 
@@ -84,7 +100,8 @@ shared-core writer 与 parity-asset writer 才能并行。Codex 子 agent 共享
 ## 4. 标准拓扑
 
 1. 主 agent 从 roadmap/manifest 选工作单元 N，先更新 `PLANS.md`。
-2. 并行启动只读 Java oracle scout 和 Go surface scout。
+2. 必须通过 collaboration tools 并行启动只读 Java oracle scout 和 Go
+   surface scout；记录 agent ID。若调用失败，先记录原始错误再串行继续。
 3. 主 agent 合并结果并冻结 observable contract、CoreFiles、AssetFiles、
    禁改文件和验证命令。未知项未关闭前不实现。
 4. 主 agent 或一个 Go slice worker 单写共享核心。若资产契约已冻结，可同时
@@ -92,11 +109,13 @@ shared-core writer 与 parity-asset writer 才能并行。Codex 子 agent 共享
 5. 主 agent 审查 patch，生成 trace/evidence，按成本从低到高运行定向验证；
    把具体失败回传给原 worker 修复。
 6. 定向验证通过后，主 agent 更新中央事实和 `PLANS.md`。
-7. 并行运行 N 的只读 parity review 与 N+1 的只读 Java/Go 调查。N+1 在 N
-   提交前不得写入。
+7. 必须启动 N 的独立只读 parity reviewer；存在安全 N+1 时，同时启动其
+   Java/Go scout。记录 agent ID 和 review 结论。N+1 在 N 提交前不得写入。
 8. 修复 N 的 findings，运行完整门禁，审查最终 diff，提交并推送 `master`。
 
-没有安全独立子任务时由主 agent 串行完成，不为追求 agent 数量人为拆分工作。
+没有安全独立子任务时由主 agent 串行完成，不为追求 agent 数量人为拆分工作，
+但必须在开始实现前记录具体串行原因。collaboration tools 可用性应通过实际
+scout 调用判断，不能根据 feature flag、进程树或推测判断。
 审查与预取期间若用户修改了重叠文件，停止相关写入，重新核对所有权并与现有
 修改协作。
 

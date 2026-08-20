@@ -20,8 +20,12 @@
 API，自动比较规范化 Java/Go trace，补齐边界、状态序列和必要 mutation，
 再更新 manifest、evidence、roadmap/CHANGELOG 等受影响事实。
 
-优先并行执行边界清晰的只读 Java/Go 调查；共享 `internal/esper` 语义一次
-只能有一个实现写入者。只有契约冻结且语义和文件真正独立时才并行写入。
+每个工作单元实现前必须通过 Codex collaboration tools 或 OMP batch 并行
+启动边界清晰的只读 Java/Go 调查；并行 shell 命令不等价于子 agent。只有
+工具不可用或确实不存在安全独立任务时才允许串行，并必须先记录具体原因：
+Codex 写入 `PLANS.md` delegation checkpoint，OMP 写入当前 batch/task
+contract。共享 `internal/esper` 语义一次只能有一个实现写入者。只有契约冻结且
+语义和文件真正独立时才并行写入。
 子 agent 不运行 formatter、lint 或测试，不更新中央事实，不生成 evidence，
 不 commit/push；主 agent 审查并集成后统一运行定向验证、差分和完整本地
 门禁，再进行独立 parity review。具体子任务必须显式声明 Target、Context、
@@ -51,7 +55,9 @@ evidence、manifest、roadmap 和 CHANGELOG 仍由主 agent 在集成验证后�
 
 项目暂不建设 GitLab CI，也不保护 `master`。每个工作单元经主 agent
 完整验证后，创建一个语义完整、可回退的提交并直接推送 `master`；禁止
-提交或推送已知失败状态，禁止覆盖用户无关修改。
+提交或推送已知失败状态，禁止覆盖用户无关修改。提交前在 tracked files
+记录验证和语义结果；提交后不得为了回填刚生成的 commit hash 再创建
+checkpoint-only 提交，commit identity 以 Git 为准。
 
 可以按需安装工具、使用固定版本的第三方 Go 库或启动 Docker。持续执行，
 直到 `docs/esper-go-port-quality-strategy.md` 的最终验收条件全部满足；在此
