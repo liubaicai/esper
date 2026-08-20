@@ -29,6 +29,9 @@ var exprCoreExistsCastJavaRuntimeIDs = []string{
 	"java-runtime-5c9fdd17b5480f9d78e2",
 	"java-runtime-52fb8d57dd380f5efe6e",
 	"java-runtime-45b9d5a2e216f8063b75",
+	"java-runtime-9957cb6d9cd9ea836d4d",
+	"java-runtime-0b91403db9a899efde99",
+	"java-runtime-9babbbb6f96faf389bb7",
 }
 
 var exprCoreExistsCastJavaExecutions = []string{
@@ -40,6 +43,9 @@ var exprCoreExistsCastJavaExecutions = []string{
 	"ExprCoreCastSimpleMoreTypes",
 	"ExprCoreCastAsParse",
 	"ExprCoreCastDoubleAndNullOM",
+	"ExprCoreCastStringAndNullCompile",
+	"ExprCoreCastBoolean",
+	"ExprCoreCastWStaticType",
 }
 
 var exprCoreExistsCastCaseOrder = []string{
@@ -51,6 +57,9 @@ var exprCoreExistsCastCaseOrder = []string{
 	"cast-simple-more-types",
 	"cast-as-parse",
 	"cast-double-null-om",
+	"cast-string-and-null",
+	"cast-boolean",
+	"cast-w-static-type",
 }
 
 type exprCoreExistsCastExpectedSend struct {
@@ -136,13 +145,72 @@ var exprCoreExistsCastExpectedSends = [][]exprCoreExistsCastExpectedSend{
 			"itemValue": `"abc"`,
 		}},
 	},
+	{
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{
+			"itemType":  `"int"`,
+			"itemValue": "100",
+		}},
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{
+			"itemType":  `"byte"`,
+			"itemValue": "2",
+		}},
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{
+			"itemType":  `"double"`,
+			"itemValue": "77.7777",
+		}},
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{
+			"itemType":  `"int64"`,
+			"itemValue": "6",
+		}},
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{
+			"itemType": `"null"`,
+		}},
+		{eventType: "SupportBeanDynRoot", payload: map[string]string{
+			"itemType":  `"string"`,
+			"itemValue": `"abc"`,
+		}},
+	},
+	{
+		{eventType: "SupportBean", payload: map[string]string{
+			"theString":     `"abc"`,
+			"intPrimitive":  "100",
+			"boolPrimitive": "true",
+			"boolBoxed":     "true",
+		}},
+		{eventType: "SupportBean", payload: map[string]string{
+			"theString":     "null",
+			"intPrimitive":  "100",
+			"boolPrimitive": "false",
+			"boolBoxed":     "false",
+		}},
+		{eventType: "SupportBean", payload: map[string]string{
+			"theString":     "null",
+			"intPrimitive":  "100",
+			"boolPrimitive": "true",
+			"boolBoxed":     "null",
+		}},
+	},
+	{
+		{eventType: "StaticTypeMapEvent", payload: map[string]string{
+			"anInt":        `"100"`,
+			"anDouble":     `"1.4E-1"`,
+			"anLong":       `"-10"`,
+			"anFloat":      `"1.001"`,
+			"anByte":       `"0x0A"`,
+			"anShort":      `"223"`,
+			"intPrimitive": "10",
+			"intBoxed":     "11",
+		}},
+	},
 }
 
 type exprCoreExistsCastSupportBean struct {
-	TheString    *string  `esper:"theString"`
-	IntPrimitive int      `esper:"intPrimitive"`
-	IntBoxed     *int     `esper:"intBoxed"`
-	FloatBoxed   *float32 `esper:"floatBoxed"`
+	TheString     *string  `esper:"theString"`
+	IntPrimitive  int      `esper:"intPrimitive"`
+	IntBoxed      *int     `esper:"intBoxed"`
+	FloatBoxed    *float32 `esper:"floatBoxed"`
+	BoolPrimitive bool     `esper:"boolPrimitive"`
+	BoolBoxed     *bool    `esper:"boolBoxed"`
 }
 
 type exprCoreExistsCastNestedNested struct {
@@ -166,6 +234,17 @@ type exprCoreExistsCastSupportBeanA struct {
 
 type exprCoreExistsCastDynamicRoot struct {
 	Item any `esper:"item"`
+}
+
+type exprCoreExistsCastStaticTypeMapEvent struct {
+	AnInt        *string `esper:"anInt"`
+	AnDouble     *string `esper:"anDouble"`
+	AnLong       *string `esper:"anLong"`
+	AnFloat      *string `esper:"anFloat"`
+	AnByte       *string `esper:"anByte"`
+	AnShort      *string `esper:"anShort"`
+	IntPrimitive int     `esper:"intPrimitive"`
+	IntBoxed     *int    `esper:"intBoxed"`
 }
 
 func runExprCoreExistsCastScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
@@ -392,6 +471,59 @@ func runExprCoreExistsCastCase(ctx context.Context, scenario compat.Scenario, ca
 		query = esper.Select(input,
 			esper.Alias("t0", esper.Cast[any, float64](esper.Field[map[string]any, any]("item"))),
 		).Query(esper.StatementName("s0"))
+	case "cast-string-and-null":
+		if _, err := esper.RegisterMap(env, "SupportBeanDynRoot", []esper.FieldSpec{
+			esper.FieldDef("item", reflect.TypeOf((*any)(nil)).Elem()),
+		}, esper.AllowDynamicFields()); err != nil {
+			return compat.Trace{}, err
+		}
+		input := esper.From[map[string]any](env, "SupportBeanDynRoot")
+		query = esper.Select(input,
+			esper.Alias("t0", esper.Cast[any, string](esper.Field[map[string]any, any]("item"))),
+		).Query(esper.StatementName("s0"))
+	case "cast-boolean":
+		if _, err := esper.RegisterMap(env, "SupportBean", []esper.FieldSpec{
+			esper.FieldDef("theString", reflect.TypeOf((*string)(nil))),
+			esper.FieldDef("intPrimitive", reflect.TypeOf(int(0))),
+			esper.FieldDef("boolPrimitive", reflect.TypeOf(false)),
+			esper.FieldDef("boolBoxed", reflect.TypeOf((*bool)(nil))),
+		}, esper.AllowDynamicFields()); err != nil {
+			return compat.Trace{}, err
+		}
+		input := esper.From[map[string]any](env, "SupportBean")
+		boolPrimitive := esper.Field[map[string]any, bool]("boolPrimitive")
+		boolBoxed := esper.Field[map[string]any, *bool]("boolBoxed")
+		query = esper.Select(input,
+			esper.Alias("t0", esper.Cast[any, bool](esper.Field[map[string]any, any]("boolPrimitive"))),
+			esper.Alias("t1", esper.BitwiseOrOf[bool](boolBoxed, boolPrimitive)),
+			esper.Alias("t2", esper.Cast[any, string](esper.Field[map[string]any, any]("boolBoxed"))),
+		).Query(esper.StatementName("s0"))
+	case "cast-w-static-type":
+		if _, err := esper.RegisterMap(env, "StaticTypeMapEvent", []esper.FieldSpec{
+			esper.FieldDef("anInt", reflect.TypeOf((*string)(nil))),
+			esper.FieldDef("anDouble", reflect.TypeOf((*string)(nil))),
+			esper.FieldDef("anLong", reflect.TypeOf((*string)(nil))),
+			esper.FieldDef("anFloat", reflect.TypeOf((*string)(nil))),
+			esper.FieldDef("anByte", reflect.TypeOf((*string)(nil))),
+			esper.FieldDef("anShort", reflect.TypeOf((*string)(nil))),
+			esper.FieldDef("intPrimitive", reflect.TypeOf(int(0))),
+			esper.FieldDef("intBoxed", reflect.TypeOf((*int)(nil))),
+		}, esper.AllowDynamicFields()); err != nil {
+			return compat.Trace{}, err
+		}
+		input := esper.From[map[string]any](env, "StaticTypeMapEvent")
+		query = esper.Select(input,
+			esper.Alias("intVal", esper.Cast[any, int](esper.Field[map[string]any, any]("anInt"))),
+			esper.Alias("doubleVal", esper.Cast[any, float64](esper.Field[map[string]any, any]("anDouble"))),
+			esper.Alias("longVal", esper.Cast[any, int64](esper.Field[map[string]any, any]("anLong"))),
+			esper.Alias("floatVal", esper.Cast[any, float32](esper.Field[map[string]any, any]("anFloat"))),
+			esper.Alias("byteVal", esper.Cast[any, int8](esper.Field[map[string]any, any]("anByte"))),
+			esper.Alias("shortVal", esper.Cast[any, int16](esper.Field[map[string]any, any]("anShort"))),
+			esper.Alias("intOne", esper.Cast[any, int](esper.Field[map[string]any, any]("intPrimitive"))),
+			esper.Alias("intTwo", esper.Cast[any, int](esper.Field[map[string]any, any]("intBoxed"))),
+			esper.Alias("longOne", esper.Cast[any, int64](esper.Field[map[string]any, any]("intPrimitive"))),
+			esper.Alias("longTwo", esper.Cast[any, int64](esper.Field[map[string]any, any]("intBoxed"))),
+		).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported expr-core-exists-cast case %q", caseName)
 	}
@@ -424,6 +556,8 @@ func decodeExprCoreExistsCastPayload(step compat.Step) (any, error) {
 			IntBoxed        *int     `json:"intBoxed"`
 			FloatBoxed      *float32 `json:"floatBoxed"`
 			DoublePrimitive float64  `json:"doublePrimitive"`
+			BoolPrimitive   bool     `json:"boolPrimitive"`
+			BoolBoxed       *bool    `json:"boolBoxed"`
 		}
 		if err := json.Unmarshal(step.Payload, &payload); err != nil {
 			return nil, fmt.Errorf("expr-core-exists-cast: decode SupportBean: %w", err)
@@ -434,6 +568,33 @@ func decodeExprCoreExistsCastPayload(step compat.Step) (any, error) {
 			"intBoxed":        payload.IntBoxed,
 			"floatBoxed":      payload.FloatBoxed,
 			"doublePrimitive": payload.DoublePrimitive,
+			"boolPrimitive":   payload.BoolPrimitive,
+			"boolBoxed":       payload.BoolBoxed,
+		}, nil
+	}
+	if step.EventType == "StaticTypeMapEvent" {
+		var payload struct {
+			AnInt        *string `json:"anInt"`
+			AnDouble     *string `json:"anDouble"`
+			AnLong       *string `json:"anLong"`
+			AnFloat      *string `json:"anFloat"`
+			AnByte       *string `json:"anByte"`
+			AnShort      *string `json:"anShort"`
+			IntPrimitive int     `json:"intPrimitive"`
+			IntBoxed     *int    `json:"intBoxed"`
+		}
+		if err := json.Unmarshal(step.Payload, &payload); err != nil {
+			return nil, fmt.Errorf("expr-core-exists-cast: decode StaticTypeMapEvent: %w", err)
+		}
+		return map[string]any{
+			"anInt":        payload.AnInt,
+			"anDouble":     payload.AnDouble,
+			"anLong":       payload.AnLong,
+			"anFloat":      payload.AnFloat,
+			"anByte":       payload.AnByte,
+			"anShort":      payload.AnShort,
+			"intPrimitive": payload.IntPrimitive,
+			"intBoxed":     payload.IntBoxed,
 		}, nil
 	}
 	if step.EventType == "SupportBeanDynRoot" {

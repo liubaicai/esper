@@ -35,90 +35,95 @@ activity or a single coverage percentage.
 
 - Updated: 2026-08-20
 - Baseline: `HEAD` and `origin/master` are clean and match at pushed commit
-  `c325027dc`; the next semantic change must preserve that baseline.
-- Status: the four typed `ExprCoreCast.java` executions are implemented and
-  replayed with zero-difference evidence alongside the four delivered Exists
-  executions. The independent reviewer was nonresponsive; bounded local review
-  and all required local gates are complete, with commit/push pending.
-- Current work unit: `expr.core` / four typed `ExprCoreCast.java` executions
-  within `case.expr-core-exists-cast`
-- Exact next action: create the semantic commit, push `master`, and verify the
-  remote ref read-only.
-- Worktree notes: intended work-unit edits are present; preserve them and do not
+  `1a5824a53`; the next semantic change must preserve that baseline.
+- Status: the next bounded expr.core unit extends the delivered Cast scenario
+  with three scalar executions (raw string/boolean/static-parse casts) inside
+  the same `case.expr-core-exists-cast`.
+- Current work unit: `expr.core` / typed scalar Cast — `ExprCoreCastStringAndNullCompile`,
+  `ExprCoreCastBoolean`, `ExprCoreCastWStaticType`
+- Exact next action: append the three executions to the parity harness
+  (scenario, oracle, Go runner, tests), regenerate traces/evidence, update the
+  manifest case to differential-verified for the three new runtime IDs.
+- Worktree notes: the delivered baseline is clean; preserve it and do not
   modify `/root/app/esper` or `goal.txt`.
 
 ## Delegation checkpoint
 
-- Collaboration facility: available; the required Cast scouts were started
-  concurrently through collaboration tools before implementation, but both
-  remained reported as running after three 30-second waits and bounded
-  completion requests. They were closed without reports.
-- Java contract scout: Mendel `01a01fc7-90c0-7ec3-9a93-46103aba7713` was
-  assigned the fixed `ExprCoreCast.java` source and exact runtime inventory;
-  no deliverable returned before closure.
-- Go surface scout: Huygens `01a01fc7-8dfe-7561-9e69-d148f84a4a92` was
-  assigned the typed Cast implementation and existing parity surfaces; no
-  deliverable returned before closure.
-- Independent parity reviewer: Gauss `01a01fe0-2023-79e1-ade9-1dec6ba1f6b7`
-  was started after targeted validation, remained reported as running after
-  repeated 30/60-second waits and a completion request, and was closed without
-  a report. The primary agent completed a bounded local review of source order,
-  exact payload metadata, runtime IDs, trace/evidence provenance, lifecycle,
-  Null behavior, and mutation coverage with no concrete findings. This is a
-  serial-review exception, not an independent approval.
-- Serial exception: both required read-only scouts were launched concurrently
-  through the collaboration facility, but neither returned findings after
-  repeated waits and interrupt-style completion requests. The primary agent
-  inspected the fixed source and Go surface locally, froze the contract below,
-  and did not broaden scope or authorize scout writes.
+- Collaboration facility: available; the unit's read-only scouts were launched
+  concurrently through collaboration tools and delivered frozen contracts.
+- Java contract scout: `CastScalarJavaContract` returned exact EPL,
+  event-type/property types, per-execution input/output vectors,
+  null/type/lifecycle semantics, and runtime-ID mapping (`9957cb6d9cd9ea836d4d`
+  / `0b91403db9a899efde99` / `9babbbb6f96faf389bb7`).
+- Go surface scout: `CastScalarGoSurface` confirmed no `internal/esper`
+  production change is needed; all three executions are covered by existing
+  `castToString`/`castToBool`/`parseStringNumber`, and reuse the exists-cast
+  parity harness.
+- Implementation writer: primary agent owns the whole exists-cast parity
+  surface because the case-order/payload/event-type contract spans the
+  scenario, oracle, Go runner, and tests as one atomic set; a second parallel
+  writer would risk inconsistent case lists, so a singleton writer is the
+  recorded exception.
+- Independent parity reviewer: `ScalarCastReview` returned a conditional
+  fail on one minor evidence-integrity defect — `javaExecutions[2]` mislabeled
+  runtime `8fa7f5076dde9d791d08` as `ExprCoreCastStringAndNullCompile` when
+  the execution inventory maps it to `ExprCoreCastDoubleAndNullOM`. The label
+  was restored to match the inventory and the evidence was regenerated so the
+  Go array and evidence `javaExecutions` agree; the review finding is resolved
+  and all local gates pass.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, typed `Cast[A,B]` conversion across
-  numeric/primitive/boxed/dynamic values, Null behavior, and a small source-order
-  slice from `ExprCoreCast.java`.
+- Capability/subdomain: `expr.core`, typed scalar `Cast` extension of
+  `case.expr-core-exists-cast` for three source-order `ExprCoreCast.java`
+  executions alongside the eight already-verified executions.
 - Java source and executions/runtime IDs: fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`, with
   `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCast.java`:
-  `ExprCoreCastSimple` / `java-runtime-3fc2cde530f321dc3994`,
-  `ExprCoreCastSimpleMoreTypes` / `java-runtime-5c9fdd17b5480f9d78e2`,
-  `ExprCoreCastAsParse` / `java-runtime-52fb8d57dd380f5efe6e`, and
-  `ExprCoreCastDoubleAndNullOM` / `java-runtime-45b9d5a2e216f8063b75`.
-- Differential scope: strict replay of the existing four source-order
-  `ExprCoreExists.java` executions followed by these four Cast executions,
-  with fresh statement/runtime lifecycle per case. The Cast payloads are exact:
-  `cast-simple` sends `theString=abc,intPrimitive=100,intBoxed=3,
-  floatBoxed=9.5`, then `theString=null,intPrimitive=100,intBoxed=null,
-  floatBoxed=null`; `cast-simple-more-types` sends
-  `theString=true,intPrimitive=1,doublePrimitive=1`; `cast-as-parse` sends
-  `theString=12,intPrimitive=1`; and `cast-double-null-om` sends tagged
-  dynamic items `int=100`, `byte=2`, `double=77.7777`, `int64=6`, `null`,
-  and `string=abc`.
+  `ExprCoreCastStringAndNullCompile` / `java-runtime-9957cb6d9cd9ea836d4d`,
+  `ExprCoreCastBoolean` / `java-runtime-0b91403db9a899efde99`, and
+  `ExprCoreCastWStaticType` / `java-runtime-9babbbb6f96faf389bb7`. These three
+  runtime IDs are already inventoried in the manifest case; only their
+  differential-verified status changes.
+- Differential scope: extend `testdata/parity/expr-core-exists-cast.json` with
+  three new cases after `cast-double-null-om`:
+  - `cast-string-and-null` sends six `SupportBeanDynRoot` tagged items
+    (`itemType` int/byte/double/int64/null/string with itemValue
+    100/2/77.7777/6/-/"abc") projecting `Cast(item?,String)` →
+    `"100"`,`"2"`,`"77.7777"`,`"6"`,null,`"abc"`;
+  - `cast-boolean` sends three `SupportBean` (theString/intPrimitive/
+    boolPrimitive/boolBoxed) projecting `Cast(boolPrimitive,Boolean)`,
+    `Cast(boolBoxed|boolPrimitive,boolean)` (null-propagates on null boolBoxed),
+    `Cast(boolBoxed,String)`;
+  - `cast-w-static-type` sends one `StaticTypeMapEvent` map
+    (anInt="100", anDouble="1.4E-1", anLong="-10", anFloat="1.001",
+    anByte="0x0A", anShort="223", intPrimitive=10, intBoxed=11) projecting ten
+    typed casts int/double/long/float/byte/short/int/int/long/long.
 - Observable contract: all cases emit one new row per send at virtual time
-  zero, no old stream, timers, or runtime errors. Cast Simple projects
-  `c0..c7` with string, Integer/Float/Long/Number conversions and preserves
-  Null for nullable inputs. MoreTypes projects float/short/byte/char/bool,
-  BigInteger and BigDecimal-equivalent exact Go values; `AsParse` projects
-  boxed Integer `12`; Double/Null OM projects boxed Double values for numeric
-  dynamic items and Null for Null/incompatible string. The Go trace uses the
-  Java oracle's scalar numeric/character normalization while focused unit
-  tests retain the typed result schema. Java EPL/SODA/compile entry details,
-  date/time diagnostics, interface casts, arrays, generic casts, Boolean casts,
-  and remaining Cast executions stay out of scope.
-- Allowed production files: only the smallest directly responsible Cast helper
-  or typed API surface in `internal/esper`, and its generated root facade if the
-  public API changes.
-- Allowed Go test/parity files: a new Cast parity runner plus minimal dispatcher
-  and focused test additions in `internal/app/parity` and `internal/esper`.
-- Allowed parity asset files: Cast-specific Java oracle/runner files and
+  zero, no old stream, timers, or errors; fresh statement/runtime lifecycle per
+  case. Java number-to-String is `Double.toString`; Java numeric string parse
+  is `Byte.decode` (hex allowed, `"0x0A"`→10), Short/Long/Integer decimal
+  (`LongValue.parseString` strips trailing L and leading +), Float/Double
+  `parseFloat/parseDouble`. Existing Go `parseStringNumber` covers these
+  exact vectors. `StaticTypeMapEvent` is a map event with `anInt..anShort`
+  as String and `intPrimitive` int / `intBoxed` Integer; the Go `RegisterMap`
+  FieldDefs mirror it. Dates, interface casts, array casts, generic casts, and
+  the remaining BigDecimal/BigInt executions stay out of scope.
+- Allowed production files: none — no `internal/esper` change is authorized;
+  this unit is parity/asset-only.
+- Allowed Go test/parity files: `internal/app/parity/expr_core_exists_cast.go`
+  (three new cases), `internal/app/parity/run_test.go` (record-count and
+  case-count updates, extra payload-mutation).
+- Allowed parity asset files: `tools/java-oracle/ExprCoreExistsCastScenarioOracle.java`
+  (`StaticTypeMapEvent` config, bool fields, new cases) and
   `testdata/parity/expr-core-exists-cast.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: changes under `/root/app/esper`; unrelated
-  semantic surfaces; `goal.txt`; generated evidence before trace validation;
-  and central facts outside this unit's manifest/roadmap/CHANGELOG updates.
-  `PLANS.md`, the manifest, roadmap, CHANGELOG, traces, and evidence remain
-  primary-agent owned. Scouts do not format, build, test, commit, or push.
-- Targeted validation: the pinned Java Cast oracle runner; focused Cast tests;
-  focused parity replay and mutation tests; and
+  semantic surfaces of `internal/esper`; `goal.txt`; generated evidence before
+  trace validation; central facts outside this unit's manifest/roadmap/CHANGELOG
+  updates. `PLANS.md`, manifest, roadmap, CHANGELOG, traces, and evidence remain
+  primary-agent owned.
+- Targeted validation: pinned Java scalar-cast oracle runner; focused
+  exists-cast parity + mutation tests; scenario shape validator; and
   `go test ./internal/compat ./internal/app/manifest -count=1`.
 - Milestone gates required: changed-file `gofmt`, `go vet ./...`,
   `go test ./... -count=1`, manifest/evidence validation, `make check`, and
@@ -126,25 +131,24 @@ activity or a single coverage percentage.
 
 ## Progress
 
-- [x] Reconfirm baseline, roadmap priorities, manifest summary, and relevant
-      existing gates.
-- [x] Select the next natural work unit from the `expr.core` manifest gap.
-- [x] Run concurrent Java/Go read-only scouts and record their agent IDs and
-      the documented nonresponsive fallback.
+- [x] Reconfirm baseline (gofmt/vet/full tests green), roadmap, manifest.
+- [x] Select the next bounded unit: three scalar `ExprCoreCast.java`
+      executions from the remaining Cast inventory (string/bool/static-parse).
+- [x] Run concurrent Java/Go read-only scouts; record agent IDs and frozen
+      contract (no `internal/esper` production change needed).
 - [x] Freeze the Java observable contract, runtime IDs, file ownership, and
-      validation commands from fixed-source local inspection.
-- [x] Implement the smallest Go/API/parity-asset change that satisfies the
-      frozen contract.
-- [x] Generate and compare Java/Go traces; run targeted tests and required
-      mutation checks.
-- [x] Update manifest, evidence, roadmap, CHANGELOG, and public summary only
-      where verified facts change.
-- [x] Run independent parity review, resolve findings, and run complete local
-      gates plus the applicable milestone gate; the reviewer was nonresponsive,
-      so the documented bounded local-review exception applies.
-- [x] Review the final diff and record actual validation.
-- [ ] Create one semantic commit, push `master`, and verify the remote ref
-      without tracked edits.
+      validation commands.
+- [x] Extend the exists-cast parity harness (scenario, oracle, Go runner,
+      tests) with the three executions.
+- [x] Generate and compare Java/Go traces; run targeted mutation/parity checks
+      (32 records, zero differences; Go matches pinned Java oracle).
+- [x] Update manifest (three runtime IDs → differential-verified), evidence,
+      roadmap, CHANGELOG, README where verified facts change.
+- [x] Run independent parity review, resolve findings, run complete local
+      gates.
+- [ ] Review the final diff, record actual validation, create one semantic
+      commit, push `master`, verify the remote ref read-only.
+
 
 ## Discoveries and decisions
 
@@ -183,6 +187,15 @@ activity or a single coverage percentage.
 - 2026-08-20: `case.expr-core-in-between` reached zero-difference replay with
   164 records, passed independent review and local gates, and was pushed as
   `033786cbd`; Git is authoritative for that commit identity.
+- 2026-08-20: `case.expr-core-exists-cast` scalar-Cast extension reached
+  zero-difference replay with 32 records (was 22) by reusing existing
+  `castToString`/`castToBool`/`parseStringNumber` with no `internal/esper`
+  production change. The independent parity review found one minor
+  evidence-integrity defect: `javaExecutions[2]` relabeled the pre-existing
+  `ExprCoreCastDoubleAndNullOM` runtime (`8fa7f5076dde9d791d08`) as
+  `ExprCoreCastStringAndNullCompile`; the label was restored to match the
+  execution inventory and evidence regenerated. Manifest case DV runtime IDs
+  8→11, summary 419→422, cases stay 134.
 - 2026-08-20: The equality scouts confirmed the reusable typed
   `EqualOf`/`NotEqualOf`/`Is`/`IsNot` surface, deep slice equality, and typed-nil
   behavior. They also identified a Plan identity collision for interface-typed

@@ -1,3 +1,20 @@
+> 最新补充：Draft 4.210（2026-08-20），扩展 `expr-core-exists-cast`
+> differential-verified 场景：固定 Java `ExprCoreCast` 的
+> `ExprCoreCastStringAndNullCompile`、`ExprCoreCastBoolean`、
+> `ExprCoreCastWStaticType` 三个 execution，与 Go typed Cast replay 产生 32
+> 条 listener records、0 differences（原 22 条 + 10 条）。覆盖 dyn-root
+> `item?` cast-to-String 的 Java number-to-String 渲染（int/byte/double/
+> long/null/string）、SupportBean bool boxed/primitive cast 与 null 传播的
+> boolean OR（boolBoxed|boolPrimitive）、以及 `StaticTypeMapEvent` 字符串
+> 数值 parse（`0x0A` hex→byte 10、`1.4E-1`→double 0.14、`1.001`→float、
+> `223`→short、`100`→int、`-10`→long），复用 Go 现有 `castToString`/
+> `castToBool`/`parseStringNumber`，无 `internal/esper` 生产改动。固定 commit
+> 的 Java oracle、runner、scenario、trace、evidence 和 value/null/order
+> mutation tests 已纳入兼容资产；manifest 保持 134 个 differential-verified
+> case，更新为 422 个 differential runtime IDs。其余 Cast 日期/interface/
+> array/generic/BigDecimal execution 与完整 parser/type/diagnostic matrix
+> 保持 implemented-only。
+
 > 最新补充：Draft 4.209（2026-08-20），扩展 `expr-core-exists-cast`
 > differential-verified 场景：固定 Java `ExprCoreExists` 四个 execution 加上
 > `ExprCoreCast` 的 `ExprCoreCastSimple`、`ExprCoreCastSimpleMoreTypes`、

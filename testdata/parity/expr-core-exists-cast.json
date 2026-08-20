@@ -204,6 +204,109 @@
         "itemType": "string",
         "itemValue": "abc"
       }
+    },
+    {
+      "op": "case",
+      "case": "cast-string-and-null"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "int",
+        "itemValue": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "byte",
+        "itemValue": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "double",
+        "itemValue": 77.7777
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "int64",
+        "itemValue": 6
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "null"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "string",
+        "itemValue": "abc"
+      }
+    },
+    {
+      "op": "case",
+      "case": "cast-boolean"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "abc",
+        "intPrimitive": 100,
+        "boolPrimitive": true,
+        "boolBoxed": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 100,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 100,
+        "boolPrimitive": true,
+        "boolBoxed": null
+      }
+    },
+    {
+      "op": "case",
+      "case": "cast-w-static-type"
+    },
+    {
+      "op": "send",
+      "eventType": "StaticTypeMapEvent",
+      "payload": {
+        "anInt": "100",
+        "anDouble": "1.4E-1",
+        "anLong": "-10",
+        "anFloat": "1.001",
+        "anByte": "0x0A",
+        "anShort": "223",
+        "intPrimitive": 10,
+        "intBoxed": 11
+      }
     }
   ]
 }

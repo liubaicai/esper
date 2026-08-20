@@ -4,6 +4,24 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.210（2026-08-20），扩展 `expr-core-exists-cast`
+> differential-verified 场景，对照固定 Java `ExprCoreCast` 的三个可观测
+> execution（`ExprCoreCastStringAndNullCompile`
+> `java-runtime-9957cb6d9cd9ea836d4d`、`ExprCoreCastBoolean`
+> `java-runtime-0b91403db9a899efde99`、`ExprCoreCastWStaticType`
+> `java-runtime-9babbbb6f96faf389bb7`），三个 isolated case、10 条 listener
+> records、0 differences（累计 32 条）。Go 侧复用类型化 `Cast[A,B]`、bool
+> `BitwiseOrOf` 与 `parseStringNumber`，覆盖 dyn-root `item?` cast-to-String
+> 的 Java number-to-String 渲染（int/byte/double/long/null/string）、
+> SupportBean bool boxed/primitive cast 与 null 传播的 boolean OR、以及
+> `StaticTypeMapEvent` 字符串数值 parse（`0x0A` hex→byte、`1.4E-1`→double、
+> `1.001`→float、`223`→short）；无 `internal/esper` 生产改动。Java
+> EPL/SODA/compile entry details、日期/interface/array/generic/BigDecimal
+> casts 和完整诊断矩阵仍为 implemented-only。固定 Java oracle、runner、
+> scenario、trace、evidence 与 value/null/order mutation tests 已纳入兼容
+> 资产；manifest 保持 134 个 differential-verified case，更新为 422 个
+> differential runtime IDs。
+
 > 最新补充：Draft 4.209（2026-08-20），扩展 `expr-core-exists-cast`
 > differential-verified 场景，对照固定 Java `ExprCoreExists` 的四个 execution
 > 与 `ExprCoreCast` 的四个可观测 execution（`ExprCoreCastSimple`
@@ -185,8 +203,8 @@
 | --- | --- |
 | Capability | 110 |
 | Case | 522 |
-| Case differential-verified | 133 |
-| Differential-verified runtime | 411 / 4,136 |
+| Case differential-verified | 134 |
+| Differential-verified runtime | 422 / 4,136 |
 | Runtime 已关联 | 2,901 / 4,136（70.2%） |
 | Runtime 未关联 | 1,235 |
 | Representative scenario | 94 / 94 通过 |

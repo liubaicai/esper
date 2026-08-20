@@ -9,7 +9,10 @@
     "java-runtime-3fc2cde530f321dc3994",
     "java-runtime-5c9fdd17b5480f9d78e2",
     "java-runtime-52fb8d57dd380f5efe6e",
-    "java-runtime-45b9d5a2e216f8063b75"
+    "java-runtime-45b9d5a2e216f8063b75",
+    "java-runtime-9957cb6d9cd9ea836d4d",
+    "java-runtime-0b91403db9a899efde99",
+    "java-runtime-9babbbb6f96faf389bb7"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreExists.java",
@@ -23,7 +26,10 @@
     "ExprCoreCastSimple",
     "ExprCoreCastSimpleMoreTypes",
     "ExprCoreCastAsParse",
-    "ExprCoreCastDoubleAndNullOM"
+    "ExprCoreCastDoubleAndNullOM",
+    "ExprCoreCastStringAndNullCompile",
+    "ExprCoreCastBoolean",
+    "ExprCoreCastWStaticType"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -230,6 +236,109 @@
         "payload": {
           "itemType": "string",
           "itemValue": "abc"
+        }
+      },
+      {
+        "op": "case",
+        "case": "cast-string-and-null"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "itemType": "int",
+          "itemValue": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "itemType": "byte",
+          "itemValue": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "itemType": "double",
+          "itemValue": 77.7777
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "itemType": "int64",
+          "itemValue": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "itemType": "null"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanDynRoot",
+        "payload": {
+          "itemType": "string",
+          "itemValue": "abc"
+        }
+      },
+      {
+        "op": "case",
+        "case": "cast-boolean"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "abc",
+          "intPrimitive": 100,
+          "boolPrimitive": true,
+          "boolBoxed": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 100,
+          "boolPrimitive": false,
+          "boolBoxed": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 100,
+          "boolPrimitive": true,
+          "boolBoxed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "cast-w-static-type"
+      },
+      {
+        "op": "send",
+        "eventType": "StaticTypeMapEvent",
+        "payload": {
+          "anInt": "100",
+          "anDouble": "1.4E-1",
+          "anLong": "-10",
+          "anFloat": "1.001",
+          "anByte": "0x0A",
+          "anShort": "223",
+          "intPrimitive": 10,
+          "intBoxed": 11
         }
       }
     ]
@@ -657,6 +766,177 @@
             }
           }
         ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "100"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "77.7777"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": true,
+              "t1": true,
+              "t2": "true"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": false,
+              "t1": false,
+              "t2": "false"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": true,
+              "t1": {
+                "state": "null"
+              },
+              "t2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-w-static-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "byteVal": "10",
+              "doubleVal": "0.14",
+              "floatVal": "1.001",
+              "intOne": "10",
+              "intTwo": "11",
+              "intVal": "100",
+              "longOne": "10",
+              "longTwo": "11",
+              "longVal": "-10",
+              "shortVal": "223"
+            }
+          }
+        ]
       }
     ]
   },
@@ -1080,6 +1360,177 @@
               "t0": {
                 "state": "null"
               }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "100"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "77.7777"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-string-and-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": true,
+              "t1": true,
+              "t2": "true"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": false,
+              "t1": false,
+              "t2": "false"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": true,
+              "t1": {
+                "state": "null"
+              },
+              "t2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-w-static-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "byteVal": "10",
+              "doubleVal": "0.14",
+              "floatVal": "1.001",
+              "intOne": "10",
+              "intTwo": "11",
+              "intVal": "100",
+              "longOne": "10",
+              "longTwo": "11",
+              "longVal": "-10",
+              "shortVal": "223"
             }
           }
         ]

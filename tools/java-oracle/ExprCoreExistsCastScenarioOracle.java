@@ -30,13 +30,15 @@ public final class ExprCoreExistsCastScenarioOracle {
     private static final String SCENARIO_ID = "expr-core-exists-cast";
     private static final String[] CASES = {
             "exists-simple", "exists-inner", "exists-om", "exists-compile",
-            "cast-simple", "cast-simple-more-types", "cast-as-parse", "cast-double-null-om"
+            "cast-simple", "cast-simple-more-types", "cast-as-parse", "cast-double-null-om",
+            "cast-string-and-null", "cast-boolean", "cast-w-static-type"
     };
     private static final String[] EVENT_TYPES = {
             "SupportBean", "SupportMarkerInterface", "SupportMarkerInterface", "SupportMarkerInterface",
-            "SupportBean", "SupportBean", "SupportBean", "SupportBeanDynRoot"
+            "SupportBean", "SupportBean", "SupportBean", "SupportBeanDynRoot",
+            "SupportBeanDynRoot", "SupportBean", "StaticTypeMapEvent"
     };
-    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6};
+    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 6, 3, 1};
 
     private ExprCoreExistsCastScenarioOracle() {
     }
@@ -150,7 +152,7 @@ public final class ExprCoreExistsCastScenarioOracle {
 			requireNumber(payload, "intPrimitive", 1);
 			return;
 		}
-		if (caseIndex == 7) {
+		if (caseIndex == 7 || caseIndex == 8) {
 			String[] itemTypes = {"int", "byte", "double", "int64", "null", "string"};
 			requireFieldCount(payload, sendIndex == 4 ? 1 : 2, CASES[caseIndex]);
 			requireString(payload, "itemType", itemTypes[sendIndex]);
@@ -167,6 +169,39 @@ public final class ExprCoreExistsCastScenarioOracle {
 			}
 			return;
 		}
+		if (caseIndex == 9) {
+			requireFieldCount(payload, 4, CASES[caseIndex]);
+			if (sendIndex == 0) {
+				requireString(payload, "theString", "abc");
+				requireNumber(payload, "intPrimitive", 100);
+				requireBoolean(payload, "boolPrimitive", true);
+				requireBoolean(payload, "boolBoxed", true);
+			} else if (sendIndex == 1) {
+				requireNull(payload, "theString");
+				requireNumber(payload, "intPrimitive", 100);
+				requireBoolean(payload, "boolPrimitive", false);
+				requireBoolean(payload, "boolBoxed", false);
+			} else {
+				requireNull(payload, "theString");
+				requireNumber(payload, "intPrimitive", 100);
+				requireBoolean(payload, "boolPrimitive", true);
+				requireNull(payload, "boolBoxed");
+			}
+			return;
+		}
+		if (caseIndex == 10) {
+			requireFieldCount(payload, 8, CASES[caseIndex]);
+			requireString(payload, "anInt", "100");
+			requireString(payload, "anDouble", "1.4E-1");
+			requireString(payload, "anLong", "-10");
+			requireString(payload, "anFloat", "1.001");
+			requireString(payload, "anByte", "0x0A");
+			requireString(payload, "anShort", "223");
+			requireNumber(payload, "intPrimitive", 10);
+			requireNumber(payload, "intBoxed", 11);
+			return;
+		}
+
 		String[] shapes = caseIndex == 1
 				? new String[]{"null", "complex", "complex", "nested-support-bean", "support-bean-a"}
 				: new String[]{"support-bean", "null", "string"};
@@ -174,6 +209,13 @@ public final class ExprCoreExistsCastScenarioOracle {
         requireString(payload, "shape", shapes[sendIndex]);
     }
 
+
+	private static void requireBoolean(JsonObject payload, String name, boolean expected) {
+		JsonValue value = payload.get(name);
+		if (value == null || !value.isBoolean() || value.asBoolean() != expected) {
+			throw new IllegalArgumentException("payload boolean mismatch for " + name);
+		}
+	}
     private static void requireFieldCount(JsonObject payload, int expected, String caseName) {
         if (payload.names().size() != expected) {
             throw new IllegalArgumentException("payload field count mismatch for " + caseName);
@@ -213,7 +255,8 @@ public final class ExprCoreExistsCastScenarioOracle {
         configuration.getRuntime().getThreading().setInternalTimerEnabled(false);
         configuration.getCommon().addEventType("SupportBean", SupportBean.class);
         configuration.getCommon().addEventType("SupportMarkerInterface", SupportMarkerInterface.class);
-		configuration.getCommon().addEventType("SupportBeanDynRoot", SupportBeanDynRoot.class);
+        configuration.getCommon().addEventType("SupportBeanDynRoot", SupportBeanDynRoot.class);
+		configuration.getCommon().addEventType("StaticTypeMapEvent", staticTypeMapEventMap());
         String runtimeName = "parity-expr-core-exists-cast-" + caseName;
         EPRuntime runtime = EPRuntimeProvider.getRuntime(runtimeName, configuration);
         try {
@@ -238,6 +281,19 @@ public final class ExprCoreExistsCastScenarioOracle {
         } finally {
             runtime.destroy();
         }
+    }
+
+    private static java.util.Map<String, Object> staticTypeMapEventMap() {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        map.put("anInt", String.class);
+        map.put("anDouble", String.class);
+        map.put("anLong", String.class);
+        map.put("anFloat", String.class);
+        map.put("anByte", String.class);
+        map.put("anShort", String.class);
+        map.put("intPrimitive", int.class);
+        map.put("intBoxed", Integer.class);
+        return map;
     }
 
     private static String eplFor(String caseName) {
@@ -279,12 +335,25 @@ public final class ExprCoreExistsCastScenarioOracle {
 		if ("cast-as-parse".equals(caseName)) {
 			return "select cast(theString, int) as t0 from SupportBean";
 		}
-		if ("cast-double-null-om".equals(caseName)) {
-			return "select cast(item?,double) as t0 from SupportBeanDynRoot";
+		if ("cast-double-null-om".equals(caseName) || "cast-string-and-null".equals(caseName)) {
+			String target = "cast-double-null-om".equals(caseName) ? "double" : "java.lang.String";
+			return "select cast(item?," + target + ") as t0 from SupportBeanDynRoot";
+		}
+		if ("cast-boolean".equals(caseName)) {
+			return "select cast(boolPrimitive as java.lang.Boolean) as t0, " +
+					"cast(boolBoxed | boolPrimitive, boolean) as t1, " +
+					"cast(boolBoxed, string) as t2 from SupportBean";
+		}
+		if ("cast-w-static-type".equals(caseName)) {
+			return "select cast(anInt, int) as intVal, cast(anDouble, double) as doubleVal, " +
+					"cast(anLong, long) as longVal, cast(anFloat, float) as floatVal, " +
+					"cast(anByte, byte) as byteVal, cast(anShort, short) as shortVal, " +
+					"cast(intPrimitive, int) as intOne, cast(intBoxed, int) as intTwo, " +
+					"cast(intPrimitive, java.lang.Long) as longOne, cast(intBoxed, long) as longTwo " +
+					"from StaticTypeMapEvent";
 		}
         throw new IllegalArgumentException("unsupported case " + caseName);
     }
-
     private static void replayCase(JsonArray allSteps, String caseName, EPRuntime runtime) {
         boolean active = false;
         for (JsonValue value : allSteps) {
@@ -302,8 +371,10 @@ public final class ExprCoreExistsCastScenarioOracle {
                 runtime.getEventService().sendEventBean(toSupportBean(payload), "SupportBean");
             } else if ("SupportMarkerInterface".equals(step.getString("eventType", ""))) {
                 runtime.getEventService().sendEventBean(toDynamicRoot(payload), "SupportMarkerInterface");
-			} else if ("SupportBeanDynRoot".equals(step.getString("eventType", ""))) {
-				runtime.getEventService().sendEventBean(toCastDynamicRoot(payload), "SupportBeanDynRoot");
+            } else if ("SupportBeanDynRoot".equals(step.getString("eventType", ""))) {
+                runtime.getEventService().sendEventBean(toCastDynamicRoot(payload), "SupportBeanDynRoot");
+            } else if ("StaticTypeMapEvent".equals(step.getString("eventType", ""))) {
+                runtime.getEventService().sendEventMap(toStaticTypeMapEvent(payload), "StaticTypeMapEvent");
             } else {
                 throw new IllegalArgumentException("unsupported event type");
             }
@@ -321,9 +392,36 @@ public final class ExprCoreExistsCastScenarioOracle {
 		if (doublePrimitive != null && !doublePrimitive.isNull()) {
 			bean.setDoublePrimitive(payload.getDouble("doublePrimitive", 0.0));
 		}
+		JsonValue boolPrimitive = payload.get("boolPrimitive");
+		if (boolPrimitive != null && boolPrimitive.isBoolean()) {
+			bean.setBoolPrimitive(boolPrimitive.asBoolean());
+		}
+		JsonValue boolBoxed = payload.get("boolBoxed");
+		if (boolBoxed != null && !boolBoxed.isNull() && boolBoxed.isBoolean()) {
+			bean.setBoolBoxed(boolBoxed.asBoolean());
+		}
         return bean;
     }
 
+    private static java.util.Map<String, Object> toStaticTypeMapEvent(JsonObject payload) {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        JsonValue anInt = payload.get("anInt");
+        map.put("anInt", anInt == null || anInt.isNull() ? null : anInt.asString());
+        JsonValue anDouble = payload.get("anDouble");
+        map.put("anDouble", anDouble == null || anDouble.isNull() ? null : anDouble.asString());
+        JsonValue anLong = payload.get("anLong");
+        map.put("anLong", anLong == null || anLong.isNull() ? null : anLong.asString());
+        JsonValue anFloat = payload.get("anFloat");
+        map.put("anFloat", anFloat == null || anFloat.isNull() ? null : anFloat.asString());
+        JsonValue anByte = payload.get("anByte");
+        map.put("anByte", anByte == null || anByte.isNull() ? null : anByte.asString());
+        JsonValue anShort = payload.get("anShort");
+        map.put("anShort", anShort == null || anShort.isNull() ? null : anShort.asString());
+        map.put("intPrimitive", payload.getInt("intPrimitive", 0));
+        JsonValue intBoxed = payload.get("intBoxed");
+        map.put("intBoxed", intBoxed == null || intBoxed.isNull() ? null : payload.getInt("intBoxed", 0));
+        return map;
+    }
 	private static SupportBeanDynRoot toCastDynamicRoot(JsonObject payload) {
 		String itemType = payload.getString("itemType", "");
 		JsonValue itemValue = payload.get("itemValue");
