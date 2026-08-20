@@ -58,6 +58,28 @@ func TestEqualityExpressionsMatchJavaCoercionArrayAndNullSemantics(t *testing.T)
 	}
 }
 
+func TestDynamicLiteralConcreteTypeEntersPlanIdentity(t *testing.T) {
+	env := NewEnvironment()
+	intPlan, err := env.Build(SelectOnce(env, Alias("value", EqualOf(Literal[any](1), Literal[any](1)))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sameIntPlan, err := env.Build(SelectOnce(env, Alias("value", EqualOf(Literal[any](1), Literal[any](1)))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stringPlan, err := env.Build(SelectOnce(env, Alias("value", EqualOf(Literal[any]("1"), Literal[any]("1")))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if intPlan.Hash() != sameIntPlan.Hash() || !reflect.DeepEqual(intPlan.Canonical(), sameIntPlan.Canonical()) {
+		t.Fatal("equivalent dynamic literal plans differ")
+	}
+	if intPlan.Hash() == stringPlan.Hash() || reflect.DeepEqual(intPlan.Canonical(), stringPlan.Canonical()) {
+		t.Fatal("dynamic literal concrete type is missing from Plan identity")
+	}
+}
+
 type equalityParityEvent struct {
 	IntValue   int     `esper:"int_value"`
 	LongValue  *int64  `esper:"long_value"`

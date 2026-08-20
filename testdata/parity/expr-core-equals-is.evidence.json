@@ -1,0 +1,531 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-fdef3bed6ec0b16d36db",
+    "java-runtime-1eaef3b328c31a863b26",
+    "java-runtime-2fb582ea3ac2dc026c82",
+    "java-runtime-d6084d5b7a191cbde6cd"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreEqualsIs.java"
+  ],
+  "javaExecutions": [
+    "ExprCoreEqualsIsCoercion",
+    "ExprCoreEqualsIsCoercionSameType",
+    "ExprCoreEqualsIsMultikeyWArray",
+    "ExprCoreEqualsNull"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-equals-is",
+    "steps": [
+      {
+        "op": "case",
+        "case": "equals-coercion"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "longPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "longPrimitive": 2
+        }
+      },
+      {
+        "op": "case",
+        "case": "equals-same-type"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "a",
+          "p01": "a",
+          "p02": "a"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "a",
+          "p01": "b",
+          "p02": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "equals-array"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E1",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            1,
+            2
+          ],
+          "intBoxedOne": [
+            1,
+            2
+          ],
+          "intBoxedTwo": [
+            1,
+            2
+          ],
+          "int2DimOne": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ],
+          "int2DimTwo": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ],
+          "objectOne": [
+            "a",
+            [
+              1
+            ]
+          ],
+          "objectTwo": [
+            "a",
+            [
+              1
+            ]
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E1",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            1
+          ],
+          "intBoxedOne": [
+            1,
+            2
+          ],
+          "intBoxedTwo": [
+            1
+          ],
+          "int2DimOne": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ],
+          "int2DimTwo": [
+            [
+              1,
+              2
+            ],
+            [
+              3
+            ]
+          ],
+          "objectOne": [
+            "a",
+            2
+          ],
+          "objectTwo": [
+            "a"
+          ]
+        }
+      },
+      {
+        "op": "case",
+        "case": "equals-null"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "x"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-equals-is",
+    "records": [
+      {
+        "case": "equals-coercion",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-coercion",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-same-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-same-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true,
+              "c3": true,
+              "c4": true,
+              "c5": true,
+              "c6": true,
+              "c7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false,
+              "c3": false,
+              "c4": false,
+              "c5": false,
+              "c6": false,
+              "c7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": false,
+              "c2": {
+                "state": "null"
+              },
+              "c3": false,
+              "c4": {
+                "state": "null"
+              },
+              "c5": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true,
+              "c2": {
+                "state": "null"
+              },
+              "c3": true,
+              "c4": {
+                "state": "null"
+              },
+              "c5": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-equals-is",
+    "records": [
+      {
+        "case": "equals-coercion",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-coercion",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-same-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-same-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": true,
+              "c2": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true,
+              "c3": true,
+              "c4": true,
+              "c5": true,
+              "c6": true,
+              "c7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false,
+              "c3": false,
+              "c4": false,
+              "c5": false,
+              "c6": false,
+              "c7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": false,
+              "c2": {
+                "state": "null"
+              },
+              "c3": false,
+              "c4": {
+                "state": "null"
+              },
+              "c5": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "equals-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true,
+              "c2": {
+                "state": "null"
+              },
+              "c3": true,
+              "c4": {
+                "state": "null"
+              },
+              "c5": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

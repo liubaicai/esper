@@ -1,3 +1,15 @@
+> 最新补充：Draft 4.204（2026-08-20），新增 `expr-core-equals-is`
+> differential-verified 场景：固定 Java `ExprCoreEqualsIs` 的四个可观测
+> execution 与 Go 类型化 equality/identity replay 产生 8 条 listener
+> records、0 differences，覆盖 int/long coercion、same-type string、
+> primitive/boxed/二维/object array 深度比较、SQL-style Null 与 Null-safe
+> `is`，并验证每个 case 的 fresh deploy/undeploy 生命周期。修复
+> interface-typed primitive literal 的具体类型未进入 Plan identity 问题；
+> invalid compile execution 保持 implemented-only。固定 commit 的 Java
+> oracle、scenario、trace、evidence 和 value/order/null/lifecycle mutation
+> checks 已纳入兼容资产；manifest 更新为 130 个 differential-verified case、
+> 402 个 differential runtime IDs。
+
 > 最新补充：Draft 4.203（2026-08-20），新增 `expr-core-in-between`
 > differential-verified 场景：固定 Java `ExprCoreInBetween` 的五个
 > scalar IN/BETWEEN execution 与 Go 类型化 replay 产生 164 条 listener

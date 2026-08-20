@@ -4,6 +4,22 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.204（2026-08-20），新增 `expr-core-equals-is`
+> differential-verified 场景，对照固定 Java `ExprCoreEqualsIs` 的四个可
+> 观测 execution（`ExprCoreEqualsIsCoercion`
+> `java-runtime-fdef3bed6ec0b16d36db`、`ExprCoreEqualsIsCoercionSameType`
+> `java-runtime-1eaef3b328c31a863b26`、`ExprCoreEqualsIsMultikeyWArray`
+> `java-runtime-2fb582ea3ac2dc026c82`、`ExprCoreEqualsNull`
+> `java-runtime-d6084d5b7a191cbde6cd`），四个 isolated case、8 条 listener
+> records、0 differences。Go 侧复用类型化 `EqualOf`/`NotEqualOf`、`Is`/
+> `IsNot`，覆盖 int/long coercion、same-type string、primitive/boxed/
+> two-dimensional/object array 深度与 shape equality，以及 SQL-style Null
+> 与 Null-safe `is`；同时修复 interface-typed primitive literal 未保留具体
+> 类型导致的 Plan identity 折叠。固定 Java oracle、runner、scenario、trace、
+> evidence 与 payload/order/null/lifecycle mutation tests 已纳入兼容资产；
+> invalid compile execution 仍保持 implemented-only，manifest 达到 130 个
+> differential-verified case、402 个 differential runtime IDs。
+
 > 最新补充：Draft 4.203（2026-08-20），新增 `expr-core-in-between`
 > differential-verified 场景，对照固定 Java `ExprCoreInBetween` 的五个
 > execution（`ExprCoreInNumeric`
@@ -108,8 +124,8 @@
 | --- | --- |
 | Capability | 110 |
 | Case | 522 |
-| Case differential-verified | 127 |
-| Differential-verified runtime | 389 / 4,136 |
+| Case differential-verified | 130 |
+| Differential-verified runtime | 402 / 4,136 |
 | Runtime 已关联 | 2,901 / 4,136（70.2%） |
 | Runtime 未关联 | 1,235 |
 | Representative scenario | 94 / 94 通过 |

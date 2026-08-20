@@ -1,0 +1,102 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-equals-is",
+  "steps": [
+    {
+      "op": "case",
+      "case": "equals-coercion"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 1,
+        "longPrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 1,
+        "longPrimitive": 2
+      }
+    },
+    {
+      "op": "case",
+      "case": "equals-same-type"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "a",
+        "p01": "a",
+        "p02": "a"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "a",
+        "p01": "b",
+        "p02": null
+      }
+    },
+    {
+      "op": "case",
+      "case": "equals-array"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportEventWithManyArray",
+      "payload": {
+        "id": "E1",
+        "intOne": [1, 2],
+        "intTwo": [1, 2],
+        "intBoxedOne": [1, 2],
+        "intBoxedTwo": [1, 2],
+        "int2DimOne": [[1, 2], [3, 4]],
+        "int2DimTwo": [[1, 2], [3, 4]],
+        "objectOne": ["a", [1]],
+        "objectTwo": ["a", [1]]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportEventWithManyArray",
+      "payload": {
+        "id": "E1",
+        "intOne": [1, 2],
+        "intTwo": [1],
+        "intBoxedOne": [1, 2],
+        "intBoxedTwo": [1],
+        "int2DimOne": [[1, 2], [3, 4]],
+        "int2DimTwo": [[1, 2], [3]],
+        "objectOne": ["a", 2],
+        "objectTwo": ["a"]
+      }
+    },
+    {
+      "op": "case",
+      "case": "equals-null"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "x"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null
+      }
+    }
+  ]
+}

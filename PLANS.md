@@ -35,88 +35,83 @@ activity or a single coverage percentage.
 
 - Updated: 2026-08-20
 - Baseline: `master` is clean and matches `origin/master` at pushed commit
-  `896ed1312`; the next semantic change must preserve that baseline.
-- Status: like/regexp is committed and pushed. The scalar IN/BETWEEN contract
-  is implemented and differential-verified for the frozen five-execution
-  slice; independent parity review and all applicable local gates pass.
-- Current work unit: `expr.core` / `case.expr-core-in-between`
-- Exact next action: create the semantic commit, push `master`, and verify the
-  local and remote refs read-only.
-- Worktree notes: expected unit files are modified/untracked; the pinned Java
-  runner accepts the current scenario with send counts 22/36/48/48/10. Do not
-  modify `/root/app/esper` or `goal.txt`. Previous commit identity is owned by
-  Git.
+  `033786cbd`; the next semantic change must preserve that baseline.
+- Status: equality/identity implementation, checked-in parity assets, and
+  zero-difference replay are complete for the four frozen listener executions.
+  The invalid compile execution remains outside differential replay. Central
+  facts, independent review, and complete local gates are complete; the
+  semantic commit and push are the only remaining delivery steps.
+- Current work unit: `expr.core` / `case.expr-core-equals-is`
+- Exact next action: audit the staged final diff, create one semantic commit,
+  push `master`, and verify the remote ref read-only.
+- Worktree notes: equality implementation, parity runner/tests/assets, central
+  manifest/docs, and this checkpoint are modified or untracked as expected.
+  Do not modify `/root/app/esper` or `goal.txt`; previous commit identity is
+  owned by Git.
 
 ## Delegation checkpoint
 
-- Collaboration facility: available; the fresh IN/BETWEEN scouts were resumed
-  and completed concurrently before implementation.
-- Java contract scout: `01a01e4f-3b78-7e72-81df-74beac83c9a5` (`Russell`),
-  completed. Confirmed source order 0/11/13/14/19, exact runtime IDs
-  `791d833152f1266fa139`, `ffe28bce1e8e2a0dc4a0`,
-  `143c2fcf5bb1e4e6aa4a`, `1145ffc38eea9ce1624e`, and
-  `31934462edbc04c83973`; frozen five-case values, null/negated/range
-  contracts, and excluded executions.
-- Go surface scout: `01a01e4f-3cd5-7eb0-a713-5b17da488e25` (`Kierkegaard`),
-  completed. Confirmed reusable `InOf`/`NotInOf`, `BetweenOf`/
-  `NotBetweenOf`, and range builders with no public API drift; identified
-  nullable replay schema needs and the endpoint-policy plan identity defect.
+- Collaboration facility: available; current scouts were sent concurrently
+  through the collaboration tools before implementation.
+- Java contract scout: Russell `01a01e4f-3b78-7e72-81df-74beac83c9a5`, current
+  submission `01a01ed4-bb07-7cf3-b7ec-1be78410ad84`; completed. Frozen source
+  order 1/2/3/5, runtime IDs, exact scalar/array/Null vectors, fresh
+  deployment lifecycle, no timers/windows/old stream, and compile-error
+  exclusion for `ExprCoreEqualsInvalid`.
+- Go surface scout: Kierkegaard `01a01e4f-3cd5-7eb0-a713-5b17da488e25`, current
+  submission `01a01edd-9aae-7082-af1b-47c408fae777`; completed. Confirmed
+  reusable `EqualOf`/`NotEqualOf`/`Is`/`IsNot`, deep slice equality and typed
+  nil behavior; identified a literal type-distinction risk in description-based
+  Plan identity and missing direct parity coverage for the four Java cases.
 - Independent parity reviewer: `01a01ea1-56e9-7f10-bbef-105d7f21b48e`
-  (`Meitner`), completed the first read-only review with no lifecycle or
-  statement-sequence mismatch. Findings were exact payload-vector validation,
-  stale baseline wording, shared provenance override and field-map ordering
-  scope decisions, plus focused nullable/negated/reversed/string-range test
-  coverage. The first follow-up closed the payload and scope findings, while
-  retaining the focused-test P2. The final follow-up completed with no P0, P1,
-  or P2 findings after the new runtime coverage; residual risk is limited to
-  the documented shared provenance/map-order protocol choices.
-- Previous like/regexp scouts/review: retained in Git history; like/regexp was
-  pushed as `896ed1312`.
-- Serial exception: none; both required IN/BETWEEN scouts were started through
-  the collaboration facility with disjoint read-only scopes.
+  (`Meitner`) completed the current post-targeted-validation review with no
+  findings. Residual risk is limited to Java-side semantic rather than raw-JSON
+  lexical validation and broader object-array coercion coverage; no mismatch is
+  observable in the current eight-record replay.
+- Previous IN/BETWEEN scouts/review: retained in Git history; that unit was
+  pushed as `033786cbd`.
+- Serial exception: none; both required equality scouts were sent through the
+  collaboration facility with disjoint read-only scopes.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, scalar IN/BETWEEN matching and Null
-  propagation
+- Capability/subdomain: `expr.core`, scalar equality/identity operators,
+  coercion, arrays, and Null semantics
 - Java source and executions/runtime IDs:
--  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreInBetween.java`;
-  `ExprCoreInNumeric` / `java-runtime-791d833152f1266fa139`;
-  `ExprCoreInStringExpr` / `java-runtime-ffe28bce1e8e2a0dc4a0`;
-  `ExprCoreBetweenStringExpr` / `java-runtime-143c2fcf5bb1e4e6aa4a`;
-  `ExprCoreBetweenNumericExpr` / `java-runtime-1145ffc38eea9ce1624e`;
-  `ExprCoreInRange` / `java-runtime-31934462edbc04c83973`.
-- Differential scope: five ordered isolated cases named `in-numeric`,
-  `in-string`, `between-string`, `between-numeric`, and `in-range`.
-  The scenario must include Java's numeric/string vectors, explicit null
-  values and bounds, negated IN/BETWEEN projections, reversed bounds, all
-  four range endpoint policies, reversed range bounds, and string range
-  inputs. No timers, windows, old-stream rows, or time advances are expected.
-  Collection/object/map/array, substitution, SODA/OM/compile, BigNumber,
-  Boolean IN, numeric-coercion variants, and invalid compilation remain
-  implemented-only; no runtime IDs are claimed for them.
-- Observable contract: Java boxed Boolean result fields, exact projection and
-  listener order, Null propagation for IN, false-on-null value/bound behavior
-  for BETWEEN, numeric equality/coercion, lexicographic string ranges,
-  reversed-bound normalization, fresh per-case lifecycle, and distinct range
-  endpoint policies in both values and Plan identity.
-- Allowed production files: `internal/esper/expr_in_between.go` only for the
-  confirmed endpoint-policy Plan identity fix, plus focused tests in the same
-  expression surface.
+-  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreEqualsIs.java`;
+  `ExprCoreEqualsIsCoercion` / `java-runtime-fdef3bed6ec0b16d36db`;
+  `ExprCoreEqualsIsCoercionSameType` / `java-runtime-1eaef3b328c31a863b26`;
+  `ExprCoreEqualsIsMultikeyWArray` / `java-runtime-2fb582ea3ac2dc026c82`;
+  `ExprCoreEqualsInvalid` / `java-runtime-bc33c9283b85c18481fb`;
+  `ExprCoreEqualsNull` / `java-runtime-d6084d5b7a191cbde6cd`.
+- Differential scope: four ordered isolated cases named `equals-coercion`,
+  `equals-same-type`, `equals-array`, and `equals-null`, matching source order
+  executions 1/2/3/5. Each case uses a fresh deployment and emits one new row
+  per send in send order; no timers, windows, old-stream rows, or time advances.
+  `ExprCoreEqualsInvalid` remains a compile/build boundary and is not assigned a
+  listener trace or differential runtime claim.
+- Observable contract: boxed nullable Boolean result fields in exact `c0...`
+  projection order; compatible int/long numeric equality; same-type string
+  equality; deep primitive/boxed/two-dimensional/object-array content and shape
+  equality; SQL-style three-valued `=` versus Null-safe `is`; explicit Null
+  property vectors; and fresh deploy/undeploy lifecycle isolation.
+- Allowed production files: `internal/esper/expr_equals.go` and, only if
+  confirmed by the focused identity regression, the smallest shared literal/
+  plan identity helper under `internal/esper`.
 - Allowed Go test/parity files: a new
-  `internal/app/parity/expr_core_in_between.go`, focused additions under
+  `internal/app/parity/expr_core_equals_is.go`, focused additions under
   `internal/esper`, and minimal dispatcher/test additions in `run.go` and
   `run_test.go`.
 - Allowed parity asset files:
-  `tools/java-oracle/ExprCoreInBetweenScenarioOracle.java`,
-  `tools/java-oracle/run-expr-core-in-between.sh`, and
-  `testdata/parity/expr-core-in-between.{json,trace.json,evidence.json}`.
+  `tools/java-oracle/ExprCoreEqualsIsScenarioOracle.java`,
+  `tools/java-oracle/run-expr-core-equals-is.sh`, and
+  `testdata/parity/expr-core-equals-is.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: changes under `/root/app/esper`; unrelated
   semantic surfaces; `goal.txt`; generated evidence before trace validation;
   and central facts outside this unit's manifest/roadmap/CHANGELOG updates.
   `PLANS.md`, the manifest, roadmap, CHANGELOG, traces, and evidence remain
   primary-agent owned. Scouts do not format, build, test, commit, or push.
-- Targeted validation: the pinned Java oracle runner; focused IN/BETWEEN
+- Targeted validation: the pinned Java oracle runner; focused equality/identity
   Esper tests; focused parity replay and mutation tests; and
   `go test ./internal/compat ./internal/app/manifest -count=1`.
 - Milestone gates required: changed-file `gofmt`, `go vet ./...`,
@@ -178,53 +173,63 @@ activity or a single coverage percentage.
   protocol compares field identity/value structurally and JSON encoding gives
   deterministic lexicographic key order; field-map insertion order is likewise
   out of scope for this unit.
-- 2026-08-20: The focused-test P2 was addressed with direct runtime coverage
-  for negated endpoint policies, reversed mixed endpoints, string ranges,
-  nullable/negated string and numeric expressions, null bounds, and
-  deploy/undeploy lifecycle isolation. The new tests are listed in the target
-  manifest entry and the final parity review confirmed no remaining findings.
+- 2026-08-20: `case.expr-core-in-between` reached zero-difference replay with
+  164 records, passed independent review and local gates, and was pushed as
+  `033786cbd`; Git is authoritative for that commit identity.
+- 2026-08-20: The equality scouts confirmed the reusable typed
+  `EqualOf`/`NotEqualOf`/`Is`/`IsNot` surface, deep slice equality, and typed-nil
+  behavior. They also identified a Plan identity collision for interface-typed
+  primitive literals and the missing direct differential replay.
+- 2026-08-20: `case.expr-core-equals-is` implementation added a strict
+  four-case scenario validator, fresh per-case Go deployments, and a pinned
+  Esper Java oracle. The replay covers eight listener records in exact source
+  order; `ExprCoreEqualsInvalid` remains a compile/build boundary.
+- 2026-08-20: `Literal[T]` now includes the dynamic concrete type in Plan
+  descriptions when `T` is an interface and the value is primitive. The
+  focused regression keeps equivalent plans stable while distinguishing
+  `Literal[any](1)` from `Literal[any]("1")`.
+- 2026-08-20: Targeted validation passed: the pinned Java runner regenerated
+  an eight-record trace byte-for-byte equal to the checked-in trace; Go
+  differential replay/evidence reported zero differences; focused equality,
+  parity, mutation, compat, and manifest tests passed. `go vet ./...`,
+  `go test ./... -count=1 -timeout 240s`, `make check`, focused expression and
+  parity race tests, JSON/schema checks, shell syntax, layout, and
+  `git diff --check` also passed.
+- 2026-08-20: Independent parity review by Meitner returned no findings. The
+  reviewer confirmed the Java source order, exact payload vectors, fresh case
+  lifecycle, trace/evidence metadata, and central manifest references; residual
+  risk is limited to semantic-vs-lexical payload validation and broader
+  object-array coercion coverage.
 
 ## Validation evidence
 
-- Investigation baseline before this unit on 2026-08-20: `/root/app/esper` is fixed at
-  `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; `master` is clean and matches
-  `origin/master` at `896ed1312`. Manifest summary reports 522 cases, 128
-  differential-verified cases, 393 differential runtimes, 2,901 referenced
-  runtimes, and 1,235 unreferenced runtime IDs. The IN/BETWEEN target is
-  implemented-only with 27 inventoried runtime associations and existing Go
-  unit coverage; no differential trace or evidence was present at that
+- Investigation baseline before this unit on 2026-08-20: `/root/app/esper` is
+  fixed at `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; `master` is clean and
+  matches `origin/master` at `033786cbd`. Manifest summary reports 522 cases,
+  129 differential-verified cases, 398 differential runtimes, 2,901
+  referenced runtimes, and 1,235 unreferenced runtime IDs. The equality target
+  is implemented-only with five inventoried runtime associations and focused
+  Go unit coverage; no differential trace or evidence is present at this
   baseline.
-- Current unit result: the pinned Java oracle and Go differential replay pass
-  with exact payload vectors and 164 byte-identical listener records; checked-in
-  trace/evidence identity, malformed-shape and payload rejection, six trace
-  mutations, focused expression/lifecycle tests, manifest validation, JSON
-  validation, shell syntax, and `git diff --check` pass. The full
-  `go test ./... -count=1 -timeout 240s`, `go vet ./...`, and `make check` gates
-  pass. The focused expression race selection and
-  `go test -race ./internal/app/parity ./internal/compat` pass. A clean baseline
-  worktree at `896ed1312` independently reproduces the unrelated
-  `internal/esper/join_representation_test.go:271`
-  `TestJoinInsertedWrapperRepresentationSupportsNonUniqueKeys` race timeout
-  after 45 seconds; the full race gate is therefore recorded as a pre-existing
-  baseline failure, not a unit regression. Independent parity review completed
-  with no P0, P1, or P2 findings. Final reruns also pass
-  `go test ./internal/esper -run 'InBetween|ExprCoreInRange|ExprCoreNullable' -count=1`,
-  `go test ./internal/app/parity -run 'ExprCoreInBetween' -count=1`, and
-  `go test ./internal/compat ./internal/app/manifest -count=1`; shell syntax,
-  JSON, and `git diff --check` were revalidated after the final diff audit.
+- Current unit result: the pinned Java oracle regenerated the checked-in trace
+  byte-for-byte. Go differential replay and evidence report eight records and
+  zero differences. Focused equality/identity Esper tests, parity replay,
+  checked-in evidence, malformed-scenario, mutation, compat, and manifest tests
+  pass. Repository-wide vet/test/check and focused race gates pass. JSON,
+  layout, shell, replay-equivalence, and diff checks pass. Independent parity
+  review returned no findings; its residual risks are documented above.
 
 ## Delivery
 
 - The previous unit is committed and pushed to `origin/master` at
-  `896ed1312`; Git history is the authoritative source for its identity. The
-  IN/BETWEEN unit may be committed only after independent review and all
-  required gates pass.
+  `033786cbd`; Git history is the authoritative source for its identity. The
+  equality unit has passed targeted validation, independent review, and all
+  required local gates; it is ready for one semantic commit and push.
 - Do not create another tracked checkpoint update after this unit's semantic
   commit. Verify the pushed ref without editing tracked files.
 
 ## Handoff
 
 Start or resume from the repository root with the starter prompt in
-`docs/esper-go-port-codex-workflows.md`. After this unit is committed and
-pushed, select the next closed-loop work unit and repeat concurrent scout
-fan-out before implementation.
+`docs/esper-go-port-codex-workflows.md`. After the equality commit is pushed,
+select the next closed-loop work unit and repeat concurrent scout fan-out.

@@ -1782,7 +1782,13 @@ func DeclaredExpressionParam[T any](name string) Expression[T] {
 func Literal[T any](value T) Expression[T] {
 	description := fmt.Sprintf("%v", value)
 	reflected := reflect.ValueOf(value)
-	if !reflected.IsValid() || (reflected.Kind() != reflect.Bool && reflected.Kind() != reflect.Int && reflected.Kind() != reflect.Int8 && reflected.Kind() != reflect.Int16 && reflected.Kind() != reflect.Int32 && reflected.Kind() != reflect.Int64 && reflected.Kind() != reflect.Uint && reflected.Kind() != reflect.Uint8 && reflected.Kind() != reflect.Uint16 && reflected.Kind() != reflect.Uint32 && reflected.Kind() != reflect.Uint64 && reflected.Kind() != reflect.Uintptr && reflected.Kind() != reflect.Float32 && reflected.Kind() != reflect.Float64 && reflected.Kind() != reflect.Complex64 && reflected.Kind() != reflect.Complex128 && reflected.Kind() != reflect.String) {
+	primitive := reflected.IsValid() && (reflected.Kind() == reflect.Bool || reflected.Kind() == reflect.Int || reflected.Kind() == reflect.Int8 || reflected.Kind() == reflect.Int16 || reflected.Kind() == reflect.Int32 || reflected.Kind() == reflect.Int64 || reflected.Kind() == reflect.Uint || reflected.Kind() == reflect.Uint8 || reflected.Kind() == reflect.Uint16 || reflected.Kind() == reflect.Uint32 || reflected.Kind() == reflect.Uint64 || reflected.Kind() == reflect.Uintptr || reflected.Kind() == reflect.Float32 || reflected.Kind() == reflect.Float64 || reflected.Kind() == reflect.Complex64 || reflected.Kind() == reflect.Complex128 || reflected.Kind() == reflect.String)
+	if typeOf[T]().Kind() == reflect.Interface && primitive {
+		// Interface-typed literals retain their concrete value type in plan
+		// identity so dynamic values such as int(1) and string("1") cannot
+		// collapse to the same canonical expression.
+		description = fmt.Sprintf("literal(%T:%v)", value, value)
+	} else if !primitive {
 		description = "literal(" + canonicalDataflowPropertyValue(reflected, make(map[canonicalDataflowReference]bool)) + ")"
 	}
 	node := &exprNode{kind: "literal", typ: typeOf[T](), description: description, literalValue: value}
