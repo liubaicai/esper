@@ -3,13 +3,15 @@
 必须是符合 Go style 的类型安全链式 API，体验参考 Flink，不以 EPL 文本
 作为主要入口，也不机械复制 Java 类结构。
 
-本项目使用 Oh My Pi（OMP）长期执行。项目约束由 `.omp/AGENTS.md` 和
-`.omp/RULES.md` 自动加载；具体流程使用：
+本项目可由 Codex 或 Oh My Pi（OMP）长期执行。共享项目约束位于根
+`AGENTS.md`，Codex 的可恢复活动计划位于 `PLANS.md`；OMP 的平台适配位于
+`.omp/`。具体流程使用：
 
 - `docs/esper-go-port-roadmap.md`：当前优先级和 remaining；
 - `testdata/compat/capability-manifest.json`：进度和验证状态的机器事实；
 - `docs/esper-go-port-runbook.md`：工作单元、门禁、提交和恢复；
 - `docs/esper-go-port-quality-strategy.md`：差分、合成数据和最终验收；
+- `docs/esper-go-port-codex-workflows.md`：Codex ExecPlan 和 agent 编排；
 - `docs/esper-go-port-omp-workflows.md`：OMP 并行拓扑和 task 模板。
 
 持续以一个可闭环工作单元为粒度推进：选择同一 capability 子域内 1 至
@@ -18,21 +20,20 @@
 API，自动比较规范化 Java/Go trace，补齐边界、状态序列和必要 mutation，
 再更新 manifest、evidence、roadmap/CHANGELOG 等受影响事实。
 
-优先用 OMP `task` 批量并行只读调查；共享 `internal/esper` 语义一次只能
-有一个实现写入者。只有依赖契约已冻结且语义/文件真正独立的组件才使用
-`isolated: true` 并行实现。子 agent 不运行 formatter、lint 或测试，不
-commit/push；主 agent 集成后统一运行定向验证、差分和完整本地门禁，
-再调用 `parity-reviewer` 独立审查。具体任务必须使用
-`# Target / # Change / # Acceptance` 契约和 strict 结构化回传。
+优先并行执行边界清晰的只读 Java/Go 调查；共享 `internal/esper` 语义一次
+只能有一个实现写入者。只有契约冻结且语义和文件真正独立时才并行写入。
+子 agent 不运行 formatter、lint 或测试，不更新中央事实，不生成 evidence，
+不 commit/push；主 agent 审查并集成后统一运行定向验证、差分和完整本地
+门禁，再进行独立 parity review。具体子任务必须显式声明 Target、Context、
+Allowed files、Forbidden actions 和 Deliverable。
 
 以“已验证工作单元吞吐量”而不是单个 agent 利用率优化调度，并维持最多
 一个未来工作单元的只读预取队列。工作单元 N 完成集成和定向验证后，必须
-用同一个 `task` batch 同时启动：N 的 `parity-reviewer`、N+1 的 Java
-契约调查、N+1 的 Go 实现面调查。review 期间主 agent 继续完成 N+1 的
-只读契约整理；只要仍有安全的只读工作，就不得立即进入 `hub wait`。
-若只能启动 singleton task，必须先说明不存在可安全并行的 sibling task。
+同时启动 N 的 parity reviewer、N+1 的 Java 契约调查和 N+1 的 Go 实现面
+调查。review 期间主 agent 继续完成 N+1 的只读契约整理，但不得开始 N+1
+写入。没有安全独立任务时串行执行，不为增加 agent 数量拆分自然工作单元。
 
-契约冻结后，允许一个 shared-core writer 与一个 `parity-asset-worker`
+契约冻结后，允许一个 shared-core writer 与一个 parity asset writer
 并行，前提是文件所有权完全不重叠：前者独占共享 runtime/API 语义，后者
 只写明确分配的 Java oracle、scenario 输入或独立 Go parity test。trace、
 evidence、manifest、roadmap 和 CHANGELOG 仍由主 agent 在集成验证后统一

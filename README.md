@@ -8,6 +8,7 @@ Esper Go 是 Esper 9.0.0 的 Go 移植。规则使用可分析、类型安全的
 
 - [执行路线图](docs/esper-go-port-roadmap.md)：当前阶段、优先级、remaining 和风险
 - [迁移执行手册](docs/esper-go-port-runbook.md)：工作单元、验证、并行和提交方式
+- [Codex 工作流](docs/esper-go-port-codex-workflows.md)：Codex ExecPlan、agent 分工和恢复方式
 - [OMP 工作流](docs/esper-go-port-omp-workflows.md)：Oh My Pi agent 分工、批处理模板和上下文管理
 - [质量策略](docs/esper-go-port-quality-strategy.md)：差分、合成数据、门禁和验收口径
 - [实施规划](docs/esper-go-port-implementation-plan.md)：完整范围、架构和语义规范

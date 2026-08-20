@@ -2,7 +2,7 @@
 
 ## 1. 目标
 
-本文把 [迁移执行手册](esper-go-port-runbook.md) 映射为 Oh My Pi（OMP）可直接执行的并行工作流。项目配置位于 `.omp/config.yml`，项目上下文和持久规则位于 `.omp/AGENTS.md`、`.omp/RULES.md`，专用 agent 位于 `.omp/agents/`。
+本文把 [迁移执行手册](esper-go-port-runbook.md) 映射为 Oh My Pi（OMP）可直接执行的并行工作流。共享项目约束位于根 `AGENTS.md`；项目配置位于 `.omp/config.yml`，OMP 补充上下文和短规则位于 `.omp/AGENTS.md`、`.omp/RULES.md`，专用 agent 位于 `.omp/agents/`。
 
 并发上限 4 是资源护栏，不是每轮应达到的目标。正常工作单元使用 2 至 3 个 agent；只有只读调查或依赖完全独立的组件才使用 4 路。共享 `internal/esper` 语义始终只有一个写入者。
 
@@ -12,7 +12,7 @@
 omp @goal.txt
 ```
 
-OMP 会自动加载最近的 `.omp/AGENTS.md`、`.omp/RULES.md`、项目配置和专用 agent；不要再把这些文件全文拼进启动消息。
+OMP 会自动加载最近的 `.omp/AGENTS.md`、`.omp/RULES.md`、项目配置和专用 agent；`.omp/AGENTS.md` 会要求读取根 `AGENTS.md`。不要再把这些文件全文拼进启动消息。
 
 项目不限定任何 model 或 provider。主 agent 和全部子 agent 使用 OMP 启动参数、用户级 role 映射或全局配置解析出的模型；更换模型不需要修改仓库文件。
 
@@ -163,7 +163,7 @@ git diff --check
 ## 6. 上下文与监督
 
 - OMP 子 agent 没有父会话历史；用 `local://` 传文件，不把实施规划或大段源码复制进 task。
-- `.omp/AGENTS.md` 提供启动上下文，`.omp/RULES.md` 保存压缩后仍应生效的硬约束；`goal.txt` 只作为长期任务启动入口。
+- 根 `AGENTS.md` 保存共享项目规则；`.omp/AGENTS.md` 提供 OMP 启动补充，`.omp/RULES.md` 保存压缩后仍应生效的硬约束；`goal.txt` 是 Codex/OMP 共用的长期任务入口。
 - 本地 memory 只用于回忆决策和失败经验。每次恢复仍以当前 manifest、evidence、Git 和工作树复核，不能把 memory 当当前事实。
 - `checkpoint`/`rewind` 适合把一次大规模只读探索压缩为结论；它只回退会话上下文，不恢复文件或 Git 状态。实现前后仍依赖独立 worktree、Git diff 和提交边界。
 - 用 `Alt+A` 打开 Agent Hub 查看耗时、上下文、输出和 patch；发现越界或方向错误时直接 steer，避免等到任务结束后重做。

@@ -1,32 +1,32 @@
-# Esper Go migration context
+# OMP adapter for the Esper Go migration
 
-This repository ports the fixed Esper 9.0.0 source at `/root/app/esper` to Go.
-Java is the observable-behavior oracle. Public rule construction is a typed,
-fluent, Flink-inspired Go API; EPL is not the primary public Go interface.
+Read the repository-root `AGENTS.md` first. It is the shared source for the
+migration mission, evidence hierarchy, work-unit ownership, quality gates, and
+delivery rules used by both Codex and OMP. This file adds only OMP mechanics.
 
 ## Sources of truth
 
 Load only the context needed for the current work unit:
 
-1. `docs/esper-go-port-roadmap.md` for current priorities and remaining work.
-2. `testdata/compat/capability-manifest.json` for machine-verified status.
-3. `docs/esper-go-port-runbook.md` and the relevant part of
+1. `AGENTS.md` and `goal.txt` for the shared contract.
+2. `docs/esper-go-port-roadmap.md` for current priorities and remaining work.
+3. `testdata/compat/capability-manifest.json` for machine-verified status.
+4. `docs/esper-go-port-runbook.md` and the relevant part of
    `docs/esper-go-port-quality-strategy.md` for execution and acceptance.
-4. Use `rg` to locate only the relevant section of the large implementation
-   plan, Java source, Go implementation, tests, scenarios, and recent history.
-5. Use `docs/esper-go-port-omp-workflows.md` when spawning OMP tasks.
+5. Use `rg` to locate only the relevant implementation, Java/Go sources,
+   tests, scenarios, evidence, and history.
+6. Use `docs/esper-go-port-omp-workflows.md` for OMP task batches and agents.
 
 If prose and validated manifest/evidence conflict, machine evidence wins and
 the prose must be corrected in the same work unit.
 
 ## Work ownership
 
-The primary agent owns work-unit selection, shared runtime integration,
-manifest/evidence status, roadmap, CHANGELOG, validation, commits, and pushes.
-Use parallel read-only scouts freely within the four-agent project limit.
-There may be only one writer for a shared `internal/esper` semantic surface.
-Use isolated writing agents only for independent components with a frozen
-contract. OMP text conflict resolution is not proof of semantic correctness.
+Use OMP `task` batches for safe sibling tasks within the four-agent project
+limit. Use `local://<path>` for large context and `schemaMode: strict` for
+structured results. Every task uses `# Target`, `# Change`, and `# Acceptance`.
+Use `isolated: true` only for a frozen, file-disjoint writing contract. OMP
+patch merging is not proof of semantic correctness.
 
 Optimize for verified work-unit throughput with a two-unit pipeline. Keep at
 most one future work unit prefetched read-only. Once work unit N is integrated
@@ -44,11 +44,9 @@ only when no safe sibling task exists, and the primary agent must state that
 reason before spawning it. `maxConcurrency` is a ceiling, not evidence that a
 turn was parallel.
 
-Subagents start blank. Give them `local://` references instead of pasting large
-documents. Every task must use `# Target`, `# Change`, and `# Acceptance`.
-Subagents skip formatters, linters, builds, tests, commits, and pushes; the
-primary agent validates once after integration and steers the same worker with
-specific failures when repair is needed.
+Subagents start blank and must receive all scoped context explicitly. Steer the
+same worker with exact failures when repair is needed. Before `hub wait`, the
+primary agent completes every safe read-only integration or prefetch action.
 
 ## Completion
 
