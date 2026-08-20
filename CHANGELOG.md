@@ -1,3 +1,14 @@
+> 最新补充：Draft 4.205（2026-08-20），新增 `expr-core-case`
+> differential-verified 场景：固定 Java `ExprCoreCase` 的三个可观测
+> execution 与 Go 类型化 CASE replay 产生 9 条 listener records、0 differences，
+> 覆盖 searched CASE 的 ELSE/声明顺序、多分支 DELL/MSFT/GE 结果、simple CASE
+> 的混合数值匹配和 fresh deployment lifecycle。严格差分向量纠正了既有
+> Branches3 supplemental test 的输入顺序；`JOE` unmatched 仍保留在独立 Go
+> 测试。固定 commit 的 Java oracle、runner、scenario、trace、evidence 和
+> value/order/case/time mutation checks 已纳入兼容资产；manifest 更新为 131 个
+> differential-verified case、405 个 differential runtime IDs，其余 CASE
+> execution 保持 implemented-only。
+
 > 最新补充：Draft 4.204（2026-08-20），新增 `expr-core-equals-is`
 > differential-verified 场景：固定 Java `ExprCoreEqualsIs` 的四个可观测
 > execution 与 Go 类型化 equality/identity replay 产生 8 条 listener

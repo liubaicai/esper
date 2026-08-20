@@ -9750,7 +9750,11 @@
     "TestCaseExpressionsRejectInvalidBuildersAtBuild",
     "TestExprCoreCaseSyntax1WithElseParity",
     "TestExprCoreCaseSyntax1Branches3Parity",
-    "TestExprCoreCaseSyntax2Parity"
+    "TestExprCoreCaseSyntax2Parity",
+    "TestRunExprCoreCaseDiffWritesPassingEvidence",
+    "TestRunExprCoreCaseRejectsMalformedScenarioShape",
+    "TestExprCoreCaseCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunExprCoreCaseDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -9766,17 +9770,30 @@
     "invalid",
     "plan-identity"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-source",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-case.json",
+    "testdata/parity/expr-core-case.trace.json",
+    "testdata/parity/expr-core-case.evidence.json",
+    "tools/java-oracle/ExprCoreCaseScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-case.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
-   "difference": "Go exposes typed CaseWhen[T] and CaseValue[T] builders with explicit branch-result type, declaration-order evaluation, lazy selected branches, Null/Missing condition handling, Null simple-value matching, numeric match coercion through Value semantics, arrays/enums, aggregate-context evaluation and Build-time invalid-builder diagnostics. Heterogeneous Java result branches require an explicit Go Cast at the branch boundary; the Go port intentionally has no EPL parser or SODA/compile deployment path, and Java parameterized event-type metadata and exact compiler diagnostics remain open.",
+   "difference": "Go exposes typed CaseWhen[T] and CaseValue[T] builders with explicit branch-result type, declaration-order evaluation, lazy selected branches, Null/Missing condition handling, Null simple-value matching, numeric match coercion through Value semantics, arrays/enums, aggregate-context evaluation and Build-time invalid-builder diagnostics. The verified replay covers Java searched CASE with ELSE, three searched branches, and simple mixed-numeric CASE matching with fresh listener lifecycle. Heterogeneous Java result branches require an explicit Go Cast at the branch boundary; the Go port intentionally has no EPL parser or SODA/compile deployment path, and Java parameterized event-type metadata, the remaining CASE execution matrix, and exact compiler diagnostics remain open.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-e9ae8d32b9f6155877ef",
+    "java-runtime-725a9999f48d69d792a2",
+    "java-runtime-0f635579498bb6de3a4c"
+   ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -34574,8 +34591,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 522,
 "implementedCases": 520,
-"differentialVerifiedCases": 130,
-"differentialVerifiedRuntimeIds": 402,
+"differentialVerifiedCases": 131,
+"differentialVerifiedRuntimeIds": 405,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

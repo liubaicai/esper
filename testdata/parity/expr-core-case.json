@@ -1,0 +1,103 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-case",
+  "steps": [
+    {
+      "op": "case",
+      "case": "case-with-else"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CSCO",
+        "volume": 4000,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 20,
+        "price": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "case-branches3"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "DELL",
+        "volume": 10000,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "MSFT",
+        "volume": 10000,
+        "price": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "GE",
+        "volume": 10000,
+        "price": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "case-simple-numeric"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 2,
+        "longPrimitive": 2,
+        "floatPrimitive": 1,
+        "doublePrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 5,
+        "longPrimitive": 1,
+        "floatPrimitive": 1,
+        "doublePrimitive": 5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 12,
+        "longPrimitive": 1,
+        "floatPrimitive": 12,
+        "doublePrimitive": 4
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 1,
+        "longPrimitive": 2,
+        "floatPrimitive": 3,
+        "doublePrimitive": 4
+      }
+    }
+  ]
+}

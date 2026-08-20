@@ -35,84 +35,84 @@ activity or a single coverage percentage.
 
 - Updated: 2026-08-20
 - Baseline: `master` is clean and matches `origin/master` at pushed commit
-  `033786cbd`; the next semantic change must preserve that baseline.
-- Status: equality/identity implementation, checked-in parity assets, and
-  zero-difference replay are complete for the four frozen listener executions.
-  The invalid compile execution remains outside differential replay. Central
-  facts, independent review, and complete local gates are complete; the
-  semantic commit and push are the only remaining delivery steps.
-- Current work unit: `expr.core` / `case.expr-core-equals-is`
-- Exact next action: audit the staged final diff, create one semantic commit,
-  push `master`, and verify the remote ref read-only.
-- Worktree notes: equality implementation, parity runner/tests/assets, central
-  manifest/docs, and this checkpoint are modified or untracked as expected.
-  Do not modify `/root/app/esper` or `goal.txt`; previous commit identity is
-  owned by Git.
+  `d51138c25`; the next semantic change must preserve that baseline.
+- Status: the equality/identity unit is committed and pushed. The next unit is
+  a frozen differential slice of the already implemented CASE capability; no
+  production semantic change is indicated by the scouts.
+- Current work unit: `expr.core` / `case.expr-core-case`
+- Exact next action: stage and audit the complete CASE diff, create one semantic
+  commit, push `master`, and verify the remote ref read-only without tracked
+  edits.
+- Worktree notes: CASE parity source/assets, central facts, and this checkpoint
+  are modified as expected; do not modify `/root/app/esper` or `goal.txt`.
 
 ## Delegation checkpoint
 
-- Collaboration facility: available; current scouts were sent concurrently
-  through the collaboration tools before implementation.
-- Java contract scout: Russell `01a01e4f-3b78-7e72-81df-74beac83c9a5`, current
-  submission `01a01ed4-bb07-7cf3-b7ec-1be78410ad84`; completed. Frozen source
-  order 1/2/3/5, runtime IDs, exact scalar/array/Null vectors, fresh
-  deployment lifecycle, no timers/windows/old stream, and compile-error
-  exclusion for `ExprCoreEqualsInvalid`.
-- Go surface scout: Kierkegaard `01a01e4f-3cd5-7eb0-a713-5b17da488e25`, current
-  submission `01a01edd-9aae-7082-af1b-47c408fae777`; completed. Confirmed
-  reusable `EqualOf`/`NotEqualOf`/`Is`/`IsNot`, deep slice equality and typed
-  nil behavior; identified a literal type-distinction risk in description-based
-  Plan identity and missing direct parity coverage for the four Java cases.
-- Independent parity reviewer: `01a01ea1-56e9-7f10-bbef-105d7f21b48e`
-  (`Meitner`) completed the current post-targeted-validation review with no
-  findings. Residual risk is limited to Java-side semantic rather than raw-JSON
-  lexical validation and broader object-array coercion coverage; no mismatch is
-  observable in the current eight-record replay.
-- Previous IN/BETWEEN scouts/review: retained in Git history; that unit was
-  pushed as `033786cbd`.
-- Serial exception: none; both required equality scouts were sent through the
-  collaboration facility with disjoint read-only scopes.
+- Collaboration facility: available; the required scouts were sent concurrently
+  through collaboration tools before implementation.
+- Java contract scout: Boole `01a01f0b-d142-7002-806d-58e591acfd23`; completed.
+  Confirmed source-order executions 3/6/7, exact vectors and result types,
+  fresh listener lifecycle, nine new records, no timers/old stream, and the
+  Java/Go vector mismatch in the existing supplemental Branches3 test.
+- Go surface scout: Copernicus `01a01f0b-cf32-7b73-960e-f1620dc3e4de`;
+  completed. Confirmed `expr_case.go` already supplies searched/simple CASE
+  semantics and identified the parity runner, oracle, scenario, trace,
+  evidence, dispatcher, and focused-test scope.
+- Independent parity reviewer: Confucius `01a01f20-0c37-76b3-9dfc-2c63fe9a70bf`;
+  initial review found two issues: oracle runner provenance did not reject a
+  dirty/untracked fixed checkout, and Go accepted known extra CASE step
+  metadata. Both were fixed in the runner and symmetric Java/Go validators;
+  follow-up returned no findings. Residual risk: unknown JSON keys not modeled
+  by `compat.Step` remain outside the known-metadata validator.
+- N+1 Java contract scout: Carson `01a01f20-107f-7bb0-96d9-b8894e0fa940`,
+  prefetching `case.expr-core-instanceof` read-only.
+- N+1 Go surface scout: Helmholtz `01a01f20-0e5a-76a1-8854-aea5f6a1faf2`,
+  prefetching `case.expr-core-instanceof` read-only.
+- Previous equality unit: committed and pushed as `d51138c25`; Git remains the
+  source of commit identity.
+- Serial exception: none; both CASE scouts were sent through the collaboration
+  facility with disjoint read-only scopes.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, scalar equality/identity operators,
-  coercion, arrays, and Null semantics
+- Capability/subdomain: `expr.core`, searched and simple CASE evaluation,
+  branch order, numeric matching, result coercion, and listener lifecycle.
 - Java source and executions/runtime IDs:
--  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreEqualsIs.java`;
-  `ExprCoreEqualsIsCoercion` / `java-runtime-fdef3bed6ec0b16d36db`;
-  `ExprCoreEqualsIsCoercionSameType` / `java-runtime-1eaef3b328c31a863b26`;
-  `ExprCoreEqualsIsMultikeyWArray` / `java-runtime-2fb582ea3ac2dc026c82`;
-  `ExprCoreEqualsInvalid` / `java-runtime-bc33c9283b85c18481fb`;
-  `ExprCoreEqualsNull` / `java-runtime-d6084d5b7a191cbde6cd`.
-- Differential scope: four ordered isolated cases named `equals-coercion`,
-  `equals-same-type`, `equals-array`, and `equals-null`, matching source order
-  executions 1/2/3/5. Each case uses a fresh deployment and emits one new row
-  per send in send order; no timers, windows, old-stream rows, or time advances.
-  `ExprCoreEqualsInvalid` remains a compile/build boundary and is not assigned a
-  listener trace or differential runtime claim.
-- Observable contract: boxed nullable Boolean result fields in exact `c0...`
-  projection order; compatible int/long numeric equality; same-type string
-  equality; deep primitive/boxed/two-dimensional/object-array content and shape
-  equality; SQL-style three-valued `=` versus Null-safe `is`; explicit Null
-  property vectors; and fresh deploy/undeploy lifecycle isolation.
-- Allowed production files: `internal/esper/expr_equals.go` and, only if
-  confirmed by the focused identity regression, the smallest shared literal/
-  plan identity helper under `internal/esper`.
-- Allowed Go test/parity files: a new
-  `internal/app/parity/expr_core_equals_is.go`, focused additions under
-  `internal/esper`, and minimal dispatcher/test additions in `run.go` and
-  `run_test.go`.
+  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCase.java`;
+  `ExprCoreCaseSyntax1WithElse` / `java-runtime-e9ae8d32b9f6155877ef`;
+  `ExprCoreCaseSyntax1Branches3` / `java-runtime-725a9999f48d69d792a2`;
+  `ExprCoreCaseSyntax2` / `java-runtime-0f635579498bb6de3a4c`.
+- Differential scope: three ordered isolated cases named `case-with-else`,
+  `case-branches3`, and `case-simple-numeric`, matching source ordinals 3/6/7.
+  `case-with-else` sends `CSCO,4000` then `DELL,20`; `case-branches3` sends
+  `DELL,10000`, `MSFT,10000`, then `GE,10000`; `case-simple-numeric` sends
+  `(2,2,1,1)`, `(5,1,1,5)`, `(12,1,12,4)`, then `(1,2,3,4)`. Each fresh
+  deployment emits one new row per send in input order, for nine records total;
+  no timers, old-stream rows, time advances, or runtime errors are in scope.
+- Observable contract: `p1` is Long with values `4000` and `60`; `c0` is
+  Double with values `5000`, `3333.3333333333335`, `10000`, `4`, `25`, `3`,
+  and `10` in the exact case/send order; searched CASE selects the first true
+  branch and simple CASE uses cross-numeric matching. The existing Go `JOE`
+  unmatched assertion remains supplemental and is excluded from the strict
+  differential scenario.
+- Allowed production files: none unless targeted replay proves a CASE semantic
+  defect; any such change is limited to `internal/esper/expr_case.go` or the
+  smallest directly responsible shared helper.
+- Allowed Go test/parity files: new
+  `internal/app/parity/expr_core_case.go`, focused additions under
+  `internal/esper` only if needed, and minimal dispatcher/test additions in
+  `run.go` and `run_test.go`.
 - Allowed parity asset files:
-  `tools/java-oracle/ExprCoreEqualsIsScenarioOracle.java`,
-  `tools/java-oracle/run-expr-core-equals-is.sh`, and
-  `testdata/parity/expr-core-equals-is.{json,trace.json,evidence.json}`.
+  `tools/java-oracle/ExprCoreCaseScenarioOracle.java`,
+  `tools/java-oracle/run-expr-core-case.sh`, and
+  `testdata/parity/expr-core-case.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: changes under `/root/app/esper`; unrelated
   semantic surfaces; `goal.txt`; generated evidence before trace validation;
   and central facts outside this unit's manifest/roadmap/CHANGELOG updates.
   `PLANS.md`, the manifest, roadmap, CHANGELOG, traces, and evidence remain
   primary-agent owned. Scouts do not format, build, test, commit, or push.
-- Targeted validation: the pinned Java oracle runner; focused equality/identity
-  Esper tests; focused parity replay and mutation tests; and
+- Targeted validation: the pinned Java oracle runner; focused CASE Esper tests;
+  focused parity replay and mutation tests; and
   `go test ./internal/compat ./internal/app/manifest -count=1`.
 - Milestone gates required: changed-file `gofmt`, `go vet ./...`,
   `go test ./... -count=1`, manifest/evidence validation, `make check`, and
@@ -200,36 +200,50 @@ activity or a single coverage percentage.
   lifecycle, trace/evidence metadata, and central manifest references; residual
   risk is limited to semantic-vs-lexical payload validation and broader
   object-array coercion coverage.
+- 2026-08-20: CASE scouts froze the three source-order executions and found no
+  production semantic gap. The strict replay uses Java's DELL/MSFT/GE vector;
+  the existing JOE unmatched assertion remains supplemental.
+- 2026-08-20: CASE Java and Go traces are byte-identical for nine listener
+  records. Evidence reports zero differences; focused CASE/parity, malformed
+  scenario, trace mutation, compat, and manifest checks pass.
+- 2026-08-20: Independent CASE review identified and the primary agent fixed
+  clean-oracle provenance enforcement plus symmetric exact case/send metadata
+  validation in the Java oracle and Go replay; a metadata mutation regression
+  now covers the previously asymmetric path.
+- 2026-08-20: CASE review follow-up by Confucius returned no findings. N+1
+  read-only scouts Carson/Helmholtz identified the five-execution
+  `case.expr-core-instanceof` candidate and its primitive-wrapper/interface
+  risks; no N+1 writes started.
 
 ## Validation evidence
 
 - Investigation baseline before this unit on 2026-08-20: `/root/app/esper` is
   fixed at `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; `master` is clean and
-  matches `origin/master` at `033786cbd`. Manifest summary reports 522 cases,
-  129 differential-verified cases, 398 differential runtimes, 2,901
-  referenced runtimes, and 1,235 unreferenced runtime IDs. The equality target
-  is implemented-only with five inventoried runtime associations and focused
-  Go unit coverage; no differential trace or evidence is present at this
-  baseline.
+  matches `origin/master` at `d51138c25`. Manifest summary reports 522 cases,
+  130 differential-verified cases, 402 differential runtimes, 2,901
+  referenced runtimes, and 1,235 unreferenced runtime IDs. CASE was
+  implemented-only with the three target runtime associations already
+  inventoried.
 - Current unit result: the pinned Java oracle regenerated the checked-in trace
-  byte-for-byte. Go differential replay and evidence report eight records and
-  zero differences. Focused equality/identity Esper tests, parity replay,
-  checked-in evidence, malformed-scenario, mutation, compat, and manifest tests
-  pass. Repository-wide vet/test/check and focused race gates pass. JSON,
-  layout, shell, replay-equivalence, and diff checks pass. Independent parity
-  review returned no findings; its residual risks are documented above.
+  byte-for-byte. Go differential replay and evidence report nine records and
+  zero differences. Focused CASE/parity, checked-in evidence,
+  malformed-scenario, mutation, compat, and manifest tests pass. The manifest
+  now reports 131 differential-verified cases and 405 differential runtimes;
+  `go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, focused
+  expression/parity race tests, JSON/shell/layout, and `git diff --check` pass.
+  Independent review and follow-up pass with no findings.
 
 ## Delivery
 
-- The previous unit is committed and pushed to `origin/master` at
-  `033786cbd`; Git history is the authoritative source for its identity. The
-  equality unit has passed targeted validation, independent review, and all
-  required local gates; it is ready for one semantic commit and push.
+- The previous equality unit is committed and pushed to `origin/master` at
+  `d51138c25`; Git history is the authoritative source for its identity. The
+  current CASE unit has passed targeted validation, independent review, and all
+  required local gates; the next action is one semantic commit and push.
 - Do not create another tracked checkpoint update after this unit's semantic
   commit. Verify the pushed ref without editing tracked files.
 
 ## Handoff
 
 Start or resume from the repository root with the starter prompt in
-`docs/esper-go-port-codex-workflows.md`. After the equality commit is pushed,
+`docs/esper-go-port-codex-workflows.md`. After the CASE commit is pushed,
 select the next closed-loop work unit and repeat concurrent scout fan-out.
