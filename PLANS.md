@@ -130,8 +130,8 @@ activity or a single coverage percentage.
 
 - Semantic commit `344f9ddf6`: `expr: verify current timestamp parity`, pushed
   to the protected `origin/master` branch.
-- The checkpoint-only closure is being recorded in a normal follow-up commit;
-  no force-push or semantic-history rewrite is required.
+- The checkpoint-only closure is recorded in normal follow-up commit
+  `65913ab0d`; no force-push or semantic-history rewrite was required.
 
 ## Handoff
 
