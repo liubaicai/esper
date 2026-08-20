@@ -10680,7 +10680,11 @@
    "goTests": [
     "TestMixedRelationalExpressionsMatchJavaNumericStringAndNullSemantics",
     "TestMixedRelationalExpressionsBuildLiveProjectionAndPlanIdentity",
-    "TestMixedRelationalExpressionsRejectInvalidBuilders"
+    "TestMixedRelationalExpressionsRejectInvalidBuilders",
+    "TestRunExprCoreRelOpDiffWritesPassingEvidence",
+    "TestRunExprCoreRelOpRejectsMalformedScenarioShape",
+    "TestExprCoreRelOpCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunExprCoreRelOpDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10694,17 +10698,29 @@
     "invalid",
     "plan-identity"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-source",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-relop.json",
+    "testdata/parity/expr-core-relop.trace.json",
+    "testdata/parity/expr-core-relop.evidence.json",
+    "tools/java-oracle/ExprCoreRelOpScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-relop.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
    "difference": "Go adds explicit mixed-type GreaterOf/GreaterOrEqualOf/LessOf/LessOrEqualOf builders. They compare native integers/floats, strings and big.Int/big.Rat through a single analyzable AST, preserve Null/typed-nil propagation, and expose stable boolean result metadata and Plan identity; existing same-typed Greater/Less and exact comparison constructors remain available. Java EPL/SODA/compile paths, implicit parser type inference and the broader array/object equality/diagnostic matrix remain outside this fluent slice.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-615cb125ab25e488f40c",
+    "java-runtime-402d95bd69d700735100"
+   ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -34499,8 +34515,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 522,
 "implementedCases": 520,
-"differentialVerifiedCases": 126,
-"differentialVerifiedRuntimeIds": 387,
+"differentialVerifiedCases": 127,
+"differentialVerifiedRuntimeIds": 389,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,
@@ -34514,7 +34530,7 @@
 "referencedJavaRuntimeIds": 2901,
 "totalJavaRuntimeIds": 4136,
 "unreferencedJavaRuntimeIds": 1235,
- "representativeScenarioTotal": 94,
- "representativeScenarioPassing": 94
+"representativeScenarioTotal": 94,
+"representativeScenarioPassing": 94
 }
 }

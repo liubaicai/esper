@@ -1,0 +1,1462 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-615cb125ab25e488f40c",
+    "java-runtime-402d95bd69d700735100"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreRelOp.java"
+  ],
+  "javaExecutions": [
+    "ExprCoreRelOpTypes",
+    "ExprCoreRelOpNull"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-relop",
+    "steps": [
+      {
+        "op": "case",
+        "case": "relop-string"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C"
+        }
+      },
+      {
+        "op": "case",
+        "case": "relop-int"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "case",
+        "case": "relop-long"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "longBoxed": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "longBoxed": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "longBoxed": 3
+        }
+      },
+      {
+        "op": "case",
+        "case": "relop-float"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "floatPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "floatPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "floatPrimitive": 3
+        }
+      },
+      {
+        "op": "case",
+        "case": "relop-double"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "doublePrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "doublePrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "doublePrimitive": 3
+        }
+      },
+      {
+        "op": "case",
+        "case": "relop-big-decimal"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "bigDecimal": "1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "bigDecimal": "2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "bigDecimal": "3"
+        }
+      },
+      {
+        "op": "case",
+        "case": "relop-int-big-decimal"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "case",
+        "case": "relop-big-integer"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "bigInteger": "1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "bigInteger": "2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "bigInteger": "3"
+        }
+      },
+      {
+        "op": "case",
+        "case": "relop-int-big-integer"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "case",
+        "case": "relop-null"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": 2,
+          "doubleBoxed": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 3,
+          "intBoxed": 2,
+          "doubleBoxed": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1,
+          "intBoxed": null,
+          "doubleBoxed": null
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-relop",
+    "records": [
+      {
+        "case": "relop-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-float",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-float",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-float",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-double",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-double",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-double",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true,
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              },
+              "c5": false,
+              "c6": true,
+              "c7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true,
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              },
+              "c5": true,
+              "c6": false,
+              "c7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              },
+              "c5": {
+                "state": "null"
+              },
+              "c6": {
+                "state": "null"
+              },
+              "c7": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-relop",
+    "records": [
+      {
+        "case": "relop-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-float",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-float",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-float",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-double",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-double",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-double",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-decimal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": true,
+              "c3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": false,
+              "c2": true,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-int-big-integer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": false,
+              "c3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true,
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              },
+              "c5": false,
+              "c6": true,
+              "c7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": true,
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              },
+              "c5": true,
+              "c6": false,
+              "c7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "relop-null",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              },
+              "c5": {
+                "state": "null"
+              },
+              "c6": {
+                "state": "null"
+              },
+              "c7": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

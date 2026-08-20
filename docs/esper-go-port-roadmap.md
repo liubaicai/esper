@@ -4,6 +4,19 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.201（2026-08-20），新增 `expr-core-relop`
+> differential-verified 场景，对照固定 Java `ExprCoreRelOp` 的两个
+> execution（`ExprCoreRelOpTypes`
+> `java-runtime-615cb125ab25e488f40c`、`ExprCoreRelOpNull`
+> `java-runtime-402d95bd69d700735100`），十个 isolated case、30 条
+> listener records、0 differences。Go 侧复用类型化
+> `GreaterOf`/`GreaterOrEqualOf`/`LessOf`/`LessOrEqualOf`，覆盖字符串、
+> int/long/float/double、BigDecimal/BigInteger 混合比较及 boxed/null
+> 三值结果；Java EPL/parser/type metadata 继续保留在差异边界。固定
+> Java oracle、runner、scenario、trace、evidence 和 value/order/null/
+> time mutation tests 已纳入兼容资产；manifest 更新为 127 个
+> differential-verified case、389 个 differential runtime IDs。
+
 > 最新补充：Draft 4.200（2026-08-20），新增 `expr-core-coalesce`
 > differential-verified 场景，对照固定 Java `ExprCoreCoalesce` 的六个可
 > 观测 execution（`ExprCoreCoalesceBeans`
@@ -62,8 +75,8 @@
 | --- | --- |
 | Capability | 110 |
 | Case | 522 |
-| Case differential-verified | 126 |
-| Differential-verified runtime | 387 / 4,136 |
+| Case differential-verified | 127 |
+| Differential-verified runtime | 389 / 4,136 |
 | Runtime 已关联 | 2,901 / 4,136（70.2%） |
 | Runtime 未关联 | 1,235 |
 | Representative scenario | 94 / 94 通过 |

@@ -1,3 +1,12 @@
+> 最新补充：Draft 4.201（2026-08-20），新增 `expr-core-relop`
+> differential-verified 场景：固定 Java `ExprCoreRelOp` 的两个
+> execution 与 Go 类型化混合关系运算 replay 产生 30 条 listener
+> records、0 differences，覆盖字符串、原生数值、BigDecimal、BigInteger
+> 混合比较，以及 boxed/null 三值传播。新增固定 commit Java oracle、
+> runner、scenario、trace、evidence 与 value/order/null/time mutation
+> checks；manifest 达到 127 个 differential-verified case、389 个
+> differential runtime IDs。
+
 > 最新补充：Draft 4.200（2026-08-20），新增 `expr-core-coalesce`
 > differential-verified 场景：固定 Java `ExprCoreCoalesce` 的六个可观测
 > execution 与 Go 类型化 `Coalesce`/`CoalesceOf` replay 产生 22 条 listener
