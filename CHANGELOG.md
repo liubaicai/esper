@@ -1,3 +1,15 @@
+> 最新补充：Draft 4.206（2026-08-20），新增 `expr-core-instanceof`
+> differential-verified 场景：固定 Java `ExprCoreInstanceOf` 的五个可观测
+> execution 与 Go 类型化 `InstanceOf[T]`/`Or` replay 产生 17 条 listener
+> records、0 differences，覆盖 primitive/wrapper 数值匹配、dynamic
+> String/Float/Integer/Long 与 Null、interface/supertype hierarchy 以及
+> fresh listener lifecycle。修复 interface target 错误解析为 `any` 的语义
+> 缺陷；Java EPL/SODA/compile text forms、optional property/missing、完整
+> primitive-wrapper alias 与 type-diagnostic matrix 保持差异边界。固定 commit
+> 的 Java oracle、runner、scenario、trace、evidence 和 value/order/case/time
+> mutation checks 已纳入兼容资产；manifest 更新为 132 个 differential-verified
+> case、410 个 differential runtime IDs。
+
 > 最新补充：Draft 4.205（2026-08-20），新增 `expr-core-case`
 > differential-verified 场景：固定 Java `ExprCoreCase` 的三个可观测
 > execution 与 Go 类型化 CASE replay 产生 9 条 listener records、0 differences，

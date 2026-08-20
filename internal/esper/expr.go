@@ -2679,16 +2679,16 @@ func TypeName(value Expr) Expression[string] {
 
 // InstanceOf reports whether a present value is assignable to T.
 func InstanceOf[T any](value Expr) Expression[bool] {
+	target := reflect.TypeOf((*T)(nil)).Elem()
 	if value == nil {
 		return makeExpr[bool]("instance-of", "instance-of(<nil>)", nil, func(EvalContext) Value { return Present(false) })
 	}
-	return makeExpr[bool]("instance-of", fmt.Sprintf("instance-of<%s>(%s)", typeOf[T](), value.Description()), []*exprNode{value.node()}, func(ctx EvalContext) Value {
+	return makeExpr[bool]("instance-of", fmt.Sprintf("instance-of<%s>(%s)", target, value.Description()), []*exprNode{value.node()}, func(ctx EvalContext) Value {
 		current := value.eval(ctx)
 		if !current.IsPresent() {
 			return Present(false)
 		}
 		candidate := reflect.TypeOf(current.Any())
-		target := typeOf[T]()
 		matches := candidate.AssignableTo(target)
 		if !matches && target.Kind() == reflect.Interface {
 			matches = candidate.Implements(target)

@@ -4,6 +4,24 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.206（2026-08-20），新增 `expr-core-instanceof`
+> differential-verified 场景，对照固定 Java `ExprCoreInstanceOf` 的五个
+> execution（`ExprCoreInstanceofSimple`
+> `java-runtime-f57ec2f2f04aad28961d`、`ExprCoreInstanceofStringAndNullOM`
+> `java-runtime-fc4c87ba7677b72cab9a`、`ExprCoreInstanceofStringAndNullCompile`
+> `java-runtime-c5af420270464e5633f7`、`ExprCoreDynamicPropertyJavaTypes`
+> `java-runtime-0423d81802ef0e7eb910`、`ExprCoreDynamicSuperTypeAndInterface`
+> `java-runtime-f446c95462162907b0c6`），五个 isolated case、17 条 listener
+> records、0 differences。Go 侧复用类型化 `InstanceOf[T]` 和 `Or`，覆盖
+> primitive/wrapper 数值向量、dynamic property 的 String/Float/Integer/Long
+> 与 Null、以及 interface/supertype hierarchy matching 和 fresh listener
+> lifecycle；并修复 interface target 错误解析为 `any` 的语义缺陷。Java
+> EPL/SODA/compile text forms、primitive-wrapper name aliases、optional
+> property/missing 与完整 type-diagnostic matrix 仍在差异边界。固定 Java
+> oracle、runner、scenario、trace、evidence 与 value/order/case/time mutation
+> tests 已纳入兼容资产；manifest 达到 132 个 differential-verified case、410
+> 个 differential runtime IDs。
+
 > 最新补充：Draft 4.205（2026-08-20），新增 `expr-core-case`
 > differential-verified 场景，对照固定 Java `ExprCoreCase` 的三个可观测
 > execution（`ExprCoreCaseSyntax1WithElse`

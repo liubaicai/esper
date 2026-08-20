@@ -33,6 +33,7 @@ func TestInstanceOfExpressionsMatchJavaDynamicAndInterfaceSemantics(t *testing.T
 		Alias("text_any", InstanceOf[any](text)),
 		Alias("item_int", InstanceOf[int](item)),
 		Alias("item_string", InstanceOf[string](item)),
+		Alias("item_marker", InstanceOf[instanceMarker](item)),
 		Alias("marker", InstanceOf[instanceMarker](marker)),
 		Alias("marker_pointer", InstanceOf[instanceMarker](Literal[any](&instanceMarkerValue{}))),
 		Alias("null", InstanceOf[string](NullLiteral[string]())),
@@ -51,7 +52,7 @@ func TestInstanceOfExpressionsMatchJavaDynamicAndInterfaceSemantics(t *testing.T
 	if !ok {
 		t.Fatal("instance-of result schema is missing")
 	}
-	for _, name := range []string{"text", "text_float", "text_any", "item_int", "item_string", "marker", "marker_pointer", "null"} {
+	for _, name := range []string{"text", "text_float", "text_any", "item_int", "item_string", "item_marker", "marker", "marker_pointer", "null"} {
 		field, ok := resultSchema.Field(name)
 		if !ok || field.Type != typeOf[bool]() {
 			t.Fatalf("instance-of field %q = %#v, want bool", name, field)
@@ -94,6 +95,7 @@ func TestInstanceOfExpressionsMatchJavaDynamicAndInterfaceSemantics(t *testing.T
 			"text_any":       true,
 			"item_int":       wantItemInt,
 			"item_string":    wantItemString,
+			"item_marker":    false,
 			"marker":         true,
 			"marker_pointer": true,
 			"null":           false,

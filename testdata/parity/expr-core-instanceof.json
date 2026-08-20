@@ -1,0 +1,168 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-instanceof",
+  "steps": [
+    {
+      "op": "case",
+      "case": "instanceof-simple"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "abc",
+        "intPrimitive": 100,
+        "intBoxed": null,
+        "floatBoxed": 100.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 100,
+        "intBoxed": null,
+        "floatBoxed": null
+      }
+    },
+    {
+      "op": "case",
+      "case": "instanceof-string-om"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "abc",
+        "intPrimitive": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 100
+      }
+    },
+    {
+      "op": "case",
+      "case": "instanceof-string-compile"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "abc",
+        "intPrimitive": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 100
+      }
+    },
+    {
+      "op": "case",
+      "case": "instanceof-dynamic-types"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "string",
+        "itemValue": "abc"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "float32",
+        "itemValue": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "null"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "int",
+        "itemValue": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "int64",
+        "itemValue": 99
+      }
+    },
+    {
+      "op": "case",
+      "case": "instanceof-dynamic-hierarchy"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "dyn-root",
+        "itemValue": "abc"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "plus"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "superg-impl",
+        "valueG": "",
+        "valueA": "",
+        "valueBaseAB": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "base-ab-impl",
+        "valueBaseAB": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "b-impl",
+        "valueB": "",
+        "valueBaseAB": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanDynRoot",
+      "payload": {
+        "itemType": "a-impl",
+        "valueA": "",
+        "valueBaseAB": ""
+      }
+    }
+  ]
+}

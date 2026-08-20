@@ -10275,7 +10275,11 @@
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreInstanceOf.java"
    ],
    "goTests": [
-    "TestInstanceOfExpressionsMatchJavaDynamicAndInterfaceSemantics"
+    "TestInstanceOfExpressionsMatchJavaDynamicAndInterfaceSemantics",
+    "TestRunExprCoreInstanceOfDiffWritesPassingEvidence",
+    "TestRunExprCoreInstanceOfRejectsMalformedScenarioShape",
+    "TestExprCoreInstanceOfCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunExprCoreInstanceOfDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10287,17 +10291,32 @@
     "pointer",
     "plan-identity"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-source",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-instanceof.json",
+    "testdata/parity/expr-core-instanceof.trace.json",
+    "testdata/parity/expr-core-instanceof.evidence.json",
+    "tools/java-oracle/ExprCoreInstanceOfScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-instanceof.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
-   "difference": "Go exposes typed InstanceOf[T](Expr) predicates and composes Java's multi-target checks with ordinary Or expressions; it handles dynamic interface-valued properties, concrete values, pointers implementing interfaces and Null as false, with Build-visible result type and Plan identity. Java EPL/SODA/compile text forms, primitive-wrapper name aliases and the full dynamic optional-property/type-diagnostic matrix remain outside the fluent API.",
+   "difference": "Go exposes typed InstanceOf[T](Expr) predicates and composes Java's multi-target checks with ordinary Or expressions; it handles dynamic interface-valued properties, concrete values, pointers implementing interfaces and Null as false, with Build-visible result type and Plan identity. The verified replay covers five source-order executions, primitive/wrapper vectors, dynamic numeric values, Null, interface/supertype hierarchy checks and fresh listener lifecycle. Java EPL/SODA/compile text forms, primitive-wrapper name aliases and the full dynamic optional-property/type-diagnostic matrix remain outside the fluent API.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-f57ec2f2f04aad28961d",
+    "java-runtime-fc4c87ba7677b72cab9a",
+    "java-runtime-c5af420270464e5633f7",
+    "java-runtime-0423d81802ef0e7eb910",
+    "java-runtime-f446c95462162907b0c6"
+   ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -34591,8 +34610,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 522,
 "implementedCases": 520,
-"differentialVerifiedCases": 131,
-"differentialVerifiedRuntimeIds": 405,
+"differentialVerifiedCases": 132,
+"differentialVerifiedRuntimeIds": 410,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,
