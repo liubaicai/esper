@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -265,6 +266,32 @@ func writeJavaTraceFixtureFromEvidence(t *testing.T, evidenceFixture string, mut
 	}
 	path := filepath.Join(t.TempDir(), "java-trace.json")
 	if err := os.WriteFile(path, javaTrace, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func writeJavaTraceFixtureFromTrace(t *testing.T, traceFixture string, mutate func(*compat.Trace)) string {
+	t.Helper()
+	file, err := os.Open(traceFixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	trace, loadErr := compat.LoadTrace(file)
+	closeErr := file.Close()
+	if loadErr != nil {
+		t.Fatal(loadErr)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	mutate(&trace)
+	data, err := json.Marshal(trace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "java-trace.json")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return path
@@ -5915,6 +5942,205 @@ func TestRunExprCoreCurrentEvaluationContextDiffRejectsTraceMutations(t *testing
 			}, &stdout, &stderr)
 			if code == 0 {
 				t.Fatalf("mutated current-evaluation-context trace unexpectedly passed")
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunExprDTBetweenDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dt-between.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dt-between.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dt-between.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "expr-dt-between-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestExprDTBetweenCheckedInEvidenceMatchesIndependentTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "dt-between.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "dt-between.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from independent trace: %#v", differences)
+	}
+
+	scenarioPath := filepath.Join(root, "dt-between.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := compat.LoadScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "expr-dt-between", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+}
+
+func TestDecodeExprDTBetweenPayloadPreservesNullAndMissingFields(t *testing.T) {
+	decode := func(payload string) map[string]any {
+		t.Helper()
+		value, err := decodeExprDTBetweenPayload(compat.Step{
+			Op:        "send",
+			EventType: "SupportTimeStartEndA",
+			Payload:   json.RawMessage(payload),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		event, ok := value.(map[string]any)
+		if !ok {
+			t.Fatalf("decoded event type = %T, want map[string]any", value)
+		}
+		return event
+	}
+
+	explicitNull := decode("{\"key\":\"N1\",\"start\":null,\"duration\":0}")
+	missing := decode("{\"key\":\"N2\",\"duration\":0}")
+	if value, exists := explicitNull["longdateStart"]; !exists || value != nil {
+		t.Fatalf("explicit null field = (%#v, %t), want present nil", value, exists)
+	}
+	if _, exists := missing["longdateStart"]; exists {
+		t.Fatal("missing date-time field was materialized in the decoded event")
+	}
+}
+
+func TestRunExprDTBetweenDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["val0"] = false
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+		{
+			name: "field-name",
+			mutate: func(trace *compat.Trace) {
+				fields := trace.Records[0].New[0].Fields
+				fields["matched"] = fields["val0"]
+				delete(fields, "val0")
+			},
+		},
+		{
+			name: "time-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Time = "2002-05-30T09:00:01Z"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dt-between.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dt-between.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dt-between.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "expr-dt-between-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutated date-time between trace unexpectedly passed")
 			}
 			data, err := os.ReadFile(evidencePath)
 			if err != nil {

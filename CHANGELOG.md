@@ -858,3 +858,16 @@ SQL FAF 的 `EPLDatabaseFAF` 10 个 Java execution 已有 `database_faf_parity_t
 
 本轮关闭 Java `InfraTableAccessCore.InfraExprSelectClauseRenderingUnnamedCol` execution（`java-runtime-4e6eba40e475800f57e1`），新增 `TestInfraTableAccessExprSelectClauseRenderingUnnamedColParity`。Go 以显式 alias 的链式 `SelectFromTable` 表达 Java 未命名表访问选择列，覆盖 typed key collection、窗口事件集合、完整 `StructOf` 表行、`Last` 事件和 `EnumTake(1)` 集合，并用 `Plan.ResultSchema` 固定对应 Go 类型和值。Java 的表达式渲染列名在 Go 中替换为显式 alias，Java Object[]/SupportBean[]/Collection 元数据由 typed slice/struct 表达；manifest disposed runtime 达 2211/4140（53.4%），361 个 case 中 344 mapped / 17 approved-difference。
 > 最新补充：Draft 4.197（2026-08-20），新增 `expr-core-current-evaluation-context` differential-verified 场景，对照固定 Java `ExprCoreCurrentEvaluationContext` 的两个 execution（`ExprCoreCurrentEvalCtx{soda=false}` `java-runtime-2efbbb4fce55aa6ce513`、`ExprCoreCurrentEvalCtx{soda=true}` `java-runtime-ca0799a6f2d163a49f7f`），两个 isolated case、两条 listener records、0 differences。Go 侧新增 `internal/app/parity/expr_core_current_evaluation_context.go` typed replay，复用 `CurrentEvaluationContext()`、`Property`、`WithRuntimeURI` 与 `WithStatementUserObject`，固定 runtime URI、statement name、`my_user_object`、非 context partition ID `-1`、重复 context 投影和 `getRuntimeURI()` accessor。Java boxed context 与 EPL/SODA model compilation 由明确的 language-neutral metadata normalization 对账；Java filter/FAF/trigger/context lifecycle 的完整传播仍留后续。固定 commit oracle、runner、scenario、trace、evidence 与 metadata/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 123 个 differential-verified case、375 个 differential runtime IDs、1,238 个未关联 runtime。验证通过 Java runner、定向 Esper/parity tests、四类 mutation、manifest/evidence consistency、`go vet ./...`、`go test ./... -count=1`、`make check`、`git diff --check` 与 expr.core race gate 后提交。
+2026-08-20
+
+- Added the `expr-dt-between` differential-verified slice for fixed Esper
+  `ExprDTBetween`: typed `DateTimeBetween`, endpoint-aware and static-range
+  builders, and strict `DateTimeAfter` now normalize `time.Time` and epoch
+  milliseconds with Esper's inclusive, endpoint-flag, reversed-bound, null,
+  virtual-time, and mixed date-time representation behavior. The replay uses
+  the fixed unidirectional latest-bound type join and shared exclude-case
+  lifecycle, and covers null/missing fields and endpoint flags. The pinned
+  Java oracle and Go replay produce 68 listener records with zero differences;
+  value, order, field-name, and time mutations are rejected. Evidence is in
+  `testdata/parity/dt-between.evidence.json` and the case is linked to
+  `expr.core` in the capability manifest.

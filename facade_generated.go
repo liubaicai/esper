@@ -356,6 +356,16 @@ func Between[T Ordered](value, lower, upper Expression[T]) Expression[bool] {
 	return internalengine.Between[T](value, lower, upper)
 }
 
+// BetweenDateTimeOf and BetweenDateTimeRangeOf are descriptive aliases for
+// callers that prefer the operation-first naming used by other expressions.
+func BetweenDateTimeOf(value, lower, upper Expr) Expression[bool] {
+	return internalengine.BetweenDateTimeOf(value, lower, upper)
+}
+
+func BetweenDateTimeRangeOf(value, lower, upper Expr, lowerInclusive, upperInclusive bool) Expression[bool] {
+	return internalengine.BetweenDateTimeRangeOf(value, lower, upper, lowerInclusive, upperInclusive)
+}
+
 // BetweenOf compares mixed ordered operands and normalizes reversed bounds,
 // matching Esper's between semantics. A Null/Missing value or bound yields
 // false, including for NotBetweenOf, as in the Java regression matrix.
@@ -1585,10 +1595,37 @@ type DataflowStats = internalengine.DataflowStats
 // It is the Go-style counterpart for Java LocalDate in typed JSON schemas.
 type DateOnly = internalengine.DateOnly
 
+// DateTimeAfter reports whether value is strictly after bound. Null and
+// missing operands produce Null, matching Esper's boxed Boolean result.
+func DateTimeAfter(value, bound Expr) Expression[bool] {
+	return internalengine.DateTimeAfter(value, bound)
+}
+
 // DateTimeArgument marks one ordinary plugin argument while retaining the
 // expression in the analyzable AST.
 func DateTimeArgument(expression Expr) DateTimePluginArgument {
 	return internalengine.DateTimeArgument(expression)
+}
+
+// DateTimeBetween compares date-time expressions by epoch milliseconds. The
+// two-argument Esper form is inclusive and normalizes reversed bounds.
+func DateTimeBetween(value, lower, upper Expr) Expression[bool] {
+	return internalengine.DateTimeBetween(value, lower, upper)
+}
+
+// DateTimeBetweenRangeOf is the static-flag counterpart of
+// DateTimeBetweenWithEndpoints. It is useful when the endpoint policy is part
+// of a reusable rule definition rather than a runtime variable.
+func DateTimeBetweenRangeOf(value, lower, upper Expr, lowerInclusive, upperInclusive bool) Expression[bool] {
+	return internalengine.DateTimeBetweenRangeOf(value, lower, upper, lowerInclusive, upperInclusive)
+}
+
+// DateTimeBetweenWithEndpoints compares date-time expressions with endpoint
+// flags that are evaluated with the current event. Literal(true) and
+// Literal(false) model Esper's constant four-argument form, while
+// VariableRef[bool] supplies runtime endpoint flags.
+func DateTimeBetweenWithEndpoints(value, lower, upper Expr, lowerInclusive, upperInclusive Expression[bool]) Expression[bool] {
+	return internalengine.DateTimeBetweenWithEndpoints(value, lower, upper, lowerInclusive, upperInclusive)
 }
 
 const DateTimeInputAny = internalengine.DateTimeInputAny

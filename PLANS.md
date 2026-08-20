@@ -34,66 +34,102 @@ activity or a single coverage percentage.
 ## Active checkpoint
 
 - Updated: 2026-08-20
-- Baseline: current-evaluation-context started from a clean `master` matching
-  `origin/master`; the next migration task must verify the then-current refs
-  instead of reusing a recorded commit hash.
-- Status: Current-evaluation-context is differential-verified; parity assets,
-  manifest/docs, canonical Java/Go traces, all required local gates, semantic
-  commit, and push are complete.
-- Current work unit: `expr.core` / `case.expr-core-current-evaluation-context`
-- Exact next action: select the next closed-loop work unit after confirming the
-  remote `master` state.
-- Worktree notes: current migration changes are committed and pushed; the next
-  migration task must re-check the worktree before selecting a new unit.
+- Baseline: `master` is clean and matches `origin/master` at the current
+  pushed checkpoint; the next semantic change must preserve that baseline.
+- Status: reviewed findings are repaired; Maxwell's follow-up review found no
+  findings, and the fixed Java oracle and Go replay now match at 68 records
+  with zero differences. All required local gates pass; delivery remains.
+- Current work unit: `expr.core` / `case.expr-dt-between`
+- Exact next action: review the final diff, create one semantic commit, push
+  `master`, and verify the remote ref without tracked edits.
+- Worktree notes: work-unit files and central facts are intentionally dirty;
+  no unrelated user changes are present. Do not edit tracked files after the
+  semantic commit merely to add its hash.
 
 ## Delegation checkpoint
 
-- Collaboration facility: must be proven by the next work unit's first scout
-  fan-out; no silent serial fallback.
-- Java oracle scout: pending next work-unit selection.
-- Go surface scout: pending next work-unit selection.
-- Parity reviewer: pending next work-unit targeted validation.
-- Serial exception: none recorded.
+- Collaboration facility: available; first scout fan-out completed
+  concurrently for this work unit.
+- Java oracle scout: `01a01d28-670f-7822-aba7-fdc3d44d1cff` (`Gibbs`),
+  read-only report received. The three executions produce the scoped listener
+  rows later expanded to 68 by the replay's supplemental null/missing cases;
+  inclusive bounds normalize reversed constants, while runtime endpoint-flag
+  expressions retain comparison-position ordering. Long, Date, Calendar,
+  LocalDateTime, and ZonedDateTime compare by the same UTC epoch millisecond.
+- Go surface scout: `01a01d28-6752-7b32-a8ea-106b494e83e2` (`Ramanujan`),
+  read-only report received. Existing `CurrentTimestamp`, typed fields,
+  `VariableRef[bool]`, and `BetweenRangeOf` support the work; the scout
+  recommends a focused `expr_dt_between.go` with private epoch normalization,
+  typed endpoint expressions, and no shared `value.go` change. No serial
+  fallback was used.
+- Parity asset worker: `01a01d36-450f-7b13-9510-4d3dbffcbd6d` (`Avicenna`),
+  bounded asset task was interrupted after repeated waits with no patch
+  returned or visible process. The primary agent assumes the exact asset
+  files below and records this as a worker-continuity exception; no semantic
+  scope is expanded.
+- Parity reviewer: `01a01d4e-620f-73e2-8187-2bdf2c85f402` (`Fermat`),
+  read-only review completed with findings: static constant endpoint flags
+  must normalize reversed bounds for all four inclusivity combinations; the
+  parity test must not derive its Java fixture from persisted evidence; the
+  type replay should model Java's latest-bound lifecycle; and null/missing
+  inputs need differential exercise or a narrower manifest claim.
+- Review resolution: static constant endpoint flags now normalize reversed
+  bounds for all four inclusivity combinations; the differential test loads
+  the independently generated Java trace artifact rather than evidence; the
+  exclude cases share one Go engine and deployment lifecycle, the type case
+  uses a unidirectional `SupportDateTime` plus `SupportBean#lastevent` join,
+  and the scenario/oracle cover null and missing date-time fields and a null
+  endpoint flag. The checked-in evidence test now compares that independent
+  Java trace and a fresh Go replay, while map-backed adapters preserve absent
+  fields as Missing instead of collapsing them into explicit nulls.
+- Follow-up parity reviewer: `01a01d73-f002-7260-841d-c89b606f4242`
+  (`Maxwell`), read-only follow-up completed with no findings; evidence
+  linkage, map-backed null/missing handling, manifest consistency, and the
+  68-record zero-difference artifacts are delivery-ready.
+- Serial exception: asset-worker continuity failure after delegation; the
+  primary agent writes only the worker's pre-frozen oracle/runner/scenario
+  files and will review them before generating traces.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, current evaluation context metadata
+- Capability/subdomain: `expr.core`, date-time `between`
 - Java source and executions/runtime IDs:
-  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCurrentEvaluationContext.java`;
-  `ExprCoreCurrentEvalCtx{soda=false}` /
-  `java-runtime-2efbbb4fce55aa6ce513`;
-  `ExprCoreCurrentEvalCtx{soda=true}` /
-  `java-runtime-ca0799a6f2d163a49f7f`.
-- Observable contract: each case deploys one statement named `s0`, projects
-  `current_evaluation_context()` twice and its `getRuntimeURI()` accessor, and
-  sends one `SupportBean` at virtual time 0 ms. The listener emits one new row
-  with repeated equivalent context metadata and the runtime URI accessor:
-  runtime URI `parity-expr-core-current-evaluation-context`, statement name
-  `s0`, user object `my_user_object`, and non-context partition ID `-1`; there
-  is no old stream. Java boxed metadata and EPL/SODA compilation are normalized
-  to the typed Go `ExpressionEvaluationContext` representation. The direct
-  evaluation default partition normalization remains covered by the existing
-  Go unit test but is outside this replay trace.
-- Allowed production files: `internal/app/parity/expr_core_current_evaluation_context.go`,
-  `internal/app/parity/run.go`, and focused additions in
-  `internal/app/parity/run_test.go`; modify `internal/esper` only if the
-  frozen parity replay demonstrates a real regression.
-- Allowed parity asset files: `tools/java-oracle/ExprCoreCurrentEvaluationContextScenarioOracle.java`,
-  `tools/java-oracle/run-expr-core-current-evaluation-context.sh`, and
-  `testdata/parity/expr-core-current-evaluation-context.{json,trace.json,evidence.json}`.
-- Forbidden/conflicting files: unrelated semantic surfaces; `goal.txt`;
-  generated evidence before trace validation; and central facts outside this
-  unit's manifest/roadmap/CHANGELOG updates. `PLANS.md`, the manifest,
-  roadmap, CHANGELOG, traces, and evidence remain primary-agent owned.
-- Targeted validation: the pinned Java oracle runner; `go test
-  ./internal/esper -run 'CurrentEvaluationContext' -count=1`; `go test
-  ./internal/app/parity -run 'ExprCoreCurrentEvaluationContext|CurrentEvaluationContext'
-  -count=1`; differential mutation tests; and `go test
-  ./internal/compat ./internal/app/manifest -count=1`.
-- Milestone gates required: changed-file `gofmt`, `go vet ./...`, `go test
-  ./... -count=1`, manifest/evidence validation, `make check`, and `git
-  diff --check`; the focused race gate remains applicable at the expr.core
-  capability milestone.
+  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTBetween.java`;
+  `ExprDTBetweenIncludeEndpoints` /
+  `java-runtime-6593e0f0cc79ed906f52`;
+  `ExprDTBetweenExcludeEndpoints` /
+  `java-runtime-5e744f4720368eb6585b`;
+  `ExprDTBetweenTypes` / `java-runtime-c0d2bebfa077f7e51474`.
+- Observable contract: fixed Java `ExprDTBetween` evaluates inclusive and
+  independently configurable exclusive endpoint checks against virtual
+  current time, supports reversed bounds and boolean variables for endpoint
+  flags, and compares the same instant across epoch-millisecond, date, and
+  calendar-like representations. The replay must cover before/at/inside/after
+  boundaries, both endpoint flags, variable-backed flags, reversed bounds,
+  mixed value/bound representations, and projected boolean field order. Go
+  uses typed fluent expressions; Java EPL/SODA/model syntax is not a Go API.
+- Allowed production files: the existing typed between implementation and
+  directly adjacent date-time comparison helpers under `internal/esper`
+  (prefer a new focused file); modify shared runtime code only if the frozen
+  replay proves a real regression.
+- Allowed Go test/parity files: focused `internal/esper` date-time between
+  tests, `internal/app/parity/expr_dt_between.go`, and minimal dispatcher/test
+  additions in `internal/app/parity/run.go` and `run_test.go`.
+- Allowed parity asset files: `tools/java-oracle/DTBetweenScenarioOracle.java`,
+  `tools/java-oracle/run-dt-between.sh`, and
+  `testdata/parity/dt-between.{json,trace.json,evidence.json}`.
+- Forbidden/conflicting files: changes under `/root/app/esper`; unrelated
+  semantic surfaces; `goal.txt`; generated evidence before trace validation;
+  and central facts outside this unit's manifest/roadmap/CHANGELOG updates.
+  `PLANS.md`, the manifest, roadmap, CHANGELOG, traces, and evidence remain
+  primary-agent owned. Scouts do not format, build, test, commit, or push.
+- Targeted validation: the pinned Java oracle runner; focused
+  `go test ./internal/esper -run 'ExprDTBetween|Between' -count=1`; focused
+  parity replay and mutation tests; and
+  `go test ./internal/compat ./internal/app/manifest -count=1`.
+- Milestone gates required: changed-file `gofmt`, `go vet ./...`,
+  `go test ./... -count=1`, manifest/evidence validation, `make check`, and
+  `git diff --check`; the focused expr race gate remains applicable.
 
 ## Progress
 
@@ -102,6 +138,8 @@ activity or a single coverage percentage.
 - [x] Select the next natural work unit from the `expr.core` manifest gap.
 - [x] Freeze the Java observable contract, runtime IDs, file ownership, and
       validation commands using read-only investigation.
+- [x] Run concurrent Java/Go read-only scouts and record their agent IDs and
+      conclusions.
 - [x] Implement the smallest Go/API/parity-asset change that satisfies the
       frozen contract.
 - [x] Generate and compare Java/Go traces; run targeted tests and required
@@ -110,6 +148,8 @@ activity or a single coverage percentage.
       where verified facts changed.
 - [x] Run independent parity review, resolve findings, and run complete local
       gates plus the applicable milestone gate.
+- [x] Repair review findings, regenerate independent traces/evidence, and rerun
+      targeted validation.
 - [x] Review the final diff, record actual validation, create one semantic
       commit, push `master`, and verify the remote ref without tracked edits.
 
@@ -118,62 +158,59 @@ activity or a single coverage percentage.
 - 2026-08-20: Codex uses root `AGENTS.md` for persistent repository
   instructions and this file as its living execution checkpoint. `.omp/`
   remains an OMP adapter rather than the shared source of project rules.
-- 2026-08-20: The current-evaluation-context Java source has two execution
-  variants that differ only by EPL/SODA compilation mode. Their shared
-  observable projection is runtime URI, statement name, user object, `-1`
-  partition ID, and the runtime URI accessor; existing typed Go implementation
-  and unit tests already cover this path.
-- 2026-08-20: The new two-case scenario produced matching Java and Go listener
-  traces at virtual time 0. The trace normalizes the Java/Go context objects to
-  four named metadata fields; differential comparison passed with zero
-  differences, and value, order, field-name, and time mutations are rejected.
+- 2026-08-20: The next selected unit is the unlinked Java `ExprDTBetween`
+  trio, adjacent to the verified `ExprDTIntervalOps` surface. Its contract
+  requires date-time-to-epoch normalization, endpoint flags, reversed-bound
+  behavior, and mixed date-time representations.
+- 2026-08-20: The typed Go date-time builders, public facade, parity runner,
+  fixed Java oracle assets, and focused tests now cover the frozen contract.
+  The pinned oracle and Go replay emit 68 listener records including the
+  supplemental null/missing cases; differential evidence is passing with zero
+  differences and value/order/field/time mutations rejected. The replay uses
+  map-backed schemas where omitted properties remain Missing.
 
 ## Validation evidence
 
 - Investigation baseline on 2026-08-20: `/root/app/esper` is fixed at
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; `master` is clean and matches
-  `origin/master` at `57c2079bd`.
-- Previous work-unit result: `case.expr-core-bitwise` is persisted as
-  `differential-verified` with two runtime IDs and zero-difference evidence;
-  details are retained in `CHANGELOG.md` and its evidence artifact.
-- Previous work-unit result: `tools/java-oracle/run-expr-core-current-timestamp.sh`
-  generated four Java listener records; `go run ./cmd/parity -mode
-  expr-core-current-timestamp-diff ...` produced passing evidence with zero
-  differences. Focused parity success and value/order/field/time mutation tests
-  pass; the case is now `differential-verified` with three runtime IDs. Targeted
-  commands passed: `go test ./internal/esper -run
-  'CurrentTimestamp|ExpressionArithmeticConditionalAndTimeFunctions' -count=1`,
-  `go test ./internal/app/parity -run 'ExprCoreCurrentTimestamp|CurrentTimestamp'
-  -count=1`, and `go test ./internal/compat ./internal/app/manifest -count=1`.
-- Current work-unit implementation result: the typed Go replay and Java oracle
-  for `expr-core-current-evaluation-context` produced two listener records with
-  matching runtime URI, statement name, user object, partition ID `-1`, and
-  accessor value. The persisted differential evidence is passing with zero
-  differences. Focused Esper and parity tests, including four trace mutations,
-  pass.
-- Manifest/evidence validation initially caught a stale unreferenced-runtime
-  summary; the distinct-runtime denominator is `4,136 - 2,898 = 1,238`, and
-  the corrected manifest and documentation validate cleanly.
-- Independent parity review on 2026-08-20: compared the fixed Java execution
-  source, Go replay, oracle case order, scenario steps, normalized trace,
-  evidence metadata, and promoted manifest entry; no semantic findings. The
-  persisted Java and Go traces compare equal, and value/order/field/time
-  mutations are rejected.
-- Complete local validation on 2026-08-20: the pinned Java runner, `go vet ./...`,
-  `go test ./... -count=1 -timeout 240s`, `make check`, `git diff --check`, and
-  changed-file `gofmt` checks passed. The focused race gate
-  `go test -race ./internal/app/parity ./internal/esper -count=1 -timeout 600s`
-  passed (`internal/app/parity` 18.116s; `internal/esper` 271.908s).
+  `origin/master` at the current pushed checkpoint before this work unit.
+  Manifest summary now reports 522 cases, 124 differential-verified cases,
+  378 differential runtimes, 2,901 referenced runtimes, and 1,235
+  unreferenced runtime IDs.
+- Previous work-unit result: `case.expr-core-current-evaluation-context` is
+  persisted as `differential-verified` with two runtime IDs, zero-difference
+  evidence, mutation rejection, complete local gates, review, commit, and push.
+- Independent parity review on 2026-08-20 initially found static reversed
+  constant bounds, circular evidence-derived Java fixtures, an inaccurate
+  type/lifecycle replay, and unexercised null claims. After repair, the pinned
+  Java runner and Go replay emit 68 matching records with zero differences;
+  static reversed bounds cover all four endpoint policies, exclude cases share
+  one runtime lifecycle, types use the unidirectional latest-bound join, and
+  null/missing input cases are replayed. The mutation suite loads the
+  independently generated Java trace artifact, and the checked-in evidence
+  test verifies both persisted traces against independent/current sources.
+- Follow-up review on 2026-08-20: Maxwell reported no findings after the
+  evidence-linkage and map-backed null/missing repairs.
+- Current unit result: `testdata/parity/dt-between.trace.json` and
+  `dt-between.evidence.json` contain the regenerated pinned Java/Go replay and
+  zero differences across 68 records for the three Java executions plus the
+  null/missing supplemental cases. Focused Esper/parity tests,
+  compatibility/manifest tests, layout, whitespace, `go vet ./...`,
+  `go test ./... -count=1 -timeout 240s`, `make check`, and
+  `go test -race ./internal/app/parity ./internal/esper -count=1
+  -timeout 600s` all pass. The checked-in evidence linkage test and direct
+  null-versus-missing decoder test also pass.
 
 ## Delivery
 
-- Current-evaluation-context is committed and pushed to `origin/master`; Git
-  history is the authoritative source for its commit identity.
-- Do not create another tracked checkpoint update after a future semantic
+- The previous unit is committed and pushed to `origin/master`; Git history is
+  the authoritative source for its commit identity.
+- Do not create another tracked checkpoint update after this unit's semantic
   commit. Verify the pushed ref without editing tracked files.
 
 ## Handoff
 
-Start or resume a Codex task from the repository root with the starter prompt
-in `docs/esper-go-port-codex-workflows.md`. The first migration action is plan
-selection and contract discovery, not an implementation guess.
+Start or resume from the repository root with the starter prompt in
+`docs/esper-go-port-codex-workflows.md`. After this unit is committed and
+pushed, select the next closed-loop work unit and repeat concurrent scout
+fan-out before implementation.

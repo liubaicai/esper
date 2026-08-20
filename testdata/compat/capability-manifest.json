@@ -523,6 +523,7 @@
     "ExprCoreAnyAllSome",
     "ExprCoreCurrentTimestamp",
     "ExprCoreCurrentEvaluationContext",
+    "ExprDTBetween",
     "ExprCoreInstanceOf",
     "ExprCoreExists",
     "ExprCoreTypeOf",
@@ -582,6 +583,10 @@
     "internal/esper/expr_current_timestamp_test.go",
     "internal/esper/expr_evaluation_context.go",
     "internal/esper/expr_evaluation_context_test.go",
+    "internal/esper/expr_dt_between.go",
+    "internal/esper/expr_dt_between_test.go",
+    "internal/app/parity/expr_dt_between.go",
+    "internal/app/parity/run_test.go",
     "internal/esper/expr.go",
     "internal/esper/enum_expr.go",
     "internal/esper/runtime.go",
@@ -10086,6 +10091,67 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-2efbbb4fce55aa6ce513",
     "java-runtime-ca0799a6f2d163a49f7f"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ]
+  },
+  {
+   "id": "case.expr-dt-between",
+   "javaRuntimeIds": [
+    "java-runtime-6593e0f0cc79ed906f52",
+    "java-runtime-5e744f4720368eb6585b",
+    "java-runtime-c0d2bebfa077f7e51474"
+   ],
+   "javaNames": [
+    "ExprDTBetweenIncludeEndpoints",
+    "ExprDTBetweenExcludeEndpoints",
+    "ExprDTBetweenTypes"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTBetween.java"
+   ],
+   "goTests": [
+    "TestDateTimeBetweenExpressionsMatchEsperEndpointAndRepresentationSemantics",
+    "TestDateTimeBetweenExpressionsEvaluateRuntimeEndpointVariablesAndNulls",
+    "TestDateTimeBetweenExpressionsBuildLiveProjectionAndPreservePlanIdentity",
+    "TestRunExprDTBetweenDiffWritesPassingEvidence",
+    "TestExprDTBetweenCheckedInEvidenceMatchesIndependentTraceAndReplay",
+    "TestDecodeExprDTBetweenPayloadPreservesNullAndMissingFields",
+    "TestRunExprDTBetweenDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "expression",
+    "date-time",
+    "between",
+    "endpoint-flags",
+    "reversed-bounds",
+    "virtual-time",
+    "null",
+    "type"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-junit",
+    "go-unit",
+    "testdata/parity/dt-between.json",
+    "testdata/parity/dt-between.trace.json",
+    "testdata/parity/dt-between.evidence.json",
+    "tools/java-oracle/DTBetweenScenarioOracle.java",
+    "tools/java-oracle/run-dt-between.sh",
+    "java-oracle-trace",
+    "go-differential"
+   ],
+   "difference": "Go exposes typed DateTimeBetween, DateTimeBetweenWithEndpoints, DateTimeBetweenRangeOf and DateTimeAfter builders. Values and bounds normalize time.Time and integer epoch milliseconds; compile-time constant bounds normalize reversed endpoints for all endpoint policies, while runtime endpoint flags preserve lower/upper ordering. The replay covers virtual-time boundaries, constant calendar bounds, five date-time representations, variable-backed endpoint flags, the shared exclude-case deployment lifecycle, the unidirectional SupportDateTime plus SupportBean latest-bound type join, and map-backed null versus missing date-time fields and flags. The checked-in differential evidence is tested against the independent Java trace and current Go replay. Java EPL/SODA/model compilation and exact boxed metadata remain outside the fluent API boundary.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-6593e0f0cc79ed906f52",
+    "java-runtime-5e744f4720368eb6585b",
+    "java-runtime-c0d2bebfa077f7e51474"
    ],
    "verification": [
     "inventoried",
@@ -32190,6 +32256,10 @@
   },
   {
    "capabilityId": "expr.core",
+   "caseId": "case.expr-dt-between"
+  },
+  {
+   "capabilityId": "expr.core",
    "caseId": "case.expr-core-logical"
   },
   {
@@ -34390,12 +34460,12 @@
   }
  ],
 "summary": {
-"totalCases": 521,
+"totalCases": 522,
 "totalCapabilities": 110,
-"inventoriedCases": 521,
-"implementedCases": 519,
-"differentialVerifiedCases": 123,
-"differentialVerifiedRuntimeIds": 375,
+"inventoriedCases": 522,
+"implementedCases": 520,
+"differentialVerifiedCases": 124,
+"differentialVerifiedRuntimeIds": 378,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,
@@ -34405,10 +34475,10 @@
 "intentionallyDifferentCapabilities": 7,
 "representativeVerifiedCapabilities": 11,
 "nfrVerifiedCapabilities": 0,
-"runtimeAssociationCount": 3064,
-"referencedJavaRuntimeIds": 2898,
+"runtimeAssociationCount": 3067,
+"referencedJavaRuntimeIds": 2901,
 "totalJavaRuntimeIds": 4136,
-"unreferencedJavaRuntimeIds": 1238,
+"unreferencedJavaRuntimeIds": 1235,
  "representativeScenarioTotal": 94,
  "representativeScenarioPassing": 94
 }

@@ -1,0 +1,3509 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-6593e0f0cc79ed906f52",
+    "java-runtime-5e744f4720368eb6585b",
+    "java-runtime-c0d2bebfa077f7e51474"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTBetween.java"
+  ],
+  "javaExecutions": [
+    "ExprDTBetweenIncludeEndpoints",
+    "ExprDTBetweenExcludeEndpoints",
+    "ExprDTBetweenTypes"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-between",
+    "steps": [
+      {
+        "op": "case",
+        "case": "include-current"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-30T09:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T09:00:00.001Z",
+          "duration": 100
+        }
+      },
+      {
+        "op": "case",
+        "case": "include-constants"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-30T09:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:05Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00.001Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "exclude-long"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-30T09:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "statement": "constants"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:05Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00.001Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "exclude-util"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-30T09:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "statement": "constants"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:05Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00.001Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "exclude-cal"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-30T09:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "statement": "constants"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:05Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00.001Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "exclude-ldt"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-30T09:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "statement": "constants"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:05Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00.001Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "exclude-zdt"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-30T09:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "statement": "constants"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E1",
+          "start": "2002-05-30T08:59:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:05Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:00:59.999Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "E2",
+          "start": "2002-05-30T09:01:00.001Z",
+          "duration": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "types"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 10,
+          "longBoxed": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:01:02.003Z",
+          "longPrimitive": 0,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 0,
+          "longBoxed": 9223372036854775807
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:01:02.003Z",
+          "longPrimitive": 0,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 10,
+          "longBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportDateTime",
+        "payload": {
+          "date": "2002-05-30T09:01:02.003Z"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportDateTime",
+        "payload": {}
+      },
+      {
+        "op": "case",
+        "case": "nulls"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-30T09:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "N1",
+          "start": null,
+          "duration": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportTimeStartEndA",
+        "payload": {
+          "key": "N2",
+          "duration": 0
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-between",
+    "records": [
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false,
+              "val8": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true,
+              "val8": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true,
+              "val8": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true,
+              "val8": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true,
+              "val8": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false,
+              "val8": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false,
+              "val4": true,
+              "val5": false,
+              "val6": true,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false,
+              "val4": true,
+              "val5": true,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false,
+              "val4": true,
+              "val5": false,
+              "val6": true,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false,
+              "val4": true,
+              "val5": true,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false,
+              "val4": true,
+              "val5": false,
+              "val6": true,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false,
+              "val4": true,
+              "val5": true,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false,
+              "val4": true,
+              "val5": false,
+              "val6": true,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false,
+              "val4": true,
+              "val5": true,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false,
+              "val4": true,
+              "val5": false,
+              "val6": true,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false,
+              "val4": true,
+              "val5": true,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "types",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false,
+              "c3": false,
+              "c4": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "types",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true,
+              "c3": true,
+              "c4": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "types",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "types",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nulls",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": {
+                "state": "null"
+              },
+              "val1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nulls",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": {
+                "state": "null"
+              },
+              "val1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-dt-between",
+    "records": [
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false,
+              "val8": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true,
+              "val8": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true,
+              "val8": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true,
+              "val8": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true,
+              "val8": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-current",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false,
+              "val8": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "include-constants",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false,
+              "val4": true,
+              "val5": false,
+              "val6": true,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false,
+              "val4": true,
+              "val5": true,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-long",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false,
+              "val4": true,
+              "val5": false,
+              "val6": true,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false,
+              "val4": true,
+              "val5": true,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-util",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false,
+              "val4": true,
+              "val5": false,
+              "val6": true,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false,
+              "val4": true,
+              "val5": true,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-cal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false,
+              "val4": true,
+              "val5": false,
+              "val6": true,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false,
+              "val4": true,
+              "val5": true,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-ldt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false,
+              "val4": false,
+              "val5": false,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false,
+              "val4": true,
+              "val5": false,
+              "val6": true,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true,
+              "val4": true,
+              "val5": true,
+              "val6": true,
+              "val7": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false,
+              "val4": true,
+              "val5": true,
+              "val6": false,
+              "val7": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": true,
+              "val2": true,
+              "val3": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": true,
+              "val1": false,
+              "val2": true,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "exclude-zdt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": false,
+              "val1": false,
+              "val2": false,
+              "val3": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "types",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": false,
+              "c1": false,
+              "c2": false,
+              "c3": false,
+              "c4": false
+            }
+          }
+        ]
+      },
+      {
+        "case": "types",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": true,
+              "c1": true,
+              "c2": true,
+              "c3": true,
+              "c4": true
+            }
+          }
+        ]
+      },
+      {
+        "case": "types",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "types",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nulls",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": {
+                "state": "null"
+              },
+              "val1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nulls",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-05-30T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val0": {
+                "state": "null"
+              },
+              "val1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
