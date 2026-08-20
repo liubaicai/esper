@@ -7867,8 +7867,8 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
 		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
 	}
-	if len(javaTrace.Records) != 32 {
-		t.Fatalf("checked-in Java trace records = %d, want 32", len(javaTrace.Records))
+	if len(javaTrace.Records) != 40 {
+		t.Fatalf("checked-in Java trace records = %d, want 40", len(javaTrace.Records))
 	}
 	statementCounts := map[string]int{}
 	caseCounts := map[string]int{}
@@ -7876,13 +7876,14 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 		statementCounts[record.Statement]++
 		caseCounts[record.Case]++
 	}
-	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 32}) {
+	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 40}) {
 		t.Fatalf("checked-in statement counts = %#v", statementCounts)
 	}
 	wantCaseCounts := map[string]int{
 		"exists-simple": 1, "exists-inner": 5, "exists-om": 3, "exists-compile": 3,
 		"cast-simple": 2, "cast-simple-more-types": 1, "cast-as-parse": 1, "cast-double-null-om": 6,
 		"cast-string-and-null": 6, "cast-boolean": 3, "cast-w-static-type": 1,
+		"cast-bigdecimal-bigint": 8,
 	}
 	if !reflect.DeepEqual(caseCounts, wantCaseCounts) {
 		t.Fatalf("checked-in case counts = %#v", caseCounts)
@@ -7996,6 +7997,24 @@ func TestRunExprCoreExistsCastDiffRejectsTraceMutations(t *testing.T) {
 			name: "time-boundary",
 			mutate: func(trace *compat.Trace) {
 				trace.Records[0].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+		{
+			name: "bigdecimal-exact-decimal",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[34].New[0].Fields["c0"] = "2.5"
+			},
+		},
+		{
+			name: "bigdecimal-bigint-truncate",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[35].New[0].Fields["c1"] = "155"
+			},
+		},
+		{
+			name: "bigdecimal-null",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[39].New[0].Fields["c0"] = "0"
 			},
 		},
 	}

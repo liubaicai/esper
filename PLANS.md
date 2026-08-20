@@ -35,94 +35,104 @@ activity or a single coverage percentage.
 
 - Updated: 2026-08-20
 - Baseline: `HEAD` and `origin/master` are clean and match at pushed commit
-  `1a5824a53`; the next semantic change must preserve that baseline.
-- Status: the next bounded expr.core unit extends the delivered Cast scenario
-  with three scalar executions (raw string/boolean/static-parse casts) inside
-  the same `case.expr-core-exists-cast`.
-- Current work unit: `expr.core` / typed scalar Cast — `ExprCoreCastStringAndNullCompile`,
-  `ExprCoreCastBoolean`, `ExprCoreCastWStaticType`
-- Exact next action: append the three executions to the parity harness
-  (scenario, oracle, Go runner, tests), regenerate traces/evidence, update the
-  manifest case to differential-verified for the three new runtime IDs.
-- Worktree notes: the delivered baseline is clean; preserve it and do not
+  `ed3d292aa` (scalar cast parity); the next semantic change must preserve
+  that baseline.
+- Status: the delivered scalar-Cast unit is committed. The next expr.core
+  unit extends `case.expr-core-exists-cast` with
+  `ExprCoreCastBigDecimalBigInt` (running at
+  `java-runtime-f44847213060b8eb3949`).
+- Current work unit: `expr.core` / BigDecimal-BigInteger Cast —
+  `Cast[any, big.Rat]` (BigDecimal) + `Cast[any, big.Int]` (BigInteger) on a
+  map event `MyEvent(value java.lang.Object)`.
+- Exact next action: review the final diff, create one semantic commit,
+  push `master`, and verify the remote ref read-only.
+- Worktree notes: delivered baseline is clean; preserve it and do not
   modify `/root/app/esper` or `goal.txt`.
 
 ## Delegation checkpoint
 
-- Collaboration facility: available; the unit's read-only scouts were launched
-  concurrently through collaboration tools and delivered frozen contracts.
-- Java contract scout: `CastScalarJavaContract` returned exact EPL,
-  event-type/property types, per-execution input/output vectors,
-  null/type/lifecycle semantics, and runtime-ID mapping (`9957cb6d9cd9ea836d4d`
-  / `0b91403db9a899efde99` / `9babbbb6f96faf389bb7`).
-- Go surface scout: `CastScalarGoSurface` confirmed no `internal/esper`
-  production change is needed; all three executions are covered by existing
-  `castToString`/`castToBool`/`parseStringNumber`, and reuse the exists-cast
-  parity harness.
+- Collaboration facility: available; the next-unit read-only scouts were
+  launched concurrently through collaboration tools before implementation.
+- Java contract scout: `CastRemainingJavaContract` returned the frozen
+  contract for the remaining non-date Cast executions: BigDecimalBigInt
+  (`java-runtime-f44847213060b8eb3949`), Interface
+  (`java-runtime-2012a048edc6511a33e0`), WArray both deployment modes
+  (`java-runtime-53d0455ef4e377c9c2f9` / `58852773df609efe7d69`).
+- Go surface scout: `CastRemainingGoSurface` returned a degenerate stub
+  ("probe") with no real assessment; rejected. The primary agent completed
+  the focused Go surface investigation locally (read-only): `Cast[any,
+  big.Rat]`/`Cast[any, big.Int]` exist and `castToBigInt` is correct, but
+  `castToBigRat`'s float branch used `SetFloat64` (binary-exact) and
+  needed a shortest-decimal round-trip (`strconv.FormatFloat(v,'g',-1,
+  bits)` + `big.Rat.SetString`) to match Java `BigDecimal.valueOf(double)`;
+  big.Rat exact-decimal trace rendering needed a harness normalizer
+  addition; WArray requires a bean `insert-into` production surface (no
+  `RegisterBean`/`InsertInto` exists in internal/esper) and Interface
+  requires Go bean-hierarchy identity modeling — both are separate
+  production-surface units.
+- Scope decision: this unit covers only `ExprCoreCastBigDecimalBigInt`
+  (one execution). WArray and Interface each need dedicated
+  `internal/esper` production-surface work (bean insert-into with array
+  fields; dynamic dirty-bean interface hierarchy), so they are deferred
+  to their own focused units — this is the recorded serial reason, not a
+  padded split.
 - Implementation writer: primary agent owns the whole exists-cast parity
-  surface because the case-order/payload/event-type contract spans the
-  scenario, oracle, Go runner, and tests as one atomic set; a second parallel
-  writer would risk inconsistent case lists, so a singleton writer is the
-  recorded exception.
-- Independent parity reviewer: `ScalarCastReview` returned a conditional
-  fail on one minor evidence-integrity defect — `javaExecutions[2]` mislabeled
-  runtime `8fa7f5076dde9d791d08` as `ExprCoreCastStringAndNullCompile` when
-  the execution inventory maps it to `ExprCoreCastDoubleAndNullOM`. The label
-  was restored to match the inventory and the evidence was regenerated so the
-  Go array and evidence `javaExecutions` agree; the review finding is resolved
-  and all local gates pass.
+  surface (scenario, oracle, Go runner, tests) as one atomic set; singleton
+  writer is the recorded exception for this harness.
+- Independent parity reviewer: `BigDecimalBigIntReview` (parity-reviewer)
+  returned APPROVED with no findings — evidence integrity, trace honesty
+  (including 2.4 -> "2.4" and the 2^500500 / 2^500500+0.1 vectors), the
+  `castToBigRat` float round-trip fix, the 13-mutation table, the Java
+  oracle, the runner jq, and the manifest/doc facts all verified.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, typed scalar `Cast` extension of
-  `case.expr-core-exists-cast` for three source-order `ExprCoreCast.java`
-  executions alongside the eight already-verified executions.
-- Java source and executions/runtime IDs: fixed commit
-  `9e1b9f1cc9117fea4bf33ab043762c045d73839c`, with
-  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCast.java`:
-  `ExprCoreCastStringAndNullCompile` / `java-runtime-9957cb6d9cd9ea836d4d`,
-  `ExprCoreCastBoolean` / `java-runtime-0b91403db9a899efde99`, and
-  `ExprCoreCastWStaticType` / `java-runtime-9babbbb6f96faf389bb7`. These three
-  runtime IDs are already inventoried in the manifest case; only their
-  differential-verified status changes.
-- Differential scope: extend `testdata/parity/expr-core-exists-cast.json` with
-  three new cases after `cast-double-null-om`:
-  - `cast-string-and-null` sends six `SupportBeanDynRoot` tagged items
-    (`itemType` int/byte/double/int64/null/string with itemValue
-    100/2/77.7777/6/-/"abc") projecting `Cast(item?,String)` →
-    `"100"`,`"2"`,`"77.7777"`,`"6"`,null,`"abc"`;
-  - `cast-boolean` sends three `SupportBean` (theString/intPrimitive/
-    boolPrimitive/boolBoxed) projecting `Cast(boolPrimitive,Boolean)`,
-    `Cast(boolBoxed|boolPrimitive,boolean)` (null-propagates on null boolBoxed),
-    `Cast(boolBoxed,String)`;
-  - `cast-w-static-type` sends one `StaticTypeMapEvent` map
-    (anInt="100", anDouble="1.4E-1", anLong="-10", anFloat="1.001",
-    anByte="0x0A", anShort="223", intPrimitive=10, intBoxed=11) projecting ten
-    typed casts int/double/long/float/byte/short/int/int/long/long.
-- Observable contract: all cases emit one new row per send at virtual time
-  zero, no old stream, timers, or errors; fresh statement/runtime lifecycle per
-  case. Java number-to-String is `Double.toString`; Java numeric string parse
-  is `Byte.decode` (hex allowed, `"0x0A"`→10), Short/Long/Integer decimal
-  (`LongValue.parseString` strips trailing L and leading +), Float/Double
-  `parseFloat/parseDouble`. Existing Go `parseStringNumber` covers these
-  exact vectors. `StaticTypeMapEvent` is a map event with `anInt..anShort`
-  as String and `intPrimitive` int / `intBoxed` Integer; the Go `RegisterMap`
-  FieldDefs mirror it. Dates, interface casts, array casts, generic casts, and
-  the remaining BigDecimal/BigInt executions stay out of scope.
-- Allowed production files: none — no `internal/esper` change is authorized;
-  this unit is parity/asset-only.
+- Capability/subdomain: `expr.core`, BigDecimal/BigInteger Cast extension of
+  `case.expr-core-exists-cast`, one source-order `ExprCoreCast.java`
+  execution (`ExprCoreCastBigDecimalBigInt`) beside the eleven
+  already-verified executions.
+- Java source and execution/runtime ID: fixed commit
+  `9e1b9f1cc9117fea4bf33ab043762c045d73839c`,
+  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCast.java`
+  lines 61-95, `ExprCoreCastBigDecimalBigInt` /
+  `java-runtime-f44847213060b8eb3949` (already inventoried in the manifest
+  case; only differential-verified status changes).
+- Differential scope: extend `testdata/parity/expr-core-exists-cast.json`
+  with `cast-bigdecimal-bigint` (8 sends of a map `MyEvent(value)` tagged by
+  kind): int 1, long 2, double 2.4, decimal "156.78", bigint "200",
+  bigint 2^500500, decimal 2^500500+0.1, null. Select
+  `cast(value, BigDecimal) as c0, cast(value, BigInteger) as c1`.
+  Expected rows: c0/c1 both big numbers (big.Rat/big.Int in Go;
+  BigDecimal/BigInteger in Java); double 2.4 -> "2.4" (Java
+  `BigDecimal.valueOf(double)` shortest-decimal round-trip, not binary
+  exact) and c1=2 (truncation toward zero); decimal/bigint round-trip;
+  2^500500+0.1 preserves trailing ".1" and 2^500500 the integer part;
+  null -> null.
+- Observable contract: one new row per send at virtual time zero, no old
+  stream/timers/errors, fresh runtime+statement per execution. Java
+  BigDecimal/BigInteger toString is the exact decimal/integer string; Go
+  must render big.Rat (non-integer) as its exact terminating decimal
+  expansion (not FloatString/RatString). BigInteger from double truncates
+  toward zero ((long)2.4 -> 2).
+- Allowed production files: `internal/esper/expr_cast.go` — the diff
+  required a real semantic fix: `castToBigRat`'s float branch now
+  round-trips the double through its shortest decimal
+  (`strconv.FormatFloat(v,'g',-1,bits)` + `big.Rat.SetString`) instead of
+  `SetFloat64`, matching Java `BigDecimal.valueOf(double)` (2.4 -> "2.4").
+  Plus an exact big.Rat -> decimal rendering helper in the trace
+  normalizer.
 - Allowed Go test/parity files: `internal/app/parity/expr_core_exists_cast.go`
-  (three new cases), `internal/app/parity/run_test.go` (record-count and
-  case-count updates, extra payload-mutation).
+  (`cast-bigdecimal-bigint` case, exact-decimal normalizer path),
+  `internal/app/parity/run_test.go` (record/case counts, new mutations).
 - Allowed parity asset files: `tools/java-oracle/ExprCoreExistsCastScenarioOracle.java`
-  (`StaticTypeMapEvent` config, bool fields, new cases) and
+  (`MyEvent` map schema, `cast-bigdecimal-bigint` case) and
   `testdata/parity/expr-core-exists-cast.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: changes under `/root/app/esper`; unrelated
-  semantic surfaces of `internal/esper`; `goal.txt`; generated evidence before
+  `internal/esper` semantic surfaces; `goal.txt`; generated evidence before
   trace validation; central facts outside this unit's manifest/roadmap/CHANGELOG
-  updates. `PLANS.md`, manifest, roadmap, CHANGELOG, traces, and evidence remain
+  updates. `PLANS.md`, manifest, roadmap, CHANGELOG, traces, evidence remain
   primary-agent owned.
-- Targeted validation: pinned Java scalar-cast oracle runner; focused
+- Targeted validation: pinned Java BigDecimal-bigint oracle runner; focused
   exists-cast parity + mutation tests; scenario shape validator; and
   `go test ./internal/compat ./internal/app/manifest -count=1`.
 - Milestone gates required: changed-file `gofmt`, `go vet ./...`,
@@ -146,12 +156,29 @@ activity or a single coverage percentage.
       roadmap, CHANGELOG, README where verified facts change.
 - [x] Run independent parity review, resolve findings, run complete local
       gates.
-- [ ] Review the final diff, record actual validation, create one semantic
+- [x] Review the final diff, record actual validation, create one semantic
       commit, push `master`, verify the remote ref read-only.
+- [x] Implement the `cast-bigdecimal-bigint` case in the Go runner, Java
+      oracle, and scenario (with exact big.Rat decimal rendering).
+- [x] Generate pinned Java trace and run zero-difference Go replay (40
+      records, 0 differences); fix `castToBigRat` float branch to match
+      `BigDecimal.valueOf(double)`; add boundary/mutation coverage (13
+      mutations pass).
+- [x] Update manifest (423 runtime IDs), regenerate evidence (passing),
+      roadmap, CHANGELOG, README.
+- [ ] Run full local gates and independent parity review; resolve findings.
+- [ ] Review final diff, record validation, create one semantic commit,
+      push `master`, verify remote ref read-only.
 
 
 ## Discoveries and decisions
 
+- 2026-08-20: The `cast-bigdecimal-bigint` unit passed the independent
+  parity review (`BigDecimalBigIntReview`, parity-reviewer, APPROVED, no
+  findings). The reviewer independently re-verified every evidence,
+  trace, mutation, oracle, and doc claim, including a Python bigint-pow
+  exact-match of the 2^500500 / 2^500500+0.1 vectors and the
+  `Double.toString` round-trip for 2.4.
 - 2026-08-20: Codex uses root `AGENTS.md` for persistent repository
   instructions and this file as its living execution checkpoint. `.omp/`
   remains an OMP adapter rather than the shared source of project rules.
@@ -196,6 +223,14 @@ activity or a single coverage percentage.
   `ExprCoreCastStringAndNullCompile`; the label was restored to match the
   execution inventory and evidence regenerated. Manifest case DV runtime IDs
   8→11, summary 419→422, cases stay 134.
+- 2026-08-20: The `cast-bigdecimal-bigint` unit reached zero-difference
+  replay with 40 records (was 32). The diff exposed a genuine
+  `internal/esper` semantic defect: `castToBigRat`'s float branch used
+  `big.Rat.SetFloat64` (binary-exact), but Java `BigDecimal.valueOf(double)`
+  round-trips through `Double.toString` — fixed to
+  `strconv.FormatFloat(v,'g',-1,bits)` + `big.Rat.SetString`, with
+  exact-decimal trace rendering for non-integer big.Rat. Manifest case DV
+  runtime IDs 11→12, summary 422→423, cases stay 134.
 - 2026-08-20: The equality scouts confirmed the reusable typed
   `EqualOf`/`NotEqualOf`/`Is`/`IsNot` surface, deep slice equality, and typed-nil
   behavior. They also identified a Plan identity collision for interface-typed

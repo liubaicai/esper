@@ -307,6 +307,73 @@
         "intPrimitive": 10,
         "intBoxed": 11
       }
+    },
+    {
+      "op": "case",
+      "case": "cast-bigdecimal-bigint"
+    },
+    {
+      "op": "send",
+      "eventType": "MyEvent",
+      "payload": {
+        "kind": "int",
+        "value": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MyEvent",
+      "payload": {
+        "kind": "long",
+        "value": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MyEvent",
+      "payload": {
+        "kind": "double",
+        "value": 2.4
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MyEvent",
+      "payload": {
+        "kind": "decimal",
+        "text": "156.78"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MyEvent",
+      "payload": {
+        "kind": "bigint",
+        "text": "200"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MyEvent",
+      "payload": {
+        "kind": "pow2-decimal",
+        "exponent": 500500
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MyEvent",
+      "payload": {
+        "kind": "pow2-bigint",
+        "exponent": 500500
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MyEvent",
+      "payload": {
+        "kind": "null"
+      }
     }
   ]
 }

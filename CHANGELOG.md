@@ -1,3 +1,20 @@
+> 最新补充：Draft 4.211（2026-08-20），扩展 `expr-core-exists-cast`
+> differential-verified 场景：固定 Java `ExprCoreCast` 的
+> `ExprCoreCastBigDecimalBigInt` execution，与 Go typed Cast replay 产生
+> 8 条 listener records、0 differences（累计 40 条）。覆盖 BigDecimal/
+> BigInteger 动态 cast：int/long 直传、double→BigDecimal 经最短十进制
+> 往返（`BigDecimal.valueOf(double)` 语义，2.4→“2.4”、1.0→“1”）、
+> decimal/bigint 精确文本、float→BigInteger 向零截断、2^500500 与
+> 2^500500+0.1 边界向量证明任意精度、以及 null 传播。修复
+> `internal/esper` 生产语义：`castToBigRat` 的 float 分支改用
+> `strconv.FormatFloat(v,'g',-1,bits)` + `big.Rat.SetString`（原
+> `SetFloat64` 二进制精确与 Java 不符）。固定 commit 的 Java oracle、
+> runner、scenario、trace、evidence 和 value/null/order/mutation tests
+> 已纳入兼容资产；manifest 保持 134 个 differential-verified case，
+> 更新为 423 个 differential runtime IDs。其余 Cast 日期/interface/
+> array/generic execution 与完整 parser/type/diagnostic matrix 保持
+> implemented-only。
+
 > 最新补充：Draft 4.210（2026-08-20），扩展 `expr-core-exists-cast`
 > differential-verified 场景：固定 Java `ExprCoreCast` 的
 > `ExprCoreCastStringAndNullCompile`、`ExprCoreCastBoolean`、

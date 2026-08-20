@@ -1,6 +1,7 @@
 package parity
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -32,6 +33,7 @@ var exprCoreExistsCastJavaRuntimeIDs = []string{
 	"java-runtime-9957cb6d9cd9ea836d4d",
 	"java-runtime-0b91403db9a899efde99",
 	"java-runtime-9babbbb6f96faf389bb7",
+	"java-runtime-f44847213060b8eb3949",
 }
 
 var exprCoreExistsCastJavaExecutions = []string{
@@ -44,8 +46,8 @@ var exprCoreExistsCastJavaExecutions = []string{
 	"ExprCoreCastAsParse",
 	"ExprCoreCastDoubleAndNullOM",
 	"ExprCoreCastStringAndNullCompile",
-	"ExprCoreCastBoolean",
 	"ExprCoreCastWStaticType",
+	"ExprCoreCastBigDecimalBigInt",
 }
 
 var exprCoreExistsCastCaseOrder = []string{
@@ -60,6 +62,7 @@ var exprCoreExistsCastCaseOrder = []string{
 	"cast-string-and-null",
 	"cast-boolean",
 	"cast-w-static-type",
+	"cast-bigdecimal-bigint",
 }
 
 type exprCoreExistsCastExpectedSend struct {
@@ -200,6 +203,39 @@ var exprCoreExistsCastExpectedSends = [][]exprCoreExistsCastExpectedSend{
 			"anShort":      `"223"`,
 			"intPrimitive": "10",
 			"intBoxed":     "11",
+		}},
+	},
+	{
+		{eventType: "MyEvent", payload: map[string]string{
+			"kind":  `"int"`,
+			"value": "1",
+		}},
+		{eventType: "MyEvent", payload: map[string]string{
+			"kind":  `"long"`,
+			"value": "2",
+		}},
+		{eventType: "MyEvent", payload: map[string]string{
+			"kind":  `"double"`,
+			"value": "2.4",
+		}},
+		{eventType: "MyEvent", payload: map[string]string{
+			"kind": `"decimal"`,
+			"text": `"156.78"`,
+		}},
+		{eventType: "MyEvent", payload: map[string]string{
+			"kind": `"bigint"`,
+			"text": `"200"`,
+		}},
+		{eventType: "MyEvent", payload: map[string]string{
+			"kind":     `"pow2-decimal"`,
+			"exponent": "500500",
+		}},
+		{eventType: "MyEvent", payload: map[string]string{
+			"kind":     `"pow2-bigint"`,
+			"exponent": "500500",
+		}},
+		{eventType: "MyEvent", payload: map[string]string{
+			"kind": `"null"`,
 		}},
 	},
 }
@@ -524,6 +560,17 @@ func runExprCoreExistsCastCase(ctx context.Context, scenario compat.Scenario, ca
 			esper.Alias("longOne", esper.Cast[any, int64](esper.Field[map[string]any, any]("intPrimitive"))),
 			esper.Alias("longTwo", esper.Cast[any, int64](esper.Field[map[string]any, any]("intBoxed"))),
 		).Query(esper.StatementName("s0"))
+	case "cast-bigdecimal-bigint":
+		if _, err := esper.RegisterMap(env, "MyEvent", []esper.FieldSpec{
+			esper.FieldDef("value", reflect.TypeOf((*any)(nil)).Elem()),
+		}, esper.AllowDynamicFields()); err != nil {
+			return compat.Trace{}, err
+		}
+		input := esper.From[map[string]any](env, "MyEvent")
+		query = esper.Select(input,
+			esper.Alias("c0", esper.Cast[any, big.Rat](esper.Field[map[string]any, any]("value"))),
+			esper.Alias("c1", esper.Cast[any, big.Int](esper.Field[map[string]any, any]("value"))),
+		).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported expr-core-exists-cast case %q", caseName)
 	}
@@ -644,6 +691,68 @@ func decodeExprCoreExistsCastPayload(step compat.Step) (any, error) {
 		}
 		return map[string]any{"item": item}, nil
 	}
+	if step.EventType == "MyEvent" {
+		var payload struct {
+			Kind     string `json:"kind"`
+			Value    any    `json:"value"`
+			Text     string `json:"text"`
+			Exponent int    `json:"exponent"`
+		}
+		decoder := json.NewDecoder(bytes.NewReader(step.Payload))
+		decoder.UseNumber()
+		if err := decoder.Decode(&payload); err != nil {
+			return nil, fmt.Errorf("expr-core-exists-cast: decode MyEvent: %w", err)
+		}
+		var value any
+		switch payload.Kind {
+		case "int":
+			number := payload.Value.(json.Number)
+			parsed, err := number.Int64()
+			if err != nil {
+				return nil, fmt.Errorf("expr-core-exists-cast: decode MyEvent int: %w", err)
+			}
+			value = int(parsed)
+		case "long":
+			number := payload.Value.(json.Number)
+			parsed, err := number.Int64()
+			if err != nil {
+				return nil, fmt.Errorf("expr-core-exists-cast: decode MyEvent long: %w", err)
+			}
+			value = parsed
+		case "double":
+			number := payload.Value.(json.Number)
+			parsed, err := number.Float64()
+			if err != nil {
+				return nil, fmt.Errorf("expr-core-exists-cast: decode MyEvent double: %w", err)
+			}
+			value = parsed
+		case "decimal":
+			rat, ok := new(big.Rat).SetString(payload.Text)
+			if !ok {
+				return nil, fmt.Errorf("expr-core-exists-cast: decode MyEvent decimal %q", payload.Text)
+			}
+			value = big.Rat(*rat)
+		case "bigint":
+			integer, ok := new(big.Int).SetString(payload.Text, 10)
+			if !ok {
+				return nil, fmt.Errorf("expr-core-exists-cast: decode MyEvent bigint %q", payload.Text)
+			}
+			value = *integer
+		case "pow2-decimal":
+			pow := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(payload.Exponent)), nil)
+			rat := new(big.Rat).SetInt(pow)
+			rat.Add(rat, new(big.Rat).SetFrac(big.NewInt(1), big.NewInt(10)))
+			value = *rat
+		case "pow2-bigint":
+			pow := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(payload.Exponent)), nil)
+			value = *pow
+		case "null":
+			value = nil
+		default:
+			return nil, fmt.Errorf("expr-core-exists-cast: unsupported MyEvent kind %q", payload.Kind)
+		}
+		return map[string]any{"value": value}, nil
+	}
 	if step.EventType != "SupportMarkerInterface" {
 		return nil, fmt.Errorf("expr-core-exists-cast: unsupported event type %q", step.EventType)
 	}
@@ -725,10 +834,7 @@ func normalizeExprCoreExistsCastValue(value any) any {
 	case big.Int:
 		return current.String()
 	case big.Rat:
-		if current.Denom().Cmp(big.NewInt(1)) == 0 {
-			return current.Num().String()
-		}
-		return current.String()
+		return bigRatExactDecimal(current)
 	case map[string]any:
 		for name, nested := range current {
 			current[name] = normalizeExprCoreExistsCastValue(nested)
@@ -747,4 +853,69 @@ func formatExprCoreExistsCastFloat(value float64, bitSize int) string {
 		formatted += ".0"
 	}
 	return formatted
+}
+
+// bigRatExactDecimal renders a big.Rat value as its exact terminating
+// decimal string, matching Java BigDecimal.toString() for the values Esper's
+// BigDecimal casts produce (doubles convert to a denominator that is a power
+// of two; decimal strings keep a terminating denominator of 2s and 5s;
+// integer inputs have denominator 1). If the denominator has a factor other
+// than 2 or 5 the decimal would repeat; that case falls back to the rational
+// string and cannot arise from the BigDecimal cast surface.
+func bigRatExactDecimal(rat big.Rat) string {
+	if rat.IsInt() {
+		return rat.Num().String()
+	}
+	num := new(big.Int).Set(rat.Num())
+	den := new(big.Int).Set(rat.Denom())
+	// Reduce common factors.
+	gcd := new(big.Int).GCD(nil, nil, num, den)
+	num.Quo(num, gcd)
+	den.Quo(den, gcd)
+	// Strip 2 and 5 factors from the denominator.
+	twos, fives := 0, 0
+	remaining := new(big.Int).Set(den)
+	two := big.NewInt(2)
+	five := big.NewInt(5)
+	tmp := new(big.Int)
+	for tmp.Mod(remaining, two).Sign() == 0 {
+		remaining.Quo(remaining, two)
+		twos++
+	}
+	for tmp.Mod(remaining, five).Sign() == 0 {
+		remaining.Quo(remaining, five)
+		fives++
+	}
+	if remaining.Cmp(big.NewInt(1)) != 0 {
+		// Repeating decimal: not producible by the BigDecimal cast surface;
+		// fall back to the rational string to stay deterministic.
+		return rat.String()
+	}
+	fractionDigits := twos
+	if fives > fractionDigits {
+		fractionDigits = fives
+	}
+	// Integer part and remainder by floor division.
+	intPart := new(big.Int).Quo(num, den)
+	remainder := new(big.Int).Rem(num, den)
+	negative := intPart.Sign() < 0 || (intPart.Sign() == 0 && remainder.Sign() < 0)
+	if negative {
+		intPart.Abs(intPart)
+		remainder.Abs(remainder)
+	}
+	// Long-divide a digit at a time to get exactly fractionDigits decimals.
+	digits := make([]byte, 0, fractionDigits)
+	ten := big.NewInt(10)
+	digit := new(big.Int)
+	for range fractionDigits {
+		remainder.Mul(remainder, ten)
+		digit.Quo(remainder, den)
+		remainder.Mod(remainder, den)
+		digits = append(digits, byte('0'+digit.Int64()))
+	}
+	result := intPart.String() + "." + string(digits)
+	if negative {
+		result = "-" + result
+	}
+	return result
 }

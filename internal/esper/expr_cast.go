@@ -462,11 +462,16 @@ func castToBigRat(source any) Value {
 		if math.IsNaN(value) || math.IsInf(value, 0) {
 			return Null()
 		}
-		result := new(big.Rat).SetFloat64(value)
-		if result == nil {
-			return Null()
+		// Match Esper's cast(double, BigDecimal), which is implemented as
+		// BigDecimal.valueOf(double) = new BigDecimal(Double.toString(d)).
+		// Round-tripping through the shortest decimal preserves that exact
+		// value (2.4 -> "2.4", 1.0 -> "1") instead of the binary-exact
+		// expansion that SetFloat64 would produce.
+		text := strconv.FormatFloat(value, 'g', -1, raw.Type().Bits())
+		if result, ok := new(big.Rat).SetString(text); ok {
+			return Present(*result)
 		}
-		return Present(*result)
+		return Null()
 	}
 	return Null()
 }

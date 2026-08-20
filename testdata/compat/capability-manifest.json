@@ -10401,7 +10401,7 @@
     "java-oracle-trace",
     "go-differential"
    ],
-   "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not), plus typed OptionalProperty[T] navigation for '?' paths that turns null, incompatible and missing intermediate receivers into Missing while preserving terminal nullable Null presence. The strict replay now verifies the four source-order Exists/OM/compile executions and seven typed Cast executions with 32 listener records and zero Java/Go differences: raw numeric/string casts (cast-simple, cast-simple-more-types, cast-as-parse, cast-double-null-om) plus dyn-root string cast with number-to-String rendering, SupportBean bool boxed/primitive casts with null-propagating boolean OR, and StaticTypeMapEvent string-to-numeric parses (0x0A hex byte, 1.4E-1 double, 1.001 float). The remaining Cast date/interface/array/generic/BigDecimal executions, Java EPL optional-property/cast syntax, SODA/compile text paths, exact date parser/diagnostic behavior and the remaining full Java type matrix remain outside the fluent builder.",
+   "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not), plus typed OptionalProperty[T] navigation for '?' paths that turns null, incompatible and missing intermediate receivers into Missing while preserving terminal nullable Null presence. The strict replay now verifies the four source-order Exists/OM/compile executions and seven typed Cast executions with 32 listener records and zero Java/Go differences: raw numeric/string casts (cast-simple, cast-simple-more-types, cast-as-parse, cast-double-null-om) plus dyn-root string cast with number-to-String rendering, SupportBean bool boxed/primitive casts with null-propagating boolean OR, and StaticTypeMapEvent string-to-numeric parses (0x0A hex byte, 1.4E-1 double, 1.001 float). The remaining Cast date/interface/array/generic/BigDecimal executions, Java EPL optional-property/cast syntax, SODA/compile text paths, exact date parser/diagnostic behavior and the remaining full Java type matrix remain outside the fluent builder. The BigDecimal/BigInteger execution (ExprCoreCastBigDecimalBigInt, 8 records) adds exact-decimal verification: double-to-BigDecimal round-trips through the shortest decimal (2.4 -> \"2.4\") matching BigDecimal.valueOf(double), with 2^500500 and 2^500500+0.1 boundary vectors proving arbitrary precision, and float truncation to BigInteger matching (long) semantics.",
    "verification": [
     "inventoried",
     "implemented",
@@ -10418,7 +10418,8 @@
     "java-runtime-45b9d5a2e216f8063b75",
     "java-runtime-9957cb6d9cd9ea836d4d",
     "java-runtime-0b91403db9a899efde99",
-    "java-runtime-9babbbb6f96faf389bb7"
+    "java-runtime-9babbbb6f96faf389bb7",
+    "java-runtime-f44847213060b8eb3949"
    ]
   },
   {
@@ -34656,7 +34657,7 @@
 "inventoriedCases": 522,
 "implementedCases": 520,
 "differentialVerifiedCases": 134,
-"differentialVerifiedRuntimeIds": 422,
+"differentialVerifiedRuntimeIds": 423,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

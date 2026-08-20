@@ -31,14 +31,15 @@ public final class ExprCoreExistsCastScenarioOracle {
     private static final String[] CASES = {
             "exists-simple", "exists-inner", "exists-om", "exists-compile",
             "cast-simple", "cast-simple-more-types", "cast-as-parse", "cast-double-null-om",
-            "cast-string-and-null", "cast-boolean", "cast-w-static-type"
+            "cast-string-and-null", "cast-boolean", "cast-w-static-type",
+            "cast-bigdecimal-bigint"
     };
     private static final String[] EVENT_TYPES = {
             "SupportBean", "SupportMarkerInterface", "SupportMarkerInterface", "SupportMarkerInterface",
             "SupportBean", "SupportBean", "SupportBean", "SupportBeanDynRoot",
-            "SupportBeanDynRoot", "SupportBean", "StaticTypeMapEvent"
+            "SupportBeanDynRoot", "SupportBean", "StaticTypeMapEvent", "MyEvent"
     };
-    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 6, 3, 1};
+    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 6, 3, 1, 8};
 
     private ExprCoreExistsCastScenarioOracle() {
     }
@@ -114,6 +115,7 @@ public final class ExprCoreExistsCastScenarioOracle {
             }
         }
     }
+
 
     private static void validatePayload(JsonObject payload, int caseIndex, int sendIndex) {
         if (caseIndex == 0) {
@@ -201,6 +203,36 @@ public final class ExprCoreExistsCastScenarioOracle {
 			requireNumber(payload, "intBoxed", 11);
 			return;
 		}
+		if (caseIndex == 11) {
+			String kind = payload.getString("kind", "");
+			switch (kind) {
+				case "int":
+				case "long":
+				case "double":
+					requireStepFields(payload, "send", "kind", "value");
+					if (!payload.get("value").isNumber()) {
+						throw new IllegalArgumentException("payload " + kind + " kind must carry a number");
+					}
+					break;
+				case "decimal":
+				case "bigint":
+					requireStepFields(payload, "send", "kind", "text");
+					break;
+				case "pow2-decimal":
+				case "pow2-bigint":
+					requireStepFields(payload, "send", "kind", "exponent");
+					if (!payload.get("exponent").isNumber()) {
+						throw new IllegalArgumentException("payload pow2 kind must carry a numeric exponent");
+					}
+					break;
+				case "null":
+					requireStepFields(payload, "send", "kind");
+					break;
+				default:
+					throw new IllegalArgumentException("unsupported value kind " + kind);
+			}
+			return;
+		}
 
 		String[] shapes = caseIndex == 1
 				? new String[]{"null", "complex", "complex", "nested-support-bean", "support-bean-a"}
@@ -258,6 +290,7 @@ public final class ExprCoreExistsCastScenarioOracle {
         configuration.getCommon().addEventType("SupportBeanDynRoot", SupportBeanDynRoot.class);
 		configuration.getCommon().addEventType("StaticTypeMapEvent", staticTypeMapEventMap());
         String runtimeName = "parity-expr-core-exists-cast-" + caseName;
+		configuration.getCommon().addEventType("MyEvent", myEventMap());
         EPRuntime runtime = EPRuntimeProvider.getRuntime(runtimeName, configuration);
         try {
             ((EPRuntimeSPI) runtime).initialize(0L);
@@ -293,6 +326,12 @@ public final class ExprCoreExistsCastScenarioOracle {
         map.put("anShort", String.class);
         map.put("intPrimitive", int.class);
         map.put("intBoxed", Integer.class);
+        return map;
+    }
+
+    private static java.util.Map<String, Object> myEventMap() {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        map.put("value", Object.class);
         return map;
     }
 
@@ -352,6 +391,9 @@ public final class ExprCoreExistsCastScenarioOracle {
 					"cast(intPrimitive, java.lang.Long) as longOne, cast(intBoxed, long) as longTwo " +
 					"from StaticTypeMapEvent";
 		}
+		if ("cast-bigdecimal-bigint".equals(caseName)) {
+			return "select cast(value, BigDecimal) as c0, cast(value, BigInteger) as c1 from MyEvent";
+		}
         throw new IllegalArgumentException("unsupported case " + caseName);
     }
     private static void replayCase(JsonArray allSteps, String caseName, EPRuntime runtime) {
@@ -375,6 +417,10 @@ public final class ExprCoreExistsCastScenarioOracle {
                 runtime.getEventService().sendEventBean(toCastDynamicRoot(payload), "SupportBeanDynRoot");
             } else if ("StaticTypeMapEvent".equals(step.getString("eventType", ""))) {
                 runtime.getEventService().sendEventMap(toStaticTypeMapEvent(payload), "StaticTypeMapEvent");
+            } else if ("MyEvent".equals(step.getString("eventType", ""))) {
+                java.util.Map<String, Object> map = new java.util.HashMap<>();
+                map.put("value", toMyEventValue(payload));
+                runtime.getEventService().sendEventMap(map, "MyEvent");
             } else {
                 throw new IllegalArgumentException("unsupported event type");
             }
@@ -421,6 +467,31 @@ public final class ExprCoreExistsCastScenarioOracle {
         JsonValue intBoxed = payload.get("intBoxed");
         map.put("intBoxed", intBoxed == null || intBoxed.isNull() ? null : payload.getInt("intBoxed", 0));
         return map;
+    }
+    private static Object toMyEventValue(JsonObject payload) {
+        String kind = payload.getString("kind", "");
+        switch (kind) {
+            case "int":
+                return payload.getInt("value", 0);
+            case "long":
+                return payload.getLong("value", 0L);
+            case "double":
+                return payload.getDouble("value", 0.0);
+            case "decimal":
+                return new java.math.BigDecimal(payload.getString("text", "0"));
+            case "bigint":
+                return new java.math.BigInteger(payload.getString("text", "0"));
+            case "pow2-decimal":
+                java.math.BigInteger base = java.math.BigInteger.valueOf(2);
+                java.math.BigDecimal pow = new java.math.BigDecimal(base.pow(payload.getInt("exponent", 0)));
+                return pow.add(new java.math.BigDecimal("0.1"));
+            case "pow2-bigint":
+                return java.math.BigInteger.valueOf(2).pow(payload.getInt("exponent", 0));
+            case "null":
+                return null;
+            default:
+                throw new IllegalArgumentException("unsupported value kind " + kind);
+        }
     }
 	private static SupportBeanDynRoot toCastDynamicRoot(JsonObject payload) {
 		String itemType = payload.getString("itemType", "");
