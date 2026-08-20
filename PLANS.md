@@ -89,7 +89,7 @@ activity or a single coverage percentage.
       where verified facts changed.
 - [x] Run independent parity review, resolve findings, and run complete local
       gates plus the applicable milestone gate.
-- [ ] Review the final diff, create one semantic commit, push `master`, and
+- [x] Review the final diff, create one semantic commit, push `master`, and
       record the commit and actual validation.
 
 ## Discoveries and decisions
@@ -125,6 +125,13 @@ activity or a single coverage percentage.
   changed-file `gofmt` checks passed. The focused race gate
   `go test -race ./internal/app/parity ./internal/esper -count=1 -timeout 600s`
   passed (`internal/app/parity` 18.020s; `internal/esper` 269.233s).
+
+## Delivery
+
+- Semantic commit `344f9ddf6`: `expr: verify current timestamp parity`, pushed
+  to the protected `origin/master` branch.
+- The checkpoint-only closure is being recorded in a normal follow-up commit;
+  no force-push or semantic-history rewrite is required.
 
 ## Handoff
 
