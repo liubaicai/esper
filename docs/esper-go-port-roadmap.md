@@ -4,6 +4,19 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.207（2026-08-20），新增 `expr-core-type-name`
+> differential-verified 场景，对照固定 Java `ExprCoreTypeOfFragment` 的一个
+> 可观测 execution（`java-runtime-eeeacbe2c7669e1e1207`），六个
+> representation case、18 条 listener records、0 differences。Go 侧复用
+> 类型化 `TypeName(Expr)`，新增声明式 fragment metadata 解析，覆盖
+> object-array、map、Avro、JSON、JSON-provided、default 的 `InnerSchema`/
+> `InnerSchema[]` 名称、Avro 空/Null 元数据和非 Avro Null/Missing；普通 Go
+> reflection type name 保持不变。POJO simple-name、invalid compile、dynamic
+> wrapper-name 与 variant/match-recognize 仍保持 implemented-only。固定 Java
+> oracle、runner、scenario、trace、evidence 与 value/order/case/time mutation
+> tests 已纳入兼容资产；manifest 达到 133 个 differential-verified case、411
+> 个 differential runtime IDs。
+
 > 最新补充：Draft 4.206（2026-08-20），新增 `expr-core-instanceof`
 > differential-verified 场景，对照固定 Java `ExprCoreInstanceOf` 的五个
 > execution（`ExprCoreInstanceofSimple`
@@ -156,8 +169,8 @@
 | --- | --- |
 | Capability | 110 |
 | Case | 522 |
-| Case differential-verified | 131 |
-| Differential-verified runtime | 405 / 4,136 |
+| Case differential-verified | 133 |
+| Differential-verified runtime | 411 / 4,136 |
 | Runtime 已关联 | 2,901 / 4,136（70.2%） |
 | Runtime 未关联 | 1,235 |
 | Representative scenario | 94 / 94 通过 |
@@ -337,7 +350,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 persisted differential evidence。当前有 131 个 differential-verified case（405 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
+2. 扩展 persisted differential evidence。当前有 133 个 differential-verified case（411 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；暂不建设 CI，后续按执行手册定期本地 Docker 重放，并保持普通测试中的显式环境型 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。

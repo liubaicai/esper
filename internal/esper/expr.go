@@ -2668,13 +2668,49 @@ func TypeName(value Expr) Expression[string] {
 	return makeExpr[string]("type-of", "type-of("+value.Description()+")", []*exprNode{value.node()}, func(ctx EvalContext) Value {
 		current := value.eval(ctx)
 		if !current.IsPresent() {
+			if fragment, ok := typeNameFragmentValue(value.node(), ctx.Event, current); ok {
+				return fragment
+			}
 			return Null()
+		}
+		if fragment, ok := typeNameFragmentValue(value.node(), ctx.Event, current); ok {
+			return fragment
 		}
 		if event, ok := current.Any().(Event); ok {
 			return Present(event.TypeName())
 		}
 		return Present(reflect.TypeOf(current.Any()).String())
 	})
+}
+
+// typeNameFragmentValue resolves declared fragment metadata without changing
+// the ordinary Go runtime type-name contract. Esper's typeof(fragment)
+// reports the declared nested event type, including [] for fragment arrays;
+// Avro carries that metadata even when the underlying field is empty.
+func typeNameFragmentValue(node *exprNode, event Event, current Value) (Value, bool) {
+	if node == nil || node.kind != "field" || !event.Schema().valid() {
+		return Value{}, false
+	}
+	nested, ok := event.Schema().NestedSchema(node.fieldName)
+	if !ok || !nested.valid() {
+		return Value{}, false
+	}
+	if event.Schema().Kind() != SchemaAvro &&
+		(!current.IsPresent() || isNilReflectValue(reflect.ValueOf(current.Any()))) {
+		return Null(), true
+	}
+	name := nested.Name()
+	if field, exists := event.Schema().Field(node.fieldName); exists && isFragmentArrayType(field.Type) {
+		name += "[]"
+	}
+	return Present(name), true
+}
+
+func isFragmentArrayType(typ reflect.Type) bool {
+	for typ != nil && typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	return typ != nil && (typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice)
 }
 
 // InstanceOf reports whether a present value is assignable to T.

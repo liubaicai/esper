@@ -1,0 +1,156 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-type-name",
+  "steps": [
+    {
+      "op": "case",
+      "case": "type-name-fragment-object-array"
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "empty"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "inside"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "insidearr"
+      }
+    },
+    {
+      "op": "case",
+      "case": "type-name-fragment-map"
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "empty"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "inside"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "insidearr"
+      }
+    },
+    {
+      "op": "case",
+      "case": "type-name-fragment-avro"
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "empty"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "inside"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "insidearr"
+      }
+    },
+    {
+      "op": "case",
+      "case": "type-name-fragment-json"
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "empty"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "inside"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "insidearr"
+      }
+    },
+    {
+      "op": "case",
+      "case": "type-name-fragment-json-provided"
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "empty"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "inside"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "insidearr"
+      }
+    },
+    {
+      "op": "case",
+      "case": "type-name-fragment-default"
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "empty"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "inside"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MySchema",
+      "payload": {
+        "shape": "insidearr"
+      }
+    }
+  ]
+}

@@ -10412,7 +10412,11 @@
    ],
    "goTests": [
     "TestTypeNameExpressionsMatchDynamicValuesAndEventTypeIdentity",
-    "TestExpressionCastExistenceTypeAndArrayAccess"
+    "TestTypeNameExpressionsUseDeclaredFragmentMetadata",
+    "TestRunExprCoreTypeNameDiffWritesPassingEvidence",
+    "TestRunExprCoreTypeNameRejectsMalformedScenarioShape",
+    "TestExprCoreTypeNameCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunExprCoreTypeNameDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10424,17 +10428,28 @@
     "null",
     "plan-identity"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-source",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-type-name.json",
+    "testdata/parity/expr-core-type-name.trace.json",
+    "testdata/parity/expr-core-type-name.evidence.json",
+    "tools/java-oracle/ExprCoreTypeNameScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-type-name.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
-   "difference": "Go's TypeName(Expr) returns the schema TypeName for an Event envelope and the Go reflect type string for ordinary dynamic values, preserving Null and Plan identity; dynamic Map values are covered live. Java fragment/variant names, POJO simple-name rules, representation-specific metadata and exact invalid diagnostics remain partial because the Go builder has no EPL/SODA type-name parser.",
+   "difference": "Go's TypeName(Expr) preserves the schema TypeName for Event envelopes and the Go reflect type string for ordinary dynamic values. The strict fragment replay verifies declared InnerSchema and InnerSchema[] names across object-array, map, JSON, JSON-provided, and default representations, plus Avro declared metadata for empty/null fields; non-Avro missing/null fragments remain Null. The POJO simple-name, invalid compile, dynamic-property wrapper-name, and variant/match-recognize executions remain implemented-only because the Go builder has no EPL/SODA type-name parser and intentionally keeps Go-native dynamic type names.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-eeeacbe2c7669e1e1207"
+   ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -34610,8 +34625,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 522,
 "implementedCases": 520,
-"differentialVerifiedCases": 132,
-"differentialVerifiedRuntimeIds": 410,
+"differentialVerifiedCases": 133,
+"differentialVerifiedRuntimeIds": 411,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

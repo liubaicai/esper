@@ -1,3 +1,16 @@
+> 最新补充：Draft 4.207（2026-08-20），新增 `expr-core-type-name`
+> differential-verified 场景：固定 Java `ExprCoreTypeOfFragment` 的一个可观测
+> execution 与 Go 类型化 `TypeName(Expr)` replay 产生 18 条 listener records、0
+> differences，覆盖 object-array、map、Avro、JSON、JSON-provided、default 六种
+> representation，以及 fragment `InnerSchema`/`InnerSchema[]` 名称、Avro 空/Null
+> 元数据、非 Avro Null/Missing 和 fresh listener lifecycle。新增声明式 nested
+> schema metadata 路径，同时保持普通 Go reflection type name 不变。POJO
+> simple-name、invalid compile、dynamic wrapper-name 与 variant/match-recognize
+> execution 仍为 implemented-only。Java oracle 运行器补齐 Avro 配置与 Jackson
+> classpath，固定 commit 的 scenario、trace、evidence 及 value/order/case/time
+> mutation checks 已纳入兼容资产；manifest 更新为 133 个 differential-verified
+> case、411 个 differential runtime IDs。
+
 > 最新补充：Draft 4.206（2026-08-20），新增 `expr-core-instanceof`
 > differential-verified 场景：固定 Java `ExprCoreInstanceOf` 的五个可观测
 > execution 与 Go 类型化 `InstanceOf[T]`/`Or` replay 产生 17 条 listener

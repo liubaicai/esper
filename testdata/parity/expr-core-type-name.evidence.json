@@ -1,0 +1,839 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-eeeacbe2c7669e1e1207"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreTypeOf.java"
+  ],
+  "javaExecutions": [
+    "ExprCoreTypeOfFragment"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-type-name",
+    "steps": [
+      {
+        "op": "case",
+        "case": "type-name-fragment-object-array"
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "empty"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "inside"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "insidearr"
+        }
+      },
+      {
+        "op": "case",
+        "case": "type-name-fragment-map"
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "empty"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "inside"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "insidearr"
+        }
+      },
+      {
+        "op": "case",
+        "case": "type-name-fragment-avro"
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "empty"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "inside"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "insidearr"
+        }
+      },
+      {
+        "op": "case",
+        "case": "type-name-fragment-json"
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "empty"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "inside"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "insidearr"
+        }
+      },
+      {
+        "op": "case",
+        "case": "type-name-fragment-json-provided"
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "empty"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "inside"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "insidearr"
+        }
+      },
+      {
+        "op": "case",
+        "case": "type-name-fragment-default"
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "empty"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "inside"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "shape": "insidearr"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-type-name",
+    "records": [
+      {
+        "case": "type-name-fragment-object-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-object-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-object-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json-provided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json-provided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json-provided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-type-name",
+    "records": [
+      {
+        "case": "type-name-fragment-object-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-object-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-object-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json-provided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json-provided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-json-provided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": "InnerSchema",
+              "t1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "type-name-fragment-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "t0": {
+                "state": "null"
+              },
+              "t1": "InnerSchema[]"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
