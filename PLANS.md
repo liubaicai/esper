@@ -30,13 +30,13 @@ activity or a single coverage percentage.
 - Baseline: `master` at `57c2079bd` (verified clean and matching
   `origin/master` before this work unit).
 - Status: Current-evaluation-context is differential-verified; parity assets,
-  manifest/docs, canonical Java/Go traces, and all required local gates are
-  complete. The semantic commit and push are the remaining delivery action.
+  manifest/docs, canonical Java/Go traces, all required local gates, semantic
+  commit, and push are complete.
 - Current work unit: `expr.core` / `case.expr-core-current-evaluation-context`
-- Exact next action: review the final diff, create the semantic commit, push
-  `master`, and record the resulting commit in this checkpoint.
-- Worktree notes: current work-unit files are modified; no unrelated files are
-  in scope; `master` still matches `origin/master` before delivery.
+- Exact next action: select the next closed-loop work unit after confirming the
+  remote `master` state.
+- Worktree notes: semantic changes are committed; this checkpoint closure is
+  the only pending documentation update; no unrelated files are in scope.
 
 ## Work-unit contract
 
@@ -93,7 +93,7 @@ activity or a single coverage percentage.
       where verified facts changed.
 - [x] Run independent parity review, resolve findings, and run complete local
       gates plus the applicable milestone gate.
-- [ ] Review the final diff, create one semantic commit, push `master`, and
+- [x] Review the final diff, create one semantic commit, push `master`, and
       record the commit and actual validation.
 
 ## Discoveries and decisions
@@ -150,7 +150,8 @@ activity or a single coverage percentage.
 
 ## Delivery
 
-- Current work-unit semantic commit and push are pending final diff review.
+- Current work-unit semantic commit `afe5b0265`: `expr: verify current
+  evaluation context parity`, pushed to `origin/master`.
 - Previous work-unit semantic commit `344f9ddf6` and checkpoint closure
   `65913ab0d` remain in history; no force-push or semantic-history rewrite is
   required for this unit.
