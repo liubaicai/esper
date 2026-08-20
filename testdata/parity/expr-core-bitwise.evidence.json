@@ -1,0 +1,151 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-b0d354033a204970cb26",
+    "java-runtime-7819faeecbb3e817d49d"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreBitWiseOperators.java"
+  ],
+  "javaExecutions": [
+    "ExprCoreBitWiseOp",
+    "ExprCoreBitWiseOpOM"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-bitwise",
+    "steps": [
+      {
+        "op": "case",
+        "case": "bitwise-op"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "bytePrimitive": 1,
+          "byteBoxed": 1,
+          "shortPrimitive": 2,
+          "shortBoxed": 2,
+          "intPrimitive": 1,
+          "intBoxed": 3,
+          "longPrimitive": 3,
+          "longBoxed": 4,
+          "boolPrimitive": false,
+          "boolBoxed": false
+        }
+      },
+      {
+        "op": "case",
+        "case": "bitwise-op-om"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "bytePrimitive": 1,
+          "byteBoxed": 1,
+          "shortPrimitive": 2,
+          "shortBoxed": 2,
+          "intPrimitive": 1,
+          "intBoxed": 3,
+          "longPrimitive": 3,
+          "longBoxed": 4,
+          "boolPrimitive": false,
+          "boolBoxed": false
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-bitwise",
+    "records": [
+      {
+        "case": "bitwise-op",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myFifthProperty": false,
+              "myFirstProperty": 1,
+              "myFourthProperty": 7,
+              "mySecondProperty": 2,
+              "myThirdProperty": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "bitwise-op-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myFifthProperty": false,
+              "myFirstProperty": 1,
+              "myFourthProperty": 7,
+              "mySecondProperty": 2,
+              "myThirdProperty": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-bitwise",
+    "records": [
+      {
+        "case": "bitwise-op",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myFifthProperty": false,
+              "myFirstProperty": 1,
+              "myFourthProperty": 7,
+              "mySecondProperty": 2,
+              "myThirdProperty": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "bitwise-op-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myFifthProperty": false,
+              "myFirstProperty": 1,
+              "myFourthProperty": 7,
+              "mySecondProperty": 2,
+              "myThirdProperty": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

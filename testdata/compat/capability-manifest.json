@@ -9912,16 +9912,28 @@
     "null",
     "invalid"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
+   "difference": "Go exposes typed BitwiseAnd/BitwiseOr/BitwiseXor (and Binary* aliases) for integer and boolean expressions, plus explicit Bitwise*Of/Binary*Of adapters for primitive/boxed or pointer operands. Integer width/signedness is preserved, boolean operands use AND/OR/XOR semantics, and Null/Missing or nil boxed operands propagate to Null; non-bitwise types are rejected by the Go generic constraint while nil operands fail at Build. The two observable Java executions now have persisted zero-difference Java/Go evidence for typed byte/short/int/long and boolean results. The invalid Java execution remains implemented-only because the trace protocol has no build-error record; Java SODA/EPL syntax and exact compiler diagnostics have no direct Go parser equivalent, while wider numeric promotion and complete mixed representation metadata remain open.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b0d354033a204970cb26",
+    "java-runtime-7819faeecbb3e817d49d"
+   ],
    "evidence": [
     "java-runtime-inventory",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-bitwise.json",
+    "testdata/parity/expr-core-bitwise.trace.json",
+    "testdata/parity/expr-core-bitwise.evidence.json",
+    "tools/java-oracle/ExprCoreBitwiseScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-bitwise.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
-   "difference": "Go exposes typed BitwiseAnd/BitwiseOr/BitwiseXor (and Binary* aliases) for integer and boolean expressions, plus explicit Bitwise*Of/Binary*Of adapters for primitive/boxed or pointer operands. Integer width/signedness is preserved, boolean operands use AND/OR/XOR semantics, and Null/Missing or nil boxed operands propagate to Null; non-bitwise types are rejected by the Go generic constraint while nil operands fail at Build. Java SODA/EPL syntax and exact compiler diagnostics have no direct Go parser equivalent; wider numeric promotion and complete mixed representation metadata remain open.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -34355,8 +34367,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 521,
 "implementedCases": 519,
-"differentialVerifiedCases": 120,
-"differentialVerifiedRuntimeIds": 368,
+"differentialVerifiedCases": 121,
+"differentialVerifiedRuntimeIds": 370,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

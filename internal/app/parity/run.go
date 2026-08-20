@@ -24,7 +24,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, epl-insert-into-transpose-pattern, epl-insert-into-transpose-pattern-diff, infra-faf-scene-two, infra-faf-scene-two-diff, infra-nwtable-subquery, infra-nwtable-subquery-diff, infra-nwtable-subquery-delete-aggregate, infra-nwtable-subquery-delete-aggregate-diff, subquery, subquery-diff, named-window-mutation, named-window-mutation-diff, table-mutation, table-mutation-diff, variable-deploy, variable-deploy-diff, context-output, context-output-diff, deployment-restart, deployment-restart-diff, high-cardinality, high-cardinality-diff, time-window, time-window-diff, dataflow-connector, dataflow-connector-diff, output-after, output-after-diff, resultset-aggregate-count-sum, resultset-aggregate-count-sum-diff, resultset-aggregate-limit-snapshot, resultset-aggregate-limit-snapshot-diff, resultset-aggregate-filtered, resultset-aggregate-filtered-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, expr-core-bitwise, expr-core-bitwise-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, output-policy, output-policy-diff, pattern-timer, pattern-timer-diff, epl-insert-into-transpose-pattern, epl-insert-into-transpose-pattern-diff, infra-faf-scene-two, infra-faf-scene-two-diff, infra-nwtable-subquery, infra-nwtable-subquery-diff, infra-nwtable-subquery-delete-aggregate, infra-nwtable-subquery-delete-aggregate-diff, subquery, subquery-diff, named-window-mutation, named-window-mutation-diff, table-mutation, table-mutation-diff, variable-deploy, variable-deploy-diff, context-output, context-output-diff, deployment-restart, deployment-restart-diff, high-cardinality, high-cardinality-diff, time-window, time-window-diff, dataflow-connector, dataflow-connector-diff, output-after, output-after-diff, resultset-aggregate-count-sum, resultset-aggregate-count-sum-diff, resultset-aggregate-limit-snapshot, resultset-aggregate-limit-snapshot-diff, resultset-aggregate-filtered, resultset-aggregate-filtered-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -44,6 +44,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	scenario, err := compat.LoadScenario(file)
 	if err != nil {
 		return fail(stderr, err)
+	}
+	if *mode == "expr-core-bitwise" || *mode == "expr-core-bitwise-diff" {
+		trace, err := runExprCoreBitwiseScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-core-bitwise-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, exprCoreBitwiseJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprCoreBitwiseJavaSources),
+				splitMetadata(*javaExecutions, exprCoreBitwiseJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
 	}
 	if *mode == "context-hash" || *mode == "context-hash-diff" {
 		trace, err := runContextHashScenario(context.Background(), scenario)

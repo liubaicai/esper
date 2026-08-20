@@ -1,0 +1,46 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-bitwise",
+  "steps": [
+    {
+      "op": "case",
+      "case": "bitwise-op"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "bytePrimitive": 1,
+        "byteBoxed": 1,
+        "shortPrimitive": 2,
+        "shortBoxed": 2,
+        "intPrimitive": 1,
+        "intBoxed": 3,
+        "longPrimitive": 3,
+        "longBoxed": 4,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    },
+    {
+      "op": "case",
+      "case": "bitwise-op-om"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "bytePrimitive": 1,
+        "byteBoxed": 1,
+        "shortPrimitive": 2,
+        "shortBoxed": 2,
+        "intPrimitive": 1,
+        "intBoxed": 3,
+        "longPrimitive": 3,
+        "longBoxed": 4,
+        "boolPrimitive": false,
+        "boolBoxed": false
+      }
+    }
+  ]
+}

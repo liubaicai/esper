@@ -4,14 +4,14 @@
 
 ## 0. 实时状态入口
 
-截至 2026-08-19，manifest v2 的已校验摘要为：
+截至 2026-08-20，manifest v2 的已校验摘要为：
 
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
 | Case | 521 |
-| Case differential-verified | 120 |
-| Differential-verified runtime | 368 / 4,136 |
+| Case differential-verified | 121 |
+| Differential-verified runtime | 370 / 4,136 |
 | Runtime 已关联 | 2,898 / 4,136（70.1%） |
 | Runtime 未关联 | 1,238 |
 | Representative scenario | 94 / 94 通过 |
@@ -191,7 +191,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 persisted differential evidence。当前有 91 个 differential-verified case（207 个 runtime）和 92/92 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
+2. 扩展 persisted differential evidence。当前有 121 个 differential-verified case（370 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；暂不建设 CI，后续按执行手册定期本地 Docker 重放，并保持普通测试中的显式环境型 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。
