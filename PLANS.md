@@ -27,52 +27,58 @@ activity or a single coverage percentage.
 ## Active checkpoint
 
 - Updated: 2026-08-20
-- Baseline: `master` at `b8e0f3ee0` (verified clean before this work unit).
-- Status: Bitwise expression parity slice implemented, differentially verified,
-  independently reviewed, committed, and pushed to `origin/master`.
-- Current work unit: `expr.core` / `case.expr-core-bitwise`
-- Exact next action: select the next closed-loop work unit after confirming
-  the remote `master` state.
-- Worktree notes: clean; unrelated files remain out of scope; `master` matches
-  `origin/master`.
+- Baseline: `master` at `95b4f7b6b` (verified clean before this work unit).
+- Status: Current-timestamp case is promoted with passing four-record evidence;
+  review, full gates, and the focused race gate are green; commit/push remains.
+- Current work unit: `expr.core` / `case.expr-core-current-timestamp`
+- Exact next action: review the final staged diff, create the semantic commit,
+  push `master`, and record the resulting commit.
+- Worktree notes: implementation and parity assets for this unit are modified;
+  unrelated files remain out of scope; `master` still matches `origin/master`.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, bitwise operators
-- Java executions and runtime IDs:
-  `ExprCoreBitWiseOp` / `java-runtime-b0d354033a204970cb26`;
-  `ExprCoreBitWiseOpOM` / `java-runtime-7819faeecbb3e817d49d`.
-  `ExprCoreBitWiseInvalid` / `java-runtime-e1ecced8a0b539b7ba84` remains
-  implemented-only because the current trace protocol has no build-error
-  record; its Go build-error regression stays required.
-- Observable contract: one typed `SupportBean` event produces one listener
-  row with byte/short/int/long bitwise results and boolean AND semantics;
-  the EPL and object-model executions normalize to the same row values and
-  output types. Null boxed operands and invalid operand shapes remain covered
-  by the existing Go unit tests.
-- Allowed production files: `internal/app/parity/expr_core_bitwise.go`,
-  `internal/app/parity/run.go`, `internal/app/parity/run_test.go`, and the
-  focused `internal/esper` parity test only if the frozen contract exposes a
-  regression.
-- Allowed parity asset files: `tools/java-oracle/ExprCoreBitwiseScenarioOracle.java`,
-  `tools/java-oracle/run-expr-core-bitwise.sh`, and
-  `testdata/parity/expr-core-bitwise.{json,trace.json,evidence.json}`.
+- Capability/subdomain: `expr.core`, current timestamp and virtual clock
+- Java source and executions/runtime IDs:
+  `ExprCoreCurrentTimestampGet` /
+  `java-runtime-c1c1fd3dc31af4864a50`;
+  `ExprCoreCurrentTimestampOM` /
+  `java-runtime-96c8b8cb4cf36a523669`;
+  `ExprCoreCurrentTimestampCompile` /
+  `java-runtime-5b126fe7fb865be8b293`.
+- Observable contract: `current-timestamp-get` deploys `s0` with the
+  unaliased `current_timestamp()` field plus `t0`, `t1`, and `t2`; sends at
+  virtual times 100 ms and 999 ms produce rows `{100,100,100,101}` and
+  `{999,999,999,1000}` in that field order, with no old stream. The OM and
+  compile cases each deploy the `t0` projection and send one event at 777 ms,
+  producing `{777}`. Java exposes boxed Long metadata; Go exposes typed int64
+  values and normalizes both as exact epoch-millisecond numbers.
+- Allowed production files: `internal/app/parity/expr_core_current_timestamp.go`,
+  `internal/app/parity/run.go`, and the focused additions in
+  `internal/app/parity/run_test.go`; modify `internal/esper` only if the
+  frozen parity contract exposes a real regression.
+- Allowed parity asset files: `tools/java-oracle/ExprCoreCurrentTimestampScenarioOracle.java`,
+  `tools/java-oracle/run-expr-core-current-timestamp.sh`, and
+  `testdata/parity/expr-core-current-timestamp.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: unrelated semantic surfaces; `goal.txt`;
   generated evidence before trace validation; and central facts outside this
   unit's manifest/roadmap/CHANGELOG updates. `PLANS.md`, the manifest,
   roadmap, CHANGELOG, traces, and evidence remain primary-agent owned.
-- Targeted scenario and test commands: the Java oracle runner; `go test
-  ./internal/esper -run 'Bitwise' -count=1`; `go test ./internal/app/parity
-  -run 'Bitwise|ExprCoreBitwise' -count=1`; differential mutation tests;
-  `go test ./internal/compat ./internal/app/manifest -count=1`.
-- Milestone gates required: `gofmt`, `go vet ./...`, `go test ./... -count=1`,
-  manifest/evidence validation, `make check`, and `git diff --check`; race is
-  applicable at the capability milestone if the baseline remains green.
+- Targeted validation: the pinned Java oracle runner; `go test
+  ./internal/esper -run 'CurrentTimestamp|ExpressionArithmeticConditionalAndTimeFunctions'
+  -count=1`; `go test ./internal/app/parity -run
+  'ExprCoreCurrentTimestamp|CurrentTimestamp' -count=1`; differential mutation
+  tests; and `go test ./internal/compat ./internal/app/manifest -count=1`.
+- Milestone gates required: changed-file `gofmt`, `go vet ./...`, `go test
+  ./... -count=1`, manifest/evidence validation, `make check`, and `git
+  diff --check`; the focused race gate remains applicable at the expr.core
+  capability milestone.
 
 ## Progress
 
-- [x] Reconfirm baseline, current manifest summary, and relevant existing gates.
-- [x] Select the next natural work unit from roadmap priority and manifest gaps.
+- [x] Reconfirm baseline, roadmap priorities, manifest summary, and relevant
+      existing gates.
+- [x] Select the next natural work unit from the `expr.core` manifest gap.
 - [x] Freeze the Java observable contract, runtime IDs, file ownership, and
       validation commands using read-only investigation.
 - [x] Implement the smallest Go/API/parity-asset change that satisfies the
@@ -82,8 +88,8 @@ activity or a single coverage percentage.
 - [x] Update manifest, evidence, roadmap, CHANGELOG, and public summary only
       where verified facts changed.
 - [x] Run independent parity review, resolve findings, and run complete local
-      gates plus applicable milestone gates.
-- [x] Review the final diff, commit one semantic work unit, push `master`, and
+      gates plus the applicable milestone gate.
+- [ ] Review the final diff, create one semantic commit, push `master`, and
       record the commit and actual validation.
 
 ## Discoveries and decisions
@@ -94,67 +100,31 @@ activity or a single coverage percentage.
 
 ## Validation evidence
 
-Preceding adapter checkpoint validation on 2026-08-20:
-
-- Changed-document local links: passed.
-- Project model/provider binding scan: passed; no bindings found.
-- `git diff --check`: passed.
-- `go vet ./...`: passed.
-- `go test ./... -count=1 -timeout 240s`: all packages before
-  `internal/esper` passed, then the Windows compiler exhausted memory while
-  compiling that large package. Re-running
-  `go test -p 1 -gcflags=all=-c=1 ./internal/esper -count=1 -timeout 240s`
-  passed.
-- The original `scripts/check-layout.sh` passed its structural checks but Git
-  Bash exceeded the Windows command-line limit at its all-files `gofmt`
-  invocation. Equivalent per-file `gofmt -l`, public/internal API comparison,
-  and `go list ./...` checks passed; no Go file changed.
-
-Bitwise parity work-unit validation on 2026-08-20:
-
-- Fixed Java oracle `/root/app/esper` was at `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- `tools/java-oracle/run-expr-core-bitwise.sh --skip-build` produced the
-  replayable two-record Java trace at
-  `testdata/parity/expr-core-bitwise.trace.json`.
-- `go run ./cmd/parity -mode expr-core-bitwise-diff ...` produced passing
-  evidence at `testdata/parity/expr-core-bitwise.evidence.json`: 2 records on
-  each side, 0 differences, runtime IDs
-  `java-runtime-b0d354033a204970cb26` and
-  `java-runtime-7819faeecbb3e817d49d`.
-- `go test ./internal/app/parity -run 'ExprCoreBitwise|Bitwise' -count=1`
-  passed, including value/order/field mutation rejection.
-- `go test ./internal/compat -count=1` passed after manifest summary updates.
-- `go vet ./...` passed.
-- `go test ./... -count=1 -timeout 240s` passed all packages.
-- `make check` passed layout, vet, and the full test suite.
-- `go test -race ./internal/app/parity ./internal/esper -count=1 -timeout 600s`
-  passed; `internal/esper` completed in 271.673s.
-- `git diff --check` and changed-file `gofmt -l` checks passed.
-- Manifest/evidence `jq` checks passed; the focused manifest entry was also
-  re-reviewed after removing a duplicate JSON `evidence` key.
-
-Work-unit decisions:
-
-- Java runtime initialization had to be pinned to epoch `0L` in the oracle;
-  otherwise wall-clock initialization created a false trace-time difference.
-- `ExprCoreBitWiseInvalid` remains implemented-only. Its Go unit test verifies
-  Build-phase rejection, but it is excluded from differential runtime IDs
-  until the language-neutral trace protocol can represent build errors without
-  weakening the evidence contract.
-
-Independent parity review on 2026-08-20:
-
-- Compared the fixed Java `ExprCoreBitWiseOperators` source, the Go typed
-  replay, oracle normalization, scenario case order, persisted traces, and
-  manifest runtime metadata; no remaining semantic findings.
-- The review found and corrected one central-fact formatting defect: the
-  bitwise case had duplicate JSON `evidence` keys after status promotion.
-
-Delivery:
-
-- Semantic commit: `expr: verify core bitwise parity`.
-- The final checkpoint update is included in this same semantic commit, which
-  is pushed to `origin/master`.
+- Investigation baseline on 2026-08-20: `/root/app/esper` is fixed at
+  `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; `master` is clean and matches
+  `origin/master` at `95b4f7b6b`.
+- Previous work-unit result: `case.expr-core-bitwise` is persisted as
+  `differential-verified` with two runtime IDs and zero-difference evidence;
+  details are retained in `CHANGELOG.md` and its evidence artifact.
+- Current work-unit implementation result: `tools/java-oracle/run-expr-core-current-timestamp.sh`
+  generated four Java listener records; `go run ./cmd/parity -mode
+  expr-core-current-timestamp-diff ...` produced passing evidence with zero
+  differences. Focused parity success and value/order/field/time mutation tests
+  pass; the case is now `differential-verified` with three runtime IDs. Targeted
+  commands passed: `go test ./internal/esper -run
+  'CurrentTimestamp|ExpressionArithmeticConditionalAndTimeFunctions' -count=1`,
+  `go test ./internal/app/parity -run 'ExprCoreCurrentTimestamp|CurrentTimestamp'
+  -count=1`, and `go test ./internal/compat ./internal/app/manifest -count=1`.
+- Independent parity review on 2026-08-20: compared the fixed Java execution
+  source, Go replay, oracle case order, scenario steps, normalized trace,
+  evidence metadata, and promoted manifest entry; no semantic findings. The
+  persisted Java and Go traces compare equal, and value/order/field/time
+  mutations are rejected.
+- Complete local validation on 2026-08-20: the pinned Java runner, `go vet ./...`,
+  `go test ./... -count=1 -timeout 240s`, `make check`, `git diff --check`, and
+  changed-file `gofmt` checks passed. The focused race gate
+  `go test -race ./internal/app/parity ./internal/esper -count=1 -timeout 600s`
+  passed (`internal/app/parity` 18.020s; `internal/esper` 269.233s).
 
 ## Handoff
 

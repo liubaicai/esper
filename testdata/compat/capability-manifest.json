@@ -9963,16 +9963,29 @@
     "type",
     "plan-identity"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-current-timestamp.json",
+    "testdata/parity/expr-core-current-timestamp.trace.json",
+    "testdata/parity/expr-core-current-timestamp.evidence.json",
+    "tools/java-oracle/ExprCoreCurrentTimestampScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-current-timestamp.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
-   "difference": "Go exposes CurrentTimestamp() as a typed int64 epoch-millisecond expression backed by EvalContext.Now, so live statements and fire-and-forget evaluation remain deterministic under VirtualClock; repeated references and arithmetic preserve the same value and plan identity. Java EPL, SODA and compile paths are represented by the fluent constructor rather than a text parser, and exact Java event-property naming/type metadata and compiler diagnostics remain open.",
+   "difference": "Go exposes CurrentTimestamp() as a typed int64 epoch-millisecond expression backed by EvalContext.Now, so live statements and fire-and-forget evaluation remain deterministic under VirtualClock; repeated references and arithmetic preserve the same value and plan identity. The three observable Java executions now have persisted zero-difference Java/Go evidence covering the unaliased property name, repeated references, arithmetic, and virtual times 100, 999, and 777 milliseconds. Java EPL, SODA and compile paths are represented by the fluent constructor rather than a text parser, and exact boxed Long metadata and compiler diagnostics remain open.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c1c1fd3dc31af4864a50",
+    "java-runtime-96c8b8cb4cf36a523669",
+    "java-runtime-5b126fe7fb865be8b293"
+   ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -34367,8 +34380,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 521,
 "implementedCases": 519,
-"differentialVerifiedCases": 121,
-"differentialVerifiedRuntimeIds": 370,
+"differentialVerifiedCases": 122,
+"differentialVerifiedRuntimeIds": 373,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

@@ -1,0 +1,54 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-current-timestamp",
+  "steps": [
+    {
+      "op": "case",
+      "case": "current-timestamp-get"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00.100Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00.999Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    },
+    {
+      "op": "case",
+      "case": "current-timestamp-om"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00.777Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    },
+    {
+      "op": "case",
+      "case": "current-timestamp-compile"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00.777Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    }
+  ]
+}
