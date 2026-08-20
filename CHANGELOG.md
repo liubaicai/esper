@@ -1,3 +1,14 @@
+> 最新补充：Draft 4.203（2026-08-20），新增 `expr-core-in-between`
+> differential-verified 场景：固定 Java `ExprCoreInBetween` 的五个
+> scalar IN/BETWEEN execution 与 Go 类型化 replay 产生 164 条 listener
+> records、0 differences，覆盖 IN Null 传播、BETWEEN Null/reversed-bound
+> 语义、数值精度、四种 range endpoint policy、string range，以及 `s0`/
+> `s1`/`s2` lifecycle。修复 range endpoint policy 未进入 Plan identity 的
+> 缺陷；固定 Java oracle、runner、scenario、trace、evidence 和 value/
+> order/null/statement/time mutation tests 已纳入兼容资产。manifest 达到
+> 129 个 differential-verified case、398 个 differential runtime IDs，
+> 其余 IN/BETWEEN inventoried execution 保持 implemented-only。
+
 > 最新补充：Draft 4.202（2026-08-20），新增 `expr-core-like-regexp`
 > differential-verified 场景：固定 Java `ExprCoreLikeRegexp` 的四个
 > execution 与 Go 类型化 LIKE/REGEXP replay 产生 19 条 listener records、

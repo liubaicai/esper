@@ -35,91 +35,88 @@ activity or a single coverage percentage.
 
 - Updated: 2026-08-20
 - Baseline: `master` is clean and matches `origin/master` at pushed commit
-  `a448dbd4f`; the next semantic change must preserve that baseline.
-- Status: relop is committed and pushed. The like/regexp replay is
-  zero-difference, independently reviewed, and all local gates pass; the
-  semantic commit and push remain.
-- Current work unit: `expr.core` / `case.expr-core-like-regexp`
-- Exact next action: perform the final staged diff audit, create one semantic
-  commit, push `master`, and verify the remote ref without tracked edits.
-- Worktree notes: expected like/regexp implementation, parity assets, central
-  facts, this checkpoint, and the Java-contract correction in
-  `expr_filter_optimizable_or_rewrite_parity_test.go` are modified/untracked;
-  do not modify `/root/app/esper` or `goal.txt`. Previous commit identity is
-  owned by Git.
+  `896ed1312`; the next semantic change must preserve that baseline.
+- Status: like/regexp is committed and pushed. The scalar IN/BETWEEN contract
+  is implemented and differential-verified for the frozen five-execution
+  slice; independent parity review and all applicable local gates pass.
+- Current work unit: `expr.core` / `case.expr-core-in-between`
+- Exact next action: create the semantic commit, push `master`, and verify the
+  local and remote refs read-only.
+- Worktree notes: expected unit files are modified/untracked; the pinned Java
+  runner accepts the current scenario with send counts 22/36/48/48/10. Do not
+  modify `/root/app/esper` or `goal.txt`. Previous commit identity is owned by
+  Git.
 
 ## Delegation checkpoint
 
-- Collaboration facility: available; the like/regexp scouts were started
-  concurrently before implementation.
-- Java oracle scout: `01a01e35-f5b6-7661-8fa8-2162b48b42b8` (`Hypatia`),
-  completed. Confirmed the four-execution ordinal 0-3 slice, runtime IDs
-  `376f347aa8fc8367fcbc`, `09f15b6eb39cbee59b0d`,
-  `7dc8b98263cf5e9e4c3f`, and `8a8794063a0b9c4bfd0e`; ten source-derived
-  listener rows with fixed field/order contracts; Java full-match REGEXP,
-  numeric formatting, and no timers/old stream.
-- Go surface scout: `01a01e35-f46f-77d0-ab28-1a4eb60c567a` (`Volta`),
-  completed. Confirmed existing typed Like/Regexp APIs and Null/Missing/
-  typed-nil handling; no API-shape change is needed. Identified a likely
-  production gap: Go `regexp.MatchString` searches substrings while Java
-  `Pattern.matcher(...).matches()` requires a full match; the replay includes
-  a distinguishing input before any production fix.
-- Independent parity reviewer: `01a01e4f-3e36-7811-97f5-1daffab14ce9`
-  (`Erdos`), completed read-only review with one P1 finding. The finding was
-  resolved by correcting three unchanged filter parity test expressions from
-  `RegexpMatch(^prefix)` to the Java-source-equivalent `Like(prefix%)`; the
-  reviewer confirmed no remaining findings on follow-up.
-- N+1 Java contract scout: `01a01e4f-3b78-7e72-81df-74beac83c9a5`
-  (`Russell`), completed read-only `expr-core-in-between` scope; identified a
-  safe five-execution candidate and its exact runtime IDs.
-- N+1 Go surface scout: `01a01e4f-3cd5-7eb0-a713-5b17da488e25`
-  (`Kierkegaard`), completed read-only `expr-core-in-between` scope; confirmed
-  reusable typed builders and flagged endpoint-plan-identity/nullability risks.
-- Previous relop scouts/review: retained in Git history; relop was pushed as
-  `a448dbd4f`.
-- Serial exception: none; both required like/regexp scouts were started
-  through the collaboration facility with disjoint read-only scopes.
+- Collaboration facility: available; the fresh IN/BETWEEN scouts were resumed
+  and completed concurrently before implementation.
+- Java contract scout: `01a01e4f-3b78-7e72-81df-74beac83c9a5` (`Russell`),
+  completed. Confirmed source order 0/11/13/14/19, exact runtime IDs
+  `791d833152f1266fa139`, `ffe28bce1e8e2a0dc4a0`,
+  `143c2fcf5bb1e4e6aa4a`, `1145ffc38eea9ce1624e`, and
+  `31934462edbc04c83973`; frozen five-case values, null/negated/range
+  contracts, and excluded executions.
+- Go surface scout: `01a01e4f-3cd5-7eb0-a713-5b17da488e25` (`Kierkegaard`),
+  completed. Confirmed reusable `InOf`/`NotInOf`, `BetweenOf`/
+  `NotBetweenOf`, and range builders with no public API drift; identified
+  nullable replay schema needs and the endpoint-policy plan identity defect.
+- Independent parity reviewer: `01a01ea1-56e9-7f10-bbef-105d7f21b48e`
+  (`Meitner`), completed the first read-only review with no lifecycle or
+  statement-sequence mismatch. Findings were exact payload-vector validation,
+  stale baseline wording, shared provenance override and field-map ordering
+  scope decisions, plus focused nullable/negated/reversed/string-range test
+  coverage. The first follow-up closed the payload and scope findings, while
+  retaining the focused-test P2. The final follow-up completed with no P0, P1,
+  or P2 findings after the new runtime coverage; residual risk is limited to
+  the documented shared provenance/map-order protocol choices.
+- Previous like/regexp scouts/review: retained in Git history; like/regexp was
+  pushed as `896ed1312`.
+- Serial exception: none; both required IN/BETWEEN scouts were started through
+  the collaboration facility with disjoint read-only scopes.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, LIKE/REGEXP matching and Null
+- Capability/subdomain: `expr.core`, scalar IN/BETWEEN matching and Null
   propagation
 - Java source and executions/runtime IDs:
--  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreLikeRegexp.java`;
-  `ExprCoreLikeWConstants` / `java-runtime-376f347aa8fc8367fcbc`;
-  `ExprCoreLikeWExprs` / `java-runtime-09f15b6eb39cbee59b0d`;
-  `ExprCoreRegexpWConstants` / `java-runtime-7dc8b98263cf5e9e4c3f`;
-  `ExprCoreRegexpWExprs` / `java-runtime-8a8794063a0b9c4bfd0e`.
-- Differential scope: four ordered isolated cases for the executions above.
-  The scenario includes the Java source inputs plus Null and a regex
-  substring/full-match discriminator inside the dynamic REGEXP statement.
-  The invalid compile execution, escaped-character case, numeric/Null case,
-  and SODA/compile duplicate remain implemented-only for later units or Go
-  unit evidence; no runtime IDs are claimed for them here.
-- Observable contract: full-string SQL-like `%`/`_` matching, Java-compatible
-  numeric text conversion, dynamic value/pattern operands, Java full-match
-  REGEXP semantics, Null/Missing/typed-nil propagation, boxed Boolean result
-  fields, field and listener order, and fresh lifecycle boundaries. Fixed
-  inputs include matches, non-matches, Null values, numeric values, and a
-  dynamic pattern that must reject a substring-only match. No timers, windows,
-  old-stream rows, or time advances are expected.
-- Allowed production files: existing typed LIKE/REGEXP code under
-  `internal/esper` only if differential replay proves a semantic regression;
-  prefer no production change.
+-  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreInBetween.java`;
+  `ExprCoreInNumeric` / `java-runtime-791d833152f1266fa139`;
+  `ExprCoreInStringExpr` / `java-runtime-ffe28bce1e8e2a0dc4a0`;
+  `ExprCoreBetweenStringExpr` / `java-runtime-143c2fcf5bb1e4e6aa4a`;
+  `ExprCoreBetweenNumericExpr` / `java-runtime-1145ffc38eea9ce1624e`;
+  `ExprCoreInRange` / `java-runtime-31934462edbc04c83973`.
+- Differential scope: five ordered isolated cases named `in-numeric`,
+  `in-string`, `between-string`, `between-numeric`, and `in-range`.
+  The scenario must include Java's numeric/string vectors, explicit null
+  values and bounds, negated IN/BETWEEN projections, reversed bounds, all
+  four range endpoint policies, reversed range bounds, and string range
+  inputs. No timers, windows, old-stream rows, or time advances are expected.
+  Collection/object/map/array, substitution, SODA/OM/compile, BigNumber,
+  Boolean IN, numeric-coercion variants, and invalid compilation remain
+  implemented-only; no runtime IDs are claimed for them.
+- Observable contract: Java boxed Boolean result fields, exact projection and
+  listener order, Null propagation for IN, false-on-null value/bound behavior
+  for BETWEEN, numeric equality/coercion, lexicographic string ranges,
+  reversed-bound normalization, fresh per-case lifecycle, and distinct range
+  endpoint policies in both values and Plan identity.
+- Allowed production files: `internal/esper/expr_in_between.go` only for the
+  confirmed endpoint-policy Plan identity fix, plus focused tests in the same
+  expression surface.
 - Allowed Go test/parity files: a new
-  `internal/app/parity/expr_core_like_regexp.go`, focused additions only if
-  needed under `internal/esper`, and minimal dispatcher/test additions in
-  `internal/app/parity/run.go` and `run_test.go`.
+  `internal/app/parity/expr_core_in_between.go`, focused additions under
+  `internal/esper`, and minimal dispatcher/test additions in `run.go` and
+  `run_test.go`.
 - Allowed parity asset files:
-  `tools/java-oracle/ExprCoreLikeRegexpScenarioOracle.java`,
-  `tools/java-oracle/run-expr-core-like-regexp.sh`, and
-  `testdata/parity/expr-core-like-regexp.{json,trace.json,evidence.json}`.
+  `tools/java-oracle/ExprCoreInBetweenScenarioOracle.java`,
+  `tools/java-oracle/run-expr-core-in-between.sh`, and
+  `testdata/parity/expr-core-in-between.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: changes under `/root/app/esper`; unrelated
   semantic surfaces; `goal.txt`; generated evidence before trace validation;
   and central facts outside this unit's manifest/roadmap/CHANGELOG updates.
   `PLANS.md`, the manifest, roadmap, CHANGELOG, traces, and evidence remain
   primary-agent owned. Scouts do not format, build, test, commit, or push.
-- Targeted validation: the pinned Java oracle runner; focused LIKE/REGEXP
+- Targeted validation: the pinned Java oracle runner; focused IN/BETWEEN
   Esper tests; focused parity replay and mutation tests; and
   `go test ./internal/compat ./internal/app/manifest -count=1`.
 - Milestone gates required: changed-file `gofmt`, `go vet ./...`,
@@ -158,44 +155,69 @@ activity or a single coverage percentage.
 - 2026-08-20: `case.expr-core-relop` was delivered as `a448dbd4f` with two
   zero-difference runtime IDs and 30 replay records. Its scenario-shape review
   tightened exact case order and send counts.
-- 2026-08-20: `case.expr-core-like-regexp` reached zero-difference replay:
-  four differential runtime IDs, four isolated cases, and 19 ordered records.
-  The checked-in Java and Go traces both hash to
-  `086c1aa32be7ae5bf2b23ec9750853c911187e3512eac9edd8e32d8917ea6f2f`;
-  the full-match fix is covered by a unit assertion and dynamic REGEXP input.
-- 2026-08-20: After targeted validation, independent reviewer Erdos and the
-  two `expr-core-in-between` read-only scouts Russell/Kierkegaard were started
-  concurrently. Erdos found and then cleared one P1 test-modeling issue;
-  Russell/Kierkegaard identified a safe five-execution N+1 slice and its
-  endpoint-plan-identity/nullability risks without modifying files.
+- 2026-08-20: `case.expr-core-like-regexp` reached zero-difference replay and
+  was delivered as `896ed1312`; the full-match fix and Java-LIKE test-modeling
+  correction passed the complete local gates.
+- 2026-08-20: Fresh concurrent IN/BETWEEN scouts Russell/Kierkegaard froze a
+  safe five-execution scalar slice and identified the endpoint-policy Plan
+  identity defect and nullable replay schema requirement.
+- 2026-08-20: `case.expr-core-in-between` reached zero-difference replay with
+  164 records and exact `s0`/`s1`/`s2` range lifecycle; checked-in trace,
+  evidence, mutation tests, manifest, roadmap, and CHANGELOG updates are in
+  place. The endpoint-policy Plan identity regression is covered by a focused
+  Go test.
+- 2026-08-20: The first parity review's payload finding was resolved by
+  symmetric frozen vectors in the Go runner and Java oracle. Validation now
+  requires exact case/send order, event type, field set, and JSON value spelling
+  for all 164 inputs, including the ten range pairs; a Go payload mutation test
+  covers the rejection path.
+- 2026-08-20: Shared differential provenance flags remain an intentional
+  runner-level override used by existing modes and are out of scope for this
+  unit; checked-in evidence still asserts the exact fixed commit, source,
+  execution, and runtime metadata. Result fields remain maps because the
+  protocol compares field identity/value structurally and JSON encoding gives
+  deterministic lexicographic key order; field-map insertion order is likewise
+  out of scope for this unit.
+- 2026-08-20: The focused-test P2 was addressed with direct runtime coverage
+  for negated endpoint policies, reversed mixed endpoints, string ranges,
+  nullable/negated string and numeric expressions, null bounds, and
+  deploy/undeploy lifecycle isolation. The new tests are listed in the target
+  manifest entry and the final parity review confirmed no remaining findings.
 
 ## Validation evidence
 
-- Investigation baseline on 2026-08-20: `/root/app/esper` is fixed at
-  `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; `master` was clean and matched
-  `origin/master` at `a448dbd4fd59f7b97ded37f7f6e1f090ed7c1a0b`. Manifest
-  summary reports 522 cases, 127 differential-verified cases, 389
-  differential runtimes, 2,901 referenced runtimes, and 1,235 unreferenced
-  runtime IDs. The like/regexp target is implemented-only with ten runtime
-  IDs and existing Go unit coverage; no differential trace or evidence is
-  present.
-- Current unit result: the pinned Java runner produced 19 records; checked-in
-  Java and Go traces are byte-identical; differential evidence is `passing`
-  with zero differences and exact four-runtime/source/execution metadata.
-  Focused LIKE/REGEXP Esper tests, parity replay/evidence/malformed-shape and
-  six trace mutation tests, compat/manifest tests, `sh -n`, JSON validation,
-  and `git diff --check` pass. The two pre-existing filter parity failures
-  were reproduced on clean `a448dbd4f`, then corrected to use the Java
-  source's LIKE semantics. After that correction, `go vet ./...`,
-  `go test ./... -count=1 -timeout 240s`, `make check`, and
-  `make test-race` all pass. The independent parity reviewer confirmed no
-  remaining findings.
+- Investigation baseline before this unit on 2026-08-20: `/root/app/esper` is fixed at
+  `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; `master` is clean and matches
+  `origin/master` at `896ed1312`. Manifest summary reports 522 cases, 128
+  differential-verified cases, 393 differential runtimes, 2,901 referenced
+  runtimes, and 1,235 unreferenced runtime IDs. The IN/BETWEEN target is
+  implemented-only with 27 inventoried runtime associations and existing Go
+  unit coverage; no differential trace or evidence was present at that
+  baseline.
+- Current unit result: the pinned Java oracle and Go differential replay pass
+  with exact payload vectors and 164 byte-identical listener records; checked-in
+  trace/evidence identity, malformed-shape and payload rejection, six trace
+  mutations, focused expression/lifecycle tests, manifest validation, JSON
+  validation, shell syntax, and `git diff --check` pass. The full
+  `go test ./... -count=1 -timeout 240s`, `go vet ./...`, and `make check` gates
+  pass. The focused expression race selection and
+  `go test -race ./internal/app/parity ./internal/compat` pass. A clean baseline
+  worktree at `896ed1312` independently reproduces the unrelated
+  `internal/esper/join_representation_test.go:271`
+  `TestJoinInsertedWrapperRepresentationSupportsNonUniqueKeys` race timeout
+  after 45 seconds; the full race gate is therefore recorded as a pre-existing
+  baseline failure, not a unit regression. Independent parity review completed
+  with no P0, P1, or P2 findings. Final reruns also pass
+  `go test ./internal/esper -run 'InBetween|ExprCoreInRange|ExprCoreNullable' -count=1`,
+  `go test ./internal/app/parity -run 'ExprCoreInBetween' -count=1`, and
+  `go test ./internal/compat ./internal/app/manifest -count=1`; shell syntax,
+  JSON, and `git diff --check` were revalidated after the final diff audit.
 
 ## Delivery
 
 - The previous unit is committed and pushed to `origin/master` at
-  `a448dbd4f`; Git history is the authoritative source for its identity. The
-  like/regexp unit may be committed only after independent review and all
+  `896ed1312`; Git history is the authoritative source for its identity. The
+  IN/BETWEEN unit may be committed only after independent review and all
   required gates pass.
 - Do not create another tracked checkpoint update after this unit's semantic
   commit. Verify the pushed ref without editing tracked files.

@@ -172,6 +172,43 @@ func TestInBetweenExpressionsBuildLiveProjectionAndPlanIdentity(t *testing.T) {
 	}
 }
 
+func TestBetweenRangeEndpointPoliciesEnterPlanIdentity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[inBetweenParityEvent](env, "BetweenRangeIdentity"); err != nil {
+		t.Fatal(err)
+	}
+	input := From[inBetweenParityEvent](env, "BetweenRangeIdentity")
+	value := Field[inBetweenParityEvent, int]("number")
+
+	build := func(lowerInclusive, upperInclusive bool) Plan {
+		t.Helper()
+		plan, err := env.Build(Select(input,
+			Alias("value", BetweenRangeOf(value, Literal(2), Literal(4), lowerInclusive, upperInclusive)),
+		).Query(StatementName("between-range-identity")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return plan
+	}
+
+	plans := []Plan{
+		build(false, false),
+		build(true, true),
+		build(true, false),
+		build(false, true),
+	}
+	for first := range plans {
+		for second := first + 1; second < len(plans); second++ {
+			if plans[first].Hash() == plans[second].Hash() || reflect.DeepEqual(plans[first].Canonical(), plans[second].Canonical()) {
+				t.Fatalf("range endpoint policies %d and %d share Plan identity: %s", first, second, plans[first].Hash())
+			}
+		}
+	}
+	if !strings.Contains(string(plans[0].Canonical()), "between-range-of[false,false]") {
+		t.Fatalf("range endpoint policy missing from canonical plan: %s", plans[0].Canonical())
+	}
+}
+
 func TestInBetweenExpressionsRejectInvalidBuilders(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[inBetweenParityEvent](env, "InBetweenInvalid"); err != nil {

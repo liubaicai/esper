@@ -147,7 +147,7 @@ func betweenExpressionWithBounds(kind string, value, lower, upper Expr, negate, 
 			children = append(children, operand.node())
 		}
 	}
-	description := fmt.Sprintf("%s(%s)", kind, joinExpressionParts(parts, ","))
+	description := fmt.Sprintf("%s[%t,%t](%s)", kind, lowerInclusive, upperInclusive, joinExpressionParts(parts, ","))
 	node := &exprNode{kind: kind, typ: typeOf[bool](), description: description, children: children}
 	for index, operand := range []Expr{value, lower, upper} {
 		if operand == nil || operand.node() == nil {

@@ -4,6 +4,24 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.203（2026-08-20），新增 `expr-core-in-between`
+> differential-verified 场景，对照固定 Java `ExprCoreInBetween` 的五个
+> execution（`ExprCoreInNumeric`
+> `java-runtime-791d833152f1266fa139`、`ExprCoreInStringExpr`
+> `java-runtime-ffe28bce1e8e2a0dc4a0`、`ExprCoreBetweenStringExpr`
+> `java-runtime-143c2fcf5bb1e4e6aa4a`、`ExprCoreBetweenNumericExpr`
+> `java-runtime-1145ffc38eea9ce1624e`、`ExprCoreInRange`
+> `java-runtime-31934462edbc04c83973`），五个 isolated case、164 条
+> listener records、0 differences。Go 侧复用类型化 `InOf`/`NotInOf`、
+> `BetweenOf`/`NotBetweenOf` 和 range builders，覆盖 IN Null 传播、BETWEEN
+> Null/reversed-bound 语义、数值精度、四种 range endpoint policy、string
+> range，以及 `s0`/`s1`/`s2` 的 deploy/undeploy 生命周期；并修复 range
+> endpoint policy 未进入 Plan identity 的缺陷。固定 Java oracle、runner、
+> scenario、trace、evidence 和 value/order/null/statement/time mutation
+> tests 已纳入兼容资产；manifest 达到 129 个 differential-verified case、
+> 398 个 differential runtime IDs，其余 IN/BETWEEN inventoried execution
+> 保持 implemented-only。
+
 > 最新补充：Draft 4.202（2026-08-20），新增 `expr-core-like-regexp`
 > differential-verified 场景，对照固定 Java `ExprCoreLikeRegexp` 的四个
 > execution（`ExprCoreLikeWConstants`

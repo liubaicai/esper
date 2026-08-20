@@ -10949,12 +10949,19 @@
    "goTests": [
     "TestInBetweenExpressionsMatchJavaCollectionNumericBigNumberAndNullSemantics",
     "TestInBetweenExpressionsBuildLiveProjectionAndPlanIdentity",
+    "TestBetweenRangeEndpointPoliciesEnterPlanIdentity",
     "TestInBetweenExpressionsRejectInvalidBuilders",
     "TestExprCoreInNumericParity",
     "TestExprCoreInStringExprParity",
     "TestExprCoreBetweenNumericExprParity",
     "TestExprCoreBetweenStringExprParity",
-    "TestExprCoreInRangeParity"
+    "TestExprCoreInRangeParity",
+    "TestExprCoreInRangeNegatedReversedStringAndLifecycleParity",
+    "TestExprCoreNullableNegatedStringAndNumericParity",
+    "TestRunExprCoreInBetweenDiffWritesPassingEvidence",
+    "TestRunExprCoreInBetweenRejectsMalformedScenarioShape",
+    "TestExprCoreInBetweenCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunExprCoreInBetweenDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10974,17 +10981,32 @@
     "invalid",
     "plan-identity"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-source",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-in-between.json",
+    "testdata/parity/expr-core-in-between.trace.json",
+    "testdata/parity/expr-core-in-between.evidence.json",
+    "tools/java-oracle/ExprCoreInBetweenScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-in-between.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
-   "difference": "Go adds InOf/NotInOf for scalar, array/slice and map-key candidates with numeric coercion, Null-aware equality and collection-null/no-row distinction; BetweenOf/NotBetweenOf accept mixed native and arbitrary-precision ordered operands, normalize reversed bounds, and return false for Null/Missing value or bound as Esper does. Existing typed In remains available and Between delegates to the mixed implementation. Java range syntax, substitution parameters, EPL/SODA/compile forms, collection metadata, full object/representation matrix and exact invalid diagnostics remain partial.",
+   "difference": "Go adds InOf/NotInOf for scalar, array/slice and map-key candidates with numeric coercion, Null-aware equality and collection-null/no-row distinction; BetweenOf/NotBetweenOf accept mixed native and arbitrary-precision ordered operands, normalize reversed bounds, and return false for Null/Missing value or bound as Esper does. This differential slice verifies scalar numeric/string IN and BETWEEN plus all four range endpoint policies, reversed range bounds, string ranges, and the s0/s1/s2 lifecycle. Java range syntax, substitution parameters, EPL/SODA/compile forms, collection metadata, full object/representation matrix and exact invalid diagnostics remain partial.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-791d833152f1266fa139",
+    "java-runtime-ffe28bce1e8e2a0dc4a0",
+    "java-runtime-143c2fcf5bb1e4e6aa4a",
+    "java-runtime-1145ffc38eea9ce1624e",
+    "java-runtime-31934462edbc04c83973"
+   ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -34533,8 +34555,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 522,
 "implementedCases": 520,
-"differentialVerifiedCases": 128,
-"differentialVerifiedRuntimeIds": 393,
+"differentialVerifiedCases": 129,
+"differentialVerifiedRuntimeIds": 398,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,
