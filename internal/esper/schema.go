@@ -1910,19 +1910,24 @@ func schemaDescendsFrom(event Schema, targetName string, visited map[string]stru
 
 func (s Schema) get(underlying any, name string) Value {
 	if underlying == nil {
+		if propertyPathStartsOptional(name) {
+			return Missing()
+		}
 		return Null()
 	}
-	if value, record := avroRecordProperty(underlying, name); record && !value.IsMissing() {
-		return value
-	}
-	if values, ok := underlying.(map[string]Value); ok {
-		if value, exists := values[name]; exists {
+	if !strings.Contains(name, "?") {
+		if value, record := avroRecordProperty(underlying, name); record && !value.IsMissing() {
 			return value
 		}
-	}
-	if values, ok := underlying.(map[string]any); ok {
-		if value, exists := values[name]; exists {
-			return presentPropertyValue(value)
+		if values, ok := underlying.(map[string]Value); ok {
+			if value, exists := values[name]; exists {
+				return value
+			}
+		}
+		if values, ok := underlying.(map[string]any); ok {
+			if value, exists := values[name]; exists {
+				return presentPropertyValue(value)
+			}
 		}
 	}
 	segments, err := parsePropertyPath(name)
@@ -1932,6 +1937,12 @@ func (s Schema) get(underlying any, name string) Value {
 	current := Present(underlying)
 	currentSchema := s
 	for _, segment := range segments {
+		if current.IsMissing() {
+			return current
+		}
+		if current.IsNull() && segment.optional {
+			return Missing()
+		}
 		if segment.name != "" {
 			current = currentSchema.getOneWithAccessors(current.Any(), segment.name, segment.accessors)
 		} else {
@@ -1939,7 +1950,10 @@ func (s Schema) get(underlying any, name string) Value {
 				current = applyPropertyAccessor(current, accessor)
 			}
 		}
-		if !current.IsPresent() {
+		if current.IsNull() && segment.optional {
+			current = Missing()
+		}
+		if current.IsMissing() {
 			return current
 		}
 		if segment.name != "" {
@@ -1954,11 +1968,18 @@ func (s Schema) get(underlying any, name string) Value {
 // propertyPathSegment is the parsed form of one event-property path segment.
 // A segment can contain a named property followed by literal indexed or
 // mapped access, for example "items[0]" or "labels('primary')".  The
-// optional "?" suffix used by Esper property getters is accepted and has no
-// effect on the Value state: Missing and Null remain distinguishable.
+// optional "?" suffix used by Esper property getters is accepted. At an
+// optional segment boundary, a Null result becomes Missing while ordinary
+// paths continue to preserve the distinction between Missing and Null.
 type propertyPathSegment struct {
 	name      string
+	optional  bool
 	accessors []propertyAccessor
+}
+
+func propertyPathStartsOptional(name string) bool {
+	segments, err := parsePropertyPath(name)
+	return err == nil && len(segments) > 0 && segments[0].optional
 }
 
 type propertyAccessor struct {
@@ -1975,17 +1996,19 @@ const (
 )
 
 func getPropertyPath(underlying any, name string, one func(any, string) Value) Value {
-	if value, record := avroRecordProperty(underlying, name); record && !value.IsMissing() {
-		return value
-	}
-	if values, ok := underlying.(map[string]Value); ok {
-		if value, exists := values[name]; exists {
+	if !strings.Contains(name, "?") {
+		if value, record := avroRecordProperty(underlying, name); record && !value.IsMissing() {
 			return value
 		}
-	}
-	if values, ok := underlying.(map[string]any); ok {
-		if value, exists := values[name]; exists {
-			return presentPropertyValue(value)
+		if values, ok := underlying.(map[string]Value); ok {
+			if value, exists := values[name]; exists {
+				return value
+			}
+		}
+		if values, ok := underlying.(map[string]any); ok {
+			if value, exists := values[name]; exists {
+				return presentPropertyValue(value)
+			}
 		}
 	}
 	segments, err := parsePropertyPath(name)
@@ -1994,13 +2017,22 @@ func getPropertyPath(underlying any, name string, one func(any, string) Value) V
 	}
 	current := Present(underlying)
 	for _, segment := range segments {
+		if current.IsMissing() {
+			return current
+		}
+		if current.IsNull() && segment.optional {
+			return Missing()
+		}
 		if segment.name != "" {
 			current = one(current.Any(), segment.name)
 		}
 		for _, accessor := range segment.accessors {
 			current = applyPropertyAccessor(current, accessor)
 		}
-		if !current.IsPresent() {
+		if current.IsNull() && segment.optional {
+			current = Missing()
+		}
+		if current.IsMissing() {
 			return current
 		}
 	}
@@ -2107,6 +2139,7 @@ func parsePropertySegment(part string) (propertyPathSegment, error) {
 			if strings.TrimSpace(part[index+1:]) != "" {
 				return propertyPathSegment{}, fmt.Errorf("unexpected text after '?' in %q", part)
 			}
+			segment.optional = true
 			index = len(part)
 		case '[':
 			close := strings.IndexByte(part[index+1:], ']')

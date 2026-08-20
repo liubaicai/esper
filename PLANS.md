@@ -34,87 +34,96 @@ activity or a single coverage percentage.
 ## Active checkpoint
 
 - Updated: 2026-08-20
-- Baseline: `HEAD` and `origin/master` remain at the clean baseline commit
-  `3390ed16b`; the worktree contains only the current TypeName unit changes.
-- Status: the TypeName fragment implementation, checked-in trace/evidence, and
-  pinned Java/Go replay pass with zero differences. Planck's independent review
-  agent was nonresponsive and closed; a bounded local review found no concrete
-  issues. The final diff review is complete; semantic delivery remains pending.
-- Current work unit: `expr.core` / `case.expr-core-type-name`
-- Exact next action: run the last read-only consistency check, then create and
-  push the semantic TypeName commit.
-- Worktree notes: TypeName implementation, parity runner/tests, scenario, and
-  Java oracle/runner are modified or new; do not modify `/root/app/esper` or
+- Baseline: `HEAD` and `origin/master` are clean and match at pushed commit
+  `6a29940a1`; the next semantic change must preserve that baseline.
+- Status: TypeName fragment parity is delivered. Exists/Cast implementation and
+  the pinned Java replay now pass targeted validation with byte-identical traces;
+  central metadata is updated and awaits independent review and full gates.
+- Current work unit: `expr.core` / `case.expr-core-exists-cast`
+- Exact next action: validate the updated manifest/evidence, run the broad local
+  gates, obtain the independent parity review, then record the final result
+  before the semantic commit.
+- Worktree notes: current work-unit edits are present in `internal/app/parity`,
+  `PLANS.md`, and the scenario; preserve them and do not modify `/root/app/esper` or
   `goal.txt`.
 
 ## Delegation checkpoint
 
 - Collaboration facility: available; the required scouts were sent concurrently
   through collaboration tools before implementation.
-- Java contract scout: Epicurus `01a01f5f-3760-7f93-b045-bdcdc38c2397`;
-  completed. It froze all five source-order executions and identified the
-  fragment, POJO, dynamic wrapper-name, variant/match-recognize, and invalid
-  compile boundaries.
-- Go surface scout: Plato `01a01f5f-39a9-72d0-9c70-fff51776455c`; completed.
-  It confirmed the typed `TypeName` surface, the existing Go-name contract for
-  ordinary values, and the missing declared fragment metadata path.
-- Independent parity reviewer: Planck `01a01f85-d751-7580-b79c-1598d2001cfb`
-  was started after targeted validation, but remained nonresponsive after
-  several waits and a completion prompt; it was closed without a report.
-  A bounded local review found no concrete findings.
-- Asset-writer handoff: Java scout Epicurus was asked to write only the
-  disjoint TypeName oracle/scenario assets after contract freeze, but did not
-  return a patch after three 30-second waits and two stop requests. It was
-  closed; the primary agent is taking over that exact allowed asset scope.
-- Serial exception: asset writing is serial in this handoff because the
-  delegated writer remained nonresponsive; no semantic scope or file ownership
-  was broadened.
+- Java contract scout: Turing `01a01f9c-a9a0-7662-8970-70a021400a6a` was
+  started concurrently but returned no deliverable after two 30-second waits,
+  an interrupt request, and closure while still reported running. The primary
+  agent inspected the fixed `ExprCoreExists.java` source locally and froze the
+  contract below.
+- Go surface scout: Plato `01a01f5f-39a9-72d0-9c70-fff51776455c` was asked
+  concurrently to inspect the typed Exists/Cast surface, but returned no
+  deliverable after the same wait/interrupt/closure sequence. The primary
+  agent inspected `expr_exists_test.go`, `expr_cast.go`, and existing parity
+  helpers locally.
+- Serial exception: both required read-only scouts were launched through the
+  collaboration facility, but neither returned findings; local source
+  inspection is the recorded fallback. No semantic scope or file ownership was
+  broadened, and no scout wrote files or ran tests.
+- Independent parity reviewer: Kuhn `01a01fbb-81cd-71b0-8bcf-500794697bd0`
+  was started after targeted validation, but remained reported as running after
+  repeated 10/30-second waits, a completion prompt, and an interrupt request;
+  it was closed without a report. The primary agent completed a bounded local
+  review of source order, exact metadata, scenario shape, evidence freshness,
+  trace counts, Null/Missing boundaries, lifecycle, and mutation coverage with
+  no concrete findings. This is a serial-review exception, not an independent
+  approval.
+- N+1 prefetch: Boyle `01a01fbb-8468-7871-8f78-f469cff59684` confirmed that
+  `ExprCoreExists.java` is exhausted at the four verified executions; remaining
+  Cast inventory entries belong to `ExprCoreCast.java` and require a new
+  explicitly scoped unit. Singer `01a01fbb-7ef0-7113-a12b-7b6e1fdfb0e2` was
+  closed after no Go-surface report; no N+1 writes started.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, typed runtime type-name predicates,
-  event envelope identity, dynamic values, fragments, variants, Null/Missing,
-  and invalid type-name diagnostics.
+- Capability/subdomain: `expr.core`, typed runtime `Exists` predicates,
+  dynamic nested property presence, explicit Null versus Missing, and the
+  source-order SODA/compile lifecycle equivalents.
 - Java source and executions/runtime IDs:
--  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreTypeOf.java`;
-  `ExprCoreTypeOfFragment` / `java-runtime-eeeacbe2c7669e1e1207`;
-  `ExprCoreTypeOfNamedUnnamedPOJO` / `java-runtime-e2b1dfb02a3ef7fb8ba3`;
-  `ExprCoreTypeOfInvalid` / `java-runtime-7811d3bb8fcadbda3937`;
-  `ExprCoreTypeOfDynamicProps` / `java-runtime-a4ad7a90bf65d6ae817f`;
-  `ExprCoreTypeOfVariantStream` / `java-runtime-c3573f2b2f4f979ab963`.
-- Differential scope: strict replay of the complete
-  `ExprCoreTypeOfFragment` execution across `OBJECTARRAY`, `MAP`, `AVRO`,
-  `JSON`, `JSONCLASSPROVIDED`, and `DEFAULT` representation branches. The
-  POJO execution remains implemented-only because the current typed Go event
-  envelope does not preserve the concrete bean subtype name. The invalid compile
-  execution remains implemented-only because the typed API has no text parser;
-  dynamic properties remain implemented-only because Java emits `Integer` and
-  `String` while the public Go contract intentionally emits `int` and
-  `string`; variant remains implemented-only because its source execution also
-  requires the unsupported match-recognize tail.
-- Observable contract: fragment projects `t0`/`t1` as nullable strings, with
-  `InnerSchema` and `InnerSchema[]` for populated non-Avro fragments and
-  representation metadata (including empty/null values) for Avro. Rows are ordered by
-  representation then payload, use fresh deployment/lifecycle per execution,
-  and have no timers, old stream, or runtime errors. Null/Missing remains
-  null for non-Avro fragments. Java source/runtime IDs are exact and pinned to
-  commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-- Allowed production files: `internal/esper/expr.go` and the smallest directly
-  related focused TypeName test file only. No global Go reflection-name change
-  is authorized.
-- Allowed Go test/parity files: a new TypeName parity runner file and minimal
+-  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreExists.java`;
+  `ExprCoreExistsSimple` / `java-runtime-d77c035088ce635538c7`;
+  `ExprCoreExistsInner` / `java-runtime-4202039fb2f1ea65fd49`;
+  `ExprCoreCastDoubleAndNullOM` / `java-runtime-8fa7f5076dde9d791d08`;
+  `ExprCoreCastStringAndNullCompile` / `java-runtime-afd826c7d955eb538001`.
+- Differential scope: strict replay of these four source-order executions,
+  using 1, 5, 3, and 3 sends respectively. `ExprCoreExistsSimple` projects
+  `c0..c4` as `true,true,false,true,true` from a SupportBean with
+  `theString=abc`, `intPrimitive=100`, `intBoxed=3`, and `floatBoxed=9.5`.
+  `ExprCoreExistsInner` projects `t0..t10` for null, the default complex
+  property bean twice, nested SupportBean, and SupportBean_A(id=10), with the
+  exact vectors frozen from the Java assertions. The OM and compile executions
+  each project `t0` for nested SupportBean, null, and string `abc`, producing
+  `true,false,false`; their language-entry difference is normalized to the
+  same typed Go plan and fresh lifecycle.
+- Observable contract: every result field is Boolean; rows are ordered by
+  source case and send order, have new-stream only, no timers, no time advance,
+  and no runtime errors. `Exists` is true for a present property even when its
+  value is null, false for Missing, null intermediate objects, and incompatible
+  dynamic values. Java bean inputs are represented by deterministic Go structs
+  and a typed dynamic root while preserving the observed presence/value
+  contract; no Java class identity is claimed. Source/runtime IDs are exact and
+  pinned to commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
+- Allowed production files: none unless the frozen replay proves a semantic
+  regression; any such change is limited to the smallest directly responsible
+  helper in `internal/esper`.
+- Allowed Go test/parity files: a new Exists/Cast parity runner file and minimal
   dispatcher/test additions in `internal/app/parity`; focused `internal/esper`
-  tests only if the frozen replay proves a regression.
+  tests only if the replay proves a regression.
 - Allowed parity asset files:
-  TypeName-specific Java oracle/runner files and
-  `testdata/parity/expr-core-type-name.{json,trace.json,evidence.json}`.
+  Exists-specific Java oracle/runner files and
+  `testdata/parity/expr-core-exists-cast.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: changes under `/root/app/esper`; unrelated
   semantic surfaces; `goal.txt`; generated evidence before trace validation;
   and central facts outside this unit's manifest/roadmap/CHANGELOG updates.
   `PLANS.md`, the manifest, roadmap, CHANGELOG, traces, and evidence remain
   primary-agent owned. Scouts do not format, build, test, commit, or push.
-- Targeted validation: the pinned Java oracle runner; focused TypeName tests;
-  focused parity replay and mutation tests; and
+- Targeted validation: the pinned Java oracle runner; focused Exists/Cast
+  tests; focused parity replay and mutation tests; and
   `go test ./internal/compat ./internal/app/manifest -count=1`.
 - Milestone gates required: changed-file `gofmt`, `go vet ./...`,
   `go test ./... -count=1`, manifest/evidence validation, `make check`, and
@@ -134,10 +143,10 @@ activity or a single coverage percentage.
 - [x] Generate and compare Java/Go traces; run targeted tests and required
       mutation checks.
 - [x] Update manifest, evidence, roadmap, CHANGELOG, and public summary only
-      where verified facts changed.
-- [x] Run the independent parity-review attempt, record the serial exception,
-      resolve any findings, and run complete local
-      gates plus the applicable milestone gate.
+      where verified facts change.
+- [x] Run independent parity review, resolve findings, and run complete local
+      gates plus the applicable milestone gate; the reviewer was nonresponsive,
+      so the documented bounded local-review exception applies.
 - [x] Review the final diff and record actual validation.
 - [ ] Create one semantic commit, push `master`, and verify the remote ref
       without tracked edits.
@@ -249,6 +258,35 @@ activity or a single coverage percentage.
   report. The primary agent performed a bounded local review of the complete
   TypeName diff and found no concrete issues; the serial-review exception is
   retained here rather than represented as an independent approval.
+- 2026-08-20: Exists/Cast scouts Turing and Plato were started concurrently for
+  the next unit but produced no deliverables after waits and interruption; they
+  were closed. Local inspection froze the four `ExprCoreExists` executions,
+  their exact runtime IDs, boolean vectors, and Null/Missing contract. The
+  unit has no authorized production change unless replay proves a regression.
+- 2026-08-20: The initial Go replay produced 12 records but differed from Java
+  for null dynamic roots, missing indexed/mapped paths on incompatible values,
+  and the OM/compile null vectors. Ordinary `Exists` and explicit nullable
+  fields must retain Null-as-present semantics, so the authorized production
+  fix is typed `OptionalProperty` plus `?` path-boundary propagation rather
+  than a global Exists change.
+- 2026-08-20: The pinned Java oracle regenerated a 12-record trace byte-identical
+  to the checked-in trace (SHA-256
+  `20c4ca6c1ff48bf2f12ec4a267003726535ace672d38291a522ec444b04e678a`). Go
+  differential replay/evidence reports 12 records and zero differences.
+- 2026-08-20: Focused Exists/Cast, malformed-scenario, checked-in-evidence,
+  trace-mutation, compat/manifest, JSON/schema, shell syntax, changed-file
+  formatting, `go vet ./...`, `go test ./... -count=1 -timeout 240s`, focused
+  expression/parity race tests, `make check`, and `git diff --check` passed.
+- 2026-08-20: Independent review by Kuhn was attempted after targeted
+  validation but remained nonresponsive and was closed without a report. The
+  primary agent's bounded local review found no concrete findings; the exact
+  serial-review exception is retained here rather than represented as an
+  independent approval. N+1 Java scout Boyle confirmed the remaining Cast
+  executions belong to `ExprCoreCast.java`, so no future writes began.
+- 2026-08-20: Final manifest audit retained both `ExprCoreExists.java` and
+  `ExprCoreCast.java` as source references because the case preserves all 17
+  inventoried runtime associations while only the four Exists-source IDs are
+  differential-verified in this unit.
 
 ## Validation evidence
 
@@ -259,20 +297,19 @@ activity or a single coverage percentage.
   referenced runtimes, and 1,235 unreferenced runtime IDs. Before this unit,
   `case.expr-core-type-name` was implemented-only with five target runtime
   associations inventoried.
-- Current unit result: changed-file formatting, checked-in trace/evidence,
-  pinned Java replay, Go differential replay, focused TypeName/parity/mutation
-  tests, `go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`,
-  focused expression/parity race tests, JSON/schema checks, shell syntax, and
-  `git diff --check` pass. The independent-review attempt has no report; the
-  bounded local review found no concrete issues. The final diff inspection found
-  no issues; remote verification remains pending.
+- Current unit result: `case.expr-core-exists-cast` is differential-verified
+  for four exact runtime IDs. The typed OptionalProperty fix, replay assets,
+  evidence, manifest, roadmap, CHANGELOG, README, and checkpoint are complete;
+  the Java/Go trace is byte-identical with zero differences. Full local gates
+  pass. The review exception is documented above; remote delivery remains
+  pending.
 
 ## Delivery
 
-- InstanceOf is committed and pushed to `origin/master` at `3390ed16b`; Git
-  history is authoritative for that identity. The TypeName unit has passed its
-  replay and required local gates and is ready for the final diff inspection
-  and semantic commit.
+- TypeName is committed and pushed to `origin/master` at `6a29940a1`; Git
+  history is authoritative for that identity. The current Exists/Cast unit has
+  passed replay, review fallback, and required local gates and is ready for one
+  semantic commit and push.
 - After the semantic commit, verify the pushed ref without editing tracked
   files or creating a checkpoint-only follow-up commit.
 

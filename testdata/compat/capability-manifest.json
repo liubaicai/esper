@@ -10359,12 +10359,20 @@
     "ExprCoreCastGeneric",
     "ExprCoreCastBigDecimalBigInt"
    ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreExists.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCast.java"
+   ],
    "goTests": [
     "TestExistsExpressionsMatchDynamicPropertyPresenceAndNullSemantics",
     "TestExpressionCastExistenceTypeAndArrayAccess",
     "TestCastExpressionsMatchJavaNumericBooleanBigNumberAndDateSemantics",
     "TestCastExpressionsBuildLiveProjectionAndPlanIdentity",
-    "TestCastExpressionsRejectInvalidBuilders"
+    "TestCastExpressionsRejectInvalidBuilders",
+    "TestRunExprCoreExistsCastDiffWritesPassingEvidence",
+    "TestRunExprCoreExistsCastRejectsMalformedScenarioShape",
+    "TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunExprCoreExistsCastDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10376,19 +10384,34 @@
     "mapped",
     "null",
     "missing",
-    "plan-identity"
+    "plan-identity",
+    "differential"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-source",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-exists-cast.json",
+    "testdata/parity/expr-core-exists-cast.trace.json",
+    "testdata/parity/expr-core-exists-cast.evidence.json",
+    "tools/java-oracle/ExprCoreExistsCastScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-exists-cast.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
-   "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not) and Cast[A,B] for typed conversion. Cast now also supports checked native numeric/boolean/rune conversion, big.Int/big.Rat, recursive arrays/slices, time.Time from RFC3339/custom or dynamic layouts, epoch milliseconds, duration and stable string formatting through CastWithLayout/CastWithFormat; live projections retain typed result metadata and plan identity. Java EPL optional-property/cast syntax, SODA/compile text paths, exact date parser/diagnostic behavior and the remaining full Java type matrix remain outside the fluent builder.",
+   "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not), plus typed OptionalProperty[T] navigation for '?' paths that turns null, incompatible and missing intermediate receivers into Missing while preserving terminal nullable Null presence. The strict replay verifies the four source-order Exists/OM/compile executions with 12 listener records and zero Java/Go differences. The remaining Cast executions, Java EPL optional-property/cast syntax, SODA/compile text paths, exact date parser/diagnostic behavior and the remaining full Java type matrix remain outside the fluent builder.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d77c035088ce635538c7",
+    "java-runtime-4202039fb2f1ea65fd49",
+    "java-runtime-8fa7f5076dde9d791d08",
+    "java-runtime-afd826c7d955eb538001"
    ]
   },
   {
@@ -34625,8 +34648,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 522,
 "implementedCases": 520,
-"differentialVerifiedCases": 133,
-"differentialVerifiedRuntimeIds": 411,
+"differentialVerifiedCases": 134,
+"differentialVerifiedRuntimeIds": 415,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

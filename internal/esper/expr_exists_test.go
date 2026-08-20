@@ -101,3 +101,34 @@ func TestExistsExpressionsMatchDynamicPropertyPresenceAndNullSemantics(t *testin
 		}
 	}
 }
+
+func TestOptionalPropertySeparatesNullReceiversAndTerminalNulls(t *testing.T) {
+	if got := OptionalProperty[any](NullLiteral[any](), "id").eval(EvalContext{}); !got.IsMissing() {
+		t.Fatalf("optional null receiver = %v, want missing", got)
+	}
+	if got := Property[any](NullLiteral[any](), "id").eval(EvalContext{}); !got.IsNull() {
+		t.Fatalf("ordinary null receiver = %v, want null", got)
+	}
+
+	value := Literal(map[string]any{
+		"id":     nil,
+		"nested": map[string]any{"value": nil},
+		"items":  []any{nil},
+		"labels": map[string]any{"primary": nil},
+	})
+	if got := OptionalProperty[any](value, "id").eval(EvalContext{}); !got.IsNull() {
+		t.Fatalf("optional terminal null = %v, want null", got)
+	}
+	if got := Property[any](value, "id?").eval(EvalContext{}); !got.IsMissing() {
+		t.Fatalf("optional terminal suffix = %v, want missing", got)
+	}
+	if got := OptionalProperty[any](value, "nested.value?").eval(EvalContext{}); !got.IsMissing() {
+		t.Fatalf("optional nested null = %v, want missing", got)
+	}
+	if got := OptionalProperty[any](value, "items[0]?").eval(EvalContext{}); !got.IsMissing() {
+		t.Fatalf("optional indexed null = %v, want missing", got)
+	}
+	if got := OptionalProperty[any](value, "labels('primary')?").eval(EvalContext{}); !got.IsMissing() {
+		t.Fatalf("optional mapped null = %v, want missing", got)
+	}
+}

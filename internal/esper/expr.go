@@ -770,7 +770,9 @@ func ResultField[V any](name string) Expression[V] {
 
 // Property resolves one named property from a value expression. It is the
 // Go-style equivalent of a nested event/map/bean property path and is useful
-// after ArrayAt when an object-array field contains nested values.
+// after ArrayAt when an object-array field contains nested values. A normal
+// Property preserves an explicit Null receiver, so Exists can distinguish it
+// from a Missing property.
 func Property[T any](object Expr, name string) Expression[T] {
 	if object == nil || strings.TrimSpace(name) == "" {
 		return makeExpr[T]("property", "property(<invalid>)", nil, func(EvalContext) Value { return Missing() })
@@ -779,7 +781,30 @@ func Property[T any](object Expr, name string) Expression[T] {
 	return makeExpr[T]("property", description, []*exprNode{object.node()}, func(ctx EvalContext) Value {
 		value := object.eval(ctx)
 		if !value.IsPresent() {
+			if value.IsNull() && propertyPathStartsOptional(name) {
+				return Missing()
+			}
 			return value
+		}
+		return castPropertyValue[T](propertyValue(value.Any(), name))
+	})
+}
+
+// OptionalProperty resolves a property from an optionally present receiver.
+// A Null, Missing, or typed-nil receiver becomes Missing, matching Esper's
+// dynamic receiver form such as item?.intBoxed. A present terminal property
+// that is itself null remains Null, so Exists still reports that the property
+// exists. A trailing ? in name applies the same optional treatment at the
+// path segment boundary.
+func OptionalProperty[T any](object Expr, name string) Expression[T] {
+	if object == nil || strings.TrimSpace(name) == "" {
+		return makeExpr[T]("optional-property", "optional-property(<invalid>)", nil, func(EvalContext) Value { return Missing() })
+	}
+	description := "optional-property(" + object.Description() + "." + name + ")"
+	return makeExpr[T]("optional-property", description, []*exprNode{object.node()}, func(ctx EvalContext) Value {
+		value := object.eval(ctx)
+		if value.IsMissing() || value.IsNull() || isNilReflectValue(reflect.ValueOf(value.Any())) {
+			return Missing()
 		}
 		return castPropertyValue[T](propertyValue(value.Any(), name))
 	})

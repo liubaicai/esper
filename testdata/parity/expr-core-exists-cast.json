@@ -1,0 +1,109 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-exists-cast",
+  "steps": [
+    {
+      "op": "case",
+      "case": "exists-simple"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "abc",
+        "intPrimitive": 100,
+        "intBoxed": 3,
+        "floatBoxed": 9.5
+      }
+    },
+    {
+      "op": "case",
+      "case": "exists-inner"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "null"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "complex"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "complex"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "nested-support-bean"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "support-bean-a"
+      }
+    },
+    {
+      "op": "case",
+      "case": "exists-om"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "support-bean"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "null"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "string"
+      }
+    },
+    {
+      "op": "case",
+      "case": "exists-compile"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "support-bean"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "null"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarkerInterface",
+      "payload": {
+        "shape": "string"
+      }
+    }
+  ]
+}
