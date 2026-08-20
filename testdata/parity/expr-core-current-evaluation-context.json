@@ -1,0 +1,32 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-current-evaluation-context",
+  "steps": [
+    {
+      "op": "case",
+      "case": "current-evaluation-context-epl"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    },
+    {
+      "op": "case",
+      "case": "current-evaluation-context-soda"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    }
+  ]
+}

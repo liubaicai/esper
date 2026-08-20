@@ -27,48 +27,52 @@ activity or a single coverage percentage.
 ## Active checkpoint
 
 - Updated: 2026-08-20
-- Baseline: `master` at `95b4f7b6b` (verified clean before this work unit).
-- Status: Current-timestamp case is promoted, committed, and pushed with
-  passing four-record evidence; review and all required gates are green.
-- Current work unit: `expr.core` / `case.expr-core-current-timestamp`
-- Exact next action: select the next closed-loop work unit after confirming the
-  remote `master` state.
-- Worktree notes: clean; unrelated files remain out of scope; `master` matches
-  `origin/master`.
+- Baseline: `master` at `57c2079bd` (verified clean and matching
+  `origin/master` before this work unit).
+- Status: Current-evaluation-context is differential-verified; parity assets,
+  manifest/docs, canonical Java/Go traces, and all required local gates are
+  complete. The semantic commit and push are the remaining delivery action.
+- Current work unit: `expr.core` / `case.expr-core-current-evaluation-context`
+- Exact next action: review the final diff, create the semantic commit, push
+  `master`, and record the resulting commit in this checkpoint.
+- Worktree notes: current work-unit files are modified; no unrelated files are
+  in scope; `master` still matches `origin/master` before delivery.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, current timestamp and virtual clock
+- Capability/subdomain: `expr.core`, current evaluation context metadata
 - Java source and executions/runtime IDs:
-  `ExprCoreCurrentTimestampGet` /
-  `java-runtime-c1c1fd3dc31af4864a50`;
-  `ExprCoreCurrentTimestampOM` /
-  `java-runtime-96c8b8cb4cf36a523669`;
-  `ExprCoreCurrentTimestampCompile` /
-  `java-runtime-5b126fe7fb865be8b293`.
-- Observable contract: `current-timestamp-get` deploys `s0` with the
-  unaliased `current_timestamp()` field plus `t0`, `t1`, and `t2`; sends at
-  virtual times 100 ms and 999 ms produce rows `{100,100,100,101}` and
-  `{999,999,999,1000}` in that field order, with no old stream. The OM and
-  compile cases each deploy the `t0` projection and send one event at 777 ms,
-  producing `{777}`. Java exposes boxed Long metadata; Go exposes typed int64
-  values and normalizes both as exact epoch-millisecond numbers.
-- Allowed production files: `internal/app/parity/expr_core_current_timestamp.go`,
-  `internal/app/parity/run.go`, and the focused additions in
+  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCurrentEvaluationContext.java`;
+  `ExprCoreCurrentEvalCtx{soda=false}` /
+  `java-runtime-2efbbb4fce55aa6ce513`;
+  `ExprCoreCurrentEvalCtx{soda=true}` /
+  `java-runtime-ca0799a6f2d163a49f7f`.
+- Observable contract: each case deploys one statement named `s0`, projects
+  `current_evaluation_context()` twice and its `getRuntimeURI()` accessor, and
+  sends one `SupportBean` at virtual time 0 ms. The listener emits one new row
+  with repeated equivalent context metadata and the runtime URI accessor:
+  runtime URI `parity-expr-core-current-evaluation-context`, statement name
+  `s0`, user object `my_user_object`, and non-context partition ID `-1`; there
+  is no old stream. Java boxed metadata and EPL/SODA compilation are normalized
+  to the typed Go `ExpressionEvaluationContext` representation. The direct
+  evaluation default partition normalization remains covered by the existing
+  Go unit test but is outside this replay trace.
+- Allowed production files: `internal/app/parity/expr_core_current_evaluation_context.go`,
+  `internal/app/parity/run.go`, and focused additions in
   `internal/app/parity/run_test.go`; modify `internal/esper` only if the
-  frozen parity contract exposes a real regression.
-- Allowed parity asset files: `tools/java-oracle/ExprCoreCurrentTimestampScenarioOracle.java`,
-  `tools/java-oracle/run-expr-core-current-timestamp.sh`, and
-  `testdata/parity/expr-core-current-timestamp.{json,trace.json,evidence.json}`.
+  frozen parity replay demonstrates a real regression.
+- Allowed parity asset files: `tools/java-oracle/ExprCoreCurrentEvaluationContextScenarioOracle.java`,
+  `tools/java-oracle/run-expr-core-current-evaluation-context.sh`, and
+  `testdata/parity/expr-core-current-evaluation-context.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: unrelated semantic surfaces; `goal.txt`;
   generated evidence before trace validation; and central facts outside this
   unit's manifest/roadmap/CHANGELOG updates. `PLANS.md`, the manifest,
   roadmap, CHANGELOG, traces, and evidence remain primary-agent owned.
 - Targeted validation: the pinned Java oracle runner; `go test
-  ./internal/esper -run 'CurrentTimestamp|ExpressionArithmeticConditionalAndTimeFunctions'
-  -count=1`; `go test ./internal/app/parity -run
-  'ExprCoreCurrentTimestamp|CurrentTimestamp' -count=1`; differential mutation
-  tests; and `go test ./internal/compat ./internal/app/manifest -count=1`.
+  ./internal/esper -run 'CurrentEvaluationContext' -count=1`; `go test
+  ./internal/app/parity -run 'ExprCoreCurrentEvaluationContext|CurrentEvaluationContext'
+  -count=1`; differential mutation tests; and `go test
+  ./internal/compat ./internal/app/manifest -count=1`.
 - Milestone gates required: changed-file `gofmt`, `go vet ./...`, `go test
   ./... -count=1`, manifest/evidence validation, `make check`, and `git
   diff --check`; the focused race gate remains applicable at the expr.core
@@ -89,7 +93,7 @@ activity or a single coverage percentage.
       where verified facts changed.
 - [x] Run independent parity review, resolve findings, and run complete local
       gates plus the applicable milestone gate.
-- [x] Review the final diff, create one semantic commit, push `master`, and
+- [ ] Review the final diff, create one semantic commit, push `master`, and
       record the commit and actual validation.
 
 ## Discoveries and decisions
@@ -97,16 +101,25 @@ activity or a single coverage percentage.
 - 2026-08-20: Codex uses root `AGENTS.md` for persistent repository
   instructions and this file as its living execution checkpoint. `.omp/`
   remains an OMP adapter rather than the shared source of project rules.
+- 2026-08-20: The current-evaluation-context Java source has two execution
+  variants that differ only by EPL/SODA compilation mode. Their shared
+  observable projection is runtime URI, statement name, user object, `-1`
+  partition ID, and the runtime URI accessor; existing typed Go implementation
+  and unit tests already cover this path.
+- 2026-08-20: The new two-case scenario produced matching Java and Go listener
+  traces at virtual time 0. The trace normalizes the Java/Go context objects to
+  four named metadata fields; differential comparison passed with zero
+  differences, and value, order, field-name, and time mutations are rejected.
 
 ## Validation evidence
 
 - Investigation baseline on 2026-08-20: `/root/app/esper` is fixed at
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; `master` is clean and matches
-  `origin/master` at `95b4f7b6b`.
+  `origin/master` at `57c2079bd`.
 - Previous work-unit result: `case.expr-core-bitwise` is persisted as
   `differential-verified` with two runtime IDs and zero-difference evidence;
   details are retained in `CHANGELOG.md` and its evidence artifact.
-- Current work-unit implementation result: `tools/java-oracle/run-expr-core-current-timestamp.sh`
+- Previous work-unit result: `tools/java-oracle/run-expr-core-current-timestamp.sh`
   generated four Java listener records; `go run ./cmd/parity -mode
   expr-core-current-timestamp-diff ...` produced passing evidence with zero
   differences. Focused parity success and value/order/field/time mutation tests
@@ -115,6 +128,15 @@ activity or a single coverage percentage.
   'CurrentTimestamp|ExpressionArithmeticConditionalAndTimeFunctions' -count=1`,
   `go test ./internal/app/parity -run 'ExprCoreCurrentTimestamp|CurrentTimestamp'
   -count=1`, and `go test ./internal/compat ./internal/app/manifest -count=1`.
+- Current work-unit implementation result: the typed Go replay and Java oracle
+  for `expr-core-current-evaluation-context` produced two listener records with
+  matching runtime URI, statement name, user object, partition ID `-1`, and
+  accessor value. The persisted differential evidence is passing with zero
+  differences. Focused Esper and parity tests, including four trace mutations,
+  pass.
+- Manifest/evidence validation initially caught a stale unreferenced-runtime
+  summary; the distinct-runtime denominator is `4,136 - 2,898 = 1,238`, and
+  the corrected manifest and documentation validate cleanly.
 - Independent parity review on 2026-08-20: compared the fixed Java execution
   source, Go replay, oracle case order, scenario steps, normalized trace,
   evidence metadata, and promoted manifest entry; no semantic findings. The
@@ -124,14 +146,14 @@ activity or a single coverage percentage.
   `go test ./... -count=1 -timeout 240s`, `make check`, `git diff --check`, and
   changed-file `gofmt` checks passed. The focused race gate
   `go test -race ./internal/app/parity ./internal/esper -count=1 -timeout 600s`
-  passed (`internal/app/parity` 18.020s; `internal/esper` 269.233s).
+  passed (`internal/app/parity` 18.116s; `internal/esper` 271.908s).
 
 ## Delivery
 
-- Semantic commit `344f9ddf6`: `expr: verify current timestamp parity`, pushed
-  to the protected `origin/master` branch.
-- The checkpoint-only closure is recorded in normal follow-up commit
-  `65913ab0d`; no force-push or semantic-history rewrite was required.
+- Current work-unit semantic commit and push are pending final diff review.
+- Previous work-unit semantic commit `344f9ddf6` and checkpoint closure
+  `65913ab0d` remain in history; no force-push or semantic-history rewrite is
+  required for this unit.
 
 ## Handoff
 

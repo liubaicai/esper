@@ -1,0 +1,169 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-2efbbb4fce55aa6ce513",
+    "java-runtime-ca0799a6f2d163a49f7f"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCurrentEvaluationContext.java"
+  ],
+  "javaExecutions": [
+    "ExprCoreCurrentEvalCtx{soda=false}",
+    "ExprCoreCurrentEvalCtx{soda=true}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-current-evaluation-context",
+    "steps": [
+      {
+        "op": "case",
+        "case": "current-evaluation-context-epl"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "case",
+        "case": "current-evaluation-context-soda"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {}
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-current-evaluation-context",
+    "records": [
+      {
+        "case": "current-evaluation-context-epl",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "contextPartitionID": -1,
+                "runtimeURI": "parity-expr-core-current-evaluation-context-current-evaluation-context-epl",
+                "statementName": "s0",
+                "statementUserObject": "my_user_object"
+              },
+              "c2": "parity-expr-core-current-evaluation-context-current-evaluation-context-epl",
+              "current_evaluation_context()": {
+                "contextPartitionID": -1,
+                "runtimeURI": "parity-expr-core-current-evaluation-context-current-evaluation-context-epl",
+                "statementName": "s0",
+                "statementUserObject": "my_user_object"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "current-evaluation-context-soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "contextPartitionID": -1,
+                "runtimeURI": "parity-expr-core-current-evaluation-context-current-evaluation-context-soda",
+                "statementName": "s0",
+                "statementUserObject": "my_user_object"
+              },
+              "c2": "parity-expr-core-current-evaluation-context-current-evaluation-context-soda",
+              "current_evaluation_context()": {
+                "contextPartitionID": -1,
+                "runtimeURI": "parity-expr-core-current-evaluation-context-current-evaluation-context-soda",
+                "statementName": "s0",
+                "statementUserObject": "my_user_object"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-core-current-evaluation-context",
+    "records": [
+      {
+        "case": "current-evaluation-context-epl",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "contextPartitionID": -1,
+                "runtimeURI": "parity-expr-core-current-evaluation-context-current-evaluation-context-epl",
+                "statementName": "s0",
+                "statementUserObject": "my_user_object"
+              },
+              "c2": "parity-expr-core-current-evaluation-context-current-evaluation-context-epl",
+              "current_evaluation_context()": {
+                "contextPartitionID": -1,
+                "runtimeURI": "parity-expr-core-current-evaluation-context-current-evaluation-context-epl",
+                "statementName": "s0",
+                "statementUserObject": "my_user_object"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "current-evaluation-context-soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "contextPartitionID": -1,
+                "runtimeURI": "parity-expr-core-current-evaluation-context-current-evaluation-context-soda",
+                "statementName": "s0",
+                "statementUserObject": "my_user_object"
+              },
+              "c2": "parity-expr-core-current-evaluation-context-current-evaluation-context-soda",
+              "current_evaluation_context()": {
+                "contextPartitionID": -1,
+                "runtimeURI": "parity-expr-core-current-evaluation-context-current-evaluation-context-soda",
+                "statementName": "s0",
+                "statementUserObject": "my_user_object"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

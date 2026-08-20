@@ -10055,7 +10055,9 @@
    ],
    "goTests": [
     "TestCurrentEvaluationContextMatchesJavaMetadataContract",
-    "TestCurrentEvaluationContextNormalizesDirectEvaluationPartitionID"
+    "TestCurrentEvaluationContextNormalizesDirectEvaluationPartitionID",
+    "TestRunExprCoreCurrentEvaluationContextDiffWritesPassingEvidence",
+    "TestRunExprCoreCurrentEvaluationContextDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10066,17 +10068,29 @@
     "user-object",
     "context-partition"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-source",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-current-evaluation-context.json",
+    "testdata/parity/expr-core-current-evaluation-context.trace.json",
+    "testdata/parity/expr-core-current-evaluation-context.evidence.json",
+    "tools/java-oracle/ExprCoreCurrentEvaluationContextScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-current-evaluation-context.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
-   "difference": "Go exposes ExpressionEvaluationContext and CurrentEvaluationContext() with explicit WithRuntimeURI/WithStatementUserObject query options. Ordinary live projections carry runtime URI, statement name, user object and non-context partition id -1 through deterministic typed metadata; direct expression evaluation also normalizes to -1. Java EPL/SODA text/model compilation and exact context-partition lifecycle payloads remain outside the fluent builder, and filter/FAF/trigger metadata propagation beyond the covered projection paths remains partial.",
+   "difference": "Go exposes ExpressionEvaluationContext and CurrentEvaluationContext() with explicit WithRuntimeURI/WithStatementUserObject query options. Ordinary live projections carry runtime URI, statement name, user object and non-context partition id -1 through deterministic typed metadata; direct expression evaluation also normalizes to -1. The two observable Java executions now have persisted zero-difference Java/Go evidence covering repeated context values and the getRuntimeURI accessor at virtual time 0. Java EPL/SODA text/model compilation and exact context-partition lifecycle payloads remain outside the fluent builder, and filter/FAF/trigger metadata propagation beyond the covered projection paths remains partial.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2efbbb4fce55aa6ce513",
+    "java-runtime-ca0799a6f2d163a49f7f"
+   ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -34380,8 +34394,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 521,
 "implementedCases": 519,
-"differentialVerifiedCases": 122,
-"differentialVerifiedRuntimeIds": 373,
+"differentialVerifiedCases": 123,
+"differentialVerifiedRuntimeIds": 375,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

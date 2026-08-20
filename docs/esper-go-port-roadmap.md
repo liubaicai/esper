@@ -4,6 +4,8 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.197（2026-08-20），新增 `expr-core-current-evaluation-context` differential-verified 场景，对照固定 Java `ExprCoreCurrentEvaluationContext` 的两个 execution（`ExprCoreCurrentEvalCtx{soda=false}` `java-runtime-2efbbb4fce55aa6ce513`、`ExprCoreCurrentEvalCtx{soda=true}` `java-runtime-ca0799a6f2d163a49f7f`），两个 isolated case、两条 listener records、0 differences。Go 侧复用类型化 `CurrentEvaluationContext()`、`Property`、`WithRuntimeURI` 和 `WithStatementUserObject`，覆盖重复 context 投影、`getRuntimeURI()` accessor、statement name、user object、非 context partition ID `-1` 与 virtual time 0；Java boxed context、EPL/SODA model 入口和完整 lifecycle payload 继续保持差异边界。固定 commit Java oracle、runner、scenario、trace、evidence 和 metadata/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 123 个 differential-verified case、375 个 differential runtime IDs。
+
 > 最新补充：Draft 4.196（2026-08-20），新增 `expr-core-current-timestamp` differential-verified 场景，对照固定 Java `ExprCoreCurrentTimestamp` 的三个 execution（`ExprCoreCurrentTimestampGet` `java-runtime-c1c1fd3dc31af4864a50`、`ExprCoreCurrentTimestampOM` `java-runtime-96c8b8cb4cf36a523669`、`ExprCoreCurrentTimestampCompile` `java-runtime-5b126fe7fb865be8b293`），三个 isolated case、四条 listener records、0 differences。Go 侧复用类型化 `CurrentTimestamp()` 和虚拟时钟，覆盖未命名 `current_timestamp()` 字段、重复引用、加一运算，以及 100/999/777 毫秒绝对时间；Java boxed Long 元数据和文本编译诊断继续保持差异边界。Java oracle、固定 commit runner、scenario、trace、evidence 和 value/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 122 个 differential-verified case、373 个 differential runtime IDs。
 
 截至 2026-08-20，manifest v2 的已校验摘要为：
@@ -12,8 +14,8 @@
 | --- | --- |
 | Capability | 110 |
 | Case | 521 |
-| Case differential-verified | 122 |
-| Differential-verified runtime | 373 / 4,136 |
+| Case differential-verified | 123 |
+| Differential-verified runtime | 375 / 4,136 |
 | Runtime 已关联 | 2,898 / 4,136（70.1%） |
 | Runtime 未关联 | 1,238 |
 | Representative scenario | 94 / 94 通过 |
