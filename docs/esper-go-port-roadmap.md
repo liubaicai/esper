@@ -4,6 +4,23 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.213（2026-08-20），扩展 `expr-core-exists-cast`
+> differential-verified 场景，对照固定 Java `ExprCoreCast` 的
+> `ExprCoreCastWArray` 两个 execution（soda=false
+> `java-runtime-53d0455ef4e377c9c2f9`、soda=true
+> `java-runtime-58852773df609efe7d69`），两个 isolated case、4 条
+> listener records、0 differences（累计 49 条）。Go 侧以
+> `Cast[any, []T]` 链式 insert-into（`MyArrayEvent` struct 目标）
+> 覆盖 9 个 array cast 目标：`string[]`、`int[primitive]`、
+> `Integer[]`（×2）、`Object[]` 及 2/3 维 `int[primitive][]`/
+> `Object[][]` 组合，元素逐层递归 coercion，SupportBean 元素渲染为
+> 字段级 token `SupportBean(E1,0)`，空 map send 九列全部 null。
+> Java EPL/SODA/compile entry details、日期/generic casts 和完整
+> 诊断矩阵仍为 implemented-only。固定 Java oracle、runner、
+> scenario、trace、evidence 与 value/null/order/mutation tests 已
+> 纳入兼容资产；manifest 保持 134 个 differential-verified case，
+> 更新为 426 个 differential runtime IDs。
+
 > 最新补充：Draft 4.212（2026-08-20），扩展 `expr-core-exists-cast`
 > differential-verified 场景，对照固定 Java `ExprCoreCast` 的
 > `ExprCoreCastInterface` execution

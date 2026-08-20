@@ -35,6 +35,8 @@ var exprCoreExistsCastJavaRuntimeIDs = []string{
 	"java-runtime-0b91403db9a899efde99",
 	"java-runtime-9babbbb6f96faf389bb7",
 	"java-runtime-f44847213060b8eb3949",
+	"java-runtime-53d0455ef4e377c9c2f9",
+	"java-runtime-58852773df609efe7d69",
 }
 
 var exprCoreExistsCastJavaExecutions = []string{
@@ -50,6 +52,8 @@ var exprCoreExistsCastJavaExecutions = []string{
 	"ExprCoreCastStringAndNullCompile",
 	"ExprCoreCastWStaticType",
 	"ExprCoreCastBigDecimalBigInt",
+	"ExprCoreCastWArray{soda=false}",
+	"ExprCoreCastWArray{soda=true}",
 }
 
 var exprCoreExistsCastCaseOrder = []string{
@@ -66,6 +70,8 @@ var exprCoreExistsCastCaseOrder = []string{
 	"cast-boolean",
 	"cast-w-static-type",
 	"cast-bigdecimal-bigint",
+	"cast-warray",
+	"cast-warray-soda",
 }
 
 type exprCoreExistsCastExpectedSend struct {
@@ -248,6 +254,40 @@ var exprCoreExistsCastExpectedSends = [][]exprCoreExistsCastExpectedSend{
 			"kind": `"null"`,
 		}},
 	},
+	{
+		{eventType: "MyEventWArray", payload: map[string]string{
+			"shape":              `"full"`,
+			"arr_string":         `["a"]`,
+			"arr_primitive":      `[1]`,
+			"arr_boxed_one":      `[2]`,
+			"arr_boxed_two":      `[3]`,
+			"arr_object":         `[{"theString":"E1","intPrimitive":0}]`,
+			"arr_2dim_primitive": `[[10]]`,
+			"arr_2dim_object":    `[[11]]`,
+			"arr_3dim_primitive": `[[[12]]]`,
+			"arr_3dim_object":    `[[[13]]]`,
+		}},
+		{eventType: "MyEventWArray", payload: map[string]string{
+			"shape": `"empty"`,
+		}},
+	},
+	{
+		{eventType: "MyEventWArray", payload: map[string]string{
+			"shape":              `"full"`,
+			"arr_string":         `["a"]`,
+			"arr_primitive":      `[1]`,
+			"arr_boxed_one":      `[2]`,
+			"arr_boxed_two":      `[3]`,
+			"arr_object":         `[{"theString":"E1","intPrimitive":0}]`,
+			"arr_2dim_primitive": `[[10]]`,
+			"arr_2dim_object":    `[[11]]`,
+			"arr_3dim_primitive": `[[[12]]]`,
+			"arr_3dim_object":    `[[[13]]]`,
+		}},
+		{eventType: "MyEventWArray", payload: map[string]string{
+			"shape": `"empty"`,
+		}},
+	},
 }
 
 type exprCoreExistsCastSupportBean struct {
@@ -257,6 +297,23 @@ type exprCoreExistsCastSupportBean struct {
 	FloatBoxed    *float32 `esper:"floatBoxed"`
 	BoolPrimitive bool     `esper:"boolPrimitive"`
 	BoolBoxed     *bool    `esper:"boolBoxed"`
+}
+
+// exprCoreExistsCastMyArrayEvent models the Java MyArrayEvent bean the
+// insert-into statement projects c0..c8 onto. Each field is the array element
+// type the corresponding Cast targets, mirroring Java's array component
+// classes (String[], int[] primitive, Integer[] boxed as int32[], Object[],
+// and the multi-dim variants).
+type exprCoreExistsCastMyArrayEvent struct {
+	C0 []string  `esper:"c0"`
+	C1 []int     `esper:"c1"`
+	C2 []int     `esper:"c2"`
+	C3 []int     `esper:"c3"`
+	C4 []any     `esper:"c4"`
+	C5 [][]int   `esper:"c5"`
+	C6 [][]int   `esper:"c6"`
+	C7 [][][]int `esper:"c7"`
+	C8 [][][]int `esper:"c8"`
 }
 
 type exprCoreExistsCastNestedNested struct {
@@ -712,6 +769,35 @@ func runExprCoreExistsCastCase(ctx context.Context, scenario compat.Scenario, ca
 			esper.Alias("c0", esper.Cast[any, big.Rat](esper.Field[map[string]any, any]("value"))),
 			esper.Alias("c1", esper.Cast[any, big.Int](esper.Field[map[string]any, any]("value"))),
 		).Query(esper.StatementName("s0"))
+	case "cast-warray", "cast-warray-soda":
+		if _, err := esper.RegisterMap(env, "MyEventWArray", []esper.FieldSpec{
+			esper.FieldDef("arr_string", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("arr_primitive", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("arr_boxed_one", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("arr_boxed_two", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("arr_object", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("arr_2dim_primitive", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("arr_2dim_object", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("arr_3dim_primitive", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("arr_3dim_object", reflect.TypeOf((*any)(nil)).Elem()),
+		}, esper.AllowDynamicFields()); err != nil {
+			return compat.Trace{}, err
+		}
+		if _, err := esper.RegisterStruct[exprCoreExistsCastMyArrayEvent](env, "MyArrayEvent"); err != nil {
+			return compat.Trace{}, err
+		}
+		input := esper.From[map[string]any](env, "MyEventWArray")
+		query = esper.Select(input,
+			esper.Alias("c0", esper.Cast[any, []string](esper.Field[map[string]any, any]("arr_string"))),
+			esper.Alias("c1", esper.Cast[any, []int](esper.Field[map[string]any, any]("arr_primitive"))),
+			esper.Alias("c2", esper.Cast[any, []int](esper.Field[map[string]any, any]("arr_boxed_one"))),
+			esper.Alias("c3", esper.Cast[any, []int](esper.Field[map[string]any, any]("arr_boxed_two"))),
+			esper.Alias("c4", esper.Cast[any, []any](esper.Field[map[string]any, any]("arr_object"))),
+			esper.Alias("c5", esper.Cast[any, [][]int](esper.Field[map[string]any, any]("arr_2dim_primitive"))),
+			esper.Alias("c6", esper.Cast[any, [][]int](esper.Field[map[string]any, any]("arr_2dim_object"))),
+			esper.Alias("c7", esper.Cast[any, [][][]int](esper.Field[map[string]any, any]("arr_3dim_primitive"))),
+			esper.Alias("c8", esper.Cast[any, [][][]int](esper.Field[map[string]any, any]("arr_3dim_object"))),
+		).InsertInto("MyArrayEvent", esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported expr-core-exists-cast case %q", caseName)
 	}
@@ -904,6 +990,54 @@ func decodeExprCoreExistsCastPayload(step compat.Step) (any, error) {
 		}
 		return map[string]any{"value": value}, nil
 	}
+	if step.EventType == "MyEventWArray" {
+		var payload struct {
+			Shape            string            `json:"shape"`
+			ArrString        []string          `json:"arr_string"`
+			ArrPrimitive     []int             `json:"arr_primitive"`
+			ArrBoxedOne      []int             `json:"arr_boxed_one"`
+			ArrBoxedTwo      []int             `json:"arr_boxed_two"`
+			ArrObject        []json.RawMessage `json:"arr_object"`
+			Arr2DimPrimitive [][]int           `json:"arr_2dim_primitive"`
+			Arr2DimObject    [][]int           `json:"arr_2dim_object"`
+			Arr3DimPrimitive [][][]int         `json:"arr_3dim_primitive"`
+			Arr3DimObject    [][][]int         `json:"arr_3dim_object"`
+		}
+		decoder := json.NewDecoder(bytes.NewReader(step.Payload))
+		decoder.UseNumber()
+		if err := decoder.Decode(&payload); err != nil {
+			return nil, fmt.Errorf("expr-core-exists-cast: decode MyEventWArray: %w", err)
+		}
+		result := map[string]any{
+			"arr_string":         payload.ArrString,
+			"arr_primitive":      payload.ArrPrimitive,
+			"arr_boxed_one":      payload.ArrBoxedOne,
+			"arr_boxed_two":      payload.ArrBoxedTwo,
+			"arr_object":         nil,
+			"arr_2dim_primitive": payload.Arr2DimPrimitive,
+			"arr_2dim_object":    payload.Arr2DimObject,
+			"arr_3dim_primitive": payload.Arr3DimPrimitive,
+			"arr_3dim_object":    payload.Arr3DimObject,
+		}
+		if payload.Shape == "full" {
+			objects := make([]any, 0, len(payload.ArrObject))
+			for _, raw := range payload.ArrObject {
+				var bean struct {
+					TheString    *string `json:"theString"`
+					IntPrimitive int     `json:"intPrimitive"`
+				}
+				if err := json.Unmarshal(raw, &bean); err != nil {
+					return nil, fmt.Errorf("expr-core-exists-cast: decode MyEventWArray arr_object: %w", err)
+				}
+				objects = append(objects, &exprCoreExistsCastSupportBean{
+					TheString:    bean.TheString,
+					IntPrimitive: bean.IntPrimitive,
+				})
+			}
+			result["arr_object"] = objects
+		}
+		return result, nil
+	}
 	if step.EventType != "SupportMarkerInterface" {
 		return nil, fmt.Errorf("expr-core-exists-cast: unsupported event type %q", step.EventType)
 	}
@@ -1014,6 +1148,28 @@ func normalizeExprCoreExistsCastValue(value any) any {
 			current[index] = normalizeExprCoreExistsCastValue(nested)
 		}
 	}
+	// Typed slices and arrays ([]string, []int, [][]int, multi-dim, etc.)
+	// render as JSON arrays of normalized elements, matching the oracle's
+	// array branch in TraceWriter.normalize. Booleans stay booleans, nested
+	// arrays recurse, all other elements stringify.
+	valueReflect := reflect.ValueOf(value)
+	for valueReflect.IsValid() && (valueReflect.Kind() == reflect.Pointer || valueReflect.Kind() == reflect.Interface) {
+		if valueReflect.IsNil() {
+			return value
+		}
+		valueReflect = valueReflect.Elem()
+	}
+	if valueReflect.IsValid() && (valueReflect.Kind() == reflect.Slice || valueReflect.Kind() == reflect.Array) {
+		items := make([]any, 0, valueReflect.Len())
+		for index := 0; index < valueReflect.Len(); index++ {
+			elem := valueReflect.Index(index)
+			if !elem.IsValid() || !elem.CanInterface() {
+				return value
+			}
+			items = append(items, normalizeExprCoreExistsCastValue(elem.Interface()))
+		}
+		return items
+	}
 	if token := exprCoreExistsCastInterfaceBeanToken(value); token != "" {
 		return token
 	}
@@ -1036,6 +1192,14 @@ func exprCoreExistsCastInterfaceBeanToken(value any) string {
 		return "ISupportAImplSuperGImplPlus"
 	case *exprCoreCastInterfaceBaseABImplBean:
 		return "ISupportBaseABImpl"
+	}
+	switch value := value.(type) {
+	case *exprCoreExistsCastSupportBean:
+		theString := ""
+		if value.TheString != nil {
+			theString = *value.TheString
+		}
+		return "SupportBean(" + theString + "," + strconv.Itoa(value.IntPrimitive) + ")"
 	}
 	return ""
 }

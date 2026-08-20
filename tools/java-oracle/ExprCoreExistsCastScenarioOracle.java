@@ -9,6 +9,7 @@ import com.espertech.esper.common.internal.support.SupportBean;
 import com.espertech.esper.compiler.client.CompilerArguments;
 import com.espertech.esper.compiler.client.EPCompilerProvider;
 import com.espertech.esper.regressionlib.support.bean.SupportBeanComplexProps;
+import com.espertech.esper.regressionlib.suite.expr.exprcore.ExprCoreCast;
 import com.espertech.esper.regressionlib.support.bean.SupportBeanDynRoot;
 import com.espertech.esper.regressionlib.support.bean.ISupportA;
 import com.espertech.esper.regressionlib.support.bean.ISupportAImplSuperG;
@@ -41,14 +42,15 @@ public final class ExprCoreExistsCastScenarioOracle {
             "exists-simple", "exists-inner", "exists-om", "exists-compile",
             "cast-simple", "cast-simple-more-types", "cast-as-parse", "cast-double-null-om",
             "cast-interface", "cast-string-and-null", "cast-boolean", "cast-w-static-type",
-            "cast-bigdecimal-bigint"
+            "cast-bigdecimal-bigint", "cast-warray", "cast-warray-soda"
     };
     private static final String[] EVENT_TYPES = {
             "SupportBean", "SupportMarkerInterface", "SupportMarkerInterface", "SupportMarkerInterface",
             "SupportBean", "SupportBean", "SupportBean", "SupportBeanDynRoot",
-            "SupportBeanDynRoot", "SupportBeanDynRoot", "SupportBean", "StaticTypeMapEvent", "MyEvent"
+            "SupportBeanDynRoot", "SupportBeanDynRoot", "SupportBean", "StaticTypeMapEvent",
+            "MyEvent", "MyEventWArray", "MyEventWArray"
     };
-    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 5, 6, 3, 1, 8};
+    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 5, 6, 3, 1, 8, 2, 2};
 
     private ExprCoreExistsCastScenarioOracle() {
     }
@@ -248,13 +250,30 @@ public final class ExprCoreExistsCastScenarioOracle {
 			}
 			return;
 		}
+	if (caseIndex == 13 || caseIndex == 14) {
+		String[] shapes = {"full", "empty"};
+		requireFieldCount(payload, sendIndex == 0 ? 10 : 1, CASES[caseIndex]);
+		requireString(payload, "shape", shapes[sendIndex]);
+		if (sendIndex == 0) {
+			requireArray(payload, "arr_string", new String[]{"a"});
+			requireIntArray(payload, "arr_primitive", new int[]{1});
+			requireIntArray(payload, "arr_boxed_one", new int[]{2});
+			requireIntArray(payload, "arr_boxed_two", new int[]{3});
+			requireArray(payload, "arr_object", new Object[]{new SupportBean("E1", 0)});
+			requireIntArray2Dim(payload, "arr_2dim_primitive", new int[][]{{10}});
+			requireArray(payload, "arr_2dim_object", new Integer[][]{{11}});
+			requireIntArray3Dim(payload, "arr_3dim_primitive", new int[][][]{{{12}}});
+			requireArray(payload, "arr_3dim_object", new Integer[][][]{{{13}}});
+		}
+		return;
+	}
 
-		String[] shapes = caseIndex == 1
-				? new String[]{"null", "complex", "complex", "nested-support-bean", "support-bean-a"}
-				: new String[]{"support-bean", "null", "string"};
-        requireFieldCount(payload, 1, CASES[caseIndex]);
-        requireString(payload, "shape", shapes[sendIndex]);
-    }
+	String[] shapes = caseIndex == 1
+			? new String[]{"null", "complex", "complex", "nested-support-bean", "support-bean-a"}
+			: new String[]{"support-bean", "null", "string"};
+    requireFieldCount(payload, 1, CASES[caseIndex]);
+    requireString(payload, "shape", shapes[sendIndex]);
+}
 
 
 	private static void requireBoolean(JsonObject payload, String name, boolean expected) {
@@ -283,6 +302,108 @@ public final class ExprCoreExistsCastScenarioOracle {
         }
     }
 
+	private static void requireArray(JsonObject payload, String name, Object[] expected) {
+		JsonValue value = payload.get(name);
+		if (value == null || !value.isArray()) {
+			throw new IllegalArgumentException("payload array mismatch for " + name);
+		}
+		requireArrayValue(value.asArray(), expected, name);
+	}
+
+	private static void requireArrayValue(JsonArray array, Object[] expected, String name) {
+		if (array.size() != expected.length) {
+			throw new IllegalArgumentException("payload array length mismatch for " + name);
+		}
+		for (int i = 0; i < expected.length; i++) {
+			Object expectedItem = expected[i];
+			JsonValue item = array.get(i);
+			if (expectedItem != null && expectedItem.getClass().isArray()) {
+				// Nested array (Object[][], Object[][][], ...): both sides must
+				// be arrays and the comparison recurses per element.
+				if (item == null || !item.isArray()) {
+					throw new IllegalArgumentException("payload nested array mismatch for " + name);
+				}
+				int nestedLength = java.lang.reflect.Array.getLength(expectedItem);
+				Object[] nested = new Object[nestedLength];
+				for (int j = 0; j < nestedLength; j++) {
+					nested[j] = java.lang.reflect.Array.get(expectedItem, j);
+				}
+				requireArrayValue(item.asArray(), nested, name);
+			} else if (expectedItem instanceof SupportBean) {
+				SupportBean bean = (SupportBean) expectedItem;
+				if (item == null || !item.isObject() ||
+						!bean.getTheString().equals(item.asObject().getString("theString", "")) ||
+						bean.getIntPrimitive() != item.asObject().getInt("intPrimitive", -1)) {
+					throw new IllegalArgumentException("payload SupportBean array mismatch for " + name);
+				}
+			} else if (expectedItem instanceof Integer) {
+				if (item == null || !item.isNumber() || item.asInt() != (Integer) expectedItem) {
+					throw new IllegalArgumentException("payload boxed-int array mismatch for " + name);
+				}
+			} else {
+				if (item == null || !item.isString() || !expectedItem.toString().equals(item.asString())) {
+					throw new IllegalArgumentException("payload string array mismatch for " + name);
+				}
+			}
+		}
+	}
+
+	private static void requireIntArray(JsonObject payload, String name, int[] expected) {
+		JsonValue value = payload.get(name);
+		if (value == null || !value.isArray()) {
+			throw new IllegalArgumentException("payload array mismatch for " + name);
+		}
+		JsonArray array = value.asArray();
+		if (array.size() != expected.length) {
+			throw new IllegalArgumentException("payload array length mismatch for " + name);
+		}
+		for (int i = 0; i < expected.length; i++) {
+			if (array.get(i) == null || !array.get(i).isNumber() || array.get(i).asInt() != expected[i]) {
+				throw new IllegalArgumentException("payload int array mismatch for " + name);
+			}
+		}
+	}
+
+	private static void requireIntArray2Dim(JsonObject payload, String name, int[][] expected) {
+		JsonValue value = payload.get(name);
+		if (value == null || !value.isArray() || value.asArray().size() != expected.length) {
+			throw new IllegalArgumentException("payload array mismatch for " + name);
+		}
+		JsonArray outer = value.asArray();
+		for (int i = 0; i < expected.length; i++) {
+			requireIntArrayValue(outer.get(i), expected[i]);
+		}
+	}
+
+	private static void requireIntArray3Dim(JsonObject payload, String name, int[][][] expected) {
+		JsonValue value = payload.get(name);
+		if (value == null || !value.isArray() || value.asArray().size() != expected.length) {
+			throw new IllegalArgumentException("payload array mismatch for " + name);
+		}
+		JsonArray outer = value.asArray();
+		for (int i = 0; i < expected.length; i++) {
+			JsonValue dim2 = outer.get(i);
+			if (dim2 == null || !dim2.isArray() || dim2.asArray().size() != expected[i].length) {
+				throw new IllegalArgumentException("payload array mismatch for " + name);
+			}
+			for (int j = 0; j < expected[i].length; j++) {
+				requireIntArrayValue(dim2.asArray().get(j), expected[i][j]);
+			}
+		}
+	}
+
+	private static void requireIntArrayValue(JsonValue value, int[] expected) {
+		if (value == null || !value.isArray() || value.asArray().size() != expected.length) {
+			throw new IllegalArgumentException("payload array mismatch");
+		}
+		for (int i = 0; i < expected.length; i++) {
+			if (value.asArray().get(i) == null || !value.asArray().get(i).isNumber() ||
+					value.asArray().get(i).asInt() != expected[i]) {
+				throw new IllegalArgumentException("payload int array mismatch");
+			}
+		}
+	}
+
     private static void requireString(JsonObject payload, String name, String expected) {
         JsonValue value = payload.get(name);
         if (value == null || !value.isString() || !expected.equals(value.asString())) {
@@ -305,7 +426,13 @@ public final class ExprCoreExistsCastScenarioOracle {
         configuration.getCommon().addEventType("SupportBeanDynRoot", SupportBeanDynRoot.class);
 		configuration.getCommon().addEventType("StaticTypeMapEvent", staticTypeMapEventMap());
         String runtimeName = "parity-expr-core-exists-cast-" + caseName;
-		configuration.getCommon().addEventType("MyEvent", myEventMap());
+		boolean warrayCase = "cast-warray".equals(caseName) || "cast-warray-soda".equals(caseName);
+		if (!warrayCase) {
+			configuration.getCommon().addEventType("MyEvent", myEventMap());
+		}
+        if (!warrayCase) {
+            configuration.getCommon().addEventType("MyArrayEvent", ExprCoreCast.MyArrayEvent.class);
+        }
         EPRuntime runtime = EPRuntimeProvider.getRuntime(runtimeName, configuration);
         try {
             ((EPRuntimeSPI) runtime).initialize(0L);
@@ -315,9 +442,13 @@ public final class ExprCoreExistsCastScenarioOracle {
             EPDeployment deployment = runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
             EPStatement statement = null;
             for (EPStatement candidate : deployment.getStatements()) {
-                if ("s0".equals(candidate.getName())) {
+                // For multi-statement cases (cast-warray declares schemas plus
+                // the insert) the @name('s0') prefix names the first schema
+                // statement s0 and the insert becomes s0-1: keep scanning so we
+                // attach the listener to the LAST s0-prefixed statement, which
+                // is the one producing listener output.
+                if (candidate.getName().startsWith("s0")) {
                     statement = candidate;
-                    break;
                 }
             }
             if (statement == null) {
@@ -349,6 +480,7 @@ public final class ExprCoreExistsCastScenarioOracle {
         map.put("value", Object.class);
         return map;
     }
+
 
     private static String eplFor(String caseName) {
         if ("exists-simple".equals(caseName)) {
@@ -420,6 +552,19 @@ public final class ExprCoreExistsCastScenarioOracle {
 		if ("cast-bigdecimal-bigint".equals(caseName)) {
 			return "select cast(value, BigDecimal) as c0, cast(value, BigInteger) as c1 from MyEvent";
 		}
+		if ("cast-warray".equals(caseName) || "cast-warray-soda".equals(caseName)) {
+			return "@public @buseventtype create schema MyEventWArray(arr_string java.lang.Object, " +
+					"arr_primitive java.lang.Object, arr_boxed_one java.lang.Object, arr_boxed_two java.lang.Object, " +
+					"arr_object java.lang.Object, arr_2dim_primitive java.lang.Object, arr_2dim_object java.lang.Object, " +
+					"arr_3dim_primitive java.lang.Object, arr_3dim_object java.lang.Object);" +
+					"@public create schema MyArrayEvent as " + ExprCoreCast.MyArrayEvent.class.getName() + ";" +
+					"@name('s0') insert into MyArrayEvent select " +
+					"cast(arr_string,string[]) as c0, cast(arr_primitive,int[primitive]) as c1, " +
+					"cast(arr_boxed_one,int[]) as c2, cast(arr_boxed_two,java.lang.Integer[]) as c3, " +
+					"cast(arr_object,java.lang.Object[]) as c4, cast(arr_2dim_primitive,int[primitive][]) as c5, " +
+					"cast(arr_2dim_object,java.lang.Object[][]) as c6, cast(arr_3dim_primitive,int[primitive][][]) as c7, " +
+					"cast(arr_3dim_object,java.lang.Object[][][]) as c8 from MyEventWArray";
+		}
         throw new IllegalArgumentException("unsupported case " + caseName);
     }
     private static void replayCase(JsonArray allSteps, String caseName, EPRuntime runtime) {
@@ -447,6 +592,8 @@ public final class ExprCoreExistsCastScenarioOracle {
                 java.util.Map<String, Object> map = new java.util.HashMap<>();
                 map.put("value", toMyEventValue(payload));
                 runtime.getEventService().sendEventMap(map, "MyEvent");
+            } else if ("MyEventWArray".equals(step.getString("eventType", ""))) {
+                runtime.getEventService().sendEventMap(toWArrayPayload(payload), "MyEventWArray");
             } else {
                 throw new IllegalArgumentException("unsupported event type");
             }
@@ -518,6 +665,95 @@ public final class ExprCoreExistsCastScenarioOracle {
             default:
                 throw new IllegalArgumentException("unsupported value kind " + kind);
         }
+    }
+
+    private static java.util.Map<String, Object> toWArrayPayload(JsonObject payload) {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        if ("empty".equals(payload.getString("shape", ""))) {
+            return map;
+        }
+        map.put("arr_string", toJsonStringArray(payload.get("arr_string")));
+        map.put("arr_primitive", toJsonIntArray(payload.get("arr_primitive")));
+        map.put("arr_boxed_one", toJsonIntegerArray(payload.get("arr_boxed_one")));
+        map.put("arr_boxed_two", toJsonIntegerArray(payload.get("arr_boxed_two")));
+        map.put("arr_object", toJsonObjectArray(payload.get("arr_object")));
+        map.put("arr_2dim_primitive", toJsonIntArray2Dim(payload.get("arr_2dim_primitive")));
+        map.put("arr_2dim_object", toJsonIntegerArray2Dim(payload.get("arr_2dim_object")));
+        map.put("arr_3dim_primitive", toJsonIntArray3Dim(payload.get("arr_3dim_primitive")));
+        map.put("arr_3dim_object", toJsonIntegerArray3Dim(payload.get("arr_3dim_object")));
+        return map;
+    }
+
+    private static String[] toJsonStringArray(JsonValue value) {
+        JsonArray array = value.asArray();
+        String[] result = new String[array.size()];
+        for (int i = 0; i < array.size(); i++) {
+            result[i] = array.get(i).asString();
+        }
+        return result;
+    }
+
+    private static int[] toJsonIntArray(JsonValue value) {
+        JsonArray array = value.asArray();
+        int[] result = new int[array.size()];
+        for (int i = 0; i < array.size(); i++) {
+            result[i] = array.get(i).asInt();
+        }
+        return result;
+    }
+
+    private static Integer[] toJsonIntegerArray(JsonValue value) {
+        JsonArray array = value.asArray();
+        Integer[] result = new Integer[array.size()];
+        for (int i = 0; i < array.size(); i++) {
+            result[i] = array.get(i).asInt();
+        }
+        return result;
+    }
+
+    private static Object[] toJsonObjectArray(JsonValue value) {
+        JsonArray array = value.asArray();
+        Object[] result = new Object[array.size()];
+        for (int i = 0; i < array.size(); i++) {
+            result[i] = toSupportBean(array.get(i).asObject());
+        }
+        return result;
+    }
+
+    private static int[][] toJsonIntArray2Dim(JsonValue value) {
+        JsonArray outer = value.asArray();
+        int[][] result = new int[outer.size()][];
+        for (int i = 0; i < outer.size(); i++) {
+            result[i] = toJsonIntArray(outer.get(i));
+        }
+        return result;
+    }
+
+    private static Integer[][] toJsonIntegerArray2Dim(JsonValue value) {
+        JsonArray outer = value.asArray();
+        Integer[][] result = new Integer[outer.size()][];
+        for (int i = 0; i < outer.size(); i++) {
+            result[i] = toJsonIntegerArray(outer.get(i));
+        }
+        return result;
+    }
+
+    private static int[][][] toJsonIntArray3Dim(JsonValue value) {
+        JsonArray outer = value.asArray();
+        int[][][] result = new int[outer.size()][][];
+        for (int i = 0; i < outer.size(); i++) {
+            result[i] = toJsonIntArray2Dim(outer.get(i));
+        }
+        return result;
+    }
+
+    private static Integer[][][] toJsonIntegerArray3Dim(JsonValue value) {
+        JsonArray outer = value.asArray();
+        Integer[][][] result = new Integer[outer.size()][][];
+        for (int i = 0; i < outer.size(); i++) {
+            result[i] = toJsonIntegerArray2Dim(outer.get(i));
+        }
+        return result;
     }
 	private static SupportBeanDynRoot toCastDynamicRoot(JsonObject payload) {
 		String itemType = payload.getString("itemType", "");
@@ -597,7 +833,7 @@ public final class ExprCoreExistsCastScenarioOracle {
             JsonObject record = new JsonObject()
                     .add("case", caseName)
                     .add("operation", "listener")
-                    .add("statement", statement.getName())
+                    .add("statement", "s0")
                     .add("sequence", ++sequence)
                     .add("time", Instant.ofEpochMilli(runtime.getEventService().getCurrentTime()).toString());
             JsonArray newArray = results(newEvents);
@@ -633,6 +869,18 @@ public final class ExprCoreExistsCastScenarioOracle {
             }
             if (value instanceof Boolean) {
                 return Json.value((Boolean) value);
+            }
+            if (value.getClass().isArray()) {
+                int length = java.lang.reflect.Array.getLength(value);
+                JsonArray array = new JsonArray();
+                for (int i = 0; i < length; i++) {
+                    array.add(normalize(java.lang.reflect.Array.get(value, i)));
+                }
+                return array;
+            }
+            if (value instanceof SupportBean) {
+                SupportBean bean = (SupportBean) value;
+                return Json.value("SupportBean(" + bean.getTheString() + "," + bean.getIntPrimitive() + ")");
             }
             if (value instanceof SupportBeanDynRoot
                     || value instanceof ISupportDImpl

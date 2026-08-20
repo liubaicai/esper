@@ -1,3 +1,21 @@
+> 最新补充：Draft 4.213（2026-08-20），扩展 `expr-core-exists-cast`
+> differential-verified 场景：固定 Java `ExprCoreCast` 的
+> `ExprCoreCastWArray` 两个 execution（soda=false
+> `java-runtime-53d0455ef4e377c9c2f9`、soda=true
+> `java-runtime-58852773df609efe7d69`），两个 isolated case、4 条
+> listener records、0 differences（累计 49 条）。Go 侧新增链式
+> insert-into（`Select(...).InsertInto("MyArrayEvent")`）+ typed
+> array cast：`Cast[any, []string]`/`[]int`/`[][]int`/`[][][]int`/
+> `[]any` 覆盖 9 列，元素递归 coercion，`SupportBean(E1,0)` 字段级
+> token，空 map send 全列 null。修复 oracle harness：多语句 EPL 中
+> `@name('s0')` 前缀使 schema 语句抢占 s0 名、insert 变为 s0-1，
+> listener 错挂；现选择最后一个 s0 前缀语句。固定 commit 的 Java
+> oracle、runner、scenario、trace、evidence 和 value/null/order/
+> mutation tests 已纳入兼容资产；manifest 保持 134 个
+> differential-verified case，更新为 426 个 differential runtime
+> IDs。其余 Cast 日期/generic execution 与完整 parser/type/
+> diagnostic matrix 仍为 implemented-only。
+
 > 最新补充：Draft 4.212（2026-08-20），扩展 `expr-core-exists-cast`
 > differential-verified 场景：固定 Java `ExprCoreCast` 的
 > `ExprCoreCastInterface` execution

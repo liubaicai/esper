@@ -7867,8 +7867,8 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
 		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
 	}
-	if len(javaTrace.Records) != 45 {
-		t.Fatalf("checked-in Java trace records = %d, want 45", len(javaTrace.Records))
+	if len(javaTrace.Records) != 49 {
+		t.Fatalf("checked-in Java trace records = %d, want 49", len(javaTrace.Records))
 	}
 	statementCounts := map[string]int{}
 	caseCounts := map[string]int{}
@@ -7876,14 +7876,14 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 		statementCounts[record.Statement]++
 		caseCounts[record.Case]++
 	}
-	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 45}) {
+	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 49}) {
 		t.Fatalf("checked-in statement counts = %#v", statementCounts)
 	}
 	wantCaseCounts := map[string]int{
 		"exists-simple": 1, "exists-inner": 5, "exists-om": 3, "exists-compile": 3,
 		"cast-simple": 2, "cast-simple-more-types": 1, "cast-as-parse": 1, "cast-double-null-om": 6,
 		"cast-interface": 5, "cast-string-and-null": 6, "cast-boolean": 3, "cast-w-static-type": 1,
-		"cast-bigdecimal-bigint": 8,
+		"cast-bigdecimal-bigint": 8, "cast-warray": 2, "cast-warray-soda": 2,
 	}
 	if !reflect.DeepEqual(caseCounts, wantCaseCounts) {
 		t.Fatalf("checked-in case counts = %#v", caseCounts)
@@ -8021,6 +8021,30 @@ func TestRunExprCoreExistsCastDiffRejectsTraceMutations(t *testing.T) {
 			name: "cast-interface-bean-token",
 			mutate: func(trace *compat.Trace) {
 				trace.Records[22].New[0].Fields["t0"] = "ISupportDImpl"
+			},
+		},
+		{
+			name: "warray-string-array-cell",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[45].New[0].Fields["c0"] = []any{"b"}
+			},
+		},
+		{
+			name: "warray-support-bean-token",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[47].New[0].Fields["c4"] = []any{"SupportBean(E1,1)"}
+			},
+		},
+		{
+			name: "warray-null-cell",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[46].New[0].Fields["c2"] = []any{"7"}
+			},
+		},
+		{
+			name: "warray-3dim-cell",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[48].New[0].Fields["c7"] = []any{[]any{[]any{"1"}}}
 			},
 		},
 	}

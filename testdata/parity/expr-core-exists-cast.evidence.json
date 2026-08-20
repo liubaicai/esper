@@ -14,7 +14,9 @@
     "java-runtime-9957cb6d9cd9ea836d4d",
     "java-runtime-0b91403db9a899efde99",
     "java-runtime-9babbbb6f96faf389bb7",
-    "java-runtime-f44847213060b8eb3949"
+    "java-runtime-f44847213060b8eb3949",
+    "java-runtime-53d0455ef4e377c9c2f9",
+    "java-runtime-58852773df609efe7d69"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreExists.java",
@@ -32,7 +34,9 @@
     "ExprCoreCastInterface",
     "ExprCoreCastStringAndNullCompile",
     "ExprCoreCastWStaticType",
-    "ExprCoreCastBigDecimalBigInt"
+    "ExprCoreCastBigDecimalBigInt",
+    "ExprCoreCastWArray{soda=false}",
+    "ExprCoreCastWArray{soda=true}"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -448,6 +452,126 @@
         "eventType": "MyEvent",
         "payload": {
           "kind": "null"
+        }
+      },
+      {
+        "op": "case",
+        "case": "cast-warray"
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventWArray",
+        "payload": {
+          "shape": "full",
+          "arr_string": [
+            "a"
+          ],
+          "arr_primitive": [
+            1
+          ],
+          "arr_boxed_one": [
+            2
+          ],
+          "arr_boxed_two": [
+            3
+          ],
+          "arr_object": [
+            {
+              "theString": "E1",
+              "intPrimitive": 0
+            }
+          ],
+          "arr_2dim_primitive": [
+            [
+              10
+            ]
+          ],
+          "arr_2dim_object": [
+            [
+              11
+            ]
+          ],
+          "arr_3dim_primitive": [
+            [
+              [
+                12
+              ]
+            ]
+          ],
+          "arr_3dim_object": [
+            [
+              [
+                13
+              ]
+            ]
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventWArray",
+        "payload": {
+          "shape": "empty"
+        }
+      },
+      {
+        "op": "case",
+        "case": "cast-warray-soda"
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventWArray",
+        "payload": {
+          "shape": "full",
+          "arr_string": [
+            "a"
+          ],
+          "arr_primitive": [
+            1
+          ],
+          "arr_boxed_one": [
+            2
+          ],
+          "arr_boxed_two": [
+            3
+          ],
+          "arr_object": [
+            {
+              "theString": "E1",
+              "intPrimitive": 0
+            }
+          ],
+          "arr_2dim_primitive": [
+            [
+              10
+            ]
+          ],
+          "arr_2dim_object": [
+            [
+              11
+            ]
+          ],
+          "arr_3dim_primitive": [
+            [
+              [
+                12
+              ]
+            ]
+          ],
+          "arr_3dim_object": [
+            [
+              [
+                13
+              ]
+            ]
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventWArray",
+        "payload": {
+          "shape": "empty"
         }
       }
     ]
@@ -1346,6 +1470,194 @@
             }
           }
         ]
+      },
+      {
+        "case": "cast-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "a"
+              ],
+              "c1": [
+                "1"
+              ],
+              "c2": [
+                "2"
+              ],
+              "c3": [
+                "3"
+              ],
+              "c4": [
+                "SupportBean(E1,0)"
+              ],
+              "c5": [
+                [
+                  "10"
+                ]
+              ],
+              "c6": [
+                [
+                  "11"
+                ]
+              ],
+              "c7": [
+                [
+                  [
+                    "12"
+                  ]
+                ]
+              ],
+              "c8": [
+                [
+                  [
+                    "13"
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              },
+              "c5": {
+                "state": "null"
+              },
+              "c6": {
+                "state": "null"
+              },
+              "c7": {
+                "state": "null"
+              },
+              "c8": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-warray-soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "a"
+              ],
+              "c1": [
+                "1"
+              ],
+              "c2": [
+                "2"
+              ],
+              "c3": [
+                "3"
+              ],
+              "c4": [
+                "SupportBean(E1,0)"
+              ],
+              "c5": [
+                [
+                  "10"
+                ]
+              ],
+              "c6": [
+                [
+                  "11"
+                ]
+              ],
+              "c7": [
+                [
+                  [
+                    "12"
+                  ]
+                ]
+              ],
+              "c8": [
+                [
+                  [
+                    "13"
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-warray-soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              },
+              "c5": {
+                "state": "null"
+              },
+              "c6": {
+                "state": "null"
+              },
+              "c7": {
+                "state": "null"
+              },
+              "c8": {
+                "state": "null"
+              }
+            }
+          }
+        ]
       }
     ]
   },
@@ -2238,6 +2550,194 @@
                 "state": "null"
               },
               "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "a"
+              ],
+              "c1": [
+                "1"
+              ],
+              "c2": [
+                "2"
+              ],
+              "c3": [
+                "3"
+              ],
+              "c4": [
+                "SupportBean(E1,0)"
+              ],
+              "c5": [
+                [
+                  "10"
+                ]
+              ],
+              "c6": [
+                [
+                  "11"
+                ]
+              ],
+              "c7": [
+                [
+                  [
+                    "12"
+                  ]
+                ]
+              ],
+              "c8": [
+                [
+                  [
+                    "13"
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              },
+              "c5": {
+                "state": "null"
+              },
+              "c6": {
+                "state": "null"
+              },
+              "c7": {
+                "state": "null"
+              },
+              "c8": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-warray-soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "a"
+              ],
+              "c1": [
+                "1"
+              ],
+              "c2": [
+                "2"
+              ],
+              "c3": [
+                "3"
+              ],
+              "c4": [
+                "SupportBean(E1,0)"
+              ],
+              "c5": [
+                [
+                  "10"
+                ]
+              ],
+              "c6": [
+                [
+                  "11"
+                ]
+              ],
+              "c7": [
+                [
+                  [
+                    "12"
+                  ]
+                ]
+              ],
+              "c8": [
+                [
+                  [
+                    "13"
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-warray-soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": {
+                "state": "null"
+              },
+              "c4": {
+                "state": "null"
+              },
+              "c5": {
+                "state": "null"
+              },
+              "c6": {
+                "state": "null"
+              },
+              "c7": {
+                "state": "null"
+              },
+              "c8": {
                 "state": "null"
               }
             }

@@ -413,6 +413,60 @@
       "payload": {
         "kind": "null"
       }
+    },
+    {
+      "op": "case",
+      "case": "cast-warray"
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventWArray",
+      "payload": {
+        "shape": "full",
+        "arr_string": ["a"],
+        "arr_primitive": [1],
+        "arr_boxed_one": [2],
+        "arr_boxed_two": [3],
+        "arr_object": [{"theString":"E1","intPrimitive":0}],
+        "arr_2dim_primitive": [[10]],
+        "arr_2dim_object": [[11]],
+        "arr_3dim_primitive": [[[12]]],
+        "arr_3dim_object": [[[13]]]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventWArray",
+      "payload": {
+        "shape": "empty"
+      }
+    },
+    {
+      "op": "case",
+      "case": "cast-warray-soda"
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventWArray",
+      "payload": {
+        "shape": "full",
+        "arr_string": ["a"],
+        "arr_primitive": [1],
+        "arr_boxed_one": [2],
+        "arr_boxed_two": [3],
+        "arr_object": [{"theString":"E1","intPrimitive":0}],
+        "arr_2dim_primitive": [[10]],
+        "arr_2dim_object": [[11]],
+        "arr_3dim_primitive": [[[12]]],
+        "arr_3dim_object": [[[13]]]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventWArray",
+      "payload": {
+        "shape": "empty"
+      }
     }
   ]
 }
