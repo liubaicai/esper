@@ -1,0 +1,98 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-filtered",
+  "steps": [
+    {
+      "op": "case",
+      "case": "black-white-percent"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "case",
+      "case": "count-variations"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 100,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 100,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 101,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 102,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 103,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 104,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 105,
+        "boolPrimitive": false
+      }
+    }
+  ]
+}

@@ -12436,10 +12436,60 @@
    ]
   },
   {
-   "id": "case.aggregate-filtered",
+   "id": "case.resultset-aggregate-filtered-differential",
    "javaRuntimeIds": [
     "java-runtime-7528fc808c92f7364d11",
-    "java-runtime-658dc7c3a941e98e2f37",
+    "java-runtime-658dc7c3a941e98e2f37"
+   ],
+   "javaNames": [
+    "ResultSetAggregateBlackWhitePercent",
+    "ResultSetAggregateCountVariations"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFiltered.java"
+   ],
+   "goTests": [
+    "TestResultSetAggregateBlackWhitePercentParity",
+    "TestResultSetAggregateCountVariationsParity",
+    "TestRunResultSetAggregateFilteredDiffWritesPassingEvidence",
+    "TestRunResultSetAggregateFilteredDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "aggregate",
+    "filter",
+    "length-window",
+    "count-distinct",
+    "percentage",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7528fc808c92f7364d11",
+    "java-runtime-658dc7c3a941e98e2f37"
+   ],
+   "representativeScenarioIds": [
+    "resultset-aggregate-filtered"
+   ]
+  },
+  {
+   "id": "case.aggregate-filtered",
+   "javaRuntimeIds": [
     "java-runtime-2287285f8221e7fc14d4",
     "java-runtime-619cdf3a6b43200abe95",
     "java-runtime-fa8b6d5d6fb58a905f23",
@@ -12456,8 +12506,6 @@
     "java-runtime-d3beb8b21b9647fcdfbc"
    ],
    "javaNames": [
-    "ResultSetAggregateBlackWhitePercent",
-    "ResultSetAggregateCountVariations",
     "ResultSetAggregateAllAggFunctions",
     "ResultSetAggregateInvalid",
     "ResultSetAggregateFilteredWMathContext",
@@ -32219,6 +32267,10 @@
   },
   {
    "capabilityId": "resultset.aggregate-filtered",
+   "caseId": "case.resultset-aggregate-filtered-differential"
+  },
+  {
+   "capabilityId": "resultset.aggregate-filtered",
    "caseId": "case.aggregate-filtered"
   },
   {
@@ -34299,14 +34351,14 @@
   }
  ],
 "summary": {
-"totalCases": 520,
+"totalCases": 521,
 "totalCapabilities": 110,
-"inventoriedCases": 520,
-"implementedCases": 518,
-"differentialVerifiedCases": 119,
-"differentialVerifiedRuntimeIds": 366,
+"inventoriedCases": 521,
+"implementedCases": 519,
+"differentialVerifiedCases": 120,
+"differentialVerifiedRuntimeIds": 368,
 "intentionallyDifferentCases": 18,
-"representativeVerifiedCases": 93,
+"representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,
 "inventoriedCapabilities": 110,
 "implementedCapabilities": 109,
@@ -34318,7 +34370,7 @@
 "referencedJavaRuntimeIds": 2898,
 "totalJavaRuntimeIds": 4136,
 "unreferencedJavaRuntimeIds": 1238,
- "representativeScenarioTotal": 93,
- "representativeScenarioPassing": 93
+ "representativeScenarioTotal": 94,
+ "representativeScenarioPassing": 94
 }
 }
