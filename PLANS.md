@@ -28,13 +28,13 @@ activity or a single coverage percentage.
 
 - Updated: 2026-08-20
 - Baseline: `master` at `95b4f7b6b` (verified clean before this work unit).
-- Status: Current-timestamp case is promoted with passing four-record evidence;
-  review, full gates, and the focused race gate are green; commit/push remains.
+- Status: Current-timestamp case is promoted, committed, and pushed with
+  passing four-record evidence; review and all required gates are green.
 - Current work unit: `expr.core` / `case.expr-core-current-timestamp`
-- Exact next action: review the final staged diff, create the semantic commit,
-  push `master`, and record the resulting commit.
-- Worktree notes: implementation and parity assets for this unit are modified;
-  unrelated files remain out of scope; `master` still matches `origin/master`.
+- Exact next action: select the next closed-loop work unit after confirming the
+  remote `master` state.
+- Worktree notes: clean; unrelated files remain out of scope; `master` matches
+  `origin/master`.
 
 ## Work-unit contract
 
