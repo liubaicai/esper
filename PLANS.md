@@ -34,93 +34,90 @@ activity or a single coverage percentage.
 ## Active checkpoint
 
 - Updated: 2026-08-20
-- Baseline: `master` is clean and matches `origin/master` at the current
-  pushed checkpoint; the next semantic change must preserve that baseline.
-- Status: logical-expression replay, review resolution, final diff review, and
-  all required local gates are complete; the semantic delivery commit is next.
-- Current work unit: `expr.core` / `case.expr-core-logical`
-- Exact next action: review the final diff, create one semantic commit, push
-  `master`, and verify the remote ref without tracked edits.
-- Worktree notes: only the logical-expression work unit is modified; no
-  unrelated user changes are present. Do not modify `/root/app/esper` or
-  central facts outside this unit.
+- Baseline: `master` is clean and matches `origin/master` at the pushed logical
+  parity checkpoint; the next semantic change must preserve that baseline.
+- Status: coalesce implementation, oracle assets, differential replay, and
+  focused validation are complete; central facts are updated, focused review
+  is complete, and all required local milestone gates pass; semantic delivery
+  remains.
+- Current work unit: `expr.core` / `case.expr-core-coalesce`
+- Exact next action: review the final diff and deliver one semantic commit,
+  then verify the pushed remote ref without tracked edits.
+- Worktree notes: the baseline files are unchanged; only the expected coalesce
+  implementation, parity assets, and this checkpoint are modified/untracked.
+  Do not modify `/root/app/esper` or `goal.txt`.
 
 ## Delegation checkpoint
 
-- Collaboration facility: available; concurrent scout fan-out completed before
-  implementation.
-- Java oracle scout: `01a01d94-b622-7bd3-8172-72947b06e6cc` (`Goodall`),
-  report received. The fixed source emits 3 combined rows, 4 variable rows,
-  and 6 boxed/null rows in `c0...` insertion order; every row is new-only,
-  there are no time steps or errors, and `thing` changes while `s0` remains
-  deployed. The null matrix is `[null,T,T,T,T,F]`, `[null,F,F,F,F,T]`,
-  `[null,F,F,null,null,null]`, `[null,null,null,T,T,null]`,
-  `[null,F,F,T,T,T]`, `[null,F,F,T,T,F]` for E1..E6.
-- Go surface scout: `01a01d94-d1d9-75e1-8b6d-3c8d949bbed8` (`Franklin`),
-  report received. Existing `And`/`Or`/`Not`, `Contains`, `VariableRef`,
-  nullable `Property`, and atomic variable snapshots require no production
-  change; replay should extend the bitwise harness. The scout flags that
-  direct variable-update protocol steps are not currently supported and that
-  `Contains` null behavior is outside this non-null Java case.
-- Parity asset worker: `01a01d95-8ae9-7c81-9734-ab5f9c70d3ce` (`Socrates`),
-  report received and files reviewed. It changed only the Java oracle, runner,
-  and scenario source files; no traces/evidence or central facts.
-- Parity reviewer: `01a01da9-3bba-7973-a220-6f33a1cccde9` (`Rawls`),
-  independent read-only review found one blocking scope issue: the Go
-  scenario modeled Java's direct deployment variable-service update as a
-  second event-driven setter statement, and evidence metadata was not pinned
-  in the linkage test. Review also requested null-state and record-removal
-  mutations.
-- Review resolution: repaired. The protocol now has an explicit
-  `set-variable` step; the Java oracle calls its deployment variable service,
-  while Go uses direct `Engine.SetVariable` against a protected module's
-  qualified deployment-owned variable. The linkage test pins commit/runtime/
-  source/execution metadata and the mutation suite covers null-state and
-  record removal. Follow-up review is clean.
-- Follow-up parity reviewer: `01a01da9-3bba-7973-a220-6f33a1cccde9`
-  (`Rawls`), read-only follow-up completed with no blocking findings. It
-  confirmed direct variable lifecycle/ownership parity, metadata pinning, and
-  independent Java-trace mutation authority; residual risks are field-map
-  ordering and no dedicated undeploy/redeploy scenario.
-- Serial exception: none; collaboration tools are available and both scout
-  scopes are independent.
+- Collaboration facility: available; concurrent scout fan-out was attempted
+  before implementation.
+- Java oracle scout: `01a01dca-a6af-7f73-beea-ca22badc21ac` (`Einstein`),
+  read-only task started concurrently but remained running through repeated
+  waits and an interrupt/wrap-up request; it was closed without a report. The
+  fixed source was independently read locally, so no Java contract is inferred
+  from the missing agent output.
+- Go surface scout: `01a01dca-a6ea-7ef2-bf8c-10972df33778` (`Kepler`), report
+  received and reviewed. It confirmed the existing `Coalesce`/`CoalesceOf`
+  builders, value-state handling, build validation, focused unit coverage, and
+  the parity extension points; no production change is indicated statically.
+- Parity asset worker: `01a01dd3-d757-7293-925f-5673b1f36438` (`Curie`),
+  started after contract freeze but timed out and left no files; the primary
+  agent created and reviewed the assets directly.
+- Independent parity reviewer: `01a01de7-74f9-7900-8819-da17795b881d`
+  (`Zeno`), started after targeted validation but remained running through an
+  interrupt/finalization request and was closed without a report. The primary
+  agent completed the same read-only parity/evidence review and found no
+  blocking finding. A second concise review request was sent to the previously
+  available `01a01da9-3bba-7973-a220-6f33a1cccde9` (`Rawls`), which also timed
+  out and was closed without a report.
+- Serial exception: none for the scout gate. The Java scout and later asset
+  worker both timed out; the primary agent completed the missing read-only
+  inspection/asset work and recorded those outcomes above.
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, logical `and`/`or`/`not`
+- Capability/subdomain: `expr.core`, `coalesce` value selection and promotion
 - Java source and executions/runtime IDs:
-  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreAndOrNot.java`;
-  `ExprCoreAndOrNotCombined` / `java-runtime-e48bf14356e3aeb838b5`;
-  `ExprCoreNotWithVariable` / `java-runtime-c63d599754acde7bb4dc`;
-  `ExprCoreAndOrNotNull` / `java-runtime-b9d938f2dc52682b77c0`.
-- Observable contract: the Java executions emit insert-stream rows for
-  integer combined predicates, a variable-backed `not contains` predicate
-  before and after an atomic variable update, and the boxed Boolean matrix
-  for `and`, `or`, and `not`. Null is three-valued: false-and-null is false,
-  true-and-null is null, true-or-null is true, false-or-null is null, and
-  not-null is null. Result field order and boxed boolean/null values are
-  observable; Java EPL/SODA syntax and exact boxed metadata/diagnostics are
-  outside the Go fluent API. The replay must use fixed inputs and exercise
-  normal values, explicit null boxed values, variable lifecycle, and row
-  ordering.
-- Allowed production files: existing typed logical expression code under
-  `internal/esper` only if replay proves a semantic regression; prefer no
-  production change because the unit tests already cover the core behavior.
-- Allowed Go test/parity files: `internal/app/parity/expr_core_logical.go`,
-  focused additions to `internal/esper/expr_logic_test.go`, and minimal
+-  `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCoalesce.java`;
+  `ExprCoreCoalesceBeans` / `java-runtime-6464df255cd4e23a89e7`;
+  `ExprCoreCoalesceLong` / `java-runtime-0a352fd0c30e1b3a175c`;
+  `ExprCoreCoalesceLongOM` / `java-runtime-0ee4f2c3f1d9129e2598`;
+  `ExprCoreCoalesceLongCompile` / `java-runtime-7cac5278b06087f8e7f2`;
+  `ExprCoreCoalesceDouble` / `java-runtime-9341a1983c1f4fb3fdda`;
+  `ExprCoreCoalesceNull` / `java-runtime-c9475d47ffbc6275e330`;
+  `ExprCoreCoalesceInvalid` / `java-runtime-32ea122af7f0205bcb19`.
+- Differential scope: the six observable executions above through
+  `ExprCoreCoalesceNull` are replayable; `ExprCoreCoalesceInvalid` is retained
+  as implemented-only because the current trace protocol has no compile-error
+  record. Its Go Build-time invalid-builder tests remain required evidence for
+  the boundary, but it is not included in differential runtime metadata.
+- Observable contract: coalesce returns the first non-null/non-missing
+  operand, preserves the original bean/event identity, promotes boxed numeric
+  operands to the widest required result (`long` and `double` cases), returns
+  null when all operands are null, and rejects fewer than two operands or
+  incompatible/narrowing operands at build/compile time. Field order, null
+  values, result type where exposed, event identity, and error phase are
+  observable. Java EPL/SODA/compile syntax, exact boxed metadata, and parser
+  diagnostics are outside the typed fluent API. The replay must use fixed
+  inputs and exercise normal values, explicit nulls, missing values, typed nil
+  pointers, bean identity, numeric promotion, and invalid-builder behavior.
+- Allowed production files: existing typed coalesce code under `internal/esper`
+  only if replay proves a semantic regression; prefer no production change.
+- Allowed Go test/parity files: `internal/app/parity/expr_core_coalesce.go`,
+  focused additions to `internal/esper/expr_coalesce_test.go`, and minimal
   dispatcher/test additions in `internal/app/parity/run.go` and `run_test.go`.
 - Allowed parity asset files:
-  `tools/java-oracle/ExprCoreLogicalScenarioOracle.java`,
-  `tools/java-oracle/run-expr-core-logical.sh`, and
-  `testdata/parity/expr-core-logical.{json,trace.json,evidence.json}`.
+  `tools/java-oracle/ExprCoreCoalesceScenarioOracle.java`,
+  `tools/java-oracle/run-expr-core-coalesce.sh`, and
+  `testdata/parity/expr-core-coalesce.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: changes under `/root/app/esper`; unrelated
   semantic surfaces; `goal.txt`; generated evidence before trace validation;
   and central facts outside this unit's manifest/roadmap/CHANGELOG updates.
   `PLANS.md`, the manifest, roadmap, CHANGELOG, traces, and evidence remain
   primary-agent owned. Scouts do not format, build, test, commit, or push.
 - Targeted validation: the pinned Java oracle runner; focused
-  `go test ./internal/esper -run 'Logical|And|Or|Not' -count=1`; focused
-  parity replay and mutation tests; and
+  `go test ./internal/esper -run 'Coalesce' -count=1`; focused parity replay
+  and mutation tests; and
   `go test ./internal/compat ./internal/app/manifest -count=1`.
 - Milestone gates required: changed-file `gofmt`, `go vet ./...`,
   `go test ./... -count=1`, manifest/evidence validation, `make check`, and
@@ -143,39 +140,51 @@ activity or a single coverage percentage.
       where verified facts changed.
 - [x] Run independent parity review, resolve findings, and run complete local
       gates plus the applicable milestone gate.
-- [x] Repair review findings, regenerate independent traces/evidence, and rerun
-      targeted validation.
-- [x] Review the final diff, record actual validation, create one semantic
-      commit, push `master`, and verify the remote ref without tracked edits.
+- [x] Review the final diff and record actual validation.
+- [ ] Create one semantic commit, push `master`, and verify the remote ref
+      without tracked edits.
 
 ## Discoveries and decisions
 
 - 2026-08-20: Codex uses root `AGENTS.md` for persistent repository
   instructions and this file as its living execution checkpoint. `.omp/`
   remains an OMP adapter rather than the shared source of project rules.
-- 2026-08-20: The selected unit is the implemented but unverified logical
-  expression trio. The fixed Java source has three executions covering
-  ordinary integer predicates, variable updates, and boxed/null truth tables;
-  the typed Go `And`/`Or`/`Not` and variable APIs already exist.
+- 2026-08-20: The selected unit is the implemented but unverified coalesce
+  expression case. The fixed Java source has bean, long-promotion, object-model,
+  compile, double-promotion, all-null, and invalid executions; the six
+  observable executions are the differential scope and the invalid execution
+  remains implemented-only because build errors have no trace record.
+- 2026-08-20: The existing typed `Coalesce`/`CoalesceOf` surface satisfied the
+  six replayable executions without production changes. The scenario covers 22
+  records across beans, long promotion, object-model/compile variants, double
+  promotion, and all-null behavior.
+- 2026-08-20: Pinned Java and Go traces compare with zero differences. The
+  checked-in trace SHA-256 is
+  `9ff55902a543bc9d61d700ca06fae21a5f64afc78d18387badec2be669c97b3c`.
+- 2026-08-20: The independent reviewer timed out and was closed without a
+  report; primary read-only review found no blocking parity issue. Manifest,
+  roadmap, and CHANGELOG now record the six-runtime promotion. The validator
+  confirmed runtime association totals remain 3,067 / 2,901 / 1,235 because
+  all seven inventory runtimes were already associated before promotion.
 
 ## Validation evidence
 
 - Investigation baseline on 2026-08-20: `/root/app/esper` is fixed at
   `9e1b9f1cc9117fea4bf33ab043762c045d73839b`; `master` is clean and matches
-  `origin/master` at `072998d59cb051076527467c0c629039516f1f34`. Manifest
-  summary reports 522 cases, 124 differential-verified cases, 378
+  `origin/master` at `cf92134a0a6c14b079e7da8ffcf5b60084b2db45`. Manifest
+  summary reports 522 cases, 125 differential-verified cases, 381
   differential runtimes, 2,901 referenced runtimes, and 1,235 unreferenced
-  runtime IDs. The target is now promoted to `differential-verified` with
-  381 differential runtime IDs; aggregate association totals remain 3,067,
-  2,901 referenced, and 1,235 unreferenced.
-- Current unit result: Rawls found and blocked the initial event-driven
-  variable-update model; the repaired direct `set-variable` replay now has
-  13 matching listener records with zero differences, and the independently
-  regenerated Java trace is byte-identical to the checked-in trace. Focused
-  Esper/parity tests, metadata/null/removal mutation checks,
-  compatibility/manifest tests, and `git diff --check` pass after repair.
-  The earlier full suite, vet, make, and race results predate the repair and
-  were rerun successfully after repair, and the follow-up review is clean.
+  runtime IDs. The target case is implemented-only with seven runtime IDs and
+  existing Go unit coverage; no differential trace or evidence is present.
+- Current unit result: the Go scout found no static production gap, the Java
+  scout timed out and was closed, and the six-execution differential boundary
+  was frozen. Oracle/scenario assets, replay traces, evidence, and focused
+  mutation checks now pass; central metadata is consistent and focused review
+  found no blocking issue. The pinned Java replay is byte-identical to the
+  checked-in trace; `go vet ./...`, `go test ./... -count=1 -timeout 240s`,
+  `make check`, focused `go test -race ./internal/app/parity ./internal/esper
+  -count=1 -timeout 600s`, manifest/evidence checks, and `git diff --check`
+  all pass.
 
 ## Delivery
 

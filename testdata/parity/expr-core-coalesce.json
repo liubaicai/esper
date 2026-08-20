@@ -1,0 +1,185 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-core-coalesce",
+  "steps": [
+    {
+      "op": "case",
+      "case": "coalesce-beans"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "s0"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "s1"
+      }
+    },
+    {
+      "op": "case",
+      "case": "coalesce-long"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "longBoxed": 1,
+        "intBoxed": 2,
+        "shortBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "shortBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    },
+    {
+      "op": "case",
+      "case": "coalesce-long-om"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "longBoxed": 1,
+        "intBoxed": 2,
+        "shortBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "shortBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    },
+    {
+      "op": "case",
+      "case": "coalesce-long-compile"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "longBoxed": 1,
+        "intBoxed": 2,
+        "shortBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "shortBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    },
+    {
+      "op": "case",
+      "case": "coalesce-double"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "shortBoxed": 2,
+        "doubleBoxed": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "doubleBoxed": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "floatBoxed": 10,
+        "doubleBoxed": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 1,
+        "longBoxed": 5,
+        "floatBoxed": 10,
+        "doubleBoxed": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "byteBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "longBoxed": 5
+      }
+    },
+    {
+      "op": "case",
+      "case": "coalesce-null"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {}
+    }
+  ]
+}

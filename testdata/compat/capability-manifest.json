@@ -10019,7 +10019,10 @@
    "goTests": [
     "TestCoalesceExpressionsMatchJavaNumericAndNullSemantics",
     "TestCoalesceExpressionsPreserveBeansAndRejectInvalidBuilders",
-    "TestCoalesceExpressionsPreservePatternEventIdentity"
+    "TestCoalesceExpressionsPreservePatternEventIdentity",
+    "TestRunExprCoreCoalesceDiffWritesPassingEvidence",
+    "TestExprCoreCoalesceCheckedInEvidenceMatchesIndependentTraceAndReplay",
+    "TestRunExprCoreCoalesceDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10032,17 +10035,33 @@
     "invalid",
     "plan-identity"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "java-source",
     "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/expr-core-coalesce.json",
+    "testdata/parity/expr-core-coalesce.trace.json",
+    "testdata/parity/expr-core-coalesce.evidence.json",
+    "tools/java-oracle/ExprCoreCoalesceScenarioOracle.java",
+    "tools/java-oracle/run-expr-core-coalesce.sh",
+    "java-oracle-trace",
+    "go-differential"
    ],
    "difference": "Go exposes Coalesce[T] for same-typed expressions and CoalesceOf[T](...Expr) when the explicit result type must widen nullable numeric operands or preserve a bean/event value. It returns the first non-Null/non-Missing value, skips typed-nil boxed pointers, preserves numeric widening through byte/short/int/long/float/double ranks, and rejects fewer than two operands, nil operands, incompatible types and narrowing during Build; CoalesceOf[any] represents Java's all-null dynamic result. Java EPL, SODA and compile paths are represented by the fluent constructor, and exact Java boxed metadata, parser diagnostics and implicit result-type inference remain open.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-6464df255cd4e23a89e7",
+    "java-runtime-0a352fd0c30e1b3a175c",
+    "java-runtime-0ee4f2c3f1d9129e2598",
+    "java-runtime-7cac5278b06087f8e7f2",
+    "java-runtime-9341a1983c1f4fb3fdda",
+    "java-runtime-c9475d47ffbc6275e330"
+   ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -34480,8 +34499,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 522,
 "implementedCases": 520,
-"differentialVerifiedCases": 125,
-"differentialVerifiedRuntimeIds": 381,
+"differentialVerifiedCases": 126,
+"differentialVerifiedRuntimeIds": 387,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

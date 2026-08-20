@@ -1,3 +1,12 @@
+> 最新补充：Draft 4.200（2026-08-20），新增 `expr-core-coalesce`
+> differential-verified 场景：固定 Java `ExprCoreCoalesce` 的六个可观测
+> execution 与 Go 类型化 `Coalesce`/`CoalesceOf` replay 产生 22 条 listener
+> records、0 differences，覆盖 bean identity、null/missing、numeric
+> promotion 与 all-null 结果；invalid compile execution 仍为
+> implemented-only。新增固定 commit Java oracle、runner、scenario、trace、
+> evidence 与 mutation checks；manifest 达到 126 个 differential-verified
+> case、387 个 differential runtime IDs。
+
 > 最新补充：Draft 4.196（2026-08-20），新增 `expr-core-current-timestamp` differential-verified 场景，对照固定 Java `ExprCoreCurrentTimestamp` 的三个 execution（`ExprCoreCurrentTimestampGet` `java-runtime-c1c1fd3dc31af4864a50`、`ExprCoreCurrentTimestampOM` `java-runtime-96c8b8cb4cf36a523669`、`ExprCoreCurrentTimestampCompile` `java-runtime-5b126fe7fb865be8b293`），三个 isolated case、四条 listener records、0 differences。Go 侧新增 `internal/app/parity/expr_core_current_timestamp.go` 的 typed replay，覆盖未命名 `current_timestamp()` 字段、重复引用、加一运算，以及 100/999/777 毫秒虚拟时间；Java boxed Long 元数据和文本编译诊断保留为明确差异边界。固定 commit Java oracle、runner、scenario、trace、evidence 和 value/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 122 个 differential-verified case、373 个 differential runtime IDs。
 
 > 最新补充：Draft 4.195（2026-08-20），新增 `expr-core-bitwise` differential-verified 场景，对照固定 Java `ExprCoreBitWiseOperators` 的两个可观测 execution（`ExprCoreBitWiseOp` `java-runtime-b0d354033a204970cb26`、`ExprCoreBitWiseOpOM` `java-runtime-7819faeecbb3e817d49d`），两个 isolated case、两条 listener records、0 differences。Go 侧复用类型化 `BitwiseAndOf`/`BitwiseOrOf`/`BitwiseXorOf` 链式表达式，覆盖 byte/short/int/long 宽度及 boolean AND 输出；Java invalid-build execution 保留为 implemented-only，并由既有 Go Build 错误测试覆盖。Java oracle、固定 commit runner、scenario、trace、evidence 和 value/order/field mutation tests 已纳入兼容资产；manifest 更新为 121 个 differential-verified case、370 个 differential runtime IDs。

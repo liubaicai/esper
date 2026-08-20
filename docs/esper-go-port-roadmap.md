@@ -4,6 +4,23 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.200（2026-08-20），新增 `expr-core-coalesce`
+> differential-verified 场景，对照固定 Java `ExprCoreCoalesce` 的六个可
+> 观测 execution（`ExprCoreCoalesceBeans`
+> `java-runtime-6464df255cd4e23a89e7`、`ExprCoreCoalesceLong`
+> `java-runtime-0a352fd0c30e1b3a175c`、`ExprCoreCoalesceLongOM`
+> `java-runtime-0ee4f2c3f1d9129e2598`、`ExprCoreCoalesceLongCompile`
+> `java-runtime-7cac5278b06087f8e7f2`、`ExprCoreCoalesceDouble`
+> `java-runtime-9341a1983c1f4fb3fdda`、`ExprCoreCoalesceNull`
+> `java-runtime-c9475d47ffbc6275e330`），六个 isolated case、22 条
+> listener records、0 differences。Go 侧复用类型化 `Coalesce`/
+> `CoalesceOf`，覆盖 bean/event identity、first-non-null、missing/null、
+> long/double numeric promotion 和 all-null result；invalid compile
+> execution 保留为 implemented-only。固定 Java oracle、runner、scenario、
+> trace、evidence 和 value/order/null/record mutation tests 已纳入兼容资产；
+> manifest 更新为 126 个 differential-verified case、387 个 differential
+> runtime IDs；已关联 runtime 总数保持 2,901，未关联 runtime 保持 1,235。
+
 > 最新补充：Draft 4.199（2026-08-20），新增 `expr-core-logical`
 > differential-verified 场景，对照固定 Java `ExprCoreAndOrNot` 的三个
 > execution（`ExprCoreAndOrNotCombined`
@@ -45,8 +62,8 @@
 | --- | --- |
 | Capability | 110 |
 | Case | 522 |
-| Case differential-verified | 125 |
-| Differential-verified runtime | 381 / 4,136 |
+| Case differential-verified | 126 |
+| Differential-verified runtime | 387 / 4,136 |
 | Runtime 已关联 | 2,901 / 4,136（70.2%） |
 | Runtime 未关联 | 1,235 |
 | Representative scenario | 94 / 94 通过 |
