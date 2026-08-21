@@ -4,6 +4,22 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.215（2026-08-21），扩展 `expr-core-exists-cast`
+> differential-verified 场景，对照固定 Java `ExprCoreCast` 的
+> `ExprCoreCastDates` execution
+> （`java-runtime-2ee2b8ab1bf9bb2c4e90`），三个 isolated cases、3 条
+> listener records、0 differences（累计 54 条）。`cast-dates-base`
+> 覆盖 date/java.util.Date、long/java.lang.Long、
+> calendar/java.util.Calendar 目标加 `.get("month")` 链（epoch
+> 1273449600000、月份 4）；`cast-dates-java8` 覆盖 localdate/
+> localdatetime/localtime 别名与 FQCN 目标（ISO 字符串渲染）；
+> `cast-dates-constant` 覆盖常量输入编译期折叠（1044057600000）。
+> Go 侧以 `CastWithLayout[string,time.Time]` + `UnixMillis`/`Month`
+> 组合表达，无 internal/esper 改动。zoneddatetime VV 时区、ISO8601
+> iso 模式、动态 dateformat、formatter 对象参数与编译诊断 deferred。
+> manifest 保持 134 个 differential-verified case，更新为 428 个
+> differential runtime IDs。
+
 > 最新补充：Draft 4.214（2026-08-21），扩展 `expr-core-exists-cast`
 > differential-verified 场景，对照固定 Java `ExprCoreCast` 的
 > `ExprCoreCastGeneric` execution

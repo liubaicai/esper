@@ -7867,8 +7867,8 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
 		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
 	}
-	if len(javaTrace.Records) != 51 {
-		t.Fatalf("checked-in Java trace records = %d, want 51", len(javaTrace.Records))
+	if len(javaTrace.Records) != 54 {
+		t.Fatalf("checked-in Java trace records = %d, want 54", len(javaTrace.Records))
 	}
 	statementCounts := map[string]int{}
 	caseCounts := map[string]int{}
@@ -7876,7 +7876,7 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 		statementCounts[record.Statement]++
 		caseCounts[record.Case]++
 	}
-	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 51}) {
+	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 54}) {
 		t.Fatalf("checked-in statement counts = %#v", statementCounts)
 	}
 	wantCaseCounts := map[string]int{
@@ -7884,6 +7884,7 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 		"cast-simple": 2, "cast-simple-more-types": 1, "cast-as-parse": 1, "cast-double-null-om": 6,
 		"cast-interface": 5, "cast-string-and-null": 6, "cast-boolean": 3, "cast-w-static-type": 1,
 		"cast-bigdecimal-bigint": 8, "cast-warray": 2, "cast-warray-soda": 2, "cast-generic": 2,
+		"cast-dates-base": 1, "cast-dates-java8": 1, "cast-dates-constant": 1,
 	}
 	if !reflect.DeepEqual(caseCounts, wantCaseCounts) {
 		t.Fatalf("checked-in case counts = %#v", caseCounts)
@@ -8063,6 +8064,30 @@ func TestRunExprCoreExistsCastDiffRejectsTraceMutations(t *testing.T) {
 			name: "generic-nested-list-cell",
 			mutate: func(trace *compat.Trace) {
 				trace.Records[49].New[0].Fields["listArray2DimOfString"] = []any{[]any{[]any{"z"}}}
+			},
+		},
+		{
+			name: "dates-base-epoch",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[51].New[0].Fields["c0"] = int64(1273449600001)
+			},
+		},
+		{
+			name: "dates-base-month",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[51].New[0].Fields["c6"] = "5"
+			},
+		},
+		{
+			name: "dates-java8-cell",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[52].New[0].Fields["c2"] = "2010-05-10T14:15:17"
+			},
+		},
+		{
+			name: "dates-constant-cell",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[53].New[0].Fields["c0"] = int64(1044057600001)
 			},
 		},
 		{

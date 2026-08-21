@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	esper "github.com/liubaicai/esper"
 	"github.com/liubaicai/esper/internal/compat"
@@ -38,6 +39,7 @@ var exprCoreExistsCastJavaRuntimeIDs = []string{
 	"java-runtime-53d0455ef4e377c9c2f9",
 	"java-runtime-58852773df609efe7d69",
 	"java-runtime-2fcd2094aaf18ca4ce03",
+	"java-runtime-2ee2b8ab1bf9bb2c4e90",
 }
 
 var exprCoreExistsCastJavaExecutions = []string{
@@ -56,6 +58,7 @@ var exprCoreExistsCastJavaExecutions = []string{
 	"ExprCoreCastWArray{soda=false}",
 	"ExprCoreCastWArray{soda=true}",
 	"ExprCoreCastGeneric",
+	"ExprCoreCastDates",
 }
 
 var exprCoreExistsCastCaseOrder = []string{
@@ -75,6 +78,9 @@ var exprCoreExistsCastCaseOrder = []string{
 	"cast-warray",
 	"cast-warray-soda",
 	"cast-generic",
+	"cast-dates-base",
+	"cast-dates-java8",
+	"cast-dates-constant",
 }
 
 type exprCoreExistsCastExpectedSend struct {
@@ -305,6 +311,24 @@ var exprCoreExistsCastExpectedSends = [][]exprCoreExistsCastExpectedSend{
 		}},
 		{eventType: "MyEventGeneric", payload: map[string]string{
 			"shape": `"empty"`,
+		}},
+	},
+	{
+		{eventType: "MyDateType", payload: map[string]string{
+			"yyyymmdd": `"20100510"`,
+		}},
+	},
+	{
+		{eventType: "MyDateType", payload: map[string]string{
+			"yyyymmdd":       `"20100510"`,
+			"yyyymmddhhmmss": `"20100510141516"`,
+			"hhmmss":         `"141516"`,
+		}},
+	},
+	{
+		{eventType: "SupportBean", payload: map[string]string{
+			"theString":    `"E1"`,
+			"intPrimitive": `1`,
 		}},
 	},
 }
@@ -859,6 +883,57 @@ func runExprCoreExistsCastCase(ctx context.Context, scenario compat.Scenario, ca
 			esper.Alias("listOfStringArray2Dim", esper.Cast[any, [][][]any](esper.Field[map[string]any, any]("listOfStringArray2Dim"))),
 			esper.Alias("listOfT", esper.Cast[any, []any](esper.Field[map[string]any, any]("listOfT"))),
 		).Query(esper.StatementName("s0"))
+	case "cast-dates-base":
+		if _, err := esper.RegisterMap(env, "MyDateType", []esper.FieldSpec{
+			esper.FieldDef("yyyymmdd", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("yyyymmddhhmmss", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("hhmmss", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("yyyymmddhhmmssvv", reflect.TypeOf((*any)(nil)).Elem()),
+		}, esper.AllowDynamicFields()); err != nil {
+			return compat.Trace{}, err
+		}
+		input := esper.From[map[string]any](env, "MyDateType")
+		dateCast := esper.CastWithLayout[string, time.Time](esper.Field[map[string]any, string]("yyyymmdd"), "20060102")
+		query = esper.Select(input,
+			esper.Alias("c0", dateCast),
+			esper.Alias("c1", dateCast),
+			esper.Alias("c2", esper.UnixMillis(dateCast)),
+			esper.Alias("c3", esper.UnixMillis(dateCast)),
+			esper.Alias("c4", dateCast),
+			esper.Alias("c5", dateCast),
+			esper.Alias("c6", esper.Subtract[int64](esper.Month(dateCast), esper.Literal[int64](1))),
+			esper.Alias("c7", esper.Subtract[int64](esper.Month(dateCast), esper.Literal[int64](1))),
+			esper.Alias("c8", esper.Subtract[int64](esper.Month(dateCast), esper.Literal[int64](1))),
+		).Query(esper.StatementName("s0"))
+	case "cast-dates-java8":
+		if _, err := esper.RegisterMap(env, "MyDateType", []esper.FieldSpec{
+			esper.FieldDef("yyyymmdd", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("yyyymmddhhmmss", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("hhmmss", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("yyyymmddhhmmssvv", reflect.TypeOf((*any)(nil)).Elem()),
+		}, esper.AllowDynamicFields()); err != nil {
+			return compat.Trace{}, err
+		}
+		input := esper.From[map[string]any](env, "MyDateType")
+		query = esper.Select(input,
+			esper.Alias("c0", esper.CastWithLayout[string, time.Time](esper.Field[map[string]any, string]("yyyymmdd"), "20060102")),
+			esper.Alias("c1", esper.CastWithLayout[string, time.Time](esper.Field[map[string]any, string]("yyyymmdd"), "20060102")),
+			esper.Alias("c2", esper.CastWithLayout[string, time.Time](esper.Field[map[string]any, string]("yyyymmddhhmmss"), "20060102150405")),
+			esper.Alias("c3", esper.CastWithLayout[string, time.Time](esper.Field[map[string]any, string]("yyyymmddhhmmss"), "20060102150405")),
+			esper.Alias("c4", esper.CastWithLayout[string, time.Time](esper.Field[map[string]any, string]("hhmmss"), "150405")),
+			esper.Alias("c5", esper.CastWithLayout[string, time.Time](esper.Field[map[string]any, string]("hhmmss"), "150405")),
+		).Query(esper.StatementName("s0"))
+	case "cast-dates-constant":
+		if _, err := esper.RegisterMap(env, "SupportBean", []esper.FieldSpec{
+			esper.FieldDef("theString", reflect.TypeOf((*string)(nil))),
+			esper.FieldDef("intPrimitive", reflect.TypeOf(int(0))),
+		}, esper.AllowDynamicFields()); err != nil {
+			return compat.Trace{}, err
+		}
+		input := esper.From[map[string]any](env, "SupportBean")
+		query = esper.Select(input,
+			esper.Alias("c0", esper.CastWithLayout[string, time.Time](esper.Literal[string]("20030201"), "20060102")),
+		).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported expr-core-exists-cast case %q", caseName)
 	}
@@ -1175,6 +1250,23 @@ func decodeExprCoreExistsCastPayload(step compat.Step) (any, error) {
 			"listOfT":               listOfT,
 		}, nil
 	}
+	if step.EventType == "MyDateType" {
+		var payload struct {
+			Yyyymmdd         *string `json:"yyyymmdd"`
+			Yyyymmddhhmmss   *string `json:"yyyymmddhhmmss"`
+			Hhmmss           *string `json:"hhmmss"`
+			Yyyymmddhhmmssvv *string `json:"yyyymmddhhmmssvv"`
+		}
+		if err := json.Unmarshal(step.Payload, &payload); err != nil {
+			return nil, fmt.Errorf("expr-core-exists-cast: decode MyDateType: %w", err)
+		}
+		return map[string]any{
+			"yyyymmdd":         payload.Yyyymmdd,
+			"yyyymmddhhmmss":   payload.Yyyymmddhhmmss,
+			"hhmmss":           payload.Hhmmss,
+			"yyyymmddhhmmssvv": payload.Yyyymmddhhmmssvv,
+		}, nil
+	}
 	if step.EventType != "SupportMarkerInterface" {
 		return nil, fmt.Errorf("expr-core-exists-cast: unsupported event type %q", step.EventType)
 	}
@@ -1232,18 +1324,42 @@ func decodeExprCoreExistsCastInterfaceBean(shape string) any {
 
 func normalizeExprCoreExistsCastTrace(trace compat.Trace) compat.Trace {
 	for recordIndex := range trace.Records {
-		for resultIndex := range trace.Records[recordIndex].New {
-			for name, value := range trace.Records[recordIndex].New[resultIndex].Fields {
-				trace.Records[recordIndex].New[resultIndex].Fields[name] = normalizeExprCoreExistsCastValue(value)
+		record := &trace.Records[recordIndex]
+		for resultIndex := range record.New {
+			for name, value := range record.New[resultIndex].Fields {
+				record.New[resultIndex].Fields[name] = normalizeExprCoreExistsCastField(record.Case, name, value)
 			}
 		}
-		for resultIndex := range trace.Records[recordIndex].Old {
-			for name, value := range trace.Records[recordIndex].Old[resultIndex].Fields {
-				trace.Records[recordIndex].Old[resultIndex].Fields[name] = normalizeExprCoreExistsCastValue(value)
+		for resultIndex := range record.Old {
+			for name, value := range record.Old[resultIndex].Fields {
+				record.Old[resultIndex].Fields[name] = normalizeExprCoreExistsCastField(record.Case, name, value)
 			}
 		}
 	}
 	return trace
+}
+
+// normalizeExprCoreExistsCastField renders temporal cells the way the Java
+// oracle's TraceWriter does: java.util.Date/Calendar columns as epoch-millis
+// JSON numbers, java.time columns as their ISO toString forms (LocalDate
+// "2006-01-02", LocalDateTime "2006-01-02T15:04:05", LocalTime "15:04:05").
+func normalizeExprCoreExistsCastField(caseName, fieldName string, value any) any {
+	if current, ok := value.(time.Time); ok {
+		switch caseName {
+		case "cast-dates-java8":
+			switch fieldName {
+			case "c0", "c1":
+				return current.Format("2006-01-02")
+			case "c2", "c3":
+				return current.Format("2006-01-02T15:04:05")
+			case "c4", "c5":
+				return current.Format("15:04:05")
+			}
+		default:
+			return current.UnixMilli()
+		}
+	}
+	return normalizeExprCoreExistsCastValue(value)
 }
 
 func normalizeExprCoreExistsCastValue(value any) any {

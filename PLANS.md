@@ -178,7 +178,61 @@ activity or a single coverage percentage.
       runner case + decode + normalizer, run_test 49->51.
 - [x] Pinned Java trace; zero-difference diff; mutations (4 generic
       mutations added); evidence.
-- [x] Manifest (15->16 DV IDs, 426->427), roadmap, CHANGELOG, README.
+- [x] Full gates green (`make check`), `GenericReview` parity review APPROVED
+      (one P2 fixed: evidence javaRuntimeIds/javaExecutions + Go fallback
+      lists appended in lockstep; evidence regenerated, 16 IDs / 15
+      executions); commit `f2e6c3771` pushed to `master`.
+
+### Cast Dates unit (in flight)
+
+Baseline: `HEAD` == `origin/master` == `f2e6c3771`.
+Delegation checkpoint (parallel batch): `CastDatesJavaContract`
+(java-oracle-scout, 20m52s) + `CastDatesGoSurface` (scout, 13m10s);
+primary agent independently read ExprCoreCast.java:376-820.
+
+Frozen work-unit contract (execution `ExprCoreCastDates`, runtime
+`java-runtime-2ee2b8ab1bf9bb2c4e90`, inventory line 2157):
+- 3 cases, 3 sends, 51 -> 54 records:
+  - `cast-dates-base`: MyDateType map event `{yyyymmdd:"20100510"}`; 9
+    columns (date/java.util.Date, long/java.lang.Long,
+    calendar/java.util.Calendar targets, plus `.get("month")` chains);
+    expected Date/Long epoch 1273449600000, month Integer 4 (0-based
+    Calendar month).
+  - `cast-dates-java8`: same map event with all 4 string props; 6 columns:
+    localdate/java.time.LocalDate x2 (2010-05-10), localdatetime x2
+    (2010-05-10T14:15:16), localtime x2 (14:15:16). zoneddatetime VV cells
+    deferred (Go stdlib lacks zone-region parsing; genuine coercion gap).
+  - `cast-dates-constant`: SupportBean("E1",1); 1 column constant-folded
+    Date(1044057600000).
+- Determinism: harness already pins `-Duser.timezone=UTC -Duser.language=en
+  -Duser.country=US` (Java 17); Go parses layouts in time.UTC.
+- Trace encoding (frozen): java.util.Date/Calendar/Long cast columns render
+  epoch millis int; LocalDate/LocalDateTime/LocalTime columns render ISO
+  strings ("2010-05-10" / "2010-05-10T14:15:16" / "14:15:16"); month
+  columns render int 4. Oracle TraceWriter gains temporal branches; Go
+  normalize mirrors.
+- Go API mapping: `CastWithLayout[string,time.Time]` ("20060102" etc.),
+  long targets via `UnixMillis(CastWithLayout[...])`, month via
+  `Month(...) - 1` (Java 0-based). No internal/esper changes expected.
+- Deferred follow-ups (recorded, not this unit): ISO8601 'iso' cases
+  (XMLGregorianCalendar zone-id semantics), dynamic dateformat (runtime
+  EPExceptions need new trace op), dateformat-nonstring (locale-sensitive
+  literals), invalid compile diagnostics (needs error-record kind),
+  render-outcol (needs column-name record kind), VV zoneddatetime cells.
+
+Progress:
+- [x] Baseline confirmed; parallel scouts returned; contract frozen here.
+- [x] Oracle: 3 case branches + MyDateType schema registration + temporal
+      TraceWriter branches (Date/Calendar -> epoch millis).
+- [x] Go runner: 3 case arms, MyDateType decode branch, case-aware
+      temporal normalizer (epoch vs ISO per column), metadata arrays
+      (17 IDs / 16 executions).
+- [x] Fixture +3 sends (73 steps); runner script guards 51->54 records,
+      +cast-dates cases, MyDateType==2, SupportBean 8->9.
+- [x] Pinned Java trace; zero-difference diff; 4 new dates mutations
+      (epoch/month/java8/constant cells) all reject; evidence regenerated.
+- [x] Manifest (DV 16->17, 427->428), roadmap, CHANGELOG 4.215, README.
+- [ ] Full gates, `CastDatesReview`, one semantic commit, push, verify ref.
 
 - 2026-08-20: GitLab DOES protect `master` (force-push rejected 2026-08-20,
   contradicting AGENTS.md/runbook claims). Amended commits cannot be repushed;

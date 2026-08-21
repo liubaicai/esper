@@ -42,15 +42,17 @@ public final class ExprCoreExistsCastScenarioOracle {
             "exists-simple", "exists-inner", "exists-om", "exists-compile",
             "cast-simple", "cast-simple-more-types", "cast-as-parse", "cast-double-null-om",
             "cast-interface", "cast-string-and-null", "cast-boolean", "cast-w-static-type",
-            "cast-bigdecimal-bigint", "cast-warray", "cast-warray-soda", "cast-generic"
+            "cast-bigdecimal-bigint", "cast-warray", "cast-warray-soda", "cast-generic",
+            "cast-dates-base", "cast-dates-java8", "cast-dates-constant"
     };
     private static final String[] EVENT_TYPES = {
             "SupportBean", "SupportMarkerInterface", "SupportMarkerInterface", "SupportMarkerInterface",
             "SupportBean", "SupportBean", "SupportBean", "SupportBeanDynRoot",
             "SupportBeanDynRoot", "SupportBeanDynRoot", "SupportBean", "StaticTypeMapEvent",
-            "MyEvent", "MyEventWArray", "MyEventWArray", "MyEventGeneric"
+            "MyEvent", "MyEventWArray", "MyEventWArray", "MyEventGeneric",
+            "MyDateType", "MyDateType", "SupportBean"
     };
-    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 5, 6, 3, 1, 8, 2, 2, 2};
+    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 5, 6, 3, 1, 8, 2, 2, 2, 1, 1, 1};
 
     private ExprCoreExistsCastScenarioOracle() {
     }
@@ -285,6 +287,24 @@ public final class ExprCoreExistsCastScenarioOracle {
 		}
 		return;
 	}
+	if (caseIndex == 16) {
+		requireFieldCount(payload, 1, CASES[caseIndex]);
+		requireString(payload, "yyyymmdd", "20100510");
+		return;
+	}
+	if (caseIndex == 17) {
+		requireFieldCount(payload, 3, CASES[caseIndex]);
+		requireString(payload, "yyyymmdd", "20100510");
+		requireString(payload, "yyyymmddhhmmss", "20100510141516");
+		requireString(payload, "hhmmss", "141516");
+		return;
+	}
+	if (caseIndex == 18) {
+		requireFieldCount(payload, 2, CASES[caseIndex]);
+		requireString(payload, "theString", "E1");
+		requireNumber(payload, "intPrimitive", 1);
+		return;
+	}
 
 	String[] shapes = caseIndex == 1
 			? new String[]{"null", "complex", "complex", "nested-support-bean", "support-bean-a"}
@@ -462,6 +482,9 @@ public final class ExprCoreExistsCastScenarioOracle {
         if (!warrayCase) {
             configuration.getCommon().addEventType("MyArrayEvent", ExprCoreCast.MyArrayEvent.class);
         }
+        if ("cast-dates-base".equals(caseName) || "cast-dates-java8".equals(caseName)) {
+            configuration.getCommon().addEventType("MyDateType", myDateTypeMap());
+        }
         EPRuntime runtime = EPRuntimeProvider.getRuntime(runtimeName, configuration);
         try {
             ((EPRuntimeSPI) runtime).initialize(0L);
@@ -507,6 +530,24 @@ public final class ExprCoreExistsCastScenarioOracle {
     private static java.util.Map<String, Object> myEventMap() {
         java.util.Map<String, Object> map = new java.util.HashMap<>();
         map.put("value", Object.class);
+        return map;
+    }
+
+    private static java.util.Map<String, Object> myDateTypeMap() {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        map.put("yyyymmdd", String.class);
+        map.put("yyyymmddhhmmss", String.class);
+        map.put("hhmmss", String.class);
+        map.put("yyyymmddhhmmssvv", String.class);
+        return map;
+    }
+
+    private static java.util.Map<String, Object> toMyDateTypePayload(JsonObject payload) {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        for (String field : new String[]{"yyyymmdd", "yyyymmddhhmmss", "hhmmss", "yyyymmddhhmmssvv"}) {
+            JsonValue value = payload.get(field);
+            map.put(field, value == null || value.isNull() ? null : value.asString());
+        }
         return map;
     }
 
@@ -610,6 +651,30 @@ public final class ExprCoreExistsCastScenarioOracle {
 					"cast(listOfStringArray2Dim,java.util.List<String[][]>) as listOfStringArray2Dim," +
 					"cast(listOfT,java.util.List<Object>) as listOfT from MyEventGeneric";
 		}
+		if ("cast-dates-base".equals(caseName)) {
+			return "select " +
+					"cast(yyyymmdd,date,dateformat:\"yyyyMMdd\") as c0," +
+					"cast(yyyymmdd,java.util.Date,dateformat:\"yyyyMMdd\") as c1," +
+					"cast(yyyymmdd,long,dateformat:\"yyyyMMdd\") as c2," +
+					"cast(yyyymmdd,java.lang.Long,dateformat:\"yyyyMMdd\") as c3," +
+					"cast(yyyymmdd,calendar,dateformat:\"yyyyMMdd\") as c4," +
+					"cast(yyyymmdd,java.util.Calendar,dateformat:\"yyyyMMdd\") as c5," +
+					"cast(yyyymmdd,date,dateformat:\"yyyyMMdd\").get(\"month\") as c6," +
+					"cast(yyyymmdd,calendar,dateformat:\"yyyyMMdd\").get(\"month\") as c7," +
+					"cast(yyyymmdd,long,dateformat:\"yyyyMMdd\").get(\"month\") as c8 from MyDateType";
+		}
+		if ("cast-dates-java8".equals(caseName)) {
+			return "select " +
+					"cast(yyyymmdd,localdate,dateformat:\"yyyyMMdd\") as c0," +
+					"cast(yyyymmdd,java.time.LocalDate,dateformat:\"yyyyMMdd\") as c1," +
+					"cast(yyyymmddhhmmss,localdatetime,dateformat:\"yyyyMMddHHmmss\") as c2," +
+					"cast(yyyymmddhhmmss,java.time.LocalDateTime,dateformat:\"yyyyMMddHHmmss\") as c3," +
+					"cast(hhmmss,localtime,dateformat:\"HHmmss\") as c4," +
+					"cast(hhmmss,java.time.LocalTime,dateformat:\"HHmmss\") as c5 from MyDateType";
+		}
+		if ("cast-dates-constant".equals(caseName)) {
+			return "select cast('20030201',date,dateformat:\"yyyyMMdd\") as c0 from SupportBean";
+		}
         throw new IllegalArgumentException("unsupported case " + caseName);
     }
     private static void replayCase(JsonArray allSteps, String caseName, EPRuntime runtime) {
@@ -641,6 +706,8 @@ public final class ExprCoreExistsCastScenarioOracle {
                 runtime.getEventService().sendEventMap(toWArrayPayload(payload), "MyEventWArray");
             } else if ("MyEventGeneric".equals(step.getString("eventType", ""))) {
                 runtime.getEventService().sendEventMap(toGenericPayload(payload), "MyEventGeneric");
+            } else if ("MyDateType".equals(step.getString("eventType", ""))) {
+                runtime.getEventService().sendEventMap(toMyDateTypePayload(payload), "MyDateType");
             } else {
                 throw new IllegalArgumentException("unsupported event type");
             }
@@ -962,6 +1029,12 @@ public final class ExprCoreExistsCastScenarioOracle {
                     object.add(entry.getKey(), normalize(entry.getValue()));
                 }
                 return object;
+            }
+            if (value instanceof java.util.Date) {
+                return Json.value(((java.util.Date) value).getTime());
+            }
+            if (value instanceof java.util.Calendar) {
+                return Json.value(((java.util.Calendar) value).getTimeInMillis());
             }
             if (value instanceof SupportBean) {
                 SupportBean bean = (SupportBean) value;

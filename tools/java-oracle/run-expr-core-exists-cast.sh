@@ -75,16 +75,18 @@ if ! jq -e '
         "exists-simple", "exists-inner", "exists-om", "exists-compile",
         "cast-simple", "cast-simple-more-types", "cast-as-parse", "cast-double-null-om",
         "cast-interface", "cast-string-and-null", "cast-boolean", "cast-w-static-type",
-        "cast-bigdecimal-bigint", "cast-warray", "cast-warray-soda", "cast-generic"
+        "cast-bigdecimal-bigint", "cast-warray", "cast-warray-soda", "cast-generic",
+        "cast-dates-base", "cast-dates-java8", "cast-dates-constant"
     ]) and
-    ([.steps[] | select(.op == "send")] | length) == 51 and
-    ([.steps[] | select(.op == "send" and .eventType == "SupportBean")] | length) == 8 and
+    ([.steps[] | select(.op == "send")] | length) == 54 and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBean")] | length) == 9 and
     ([.steps[] | select(.op == "send" and .eventType == "SupportMarkerInterface")] | length) == 11 and
     ([.steps[] | select(.op == "send" and .eventType == "SupportBeanDynRoot")] | length) == 17 and
     ([.steps[] | select(.op == "send" and .eventType == "StaticTypeMapEvent")] | length) == 1 and
     ([.steps[] | select(.op == "send" and .eventType == "MyEvent")] | length) == 8 and
     ([.steps[] | select(.op == "send" and .eventType == "MyEventWArray")] | length) == 4 and
-    ([.steps[] | select(.op == "send" and .eventType == "MyEventGeneric")] | length) == 2
+    ([.steps[] | select(.op == "send" and .eventType == "MyEventGeneric")] | length) == 2 and
+    ([.steps[] | select(.op == "send" and .eventType == "MyDateType")] | length) == 2
     ' "$scenario" >/dev/null 2>&1; then
     echo "scenario is not a valid expr-core-exists-cast replay: $scenario" >&2
     exit 1
@@ -131,11 +133,11 @@ if ! jq -e '
     .version == "esper-parity/v1" and
     .id == "expr-core-exists-cast" and
     (.records | type == "array") and
-    ((.records | length) == 51) and
+    ((.records | length) == 54) and
     ([.records[] | select(.operation == "listener" and .statement == "s0" and
         (.new | type == "array" and length == 1) and
         ((.old // []) | length == 0) and
-        .new[0].kind == "row")] | length) == 51 and
+        .new[0].kind == "row")] | length) == 54 and
     ([.records[] | select(.case == "exists-simple")] | length) == 1 and
     ([.records[] | select(.case == "exists-inner")] | length) == 5 and
     ([.records[] | select(.case == "exists-om")] | length) == 3 and
@@ -152,6 +154,7 @@ if ! jq -e '
     ([.records[] | select(.case == "cast-warray")] | length) == 2 and
     ([.records[] | select(.case == "cast-warray-soda")] | length) == 2 and
     ([.records[] | select(.case == "cast-generic")] | length) == 2 and
+    ([.records[] | select(.case == "cast-dates-base" or .case == "cast-dates-java8" or .case == "cast-dates-constant")] | length) == 3 and
     ([.records[] | select(.case == "exists-simple") | (.new[0].fields | keys)] | unique) == [["c0", "c1", "c2", "c3", "c4"]] and
     ([.records[] | select(.case == "exists-inner") | (.new[0].fields | keys)] | unique) == [["t0", "t1", "t10", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9"]] and
     ([.records[] | select(.case == "exists-om" or .case == "exists-compile") | (.new[0].fields | keys)] | unique) == [["t0"]] and
@@ -163,7 +166,10 @@ if ! jq -e '
     ([.records[] | select(.case == "cast-w-static-type") | (.new[0].fields | keys)] | unique) == [["byteVal", "doubleVal", "floatVal", "intOne", "intTwo", "intVal", "longOne", "longTwo", "longVal", "shortVal"]] and
     ([.records[] | select(.case == "cast-bigdecimal-bigint") | (.new[0].fields | keys)] | unique) == [["c0", "c1"]] and
     ([.records[] | select(.case == "cast-warray" or .case == "cast-warray-soda") | (.new[0].fields | keys)] | unique) == [["c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"]] and
-    ([.records[] | select(.case == "cast-generic") | (.new[0].fields | keys)] | unique) == [["listArray2DimOfString", "listArrayOfString", "listOfOptionalInteger", "listOfString", "listOfStringArray", "listOfStringArray2Dim", "listOfT", "mapOfStringAndInteger"]]
+    ([.records[] | select(.case == "cast-generic") | (.new[0].fields | keys)] | unique) == [["listArray2DimOfString", "listArrayOfString", "listOfOptionalInteger", "listOfString", "listOfStringArray", "listOfStringArray2Dim", "listOfT", "mapOfStringAndInteger"]] and
+    ([.records[] | select(.case == "cast-dates-base") | (.new[0].fields | keys)] | unique) == [["c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"]] and
+    ([.records[] | select(.case == "cast-dates-java8") | (.new[0].fields | keys)] | unique) == [["c0", "c1", "c2", "c3", "c4", "c5"]] and
+    ([.records[] | select(.case == "cast-dates-constant") | (.new[0].fields | keys)] | unique) == [["c0"]]
     ' "$output" >/dev/null 2>&1; then
     echo "Java oracle produced an invalid trace: $output" >&2
     exit 1

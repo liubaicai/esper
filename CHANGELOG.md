@@ -1,3 +1,17 @@
+> 最新补充：Draft 4.215（2026-08-21），扩展 `expr-core-exists-cast`
+> differential-verified 场景：固定 Java `ExprCoreCast` 的
+> `ExprCoreCastDates` execution
+> （`java-runtime-2ee2b8ab1bf9bb2c4e90`），三个 isolated cases、3 条
+> listener records、0 differences（累计 54 条）。java.util.Date/
+> Calendar 列以 epoch millis 渲染、Long/月份列为字符串、java.time
+> 列为 ISO 字符串（oracle TraceWriter 新增 Date/Calendar 分支，
+> Go normalizer 按列渲染镜像）；常量输入走编译期常量折叠路径。
+> 固定 commit 的 Java oracle、runner、scenario、trace、evidence 和
+> value/null/order/mutation tests 已纳入兼容资产；manifest 保持 134
+> 个 differential-verified case，更新为 428 个 differential runtime
+> IDs。其余 Cast date 子断言（ISO8601 iso 模式、动态 dateformat、
+> invalid 诊断）仍为 implemented-only。
+
 > 最新补充：Draft 4.214（2026-08-21），扩展 `expr-core-exists-cast`
 > differential-verified 场景：固定 Java `ExprCoreCast` 的
 > `ExprCoreCastGeneric` execution

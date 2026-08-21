@@ -17,7 +17,8 @@
     "java-runtime-f44847213060b8eb3949",
     "java-runtime-53d0455ef4e377c9c2f9",
     "java-runtime-58852773df609efe7d69",
-    "java-runtime-2fcd2094aaf18ca4ce03"
+    "java-runtime-2fcd2094aaf18ca4ce03",
+    "java-runtime-2ee2b8ab1bf9bb2c4e90"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreExists.java",
@@ -38,7 +39,8 @@
     "ExprCoreCastBigDecimalBigInt",
     "ExprCoreCastWArray{soda=false}",
     "ExprCoreCastWArray{soda=true}",
-    "ExprCoreCastGeneric"
+    "ExprCoreCastGeneric",
+    "ExprCoreCastDates"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -628,6 +630,42 @@
         "eventType": "MyEventGeneric",
         "payload": {
           "shape": "empty"
+        }
+      },
+      {
+        "op": "case",
+        "case": "cast-dates-base"
+      },
+      {
+        "op": "send",
+        "eventType": "MyDateType",
+        "payload": {
+          "yyyymmdd": "20100510"
+        }
+      },
+      {
+        "op": "case",
+        "case": "cast-dates-java8"
+      },
+      {
+        "op": "send",
+        "eventType": "MyDateType",
+        "payload": {
+          "yyyymmdd": "20100510",
+          "yyyymmddhhmmss": "20100510141516",
+          "hhmmss": "141516"
+        }
+      },
+      {
+        "op": "case",
+        "case": "cast-dates-constant"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
         }
       }
     ]
@@ -1802,6 +1840,64 @@
             }
           }
         ]
+      },
+      {
+        "case": "cast-dates-base",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1273449600000,
+              "c1": 1273449600000,
+              "c2": "1273449600000",
+              "c3": "1273449600000",
+              "c4": 1273449600000,
+              "c5": 1273449600000,
+              "c6": "4",
+              "c7": "4",
+              "c8": "4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-dates-java8",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "2010-05-10",
+              "c1": "2010-05-10",
+              "c2": "2010-05-10T14:15:16",
+              "c3": "2010-05-10T14:15:16",
+              "c4": "14:15:16",
+              "c5": "14:15:16"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-dates-constant",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1044057600000
+            }
+          }
+        ]
       }
     ]
   },
@@ -2972,6 +3068,64 @@
               "mapOfStringAndInteger": {
                 "state": "null"
               }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-dates-base",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1273449600000,
+              "c1": 1273449600000,
+              "c2": "1273449600000",
+              "c3": "1273449600000",
+              "c4": 1273449600000,
+              "c5": 1273449600000,
+              "c6": "4",
+              "c7": "4",
+              "c8": "4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-dates-java8",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "2010-05-10",
+              "c1": "2010-05-10",
+              "c2": "2010-05-10T14:15:16",
+              "c3": "2010-05-10T14:15:16",
+              "c4": "14:15:16",
+              "c5": "14:15:16"
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-dates-constant",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1044057600000
             }
           }
         ]
