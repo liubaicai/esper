@@ -1,3 +1,20 @@
+> 最新补充：Draft 4.220（2026-08-21），扩展 `subselect-filtered`
+> differential-verified 场景（Joined4 数值 coercion 切片）：固定 Java
+> `EPLSubselectFiltered.java` 的 `EPLSubselectSelectWhereJoined4Coercion`
+>（`java-runtime-fd19463d0ce39b10f445`，三个谓词排列 case）与
+> `EPLSubselectSelectWhereJoined4BackCoercion`
+>（`java-runtime-66c3d4d4100cb3f923a0`，两个谓词排列 case）。场景扩展为
+> 15 个 case，Java/Go 各 63 条 listener records、0 differences；覆盖三路
+> keepall join 外层、跨流 boxed 数值等值 coercion（int==long==double 精确
+> 提升）、精确拒绝边界（整数差 1、double 差 0.0001 无容差）、谓词排列
+> 不变性、空子查询窗口首轮 Null 与负值 intPrimitive 透传。Go 侧复用
+> `JoinMany`/`JoinSource`/`OnSourcesEqual`/`JoinField` + `SubqueryValue`，
+> 无 `internal/esper` 改动。manifest 更新为 526 cases、139 个
+> differential-verified case、442 个 differential runtime IDs、3081 条
+> associations（唯一已关联 runtime 2901，未关联 1235），
+> `epl.subselect.filtered` capability 达到 10/27 DV runtime。其余 17 个
+> filtered execution 保持 implemented-only。
+
 > 最新补充：Draft 4.219（2026-08-21），扩展 `subselect-filtered`
 > differential-verified 场景（multikey-wArray 切片）：固定 Java
 > `EPLSubselectFiltered.java` 的三个

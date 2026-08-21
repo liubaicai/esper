@@ -31,15 +31,17 @@ import java.util.TreeSet;
  * Java oracle for EPLSubselectFiltered first-slice scenarios (scalar subquery
  * with where/having/filter).
  *
- * Covers the first slice of EPLSubselectFiltered: 8 behavioral executions
- * across 10 scenario cases - the three HavingNoAgg variants
+ * Covers the first slice of EPLSubselectFiltered: 10 behavioral executions
+ * across 15 scenario cases - the three HavingNoAgg variants
  * (having-no-filter-no-where, having-w-where, having-w-filter-w-where), the
  * three WhereConstant rounds (where-constant-single-column,
  * where-constant-two-column, where-constant-range), SelectWithWhereJoined
- * (select-with-where-joined), and the three MultikeyWArray rounds
+ * (select-with-where-joined), the three MultikeyWArray rounds
  * (multikey-array-primitive, multikey-array-two-field,
- * multikey-array-composite). Same-event, wildcard, previous, and
- * multi-stream joined executions remain in later slices.
+ * multikey-array-composite), and the two Joined4 numeric-coercion executions
+ * (joined-4-coercion-p1/p2/p3, joined-4-back-coercion-p1/p2). Same-event,
+ * wildcard, previous, and the remaining multi-stream joined executions remain
+ * in later slices.
  */
 public class EPLSubselectFilteredScenarioOracle {
 
@@ -139,6 +141,18 @@ public class EPLSubselectFilteredScenarioOracle {
                             SupportBean event = new SupportBean();
                             event.setTheString(payload.getString("theString", ""));
                             event.setIntPrimitive(payload.getInt("intPrimitive", 0));
+                            JsonValue intBoxedVal = payload.get("intBoxed");
+                            if (intBoxedVal instanceof JsonNumber) {
+                                event.setIntBoxed(((JsonNumber) intBoxedVal).asInt());
+                            }
+                            JsonValue longBoxedVal = payload.get("longBoxed");
+                            if (longBoxedVal instanceof JsonNumber) {
+                                event.setLongBoxed(((JsonNumber) longBoxedVal).asLong());
+                            }
+                            JsonValue doubleBoxedVal = payload.get("doubleBoxed");
+                            if (doubleBoxedVal instanceof JsonNumber) {
+                                event.setDoubleBoxed(((JsonNumber) doubleBoxedVal).asDouble());
+                            }
                             runtime.getEventService().sendEventBean(event, "SupportBean");
                         }
                         case "SupportBean_S0" -> {
@@ -239,6 +253,21 @@ public class EPLSubselectFilteredScenarioOracle {
             };
             case "multikey-array-composite" -> new String[]{
                 "@name('s0') select (select id from SupportEventWithManyArray#keepall as sm where sm.intOne = se.array and sm.value > se.value) as value from SupportEventWithIntArray as se"
+            };
+            case "joined-4-coercion-p1" -> new String[]{
+                "@name('s0') select (select intPrimitive from SupportBean(theString='S')#length(1000)   where intBoxed=s1.longBoxed and intBoxed=s2.doubleBoxed and doubleBoxed=s3.intBoxed) as ids0 from SupportBean(theString='A')#keepall as s1, SupportBean(theString='B')#keepall as s2, SupportBean(theString='C')#keepall as s3 where s1.intPrimitive = s2.intPrimitive and s2.intPrimitive = s3.intPrimitive"
+            };
+            case "joined-4-coercion-p2" -> new String[]{
+                "@name('s0') select (select intPrimitive from SupportBean(theString='S')#length(1000)   where doubleBoxed=s3.intBoxed and intBoxed=s2.doubleBoxed and intBoxed=s1.longBoxed) as ids0 from SupportBean(theString='A')#keepall as s1, SupportBean(theString='B')#keepall as s2, SupportBean(theString='C')#keepall as s3 where s1.intPrimitive = s2.intPrimitive and s2.intPrimitive = s3.intPrimitive"
+            };
+            case "joined-4-coercion-p3" -> new String[]{
+                "@name('s0') select (select intPrimitive from SupportBean(theString='S')#length(1000)   where doubleBoxed=s3.intBoxed and intBoxed=s1.longBoxed and intBoxed=s2.doubleBoxed) as ids0 from SupportBean(theString='A')#keepall as s1, SupportBean(theString='B')#keepall as s2, SupportBean(theString='C')#keepall as s3 where s1.intPrimitive = s2.intPrimitive and s2.intPrimitive = s3.intPrimitive"
+            };
+            case "joined-4-back-coercion-p1" -> new String[]{
+                "@name('s0') select (select intPrimitive from SupportBean(theString='S')#length(1000)   where longBoxed=s1.intBoxed and longBoxed=s2.doubleBoxed and intBoxed=s3.longBoxed) as ids0 from SupportBean(theString='A')#keepall as s1, SupportBean(theString='B')#keepall as s2, SupportBean(theString='C')#keepall as s3 where s1.intPrimitive = s2.intPrimitive and s2.intPrimitive = s3.intPrimitive"
+            };
+            case "joined-4-back-coercion-p2" -> new String[]{
+                "@name('s0') select (select intPrimitive from SupportBean(theString='S')#length(1000)   where longBoxed=s2.doubleBoxed and intBoxed=s3.longBoxed and longBoxed=s1.intBoxed ) as ids0 from SupportBean(theString='A')#keepall as s1, SupportBean(theString='B')#keepall as s2, SupportBean(theString='C')#keepall as s3 where s1.intPrimitive = s2.intPrimitive and s2.intPrimitive = s3.intPrimitive"
             };
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };

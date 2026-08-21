@@ -1995,7 +1995,9 @@
     "java-runtime-6034a5785b901739431e",
     "java-runtime-643236df4a8946ab3c24",
     "java-runtime-9255e3470adb866211bf",
-    "java-runtime-7fbee5b6cef2f287ee41"
+    "java-runtime-7fbee5b6cef2f287ee41",
+    "java-runtime-fd19463d0ce39b10f445",
+    "java-runtime-66c3d4d4100cb3f923a0"
    ]
   },
   {
@@ -32409,6 +32411,54 @@
     "java-runtime-9255e3470adb866211bf",
     "java-runtime-7fbee5b6cef2f287ee41"
    ]
+  },
+  {
+   "id": "case.subselect-filtered-joined-coercion",
+   "javaRuntimeIds": [
+    "java-runtime-fd19463d0ce39b10f445",
+    "java-runtime-66c3d4d4100cb3f923a0"
+   ],
+   "javaNames": [
+    "EPLSubselectSelectWhereJoined4Coercion",
+    "EPLSubselectSelectWhereJoined4BackCoercion"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectFiltered.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunSubselectFilteredDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunSubselectFilteredDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "subselect",
+    "filtered",
+    "joined",
+    "coercion",
+    "boxed-numeric",
+    "predicate-order-invariant"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/subselect-filtered.json",
+    "testdata/parity/subselect-filtered.trace.json",
+    "testdata/parity/subselect-filtered.evidence.json",
+    "tools/java-oracle/EPLSubselectFilteredScenarioOracle.java",
+    "tools/java-oracle/run-subselect-filtered.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-fd19463d0ce39b10f445",
+    "java-runtime-66c3d4d4100cb3f923a0"
+   ]
   }
  ],
  "mappings": [
@@ -34843,13 +34893,17 @@
   {
    "capabilityId": "epl.subselect.filtered",
    "caseId": "case.subselect-filtered-multikey-array"
+  },
+  {
+   "capabilityId": "epl.subselect.filtered",
+   "caseId": "case.subselect-filtered-joined-coercion"
   }
  ],
  "summary": {
-  "inventoriedCases": 525,
-  "implementedCases": 523,
-  "differentialVerifiedCases": 138,
-  "differentialVerifiedRuntimeIds": 440,
+  "inventoriedCases": 526,
+  "implementedCases": 524,
+  "differentialVerifiedCases": 139,
+  "differentialVerifiedRuntimeIds": 442,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -34859,13 +34913,13 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3079,
+  "runtimeAssociationCount": 3081,
   "referencedJavaRuntimeIds": 2901,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 1235,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 525,
+  "totalCases": 526,
   "totalCapabilities": 110
  }
 }

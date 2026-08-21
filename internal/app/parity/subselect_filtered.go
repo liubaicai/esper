@@ -10,8 +10,11 @@ import (
 )
 
 type subselectFilteredBean struct {
-	TheString    string `esper:"theString"`
-	IntPrimitive int    `esper:"intPrimitive"`
+	TheString    string  `esper:"theString"`
+	IntPrimitive int     `esper:"intPrimitive"`
+	IntBoxed     int     `esper:"intBoxed"`
+	LongBoxed    int64   `esper:"longBoxed"`
+	DoubleBoxed  float64 `esper:"doubleBoxed"`
 }
 
 type subselectFilteredS0 struct {
@@ -51,6 +54,8 @@ var (
 		"java-runtime-643236df4a8946ab3c24",
 		"java-runtime-9255e3470adb866211bf",
 		"java-runtime-7fbee5b6cef2f287ee41",
+		"java-runtime-fd19463d0ce39b10f445",
+		"java-runtime-66c3d4d4100cb3f923a0",
 	}
 	subselectFilteredJavaExecutions = []string{
 		"EPLSubselectHavingNoAggNoFilterNoWhere",
@@ -61,15 +66,19 @@ var (
 		"EPLSubselectWhereClauseMultikeyWArrayPrimitive",
 		"EPLSubselectWhereClauseMultikeyWArray2Field",
 		"EPLSubselectWhereClauseMultikeyWArrayComposite",
+		"EPLSubselectSelectWhereJoined4Coercion",
+		"EPLSubselectSelectWhereJoined4BackCoercion",
 	}
 )
 
-// runSubselectFilteredScenario replays the scalar-filter and multikey-wArray
-// slices of EPLSubselectFiltered (8 executions across 10 scenario cases;
-// WhereConstant contributes three single-deployment cases): non-aggregated
-// having row filters, constant and correlated where predicates, and the
-// null-on-empty/null-on-multiple scalar subselect boundaries, plus int[]
-// content-equality correlation keys.
+// runSubselectFilteredScenario replays the scalar-filter, multikey-wArray and
+// joined numeric-coercion slices of EPLSubselectFiltered (10 executions
+// across 15 scenario cases; WhereConstant contributes three single-deployment
+// cases and each Joined4 coercion statement is its own predicate-ordering
+// case): non-aggregated having row filters, constant and correlated where
+// predicates, null-on-empty/null-on-multiple scalar subselect boundaries,
+// int[] content-equality correlation keys, and cross-stream boxed numeric
+// coercion over a three-way keepall join.
 func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
@@ -79,6 +88,8 @@ func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario)
 		"where-constant-single-column", "where-constant-two-column", "where-constant-range",
 		"select-with-where-joined",
 		"multikey-array-primitive", "multikey-array-two-field", "multikey-array-composite",
+		"joined-4-coercion-p1", "joined-4-coercion-p2", "joined-4-coercion-p3",
+		"joined-4-back-coercion-p1", "joined-4-back-coercion-p2",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-filtered scenario %q has no supported cases", scenario.ID)
@@ -214,6 +225,52 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 				esper.SubqueryWhere(predicate),
 				esper.SubqueryCardinalityMode(esper.SubqueryNullOnMultiple),
 			)),
+		).Query(esper.StatementName("s0"))
+	case "joined-4-coercion-p1", "joined-4-coercion-p2", "joined-4-coercion-p3",
+		"joined-4-back-coercion-p1", "joined-4-back-coercion-p2":
+		coercionInner := esper.From[subselectFilteredBean](env, "SupportBean").
+			Filter(esper.Equal[string](esper.Field[subselectFilteredBean, string]("theString"), esper.Literal("S"))).
+			Window(esper.LengthWindow(1000)).
+			AsRecord()
+		filtered := func(name string) esper.Stream[subselectFilteredBean] {
+			return esper.From[subselectFilteredBean](env, "SupportBean").
+				Filter(esper.Equal[string](esper.Field[subselectFilteredBean, string]("theString"), esper.Literal(name)))
+		}
+		intBoxed := esper.Field[any, any]("intBoxed")
+		longBoxed := esper.Field[any, any]("longBoxed")
+		doubleBoxed := esper.Field[any, any]("doubleBoxed")
+		var predicate esper.Expression[bool]
+		switch caseName {
+		case "joined-4-coercion-p1":
+			predicate = esper.And(esper.EqualOf(intBoxed, esper.JoinField[any](0, "longBoxed")),
+				esper.And(esper.EqualOf(intBoxed, esper.JoinField[any](1, "doubleBoxed")),
+					esper.EqualOf(doubleBoxed, esper.JoinField[any](2, "intBoxed"))))
+		case "joined-4-coercion-p2":
+			predicate = esper.And(esper.EqualOf(doubleBoxed, esper.JoinField[any](2, "intBoxed")),
+				esper.And(esper.EqualOf(intBoxed, esper.JoinField[any](1, "doubleBoxed")),
+					esper.EqualOf(intBoxed, esper.JoinField[any](0, "longBoxed"))))
+		case "joined-4-coercion-p3":
+			predicate = esper.And(esper.EqualOf(doubleBoxed, esper.JoinField[any](2, "intBoxed")),
+				esper.And(esper.EqualOf(intBoxed, esper.JoinField[any](0, "longBoxed")),
+					esper.EqualOf(intBoxed, esper.JoinField[any](1, "doubleBoxed"))))
+		case "joined-4-back-coercion-p1":
+			predicate = esper.And(esper.EqualOf(longBoxed, esper.JoinField[any](0, "intBoxed")),
+				esper.And(esper.EqualOf(longBoxed, esper.JoinField[any](1, "doubleBoxed")),
+					esper.EqualOf(intBoxed, esper.JoinField[any](2, "longBoxed"))))
+		default:
+			predicate = esper.And(esper.EqualOf(longBoxed, esper.JoinField[any](1, "doubleBoxed")),
+				esper.And(esper.EqualOf(intBoxed, esper.JoinField[any](2, "longBoxed")),
+					esper.EqualOf(longBoxed, esper.JoinField[any](0, "intBoxed"))))
+		}
+		query = esper.JoinMany(
+			esper.JoinSource(filtered("A").Window(esper.KeepAll())),
+			esper.JoinSource(filtered("B").Window(esper.KeepAll())),
+			esper.JoinSource(filtered("C").Window(esper.KeepAll())),
+		).On(
+			esper.OnSourcesEqual(0, esper.Field[subselectFilteredBean, int]("intPrimitive"), 1, esper.Field[subselectFilteredBean, int]("intPrimitive")),
+			esper.OnSourcesEqual(1, esper.Field[subselectFilteredBean, int]("intPrimitive"), 2, esper.Field[subselectFilteredBean, int]("intPrimitive")),
+		).Select(
+			esper.SelectLeft("ids0", esper.SubqueryValue[int](coercionInner, esper.Field[any, int]("intPrimitive"), predicate)),
 		).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported subselect-filtered case %q", caseName)

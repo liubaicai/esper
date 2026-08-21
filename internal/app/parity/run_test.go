@@ -13577,6 +13577,30 @@ func TestRunSubselectFilteredDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
+			name: "coercion-cross-type-match",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[39].New[0].Fields["ids0"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "coercion-near-miss-rejected",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[44].New[0].Fields["ids0"] = -3
+			},
+		},
+		{
+			name: "back-coercion-double-precision",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[56].New[0].Fields["ids0"] = -3
+			},
+		},
+		{
+			name: "coercion-predicate-order-invariant",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[49].New[0].Fields["ids0"] = map[string]any{"state": "null"}
+			},
+		},
+		{
 			name: "record-removed",
 			mutate: func(trace *compat.Trace) {
 				trace.Records = trace.Records[:len(trace.Records)-1]
