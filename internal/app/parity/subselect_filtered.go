@@ -23,9 +23,9 @@ type subselectFilteredS0 struct {
 }
 
 type subselectFilteredS1 struct {
-	ID  int    `esper:"id"`
-	P10 string `esper:"p10"`
-	P11 string `esper:"p11"`
+	ID  int     `esper:"id"`
+	P10 *string `esper:"p10"`
+	P11 *string `esper:"p11"`
 }
 
 type subselectFilteredS2 struct {
@@ -66,6 +66,10 @@ var (
 		"java-runtime-78f47a5bcdf6b87c9e68",
 		"java-runtime-b1c2169572264f9fd646",
 		"java-runtime-87fd9e194fcd61e0aba5",
+		"java-runtime-4ec1d23f545746f81f20",
+		"java-runtime-0626e0d5b878384ba989",
+		"java-runtime-7705828482936493f505",
+		"java-runtime-7e0f728f635710446f39",
 	}
 	subselectFilteredJavaExecutions = []string{
 		"EPLSubselectHavingNoAggNoFilterNoWhere",
@@ -83,21 +87,27 @@ var (
 		"EPLSubselectWherePrevious",
 		"EPLSubselectWherePreviousOM",
 		"EPLSubselectWherePreviousCompile",
+		"EPLSubselectSameEvent",
+		"EPLSubselectSameEventOM",
+		"EPLSubselectSameEventCompile",
+		"EPLSubselectSelectWildcard",
 	}
 )
 
 // runSubselectFilteredScenario replays the scalar-filter, multikey-wArray,
-// joined numeric-coercion, join-filtered and where-previous slices of
-// EPLSubselectFiltered (15 executions across 20 scenario cases; WhereConstant
-// contributes three single-deployment cases, each Joined4 coercion statement
-// is its own predicate-ordering case, and the WherePrevious triple replays
-// one shared sequence per compilation path): non-aggregated having row
-// filters, constant and correlated where predicates,
-// null-on-empty/null-on-multiple scalar subselect boundaries, int[]
-// content-equality correlation keys, cross-stream boxed numeric coercion
-// over a three-way keepall join, two-stream joins gated by scalar/boolean
-// subqueries with prior/prev projections, and prev over a gated subquery's
-// unfiltered window.
+// joined numeric-coercion, join-filtered, where-previous and wildcard
+// event-subquery slices of EPLSubselectFiltered (19 executions across 24
+// scenario cases; WhereConstant contributes three single-deployment cases,
+// each Joined4 coercion statement is its own predicate-ordering case, the
+// WherePrevious triple replays one shared sequence per compilation path, and
+// the SameEvent triple does the same for the self-stream wildcard column):
+// non-aggregated having row filters, constant and correlated where
+// predicates, null-on-empty/null-on-multiple scalar subselect boundaries,
+// int[] content-equality correlation keys, cross-stream boxed numeric
+// coercion over a three-way keepall join, two-stream joins gated by
+// scalar/boolean subqueries with prior/prev projections, prev over a gated
+// subquery's unfiltered window, and single-event wildcard columns observing
+// trigger and cross-stream event references.
 func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
@@ -111,6 +121,7 @@ func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario)
 		"joined-4-back-coercion-p1", "joined-4-back-coercion-p2",
 		"join-filtered-one", "join-filtered-two",
 		"where-previous", "where-previous-om", "where-previous-compile",
+		"same-event", "same-event-om", "same-event-compile", "select-wildcard",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-filtered scenario %q has no supported cases", scenario.ID)
@@ -319,13 +330,13 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 		}
 		if caseName == "join-filtered-one" {
 			query = build(esper.EqualOf(
-				esper.Concat(esper.JoinField[string](0, "p00"), esper.JoinField[string](1, "p10")),
+				esper.ConcatOf(esper.JoinField[any](0, "p00"), esper.JoinField[any](1, "p10")),
 				esper.SubqueryValue[string](innerLong, esper.Field[any, string]("p20"), correlated),
 			))
 		} else {
 			query = build(esper.SubqueryValue[bool](innerLong,
 				esper.EqualOf(
-					esper.Concat(esper.JoinField[string](0, "p00"), esper.JoinField[string](1, "p10")),
+					esper.ConcatOf(esper.JoinField[any](0, "p00"), esper.JoinField[any](1, "p10")),
 					esper.Field[any, string]("p20"),
 				),
 				correlated,
@@ -337,6 +348,15 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 				esper.Prev[int](1, esper.Field[any, int]("id")),
 				esper.Equal[int](esper.Field[any, int]("id"), esper.OuterField[int]("id"))),
 			)).Query(esper.StatementName("s0"))
+	case "same-event", "same-event-om", "same-event-compile":
+		query = esper.Select(
+			esper.From[subselectFilteredS1](env, "SupportBean_S1"),
+			esper.Alias("events1", esper.SubqueryValue[esper.Event](s1Inner(), esper.EventValue[esper.Event]())),
+		).Query(esper.StatementName("s0"))
+	case "select-wildcard":
+		query = esper.Select(outer,
+			esper.Alias("events1", esper.SubqueryValue[esper.Event](s1Inner(), esper.EventValue[esper.Event]())),
+		).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported subselect-filtered case %q", caseName)
 	}

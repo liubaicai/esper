@@ -1,3 +1,21 @@
+> 最新补充：Draft 4.223（2026-08-21），扩展 `subselect-filtered`
+> differential-verified 场景（wildcard 事件子查询切片）：固定 Java
+> `EPLSubselectFiltered.java` 的 `EPLSubselectSameEvent`
+>（`java-runtime-4ec1d23f545746f81f20`）、`EPLSubselectSameEventOM`
+>（`java-runtime-0626e0d5b878384ba989`）、`EPLSubselectSameEventCompile`
+>（`java-runtime-7705828482936493f505`）与 `EPLSubselectSelectWildcard`
+>（`java-runtime-7e0f728f635710446f39`）。场景扩展为 24 个 case，Java/Go
+> 各 80 条 listener records、0 differences；覆盖 `(select * ...)` 通配符
+> 标量子查询的单事件列投影——自流子查询可见触发事件自身（assertSame 身份
+> 断言以 {kind:row,fields:{id,p10,p11}} 字段快照为观测等价物，oracle 与
+> compat 渲染镜像）与跨流返回窗口先前事件。Go 侧复用
+> `EventValue[esper.Event]` + `SubqueryValue`；join-filtered 拼接谓词改用
+> 无类型 `ConcatOf`+`JoinField[any]`（既有 case records 字节级不变）。
+> manifest 更新为 529 cases、142 个 differential-verified case、451 个
+> differential runtime IDs、3090 条 associations（唯一已关联 runtime
+> 2901，未关联 1235），`epl.subselect.filtered` capability 达到 19/27
+> DV runtime。其余 8 个 filtered execution 保持 implemented-only。
+
 > 最新补充：Draft 4.222（2026-08-21），扩展 `subselect-filtered`
 > differential-verified 场景（where-previous 切片）：固定 Java
 > `EPLSubselectFiltered.java` 的 `EPLSubselectWherePrevious`

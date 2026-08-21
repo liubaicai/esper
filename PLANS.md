@@ -32,26 +32,32 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `f138c56f1` (`subselect: verify
-  join-gated parity (Draft 4.221)` pushed).
-- Current work unit: `epl.subselect.filtered`, where-previous slice of the
-  same `EPLSubselectFiltered.java` — three behaviorally-equivalent
-  executions (base/OM/Compile) across three cases extending
-  `subselect-filtered` to twenty cases; zero `internal/esper` changes.
+- Baseline: `HEAD` == `origin/master` == `f7c07c73f` (`subselect: verify
+  where-previous parity (Draft 4.222)` pushed).
+- Current work unit: `epl.subselect.filtered`, wildcard event-subquery
+  slice of the same `EPLSubselectFiltered.java` — four executions (SameEvent
+  triple + SelectWildcard) extending `subselect-filtered` to twenty-four
+  cases; zero `internal/esper` changes.
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - WherePrevious trio (`java-runtime-78f47a5bcdf6b87c9e68`,
-    `java-runtime-b1c2169572264f9fd646`,
-    `java-runtime-87fd9e194fcd61e0aba5`): correlated gated subquery
-    `(select prev(1, id) from SupportBean_S1#length(1000) where id=s0.id)`
-    projected as value over SupportBean_S0; three-round vector null/1/2 per
-    case. WHERE only filters candidate rows; prev(1) reads the unfiltered
-    window arrival order (round2 prev=1 is the discriminating probe).
-- Differential scope: `subselect-filtered` scenario extended to twenty
-  cases (three where-previous cases replaying the shared six-send sequence);
-  Java oracle gains the three case branches (WherePrevOracle worker); Go
-  runner gains one Prev-in-SubqueryValue branch and two new trace mutations
-  targeting om seq2/seq3.
+  - SameEvent trio (`java-runtime-4ec1d23f545746f81f20`,
+    `java-runtime-0626e0d5b878384ba989`,
+    `java-runtime-7705828482936493f505`): `(select * from
+    SupportBean_S1#length(1000)) as events1 from SupportBean_S1` — the
+    self-stream wildcard subquery sees the triggering event itself; Java
+    assertSame identity renders as the {kind:row,fields:{id,p10,p11}}
+    field-snapshot row on both sides.
+  - SelectWildcard (`java-runtime-7e0f728f635710446f39`): cross-stream form
+    `... from SupportBean_S0`; events1 holds the prior S1 event by value
+    snapshot; S1 sends never fire the S0-outer statement.
+- Differential scope: `subselect-filtered` scenario extended to twenty-four
+  cases; Java oracle gains the four case branches plus a SupportBean_S1
+  row-rendering branch in normalize (SameEventOracle worker; its om-case
+  outer-stream defect was fixed by the primary agent after the worker
+  parked); Go runner gains two EventValue[esper.Event] branches, reverts
+  S1.P10/P11 to pointers with join-filtered switched to untyped
+  ConcatOf/JoinField[any] (prior records byte-identical), and adds two new
+  trace mutations.
 - Allowed files: `internal/app/parity/subselect_filtered.go`,
   `internal/app/parity/run_test.go`,
   `tools/java-oracle/EPLSubselectFilteredScenarioOracle.java` +
@@ -78,6 +84,12 @@ activity or a single coverage percentage.
   isolated) authored the new Java oracle and runner script on the frozen
   scenario contract while the primary agent wrote the Go runner, dispatch,
   scenario, and tests. File ownership was disjoint.
+- Wildcard unit agents: prefetch scouts `SameEventJavaContract`
+  (java-oracle-scout) and `SameEventGoSurface` (scout) ran concurrently with
+  the Draft 4.222 review; asset writer `SameEventOracle`
+  (parity-asset-worker, isolated) authored the oracle extension (its om-case
+  outer-stream defect was fixed by the primary agent after the worker
+  parked). File ownership disjoint except that one primary-owned fix.
 - Where-previous unit agents: prefetch scouts `WherePrevJavaContract`
   (java-oracle-scout) and `WherePrevGoSurface` (scout) ran concurrently with
   the Draft 4.221 review; asset writer `WherePrevOracle`
@@ -247,7 +259,7 @@ filtered diff/mutation tests (20 mutations all reject), `go vet ./...`,
 `go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
 pass.
 
-## Where-previous unit (active)
+## Where-previous unit (closed; committed as `f7c07c73f`)
 
 - [x] Prefetch scouts (`WherePrevJavaContract`, `WherePrevGoSurface`) froze
   the three-execution slice, the three-round vectors, and the reusable Go
@@ -272,6 +284,35 @@ checksum `08ce7300b5fea5f0c896f70a779fb5c780b273b2fd12fc4d0f951c40b9091511`;
 the differential evidence is passing with 76 Java records, 76 Go records,
 0 differences, fifteen frozen runtime IDs, and fifteen execution names.
 Focused filtered diff/mutation tests (22 mutations all reject), `go vet
+./...`, `go test ./... -count=1 -timeout 240s`, `make check`, and
+`git diff --check` pass.
+
+## Wildcard events unit (active)
+
+- [x] Prefetch scouts (`SameEventJavaContract`, `SameEventGoSurface`) froze
+  the four-execution slice, the assertSame field-snapshot observation
+  equivalent, and the reusable Go surface (`EventValue[esper.Event]`;
+  zero engine changes).
+- [x] Extend `subselect-filtered` scenario to twenty-four cases; extend the
+  Java oracle via the `SameEventOracle` asset worker (om-case outer-stream
+  fix applied by the primary agent); extend the Go runner with two
+  EventValue branches and two new trace mutations.
+- [x] Regenerate the pinned-commit Java trace (80 records) and the passing
+  evidence with zero differences; register
+  `case.subselect-filtered-wildcard-events`; manifest summary is 142
+  differential cases, 451 differential runtime IDs, 3090 associations,
+  2901 unique referenced runtimes, 1235 unreferenced;
+  `epl.subselect.filtered` reaches 19/27 DV runtimes.
+- [x] Complete final full gates and independent parity review
+  (`WildcardReview` initial verdict flagged one P3 stale doc comment; the
+  fix was re-checked by the same reviewer: pass, zero findings); delivery is
+  ready for the single semantic commit and push.
+
+Final pre-commit verification: pinned Java oracle regenerated the trace with
+checksum `9a2162c75a92e8062f4df743914adff205155a845e0eddcf1f59805e6791181d`;
+the differential evidence is passing with 80 Java records, 80 Go records,
+0 differences, nineteen frozen runtime IDs, and nineteen execution names.
+Focused filtered diff/mutation tests (24 mutations all reject), `go vet
 ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, and
 `git diff --check` pass.
 

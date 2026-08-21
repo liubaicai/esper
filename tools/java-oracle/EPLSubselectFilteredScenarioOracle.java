@@ -32,8 +32,8 @@ import java.util.TreeSet;
  * Java oracle for EPLSubselectFiltered first-slice scenarios (scalar subquery
  * with where/having/filter).
  *
- * Covers the first slice of EPLSubselectFiltered: 15 behavioral executions
- * across 20 scenario cases - the three HavingNoAgg variants
+ * Covers the first slice of EPLSubselectFiltered: 19 behavioral executions
+ * across 24 scenario cases - the three HavingNoAgg variants
  * (having-no-filter-no-where, having-w-where, having-w-filter-w-where), the
  * three WhereConstant rounds (where-constant-single-column,
  * where-constant-two-column, where-constant-range), SelectWithWhereJoined
@@ -45,8 +45,13 @@ import java.util.TreeSet;
  * three WherePrevious variants (where-previous, where-previous-om,
  * where-previous-compile) - the three variants are behaviorally equivalent
  * and replay the same statement and event sequence, differing only in the
- * compilation path for the OM/Compile rounds. Same-event, wildcard, and the
- * remaining multi-stream joined executions remain in later slices.
+ * compilation path for the OM/Compile rounds. Also covered are the three
+ * SameEvent variants (same-event, same-event-om, same-event-compile) with a
+ * SupportBean_S1 outer stream and SelectWildcard (select-wildcard) with a
+ * SupportBean_S0 outer stream; both select the wildcard subquery
+ * (select * from SupportBean_S1#length(1000)) as events1, whose single-event
+ * column is observed through assertSame identity equivalence rendered as a
+ * field-snapshot row object {"kind":"row","fields":{"id":...,"p10":...}}.
  */
 public class EPLSubselectFilteredScenarioOracle {
 
@@ -298,6 +303,18 @@ public class EPLSubselectFilteredScenarioOracle {
             case "where-previous-compile" -> new String[]{
                 "@name('s0') select (select prev(1, id) from SupportBean_S1#length(1000) where id=s0.id) as value from SupportBean_S0 as s0"
             };
+            case "same-event" -> new String[]{
+                "@name('s0') select (select * from SupportBean_S1#length(1000)) as events1 from SupportBean_S1"
+            };
+            case "same-event-om" -> new String[]{
+                "@name('s0') select (select * from SupportBean_S1#length(1000)) as events1 from SupportBean_S1"
+            };
+            case "same-event-compile" -> new String[]{
+                "@name('s0') select (select * from SupportBean_S1#length(1000)) as events1 from SupportBean_S1"
+            };
+            case "select-wildcard" -> new String[]{
+                "@name('s0') select (select * from SupportBean_S1#length(1000)) as events1 from SupportBean_S0"
+            };
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };
     }
@@ -316,6 +333,17 @@ public class EPLSubselectFilteredScenarioOracle {
         }
         if (value instanceof Boolean) {
             return Json.value((Boolean) value);
+        }
+        if (value instanceof SupportBean_S1) {
+            SupportBean_S1 event = (SupportBean_S1) value;
+            JsonObject fields = new JsonObject();
+            fields.add("id", normalize(event.getId()));
+            fields.add("p10", normalize(event.getP10()));
+            fields.add("p11", normalize(event.getP11()));
+            JsonObject rowObj = new JsonObject();
+            rowObj.add("kind", "row");
+            rowObj.add("fields", fields);
+            return rowObj;
         }
         return Json.value(String.valueOf(value));
     }

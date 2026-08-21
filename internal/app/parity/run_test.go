@@ -13631,6 +13631,24 @@ func TestRunSubselectFilteredDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
+			name: "same-event-trigger-snapshot",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[76].New[0].Fields["events1"] = map[string]any{
+					"kind": "row",
+					"fields": map[string]any{
+						"id":  map[string]any{"state": "null"},
+						"p10": "Y",
+					},
+				}
+			},
+		},
+		{
+			name: "wildcard-cross-stream-prior",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[79].New[0].Fields["events1"] = map[string]any{"state": "null"}
+			},
+		},
+		{
 			name: "record-removed",
 			mutate: func(trace *compat.Trace) {
 				trace.Records = trace.Records[:len(trace.Records)-1]
