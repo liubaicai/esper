@@ -33,6 +33,8 @@ var (
 		"java-runtime-f5da6be14e939f2b26cc",
 		"java-runtime-b06640d26b3b63075791",
 		"java-runtime-14c4aecdca8b446299f1",
+		"java-runtime-3b6467afa76b0966c475",
+		"java-runtime-274b66386ba625a8b24c",
 	}
 	rollupDimensionalityJavaExecutions = []string{
 		"ResultSetQueryTypeUnboundRollup2Dim",
@@ -65,6 +67,7 @@ func runRollupDimensionalityScenario(ctx context.Context, scenario compat.Scenar
 		"unbound-rollup-3dim-rollup-join", "unbound-rollup-3dim-gs-join",
 		"unbound-cube-unenclosed-a", "unbound-cube-unenclosed-b", "unbound-cube-unenclosed-c",
 		"unbound-cube-4dim",
+		"bound-rollup",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("rollup-dimensionality scenario %q has no supported cases", scenario.ID)
@@ -212,6 +215,15 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 				esper.Alias("c2", longPrimitive),
 				esper.Alias("c3", doublePrimitive),
 				esper.Alias("c4", esper.Sum[int](intBoxed)),
+			).Query(esper.StatementName("s0"))
+	case "bound-rollup":
+		query = esper.From[rollupDimensionalityBean](env, "SupportBean").
+			Window(esper.LengthWindow(3)).
+			GroupByRollup(theString, intPrimitive).
+			Select(
+				esper.Alias("c0", theString),
+				esper.Alias("c1", intPrimitive),
+				esper.Alias("c2", esper.Sum[int64](longPrimitive)),
 			).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported rollup-dimensionality case %q", caseName)

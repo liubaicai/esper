@@ -444,8 +444,19 @@ rollup-dimensionality diff/mutation tests (9 mutations all reject),
   `case.rollup-dimensionality-unbound-cube`; manifest summary is 146
   differential cases, 464 differential runtime IDs, 3103 associations,
   2907 unique referenced runtimes, 1229 unreferenced.
-- [ ] Complete final full gates and independent parity review; then the
-  single semantic commit and push.
+- [x] Complete final full gates and independent parity review
+  (initial review flagged one P2 — two mutations targeting wrong-case
+  indices — plus P3 count/table drift; all fixed and re-checked: pass);
+  delivery is ready for the single semantic commit and push.
+
+Final pre-commit verification: pinned Java oracle regenerated the trace with
+checksum `6c81e4a0eabfe4f06d7d874881f32dddb4e43800f7908c7ec4030ad318542c05`;
+the differential evidence is passing with 64 Java records, 64 Go records,
+0 differences, six frozen runtime IDs, and six execution names. Focused
+rollup-dimensionality diff/mutation tests (12 mutations all reject), full
+`internal/esper` regression after the cubeGroupingSets fix, `go vet ./...`,
+`go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
+pass.
 
 ## Historical work-unit contract (Generic Cast; closed)
 

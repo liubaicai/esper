@@ -249,6 +249,15 @@ public class EPLResultSetQueryTypeRollupDimensionalityScenarioOracle {
             case "unbound-cube-4dim" -> new String[]{
                 "@Name('s0')select theString as c0, intPrimitive as c1, longPrimitive as c2, doublePrimitive as c3, sum(intBoxed) as c4 from SupportBean group by cube(theString, intPrimitive, longPrimitive, doublePrimitive)"
             };
+            case "bound-rollup" -> new String[]{
+                "@Name('s0')select theString as c0, intPrimitive as c1, sum(longPrimitive) as c2 from SupportBean#length(3) group by rollup(theString, intPrimitive)"
+            };
+            case "bound-rollup-join" -> new String[]{
+                "@Name('s0')select theString as c0, intPrimitive as c1, sum(longPrimitive) as c2 from SupportBean#length(3), SupportBean_S0#lastevent group by rollup(theString, intPrimitive)"
+            };
+            case "unbound-rollup-2dim-batch" -> new String[]{
+                "@Name('s0')select irstream theString as c0, intPrimitive as c1, sum(longPrimitive) as c2 from SupportBean#length_batch(4) group by rollup(theString, intPrimitive)"
+            };
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };
     }

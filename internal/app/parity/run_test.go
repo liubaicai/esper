@@ -13617,7 +13617,7 @@ func TestRunRollupDimensionalityCubeMutations(t *testing.T) {
 		{
 			name: "cube-4dim-cross-accumulation",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[64].New[15].Fields["c4"] = int64(6000)
+				trace.Records[52].New[15].Fields["c4"] = int64(6000)
 			},
 		},
 	}

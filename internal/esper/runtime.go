@@ -17298,40 +17298,40 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		// MaxTimeWindow keeps only the incoming event batch).
 		emitNew = true
 	}
-	orderAffected := func(events []Event) {
-		if len(groupingSets) > 1 {
-			// Java's rollup remove path lists all leaf groups for the removed
-			// events before the coarser grouping levels when the events share
-			// one delta (e.g. two window expiries at the same virtual time).
-			for _, groupingSet := range groupingSets {
-				for _, event := range events {
-					key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
-					if _, exists := seen[key]; !exists {
-						seen[key] = struct{}{}
-						affected = append(affected, key)
-					}
-				}
-			}
-			return
+	addAffectedKey := func(groupingSet []int, event Event) {
+		key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
+		if _, exists := seen[key]; !exists {
+			seen[key] = struct{}{}
+			affected = append(affected, key)
 		}
-		for _, event := range events {
+	}
+	if len(groupingSets) > 1 {
+		// Multi-level rollup/cube/grouping-sets result sets order the
+		// affected rows grouping-set major across the entire batch: every
+		// leaf group touched by any incoming event precedes other leaf
+		// groups touched by expiries at the same level, then coarser levels
+		// follow in declaration order. This mirrors Java's
+		// ResultSetProcessorGroupedRollup for mixed new+expiry batches.
+		for _, groupingSet := range groupingSets {
+			for _, event := range delta.newEvents {
+				addAffectedKey(groupingSet, event)
+			}
+			for _, event := range delta.oldEvents {
+				addAffectedKey(groupingSet, event)
+			}
+		}
+	} else {
+		for _, event := range delta.newEvents {
 			for _, groupingSet := range groupingSets {
-				key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
-				if _, exists := seen[key]; !exists {
-					seen[key] = struct{}{}
-					affected = append(affected, key)
-				}
+				addAffectedKey(groupingSet, event)
+			}
+		}
+		for _, event := range delta.oldEvents {
+			for _, groupingSet := range groupingSets {
+				addAffectedKey(groupingSet, event)
 			}
 		}
 	}
-	// Esper's result set lists the incoming event's group before groups whose
-	// rows changed only because a window eviction removed an old event. The
-	// grouped irstream trace (ResultSetAggregateCountSum count-one-view /
-	// count-join) exercises both groups in one batch: new rows list the new
-	// event's group first and the eviction-affected group second, and the old
-	// rows follow the same group order with the pre-batch state.
-	orderAffected(delta.newEvents)
-	orderAffected(delta.oldEvents)
 	markAffected := func(event Event, groupingSet []int) string {
 		key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
 		group := state.groups[key]

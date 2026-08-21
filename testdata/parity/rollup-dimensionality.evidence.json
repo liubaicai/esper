@@ -7,7 +7,9 @@
     "java-runtime-e60ea25dc87dcfbdcc08",
     "java-runtime-f5da6be14e939f2b26cc",
     "java-runtime-b06640d26b3b63075791",
-    "java-runtime-14c4aecdca8b446299f1"
+    "java-runtime-14c4aecdca8b446299f1",
+    "java-runtime-3b6467afa76b0966c475",
+    "java-runtime-274b66386ba625a8b24c"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupDimensionality.java"
@@ -292,13 +294,6 @@
       },
       {
         "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
         "eventType": "SupportBean",
         "payload": {
           "theString": "E1",
@@ -360,13 +355,6 @@
       {
         "op": "case",
         "case": "unbound-rollup-3dim-gs"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
       },
       {
         "op": "send",
@@ -434,13 +422,6 @@
       },
       {
         "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
-      },
-      {
-        "op": "send",
         "eventType": "SupportBean",
         "payload": {
           "theString": "E1",
@@ -502,13 +483,6 @@
       {
         "op": "case",
         "case": "unbound-rollup-3dim-gs-join"
-      },
-      {
-        "op": "send",
-        "eventType": "SupportBean_S0",
-        "payload": {
-          "id": 1
-        }
       },
       {
         "op": "send",
@@ -737,6 +711,109 @@
           "longPrimitive": 10,
           "doublePrimitive": 100.0,
           "intBoxed": 4000
+        }
+      },
+      {
+        "op": "case",
+        "case": "bound-rollup"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11,
+          "longPrimitive": 300
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 400
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 500
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 21,
+          "longPrimitive": 600
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 21,
+          "longPrimitive": 700
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 21,
+          "longPrimitive": 800
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 900
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11,
+          "longPrimitive": 1000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 1100
         }
       }
     ]
@@ -2416,738 +2493,6 @@
         ]
       },
       {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 10,
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 11,
-              "c3": 1,
-              "c4": 200
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 2,
-              "c2": 10,
-              "c3": 1,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 2,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 600
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 600
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": 1,
-              "c2": 10,
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1000
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 5,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 10,
-              "c3": 2,
-              "c4": 600
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 800
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 5,
-              "c4": 1500
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 6,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 11,
-              "c3": 2,
-              "c4": 800
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 5,
-              "c4": 1700
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 6,
-              "c4": 2100
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 10,
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 11,
-              "c3": 1,
-              "c4": 200
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 2,
-              "c2": 10,
-              "c3": 1,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 2,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 600
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 600
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": 1,
-              "c2": 10,
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1000
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 5,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 10,
-              "c3": 2,
-              "c4": 600
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 800
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 5,
-              "c4": 1500
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 6,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 11,
-              "c3": 2,
-              "c4": 800
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 5,
-              "c4": 1700
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 6,
-              "c4": 2100
-            }
-          }
-        ]
-      },
-      {
         "case": "unbound-cube-unenclosed-a",
         "operation": "listener",
         "statement": "s0",
@@ -4478,6 +3823,541 @@
                 "state": "null"
               },
               "c4": 7000
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 11,
+              "c2": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 900
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1200
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 11,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": 1300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1800
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": 2100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2100
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": 1500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2400
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 11,
+              "c2": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2700
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 3000
             }
           }
         ]
@@ -6159,738 +6039,6 @@
         ]
       },
       {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 10,
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 11,
-              "c3": 1,
-              "c4": 200
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 2,
-              "c2": 10,
-              "c3": 1,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 2,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 600
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 600
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": 1,
-              "c2": 10,
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1000
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 5,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 10,
-              "c3": 2,
-              "c4": 600
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 800
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 5,
-              "c4": 1500
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-rollup-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 6,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 11,
-              "c3": 2,
-              "c4": 800
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 5,
-              "c4": 1700
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 6,
-              "c4": 2100
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 1,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 10,
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 100
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 11,
-              "c3": 1,
-              "c4": 200
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 2,
-              "c4": 300
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 2,
-              "c2": 10,
-              "c3": 1,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 2,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 300
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 600
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 600
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 4,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": 1,
-              "c2": 10,
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E2",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 1,
-              "c4": 400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1000
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 5,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 10,
-              "c3": 2,
-              "c4": 600
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 3,
-              "c4": 800
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1100
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 5,
-              "c4": 1500
-            }
-          }
-        ]
-      },
-      {
-        "case": "unbound-rollup-3dim-gs-join",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 6,
-        "time": "1970-01-01T00:00:00Z",
-        "new": [
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": 11,
-              "c3": 2,
-              "c4": 800
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": 1,
-              "c2": {
-                "state": "null"
-              },
-              "c3": 4,
-              "c4": 1400
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": "E1",
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 5,
-              "c4": 1700
-            }
-          },
-          {
-            "kind": "row",
-            "fields": {
-              "c0": {
-                "state": "null"
-              },
-              "c1": {
-                "state": "null"
-              },
-              "c2": {
-                "state": "null"
-              },
-              "c3": 6,
-              "c4": 2100
-            }
-          }
-        ]
-      },
-      {
         "case": "unbound-cube-unenclosed-a",
         "operation": "listener",
         "statement": "s0",
@@ -8221,6 +7369,541 @@
                 "state": "null"
               },
               "c4": 7000
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 11,
+              "c2": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 900
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1200
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 11,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": 1300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1800
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": 2100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2100
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": 1500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2400
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 11,
+              "c2": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2700
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21,
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 3000
             }
           }
         ]
