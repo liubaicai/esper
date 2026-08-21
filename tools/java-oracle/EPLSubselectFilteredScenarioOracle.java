@@ -26,19 +26,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeSet;
 
 /**
  * Java oracle for EPLSubselectFiltered first-slice scenarios (scalar subquery
  * with where/having/filter).
  *
- * Covers the first slice of EPLSubselectFiltered: 19 behavioral executions
- * across 24 scenario cases - the three HavingNoAgg variants
+ * Covers the first slice of EPLSubselectFiltered: 22 behavioral executions
+ * across 27 scenario cases - the three HavingNoAgg variants
  * (having-no-filter-no-where, having-w-where, having-w-filter-w-where), the
  * three WhereConstant rounds (where-constant-single-column,
  * where-constant-two-column, where-constant-range), SelectWithWhereJoined
- * (select-with-where-joined), the three MultikeyWArray rounds
- * (multikey-array-primitive, multikey-array-two-field,
+ * (select-with-where-joined), the three multi-stream join rounds
+ * (joined-2-streams, joined-3-streams, joined-3-scene-two), the three
+ * MultikeyWArray rounds (multikey-array-primitive, multikey-array-two-field,
  * multikey-array-composite), the two Joined4 numeric-coercion executions
  * (joined-4-coercion-p1/p2/p3, joined-4-back-coercion-p1/p2), the two
  * JoinFiltered executions (join-filtered-one, join-filtered-two), and the
@@ -89,6 +92,10 @@ public class EPLSubselectFilteredScenarioOracle {
         config.getCommon().addEventType(SupportBean_S0.class);
         config.getCommon().addEventType(SupportBean_S1.class);
         config.getCommon().addEventType(SupportBean_S2.class);
+        Map<String, Object> s3Type = new HashMap<>();
+        s3Type.put("id", Integer.class);
+        s3Type.put("p30", String.class);
+        config.getCommon().addEventType("SupportBean_S3", s3Type);
         config.getCommon().addEventType(SupportEventWithIntArray.class);
         config.getCommon().addEventType(SupportEventWithManyArray.class);
         config.getRuntime().getThreading().setInternalTimerEnabled(false);
@@ -231,6 +238,15 @@ public class EPLSubselectFilteredScenarioOracle {
                             }
                             runtime.getEventService().sendEventBean(event, "SupportBean_S2");
                         }
+                        case "SupportBean_S3" -> {
+                            Map<String, Object> m = new HashMap<>();
+                            m.put("id", payload.getInt("id", 0));
+                            JsonValue p30 = payload.get("p30");
+                            if (p30 instanceof JsonString) {
+                                m.put("p30", ((JsonString) p30).asString());
+                            }
+                            runtime.getEventService().sendEventMap(m, "SupportBean_S3");
+                        }
                         default -> throw new IllegalStateException("unknown eventType: " + type);
                     }
                 }
@@ -263,6 +279,15 @@ public class EPLSubselectFilteredScenarioOracle {
             };
             case "select-with-where-joined" -> new String[]{
                 "@name('s0') select (select id from SupportBean_S1#length(1000) where p10=s0.p00) as ids1 from SupportBean_S0 as s0"
+            };
+            case "joined-2-streams" -> new String[]{
+                "@name('s0') select (select id from SupportBean_S0#length(1000) where p00=s1.p10 and p00=s2.p20) as ids0 from SupportBean_S1#keepall as s1, SupportBean_S2#keepall as s2 where s1.id = s2.id"
+            };
+            case "joined-3-streams" -> new String[]{
+                "@name('s0') select (select id from SupportBean_S0#length(1000) where p00=s1.p10 and p00=s3.p30) as ids0 from SupportBean_S1#keepall as s1, SupportBean_S2#keepall as s2, SupportBean_S3#keepall as s3 where s1.id = s2.id and s2.id = s3.id"
+            };
+            case "joined-3-scene-two" -> new String[]{
+                "@name('s0') select (select id from SupportBean_S0#length(1000) where p00=s1.p10 and p00=s3.p30 and p00=s2.p20) as ids0 from SupportBean_S1#keepall as s1, SupportBean_S2#keepall as s2, SupportBean_S3#keepall as s3 where s1.id = s2.id and s2.id = s3.id"
             };
             case "multikey-array-primitive" -> new String[]{
                 "@name('s0') select (select id from SupportEventWithManyArray#keepall as sm where sm.intOne = se.array) as value from SupportEventWithIntArray as se"

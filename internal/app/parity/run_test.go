@@ -13649,6 +13649,30 @@ func TestRunSubselectFilteredDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
+			name: "multi-stream-partial-correlation",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[83].New[0].Fields["ids0"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "multi-stream-full-correlation",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[88].New[0].Fields["ids0"] = 99
+			},
+		},
+		{
+			name: "multi-stream-scene-two-positive-hit",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[91].New[0].Fields["ids0"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "multi-stream-join-gate",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[80].New[0].Fields["ids0"] = 99
+			},
+		},
+		{
 			name: "record-removed",
 			mutate: func(trace *compat.Trace) {
 				trace.Records = trace.Records[:len(trace.Records)-1]

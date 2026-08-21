@@ -2006,7 +2006,10 @@
     "java-runtime-4ec1d23f545746f81f20",
     "java-runtime-0626e0d5b878384ba989",
     "java-runtime-7705828482936493f505",
-    "java-runtime-7e0f728f635710446f39"
+    "java-runtime-7e0f728f635710446f39",
+    "java-runtime-b3ce74a1b603f1dfa644",
+    "java-runtime-21f4b30723f3e5256823",
+    "java-runtime-71f4714a3f10241083e9"
    ]
   },
   {
@@ -32621,6 +32624,57 @@
     "java-runtime-7705828482936493f505",
     "java-runtime-7e0f728f635710446f39"
    ]
+  },
+  {
+   "id": "case.subselect-filtered-multi-stream",
+   "javaRuntimeIds": [
+    "java-runtime-b3ce74a1b603f1dfa644",
+    "java-runtime-21f4b30723f3e5256823",
+    "java-runtime-71f4714a3f10241083e9"
+   ],
+   "javaNames": [
+    "EPLSubselectSelectWhereJoined2Streams",
+    "EPLSubselectSelectWhereJoined3Streams",
+    "EPLSubselectSelectWhereJoined3SceneTwo"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectFiltered.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunSubselectFilteredDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunSubselectFilteredDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "subselect",
+    "filtered",
+    "multi-stream",
+    "partial-correlation",
+    "join-gated",
+    "scene-control"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/subselect-filtered.json",
+    "testdata/parity/subselect-filtered.trace.json",
+    "testdata/parity/subselect-filtered.evidence.json",
+    "tools/java-oracle/EPLSubselectFilteredScenarioOracle.java",
+    "tools/java-oracle/run-subselect-filtered.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b3ce74a1b603f1dfa644",
+    "java-runtime-21f4b30723f3e5256823",
+    "java-runtime-71f4714a3f10241083e9"
+   ]
   }
  ],
  "mappings": [
@@ -35071,13 +35125,17 @@
   {
    "capabilityId": "epl.subselect.filtered",
    "caseId": "case.subselect-filtered-wildcard-events"
+  },
+  {
+   "capabilityId": "epl.subselect.filtered",
+   "caseId": "case.subselect-filtered-multi-stream"
   }
  ],
  "summary": {
-  "inventoriedCases": 529,
-  "implementedCases": 527,
-  "differentialVerifiedCases": 142,
-  "differentialVerifiedRuntimeIds": 451,
+  "inventoriedCases": 530,
+  "implementedCases": 528,
+  "differentialVerifiedCases": 143,
+  "differentialVerifiedRuntimeIds": 454,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -35087,13 +35145,13 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3090,
+  "runtimeAssociationCount": 3093,
   "referencedJavaRuntimeIds": 2901,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 1235,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 529,
+  "totalCases": 530,
   "totalCapabilities": 110
  }
 }

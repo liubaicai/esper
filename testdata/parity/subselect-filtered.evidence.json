@@ -20,7 +20,10 @@
     "java-runtime-4ec1d23f545746f81f20",
     "java-runtime-0626e0d5b878384ba989",
     "java-runtime-7705828482936493f505",
-    "java-runtime-7e0f728f635710446f39"
+    "java-runtime-7e0f728f635710446f39",
+    "java-runtime-b3ce74a1b603f1dfa644",
+    "java-runtime-21f4b30723f3e5256823",
+    "java-runtime-71f4714a3f10241083e9"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectFiltered.java"
@@ -44,7 +47,10 @@
     "EPLSubselectSameEvent",
     "EPLSubselectSameEventOM",
     "EPLSubselectSameEventCompile",
-    "EPLSubselectSelectWildcard"
+    "EPLSubselectSelectWildcard",
+    "EPLSubselectSelectWhereJoined2Streams",
+    "EPLSubselectSelectWhereJoined3Streams",
+    "EPLSubselectSelectWhereJoined3SceneTwo"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -2101,6 +2107,330 @@
         "payload": {
           "id": 0
         }
+      },
+      {
+        "op": "case",
+        "case": "joined-2-streams"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 10,
+          "p20": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 99,
+          "p00": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 11,
+          "p10": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 11,
+          "p20": "s0_1"
+        }
+      },
+      {
+        "op": "case",
+        "case": "joined-3-streams"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 10,
+          "p20": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 10,
+          "p30": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 99,
+          "p00": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 11,
+          "p10": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 11,
+          "p20": "xxx"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 11,
+          "p30": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 98,
+          "p00": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 12,
+          "p10": "s0_x"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 12,
+          "p20": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 12,
+          "p30": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 13,
+          "p10": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 13,
+          "p20": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 13,
+          "p30": "s0_x"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 14,
+          "p10": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 14,
+          "p20": "xx"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 14,
+          "p30": "s0_2"
+        }
+      },
+      {
+        "op": "case",
+        "case": "joined-3-scene-two"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 10,
+          "p20": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 10,
+          "p30": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 99,
+          "p00": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 11,
+          "p10": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 11,
+          "p20": "xxx"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 11,
+          "p30": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 98,
+          "p00": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 12,
+          "p10": "s0_x"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 12,
+          "p20": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 12,
+          "p30": "s0_1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 13,
+          "p10": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 13,
+          "p20": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 13,
+          "p30": "s0_x"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 14,
+          "p10": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 14,
+          "p20": "s0_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S3",
+        "payload": {
+          "id": 14,
+          "p30": "s0_2"
+        }
       }
     ]
   },
@@ -3451,6 +3781,202 @@
             }
           }
         ]
+      },
+      {
+        "case": "joined-2-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-2-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": 99
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": 99
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": 98
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": 98
+            }
+          }
+        ]
       }
     ]
   },
@@ -4798,6 +5324,202 @@
                 },
                 "kind": "row"
               }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-2-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-2-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": 99
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": 99
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-streams",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": 98
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "joined-3-scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ids0": 98
             }
           }
         ]

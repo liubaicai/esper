@@ -1,3 +1,22 @@
+> 最新补充：Draft 4.224（2026-08-21），扩展 `subselect-filtered`
+> differential-verified 场景（多流 join 切片）：固定 Java
+> `EPLSubselectFiltered.java` 的 `EPLSubselectSelectWhereJoined2Streams`
+>（`java-runtime-b3ce74a1b603f1dfa644`）、
+> `EPLSubselectSelectWhereJoined3Streams`
+>（`java-runtime-21f4b30723f3e5256823`）与
+> `EPLSubselectSelectWhereJoined3SceneTwo`
+>（`java-runtime-71f4714a3f10241083e9`）。场景扩展为 27 个 case，Java/Go
+> 各 92 条 listener records、0 differences；覆盖 S1⋈S2 与三流 keepall join
+> 外层驱动 S0 子查询、部分相关性语义（子查询仅相关 s1.p10/s3.p30 时 S2
+> 只参与 join 门控——同输入 R2 99 vs null 差分对判别）、未完成 id 链不
+> 触发、窗口跨轮累积。Go 侧复用 `Join`/`JoinMany`/`OnEqual`/
+> `OnSourcesEqual`/`JoinField`，无 `internal/esper` 改动；oracle 以
+> Map-based SupportBean_S3 事件类型规避 regression-lib classpath 依赖。
+> manifest 更新为 530 cases、143 个 differential-verified case、454 个
+> differential runtime IDs、3093 条 associations（唯一已关联 runtime
+> 2901，未关联 1235），`epl.subselect.filtered` capability 达到 22/27
+> DV runtime。其余 5 个 filtered execution 保持 implemented-only。
+
 > 最新补充：Draft 4.223（2026-08-21），扩展 `subselect-filtered`
 > differential-verified 场景（wildcard 事件子查询切片）：固定 Java
 > `EPLSubselectFiltered.java` 的 `EPLSubselectSameEvent`

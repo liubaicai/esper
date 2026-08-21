@@ -33,6 +33,11 @@ type subselectFilteredS2 struct {
 	P20 string `esper:"p20"`
 }
 
+type subselectFilteredS3 struct {
+	ID  int    `esper:"id"`
+	P30 string `esper:"p30"`
+}
+
 type subselectFilteredManyArray struct {
 	ID     string `esper:"id"`
 	IntOne []int  `esper:"intOne"`
@@ -70,6 +75,9 @@ var (
 		"java-runtime-0626e0d5b878384ba989",
 		"java-runtime-7705828482936493f505",
 		"java-runtime-7e0f728f635710446f39",
+		"java-runtime-b3ce74a1b603f1dfa644",
+		"java-runtime-21f4b30723f3e5256823",
+		"java-runtime-71f4714a3f10241083e9",
 	}
 	subselectFilteredJavaExecutions = []string{
 		"EPLSubselectHavingNoAggNoFilterNoWhere",
@@ -91,23 +99,29 @@ var (
 		"EPLSubselectSameEventOM",
 		"EPLSubselectSameEventCompile",
 		"EPLSubselectSelectWildcard",
+		"EPLSubselectSelectWhereJoined2Streams",
+		"EPLSubselectSelectWhereJoined3Streams",
+		"EPLSubselectSelectWhereJoined3SceneTwo",
 	}
 )
 
 // runSubselectFilteredScenario replays the scalar-filter, multikey-wArray,
-// joined numeric-coercion, join-filtered, where-previous and wildcard
-// event-subquery slices of EPLSubselectFiltered (19 executions across 24
-// scenario cases; WhereConstant contributes three single-deployment cases,
-// each Joined4 coercion statement is its own predicate-ordering case, the
-// WherePrevious triple replays one shared sequence per compilation path, and
-// the SameEvent triple does the same for the self-stream wildcard column):
-// non-aggregated having row filters, constant and correlated where
-// predicates, null-on-empty/null-on-multiple scalar subselect boundaries,
-// int[] content-equality correlation keys, cross-stream boxed numeric
-// coercion over a three-way keepall join, two-stream joins gated by
-// scalar/boolean subqueries with prior/prev projections, prev over a gated
-// subquery's unfiltered window, and single-event wildcard columns observing
-// trigger and cross-stream event references.
+// joined numeric-coercion, join-filtered, where-previous, wildcard
+// event-subquery and multi-stream join slices of EPLSubselectFiltered (22
+// executions across 27 scenario cases; WhereConstant contributes three
+// single-deployment cases, each Joined4 coercion statement is its own
+// predicate-ordering case, the WherePrevious triple replays one shared
+// sequence per compilation path, the SameEvent triple does the same for the
+// self-stream wildcard column, and the two three-stream join cases contrast
+// partial versus full correlation over byte-identical inputs except the
+// final scene-two round): non-aggregated having row filters, constant and
+// correlated where predicates, null-on-empty/null-on-multiple scalar
+// subselect boundaries, int[] content-equality correlation keys, cross-stream
+// boxed numeric coercion over a three-way keepall join, two-stream joins
+// gated by scalar/boolean subqueries with prior/prev projections, prev over
+// a gated subquery's unfiltered window, single-event wildcard columns
+// observing trigger and cross-stream event references, and multi-stream
+// keepall joins driving an S0 correlated subquery.
 func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
@@ -122,6 +136,7 @@ func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario)
 		"join-filtered-one", "join-filtered-two",
 		"where-previous", "where-previous-om", "where-previous-compile",
 		"same-event", "same-event-om", "same-event-compile", "select-wildcard",
+		"joined-2-streams", "joined-3-streams", "joined-3-scene-two",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-filtered scenario %q has no supported cases", scenario.ID)
@@ -152,6 +167,7 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 		func() error { _, err := esper.RegisterStruct[subselectFilteredS0](env, "SupportBean_S0"); return err },
 		func() error { _, err := esper.RegisterStruct[subselectFilteredS1](env, "SupportBean_S1"); return err },
 		func() error { _, err := esper.RegisterStruct[subselectFilteredS2](env, "SupportBean_S2"); return err },
+		func() error { _, err := esper.RegisterStruct[subselectFilteredS3](env, "SupportBean_S3"); return err },
 		func() error {
 			_, err := esper.RegisterStruct[subselectFilteredManyArray](env, "SupportEventWithManyArray")
 			return err
@@ -357,6 +373,51 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 		query = esper.Select(outer,
 			esper.Alias("events1", esper.SubqueryValue[esper.Event](s1Inner(), esper.EventValue[esper.Event]())),
 		).Query(esper.StatementName("s0"))
+	case "joined-2-streams":
+		s0Inner := func() esper.RecordStream {
+			return esper.From[subselectFilteredS0](env, "SupportBean_S0").Window(esper.LengthWindow(1000)).AsRecord()
+		}
+		query = esper.Join(
+			esper.From[subselectFilteredS1](env, "SupportBean_S1").Window(esper.KeepAll()),
+			esper.From[subselectFilteredS2](env, "SupportBean_S2").Window(esper.KeepAll()),
+			esper.OnEqual(
+				esper.Field[subselectFilteredS1, int]("id"),
+				esper.Field[subselectFilteredS2, int]("id"),
+			),
+		).Select(
+			esper.SelectLeft("ids0", esper.SubqueryValue[int](s0Inner(),
+				esper.Field[any, int]("id"),
+				esper.And(
+					esper.EqualOf(esper.Field[any, string]("p00"), esper.JoinField[any](0, "p10")),
+					esper.EqualOf(esper.Field[any, string]("p00"), esper.JoinField[any](1, "p20")),
+				),
+			)),
+		).Query(esper.StatementName("s0"))
+	case "joined-3-streams", "joined-3-scene-two":
+		s0Inner := func() esper.RecordStream {
+			return esper.From[subselectFilteredS0](env, "SupportBean_S0").Window(esper.LengthWindow(1000)).AsRecord()
+		}
+		p00 := esper.Field[any, string]("p00")
+		var predicate esper.Expression[bool]
+		if caseName == "joined-3-streams" {
+			predicate = esper.And(esper.EqualOf(p00, esper.JoinField[any](0, "p10")),
+				esper.EqualOf(p00, esper.JoinField[any](2, "p30")))
+		} else {
+			predicate = esper.And(esper.EqualOf(p00, esper.JoinField[any](0, "p10")),
+				esper.And(esper.EqualOf(p00, esper.JoinField[any](2, "p30")),
+					esper.EqualOf(p00, esper.JoinField[any](1, "p20"))))
+		}
+		query = esper.JoinMany(
+			esper.JoinSource(esper.From[subselectFilteredS1](env, "SupportBean_S1").Window(esper.KeepAll())),
+			esper.JoinSource(esper.From[subselectFilteredS2](env, "SupportBean_S2").Window(esper.KeepAll())),
+			esper.JoinSource(esper.From[subselectFilteredS3](env, "SupportBean_S3").Window(esper.KeepAll())),
+		).On(
+			esper.OnSourcesEqual(0, esper.Field[subselectFilteredS1, int]("id"), 1, esper.Field[subselectFilteredS2, int]("id")),
+			esper.OnSourcesEqual(1, esper.Field[subselectFilteredS2, int]("id"), 2, esper.Field[subselectFilteredS3, int]("id")),
+		).Select(
+			esper.SelectLeft("ids0", esper.SubqueryValue[int](s0Inner(),
+				esper.Field[any, int]("id"), predicate)),
+		).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported subselect-filtered case %q", caseName)
 	}
@@ -401,6 +462,12 @@ func decodeSubselectFilteredPayload(step compat.Step) (any, error) {
 		var event subselectFilteredS2
 		if err := json.Unmarshal(step.Payload, &event); err != nil {
 			return nil, fmt.Errorf("subselect-filtered SupportBean_S2: %w", err)
+		}
+		return event, nil
+	case "SupportBean_S3":
+		var event subselectFilteredS3
+		if err := json.Unmarshal(step.Payload, &event); err != nil {
+			return nil, fmt.Errorf("subselect-filtered SupportBean_S3: %w", err)
 		}
 		return event, nil
 	case "SupportEventWithManyArray":
