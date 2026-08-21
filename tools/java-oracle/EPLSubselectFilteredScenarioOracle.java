@@ -10,6 +10,7 @@ import com.espertech.esper.common.client.json.minimaljson.JsonValue;
 import com.espertech.esper.common.internal.support.SupportBean;
 import com.espertech.esper.common.internal.support.SupportBean_S0;
 import com.espertech.esper.common.internal.support.SupportBean_S1;
+import com.espertech.esper.common.internal.support.SupportBean_S2;
 import com.espertech.esper.compiler.client.CompilerArguments;
 import com.espertech.esper.compiler.client.EPCompilerProvider;
 import com.espertech.esper.regressionlib.support.bean.SupportEventWithIntArray;
@@ -31,15 +32,16 @@ import java.util.TreeSet;
  * Java oracle for EPLSubselectFiltered first-slice scenarios (scalar subquery
  * with where/having/filter).
  *
- * Covers the first slice of EPLSubselectFiltered: 10 behavioral executions
- * across 15 scenario cases - the three HavingNoAgg variants
+ * Covers the first slice of EPLSubselectFiltered: 12 behavioral executions
+ * across 17 scenario cases - the three HavingNoAgg variants
  * (having-no-filter-no-where, having-w-where, having-w-filter-w-where), the
  * three WhereConstant rounds (where-constant-single-column,
  * where-constant-two-column, where-constant-range), SelectWithWhereJoined
  * (select-with-where-joined), the three MultikeyWArray rounds
  * (multikey-array-primitive, multikey-array-two-field,
- * multikey-array-composite), and the two Joined4 numeric-coercion executions
- * (joined-4-coercion-p1/p2/p3, joined-4-back-coercion-p1/p2). Same-event,
+ * multikey-array-composite), the two Joined4 numeric-coercion executions
+ * (joined-4-coercion-p1/p2/p3, joined-4-back-coercion-p1/p2), and the two
+ * JoinFiltered executions (join-filtered-one, join-filtered-two). Same-event,
  * wildcard, previous, and the remaining multi-stream joined executions remain
  * in later slices.
  */
@@ -78,6 +80,7 @@ public class EPLSubselectFilteredScenarioOracle {
         config.getCommon().addEventType(SupportBean.class);
         config.getCommon().addEventType(SupportBean_S0.class);
         config.getCommon().addEventType(SupportBean_S1.class);
+        config.getCommon().addEventType(SupportBean_S2.class);
         config.getCommon().addEventType(SupportEventWithIntArray.class);
         config.getCommon().addEventType(SupportEventWithManyArray.class);
         config.getRuntime().getThreading().setInternalTimerEnabled(false);
@@ -212,6 +215,14 @@ public class EPLSubselectFilteredScenarioOracle {
                             int value = valueVal instanceof JsonNumber ? ((JsonNumber) valueVal).asInt() : 0;
                             runtime.getEventService().sendEventBean(new SupportEventWithIntArray(id, array, value), "SupportEventWithIntArray");
                         }
+                        case "SupportBean_S2" -> {
+                            SupportBean_S2 event = new SupportBean_S2(payload.getInt("id", 0));
+                            JsonValue p20 = payload.get("p20");
+                            if (p20 instanceof JsonString) {
+                                event.setP20(((JsonString) p20).asString());
+                            }
+                            runtime.getEventService().sendEventBean(event, "SupportBean_S2");
+                        }
                         default -> throw new IllegalStateException("unknown eventType: " + type);
                     }
                 }
@@ -268,6 +279,12 @@ public class EPLSubselectFilteredScenarioOracle {
             };
             case "joined-4-back-coercion-p2" -> new String[]{
                 "@name('s0') select (select intPrimitive from SupportBean(theString='S')#length(1000)   where longBoxed=s2.doubleBoxed and intBoxed=s3.longBoxed and longBoxed=s1.intBoxed ) as ids0 from SupportBean(theString='A')#keepall as s1, SupportBean(theString='B')#keepall as s2, SupportBean(theString='C')#keepall as s3 where s1.intPrimitive = s2.intPrimitive and s2.intPrimitive = s3.intPrimitive"
+            };
+            case "join-filtered-one" -> new String[]{
+                "@name('s0') select s0.id as s0id, s1.id as s1id, (select p20 from SupportBean_S2#length(1000) where id=s0.id) as s2p20, (select prior(1, p20) from SupportBean_S2#length(1000) where id=s0.id) as s2p20Prior, (select prev(1, p20) from SupportBean_S2#length(10) where id=s0.id) as s2p20Prev from SupportBean_S0#keepall as s0, SupportBean_S1#keepall as s1 where s0.id = s1.id and p00||p10 = (select p20 from SupportBean_S2#length(1000) where id=s0.id)"
+            };
+            case "join-filtered-two" -> new String[]{
+                "@name('s0') select s0.id as s0id, s1.id as s1id, (select p20 from SupportBean_S2#length(1000) where id=s0.id) as s2p20, (select prior(1, p20) from SupportBean_S2#length(1000) where id=s0.id) as s2p20Prior, (select prev(1, p20) from SupportBean_S2#length(10) where id=s0.id) as s2p20Prev from SupportBean_S0#keepall as s0, SupportBean_S1#keepall as s1 where s0.id = s1.id and (select s0.p00||s1.p10 = p20 from SupportBean_S2#length(1000) where id=s0.id)"
             };
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };

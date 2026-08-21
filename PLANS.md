@@ -32,32 +32,33 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `4d931c979` (`subselect: verify
-  multikey wArray parity (Draft 4.219)` pushed).
-- Current work unit: `epl.subselect.filtered`, Joined4 numeric-coercion
-  slice of the same `EPLSubselectFiltered.java` — two executions across five
-  predicate-ordering cases extending `subselect-filtered` to fifteen cases;
-  zero `internal/esper` changes.
+- Baseline: `HEAD` == `origin/master` == `dcec9e1e0` (`subselect: verify
+  joined coercion parity (Draft 4.220)` pushed).
+- Current work unit: `epl.subselect.filtered`, join-gated slice of the same
+  `EPLSubselectFiltered.java` — two executions (JoinFilteredOne/Two)
+  extending `subselect-filtered` to seventeen cases; zero `internal/esper`
+  changes.
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - `EPLSubselectSelectWhereJoined4Coercion`
-    (`java-runtime-fd19463d0ce39b10f445`): three-way keepall join
-    (`s1.intPrimitive=s2.intPrimitive=s3.intPrimitive`) with subquery
-    predicates `intBoxed=s1.longBoxed`, `intBoxed=s2.doubleBoxed`,
-    `doubleBoxed=s3.intBoxed` in three orderings; five-round vector
-    null/-2/null/null/null.
-  - `EPLSubselectSelectWhereJoined4BackCoercion`
-    (`java-runtime-66c3d4d4100cb3f923a0`): wider-side-inner predicates
-    `longBoxed=s1.intBoxed`, `longBoxed=s2.doubleBoxed`,
-    `intBoxed=s3.longBoxed` in two orderings; vector null/-1/null/null/null.
-  - Exact rejection boundaries: integer off-by-one (3002 vs 3003, 204 vs
-    205) and double 0.0001 (203 vs 203.0001) reject with no epsilon;
-    predicate ordering never changes any round's output.
-- Differential scope: `subselect-filtered` scenario extended to fifteen
-  cases (boxed SupportBean payloads intBoxed/longBoxed/doubleBoxed); Java
-  oracle gains five join EPL statements and boxed decode (CoercionOracle
-  worker); Go runner gains the JoinMany/OnSourcesEqual/JoinField branch and
-  four new trace mutations.
+  - `EPLSubselectJoinFilteredOne` (`java-runtime-7474133de58ff180f8fa`):
+    S0⋈S1 keepall join on id equality; WHERE gates on
+    `s0.id=s1.id and p00||p10 = (select p20 ... where id=s0.id)`;
+    SELECT projects s0id/s1id plus scalar/prior(1)/prev(1) subqueries over
+    #length(1000)/#length(1000)/#length(10); vectors
+    {1,1,ab,null,null} and {2,2,qx,ab,ab}.
+  - `EPLSubselectJoinFilteredTwo` (`java-runtime-0a6686ce79af715278f7`):
+    same shape but the WHERE gate is a boolean subquery
+    `(select s0.p00||s1.p10 = p20 ...)`; identical output vectors.
+  - Key semantics: join-unsatisfied and empty-subquery rounds never fire;
+    prior/prev read the unfiltered windows across ids (round2
+    Prior=Prev="ab" from the id=1 event).
+- Differential scope: `subselect-filtered` scenario extended to seventeen
+  cases (SupportBean_S2{id,p20} payloads; S0/S1/S2 structs switched to value
+  strings matching the proven unit-test shape — observationally identical
+  for all prior cases, proven by byte-identical record prefixes); Java
+  oracle gains the two join EPL statements and S2 decode (JoinFilteredOracle
+  worker); Go runner gains the Join/OnEqual/SelectLeft/SelectRight branch
+  and three new trace mutations.
 - Allowed files: `internal/app/parity/subselect_filtered.go`,
   `internal/app/parity/run_test.go`,
   `tools/java-oracle/EPLSubselectFilteredScenarioOracle.java` +
@@ -84,6 +85,12 @@ activity or a single coverage percentage.
   isolated) authored the new Java oracle and runner script on the frozen
   scenario contract while the primary agent wrote the Go runner, dispatch,
   scenario, and tests. File ownership was disjoint.
+- Join-gated unit agents: prefetch scouts `JoinFilteredJavaContract`
+  (java-oracle-scout) and `JoinFilteredGoSurface` (scout) ran concurrently
+  with the Draft 4.220 review; asset writer `JoinFilteredOracle`
+  (parity-asset-worker, isolated) authored the oracle extension while the
+  primary agent wrote the scenario extension, runner branch, and mutations.
+  File ownership was disjoint.
 - Multikey unit agents: prefetch scouts `MultikeyJavaContract`
   (java-oracle-scout) and `MultikeyGoSurface` (scout) ran concurrently with
   the Draft 4.218 review; asset writer `MultikeyOracle`
@@ -185,7 +192,7 @@ filtered diff/mutation tests (13 mutations all reject), `go vet ./...`,
 `go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
 pass.
 
-## Joined coercion unit (active)
+## Joined coercion unit (closed; committed as `dcec9e1e0`)
 
 - [x] Prefetch scouts (`CoercionJavaContract`, `CoercionGoSurface`) froze the
   two-execution slice, the five-round vectors, exact rejection boundaries,
@@ -211,6 +218,33 @@ checksum `05e3ea6dc541f87e84a233ecd4dec630573fb163437a2f97fd05b825b9452d56`;
 the differential evidence is passing with 63 Java records, 63 Go records,
 0 differences, ten frozen runtime IDs, and ten execution names. Focused
 filtered diff/mutation tests (17 mutations all reject), `go vet ./...`,
+`go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
+pass.
+
+## Join-gated unit (active)
+
+- [x] Prefetch scouts (`JoinFilteredJavaContract`, `JoinFilteredGoSurface`)
+  froze the two-execution slice, the fire/no-fire vectors, prior/prev
+  unfiltered-window semantics, and the reusable Go surface (`Join`/`OnEqual`
+  builders; zero engine changes).
+- [x] Extend `subselect-filtered` scenario to seventeen cases; extend the
+  Java oracle via the `JoinFilteredOracle` asset worker; extend the Go runner
+  with the S2 struct, Join branch, and three new trace mutations.
+- [x] Regenerate the pinned-commit Java trace (67 records) and the passing
+  evidence with zero differences; register
+  `case.subselect-filtered-join-gated`; manifest summary is 140 differential
+  cases, 444 differential runtime IDs, 3083 associations, 2901 unique
+  referenced runtimes, 1235 unreferenced; `epl.subselect.filtered` reaches
+  12/27 DV runtimes.
+- [x] Complete final full gates and independent parity review
+  (`JoinGatedReview` verdict: pass, zero findings); delivery is ready for the
+  single semantic commit and push.
+
+Final pre-commit verification: pinned Java oracle regenerated the trace with
+checksum `74cd9542e22d059247ae94f3e46bbbc7ede54491a4a3343fd271bbef05b64117`;
+the differential evidence is passing with 67 Java records, 67 Go records,
+0 differences, twelve frozen runtime IDs, and twelve execution names. Focused
+filtered diff/mutation tests (20 mutations all reject), `go vet ./...`,
 `go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
 pass.
 

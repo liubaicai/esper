@@ -1997,7 +1997,9 @@
     "java-runtime-9255e3470adb866211bf",
     "java-runtime-7fbee5b6cef2f287ee41",
     "java-runtime-fd19463d0ce39b10f445",
-    "java-runtime-66c3d4d4100cb3f923a0"
+    "java-runtime-66c3d4d4100cb3f923a0",
+    "java-runtime-7474133de58ff180f8fa",
+    "java-runtime-0a6686ce79af715278f7"
    ]
   },
   {
@@ -32459,6 +32461,54 @@
     "java-runtime-fd19463d0ce39b10f445",
     "java-runtime-66c3d4d4100cb3f923a0"
    ]
+  },
+  {
+   "id": "case.subselect-filtered-join-gated",
+   "javaRuntimeIds": [
+    "java-runtime-7474133de58ff180f8fa",
+    "java-runtime-0a6686ce79af715278f7"
+   ],
+   "javaNames": [
+    "EPLSubselectJoinFilteredOne",
+    "EPLSubselectJoinFilteredTwo"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectFiltered.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunSubselectFilteredDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunSubselectFilteredDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "subselect",
+    "filtered",
+    "join",
+    "boolean-subquery",
+    "prior-prev",
+    "where-gate"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/subselect-filtered.json",
+    "testdata/parity/subselect-filtered.trace.json",
+    "testdata/parity/subselect-filtered.evidence.json",
+    "tools/java-oracle/EPLSubselectFilteredScenarioOracle.java",
+    "tools/java-oracle/run-subselect-filtered.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7474133de58ff180f8fa",
+    "java-runtime-0a6686ce79af715278f7"
+   ]
   }
  ],
  "mappings": [
@@ -34897,13 +34947,17 @@
   {
    "capabilityId": "epl.subselect.filtered",
    "caseId": "case.subselect-filtered-joined-coercion"
+  },
+  {
+   "capabilityId": "epl.subselect.filtered",
+   "caseId": "case.subselect-filtered-join-gated"
   }
  ],
  "summary": {
-  "inventoriedCases": 526,
-  "implementedCases": 524,
-  "differentialVerifiedCases": 139,
-  "differentialVerifiedRuntimeIds": 442,
+  "inventoriedCases": 527,
+  "implementedCases": 525,
+  "differentialVerifiedCases": 140,
+  "differentialVerifiedRuntimeIds": 444,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -34913,13 +34967,13 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3081,
+  "runtimeAssociationCount": 3083,
   "referencedJavaRuntimeIds": 2901,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 1235,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 526,
+  "totalCases": 527,
   "totalCapabilities": 110
  }
 }

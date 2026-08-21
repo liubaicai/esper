@@ -18,14 +18,19 @@ type subselectFilteredBean struct {
 }
 
 type subselectFilteredS0 struct {
-	ID  int     `esper:"id"`
-	P00 *string `esper:"p00"`
+	ID  int    `esper:"id"`
+	P00 string `esper:"p00"`
 }
 
 type subselectFilteredS1 struct {
-	ID  int     `esper:"id"`
-	P10 *string `esper:"p10"`
-	P11 *string `esper:"p11"`
+	ID  int    `esper:"id"`
+	P10 string `esper:"p10"`
+	P11 string `esper:"p11"`
+}
+
+type subselectFilteredS2 struct {
+	ID  int    `esper:"id"`
+	P20 string `esper:"p20"`
 }
 
 type subselectFilteredManyArray struct {
@@ -56,6 +61,8 @@ var (
 		"java-runtime-7fbee5b6cef2f287ee41",
 		"java-runtime-fd19463d0ce39b10f445",
 		"java-runtime-66c3d4d4100cb3f923a0",
+		"java-runtime-7474133de58ff180f8fa",
+		"java-runtime-0a6686ce79af715278f7",
 	}
 	subselectFilteredJavaExecutions = []string{
 		"EPLSubselectHavingNoAggNoFilterNoWhere",
@@ -68,17 +75,20 @@ var (
 		"EPLSubselectWhereClauseMultikeyWArrayComposite",
 		"EPLSubselectSelectWhereJoined4Coercion",
 		"EPLSubselectSelectWhereJoined4BackCoercion",
+		"EPLSubselectJoinFilteredOne",
+		"EPLSubselectJoinFilteredTwo",
 	}
 )
 
-// runSubselectFilteredScenario replays the scalar-filter, multikey-wArray and
-// joined numeric-coercion slices of EPLSubselectFiltered (10 executions
-// across 15 scenario cases; WhereConstant contributes three single-deployment
-// cases and each Joined4 coercion statement is its own predicate-ordering
-// case): non-aggregated having row filters, constant and correlated where
-// predicates, null-on-empty/null-on-multiple scalar subselect boundaries,
-// int[] content-equality correlation keys, and cross-stream boxed numeric
-// coercion over a three-way keepall join.
+// runSubselectFilteredScenario replays the scalar-filter, multikey-wArray,
+// joined numeric-coercion and join-filtered slices of EPLSubselectFiltered
+// (12 executions across 17 scenario cases; WhereConstant contributes three
+// single-deployment cases and each Joined4 coercion statement is its own
+// predicate-ordering case): non-aggregated having row filters, constant and
+// correlated where predicates, null-on-empty/null-on-multiple scalar
+// subselect boundaries, int[] content-equality correlation keys, cross-stream
+// boxed numeric coercion over a three-way keepall join, and two-stream joins
+// gated by scalar/boolean subqueries with prior/prev projections.
 func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
@@ -90,6 +100,7 @@ func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario)
 		"multikey-array-primitive", "multikey-array-two-field", "multikey-array-composite",
 		"joined-4-coercion-p1", "joined-4-coercion-p2", "joined-4-coercion-p3",
 		"joined-4-back-coercion-p1", "joined-4-back-coercion-p2",
+		"join-filtered-one", "join-filtered-two",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-filtered scenario %q has no supported cases", scenario.ID)
@@ -119,6 +130,7 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 		func() error { _, err := esper.RegisterStruct[subselectFilteredBean](env, "SupportBean"); return err },
 		func() error { _, err := esper.RegisterStruct[subselectFilteredS0](env, "SupportBean_S0"); return err },
 		func() error { _, err := esper.RegisterStruct[subselectFilteredS1](env, "SupportBean_S1"); return err },
+		func() error { _, err := esper.RegisterStruct[subselectFilteredS2](env, "SupportBean_S2"); return err },
 		func() error {
 			_, err := esper.RegisterStruct[subselectFilteredManyArray](env, "SupportEventWithManyArray")
 			return err
@@ -272,6 +284,43 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 		).Select(
 			esper.SelectLeft("ids0", esper.SubqueryValue[int](coercionInner, esper.Field[any, int]("intPrimitive"), predicate)),
 		).Query(esper.StatementName("s0"))
+	case "join-filtered-one", "join-filtered-two":
+		innerLong := esper.From[subselectFilteredS2](env, "SupportBean_S2").Window(esper.LengthWindow(1000)).AsRecord()
+		innerShort := func() esper.RecordStream {
+			return esper.From[subselectFilteredS2](env, "SupportBean_S2").Window(esper.LengthWindow(10)).AsRecord()
+		}
+		correlated := esper.Equal[int](esper.Field[any, int]("id"), esper.JoinField[int](0, "id"))
+		build := func(where esper.Expression[bool]) esper.Query {
+			return esper.Join(
+				esper.From[subselectFilteredS0](env, "SupportBean_S0").Window(esper.KeepAll()),
+				esper.From[subselectFilteredS1](env, "SupportBean_S1").Window(esper.KeepAll()),
+				esper.OnEqual(
+					esper.Field[subselectFilteredS0, int]("id"),
+					esper.Field[subselectFilteredS1, int]("id"),
+				),
+			).Select(
+				esper.SelectLeft("s0id", esper.JoinField[int](0, "id")),
+				esper.SelectRight("s1id", esper.JoinField[int](1, "id")),
+				esper.SelectLeft("s2p20", esper.SubqueryValue[string](innerLong, esper.Field[any, string]("p20"), correlated)),
+				esper.SelectLeft("s2p20Prior", esper.SubqueryValue[string](innerLong, esper.Prior[string](0, esper.Field[any, string]("p20")), correlated)),
+				esper.SelectLeft("s2p20Prev", esper.SubqueryValue[string](innerShort(),
+					esper.Prev[string](1, esper.Field[any, string]("p20")), correlated)),
+			).Where(where).Query(esper.StatementName("s0"))
+		}
+		if caseName == "join-filtered-one" {
+			query = build(esper.EqualOf(
+				esper.Concat(esper.JoinField[string](0, "p00"), esper.JoinField[string](1, "p10")),
+				esper.SubqueryValue[string](innerLong, esper.Field[any, string]("p20"), correlated),
+			))
+		} else {
+			query = build(esper.SubqueryValue[bool](innerLong,
+				esper.EqualOf(
+					esper.Concat(esper.JoinField[string](0, "p00"), esper.JoinField[string](1, "p10")),
+					esper.Field[any, string]("p20"),
+				),
+				correlated,
+			))
+		}
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported subselect-filtered case %q", caseName)
 	}
@@ -310,6 +359,12 @@ func decodeSubselectFilteredPayload(step compat.Step) (any, error) {
 		var event subselectFilteredS1
 		if err := json.Unmarshal(step.Payload, &event); err != nil {
 			return nil, fmt.Errorf("subselect-filtered SupportBean_S1: %w", err)
+		}
+		return event, nil
+	case "SupportBean_S2":
+		var event subselectFilteredS2
+		if err := json.Unmarshal(step.Payload, &event); err != nil {
+			return nil, fmt.Errorf("subselect-filtered SupportBean_S2: %w", err)
 		}
 		return event, nil
 	case "SupportEventWithManyArray":

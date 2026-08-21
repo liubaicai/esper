@@ -13601,6 +13601,24 @@ func TestRunSubselectFilteredDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
+			name: "join-filtered-gate-match",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[63].New[0].Fields["s2p20"] = "qx"
+			},
+		},
+		{
+			name: "join-filtered-prior-unfiltered",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[64].New[0].Fields["s2p20Prior"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "join-filtered-prev-window",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[66].New[0].Fields["s2p20Prev"] = "qx"
+			},
+		},
+		{
 			name: "record-removed",
 			mutate: func(trace *compat.Trace) {
 				trace.Records = trace.Records[:len(trace.Records)-1]
