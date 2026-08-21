@@ -711,7 +711,8 @@
     "internal/esper/expr.go",
     "internal/esper/plan.go",
     "internal/esper/runtime.go",
-    "internal/esper/aggregate_test.go"
+    "internal/esper/aggregate_test.go",
+    "internal/app/parity/rollup_dimensionality.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -723,7 +724,14 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-30499c2e4ff9aece48b2",
+    "java-runtime-b059890b735f776a9e03",
+    "java-runtime-e60ea25dc87dcfbdcc08",
+    "java-runtime-f5da6be14e939f2b26cc"
    ]
   },
   {
@@ -32735,6 +32743,60 @@
     "java-runtime-9161a695d692feb6902d",
     "java-runtime-1072ab9fc42579eed1e5"
    ]
+  },
+  {
+   "id": "case.rollup-dimensionality-unbound-rollup",
+   "javaRuntimeIds": [
+    "java-runtime-30499c2e4ff9aece48b2",
+    "java-runtime-b059890b735f776a9e03",
+    "java-runtime-e60ea25dc87dcfbdcc08",
+    "java-runtime-f5da6be14e939f2b26cc"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeUnboundRollup2Dim",
+    "ResultSetQueryTypeUnboundRollup1Dim",
+    "ResultSetQueryTypeUnboundRollupUnenclosed",
+    "ResultSetQueryTypeUnboundRollup3Dim"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupDimensionality.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunRollupDimensionalityDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRollupDimensionalityDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "rollup",
+    "grouping-sets",
+    "dimensionality",
+    "unbounded",
+    "syntax-equivalence",
+    "cartesian-join-prime"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/rollup-dimensionality.json",
+    "testdata/parity/rollup-dimensionality.trace.json",
+    "testdata/parity/rollup-dimensionality.evidence.json",
+    "tools/java-oracle/EPLResultSetQueryTypeRollupDimensionalityScenarioOracle.java",
+    "tools/java-oracle/run-rollup-dimensionality.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-30499c2e4ff9aece48b2",
+    "java-runtime-b059890b735f776a9e03",
+    "java-runtime-e60ea25dc87dcfbdcc08",
+    "java-runtime-f5da6be14e939f2b26cc"
+   ]
   }
  ],
  "mappings": [
@@ -35193,29 +35255,33 @@
   {
    "capabilityId": "epl.subselect.filtered",
    "caseId": "case.subselect-filtered-finale"
+  },
+  {
+   "capabilityId": "resultset.aggregate-dimensional",
+   "caseId": "case.rollup-dimensionality-unbound-rollup"
   }
  ],
  "summary": {
-  "inventoriedCases": 531,
-  "implementedCases": 529,
-  "differentialVerifiedCases": 144,
-  "differentialVerifiedRuntimeIds": 458,
+  "inventoriedCases": 532,
+  "implementedCases": 530,
+  "differentialVerifiedCases": 145,
+  "differentialVerifiedRuntimeIds": 462,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 110,
   "implementedCapabilities": 109,
-  "differentialVerifiedCapabilities": 15,
+  "differentialVerifiedCapabilities": 16,
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3097,
-  "referencedJavaRuntimeIds": 2901,
+  "runtimeAssociationCount": 3101,
+  "referencedJavaRuntimeIds": 2905,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1235,
+  "unreferencedJavaRuntimeIds": 1231,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 531,
+  "totalCases": 532,
   "totalCapabilities": 110
  }
 }

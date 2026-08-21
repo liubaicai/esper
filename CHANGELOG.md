@@ -1,3 +1,20 @@
+> 最新补充：Draft 4.226（2026-08-21），新增
+> `resultset.aggregate-dimensional` 的 `rollup-dimensionality`
+> differential-verified 场景（unbound-rollup 家族第一切片）：固定 Java
+> `ResultSetQueryTypeRollupDimensionality.java` 的 `UnboundRollup2Dim`
+>（`java-runtime-30499c2e4ff9aece48b2`）、`UnboundRollup1Dim`
+>（`java-runtime-b059890b735f776a9e03`）、`UnboundRollupUnenclosed`
+>（`java-runtime-e60ea25dc87dcfbdcc08`）与 `UnboundRollup3Dim`
+>（`java-runtime-f5da6be14e939f2b26cc`）。场景含 10 个 case，Java/Go 各
+> 50 条 listener records、0 differences；覆盖细化→粗化→总体行序、被聚合
+> 键列 null 填充、无界流单调累加、一维 rollup≡cube、嵌套/显式 grouping
+> sets 语法等价与 cartesian join priming。Go 侧复用 `GroupByRollup`/
+> `GroupByCube`/`GroupByGroupingSets`，无 `internal/esper` 改动。manifest
+> 更新为 532 cases、145 个 differential-verified case、462 个 differential
+> runtime IDs、3101 条 associations（唯一已关联 runtime 2905，未关联
+> 1231），`resultset.aggregate-dimensional` capability 提升为
+> differential-verified（4/24 DV runtime）。
+
 > 最新补充：Draft 4.225（2026-08-21），扩展 `subselect-filtered`
 > differential-verified 场景（套件收尾切片）：固定 Java
 > `EPLSubselectFiltered.java` 的 `EPLSubselectSelectSceneOne`

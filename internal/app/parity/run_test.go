@@ -13476,6 +13476,127 @@ func TestRunSubselectQuantifiedDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunRollupDimensionalityDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "rollup-dimensionality.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "rollup-dimensionality.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rollup-dimensionality.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "rollup-dimensionality-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunRollupDimensionalityDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "rollup-2dim-subtotal",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["c2"] = int64(999)
+			},
+		},
+		{
+			name: "rollup-2dim-overall-key-null-padding",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[2].Fields["c0"] = "E2"
+			},
+		},
+		{
+			name: "rollup-1dim-cube-equivalence",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[12].New[0].Fields["c1"] = int64(11)
+			},
+		},
+		{
+			name: "unenclosed-nested-key-retained",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[15].New[0].Fields["c0"] = nil
+			},
+		},
+		{
+			name: "rollup-3dim-overall-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[26].New[3].Fields["c3"] = int64(2)
+			},
+		},
+		{
+			name: "rollup-3dim-gs-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[33].New[0].Fields["c1"] = nil
+			},
+		},
+		{
+			name: "rollup-3dim-join-prime",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[39].New[0].Fields["c0"] = "E2"
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[19].Case = "unbound-rollup-1dim-cube"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "rollup-dimensionality.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "rollup-dimensionality.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rollup-dimensionality.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "rollup-dimensionality-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunSubselectFilteredDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "subselect-filtered.evidence.json"),

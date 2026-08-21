@@ -1,0 +1,5389 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-30499c2e4ff9aece48b2",
+    "java-runtime-b059890b735f776a9e03",
+    "java-runtime-e60ea25dc87dcfbdcc08",
+    "java-runtime-f5da6be14e939f2b26cc"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupDimensionality.java"
+  ],
+  "javaExecutions": [
+    "ResultSetQueryTypeUnboundRollup2Dim",
+    "ResultSetQueryTypeUnboundRollup1Dim",
+    "ResultSetQueryTypeUnboundRollupUnenclosed",
+    "ResultSetQueryTypeUnboundRollup3Dim"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "rollup-dimensionality",
+    "steps": [
+      {
+        "op": "case",
+        "case": "unbound-rollup-2dim"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11,
+          "longPrimitive": 300
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 400
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11,
+          "longPrimitive": 500
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 600
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbound-rollup-1dim-rollup"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 40
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbound-rollup-1dim-cube"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 40
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbound-rollup-unenclosed-a"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100,
+          "doublePrimitive": 1000.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 200,
+          "doublePrimitive": 2000.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20,
+          "longPrimitive": 100,
+          "doublePrimitive": 3000.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100,
+          "doublePrimitive": 4000.0
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbound-rollup-unenclosed-b"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100,
+          "doublePrimitive": 1000.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 200,
+          "doublePrimitive": 2000.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20,
+          "longPrimitive": 100,
+          "doublePrimitive": 3000.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100,
+          "doublePrimitive": 4000.0
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbound-rollup-unenclosed-c"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100,
+          "doublePrimitive": 1000.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 200,
+          "doublePrimitive": 2000.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20,
+          "longPrimitive": 100,
+          "doublePrimitive": 3000.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100,
+          "doublePrimitive": 4000.0
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbound-rollup-3dim-rollup"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 100.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 11,
+          "doublePrimitive": 200.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 10,
+          "doublePrimitive": 300.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 400.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 500.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 11,
+          "doublePrimitive": 600.0
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbound-rollup-3dim-gs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 100.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 11,
+          "doublePrimitive": 200.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 10,
+          "doublePrimitive": 300.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 400.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 500.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 11,
+          "doublePrimitive": 600.0
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbound-rollup-3dim-rollup-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 100.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 11,
+          "doublePrimitive": 200.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 10,
+          "doublePrimitive": 300.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 400.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 500.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 11,
+          "doublePrimitive": 600.0
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbound-rollup-3dim-gs-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 100.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 11,
+          "doublePrimitive": 200.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 10,
+          "doublePrimitive": 300.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 400.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 500.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 11,
+          "doublePrimitive": 600.0
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-dimensionality",
+    "records": [
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 11,
+              "c2": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 11,
+              "c2": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 700
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 60
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 60
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 200,
+              "c3": 2000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": 100,
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 7000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 200,
+              "c3": 2000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": 100,
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 7000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 200,
+              "c3": 2000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": 100,
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 7000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 1,
+              "c4": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 2,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 2,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1700
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6,
+              "c4": 2100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 1,
+              "c4": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 2,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 2,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1700
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6,
+              "c4": 2100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 1,
+              "c4": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 2,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 2,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1700
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6,
+              "c4": 2100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 1,
+              "c4": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 2,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 2,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1700
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6,
+              "c4": 2100
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-dimensionality",
+    "records": [
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 11,
+              "c2": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20,
+              "c2": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 11,
+              "c2": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 900
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-2dim",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 700
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 1500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 2100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 60
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-1dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 60
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 200,
+              "c3": 2000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": 100,
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 7000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 200,
+              "c3": 2000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": 100,
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 7000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 200,
+              "c3": 2000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": 100,
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-unenclosed-c",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": 100,
+              "c3": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 7000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 1,
+              "c4": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 2,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 2,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1700
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6,
+              "c4": 2100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 1,
+              "c4": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 2,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 2,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1700
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6,
+              "c4": 2100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 1,
+              "c4": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 2,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-rollup-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 2,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1700
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6,
+              "c4": 2100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 1,
+              "c4": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 2,
+              "c4": 600
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1500
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-rollup-3dim-gs-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 11,
+              "c3": 2,
+              "c4": 800
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 5,
+              "c4": 1700
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6,
+              "c4": 2100
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

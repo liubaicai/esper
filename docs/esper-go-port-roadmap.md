@@ -4,6 +4,25 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.226（2026-08-21），新增
+> `resultset.aggregate-dimensional` 的 `rollup-dimensionality`
+> differential-verified 场景（unbound-rollup 家族第一切片），对照固定 Java
+> `ResultSetQueryTypeRollupDimensionality.java` 的四个 execution：
+> `UnboundRollup2Dim`（`java-runtime-30499c2e4ff9aece48b2`）、
+> `UnboundRollup1Dim`（`java-runtime-b059890b735f776a9e03`，rollup/cube
+> 一维退化两 case）、`UnboundRollupUnenclosed`
+>（`java-runtime-e60ea25dc87dcfbdcc08`，三种等价语法三 case）与
+> `UnboundRollup3Dim`（`java-runtime-f5da6be14e939f2b26cc`，
+> rollup/grouping-sets × 非 join/join 四 case）。Java/Go 各 50 条 listener
+> records、0 differences；覆盖细化→粗化→总体行序、被聚合键列 null 填充、
+> 无界流单调累加、一维 rollup≡cube、嵌套/显式 grouping sets 语法等价
+> （Go 以 GroupByGroupingSets 展开表达）、cartesian join priming 与
+> JoinField 跨流键。Go 侧复用 `GroupByRollup`/`GroupByCube`/
+> `GroupByGroupingSets`，无 `internal/esper` 改动。manifest 更新为 145 个
+> differential-verified case、462 个 differential runtime IDs、3101 条
+> runtime associations，`resultset.aggregate-dimensional` capability 提升
+> 为 differential-verified（4/24 DV runtime）。
+
 > 最新补充：Draft 4.225（2026-08-21），扩展 `subselect-filtered`
 > differential-verified 场景（套件收尾切片），对照固定 Java
 > `EPLSubselectFiltered.java` 的四个 execution：`EPLSubselectSelectSceneOne`
@@ -476,11 +495,11 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 531 |
-| Case differential-verified | 144 |
-| Differential-verified runtime | 458 / 4,136 |
-| Runtime 已关联 | 2,901 / 4,136（70.1%） |
-| Runtime 未关联 | 1,235 |
+| Case | 532 |
+| Case differential-verified | 145 |
+| Differential-verified runtime | 462 / 4,136 |
+| Runtime 已关联 | 2,905 / 4,136（70.2%） |
+| Runtime 未关联 | 1,231 |
 | Representative scenario | 94 / 94 通过 |
 | Intentionally-different case | 18 |
 | NFR-verified case | 0 |
@@ -658,7 +677,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 persisted differential evidence。当前有 144 个 differential-verified case（458 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
+2. 扩展 persisted differential evidence。当前有 145 个 differential-verified case（462 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；暂不建设 CI，后续按执行手册定期本地 Docker 重放，并保持普通测试中的显式环境型 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。

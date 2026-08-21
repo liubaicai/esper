@@ -32,30 +32,30 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `afd03ee7d` (`subselect: verify
-  multi-stream join parity (Draft 4.224)` pushed).
-- Current work unit: `epl.subselect.filtered`, suite-finale slice of the
-  same `EPLSubselectFiltered.java` — four executions (SceneOne, Where2-
-  Subquery, MixMax, Prior) extending `subselect-filtered` to thirty-one
-  cases; zero `internal/esper` changes.
+- Baseline: `HEAD` == `origin/master` == `45bac28c3` (`subselect: verify
+  filtered suite finale parity (Draft 4.225)` pushed).
+- Current work unit: `resultset.aggregate-dimensional`,
+  rollup-dimensionality unbound-rollup slice — four executions across ten
+  cases in a new scenario/oracle/runner triple; zero `internal/esper`
+  changes.
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - SelectSceneOne (`java-runtime-b2be42620bdc328d006e`): irstream dual
-    projection over a length(2) outer with a volume-correlated length(10)
-    subquery; eviction re-evaluates the subquery — old stream {100,null} is
-    the discriminating probe.
-  - Where2Subquery (`java-runtime-1fcd5cdcc62015389f98`): OR of two gated
-    scalar subqueries in the outer WHERE; fire vector 1/2/3.
-  - MixMax (`java-runtime-9161a695d692feb6902d`): twin sort(1,measurement)
-    wildcard subqueries project high/low event rows.
-  - Prior (`java-runtime-1072ab9fc42579eed1e5`): three-statement insert-into
-    chain with coalesce dedupe gate; fired pairs (2,4) and (7,6).
-- Differential scope: `subselect-filtered` scenario extended to thirty-one
-  cases; Java oracle gains the four case branches, multi-statement module
-  compile for the Prior chain, old-stream recording, Map/EventBean normalize
-  branches, and Map-based MarketData/Sensor types (FinaleOracle worker);
-  Go runner gains four branches (WithOldStream, Or-gated Filter, SortWindow
-  envelopes, multi-plan Prior deploy) and four new trace mutations.
+  - UnboundRollup2Dim (`java-runtime-30499c2e4ff9aece48b2`):
+    rollup(theString,intPrimitive) over the unbounded stream; three rows per
+    event (detail/subtotal/overall), null-padded keys, monotonic sum.
+  - UnboundRollup1Dim (`java-runtime-b059890b735f776a9e03`): rollup vs cube
+    one-dim degeneration, two cases; vector pairs {E,10}/{null,10} etc.
+  - UnboundRollupUnenclosed (`java-runtime-e60ea25dc87dcfbdcc08`): three
+    equivalent syntaxes expand to grouping sets
+    {(t,i,l),(t,i),(t)}; c0 never null in the nested form.
+  - UnboundRollup3Dim (`java-runtime-f5da6be14e939f2b26cc`):
+    rollup/grouping-sets × non-join/join (cartesian S0#lastevent prime);
+    four rows per event including the overall row.
+- Differential scope: new `rollup-dimensionality` scenario/oracle/runner
+  triple (10 cases); oracle and runner script are new files
+  (RollupDimOracle worker); Go runner gains GroupByRollup/Cube/
+  GroupingSets branches incl. a cartesian-join rollup via JoinField keys,
+  plus nine trace mutations.
 - Allowed files: `internal/app/parity/subselect_filtered.go`,
   `internal/app/parity/run_test.go`,
   `tools/java-oracle/EPLSubselectFilteredScenarioOracle.java` +
@@ -82,6 +82,12 @@ activity or a single coverage percentage.
   isolated) authored the new Java oracle and runner script on the frozen
   scenario contract while the primary agent wrote the Go runner, dispatch,
   scenario, and tests. File ownership was disjoint.
+- Rollup-dimensionality unit agents: prefetch scouts
+  `RollupDimJavaContract` (java-oracle-scout; its first delivery crashed
+  after extraction and the frozen contract was redelivered on nudge) and
+  `RollupDimGoSurface` (scout) ran concurrently with the Draft 4.225 review;
+  asset writer `RollupDimOracle` (parity-asset-worker, isolated) authored
+  the new oracle and runner script. File ownership was disjoint.
 - Finale unit agents: prefetch scouts `FilterFinaleJavaContract`
   (java-oracle-scout) and `FilterFinaleGoSurface` (scout) ran concurrently
   with the Draft 4.224 review; asset writer `FinaleOracle`
@@ -359,7 +365,7 @@ twenty-two execution names. Focused filtered diff/mutation tests (28
 mutations all reject), `go vet ./...`, `go test ./... -count=1 -timeout
 240s`, `make check`, and `git diff --check` pass.
 
-## Suite finale unit (active)
+## Suite finale unit (closed; committed as `45bac28c3`)
 
 - [x] Prefetch scouts (`FilterFinaleJavaContract`, `FilterFinaleGoSurface`)
   froze the four-execution finale, the old-stream discriminator, and the
@@ -387,6 +393,37 @@ checksum `89ce23db4f58d44acb3b17435969b7a6d7aa68ca8e83cbc23dcebec83f0aef85`;
 the differential evidence is passing with 103 Java records, 103 Go records,
 0 differences, twenty-six frozen runtime IDs, and twenty-six execution
 names. Focused filtered diff/mutation tests (32 mutations all reject),
+`go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, and
+`git diff --check` pass.
+
+## Rollup dimensionality unit (active)
+
+- [x] Prefetch scouts (`RollupDimJavaContract`, `RollupDimGoSurface`) froze
+  the four-execution unbound-rollup slice, per-round vectors, and the
+  reusable Go surface (`GroupByRollup/Cube/GroupingSets`; zero engine
+  changes).
+- [x] Create the `rollup-dimensionality` scenario (ten cases), the new Java
+  oracle and runner script via the `RollupDimOracle` asset worker, and the
+  Go runner, dispatch modes, and diff/mutation tests (nine mutations all
+  reject).
+- [x] Generate the pinned-commit Java trace (50 records) and the passing
+  evidence with zero differences; register
+  `case.rollup-dimensionality-unbound-rollup`; promote
+  `resultset.aggregate-dimensional` to differential-verified (4/24 DV
+  runtimes); manifest summary is 145 differential cases, 462 differential
+  runtime IDs, 3101 associations, 2905 unique referenced runtimes, 1231
+  unreferenced.
+- [x] Complete final full gates and independent parity review
+  (`RollupDimReview` initial verdict flagged one P2 — two mutations targeted
+  wrong-case indices — plus P3 count/table drift incl. a 70.3%-vs-70.2%
+  rounding note; all fixed and re-checked by the same reviewer: pass, zero
+  findings); delivery is ready for the single semantic commit and push.
+
+Final pre-commit verification: pinned Java oracle regenerated the trace with
+checksum `cfa0669dc5e520ac26cb1abb176f933eef9aab5888815c942169626711230e72`;
+the differential evidence is passing with 50 Java records, 50 Go records,
+0 differences, four frozen runtime IDs, and four execution names. Focused
+rollup-dimensionality diff/mutation tests (9 mutations all reject),
 `go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, and
 `git diff --check` pass.
 

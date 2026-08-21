@@ -1790,6 +1790,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "rollup-dimensionality" || *mode == "rollup-dimensionality-diff" {
+		trace, err := runRollupDimensionalityScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "rollup-dimensionality-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, rollupDimensionalityJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, rollupDimensionalityJavaSources),
+				splitMetadata(*javaExecutions, rollupDimensionalityJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "subselect-filtered" || *mode == "subselect-filtered-diff" {
 		trace, err := runSubselectFilteredScenario(context.Background(), scenario)
 		if err != nil {
