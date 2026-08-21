@@ -33,53 +33,41 @@ activity or a single coverage percentage.
 
 ## Active checkpoint
 
-- Updated: 2026-08-20
-- Baseline: `HEAD` == `origin/master` == `67514e7db` (`cast-warray` unit,
-  pushed). Uncommitted: this PLANS.md closeout note (rides with the next
-  unit's commit; master is protected, no post-push amend).
-- Status: the delivered `ExprCoreCastWArray` unit is committed and pushed.
-  The next expr.core unit extends `case.expr-core-exists-cast` with
-  `ExprCoreCastGeneric` (`java-runtime-2fcd2094aaf18ca4ce03`, ordinal 11,
-  SERDEREQUIRED).
-- Current work unit: `expr.core` / generic Cast extension — schema MyEvent
-  with 8 Object-typed columns (listOfString, listOfOptionalInteger,
-  mapOfStringAndInteger, listArrayOfString, listOfStringArray,
-  listArray2DimOfString, listOfStringArray2Dim, listOfT) and
-  `@name('s0') select cast(<col>, <generic target>) as <col> ... from
-  MyEvent`, per SupportGenericColUtil.NAMESANDTYPES.
-- Exact next action: freeze the Generic contract (scouts
-  `GenericCastJavaContract` + `GenericCastGoSurface` running), record it
-  here, then implement oracle case + fixture sends + Go runner + run_test
-  counts, regenerate Java trace, Go replay zero-difference diff, evidence,
-  manifest/roadmap/CHANGELOG, full gates, parity review, one semantic
-  commit, push `master`, verify remote ref.
+- Updated: 2026-08-21
+- Baseline: `HEAD` == `origin/master` == `500d8db84` (`expr-core-exists-cast`
+  Cast Dates unit, pushed). The current uncommitted repair aligns the Go and
+  checked-in evidence metadata with Java inventory ordinal order; the pinned
+  Java trace remains unchanged.
+- Status: Cast Dates behavior is already differential-verified (17 runtime IDs,
+  54 records, zero differences). Repair scope is limited to canonical runtime
+  ID/execution ordering, regenerated evidence, and stale current facts.
+- Current repair validation: fixed trace checksum
+  `f0efd3239e22fbb9533a648d7b2cee9ac321df6e45a94a77712418ffe8f7f40d`; manifest
+  JSON parses; Go/evidence metadata contain the same 17 inventory-ordered IDs
+  and execution names. Targeted parity/compat tests, full gates, reviewer
+  re-check, one repair commit, and push remain before this checkpoint closes.
+- Next work unit candidate: `EPLSubselectMultirow` direct multirow outputs,
+  runtime IDs `java-runtime-29c2087cc4243e9b7a50` and
+  `java-runtime-64eb1701d14bdbcefc86`. Existing Go tests are association-only;
+  no oracle/scenario/evidence slice has been claimed yet.
+- Known separate risk: an empty `SubqueryRow` map is present in Go, but nested
+  property access currently yields Missing where Java nested projection yields
+  null. Do not claim the existing whole-row trace verifies this distinction.
 - Worktree notes: do not modify `/root/app/esper` or `goal.txt`.
 
 ## Delegation checkpoint
 
-- Collaboration facility: available; this unit's read-only scouts were
-  launched concurrently before implementation: `GenericCastJavaContract`
-  (java-oracle-scout) and `GenericCastGoSurface` (scout). Primary agent
-  independently read `ExprCoreCastGeneric` (ExprCoreCast.java:97-131) and
-  `SupportGenericColUtil` (names/types/sample/compare) to cross-check.
-- Frozen contract (pending scout confirmation): one case `cast-generic`,
-  one statement, one send. Sample values: listOfString=["a"],
-  listOfOptionalInteger=[Optional.of(10)], mapOfStringAndInteger={k:20},
-  listArrayOfString=[[b]], listOfStringArray=[[c]],
-  listArray2DimOfString=[[[b]]], listOfStringArray2Dim=[[[c]]],
-  listOfT=["x"]. Java asserts cast returns the same instances; the
-  differential encodes per-cell normalized rendering with
-  Optional.get()=10 unwrapped to "10".
-- Scope decision: `ExprCoreCastDates` stays deferred (needs chained
-  calendar-get expression, send-time error record protocol, Java8 distinct
-  time types).
-- Implementation writer: primary agent owns the exists-cast parity surface
-  as one atomic set; singleton writer is the recorded exception for this
-  harness.
-- Independent parity reviewer: `GenericReview` scheduled after integration.
+- Cast Dates repair review: `CastDatesReview-2` (parity-reviewer), read-only
+  re-review after metadata alignment.
+- Next-unit read-only scouts launched concurrently before any Subquery write:
+  `SubqueryMultirowJavaContract` (java-oracle-scout) and
+  `SubqueryMultirowGoSurface` (scout). Their reports identify the two direct
+  `EPLSubselectMultirow` executions and keep the empty-map nested-property
+  behavior as a separate semantic slice.
+- Primary agent owns PLANS, manifest, roadmap, CHANGELOG, generated traces and
+  evidence, integration validation, review, commit, and push.
 
-
-## Work-unit contract
+## Historical work-unit contract (Generic Cast; closed)
 
 - Capability/subdomain: `expr.core`, generic Cast extension of
   `case.expr-core-exists-cast`, one source-order `ExprCoreCast.java`
@@ -163,7 +151,7 @@ activity or a single coverage percentage.
       (`67514e7db` "expr: verify array cast parity"), push `master`, verify
       remote ref read-only (local == origin/master == `67514e7db`).
 
-### Generic unit (in flight)
+### Generic unit (closed)
 
 - [x] Reconfirm baseline (`HEAD` == `origin/master` == `67514e7db`).
 - [x] Launch concurrent read-only scouts `GenericCastJavaContract` +
@@ -183,12 +171,13 @@ activity or a single coverage percentage.
       lists appended in lockstep; evidence regenerated, 16 IDs / 15
       executions); commit `f2e6c3771` pushed to `master`.
 
-### Cast Dates unit (in flight)
+### Cast Dates unit (closed; metadata repair)
 
-Baseline: `HEAD` == `origin/master` == `f2e6c3771`.
-Delegation checkpoint (parallel batch): `CastDatesJavaContract`
-(java-oracle-scout, 20m52s) + `CastDatesGoSurface` (scout, 13m10s);
-primary agent independently read ExprCoreCast.java:376-820.
+Baseline: implementation commit `500d8db84`; metadata repair follows on the
+same committed behavior and does not modify the pinned trace.
+Delegation checkpoint: `CastDatesJavaContract` (java-oracle-scout) and
+`CastDatesGoSurface` (scout) were launched concurrently; primary agent read
+`ExprCoreCast.java:376-820` independently.
 
 Frozen work-unit contract (execution `ExprCoreCastDates`, runtime
 `java-runtime-2ee2b8ab1bf9bb2c4e90`, inventory line 2157):
@@ -196,49 +185,40 @@ Frozen work-unit contract (execution `ExprCoreCastDates`, runtime
   - `cast-dates-base`: MyDateType map event `{yyyymmdd:"20100510"}`; 9
     columns (date/java.util.Date, long/java.lang.Long,
     calendar/java.util.Calendar targets, plus `.get("month")` chains);
-    expected Date/Long epoch 1273449600000, month Integer 4 (0-based
-    Calendar month).
-  - `cast-dates-java8`: same map event with all 4 string props; 6 columns:
-    localdate/java.time.LocalDate x2 (2010-05-10), localdatetime x2
-    (2010-05-10T14:15:16), localtime x2 (14:15:16). zoneddatetime VV cells
-    deferred (Go stdlib lacks zone-region parsing; genuine coercion gap).
-  - `cast-dates-constant`: SupportBean("E1",1); 1 column constant-folded
-    Date(1044057600000).
-- Determinism: harness already pins `-Duser.timezone=UTC -Duser.language=en
-  -Duser.country=US` (Java 17); Go parses layouts in time.UTC.
-- Trace encoding (frozen): java.util.Date/Calendar/Long cast columns render
-  epoch millis int; LocalDate/LocalDateTime/LocalTime columns render ISO
-  strings ("2010-05-10" / "2010-05-10T14:15:16" / "14:15:16"); month
-  columns render int 4. Oracle TraceWriter gains temporal branches; Go
-  normalize mirrors.
-- Go API mapping: `CastWithLayout[string,time.Time]` ("20060102" etc.),
-  long targets via `UnixMillis(CastWithLayout[...])`, month via
-  `Month(...) - 1` (Java 0-based). No internal/esper changes expected.
-- Deferred follow-ups (recorded, not this unit): ISO8601 'iso' cases
-  (XMLGregorianCalendar zone-id semantics), dynamic dateformat (runtime
-  EPExceptions need new trace op), dateformat-nonstring (locale-sensitive
-  literals), invalid compile diagnostics (needs error-record kind),
-  render-outcol (needs column-name record kind), VV zoneddatetime cells.
+    expected Date/Long epoch 1273449600000, month Integer 4 (zero-based).
+  - `cast-dates-java8`: LocalDate, LocalDateTime, and LocalTime alias/FQCN
+    targets render deterministic ISO values; zoneddatetime VV cells remain
+    deferred because Go stdlib lacks zone-region parsing.
+  - `cast-dates-constant`: SupportBean("E1",1); one constant-folded Date
+    column with epoch 1044057600000.
+- Go mapping uses `CastWithLayout[string,time.Time]`, `UnixMillis`, and
+  `Month(...) - 1`; no `internal/esper` change was needed.
+- Deferred follow-ups: ISO8601 `iso`, dynamic dateformat, non-string formatter
+  parameters, invalid compile diagnostics, render-out-column metadata, and VV
+  zoneddatetime cells.
 
 Progress:
-- [x] Baseline confirmed; parallel scouts returned; contract frozen here.
-- [x] Oracle: 3 case branches + MyDateType schema registration + temporal
-      TraceWriter branches (Date/Calendar -> epoch millis).
-- [x] Go runner: 3 case arms, MyDateType decode branch, case-aware
-      temporal normalizer (epoch vs ISO per column), metadata arrays
-      (17 IDs / 16 executions).
-- [x] Fixture +3 sends (73 steps); runner script guards 51->54 records,
-      +cast-dates cases, MyDateType==2, SupportBean 8->9.
-- [x] Pinned Java trace; zero-difference diff; 4 new dates mutations
-      (epoch/month/java8/constant cells) all reject; evidence regenerated.
-- [x] Manifest (DV 16->17, 427->428), roadmap, CHANGELOG 4.215, README.
-- [ ] Full gates, `CastDatesReview`, one semantic commit, push, verify ref.
+- [x] Oracle, Go runner, scenario, pinned trace, and zero-difference replay.
+- [x] Four date mutations reject (epoch, month, Java 8 cell, constant cell).
+- [x] Manifest and Draft 4.215 docs record 17 differential runtime IDs.
+- [x] Post-commit repair aligns Go/evidence runtime IDs and execution names to
+  Java inventory ordinal order; manifest prose now states four Exists plus
+  thirteen typed Cast executions.
+- [x] Regenerate evidence from the unchanged trace; targeted parity/compat
+  tests, JSON checks, full gates, and `CastDatesReview-2` re-review all pass.
+  One semantic repair commit and push remain.
+- 2026-08-21: Repair validation completed against the unchanged pinned trace;
+  `case.expr-core-exists-cast` now has 17 inventory-ordered runtime IDs, 17
+  execution names, and 54 records with passing evidence and zero differences.
+  The trace checksum is `f0efd3239e22fbb9533a648d7b2cee9ac321df6e45a94a77712418ffe8f7f40d`.
+  `go vet ./...`, `go test ./... -count=1`, `make check`, targeted parity and
+  compat tests, JSON validation, and `git diff --check` passed; the repair is
+  ready for its semantic commit and push.
 
 - 2026-08-20: GitLab DOES protect `master` (force-push rejected 2026-08-20,
   contradicting AGENTS.md/runbook claims). Amended commits cannot be repushed;
   finalize all file changes BEFORE the single unit commit/push. Post-commit
-  PLANS closeout notes must ride with the next unit's commit.
-
+  `PLANS.md` closeout notes must ride with the next unit's commit.
 
 ## Discoveries and decisions
 
@@ -498,14 +478,20 @@ Progress:
   `ExprCoreCast.java` as source references because the case preserves all 17
   inventoried runtime associations while the four Exists-source IDs and four
   Cast-source IDs are now differential-verified.
-- 2026-08-20: Cast implementation and replay assets passed the pinned Java
-  oracle, focused Cast/parity/mutation/manifest checks, `gofmt` verification,
-  `go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, the
-  focused expression/parity race gate, JSON/schema and shell checks, and
-  `git diff --check`. The regenerated Java trace is byte-identical to the
-  checked-in trace (SHA-256
-  `8199f6dfab4a35acbd2949830268eb104cd10aa4de9915509ccaec6edbcd10ab`);
-  evidence reports 22 records and zero differences.
+- 2026-08-21: Cast metadata repair validation passed the pinned Java trace
+  replay, focused parity/mutation/manifest checks, JSON/schema checks, `gofmt`,
+  `go vet ./...`, `go test ./... -count=1`, `make check`, and `git diff --check`.
+  The regenerated evidence is passing with 17 inventory-ordered runtime IDs,
+  17 execution names, 54 records, and zero differences; the checked-in trace
+  remains byte-identical (SHA-256
+  `f0efd3239e22fbb9533a648d7b2cee9ac321df6e45a94a77712418ffe8f7f40d`).
+- Current unit result: `case.expr-core-exists-cast` is differential-verified
+  across 17 exact inventory-ordered runtime IDs and 54 listener records. The
+  Cast Dates metadata repair aligns Go/evidence runtime IDs and execution names
+  with the manifest and Java inventory; the regenerated evidence is passing with
+  zero differences. The pinned trace remains byte-identical. Full local gates
+  and the independent `CastDatesReview-2` re-review pass; remote delivery is
+  ready for the semantic repair commit and push.
 
 ## Validation evidence
 
@@ -515,12 +501,12 @@ Progress:
   134 differential-verified cases, and 415 differential runtimes before the
   four Cast runtime IDs were added.
 - Current unit result: `case.expr-core-exists-cast` is differential-verified
-  across eight exact runtime IDs and 22 listener records. The typed Cast char
-  fix, replay assets, evidence, manifest, roadmap, CHANGELOG, README, and
-  checkpoint are complete; the Java/Go trace is byte-identical with zero
-  differences. Full local gates pass. The review exception is documented above;
-  remote delivery remains pending.
-
+  across 17 exact inventory-ordered runtime IDs and 54 listener records. The
+  Cast Dates metadata repair aligns Go/evidence runtime IDs and execution names
+  with the manifest and Java inventory; the regenerated evidence is passing with
+  zero differences. The pinned trace remains byte-identical. Full local gates
+  and the independent `CastDatesReview-2` re-review pass; remote delivery is
+  ready for the semantic repair commit and push.
 ## Delivery
 
 - The current Exists/Cast unit has passed replay, review fallback, final diff

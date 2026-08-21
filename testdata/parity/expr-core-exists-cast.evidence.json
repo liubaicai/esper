@@ -6,6 +6,7 @@
     "java-runtime-4202039fb2f1ea65fd49",
     "java-runtime-8fa7f5076dde9d791d08",
     "java-runtime-afd826c7d955eb538001",
+    "java-runtime-2ee2b8ab1bf9bb2c4e90",
     "java-runtime-3fc2cde530f321dc3994",
     "java-runtime-5c9fdd17b5480f9d78e2",
     "java-runtime-52fb8d57dd380f5efe6e",
@@ -14,11 +15,10 @@
     "java-runtime-9957cb6d9cd9ea836d4d",
     "java-runtime-0b91403db9a899efde99",
     "java-runtime-9babbbb6f96faf389bb7",
-    "java-runtime-f44847213060b8eb3949",
     "java-runtime-53d0455ef4e377c9c2f9",
     "java-runtime-58852773df609efe7d69",
     "java-runtime-2fcd2094aaf18ca4ce03",
-    "java-runtime-2ee2b8ab1bf9bb2c4e90"
+    "java-runtime-f44847213060b8eb3949"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreExists.java",
@@ -29,18 +29,19 @@
     "ExprCoreExistsInner",
     "ExprCoreCastDoubleAndNullOM",
     "ExprCoreCastStringAndNullCompile",
+    "ExprCoreCastDates",
     "ExprCoreCastSimple",
     "ExprCoreCastSimpleMoreTypes",
     "ExprCoreCastAsParse",
     "ExprCoreCastDoubleAndNullOM",
     "ExprCoreCastInterface",
     "ExprCoreCastStringAndNullCompile",
+    "ExprCoreCastBoolean",
     "ExprCoreCastWStaticType",
-    "ExprCoreCastBigDecimalBigInt",
     "ExprCoreCastWArray{soda=false}",
     "ExprCoreCastWArray{soda=true}",
     "ExprCoreCastGeneric",
-    "ExprCoreCastDates"
+    "ExprCoreCastBigDecimalBigInt"
   ],
   "scenario": {
     "version": "esper-parity/v1",
