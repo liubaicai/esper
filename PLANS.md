@@ -40,14 +40,12 @@ activity or a single coverage percentage.
   fix (`cubeGroupingSets` enumeration bit order).
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - UnboundCubeUnenclosed (`java-runtime-b06640d26b3b63075791`): three
-    equivalent syntaxes (plain key + cube, explicit sets with top key last,
-    plain key + inner cube with empty set) expand to grouping sets
-    {(t,i,l),(t,i),(t,l),(t)}; four rows per event.
-  - UnboundCube4Dim (`java-runtime-14c4aecdca8b446299f1`):
-    cube(theString,intPrimitive,longPrimitive,doublePrimitive) with
-    sum(intBoxed); 16 rows per event in strict bitmask-descending order
-    (dim0 highest bit); cross-key accumulation vectors frozen per round.
+  - BoundRollup2Dim (`java-runtime-3b6467afa76b0966c475`):
+    length(3) + rollup(theString,intPrimitive) over SupportBean; 11 rounds
+    with window-expiry empty-group rows (key retained + sum=null).
+  - UnboundRollup2DimBatchWindow (`java-runtime-274b66386ba625a8b24c`):
+    length_batch(4) + irstream; two flushes each producing 6 new rows and
+    6 old rows (old = previous aggregate snapshot (first flush empty so sums are null; second flush carries evicted batch actual sums)).
 - Differential scope: `rollup-dimensionality` scenario extended to fourteen
   cases; Go runner gains cube branches over the same bean; shared-core fix:
   `cubeGroupingSets` enumerates dim0-highest-bit descending to match Esper

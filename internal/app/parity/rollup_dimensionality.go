@@ -43,18 +43,20 @@ var (
 		"ResultSetQueryTypeUnboundRollup3Dim",
 		"ResultSetQueryTypeUnboundCubeUnenclosed",
 		"ResultSetQueryTypeUnboundCube4Dim",
+		"ResultSetQueryTypeBoundRollup2Dim",
+		"ResultSetQueryTypeUnboundRollup2DimBatchWindow",
 	}
 )
 
-// runRollupDimensionalityScenario replays the unbound rollup and cube family
-// of ResultSetQueryTypeRollupDimensionality (6 executions across 14 scenario
-// cases; the 1-dim rollup/cube pair, the three unenclosed syntax variants,
-// the 3-dim rollup/grouping-sets pair, the cube-unenclosed trio, and the
-// 4-dim cube each replay one shared sequence, with join variants priming a
-// cartesian SupportBean_S0#lastevent side): hierarchical detail-to-overall
-// rows, null-padded aggregated key columns, monotonic accumulation on the
-// unbounded stream, rollup/cube/grouping-sets syntax equivalence, and cube
-// bitmask row ordering.
+// runRollupDimensionalityScenario replays the unbound rollup, cube and
+// bound/batch family of ResultSetQueryTypeRollupDimensionality (8 executions
+// across 16 scenario cases; the 1-dim rollup/cube pair, the three unenclosed
+// syntax variants, the two 3-dim pairs, the cube-unenclosed trio, the 4-dim
+// cube, and the bound/batch pair each replay one shared sequence):
+// hierarchical detail-to-overall rows, null-padded aggregated key columns,
+// monotonic accumulation on unbounded and windowed streams, rollup/cube/
+// grouping-sets syntax equivalence, cube bitmask row ordering, and batch
+// flush new/old IR pairs.
 func runRollupDimensionalityScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
@@ -67,7 +69,7 @@ func runRollupDimensionalityScenario(ctx context.Context, scenario compat.Scenar
 		"unbound-rollup-3dim-rollup-join", "unbound-rollup-3dim-gs-join",
 		"unbound-cube-unenclosed-a", "unbound-cube-unenclosed-b", "unbound-cube-unenclosed-c",
 		"unbound-cube-4dim",
-		"bound-rollup",
+		"bound-rollup", "unbound-rollup-2dim-batch",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("rollup-dimensionality scenario %q has no supported cases", scenario.ID)
@@ -128,9 +130,6 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 			esper.Alias("c1", esper.Sum[int](intPrimitive)),
 		).Query(esper.StatementName("s0"))
 	case "unbound-rollup-unenclosed-a", "unbound-rollup-unenclosed-b", "unbound-rollup-unenclosed-c":
-		// The three Java syntax variants (plain key + rollup, explicit
-		// grouping sets with the top key repeated, plain key + inner
-		// grouping sets) expand to the same three grouping sets.
 		query = esper.From[rollupDimensionalityBean](env, "SupportBean").
 			GroupByGroupingSets(
 				esper.GroupingSet(theString, intPrimitive, longPrimitive),
@@ -143,8 +142,8 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 			esper.Alias("c3", esper.Sum[float64](doublePrimitive)),
 		).Query(esper.StatementName("s0"))
 	case "unbound-rollup-3dim-rollup", "unbound-rollup-3dim-gs":
-		var agg esper.AggregateStream
 		stream := esper.From[rollupDimensionalityBean](env, "SupportBean")
+		var agg esper.AggregateStream
 		if caseName == "unbound-rollup-3dim-gs" {
 			agg = stream.GroupByGroupingSets(
 				esper.GroupingSet(theString, intPrimitive, longPrimitive),
@@ -166,7 +165,6 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 		jTheString := esper.JoinField[any](0, "theString")
 		jIntPrimitive := esper.JoinField[any](0, "intPrimitive")
 		jLongPrimitive := esper.JoinField[any](0, "longPrimitive")
-		// Cartesian join against the single-row primed side stream.
 		var agg esper.AggregateStream
 		joinAgg := esper.Join(
 			esper.From[rollupDimensionalityBean](env, "SupportBean").Window(esper.KeepAll()),
@@ -190,9 +188,6 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 			esper.Alias("c4", esper.Sum[float64](esper.JoinField[float64](0, "doublePrimitive"))),
 		).Query(esper.StatementName("s0"))
 	case "unbound-cube-unenclosed-a", "unbound-cube-unenclosed-b", "unbound-cube-unenclosed-c":
-		// The three Java syntax variants (plain key + cube, explicit grouping
-		// sets with the top key last, plain key + inner grouping sets with an
-		// empty set) expand to the same four grouping sets.
 		query = esper.From[rollupDimensionalityBean](env, "SupportBean").
 			GroupByGroupingSets(
 				esper.GroupingSet(theString, intPrimitive, longPrimitive),
@@ -225,6 +220,15 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 				esper.Alias("c1", intPrimitive),
 				esper.Alias("c2", esper.Sum[int64](longPrimitive)),
 			).Query(esper.StatementName("s0"))
+	case "unbound-rollup-2dim-batch":
+		query = esper.From[rollupDimensionalityBean](env, "SupportBean").
+			Window(esper.LengthBatch(4)).
+			GroupByRollup(theString, intPrimitive).
+			Select(
+				esper.Alias("c0", theString),
+				esper.Alias("c1", intPrimitive),
+				esper.Alias("c2", esper.Sum[int64](longPrimitive)),
+			).Query(esper.StatementName("s0"), esper.WithOldStream())
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported rollup-dimensionality case %q", caseName)
 	}

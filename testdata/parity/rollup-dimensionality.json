@@ -9,7 +9,8 @@
   "java-runtime-f5da6be14e939f2b26cc",
   "java-runtime-b06640d26b3b63075791",
   "java-runtime-14c4aecdca8b446299f1",
-  "java-runtime-3b6467afa76b0966c475"
+  "java-runtime-3b6467afa76b0966c475",
+  "java-runtime-274b66386ba625a8b24c"
  ],
  "cases": [
   {
@@ -71,6 +72,10 @@
   {
    "case": "bound-rollup",
    "runtimeId": "java-runtime-3b6467afa76b0966c475"
+  },
+  {
+   "case": "unbound-rollup-2dim-batch",
+   "runtimeId": "java-runtime-274b66386ba625a8b24c"
   }
  ],
  "steps": [
@@ -862,6 +867,82 @@
     "theString": "E2",
     "intPrimitive": 20,
     "longPrimitive": 1100
+   }
+  },
+  {
+   "op": "case",
+   "case": "unbound-rollup-2dim-batch"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11,
+    "longPrimitive": 300
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 400
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11,
+    "longPrimitive": 500
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 600
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11,
+    "longPrimitive": 700
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 800
    }
   }
  ]

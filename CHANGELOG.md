@@ -1,3 +1,17 @@
+> 最新补充：Draft 4.228（2026-08-21），扩展
+> `resultset.aggregate-dimensional` 的 `rollup-dimensionality`
+> differential-verified 场景（bound/batch 切片）：固定 Java
+> `ResultSetQueryTypeRollupDimensionality.java` 的 `BoundRollup2Dim`
+>（`java-runtime-3b6467afa76b0966c475`）与 `UnboundRollup2DimBatchWindow`
+>（`java-runtime-274b66386ba625a8b24c`）。场景扩展为 16 个 case，Java/Go
+> 各 66 条 listener records、0 differences；覆盖 length(3) 窗口过期空组行
+>（键保留+sum=null）、length_batch(4) flush 的 new…old… IR 对、batch 内
+> 无事件既有组的 null-sum 行。Go 侧复用 `LengthWindow`/`LengthBatch`/
+> `WithOldStream`，无 `internal/esper` 改动。manifest 更新为 534 cases、
+> 147 个 differential-verified case、466 个 differential runtime IDs、
+> 3105 条 associations（唯一已关联 runtime 2908，未关联 1228），
+> capability 达到 8/24 DV runtime。
+
 > 最新补充：Draft 4.227（2026-08-21），扩展
 > `resultset.aggregate-dimensional` 的 `rollup-dimensionality`
 > differential-verified 场景（cube 家族切片）：固定 Java

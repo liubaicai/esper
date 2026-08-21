@@ -13620,6 +13620,24 @@ func TestRunRollupDimensionalityCubeMutations(t *testing.T) {
 				trace.Records[52].New[15].Fields["c4"] = int64(6000)
 			},
 		},
+		{
+			name: "bound-rollup-expiry-null-sum",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[56].New[1].Fields["c2"] = int64(400)
+			},
+		},
+		{
+			name: "batch-flush-old-null-aggregates",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[64].Old[0].Fields["c2"] = int64(100)
+			},
+		},
+		{
+			name: "batch-flush-new-accumulation",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[65].New[0].Fields["c2"] = int64(300)
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
