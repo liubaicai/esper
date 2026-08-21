@@ -4,6 +4,23 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.214（2026-08-21），扩展 `expr-core-exists-cast`
+> differential-verified 场景，对照固定 Java `ExprCoreCast` 的
+> `ExprCoreCastGeneric` execution
+> （`java-runtime-2fcd2094aaf18ca4ce03`），一个 isolated case、2 条
+> listener records、0 differences（累计 51 条）。Go 侧以
+> `Cast[any, []any]`/`Cast[any, map[string]any]` 覆盖 8 个擦除泛型
+> 目标（`List<String>`、`List<Optional<Integer>>`、
+> `Map<String,Integer>`、`List<String>[]`、`List<String[]>`、
+> `List<String>[][]`、`List<String[][]>`、`List<Object>`），元素经
+> erasure identity 直传；Optional 元素渲染 `Optional[10]` token，List/
+> Map 递归 JSON（map 键排序），空 map send 八列全 null。Java EPL/
+> SODA/compile entry details、日期 casts 和完整诊断矩阵仍为
+> implemented-only。固定 Java oracle、runner、scenario、trace、
+> evidence 与 value/null/order/mutation tests 已纳入兼容资产；
+> manifest 保持 134 个 differential-verified case，更新为 427 个
+> differential runtime IDs。
+
 > 最新补充：Draft 4.213（2026-08-20），扩展 `expr-core-exists-cast`
 > differential-verified 场景，对照固定 Java `ExprCoreCast` 的
 > `ExprCoreCastWArray` 两个 execution（soda=false

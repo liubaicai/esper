@@ -42,15 +42,15 @@ public final class ExprCoreExistsCastScenarioOracle {
             "exists-simple", "exists-inner", "exists-om", "exists-compile",
             "cast-simple", "cast-simple-more-types", "cast-as-parse", "cast-double-null-om",
             "cast-interface", "cast-string-and-null", "cast-boolean", "cast-w-static-type",
-            "cast-bigdecimal-bigint", "cast-warray", "cast-warray-soda"
+            "cast-bigdecimal-bigint", "cast-warray", "cast-warray-soda", "cast-generic"
     };
     private static final String[] EVENT_TYPES = {
             "SupportBean", "SupportMarkerInterface", "SupportMarkerInterface", "SupportMarkerInterface",
             "SupportBean", "SupportBean", "SupportBean", "SupportBeanDynRoot",
             "SupportBeanDynRoot", "SupportBeanDynRoot", "SupportBean", "StaticTypeMapEvent",
-            "MyEvent", "MyEventWArray", "MyEventWArray"
+            "MyEvent", "MyEventWArray", "MyEventWArray", "MyEventGeneric"
     };
-    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 5, 6, 3, 1, 8, 2, 2};
+    private static final int[] SEND_COUNTS = {1, 5, 3, 3, 2, 1, 1, 6, 5, 6, 3, 1, 8, 2, 2, 2};
 
     private ExprCoreExistsCastScenarioOracle() {
     }
@@ -267,6 +267,24 @@ public final class ExprCoreExistsCastScenarioOracle {
 		}
 		return;
 	}
+	if (caseIndex == 15) {
+		if (sendIndex == 0) {
+			requireFieldCount(payload, 9, CASES[caseIndex]);
+			requireString(payload, "shape", "full");
+			requireArray(payload, "listOfString", new Object[]{"a"});
+			requireArray(payload, "listOfOptionalInteger", new Object[]{10});
+			requireMapKV(payload, "mapOfStringAndInteger", "k", 20);
+			requireArray(payload, "listArrayOfString", new Object[]{new Object[]{"b"}});
+			requireArray(payload, "listOfStringArray", new Object[]{new Object[]{"c"}});
+			requireArray(payload, "listArray2DimOfString", new Object[]{new Object[]{new Object[]{"b"}}});
+			requireArray(payload, "listOfStringArray2Dim", new Object[]{new Object[]{new Object[]{"c"}}});
+			requireArray(payload, "listOfT", new Object[]{"x"});
+		} else {
+			requireFieldCount(payload, 1, CASES[caseIndex]);
+			requireString(payload, "shape", "empty");
+		}
+		return;
+	}
 
 	String[] shapes = caseIndex == 1
 			? new String[]{"null", "complex", "complex", "nested-support-bean", "support-bean-a"}
@@ -401,6 +419,17 @@ public final class ExprCoreExistsCastScenarioOracle {
 					value.asArray().get(i).asInt() != expected[i]) {
 				throw new IllegalArgumentException("payload int array mismatch");
 			}
+		}
+	}
+
+	private static void requireMapKV(JsonObject payload, String name, String key, int expectedValue) {
+		JsonValue value = payload.get(name);
+		if (value == null || !value.isObject() || value.asObject().size() != 1) {
+			throw new IllegalArgumentException("payload map mismatch for " + name);
+		}
+		JsonValue entry = value.asObject().get(key);
+		if (entry == null || !entry.isNumber() || entry.asInt() != expectedValue) {
+			throw new IllegalArgumentException("payload map entry mismatch for " + name);
 		}
 	}
 
@@ -565,6 +594,22 @@ public final class ExprCoreExistsCastScenarioOracle {
 					"cast(arr_2dim_object,java.lang.Object[][]) as c6, cast(arr_3dim_primitive,int[primitive][][]) as c7, " +
 					"cast(arr_3dim_object,java.lang.Object[][][]) as c8 from MyEventWArray";
 		}
+		if ("cast-generic".equals(caseName)) {
+			return "@public @buseventtype create schema MyEventGeneric(listOfString java.lang.Object," +
+					"listOfOptionalInteger java.lang.Object,mapOfStringAndInteger java.lang.Object," +
+					"listArrayOfString java.lang.Object,listOfStringArray java.lang.Object," +
+					"listArray2DimOfString java.lang.Object,listOfStringArray2Dim java.lang.Object," +
+					"listOfT java.lang.Object);" +
+					"@name('s0') select " +
+					"cast(listOfString,java.util.List<String>) as listOfString," +
+					"cast(listOfOptionalInteger,java.util.List<Optional<Integer>>) as listOfOptionalInteger," +
+					"cast(mapOfStringAndInteger,java.util.Map<String, Integer>) as mapOfStringAndInteger," +
+					"cast(listArrayOfString,java.util.List<String>[]) as listArrayOfString," +
+					"cast(listOfStringArray,java.util.List<String[]>) as listOfStringArray," +
+					"cast(listArray2DimOfString,java.util.List<String>[][]) as listArray2DimOfString," +
+					"cast(listOfStringArray2Dim,java.util.List<String[][]>) as listOfStringArray2Dim," +
+					"cast(listOfT,java.util.List<Object>) as listOfT from MyEventGeneric";
+		}
         throw new IllegalArgumentException("unsupported case " + caseName);
     }
     private static void replayCase(JsonArray allSteps, String caseName, EPRuntime runtime) {
@@ -594,6 +639,8 @@ public final class ExprCoreExistsCastScenarioOracle {
                 runtime.getEventService().sendEventMap(map, "MyEvent");
             } else if ("MyEventWArray".equals(step.getString("eventType", ""))) {
                 runtime.getEventService().sendEventMap(toWArrayPayload(payload), "MyEventWArray");
+            } else if ("MyEventGeneric".equals(step.getString("eventType", ""))) {
+                runtime.getEventService().sendEventMap(toGenericPayload(payload), "MyEventGeneric");
             } else {
                 throw new IllegalArgumentException("unsupported event type");
             }
@@ -681,6 +728,26 @@ public final class ExprCoreExistsCastScenarioOracle {
         map.put("arr_2dim_object", toJsonIntegerArray2Dim(payload.get("arr_2dim_object")));
         map.put("arr_3dim_primitive", toJsonIntArray3Dim(payload.get("arr_3dim_primitive")));
         map.put("arr_3dim_object", toJsonIntegerArray3Dim(payload.get("arr_3dim_object")));
+        return map;
+    }
+
+    private static java.util.Map<String, Object> toGenericPayload(JsonObject payload) {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        if ("empty".equals(payload.getString("shape", ""))) {
+            return map;
+        }
+        map.put("listOfString", Arrays.asList("a"));
+        map.put("listOfOptionalInteger", Arrays.asList(java.util.Optional.of(10)));
+        map.put("mapOfStringAndInteger", java.util.Collections.singletonMap("k", 20));
+        map.put("listArrayOfString", new java.util.List[]{Arrays.asList("b")});
+        java.util.List<String[]> listOfStringArray = new java.util.ArrayList<>();
+        listOfStringArray.add(new String[]{"c"});
+        map.put("listOfStringArray", listOfStringArray);
+        map.put("listArray2DimOfString", new java.util.List[][]{{Arrays.asList("b")}});
+        java.util.List<String[][]> listOfStringArray2Dim = new java.util.ArrayList<>();
+        listOfStringArray2Dim.add(new String[][]{{"c"}});
+        map.put("listOfStringArray2Dim", listOfStringArray2Dim);
+        map.put("listOfT", Arrays.asList("x"));
         return map;
     }
 
@@ -877,6 +944,24 @@ public final class ExprCoreExistsCastScenarioOracle {
                     array.add(normalize(java.lang.reflect.Array.get(value, i)));
                 }
                 return array;
+            }
+            if (value instanceof java.util.Collection) {
+                JsonArray array = new JsonArray();
+                for (Object item : (java.util.Collection<?>) value) {
+                    array.add(normalize(item));
+                }
+                return array;
+            }
+            if (value instanceof java.util.Map) {
+                java.util.TreeMap<String, Object> sorted = new java.util.TreeMap<>();
+                for (java.util.Map.Entry<?, ?> entry : ((java.util.Map<?, ?>) value).entrySet()) {
+                    sorted.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
+                JsonObject object = new JsonObject();
+                for (java.util.Map.Entry<String, Object> entry : sorted.entrySet()) {
+                    object.add(entry.getKey(), normalize(entry.getValue()));
+                }
+                return object;
             }
             if (value instanceof SupportBean) {
                 SupportBean bean = (SupportBean) value;

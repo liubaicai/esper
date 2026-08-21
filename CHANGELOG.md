@@ -1,3 +1,18 @@
+> 最新补充：Draft 4.214（2026-08-21），扩展 `expr-core-exists-cast`
+> differential-verified 场景：固定 Java `ExprCoreCast` 的
+> `ExprCoreCastGeneric` execution
+> （`java-runtime-2fcd2094aaf18ca4ce03`），一个 isolated case、2 条
+> listener records、0 differences（累计 51 条）。覆盖 8 个擦除泛型
+> cast 目标的 identity 直传语义（SimpleTypeCasterAnyType erasure）；
+> oracle TraceWriter 新增 Collection/Map 递归归一化（Map 键排序，
+> 消除 Java toString 身份 hash 不确定性），Go 侧以
+> `exprCoreCastOptional` wrapper 渲染 `Optional[10]`。固定 commit 的
+> Java oracle、runner、scenario、trace、evidence 和 value/null/
+> order/mutation tests 已纳入兼容资产；manifest 保持 134 个
+> differential-verified case，更新为 427 个 differential runtime
+> IDs。其余 Cast 日期 execution 与完整 parser/type/diagnostic
+> matrix 仍为 implemented-only。
+
 > 最新补充：Draft 4.213（2026-08-20），扩展 `expr-core-exists-cast`
 > differential-verified 场景：固定 Java `ExprCoreCast` 的
 > `ExprCoreCastWArray` 两个 execution（soda=false

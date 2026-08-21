@@ -16,7 +16,8 @@
     "java-runtime-9babbbb6f96faf389bb7",
     "java-runtime-f44847213060b8eb3949",
     "java-runtime-53d0455ef4e377c9c2f9",
-    "java-runtime-58852773df609efe7d69"
+    "java-runtime-58852773df609efe7d69",
+    "java-runtime-2fcd2094aaf18ca4ce03"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreExists.java",
@@ -36,7 +37,8 @@
     "ExprCoreCastWStaticType",
     "ExprCoreCastBigDecimalBigInt",
     "ExprCoreCastWArray{soda=false}",
-    "ExprCoreCastWArray{soda=true}"
+    "ExprCoreCastWArray{soda=true}",
+    "ExprCoreCastGeneric"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -570,6 +572,60 @@
       {
         "op": "send",
         "eventType": "MyEventWArray",
+        "payload": {
+          "shape": "empty"
+        }
+      },
+      {
+        "op": "case",
+        "case": "cast-generic"
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventGeneric",
+        "payload": {
+          "shape": "full",
+          "listOfString": [
+            "a"
+          ],
+          "listOfOptionalInteger": [
+            10
+          ],
+          "mapOfStringAndInteger": {
+            "k": 20
+          },
+          "listArrayOfString": [
+            [
+              "b"
+            ]
+          ],
+          "listOfStringArray": [
+            [
+              "c"
+            ]
+          ],
+          "listArray2DimOfString": [
+            [
+              [
+                "b"
+              ]
+            ]
+          ],
+          "listOfStringArray2Dim": [
+            [
+              [
+                "c"
+              ]
+            ]
+          ],
+          "listOfT": [
+            "x"
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventGeneric",
         "payload": {
           "shape": "empty"
         }
@@ -1658,6 +1714,94 @@
             }
           }
         ]
+      },
+      {
+        "case": "cast-generic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "listArray2DimOfString": [
+                [
+                  [
+                    "b"
+                  ]
+                ]
+              ],
+              "listArrayOfString": [
+                [
+                  "b"
+                ]
+              ],
+              "listOfOptionalInteger": [
+                "Optional[10]"
+              ],
+              "listOfString": [
+                "a"
+              ],
+              "listOfStringArray": [
+                [
+                  "c"
+                ]
+              ],
+              "listOfStringArray2Dim": [
+                [
+                  [
+                    "c"
+                  ]
+                ]
+              ],
+              "listOfT": [
+                "x"
+              ],
+              "mapOfStringAndInteger": {
+                "k": "20"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-generic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "listArray2DimOfString": {
+                "state": "null"
+              },
+              "listArrayOfString": {
+                "state": "null"
+              },
+              "listOfOptionalInteger": {
+                "state": "null"
+              },
+              "listOfString": {
+                "state": "null"
+              },
+              "listOfStringArray": {
+                "state": "null"
+              },
+              "listOfStringArray2Dim": {
+                "state": "null"
+              },
+              "listOfT": {
+                "state": "null"
+              },
+              "mapOfStringAndInteger": {
+                "state": "null"
+              }
+            }
+          }
+        ]
       }
     ]
   },
@@ -2738,6 +2882,94 @@
                 "state": "null"
               },
               "c8": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-generic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "listArray2DimOfString": [
+                [
+                  [
+                    "b"
+                  ]
+                ]
+              ],
+              "listArrayOfString": [
+                [
+                  "b"
+                ]
+              ],
+              "listOfOptionalInteger": [
+                "Optional[10]"
+              ],
+              "listOfString": [
+                "a"
+              ],
+              "listOfStringArray": [
+                [
+                  "c"
+                ]
+              ],
+              "listOfStringArray2Dim": [
+                [
+                  [
+                    "c"
+                  ]
+                ]
+              ],
+              "listOfT": [
+                "x"
+              ],
+              "mapOfStringAndInteger": {
+                "k": "20"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "cast-generic",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "listArray2DimOfString": {
+                "state": "null"
+              },
+              "listArrayOfString": {
+                "state": "null"
+              },
+              "listOfOptionalInteger": {
+                "state": "null"
+              },
+              "listOfString": {
+                "state": "null"
+              },
+              "listOfStringArray": {
+                "state": "null"
+              },
+              "listOfStringArray2Dim": {
+                "state": "null"
+              },
+              "listOfT": {
+                "state": "null"
+              },
+              "mapOfStringAndInteger": {
                 "state": "null"
               }
             }

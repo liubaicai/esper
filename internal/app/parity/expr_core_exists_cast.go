@@ -37,6 +37,7 @@ var exprCoreExistsCastJavaRuntimeIDs = []string{
 	"java-runtime-f44847213060b8eb3949",
 	"java-runtime-53d0455ef4e377c9c2f9",
 	"java-runtime-58852773df609efe7d69",
+	"java-runtime-2fcd2094aaf18ca4ce03",
 }
 
 var exprCoreExistsCastJavaExecutions = []string{
@@ -54,6 +55,7 @@ var exprCoreExistsCastJavaExecutions = []string{
 	"ExprCoreCastBigDecimalBigInt",
 	"ExprCoreCastWArray{soda=false}",
 	"ExprCoreCastWArray{soda=true}",
+	"ExprCoreCastGeneric",
 }
 
 var exprCoreExistsCastCaseOrder = []string{
@@ -72,6 +74,7 @@ var exprCoreExistsCastCaseOrder = []string{
 	"cast-bigdecimal-bigint",
 	"cast-warray",
 	"cast-warray-soda",
+	"cast-generic",
 }
 
 type exprCoreExistsCastExpectedSend struct {
@@ -288,6 +291,40 @@ var exprCoreExistsCastExpectedSends = [][]exprCoreExistsCastExpectedSend{
 			"shape": `"empty"`,
 		}},
 	},
+	{
+		{eventType: "MyEventGeneric", payload: map[string]string{
+			"shape":                 `"full"`,
+			"listOfString":          `["a"]`,
+			"listOfOptionalInteger": `[10]`,
+			"mapOfStringAndInteger": `{"k":20}`,
+			"listArrayOfString":     `[["b"]]`,
+			"listOfStringArray":     `[["c"]]`,
+			"listArray2DimOfString": `[[["b"]]]`,
+			"listOfStringArray2Dim": `[[["c"]]]`,
+			"listOfT":               `["x"]`,
+		}},
+		{eventType: "MyEventGeneric", payload: map[string]string{
+			"shape": `"empty"`,
+		}},
+	},
+}
+
+// exprCoreCastOptional models java.util.Optional for the cast-generic
+// differential case: presence is part of the observable value and the token
+// renders as Java's own Optional.toString() ("Optional[10]" / "Optional.empty").
+type exprCoreCastOptional struct {
+	value   any
+	present bool
+}
+
+// toAnySlice widens a typed slice to []any elementwise so the erased Java
+// List casts hit the AssignableTo identity path.
+func toAnySlice[T any](values []T) []any {
+	widened := make([]any, 0, len(values))
+	for _, value := range values {
+		widened = append(widened, value)
+	}
+	return widened
 }
 
 type exprCoreExistsCastSupportBean struct {
@@ -798,6 +835,30 @@ func runExprCoreExistsCastCase(ctx context.Context, scenario compat.Scenario, ca
 			esper.Alias("c7", esper.Cast[any, [][][]int](esper.Field[map[string]any, any]("arr_3dim_primitive"))),
 			esper.Alias("c8", esper.Cast[any, [][][]int](esper.Field[map[string]any, any]("arr_3dim_object"))),
 		).InsertInto("MyArrayEvent", esper.StatementName("s0"))
+	case "cast-generic":
+		if _, err := esper.RegisterMap(env, "MyEventGeneric", []esper.FieldSpec{
+			esper.FieldDef("listOfString", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("listOfOptionalInteger", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("mapOfStringAndInteger", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("listArrayOfString", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("listOfStringArray", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("listArray2DimOfString", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("listOfStringArray2Dim", reflect.TypeOf((*any)(nil)).Elem()),
+			esper.FieldDef("listOfT", reflect.TypeOf((*any)(nil)).Elem()),
+		}, esper.AllowDynamicFields()); err != nil {
+			return compat.Trace{}, err
+		}
+		input := esper.From[map[string]any](env, "MyEventGeneric")
+		query = esper.Select(input,
+			esper.Alias("listOfString", esper.Cast[any, []any](esper.Field[map[string]any, any]("listOfString"))),
+			esper.Alias("listOfOptionalInteger", esper.Cast[any, []any](esper.Field[map[string]any, any]("listOfOptionalInteger"))),
+			esper.Alias("mapOfStringAndInteger", esper.Cast[any, map[string]any](esper.Field[map[string]any, any]("mapOfStringAndInteger"))),
+			esper.Alias("listArrayOfString", esper.Cast[any, [][]any](esper.Field[map[string]any, any]("listArrayOfString"))),
+			esper.Alias("listOfStringArray", esper.Cast[any, [][]any](esper.Field[map[string]any, any]("listOfStringArray"))),
+			esper.Alias("listArray2DimOfString", esper.Cast[any, [][][]any](esper.Field[map[string]any, any]("listArray2DimOfString"))),
+			esper.Alias("listOfStringArray2Dim", esper.Cast[any, [][][]any](esper.Field[map[string]any, any]("listOfStringArray2Dim"))),
+			esper.Alias("listOfT", esper.Cast[any, []any](esper.Field[map[string]any, any]("listOfT"))),
+		).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported expr-core-exists-cast case %q", caseName)
 	}
@@ -1038,6 +1099,82 @@ func decodeExprCoreExistsCastPayload(step compat.Step) (any, error) {
 		}
 		return result, nil
 	}
+	if step.EventType == "MyEventGeneric" {
+		var payload struct {
+			Shape                 string         `json:"shape"`
+			ListOfString          []string       `json:"listOfString"`
+			ListOfOptionalInteger []int          `json:"listOfOptionalInteger"`
+			MapOfStringAndInteger map[string]int `json:"mapOfStringAndInteger"`
+			ListArrayOfString     [][]string     `json:"listArrayOfString"`
+			ListOfStringArray     [][]string     `json:"listOfStringArray"`
+			ListArray2DimOfString [][][]string   `json:"listArray2DimOfString"`
+			ListOfStringArray2Dim [][][]string   `json:"listOfStringArray2Dim"`
+			ListOfT               []string       `json:"listOfT"`
+		}
+		decoder := json.NewDecoder(bytes.NewReader(step.Payload))
+		decoder.UseNumber()
+		if err := decoder.Decode(&payload); err != nil {
+			return nil, fmt.Errorf("expr-core-exists-cast: decode MyEventGeneric: %w", err)
+		}
+		if payload.Shape == "empty" {
+			return map[string]any{
+				"listOfString":          nil,
+				"listOfOptionalInteger": nil,
+				"mapOfStringAndInteger": nil,
+				"listArrayOfString":     nil,
+				"listOfStringArray":     nil,
+				"listArray2DimOfString": nil,
+				"listOfStringArray2Dim": nil,
+				"listOfT":               nil,
+			}, nil
+		}
+		optionals := make([]any, 0, len(payload.ListOfOptionalInteger))
+		for _, value := range payload.ListOfOptionalInteger {
+			optionals = append(optionals, exprCoreCastOptional{value: value, present: true})
+		}
+		genericMap := make(map[string]any, len(payload.MapOfStringAndInteger))
+		for name, value := range payload.MapOfStringAndInteger {
+			genericMap[name] = value
+		}
+		listOfT := make([]any, 0, len(payload.ListOfT))
+		for _, value := range payload.ListOfT {
+			listOfT = append(listOfT, value)
+		}
+		listArrayOfString := make([][]any, 0, len(payload.ListArrayOfString))
+		for _, inner := range payload.ListArrayOfString {
+			listArrayOfString = append(listArrayOfString, toAnySlice(inner))
+		}
+		listOfStringArray := make([][]any, 0, len(payload.ListOfStringArray))
+		for _, inner := range payload.ListOfStringArray {
+			listOfStringArray = append(listOfStringArray, toAnySlice(inner))
+		}
+		listArray2Dim := make([][][]any, 0, len(payload.ListArray2DimOfString))
+		for _, inner := range payload.ListArray2DimOfString {
+			outer := make([][]any, 0, len(inner))
+			for _, nested := range inner {
+				outer = append(outer, toAnySlice(nested))
+			}
+			listArray2Dim = append(listArray2Dim, outer)
+		}
+		listOfStringArray2Dim := make([][][]any, 0, len(payload.ListOfStringArray2Dim))
+		for _, inner := range payload.ListOfStringArray2Dim {
+			outer := make([][]any, 0, len(inner))
+			for _, nested := range inner {
+				outer = append(outer, toAnySlice(nested))
+			}
+			listOfStringArray2Dim = append(listOfStringArray2Dim, outer)
+		}
+		return map[string]any{
+			"listOfString":          toAnySlice(payload.ListOfString),
+			"listOfOptionalInteger": optionals,
+			"mapOfStringAndInteger": genericMap,
+			"listArrayOfString":     listArrayOfString,
+			"listOfStringArray":     listOfStringArray,
+			"listArray2DimOfString": listArray2Dim,
+			"listOfStringArray2Dim": listOfStringArray2Dim,
+			"listOfT":               listOfT,
+		}, nil
+	}
 	if step.EventType != "SupportMarkerInterface" {
 		return nil, fmt.Errorf("expr-core-exists-cast: unsupported event type %q", step.EventType)
 	}
@@ -1200,6 +1337,15 @@ func exprCoreExistsCastInterfaceBeanToken(value any) string {
 			theString = *value.TheString
 		}
 		return "SupportBean(" + theString + "," + strconv.Itoa(value.IntPrimitive) + ")"
+	case exprCoreCastOptional:
+		if !value.present {
+			return "Optional.empty"
+		}
+		inner := normalizeExprCoreExistsCastValue(value.value)
+		if text, ok := inner.(string); ok {
+			return "Optional[" + text + "]"
+		}
+		return "Optional[" + fmt.Sprint(inner) + "]"
 	}
 	return ""
 }

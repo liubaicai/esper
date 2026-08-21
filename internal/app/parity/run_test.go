@@ -7867,8 +7867,8 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
 		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
 	}
-	if len(javaTrace.Records) != 49 {
-		t.Fatalf("checked-in Java trace records = %d, want 49", len(javaTrace.Records))
+	if len(javaTrace.Records) != 51 {
+		t.Fatalf("checked-in Java trace records = %d, want 51", len(javaTrace.Records))
 	}
 	statementCounts := map[string]int{}
 	caseCounts := map[string]int{}
@@ -7876,14 +7876,14 @@ func TestExprCoreExistsCastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) 
 		statementCounts[record.Statement]++
 		caseCounts[record.Case]++
 	}
-	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 49}) {
+	if !reflect.DeepEqual(statementCounts, map[string]int{"s0": 51}) {
 		t.Fatalf("checked-in statement counts = %#v", statementCounts)
 	}
 	wantCaseCounts := map[string]int{
 		"exists-simple": 1, "exists-inner": 5, "exists-om": 3, "exists-compile": 3,
 		"cast-simple": 2, "cast-simple-more-types": 1, "cast-as-parse": 1, "cast-double-null-om": 6,
 		"cast-interface": 5, "cast-string-and-null": 6, "cast-boolean": 3, "cast-w-static-type": 1,
-		"cast-bigdecimal-bigint": 8, "cast-warray": 2, "cast-warray-soda": 2,
+		"cast-bigdecimal-bigint": 8, "cast-warray": 2, "cast-warray-soda": 2, "cast-generic": 2,
 	}
 	if !reflect.DeepEqual(caseCounts, wantCaseCounts) {
 		t.Fatalf("checked-in case counts = %#v", caseCounts)
@@ -8045,6 +8045,30 @@ func TestRunExprCoreExistsCastDiffRejectsTraceMutations(t *testing.T) {
 			name: "warray-3dim-cell",
 			mutate: func(trace *compat.Trace) {
 				trace.Records[48].New[0].Fields["c7"] = []any{[]any{[]any{"1"}}}
+			},
+		},
+		{
+			name: "generic-optional-token",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[49].New[0].Fields["listOfOptionalInteger"] = []any{"Optional[11]"}
+			},
+		},
+		{
+			name: "generic-map-cell",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[49].New[0].Fields["mapOfStringAndInteger"] = map[string]any{"k": "21"}
+			},
+		},
+		{
+			name: "generic-nested-list-cell",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[49].New[0].Fields["listArray2DimOfString"] = []any{[]any{[]any{"z"}}}
+			},
+		},
+		{
+			name: "generic-null-cell",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[50].New[0].Fields["listOfString"] = []any{"a"}
 			},
 		},
 	}

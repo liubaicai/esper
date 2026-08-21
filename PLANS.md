@@ -34,114 +34,92 @@ activity or a single coverage percentage.
 ## Active checkpoint
 
 - Updated: 2026-08-20
-- Baseline: `HEAD` and `origin/master` are clean and match at pushed commit
-  `2a6c7f9a4` (`cast-interface` unit); the next semantic change must preserve
-  that baseline.
-- Status: the delivered `ExprCoreCastInterface` Cast unit is committed and
-  pushed. The next expr.core unit extends `case.expr-core-exists-cast` with
-  `ExprCoreCastWArray{soda=false}` (running at
-  `java-runtime-53d0455ef4e377c9c2f9`) and
-  `ExprCoreCastWArray{soda=true}` (running at
-  `java-runtime-58852773df609efe7d69`).
-- Current work unit: `expr.core` / array Cast extension —
-  `insert into MyArrayEvent select cast(arr_*, <array target>) as c0..c8`
-  over a `MyEvent` map event with 9 Object-typed array properties, both SODA
-  and text compile paths.
-- Exact next action: freeze the WArray contract (scouts returned), record it in
-  this checkpoint, then implement oracle case(s) + fixture sends + Go runner +
-  run_test counts, regenerate Java trace, run Go replay zero-difference diff,
-  regenerate evidence, update manifest/roadmap/CHANGELOG, run full local gates,
-  independent parity review, one semantic commit, push `master`, verify remote
-  ref read-only.
-- Worktree notes: baseline commit `2a6c7f9a4` is clean; do not modify
-  `/root/app/esper` or `goal.txt`.
+- Baseline: `HEAD` == `origin/master` == `67514e7db` (`cast-warray` unit,
+  pushed). Uncommitted: this PLANS.md closeout note (rides with the next
+  unit's commit; master is protected, no post-push amend).
+- Status: the delivered `ExprCoreCastWArray` unit is committed and pushed.
+  The next expr.core unit extends `case.expr-core-exists-cast` with
+  `ExprCoreCastGeneric` (`java-runtime-2fcd2094aaf18ca4ce03`, ordinal 11,
+  SERDEREQUIRED).
+- Current work unit: `expr.core` / generic Cast extension — schema MyEvent
+  with 8 Object-typed columns (listOfString, listOfOptionalInteger,
+  mapOfStringAndInteger, listArrayOfString, listOfStringArray,
+  listArray2DimOfString, listOfStringArray2Dim, listOfT) and
+  `@name('s0') select cast(<col>, <generic target>) as <col> ... from
+  MyEvent`, per SupportGenericColUtil.NAMESANDTYPES.
+- Exact next action: freeze the Generic contract (scouts
+  `GenericCastJavaContract` + `GenericCastGoSurface` running), record it
+  here, then implement oracle case + fixture sends + Go runner + run_test
+  counts, regenerate Java trace, Go replay zero-difference diff, evidence,
+  manifest/roadmap/CHANGELOG, full gates, parity review, one semantic
+  commit, push `master`, verify remote ref.
+- Worktree notes: do not modify `/root/app/esper` or `goal.txt`.
 
 ## Delegation checkpoint
 
-- Collaboration facility: available; the next-unit read-only scouts were
-  launched concurrently through collaboration tools before implementation.
-- Java contract scout: `DatesGenericArrayJavaContract` (java-oracle-scout)
-  froze the WArray/Dates/Generic contracts (6m13s): exact EPL for
-  `ExprCoreCastWArray{soda=false}` / `{soda=true}` (9 Object-typed array
-  props on `MyEvent`, insert-into `MyArrayEvent` bean with 9 casts
-  `cast(arr_string,string[]) as c0, cast(arr_primitive,int[primitive]) as c1,
-  cast(arr_boxed_one,int[]) as c2, cast(arr_boxed_two,java.lang.Integer[]) as
-  c3, cast(arr_object,java.lang.Object[]) as c4,
-  cast(arr_2dim_primitive,int[primitive][]) as c5,
-  cast(arr_2dim_object,java.lang.Object[][]) as c6,
-  cast(arr_3dim_primitive,int[primitive][][]) as c7,
-  cast(arr_3dim_object,java.lang.Object[][][]) as c8 from MyEvent`); the two
-  send vectors (full map with String[]{a}, int[]{1}, Integer[]{2}/{3},
-  SupportBean[]{E1,0}, int[][]{{10}}, Integer[][]{{11}}, int[][][]{{{12}}},
-  Integer[][][]{{{13}}}; then empty map => all nine null); statement event
-  type asserts exact array component classes; the two soda variants differ only
-  in compile path with identical observable output; no virtual time anywhere.
-- Go surface scout: `DatesGenericArrayGoSurface` (scout) confirmed (20m25s)
-  WArray is ONE clean closed-loop unit: `Cast[any,[]T]` element coercion for
-  primitive/boxed/multi-dim arrays already recurses via `castAnyToType`
-  (expr_cast.go:560-580); insert-into already proven
-  (epl_insert_into_parity_test.go, runtime.go RouteTo); only missing pieces are
-  parity-only (oracle TraceWriter + Go normalizer must render array cells and
-  the `arr_object` SupportBean deterministically; a struct- or map-backed
-  `MyArrayEvent` target registered via RegisterMap/RegisterStruct).
-- Scope decision: this unit covers `ExprCoreCastWArray{soda=false}` +
-  `{soda=true}` (two executions,
-  `java-runtime-53d0455ef4e377c9c2f9`,
-  `java-runtime-58852773df609efe7d69`). `ExprCoreCastGeneric` needs a
-  List/Map oracle token (proposed low-risk follow-up unit);
-  `ExprCoreCastDates` needs a new chained calendar-get expression +
-  send-time error record protocol + Java8 distinct time types and is deferred.
-- Implementation writer: primary agent owns the whole exists-cast parity
-  surface (scenario, oracle, Go runner, tests) as one atomic set; singleton
-  writer is the recorded exception for this harness.
-- Independent parity reviewer: for this unit, `WArrayReview`
-  (parity-reviewer) is scheduled after integration; its verdict is recorded
-  here once available.
+- Collaboration facility: available; this unit's read-only scouts were
+  launched concurrently before implementation: `GenericCastJavaContract`
+  (java-oracle-scout) and `GenericCastGoSurface` (scout). Primary agent
+  independently read `ExprCoreCastGeneric` (ExprCoreCast.java:97-131) and
+  `SupportGenericColUtil` (names/types/sample/compare) to cross-check.
+- Frozen contract (pending scout confirmation): one case `cast-generic`,
+  one statement, one send. Sample values: listOfString=["a"],
+  listOfOptionalInteger=[Optional.of(10)], mapOfStringAndInteger={k:20},
+  listArrayOfString=[[b]], listOfStringArray=[[c]],
+  listArray2DimOfString=[[[b]]], listOfStringArray2Dim=[[[c]]],
+  listOfT=["x"]. Java asserts cast returns the same instances; the
+  differential encodes per-cell normalized rendering with
+  Optional.get()=10 unwrapped to "10".
+- Scope decision: `ExprCoreCastDates` stays deferred (needs chained
+  calendar-get expression, send-time error record protocol, Java8 distinct
+  time types).
+- Implementation writer: primary agent owns the exists-cast parity surface
+  as one atomic set; singleton writer is the recorded exception for this
+  harness.
+- Independent parity reviewer: `GenericReview` scheduled after integration.
+
 
 ## Work-unit contract
 
-- Capability/subdomain: `expr.core`, array Cast extension of
-  `case.expr-core-exists-cast`, two source-order `ExprCoreCast.java`
-  executions (`ExprCoreCastWArray{soda=false}` / `{soda=true}`) beside the
-  thirteen already-verified executions.
+- Capability/subdomain: `expr.core`, generic Cast extension of
+  `case.expr-core-exists-cast`, one source-order `ExprCoreCast.java`
+  execution (`ExprCoreCastGeneric`, ordinal 11) beside the fifteen
+  already-verified executions.
 - Java source and execution/runtime ID: fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`,
   `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/exprcore/ExprCoreCast.java`
-  lines 133-213, `ExprCoreCastWArray` /
-  `java-runtime-53d0455ef4e377c9c2f9` (soda=false) and
-  `java-runtime-58852773df609efe7d69` (soda=true) (already inventoried in the
-  manifest case; only differential-verified status changes).
+  lines 97-131 + `support/events/SupportGenericColUtil.java`,
+  `ExprCoreCastGeneric` / `java-runtime-2fcd2094aaf18ca4ce03` (already in
+  manifest case javaRuntimeIds; only DV status changes).
 - Differential scope: extend `testdata/parity/expr-core-exists-cast.json`
-  with two cases `cast-warray` (text) and `cast-warray-soda` (model), each
-  with two sends of map event `MyEvent` (9 array props; then empty map).
-  Select = `insert into MyArrayEvent select cast(arr_string,string[]) as c0,
-  cast(arr_primitive,int[primitive]) as c1, cast(arr_boxed_one,int[]) as c2,
-  cast(arr_boxed_two,java.lang.Integer[]) as c3, cast(arr_object,
-  java.lang.Object[]) as c4, cast(arr_2dim_primitive,int[primitive][]) as c5,
-  cast(arr_2dim_object,java.lang.Object[][]) as c6,
-  cast(arr_3dim_primitive,int[primitive][][]) as c7,
-  cast(arr_3dim_object,java.lang.Object[][][]) as c8 from MyEvent`.
-- Observable contract: one new row per send at virtual time zero, no old
-  stream/timers/errors, fresh runtime+statement per execution. The inserted
-  `MyArrayEvent` bean carries c0..c8 with the exact Java array component
-  classes (String[], int[], Integer[], Object[], int[][], Object[][],
-  int[][][], Object[][][]); the element values are preserved elementwise
-  (including SupportBean identity c4[0]); the empty-map send yields all-null
-  arrays. Both Java oracle and Go normalizer render array cells
-  deterministically (element tokens) and the `arr_object` SupportBean as its
-  simple class name token.
-- Allowed production files: none under `internal/esper` (array element cast
-  + insert-into route already implemented; the change is parity-layer).
-  [CAUTION to verify: exact listener-count parity for the insert-into route.]
+  with one case `cast-generic`, one send of map event `MyEventGeneric` (8
+  Object-typed props). Select = `select cast(listOfString,
+  java.util.List<String>) as listOfString, cast(listOfOptionalInteger,
+  java.util.List<java.util.Optional<Integer>>) as listOfOptionalInteger,
+  cast(mapOfStringAndInteger, java.util.Map<String,Integer>) as
+  mapOfStringAndInteger, cast(listArrayOfString, java.util.List<String>[]) as
+  listArrayOfString, cast(listOfStringArray, java.util.List<String[]>) as
+  listOfStringArray, cast(listArray2DimOfString, java.util.List<String>[][])
+  as listArray2DimOfString, cast(listOfStringArray2Dim,
+  java.util.List<String[][]>) as listOfStringArray2Dim, cast(listOfT,
+  java.util.List<Object>) as listOfT from MyEventGeneric` (harness type
+  renamed from MyEvent to avoid collision; same cast semantics).
+- Observable contract: one row at virtual time zero; eight columns preserve
+  the sent values elementwise (List/Map cast identity on erasure);
+  Optional.get()=10 renders as "10". Deterministic rendering both sides:
+  lists as JSON arrays of element tokens, maps as sorted-key JSON objects,
+  Optional unwrapped.
+- Allowed production files: none under `internal/esper` expected (List/Map
+  assignable casts exist via castAnyToType); parity-layer only unless the
+  Go surface scout flags a real gap.
 - Allowed Go test/parity files: `internal/app/parity/expr_core_exists_cast.go`
-  (two warray cases, MyEvent map schema with 9 Object array props, MyArrayEvent
-  target schema, decode branches, array/bean normalizer tokens),
-  `internal/app/parity/run_test.go` (record counts 45->49, case counts, new
-  mutations).
+  (case dispatch, MyEventGeneric decode branch, list/map/Optional
+  normalizer cases), `internal/app/parity/run_test.go` (49->50 records,
+  case count, mutations), scenario/trace/evidence fixtures, oracle +
+  runner script guards.
 - Allowed parity asset files:
-  `tools/java-oracle/ExprCoreExistsCastScenarioOracle.java` (warray cases,
-  payload builders, array-element + SupportBean token rendering in
-  TraceWriter) and
+  `tools/java-oracle/ExprCoreExistsCastScenarioOracle.java` (generic case,
+  payload builders, List/Map/Optional token rendering in TraceWriter) and
   `testdata/parity/expr-core-exists-cast.{json,trace.json,evidence.json}`.
 - Forbidden/conflicting files: changes under `/root/app/esper`; unrelated
   `internal/esper` semantic surfaces; `goal.txt`; generated evidence before
@@ -177,9 +155,35 @@ activity or a single coverage percentage.
       boundary/mutation coverage (4 warray mutations all reject).
 - [x] Update manifest (case DV runtime IDs 13->15, summary 424->426),
       regenerate evidence (passing), roadmap, CHANGELOG.
-- [ ] Run full local gates and independent parity review; resolve findings.
-- [ ] Review final diff, record validation, create one semantic commit,
-      push `master`, verify remote ref read-only.
+- [x] Run full local gates and independent parity review; resolve findings
+      (`WArrayReview`, parity-reviewer, APPROVED at 0.93 confidence with one
+      P3 dead-code nit — unused `myEventWArrayMap()` — removed and the trace
+      re-verified byte-identical afterwards).
+- [x] Review final diff, record validation, create one semantic commit
+      (`67514e7db` "expr: verify array cast parity"), push `master`, verify
+      remote ref read-only (local == origin/master == `67514e7db`).
+
+### Generic unit (in flight)
+
+- [x] Reconfirm baseline (`HEAD` == `origin/master` == `67514e7db`).
+- [x] Launch concurrent read-only scouts `GenericCastJavaContract` +
+      `GenericCastGoSurface`; primary agent independently read
+      ExprCoreCastGeneric + SupportGenericColUtil.
+- [x] Freeze the Generic contract in this checkpoint (1 case, 1 send,
+      8 columns, runtime `java-runtime-2fcd2094aaf18ca4ce03`).
+- [x] Confirm scout reports match the frozen contract; adjust if they
+      surface gaps.
+- [x] Implement `cast-generic` end-to-end: oracle case + payload builders +
+      TraceWriter List/Map/Optional rendering, scenario fixture send, Go
+      runner case + decode + normalizer, run_test 49->51.
+- [x] Pinned Java trace; zero-difference diff; mutations (4 generic
+      mutations added); evidence.
+- [x] Manifest (15->16 DV IDs, 426->427), roadmap, CHANGELOG, README.
+
+- 2026-08-20: GitLab DOES protect `master` (force-push rejected 2026-08-20,
+  contradicting AGENTS.md/runbook claims). Amended commits cannot be repushed;
+  finalize all file changes BEFORE the single unit commit/push. Post-commit
+  PLANS closeout notes must ride with the next unit's commit.
 
 
 ## Discoveries and decisions

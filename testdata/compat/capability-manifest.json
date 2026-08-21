@@ -10401,7 +10401,7 @@
     "java-oracle-trace",
     "go-differential"
    ],
-   "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not), plus typed OptionalProperty[T] navigation for '?' paths that turns null, incompatible and missing intermediate receivers into Missing while preserving terminal nullable Null presence. The strict replay now verifies the four source-order Exists/OM/compile executions and ten typed Cast executions with 49 listener records and zero Java/Go differences: raw numeric/string casts (cast-simple, cast-simple-more-types, cast-as-parse, cast-double-null-om), dyn-root string/number casts, SupportBean bool boxed/primitive casts with null-propagating boolean OR, StaticTypeMapEvent string-to-numeric parses (0x0A hex byte, 1.4E-1 double, 1.001 float), and interface/class target casts (cast-interface) discriminating eight cast(item?, T) targets with per-target bean presence rendered as Java simple-class-name tokens (double-wrapped SupportBeanDynRoot->t0, ISupportDImpl->t5, ISupportBCImpl->t2+t4, ISupportAImplSuperGImplPlus->t1/t2/t4/t6/t7, ISupportBaseABImpl->t2+t3). The remaining Cast date/generic executions, Java EPL optional-property/cast syntax, SODA/compile text paths, exact date parser/diagnostic behavior and the remaining full Java type matrix remain outside the fluent builder. The BigDecimal/BigInteger execution (ExprCoreCastBigDecimalBigInt, 8 records) adds exact-decimal verification: double-to-BigDecimal round-trips through the shortest decimal (2.4 -> \"2.4\") matching BigDecimal.valueOf(double), with 2^500500 and 2^500500+0.1 boundary vectors proving arbitrary precision, and float truncation to BigInteger matching (long) semantics. The array-cast executions (ExprCoreCastWArray soda=false/soda=true, 4 records) add insert-into MyArrayEvent verification: Object-typed map fields cast to String[]/int[primitive]/Integer[]/Object[] and the multi-dim int[primitive][]/Object[][]/int[primitive][][]/Object[][][] targets, with element coercion recursing per component, SupportBean elements rendered as field-rich tokens, and empty-map sends yielding null in all nine columns.",
+   "difference": "Go exposes Exists(Expr) with explicit Value-state semantics (present Null counts as existing, Missing does not), plus typed OptionalProperty[T] navigation for '?' paths that turns null, incompatible and missing intermediate receivers into Missing while preserving terminal nullable Null presence. The strict replay now verifies the four source-order Exists/OM/compile executions and eleven typed Cast executions with 51 listener records and zero Java/Go differences: raw numeric/string casts (cast-simple, cast-simple-more-types, cast-as-parse, cast-double-null-om), dyn-root string/number casts, SupportBean bool boxed/primitive casts with null-propagating boolean OR, StaticTypeMapEvent string-to-numeric parses (0x0A hex byte, 1.4E-1 double, 1.001 float), and interface/class target casts (cast-interface) discriminating eight cast(item?, T) targets with per-target bean presence rendered as Java simple-class-name tokens (double-wrapped SupportBeanDynRoot->t0, ISupportDImpl->t5, ISupportBCImpl->t2+t4, ISupportAImplSuperGImplPlus->t1/t2/t4/t6/t7, ISupportBaseABImpl->t2+t3). The remaining Cast date executions, Java EPL optional-property/cast syntax, SODA/compile text paths, exact date parser/diagnostic behavior and the remaining full Java type matrix remain outside the fluent builder. The BigDecimal/BigInteger execution (ExprCoreCastBigDecimalBigInt, 8 records) adds exact-decimal verification: double-to-BigDecimal round-trips through the shortest decimal (2.4 -> \"2.4\") matching BigDecimal.valueOf(double), with 2^500500 and 2^500500+0.1 boundary vectors proving arbitrary precision, and float truncation to BigInteger matching (long) semantics. The array-cast executions (ExprCoreCastWArray soda=false/soda=true, 4 records) add insert-into MyArrayEvent verification: Object-typed map fields cast to String[]/int[primitive]/Integer[]/Object[] and the multi-dim int[primitive][]/Object[][]/int[primitive][][]/Object[][][] targets, with element coercion recursing per component, SupportBean elements rendered as field-rich tokens, and empty-map sends yielding null in all nine columns. The generic-cast execution (ExprCoreCastGeneric, 2 records) adds erased-Collection cast verification: eight java.util.List/Map parameterized targets (List<String>, List<Optional<Integer>>, Map<String,Integer>, List<String>[], List<String[]>, List<String>[][], List<String[][]>, List<Object>) are identity pass-throughs per SimpleTypeCasterAnyType erasure semantics, with List/Map trace cells rendered as recursive JSON (sorted map keys), Optional elements as Optional[10] tokens, and the empty-map send yielding null in all eight columns.",
    "verification": [
     "inventoried",
     "implemented",
@@ -10422,7 +10422,8 @@
     "java-runtime-9babbbb6f96faf389bb7",
     "java-runtime-f44847213060b8eb3949",
     "java-runtime-53d0455ef4e377c9c2f9",
-    "java-runtime-58852773df609efe7d69"
+    "java-runtime-58852773df609efe7d69",
+    "java-runtime-2fcd2094aaf18ca4ce03"
    ]
   },
   {
@@ -34660,7 +34661,7 @@
 "inventoriedCases": 522,
 "implementedCases": 520,
 "differentialVerifiedCases": 134,
-"differentialVerifiedRuntimeIds": 426,
+"differentialVerifiedRuntimeIds": 427,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,

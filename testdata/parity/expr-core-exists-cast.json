@@ -467,6 +467,32 @@
       "payload": {
         "shape": "empty"
       }
+    },
+    {
+      "op": "case",
+      "case": "cast-generic"
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventGeneric",
+      "payload": {
+        "shape": "full",
+        "listOfString": ["a"],
+        "listOfOptionalInteger": [10],
+        "mapOfStringAndInteger": {"k":20},
+        "listArrayOfString": [["b"]],
+        "listOfStringArray": [["c"]],
+        "listArray2DimOfString": [[["b"]]],
+        "listOfStringArray2Dim": [[["c"]]],
+        "listOfT": ["x"]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventGeneric",
+      "payload": {
+        "shape": "empty"
+      }
     }
   ]
 }
