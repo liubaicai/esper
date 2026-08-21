@@ -3,6 +3,7 @@ import com.espertech.esper.common.client.EventBean;
 import com.espertech.esper.common.client.configuration.Configuration;
 import com.espertech.esper.common.client.json.minimaljson.Json;
 import com.espertech.esper.common.client.json.minimaljson.JsonArray;
+import com.espertech.esper.common.client.json.minimaljson.JsonNumber;
 import com.espertech.esper.common.client.json.minimaljson.JsonObject;
 import com.espertech.esper.common.client.json.minimaljson.JsonValue;
 import com.espertech.esper.common.internal.support.SupportBean;
@@ -24,10 +25,10 @@ import java.util.TreeSet;
 /**
  * Java oracle for EPLSubselectAllAnySomeExpr quantified-comparison scenarios.
  *
- * Covers 4 behavioral executions (5 scenario cases; relational-all-om is the
- * fresh-statement OM re-deploy round of RelationalOpAll). InvalidSubselect is
- * excluded (compile-time-only, approved difference). NullOrNoRows executions
- * are covered separately by case.subquery-empty-quantifiers.
+ * Covers all 6 behavioral executions across 7 scenario cases (5 original plus
+ * 2 null-or-no-rows cases; relational-all-om is the fresh-statement OM re-deploy
+ * round of RelationalOpAll). InvalidSubselect is excluded (compile-time-only,
+ * approved difference).
  */
 public class EPLSubselectAllAnySomeExprScenarioOracle {
 
@@ -121,6 +122,14 @@ public class EPLSubselectAllAnySomeExprScenarioOracle {
                     SupportBean event = new SupportBean();
                     event.setTheString(payload.getString("theString", ""));
                     event.setIntPrimitive(payload.getInt("intPrimitive", 0));
+                    JsonValue intBoxed = payload.get("intBoxed");
+                    if (intBoxed instanceof JsonNumber) {
+                        event.setIntBoxed(((JsonNumber) intBoxed).asInt());
+                    }
+                    JsonValue doubleBoxed = payload.get("doubleBoxed");
+                    if (doubleBoxed instanceof JsonNumber) {
+                        event.setDoubleBoxed(((JsonNumber) doubleBoxed).asDouble());
+                    }
                     runtime.getEventService().sendEventBean(event, "SupportBean");
                 }
             }
@@ -163,6 +172,21 @@ public class EPLSubselectAllAnySomeExprScenarioOracle {
                     + "intPrimitive != SOME (select intPrimitive from SupportBean(theString like 'S%')#keepall) as r3, "
                     + "intPrimitive <> ANY (select intPrimitive from SupportBean(theString like 'S%')#keepall) as r4 "
                     + "from SupportBean(theString like 'E%')"
+            };
+            case "relational-null-no-rows" -> new String[]{
+                "@name('s0') select "
+                    + "intBoxed >= all (select doubleBoxed from SupportBean(theString like 'S%')#keepall) as vall, "
+                    + "intBoxed >= any (select doubleBoxed from SupportBean(theString like 'S%')#keepall) as vany "
+                    + " from SupportBean(theString like 'E%')"
+            };
+            case "equals-in-null-no-rows" -> new String[]{
+                "@name('s0') select "
+                    + "intBoxed = all (select doubleBoxed from SupportBean(theString like 'S%')#keepall) as eall, "
+                    + "intBoxed = any (select doubleBoxed from SupportBean(theString like 'S%')#keepall) as eany, "
+                    + "intBoxed != all (select doubleBoxed from SupportBean(theString like 'S%')#keepall) as neall, "
+                    + "intBoxed != any (select doubleBoxed from SupportBean(theString like 'S%')#keepall) as neany, "
+                    + "intBoxed in (select doubleBoxed from SupportBean(theString like 'S%')#keepall) as isin "
+                    + " from SupportBean(theString like 'E%')"
             };
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };

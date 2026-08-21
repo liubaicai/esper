@@ -1,3 +1,25 @@
+> 最新补充：Draft 4.217（2026-08-21），扩展 `query.subquery` 的
+> `subselect-quantified` differential-verified 场景，补齐固定 Java
+> `EPLSubselectAllAnySomeExpr` 的两个 null/空集 execution：
+> `EPLSubselectRelationalOpNullOrNoRows`
+> （`java-runtime-ad44331ab7f0645a4e7a`）与
+> `EPLSubselectEqualsInNullOrNoRows`
+> （`java-runtime-29c66b744c3754d59ec7`）。场景新增
+> `relational-null-no-rows` 与 `equals-in-null-no-rows` 两个 case，Java/Go
+> 各 40 条 listener records、0 differences；覆盖空集 ALL=true/ANY=false/IN=false
+> （含 outer null）、`{null}` 集合全 Null、`{null,1}` 混合集合的三值边界
+>（`1>=any` → true、`0>=any` → false、`=any`/`in` → Null、`!=all` false
+> 主导、`!=any` true 主导）以及 Integer/Double 混合数值 coercion。修复
+> `internal/esper` 共享语义：`evaluateQuantifiedSubquery` 的 relational
+> ANY 此前把 unknown 行一律折叠为 Null，现对照 Java
+> `SubselectForgeStrategyNRRelOpAnyDefault` 在存在非空行时保留 decisive
+> false（equals 语义保持 SQL unknown）；全量 `internal/esper` 单测回归
+> 通过。`case.subquery-empty-quantifiers` 由 implemented 提升为
+> differential-verified；manifest 更新为 136 个 differential-verified
+> case、432 个 differential runtime IDs、3071 条 runtime associations
+>（唯一已关联 runtime 2901，未关联 1235）。`EPLSubselectInvalid` 仍为
+> compile-time-only approved difference。
+
 > 最新补充：Draft 4.216（2026-08-21），新增 `query.subquery` 的
 > `subselect-multirow` differential-verified 场景：固定 Java
 > `EPLSubselectMultirow.java` 的两个 execution

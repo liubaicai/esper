@@ -13408,9 +13408,33 @@ func TestRunSubselectQuantifiedDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
+			name: "relational-null-empty-all",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[26].New[0].Fields["vall"] = false
+			},
+		},
+		{
+			name: "relational-null-any-false-dominates",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[32].New[0].Fields["vany"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "equals-in-null-empty-in",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[33].New[0].Fields["isin"] = true
+			},
+		},
+		{
+			name: "equals-in-null-e6-neall",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[38].New[0].Fields["neall"] = true
+			},
+		},
+		{
 			name: "record-removed",
 			mutate: func(trace *compat.Trace) {
-				trace.Records = trace.Records[:25]
+				trace.Records = trace.Records[:len(trace.Records)-1]
 			},
 		},
 		{

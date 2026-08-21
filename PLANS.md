@@ -31,57 +31,87 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-## Active checkpoint
-
 - Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `c29aab39f` (`repair: align cast
-  parity metadata`, Cast Dates evidence repair pushed).
-- Current work unit: `query.subquery`, direct multirow subselect slice from
-  fixed `EPLSubselectMultirow.java`. The unit covers exactly two observable
-  executions and no shared `internal/esper` semantic change is expected.
+- Baseline: `HEAD` == `origin/master` == `b5599f1ba` (`subselect: verify
+  direct multirow parity (Draft 4.216)` pushed).
+- Current work unit: `query.subquery`, quantified null/empty-set boundary
+  extension of the existing `subselect-quantified` differential scenario from
+  fixed `EPLSubselectAllAnySomeExpr.java`. Two observable executions; one
+  shared `internal/esper` semantic fix (relational ANY false-dominates-unknown).
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - `EPLSubselectMultirowSingleColumn`, runtime
-    `java-runtime-29c2087cc4243e9b7a50`, inventory ordinal 0. Java deploys
-    `SupportWindow#length(3)` fed by SupportBean, then projects
-    `window(intPrimitive)` from SupportBean#keepall and from the late-start
-    SupportWindow into SupportBean_S0. Expected values: direct stream
-    `[5,10,15,6]`; late named-window snapshot `[10,15,6]`; after inserting 5,
-    `[15,6,5]`; property metadata is `p00:string`, `val:Integer[]`.
-  - `EPLSubselectMultirowUnderlyingCorrelated`, runtime
-    `java-runtime-64eb1701d14bdbcefc86`, inventory ordinal 1. Java projects
-    `window(sb.*)` from SupportBean#keepall where `theString=s0.p00` into
-    SupportBean_S0. Expected empty correlation `val=null`, T1 one underlying
-    SupportBean event, T2 two events in any order; metadata is
-    `p00:string`, `val:SupportBean[]`.
-- Differential scope: one replayable `subselect-multirow` scenario with
-  deterministic case markers and sends for both executions; Java oracle,
-  Go runner/dispatch, checked-in trace/evidence, and value/order/type/null
-  mutation tests. Event rows normalize as protocol `{kind:"row",fields:{...}}`;
-  correlated empty `val` normalizes as Null. No nested `SubqueryRow` property
-  projection is included in this unit.
-- Allowed files: new `internal/app/parity/subselect_multirow.go` and focused
-  runner tests/dispatch edits, `tools/java-oracle/EPLSubselectMultirowScenarioOracle.java`
-  plus runner script, `testdata/parity/subselect-multirow.json`, generated
-  trace/evidence, and primary-owned `PLANS.md`, manifest, roadmap, CHANGELOG.
+  - `EPLSubselectRelationalOpNullOrNoRows`, runtime
+    `java-runtime-ad44331ab7f0645a4e7a`. `intBoxed >= all/any (select
+    doubleBoxed from SupportBean(theString like 'S%')#keepall)`; empty set
+    `[true,false]`, `{null}` `[null,null]`, `{null,1}` rows
+    `[null,null]`/`[null,true]`/`[false,false]`.
+  - `EPLSubselectEqualsInNullOrNoRows`, runtime
+    `java-runtime-29c66b744c3754d59ec7`. `= all/!= all/= any/!= any/in` five
+    columns; empty `[true,false,true,false,false]`, `{null}` all Null,
+    `{null,1}` rows `[null,true,false,null,true]`/`[false,null,null,true,null]`.
+- Engine fix: `internal/esper/subquery.go` `evaluateQuantifiedSubquery` now
+  keeps a decisive false for relational ANY when a non-null row exists
+  (mirrors Java `SubselectForgeStrategyNRRelOpAnyDefault`); equals-style ANY
+  keeps the SQL unknown. Proven by the zero-difference differential.
+- Differential scope: `subselect-quantified` scenario extended with
+  `relational-null-no-rows` and `equals-in-null-no-rows` cases (boxed
+  nullable payloads); Java oracle, Go runner, regenerated trace/evidence, and
+  four new trace mutations including the false-dominates guard.
+- Allowed files: `internal/esper/subquery.go` (primary only),
+  `internal/app/parity/subselect_quantified.go`,
+  `internal/app/parity/run_test.go`,
+  `tools/java-oracle/EPLSubselectAllAnySomeExprScenarioOracle.java`
+  (OracleExtend worker only), `testdata/parity/subselect-quantified.json`,
+  regenerated trace/evidence, and primary-owned `PLANS.md`, manifest,
+  roadmap, CHANGELOG.
 - Forbidden: changes under `/root/app/esper`, `goal.txt`, unrelated
-  `internal/esper` semantics, hand-authored generated trace/evidence, and
-  global map Missing/Null behavior changes. The known empty `SubqueryRow`
-  nested-property risk remains a separate follow-up requiring its own replay.
-- Targeted validation: pinned Java oracle runner, Go direct multirow tests,
-  runner differential/mutation tests, `go test ./internal/compat ./internal/app/manifest -count=1`,
-  manifest/evidence consistency, then full local gates and independent review.
+  `internal/esper` semantics, hand-authored generated trace/evidence.
+- Targeted validation: pinned Java oracle runner, quantified
+  differential/mutation tests, full `internal/esper` regression, `go test
+  ./internal/compat ./internal/app/manifest -count=1`, then full local gates
+  and independent review.
 
 ## Delegation checkpoint
 
+- Quantified-null unit agents: read-only scouts `JavaContract`
+  (java-oracle-scout) and `GoSurface` (scout) ran concurrently before
+  implementation; asset writer `OracleExtend` (parity-asset-worker,
+  isolated) authored the Java oracle extension on the frozen scenario
+  contract while the primary agent wrote the shared engine fix, Go runner,
+  scenario, and tests. File ownership was disjoint.
 - Cast Dates repair review: `CastDatesReview-2`, APPROVED after canonical
   metadata/evidence alignment; repair commit `c29aab39f` pushed.
-- Next-unit read-only scouts completed concurrently before implementation:
-  `SubqueryMultirowJavaContract` (java-oracle-scout) and
-  `SubqueryMultirowGoSurface` (scout). Both reports agree on the two execution
-  IDs, direct Go coverage, and the deferred nested-property risk.
 - Primary agent owns shared semantics, parity assets, generated trace/evidence,
   manifest, roadmap, CHANGELOG, PLANS, validation, review, commit, and push.
+
+## Quantified null unit (active)
+
+- [x] Concurrent read-only scouts (`JavaContract`, `GoSurface`) froze the two
+  null/empty-set executions, the exact event vectors, and the reusable Go
+  surface (no new builders; `Field[any, any]` + existing quantified builders).
+- [x] Extend `subselect-quantified` scenario with `relational-null-no-rows`
+  and `equals-in-null-no-rows` (boxed nullable payloads); extend the Java
+  oracle via the `OracleExtend` asset worker; extend the Go runner metadata,
+  case order, and query branches.
+- [x] Fix `evaluateQuantifiedSubquery` relational ANY to keep a decisive false
+  when a non-null row exists; regenerate the Java trace (40 records) and the
+  passing evidence with zero differences.
+- [x] Add four trace mutations for the new cases including the
+  false-dominates guard; all reject.
+- [x] Promote `case.subquery-empty-quantifiers` to differential-verified;
+  extend `case.subquery-quantified-comparisons` to six runtime IDs; manifest
+  summary is 136 differential cases, 432 differential runtime IDs, 3071
+- [x] Complete final full gates and independent parity review
+  (`QuantifiedNullReview` verdict: pass, zero findings); delivery is ready for
+  the single semantic commit and push.
+
+Final pre-commit verification: pinned Java oracle regenerated the trace with
+checksum `a5d4703760c4c5c166e9fef357422eb50370780a57781d7ef93fa56fcdf6af2d`;
+the extended differential evidence is passing with 40 Java records, 40 Go
+records, 0 differences, six frozen runtime IDs, and six execution names.
+Focused quantified diff/mutation tests (14 mutations all reject), full
+`internal/esper` regression after the engine fix, `go vet ./...`, `go test
+./... -count=1 -timeout 240s`, `make check`, and `git diff --check` pass.
 
 ## Historical work-unit contract (Generic Cast; closed)
 
@@ -138,7 +168,7 @@ activity or a single coverage percentage.
   `git diff --check`; the focused expr race gate remains applicable.
 
 
-## Direct multirow unit (active)
+## Direct multirow unit (closed; committed as `b5599f1ba`)
 
 - [x] Freeze the two `EPLSubselectMultirow.java` executions and exact runtime
   IDs with concurrent scouts `SubqueryMultirowJavaContract` and

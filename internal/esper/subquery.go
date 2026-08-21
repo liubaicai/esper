@@ -1973,7 +1973,11 @@ func evaluateQuantifiedSubquery(left Value, values []Value, comparison SubqueryC
 		return Null()
 	}
 	hasNull := false
+	hasNonNullRow := false
 	for _, right := range values {
+		if right.IsPresent() {
+			hasNonNullRow = true
+		}
 		result := compareSubqueryValues(left, right, comparison)
 		matched, present := boolValue(result)
 		if !present {
@@ -1987,13 +1991,29 @@ func evaluateQuantifiedSubquery(left Value, values []Value, comparison SubqueryC
 			return Present(true)
 		}
 	}
-	if hasNull {
-		return Null()
-	}
 	if all {
+		if hasNull {
+			return Null()
+		}
 		return Present(true)
 	}
+	// Esper's relational ANY (SubselectForgeStrategyNRRelOpAnyDefault) keeps
+	// a decisive false result when at least one non-null row exists, even
+	// while other rows are unknown; only equals-style ANY preserves the SQL
+	// unknown outcome of a null candidate row.
+	if hasNull && !(isRelationalSubqueryComparison(comparison) && hasNonNullRow) {
+		return Null()
+	}
 	return Present(false)
+}
+
+func isRelationalSubqueryComparison(comparison SubqueryComparison) bool {
+	switch comparison {
+	case SubqueryGreater, SubqueryGreaterOrEqual, SubqueryLess, SubqueryLessOrEqual:
+		return true
+	default:
+		return false
+	}
 }
 
 func compareSubqueryValues(left, right Value, comparison SubqueryComparison) Value {

@@ -10,8 +10,10 @@ import (
 )
 
 type subselectQuantifiedBean struct {
-	TheString    string `esper:"theString"`
-	IntPrimitive int    `esper:"intPrimitive"`
+	TheString    string   `esper:"theString"`
+	IntPrimitive int      `esper:"intPrimitive"`
+	IntBoxed     *int     `esper:"intBoxed"`
+	DoubleBoxed  *float64 `esper:"doubleBoxed"`
 }
 
 var subselectQuantifiedJavaSources = []string{
@@ -24,17 +26,21 @@ var (
 		"java-runtime-f59ce457c593e1f327d6",
 		"java-runtime-34a01c2e4da4d05de0cd",
 		"java-runtime-0d291fddb8228d4ec1cf",
+		"java-runtime-ad44331ab7f0645a4e7a",
+		"java-runtime-29c66b744c3754d59ec7",
 	}
 	subselectQuantifiedJavaExecutions = []string{
 		"EPLSubselectRelationalOpAll",
 		"EPLSubselectRelationalOpSome",
 		"EPLSubselectEqualsNotEqualsAll",
 		"EPLSubselectEqualsAnyOrSome",
+		"EPLSubselectRelationalOpNullOrNoRows",
+		"EPLSubselectEqualsInNullOrNoRows",
 	}
 )
 
-// runSubselectQuantifiedScenario replays 4 executions of
-// EPLSubselectAllAnySomeExpr (5 scenario cases; relational-all-om is the
+// runSubselectQuantifiedScenario replays 6 executions of
+// EPLSubselectAllAnySomeExpr (7 scenario cases; relational-all-om is the
 // fresh-statement OM re-deploy round of RelationalOpAll): quantified
 // comparisons value <op> ALL/ANY/SOME (subselect) over a keepall inner
 // stream filtered by like 'S%', outer stream filtered by like 'E%'.
@@ -45,6 +51,7 @@ func runSubselectQuantifiedScenario(ctx context.Context, scenario compat.Scenari
 	caseOrder := []string{
 		"relational-all", "relational-all-om", "relational-some",
 		"equals-not-equals-all", "equals-any-or-some",
+		"relational-null-no-rows", "equals-in-null-no-rows",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-quantified scenario %q has no supported cases", scenario.ID)
@@ -82,6 +89,8 @@ func runSubselectQuantifiedCase(ctx context.Context, scenario compat.Scenario, c
 	outer := esper.From[subselectQuantifiedBean](env, "SupportBean").
 		Filter(esper.Like(esper.Field[subselectQuantifiedBean, string]("theString"), esper.Literal("E%")))
 	intField := esper.Field[any, int]("intPrimitive")
+	boxedInt := esper.Field[any, any]("intBoxed")
+	boxedDouble := esper.Field[any, any]("doubleBoxed")
 
 	var query esper.Query
 	switch caseName {
@@ -112,6 +121,19 @@ func runSubselectQuantifiedCase(ctx context.Context, scenario compat.Scenario, c
 			esper.Alias("r2", esper.SubqueryAny[int](intField, inner(), intField, esper.SubqueryEqual)),
 			esper.Alias("r3", esper.SubquerySome[int](intField, inner(), intField, esper.SubqueryNotEqual)),
 			esper.Alias("r4", esper.SubqueryAny[int](intField, inner(), intField, esper.SubqueryNotEqual)),
+		).Query(esper.StatementName("s0"))
+	case "relational-null-no-rows":
+		query = esper.Select(outer,
+			esper.Alias("vall", esper.SubqueryAll[any](boxedInt, inner(), boxedDouble, esper.SubqueryGreaterOrEqual)),
+			esper.Alias("vany", esper.SubqueryAny[any](boxedInt, inner(), boxedDouble, esper.SubqueryGreaterOrEqual)),
+		).Query(esper.StatementName("s0"))
+	case "equals-in-null-no-rows":
+		query = esper.Select(outer,
+			esper.Alias("eall", esper.SubqueryAll[any](boxedInt, inner(), boxedDouble, esper.SubqueryEqual)),
+			esper.Alias("eany", esper.SubqueryAny[any](boxedInt, inner(), boxedDouble, esper.SubqueryEqual)),
+			esper.Alias("neall", esper.SubqueryAll[any](boxedInt, inner(), boxedDouble, esper.SubqueryNotEqual)),
+			esper.Alias("neany", esper.SubqueryAny[any](boxedInt, inner(), boxedDouble, esper.SubqueryNotEqual)),
+			esper.Alias("isin", esper.SubqueryIn[any](boxedInt, inner(), boxedDouble)),
 		).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported subselect-quantified case %q", caseName)

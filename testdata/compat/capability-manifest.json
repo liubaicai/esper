@@ -8258,16 +8258,18 @@
     "null",
     "empty-set"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-runtime-inventory",
-    "java-junit",
-    "go-unit"
+    "testdata/parity/subselect-quantified.evidence.json"
    ],
-   "difference": "Go fixes the Esper empty-set truth table for fluent ALL/ANY/IN evaluation: ALL is true, ANY/SOME and IN are false even when the outer value is null; a non-empty set containing a null candidate still yields Null when no decisive comparison exists. The test also covers the transition from an empty Named Window to a null-valued candidate. Java equality/not-equality ALL/ANY and the complete operator matrix remain represented by the broader subquery case.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-ad44331ab7f0645a4e7a",
+    "java-runtime-29c66b744c3754d59ec7"
    ]
   },
   {
@@ -31971,13 +31973,17 @@
     "java-runtime-b79aed44a6781acea60e",
     "java-runtime-f59ce457c593e1f327d6",
     "java-runtime-34a01c2e4da4d05de0cd",
-    "java-runtime-0d291fddb8228d4ec1cf"
+    "java-runtime-0d291fddb8228d4ec1cf",
+    "java-runtime-ad44331ab7f0645a4e7a",
+    "java-runtime-29c66b744c3754d59ec7"
    ],
    "javaNames": [
     "EPLSubselectRelationalOpAll",
     "EPLSubselectRelationalOpSome",
     "EPLSubselectEqualsNotEqualsAll",
-    "EPLSubselectEqualsAnyOrSome"
+    "EPLSubselectEqualsAnyOrSome",
+    "EPLSubselectRelationalOpNullOrNoRows",
+    "EPLSubselectEqualsInNullOrNoRows"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAllAnySomeExpr.java"
@@ -32004,7 +32010,9 @@
     "java-runtime-b79aed44a6781acea60e",
     "java-runtime-f59ce457c593e1f327d6",
     "java-runtime-34a01c2e4da4d05de0cd",
-    "java-runtime-0d291fddb8228d4ec1cf"
+    "java-runtime-0d291fddb8228d4ec1cf",
+    "java-runtime-ad44331ab7f0645a4e7a",
+    "java-runtime-29c66b744c3754d59ec7"
    ],
    "remaining": [
     "EPLSubselectInvalid (java-runtime-b24dc67d324d702d8961) and the embedded intArr > all compile check in EPLSubselectRelationalOpAll: compile-time error-only behavior; typed Go builder rejects int-array vs int comparison at build time (approved difference)"
@@ -34715,8 +34723,8 @@
 "totalCapabilities": 110,
 "inventoriedCases": 523,
 "implementedCases": 521,
-"differentialVerifiedCases": 135,
-"differentialVerifiedRuntimeIds": 430,
+"differentialVerifiedCases": 136,
+"differentialVerifiedRuntimeIds": 432,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,
@@ -34726,7 +34734,7 @@
 "intentionallyDifferentCapabilities": 7,
 "representativeVerifiedCapabilities": 11,
 "nfrVerifiedCapabilities": 0,
-"runtimeAssociationCount": 3069,
+"runtimeAssociationCount": 3071,
 "referencedJavaRuntimeIds": 2901,
 "totalJavaRuntimeIds": 4136,
 "unreferencedJavaRuntimeIds": 1235,
