@@ -4361,7 +4361,13 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d530652f60616c332431",
+    "java-runtime-9668909b2b2f00769dab",
+    "java-runtime-92e69b0657b10a656fdc"
    ]
   }
  ],
@@ -23652,14 +23658,20 @@
     "resultset",
     "sort"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "5 Go parity tests covering aggregate GroupBy + ORDER BY ascending/descending/multi-key-tiebreak/expression-key and unknown-field build-time rejection"
    ],
    "difference": "Go tests use LengthBatch + GroupBy aggregate path (output rate limiting not yet ported); join, wildcard and FAF ORDER BY paths remain open",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d530652f60616c332431",
+    "java-runtime-9668909b2b2f00769dab",
+    "java-runtime-92e69b0657b10a656fdc"
    ]
   },
   {
@@ -35372,14 +35384,14 @@
  "summary": {
   "inventoriedCases": 534,
   "implementedCases": 532,
-  "differentialVerifiedCases": 147,
-  "differentialVerifiedRuntimeIds": 466,
+  "differentialVerifiedCases": 148,
+  "differentialVerifiedRuntimeIds": 469,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 110,
   "implementedCapabilities": 109,
-  "differentialVerifiedCapabilities": 16,
+  "differentialVerifiedCapabilities": 17,
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,

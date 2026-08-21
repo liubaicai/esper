@@ -4,6 +4,20 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.229（2026-08-21），新增 `resultset.orderby-simple` 的
+> `orderby-simple` differential-verified 场景，对照固定 Java
+> `ResultSetOrderBySimple.java` 的三个 execution：
+> `ResultSetOrderBySimple`（`java-runtime-d530652f60616c332431`）、
+> `ResultSetOrderByDescending`（`java-runtime-9668909b2b2f00769dab`）与
+> `ResultSetOrderByMultipleKeys`
+>（`java-runtime-92e69b0657b10a656fdc`）。三个 case、Java/Go 各 3 条
+> listener records、0 differences；覆盖 length(5/10)+output every 6 events
+> 的 asc/desc/multi-key 排序与 stable-tie 语义。Go 侧复用
+> `OrderBy`/`Ascending`/`Descending`，无 `internal/esper` 改动。manifest
+> 更新为 148 个 differential-verified case、469 个 differential runtime
+> IDs、3105 条 runtime associations，`resultset.orderby-simple` capability
+> 提升为 differential-verified（3/18 DV runtime）。
+
 > 最新补充：Draft 4.228（2026-08-21），扩展
 > `resultset.aggregate-dimensional` 的 `rollup-dimensionality`
 > differential-verified 场景（bound/batch 切片），对照固定 Java
@@ -527,8 +541,8 @@
 | --- | --- |
 | Capability | 110 |
 | Case | 534 |
-| Case differential-verified | 147 |
-| Differential-verified runtime | 466 / 4,136 |
+| Case differential-verified | 148 |
+| Differential-verified runtime | 469 / 4,136 |
 | Runtime 已关联 | 2,908 / 4,136（70.3%） |
 | Runtime 未关联 | 1,228 |
 | Representative scenario | 94 / 94 通过 |

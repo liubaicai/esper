@@ -1,0 +1,201 @@
+{
+ "version": "esper-parity/v1",
+ "id": "orderby-simple",
+ "description": "OrderBy simple view-flow scenarios replaying ResultSetOrderBySimple executions over SupportMarketDataBean with length(5)+output every 6 events",
+ "javaRuntimes": [
+  "java-runtime-9668909b2b2f00769dab",
+  "java-runtime-92e69b0657b10a656fdc",
+  "java-runtime-2524d06789dd35e36c8e",
+  "java-runtime-d530652f60616c332431"
+ ],
+ "cases": [
+  {
+   "case": "orderby-simple",
+   "runtimeId": "java-runtime-d530652f60616c332431"
+  },
+  {
+   "case": "orderby-descending",
+   "runtimeId": "java-runtime-9668909b2b2f00769dab"
+  },
+  {
+   "case": "orderby-multiple-keys",
+   "runtimeId": "java-runtime-92e69b0657b10a656fdc"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "orderby-simple"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 2,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "KGB",
+    "price": 1,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CMU",
+    "price": 3,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 6,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CAT",
+    "price": 6,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CAT",
+    "price": 5,
+    "volume": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "orderby-descending"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 2,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "KGB",
+    "price": 1,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CMU",
+    "price": 3,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 6,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CAT",
+    "price": 6,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CAT",
+    "price": 5,
+    "volume": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "orderby-multiple-keys"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 2,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "KGB",
+    "price": 1,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CMU",
+    "price": 3,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 6,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CAT",
+    "price": 6,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CAT",
+    "price": 5,
+    "volume": 0
+   }
+  }
+ ]
+}

@@ -1790,6 +1790,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "orderby-simple" || *mode == "orderby-simple-diff" {
+		trace, err := runOrderBySimpleScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "orderby-simple-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, orderBySimpleJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, orderBySimpleJavaSources),
+				splitMetadata(*javaExecutions, orderBySimpleJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "rollup-dimensionality" || *mode == "rollup-dimensionality-diff" {
 		trace, err := runRollupDimensionalityScenario(context.Background(), scenario)
 		if err != nil {
