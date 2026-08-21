@@ -32,36 +32,31 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `f8b6f203f` (`subselect: verify
-  quantified null parity (Draft 4.217)` pushed).
-- Current work unit: `epl.subselect.filtered`, scalar-filter slice of fixed
-  `EPLSubselectFiltered.java` — five executions across seven scenario cases;
-  no shared `internal/esper` change expected (prefetch confirmed full builder
-  coverage).
+- Baseline: `HEAD` == `origin/master` == `a5cff7b23` (`subselect: verify
+  filtered scalar parity (Draft 4.218)` pushed).
+- Current work unit: `epl.subselect.filtered`, multikey-wArray slice of the
+  same `EPLSubselectFiltered.java` — three executions extending the existing
+  `subselect-filtered` scenario to ten cases; zero `internal/esper` changes.
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - HavingNoAgg trio (`java-runtime-bc6684a32b1cda80e244`,
-    `java-runtime-9511e607f74ca4551624`,
-    `java-runtime-0ef90e75f854b7845de0`): non-aggregated having row filter
-    `theString='ID1'`, where `intPrimitive>15`, stream filter
-    `intPrimitive<20`; empty→null, where-excluded→null, filter-excluded→null,
-    decisive rows surface intPrimitive.
-  - `EPLSubselectWhereConstant` (`java-runtime-57e3956886ac655d387d`), three
-    single-deployment cases: single-column constant with multi-row→null,
-    two-column constant AND, range `between 10 and 20` over #lastevent.
-  - `EPLSubselectSelectWithWhereJoined`
-    (`java-runtime-6034a5785b901739431e`): correlated `p10=s0.p00` over
-    SupportBean_S1#length(1000); null/absent outer p00→null; X/Y/Z→1/2/3;
-    'A'→null.
-- Differential scope: new `subselect-filtered` scenario (SupportBean,
-  SupportBean_S0(id,p00), SupportBean_S1(id,p10,p11)), new Java oracle +
-  runner script (FilteredOracle worker), new Go runner + dispatch + diff/
-  mutation tests; zero engine changes.
+  - Primitive (`java-runtime-643236df4a8946ab3c24`): `sm.intOne = se.array`
+    int[] content equality; empty==empty, null==null, length/element mismatch
+    never matches; IA5 [1,2] double-match→null.
+  - 2Field (`java-runtime-9255e3470adb866211bf`): array equality AND
+    `sm.value = se.value`; five-probe vector MA3/MA2/MA1/null/null.
+  - Composite (`java-runtime-7fbee5b6cef2f287ee41`): array equality AND
+    strict `sm.value > se.value`; three-match→null; 300>299 strict pass.
+- Differential scope: `subselect-filtered` scenario extended to ten cases
+  (SupportEventWithManyArray{id,intOne[],value} and
+  SupportEventWithIntArray{id,array[],value} payloads; JSON arrays, empty
+  arrays and explicit nulls); Java oracle gains the two array event types and
+  three EPL cases (MultikeyOracle worker); Go runner gains two structs,
+  three case branches, and four new trace mutations.
 - Allowed files: `internal/app/parity/subselect_filtered.go`,
-  `internal/app/parity/run.go` dispatch, `internal/app/parity/run_test.go`,
+  `internal/app/parity/run_test.go`,
   `tools/java-oracle/EPLSubselectFilteredScenarioOracle.java` +
-  `tools/java-oracle/run-subselect-filtered.sh` (worker only),
-  `testdata/parity/subselect-filtered.json`, generated trace/evidence, and
+  `tools/java-oracle/run-subselect-filtered.sh` (worker/primary fix),
+  `testdata/parity/subselect-filtered.json`, regenerated trace/evidence, and
   primary-owned `PLANS.md`, manifest, roadmap, CHANGELOG, README.
 - Forbidden: changes under `/root/app/esper`, `goal.txt`, `internal/esper`
   production semantics, hand-authored generated trace/evidence.
@@ -77,6 +72,14 @@ activity or a single coverage percentage.
   isolated) authored the new Java oracle and runner script on the frozen
   scenario contract while the primary agent wrote the Go runner, dispatch,
   scenario, and tests. File ownership was disjoint.
+- Multikey unit agents: prefetch scouts `MultikeyJavaContract`
+  (java-oracle-scout) and `MultikeyGoSurface` (scout) ran concurrently with
+  the Draft 4.218 review; asset writer `MultikeyOracle`
+  (parity-asset-worker, isolated) authored the oracle extension (its compile
+  failure against the regression-lib-only classpath was fixed by the primary
+  agent adding the two event sources to the runner javac step after the
+  parked worker could not be revived). File ownership disjoint except that
+  one primary-owned script fix.
 - Quantified-null unit agents: read-only scouts `JavaContract`
   (java-oracle-scout) and `GoSurface` (scout) ran concurrently before
   implementation; asset writer `OracleExtend` (parity-asset-worker,
@@ -118,7 +121,7 @@ Focused quantified diff/mutation tests (14 mutations all reject), full
 `internal/esper` regression after the engine fix, `go vet ./...`, `go test
 ./... -count=1 -timeout 240s`, `make check`, and `git diff --check` pass.
 
-## Filtered scalar unit (active)
+## Filtered scalar unit (closed; committed as `a5cff7b23`)
 
 - [x] Prefetch scouts (`FilteredJavaContract`, `FilteredGoSurface`) froze the
   five-execution slice, the exact event vectors, and the reusable Go surface
@@ -142,6 +145,31 @@ checksum `ffd54beb15c38c3884cb777b48afdde6c031dc47c6b8168d2dd62b48e6be0656`;
 the differential evidence is passing with 24 Java records, 24 Go records,
 0 differences, five frozen runtime IDs, and five execution names. Focused
 filtered diff/mutation tests (9 mutations all reject), `go vet ./...`,
+`go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
+pass.
+
+## Multikey wArray unit (active)
+
+- [x] Prefetch scouts (`MultikeyJavaContract`, `MultikeyGoSurface`) froze the
+  three-execution slice, the exact event vectors, and the reusable Go surface
+  (existing `Is`/`And`/`OuterField` builders; zero engine changes).
+- [x] Extend `subselect-filtered` scenario to ten cases with array event
+  payloads; extend the Java oracle via the `MultikeyOracle` asset worker
+  (classpath fix applied by the primary agent); extend the Go runner with
+  two array structs, three branches, and four new trace mutations.
+- [x] Regenerate the pinned-commit Java trace (38 records) and the passing
+  evidence with zero differences; register `case.subselect-filtered-multikey-array`;
+  manifest summary is 138 differential cases, 440 differential runtime IDs,
+  3079 associations, 2901 unique referenced runtimes, and 1235 unreferenced.
+- [x] Complete final full gates and independent parity review
+  (`MultikeyReview` verdict: pass, zero findings); delivery is ready for the
+  single semantic commit and push.
+
+Final pre-commit verification: pinned Java oracle regenerated the trace with
+checksum `2946762534ffedd7e1e42890abd71c7f132d5d12cdea9dbbd8f6c4be33525a75`;
+the differential evidence is passing with 38 Java records, 38 Go records,
+0 differences, eight frozen runtime IDs, and eight execution names. Focused
+filtered diff/mutation tests (13 mutations all reject), `go vet ./...`,
 `go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
 pass.
 

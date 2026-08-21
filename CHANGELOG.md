@@ -1,3 +1,22 @@
+> 最新补充：Draft 4.219（2026-08-21），扩展 `subselect-filtered`
+> differential-verified 场景（multikey-wArray 切片）：固定 Java
+> `EPLSubselectFiltered.java` 的三个
+> `EPLSubselectWhereClauseMultikeyWArray*` execution
+>（`java-runtime-643236df4a8946ab3c24`、
+> `java-runtime-9255e3470adb866211bf`、
+> `java-runtime-7fbee5b6cef2f287ee41`）。场景扩展为 10 个 case，Java/Go
+> 各 38 条 listener records、0 differences；覆盖 int[] 内容等值相关键
+>（空数组==空数组、null 数组==null 数组、长度/元素不等不匹配）、数组等值
+> AND 标量等值/严格大于组合、多命中→Null（`SubqueryNullOnMultiple`）。
+> Go 侧复用 `Is`/`And`/`OuterField` + `SubqueryValueWithOptions`，无
+> `internal/esper` 改动；oracle runner javac 步骤补充编译两个
+> regression-lib 事件类源文件。固定 commit 的 Java oracle、runner、
+> scenario、trace、evidence 与 4 个新 trace mutations 已纳入兼容资产；
+> manifest 更新为 525 cases、138 个 differential-verified case、440 个
+> differential runtime IDs、3079 条 associations（唯一已关联 runtime
+> 2901，未关联 1235），`epl.subselect.filtered` capability 达到 8/27
+> DV runtime。其余 19 个 filtered execution 保持 implemented-only。
+
 > 最新补充：Draft 4.218（2026-08-21），新增 `subselect-filtered`
 > differential-verified 场景（第一切片）：固定 Java
 > `EPLSubselectFiltered.java` 的五个 execution——HavingNoAgg 三连

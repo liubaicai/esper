@@ -13553,6 +13553,30 @@ func TestRunSubselectFilteredDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
+			name: "multikey-empty-array-key",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[25].New[0].Fields["value"] = "MA3"
+			},
+		},
+		{
+			name: "multikey-null-array-key",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[27].New[0].Fields["value"] = "MA1"
+			},
+		},
+		{
+			name: "multikey-null-on-multiple",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[28].New[0].Fields["value"] = "MA1"
+			},
+		},
+		{
+			name: "multikey-scalar-equality",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[32].New[0].Fields["value"] = "MA3"
+			},
+		},
+		{
 			name: "record-removed",
 			mutate: func(trace *compat.Trace) {
 				trace.Records = trace.Records[:len(trace.Records)-1]

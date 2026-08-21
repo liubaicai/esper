@@ -12,6 +12,8 @@ import com.espertech.esper.common.internal.support.SupportBean_S0;
 import com.espertech.esper.common.internal.support.SupportBean_S1;
 import com.espertech.esper.compiler.client.CompilerArguments;
 import com.espertech.esper.compiler.client.EPCompilerProvider;
+import com.espertech.esper.regressionlib.support.bean.SupportEventWithIntArray;
+import com.espertech.esper.regressionlib.support.bean.SupportEventWithManyArray;
 import com.espertech.esper.runtime.client.DeploymentOptions;
 import com.espertech.esper.runtime.client.EPDeployment;
 import com.espertech.esper.runtime.client.EPRuntime;
@@ -29,12 +31,14 @@ import java.util.TreeSet;
  * Java oracle for EPLSubselectFiltered first-slice scenarios (scalar subquery
  * with where/having/filter).
  *
- * Covers the first slice of EPLSubselectFiltered: 5 behavioral executions
- * across 7 scenario cases - the three HavingNoAgg variants
+ * Covers the first slice of EPLSubselectFiltered: 8 behavioral executions
+ * across 10 scenario cases - the three HavingNoAgg variants
  * (having-no-filter-no-where, having-w-where, having-w-filter-w-where), the
  * three WhereConstant rounds (where-constant-single-column,
- * where-constant-two-column, where-constant-range), and SelectWithWhereJoined
- * (select-with-where-joined). Same-event, wildcard, previous, and
+ * where-constant-two-column, where-constant-range), SelectWithWhereJoined
+ * (select-with-where-joined), and the three MultikeyWArray rounds
+ * (multikey-array-primitive, multikey-array-two-field,
+ * multikey-array-composite). Same-event, wildcard, previous, and
  * multi-stream joined executions remain in later slices.
  */
 public class EPLSubselectFilteredScenarioOracle {
@@ -72,6 +76,8 @@ public class EPLSubselectFilteredScenarioOracle {
         config.getCommon().addEventType(SupportBean.class);
         config.getCommon().addEventType(SupportBean_S0.class);
         config.getCommon().addEventType(SupportBean_S1.class);
+        config.getCommon().addEventType(SupportEventWithIntArray.class);
+        config.getCommon().addEventType(SupportEventWithManyArray.class);
         config.getRuntime().getThreading().setInternalTimerEnabled(false);
         EPRuntime runtime = EPRuntimeProvider.getRuntime("EPLSubselectFilteredScenarioOracle-" + caseName, config);
         runtime.getEventService().advanceTime(0);
@@ -155,6 +161,43 @@ public class EPLSubselectFilteredScenarioOracle {
                             }
                             runtime.getEventService().sendEventBean(event, "SupportBean_S1");
                         }
+                        case "SupportEventWithManyArray" -> {
+                            String id = payload.getString("id", null);
+                            if (id == null) {
+                                throw new IllegalStateException("SupportEventWithManyArray payload requires id");
+                            }
+                            JsonValue intOneVal = payload.get("intOne");
+                            int[] intOne = null;
+                            if (intOneVal instanceof JsonArray) {
+                                JsonArray intOneJson = (JsonArray) intOneVal;
+                                intOne = new int[intOneJson.size()];
+                                for (int i = 0; i < intOneJson.size(); i++) {
+                                    intOne[i] = intOneJson.get(i).asInt();
+                                }
+                            }
+                            JsonValue valueVal = payload.get("value");
+                            int value = valueVal instanceof JsonNumber ? ((JsonNumber) valueVal).asInt() : 0;
+                            runtime.getEventService().sendEventBean(
+                                new SupportEventWithManyArray(id).withIntOne(intOne).withValue(value), "SupportEventWithManyArray");
+                        }
+                        case "SupportEventWithIntArray" -> {
+                            String id = payload.getString("id", null);
+                            if (id == null) {
+                                throw new IllegalStateException("SupportEventWithIntArray payload requires id");
+                            }
+                            JsonValue arrayVal = payload.get("array");
+                            int[] array = null;
+                            if (arrayVal instanceof JsonArray) {
+                                JsonArray arrayJson = (JsonArray) arrayVal;
+                                array = new int[arrayJson.size()];
+                                for (int i = 0; i < arrayJson.size(); i++) {
+                                    array[i] = arrayJson.get(i).asInt();
+                                }
+                            }
+                            JsonValue valueVal = payload.get("value");
+                            int value = valueVal instanceof JsonNumber ? ((JsonNumber) valueVal).asInt() : 0;
+                            runtime.getEventService().sendEventBean(new SupportEventWithIntArray(id, array, value), "SupportEventWithIntArray");
+                        }
                         default -> throw new IllegalStateException("unknown eventType: " + type);
                     }
                 }
@@ -187,6 +230,15 @@ public class EPLSubselectFilteredScenarioOracle {
             };
             case "select-with-where-joined" -> new String[]{
                 "@name('s0') select (select id from SupportBean_S1#length(1000) where p10=s0.p00) as ids1 from SupportBean_S0 as s0"
+            };
+            case "multikey-array-primitive" -> new String[]{
+                "@name('s0') select (select id from SupportEventWithManyArray#keepall as sm where sm.intOne = se.array) as value from SupportEventWithIntArray as se"
+            };
+            case "multikey-array-two-field" -> new String[]{
+                "@name('s0') select (select id from SupportEventWithManyArray#keepall as sm where sm.intOne = se.array and sm.value = se.value) as value from SupportEventWithIntArray as se"
+            };
+            case "multikey-array-composite" -> new String[]{
+                "@name('s0') select (select id from SupportEventWithManyArray#keepall as sm where sm.intOne = se.array and sm.value > se.value) as value from SupportEventWithIntArray as se"
             };
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };

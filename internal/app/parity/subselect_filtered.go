@@ -25,6 +25,18 @@ type subselectFilteredS1 struct {
 	P11 *string `esper:"p11"`
 }
 
+type subselectFilteredManyArray struct {
+	ID     string `esper:"id"`
+	IntOne []int  `esper:"intOne"`
+	Value  int    `esper:"value"`
+}
+
+type subselectFilteredIntArray struct {
+	ID    string `esper:"id"`
+	Array []int  `esper:"array"`
+	Value int    `esper:"value"`
+}
+
 var subselectFilteredJavaSources = []string{
 	"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectFiltered.java",
 }
@@ -36,6 +48,9 @@ var (
 		"java-runtime-0ef90e75f854b7845de0",
 		"java-runtime-57e3956886ac655d387d",
 		"java-runtime-6034a5785b901739431e",
+		"java-runtime-643236df4a8946ab3c24",
+		"java-runtime-9255e3470adb866211bf",
+		"java-runtime-7fbee5b6cef2f287ee41",
 	}
 	subselectFilteredJavaExecutions = []string{
 		"EPLSubselectHavingNoAggNoFilterNoWhere",
@@ -43,14 +58,18 @@ var (
 		"EPLSubselectHavingNoAggWFilterWWhere",
 		"EPLSubselectWhereConstant",
 		"EPLSubselectSelectWithWhereJoined",
+		"EPLSubselectWhereClauseMultikeyWArrayPrimitive",
+		"EPLSubselectWhereClauseMultikeyWArray2Field",
+		"EPLSubselectWhereClauseMultikeyWArrayComposite",
 	}
 )
 
-// runSubselectFilteredScenario replays the scalar-filter slice of
-// EPLSubselectFiltered (5 executions across 7 scenario cases; WhereConstant
-// contributes three single-deployment cases): non-aggregated having row
-// filters, constant and correlated where predicates, and the
-// null-on-empty/null-on-multiple scalar subselect boundaries.
+// runSubselectFilteredScenario replays the scalar-filter and multikey-wArray
+// slices of EPLSubselectFiltered (8 executions across 10 scenario cases;
+// WhereConstant contributes three single-deployment cases): non-aggregated
+// having row filters, constant and correlated where predicates, and the
+// null-on-empty/null-on-multiple scalar subselect boundaries, plus int[]
+// content-equality correlation keys.
 func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
@@ -59,6 +78,7 @@ func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario)
 		"having-no-filter-no-where", "having-w-where", "having-w-filter-w-where",
 		"where-constant-single-column", "where-constant-two-column", "where-constant-range",
 		"select-with-where-joined",
+		"multikey-array-primitive", "multikey-array-two-field", "multikey-array-composite",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-filtered scenario %q has no supported cases", scenario.ID)
@@ -88,6 +108,14 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 		func() error { _, err := esper.RegisterStruct[subselectFilteredBean](env, "SupportBean"); return err },
 		func() error { _, err := esper.RegisterStruct[subselectFilteredS0](env, "SupportBean_S0"); return err },
 		func() error { _, err := esper.RegisterStruct[subselectFilteredS1](env, "SupportBean_S1"); return err },
+		func() error {
+			_, err := esper.RegisterStruct[subselectFilteredManyArray](env, "SupportEventWithManyArray")
+			return err
+		},
+		func() error {
+			_, err := esper.RegisterStruct[subselectFilteredIntArray](env, "SupportEventWithIntArray")
+			return err
+		},
 	} {
 		if err := register(); err != nil {
 			return compat.Trace{}, err
@@ -163,6 +191,30 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 				esper.Equal[string](esper.Field[any, string]("p10"), esper.OuterField[string]("p00")),
 			)),
 		).Query(esper.StatementName("s0"))
+	case "multikey-array-primitive", "multikey-array-two-field", "multikey-array-composite":
+		manyArrayInner := func() esper.RecordStream {
+			return esper.From[subselectFilteredManyArray](env, "SupportEventWithManyArray").Window(esper.KeepAll()).AsRecord()
+		}
+		intArrayOuter := esper.From[subselectFilteredIntArray](env, "SupportEventWithIntArray")
+		arrayEqual := esper.Is(esper.Field[any, any]("intOne"), esper.OuterField[any]("array"))
+		var predicate esper.Expression[bool]
+		switch caseName {
+		case "multikey-array-primitive":
+			predicate = arrayEqual
+		case "multikey-array-two-field":
+			predicate = esper.And(arrayEqual,
+				esper.Equal[int](esper.Field[any, int]("value"), esper.OuterField[int]("value")))
+		default:
+			predicate = esper.And(arrayEqual,
+				esper.Greater[int](esper.Field[any, int]("value"), esper.OuterField[int]("value")))
+		}
+		query = esper.Select(intArrayOuter,
+			esper.Alias("value", esper.SubqueryValueWithOptions[string](manyArrayInner(),
+				esper.Field[any, string]("id"),
+				esper.SubqueryWhere(predicate),
+				esper.SubqueryCardinalityMode(esper.SubqueryNullOnMultiple),
+			)),
+		).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported subselect-filtered case %q", caseName)
 	}
@@ -201,6 +253,18 @@ func decodeSubselectFilteredPayload(step compat.Step) (any, error) {
 		var event subselectFilteredS1
 		if err := json.Unmarshal(step.Payload, &event); err != nil {
 			return nil, fmt.Errorf("subselect-filtered SupportBean_S1: %w", err)
+		}
+		return event, nil
+	case "SupportEventWithManyArray":
+		var event subselectFilteredManyArray
+		if err := json.Unmarshal(step.Payload, &event); err != nil {
+			return nil, fmt.Errorf("subselect-filtered SupportEventWithManyArray: %w", err)
+		}
+		return event, nil
+	case "SupportEventWithIntArray":
+		var event subselectFilteredIntArray
+		if err := json.Unmarshal(step.Payload, &event); err != nil {
+			return nil, fmt.Errorf("subselect-filtered SupportEventWithIntArray: %w", err)
 		}
 		return event, nil
 	default:

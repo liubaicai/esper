@@ -110,6 +110,8 @@ classpath="$classpath:$esper_root/common-avro/target/classes:$esper_root/common-
 classpath="$classpath:$(tr '\n' ':' < "$work/compiler-cp.txt"):$(tr '\n' ':' < "$work/runtime-cp.txt")"
 
 "$javac_bin" -encoding UTF-8 -cp "$classpath" -d "$classes" \
+    "$esper_root/regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportEventWithManyArray.java" \
+    "$esper_root/regression-lib/src/main/java/com/espertech/esper/regressionlib/support/bean/SupportEventWithIntArray.java" \
     "$script_root/EPLSubselectFilteredScenarioOracle.java"
 
 parent=$(dirname "$output")

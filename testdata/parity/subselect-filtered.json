@@ -1,13 +1,16 @@
 {
  "version": "esper-parity/v1",
  "id": "subselect-filtered",
- "description": "Filtered scalar subselects replaying the EPLSubselectFiltered having/where/constant/joined slice over SupportBean, SupportBean_S0 and SupportBean_S1 with null-on-empty and null-on-multiple boundaries",
+ "description": "Filtered scalar subselects replaying the EPLSubselectFiltered having/where/constant/joined and multikey-wArray slices over SupportBean, SupportBean_S0, SupportBean_S1, SupportEventWithManyArray and SupportEventWithIntArray with null-on-empty and null-on-multiple boundaries",
  "javaRuntimes": [
   "java-runtime-bc6684a32b1cda80e244",
   "java-runtime-9511e607f74ca4551624",
   "java-runtime-0ef90e75f854b7845de0",
   "java-runtime-57e3956886ac655d387d",
-  "java-runtime-6034a5785b901739431e"
+  "java-runtime-6034a5785b901739431e",
+  "java-runtime-643236df4a8946ab3c24",
+  "java-runtime-9255e3470adb866211bf",
+  "java-runtime-7fbee5b6cef2f287ee41"
  ],
  "cases": [
   {
@@ -37,6 +40,18 @@
   {
    "case": "select-with-where-joined",
    "runtimeId": "java-runtime-6034a5785b901739431e"
+  },
+  {
+   "case": "multikey-array-primitive",
+   "runtimeId": "java-runtime-643236df4a8946ab3c24"
+  },
+  {
+   "case": "multikey-array-two-field",
+   "runtimeId": "java-runtime-9255e3470adb866211bf"
+  },
+  {
+   "case": "multikey-array-composite",
+   "runtimeId": "java-runtime-7fbee5b6cef2f287ee41"
   }
  ],
  "steps": [
@@ -89,6 +104,35 @@
   {"op":"send","eventType":"SupportBean_S0","payload":{"id":0,"p00":"X"}},
   {"op":"send","eventType":"SupportBean_S0","payload":{"id":0,"p00":"Y"}},
   {"op":"send","eventType":"SupportBean_S0","payload":{"id":0,"p00":"Z"}},
-  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0,"p00":"A"}}
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0,"p00":"A"}},
+  {"op":"case","case":"multikey-array-primitive"},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA1","intOne":[1,2],"value":0}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA1","array":[1,2],"value":0}},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA2","intOne":[1,2],"value":0}},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA3","intOne":[1],"value":0}},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA4","intOne":[],"value":0}},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA5","intOne":null,"value":0}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA2","array":[],"value":0}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA3","array":[1],"value":0}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA4","array":null,"value":0}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA5","array":[1,2],"value":0}},
+  {"op":"case","case":"multikey-array-two-field"},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA1","intOne":[1,2],"value":10}},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA2","intOne":[1,2],"value":11}},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA3","intOne":[1],"value":12}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA1","array":[1],"value":12}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA2","array":[1,2],"value":11}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA3","array":[1,2],"value":10}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA4","array":[1],"value":10}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA5","array":[1,2],"value":12}},
+  {"op":"case","case":"multikey-array-composite"},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA1","intOne":[1,2],"value":100}},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA2","intOne":[1,2],"value":200}},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA3","intOne":[1],"value":300}},
+  {"op":"send","eventType":"SupportEventWithManyArray","payload":{"id":"MA4","intOne":[1,2],"value":400}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA2","array":[1,2],"value":250}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA3","array":[1,2],"value":0}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA4","array":[1],"value":299}},
+  {"op":"send","eventType":"SupportEventWithIntArray","payload":{"id":"IA5","array":[1,2],"value":500}}
  ]
 }
