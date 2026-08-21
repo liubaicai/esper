@@ -32,33 +32,26 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `dcec9e1e0` (`subselect: verify
-  joined coercion parity (Draft 4.220)` pushed).
-- Current work unit: `epl.subselect.filtered`, join-gated slice of the same
-  `EPLSubselectFiltered.java` — two executions (JoinFilteredOne/Two)
-  extending `subselect-filtered` to seventeen cases; zero `internal/esper`
-  changes.
+- Baseline: `HEAD` == `origin/master` == `f138c56f1` (`subselect: verify
+  join-gated parity (Draft 4.221)` pushed).
+- Current work unit: `epl.subselect.filtered`, where-previous slice of the
+  same `EPLSubselectFiltered.java` — three behaviorally-equivalent
+  executions (base/OM/Compile) across three cases extending
+  `subselect-filtered` to twenty cases; zero `internal/esper` changes.
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - `EPLSubselectJoinFilteredOne` (`java-runtime-7474133de58ff180f8fa`):
-    S0⋈S1 keepall join on id equality; WHERE gates on
-    `s0.id=s1.id and p00||p10 = (select p20 ... where id=s0.id)`;
-    SELECT projects s0id/s1id plus scalar/prior(1)/prev(1) subqueries over
-    #length(1000)/#length(1000)/#length(10); vectors
-    {1,1,ab,null,null} and {2,2,qx,ab,ab}.
-  - `EPLSubselectJoinFilteredTwo` (`java-runtime-0a6686ce79af715278f7`):
-    same shape but the WHERE gate is a boolean subquery
-    `(select s0.p00||s1.p10 = p20 ...)`; identical output vectors.
-  - Key semantics: join-unsatisfied and empty-subquery rounds never fire;
-    prior/prev read the unfiltered windows across ids (round2
-    Prior=Prev="ab" from the id=1 event).
-- Differential scope: `subselect-filtered` scenario extended to seventeen
-  cases (SupportBean_S2{id,p20} payloads; S0/S1/S2 structs switched to value
-  strings matching the proven unit-test shape — observationally identical
-  for all prior cases, proven by byte-identical record prefixes); Java
-  oracle gains the two join EPL statements and S2 decode (JoinFilteredOracle
-  worker); Go runner gains the Join/OnEqual/SelectLeft/SelectRight branch
-  and three new trace mutations.
+  - WherePrevious trio (`java-runtime-78f47a5bcdf6b87c9e68`,
+    `java-runtime-b1c2169572264f9fd646`,
+    `java-runtime-87fd9e194fcd61e0aba5`): correlated gated subquery
+    `(select prev(1, id) from SupportBean_S1#length(1000) where id=s0.id)`
+    projected as value over SupportBean_S0; three-round vector null/1/2 per
+    case. WHERE only filters candidate rows; prev(1) reads the unfiltered
+    window arrival order (round2 prev=1 is the discriminating probe).
+- Differential scope: `subselect-filtered` scenario extended to twenty
+  cases (three where-previous cases replaying the shared six-send sequence);
+  Java oracle gains the three case branches (WherePrevOracle worker); Go
+  runner gains one Prev-in-SubqueryValue branch and two new trace mutations
+  targeting om seq2/seq3.
 - Allowed files: `internal/app/parity/subselect_filtered.go`,
   `internal/app/parity/run_test.go`,
   `tools/java-oracle/EPLSubselectFilteredScenarioOracle.java` +
@@ -85,6 +78,12 @@ activity or a single coverage percentage.
   isolated) authored the new Java oracle and runner script on the frozen
   scenario contract while the primary agent wrote the Go runner, dispatch,
   scenario, and tests. File ownership was disjoint.
+- Where-previous unit agents: prefetch scouts `WherePrevJavaContract`
+  (java-oracle-scout) and `WherePrevGoSurface` (scout) ran concurrently with
+  the Draft 4.221 review; asset writer `WherePrevOracle`
+  (parity-asset-worker, isolated) authored the oracle case branches while
+  the primary agent wrote the scenario extension, runner branch, and
+  mutations. File ownership was disjoint.
 - Join-gated unit agents: prefetch scouts `JoinFilteredJavaContract`
   (java-oracle-scout) and `JoinFilteredGoSurface` (scout) ran concurrently
   with the Draft 4.220 review; asset writer `JoinFilteredOracle`
@@ -221,7 +220,7 @@ filtered diff/mutation tests (17 mutations all reject), `go vet ./...`,
 `go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
 pass.
 
-## Join-gated unit (active)
+## Join-gated unit (closed; committed as `f138c56f1`)
 
 - [x] Prefetch scouts (`JoinFilteredJavaContract`, `JoinFilteredGoSurface`)
   froze the two-execution slice, the fire/no-fire vectors, prior/prev
@@ -247,6 +246,34 @@ the differential evidence is passing with 67 Java records, 67 Go records,
 filtered diff/mutation tests (20 mutations all reject), `go vet ./...`,
 `go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
 pass.
+
+## Where-previous unit (active)
+
+- [x] Prefetch scouts (`WherePrevJavaContract`, `WherePrevGoSurface`) froze
+  the three-execution slice, the three-round vectors, and the reusable Go
+  surface (`Prev` inside `SubqueryValue`; zero engine changes).
+- [x] Extend `subselect-filtered` scenario to twenty cases; extend the Java
+  oracle via the `WherePrevOracle` asset worker; extend the Go runner with
+  the Prev branch and two new trace mutations (om seq2 null-flip and seq3
+  offset probe).
+- [x] Regenerate the pinned-commit Java trace (76 records) and the passing
+  evidence with zero differences; register
+  `case.subselect-filtered-where-previous`; manifest summary is 141
+  differential cases, 447 differential runtime IDs, 3086 associations,
+  2901 unique referenced runtimes, 1235 unreferenced;
+  `epl.subselect.filtered` reaches 15/27 DV runtimes.
+- [x] Complete final full gates and independent parity review
+  (`WherePrevReview` initial verdict flagged one P2 stale doc comment; the
+  fix was re-checked by the same reviewer: pass, zero findings); delivery is
+  ready for the single semantic commit and push.
+
+Final pre-commit verification: pinned Java oracle regenerated the trace with
+checksum `08ce7300b5fea5f0c896f70a779fb5c780b273b2fd12fc4d0f951c40b9091511`;
+the differential evidence is passing with 76 Java records, 76 Go records,
+0 differences, fifteen frozen runtime IDs, and fifteen execution names.
+Focused filtered diff/mutation tests (22 mutations all reject), `go vet
+./...`, `go test ./... -count=1 -timeout 240s`, `make check`, and
+`git diff --check` pass.
 
 ## Historical work-unit contract (Generic Cast; closed)
 

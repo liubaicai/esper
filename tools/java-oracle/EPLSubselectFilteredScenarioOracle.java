@@ -32,18 +32,21 @@ import java.util.TreeSet;
  * Java oracle for EPLSubselectFiltered first-slice scenarios (scalar subquery
  * with where/having/filter).
  *
- * Covers the first slice of EPLSubselectFiltered: 12 behavioral executions
- * across 17 scenario cases - the three HavingNoAgg variants
+ * Covers the first slice of EPLSubselectFiltered: 15 behavioral executions
+ * across 20 scenario cases - the three HavingNoAgg variants
  * (having-no-filter-no-where, having-w-where, having-w-filter-w-where), the
  * three WhereConstant rounds (where-constant-single-column,
  * where-constant-two-column, where-constant-range), SelectWithWhereJoined
  * (select-with-where-joined), the three MultikeyWArray rounds
  * (multikey-array-primitive, multikey-array-two-field,
  * multikey-array-composite), the two Joined4 numeric-coercion executions
- * (joined-4-coercion-p1/p2/p3, joined-4-back-coercion-p1/p2), and the two
- * JoinFiltered executions (join-filtered-one, join-filtered-two). Same-event,
- * wildcard, previous, and the remaining multi-stream joined executions remain
- * in later slices.
+ * (joined-4-coercion-p1/p2/p3, joined-4-back-coercion-p1/p2), the two
+ * JoinFiltered executions (join-filtered-one, join-filtered-two), and the
+ * three WherePrevious variants (where-previous, where-previous-om,
+ * where-previous-compile) - the three variants are behaviorally equivalent
+ * and replay the same statement and event sequence, differing only in the
+ * compilation path for the OM/Compile rounds. Same-event, wildcard, and the
+ * remaining multi-stream joined executions remain in later slices.
  */
 public class EPLSubselectFilteredScenarioOracle {
 
@@ -285,6 +288,15 @@ public class EPLSubselectFilteredScenarioOracle {
             };
             case "join-filtered-two" -> new String[]{
                 "@name('s0') select s0.id as s0id, s1.id as s1id, (select p20 from SupportBean_S2#length(1000) where id=s0.id) as s2p20, (select prior(1, p20) from SupportBean_S2#length(1000) where id=s0.id) as s2p20Prior, (select prev(1, p20) from SupportBean_S2#length(10) where id=s0.id) as s2p20Prev from SupportBean_S0#keepall as s0, SupportBean_S1#keepall as s1 where s0.id = s1.id and (select s0.p00||s1.p10 = p20 from SupportBean_S2#length(1000) where id=s0.id)"
+            };
+            case "where-previous" -> new String[]{
+                "@name('s0') select (select prev(1, id) from SupportBean_S1#length(1000) where id=s0.id) as value from SupportBean_S0 as s0"
+            };
+            case "where-previous-om" -> new String[]{
+                "@name('s0') select (select prev(1, id) from SupportBean_S1#length(1000) where id=s0.id) as value from SupportBean_S0 as s0"
+            };
+            case "where-previous-compile" -> new String[]{
+                "@name('s0') select (select prev(1, id) from SupportBean_S1#length(1000) where id=s0.id) as value from SupportBean_S0 as s0"
             };
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };

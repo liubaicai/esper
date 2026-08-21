@@ -4,6 +4,23 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.222（2026-08-21），扩展 `subselect-filtered`
+> differential-verified 场景（where-previous 切片），对照固定 Java
+> `EPLSubselectFiltered.java` 的三个 execution：
+> `EPLSubselectWherePrevious`（`java-runtime-78f47a5bcdf6b87c9e68`）、
+> `EPLSubselectWherePreviousOM`（`java-runtime-b1c2169572264f9fd646`）与
+> `EPLSubselectWherePreviousCompile`
+> （`java-runtime-87fd9e194fcd61e0aba5`）——三变体行为逐字等价，各占一个
+> case 重放同一序列。场景扩展为 20 个 case，Java/Go 各 76 条 listener
+> records、0 differences；覆盖相关门控子查询投影内的 prev(1,id)：WHERE 只
+> 筛选候选行、prev 读取未过滤 #length(1000) 窗口的到达序历史（round2
+> prev=1 为判别点——若实现为先过滤后 prev 将得 null）、空集→Null。Go 侧
+> 复用 `Prev` + `SubqueryValue` + `OuterField`，无 `internal/esper` 改动。
+> manifest 更新为 141 个 differential-verified case、447 个 differential
+> runtime IDs、3086 条 runtime associations，`epl.subselect.filtered`
+> capability 达到 15/27 DV runtime。其余 12 个 filtered execution 保持
+> implemented-only。
+
 > 最新补充：Draft 4.221（2026-08-21），扩展 `subselect-filtered`
 > differential-verified 场景（join-gated 切片），对照固定 Java
 > `EPLSubselectFiltered.java` 的两个 execution：
@@ -402,9 +419,9 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 527 |
-| Case differential-verified | 140 |
-| Differential-verified runtime | 444 / 4,136 |
+| Case | 528 |
+| Case differential-verified | 141 |
+| Differential-verified runtime | 447 / 4,136 |
 | Runtime 已关联 | 2,901 / 4,136（70.1%） |
 | Runtime 未关联 | 1,235 |
 | Representative scenario | 94 / 94 通过 |
@@ -584,7 +601,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 persisted differential evidence。当前有 140 个 differential-verified case（444 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
+2. 扩展 persisted differential evidence。当前有 141 个 differential-verified case（447 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；暂不建设 CI，后续按执行手册定期本地 Docker 重放，并保持普通测试中的显式环境型 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。

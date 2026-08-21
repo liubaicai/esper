@@ -13619,6 +13619,18 @@ func TestRunSubselectFilteredDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
+			name: "where-previous-unfiltered-window",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[71].New[0].Fields["value"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "where-previous-anchor-offset",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[72].New[0].Fields["value"] = 1
+			},
+		},
+		{
 			name: "record-removed",
 			mutate: func(trace *compat.Trace) {
 				trace.Records = trace.Records[:len(trace.Records)-1]

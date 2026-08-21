@@ -63,6 +63,9 @@ var (
 		"java-runtime-66c3d4d4100cb3f923a0",
 		"java-runtime-7474133de58ff180f8fa",
 		"java-runtime-0a6686ce79af715278f7",
+		"java-runtime-78f47a5bcdf6b87c9e68",
+		"java-runtime-b1c2169572264f9fd646",
+		"java-runtime-87fd9e194fcd61e0aba5",
 	}
 	subselectFilteredJavaExecutions = []string{
 		"EPLSubselectHavingNoAggNoFilterNoWhere",
@@ -77,18 +80,24 @@ var (
 		"EPLSubselectSelectWhereJoined4BackCoercion",
 		"EPLSubselectJoinFilteredOne",
 		"EPLSubselectJoinFilteredTwo",
+		"EPLSubselectWherePrevious",
+		"EPLSubselectWherePreviousOM",
+		"EPLSubselectWherePreviousCompile",
 	}
 )
 
 // runSubselectFilteredScenario replays the scalar-filter, multikey-wArray,
-// joined numeric-coercion and join-filtered slices of EPLSubselectFiltered
-// (12 executions across 17 scenario cases; WhereConstant contributes three
-// single-deployment cases and each Joined4 coercion statement is its own
-// predicate-ordering case): non-aggregated having row filters, constant and
-// correlated where predicates, null-on-empty/null-on-multiple scalar
-// subselect boundaries, int[] content-equality correlation keys, cross-stream
-// boxed numeric coercion over a three-way keepall join, and two-stream joins
-// gated by scalar/boolean subqueries with prior/prev projections.
+// joined numeric-coercion, join-filtered and where-previous slices of
+// EPLSubselectFiltered (15 executions across 20 scenario cases; WhereConstant
+// contributes three single-deployment cases, each Joined4 coercion statement
+// is its own predicate-ordering case, and the WherePrevious triple replays
+// one shared sequence per compilation path): non-aggregated having row
+// filters, constant and correlated where predicates,
+// null-on-empty/null-on-multiple scalar subselect boundaries, int[]
+// content-equality correlation keys, cross-stream boxed numeric coercion
+// over a three-way keepall join, two-stream joins gated by scalar/boolean
+// subqueries with prior/prev projections, and prev over a gated subquery's
+// unfiltered window.
 func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
@@ -101,6 +110,7 @@ func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario)
 		"joined-4-coercion-p1", "joined-4-coercion-p2", "joined-4-coercion-p3",
 		"joined-4-back-coercion-p1", "joined-4-back-coercion-p2",
 		"join-filtered-one", "join-filtered-two",
+		"where-previous", "where-previous-om", "where-previous-compile",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-filtered scenario %q has no supported cases", scenario.ID)
@@ -321,6 +331,12 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 				correlated,
 			))
 		}
+	case "where-previous", "where-previous-om", "where-previous-compile":
+		query = esper.Select(outer,
+			esper.Alias("value", esper.SubqueryValue[int](s1Inner(),
+				esper.Prev[int](1, esper.Field[any, int]("id")),
+				esper.Equal[int](esper.Field[any, int]("id"), esper.OuterField[int]("id"))),
+			)).Query(esper.StatementName("s0"))
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported subselect-filtered case %q", caseName)
 	}
