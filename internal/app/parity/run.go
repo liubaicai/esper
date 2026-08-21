@@ -1757,6 +1757,23 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "subselect-multirow" || *mode == "subselect-multirow-diff" {
+		trace, err := runSubselectDirectMultirowScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "subselect-multirow-diff" {
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, subselectDirectMultirowJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, subselectDirectMultirowJavaSources),
+				splitMetadata(*javaExecutions, subselectDirectMultirowJavaExecutions), scenario, trace,
+				normalizeSubselectDirectMultirowUnderlyingTrace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "subselect-aggregated-multirow" || *mode == "subselect-aggregated-multirow-diff" {
 		trace, err := runSubselectMultirowScenario(context.Background(), scenario)
 		if err != nil {
@@ -1923,9 +1940,13 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-// runDifferentialMode loads the Java trace, builds canonical differential
-// evidence and writes it. It returns 1 when the normalized traces differ.
+// runDifferentialMode loads the Java trace, builds canonical differential evidence, and writes it. It returns 1 when the normalized traces differ.
 func runDifferentialMode(stdout, stderr io.Writer, javaTracePath, evidencePath, javaCommit string, runtimeIDs, sourceFiles, executions []string, scenario compat.Scenario, goTrace compat.Trace) int {
+	return runDifferentialModeWithNormalizer(stdout, stderr, javaTracePath, evidencePath, javaCommit,
+		runtimeIDs, sourceFiles, executions, scenario, goTrace, nil)
+}
+
+func runDifferentialModeWithNormalizer(stdout, stderr io.Writer, javaTracePath, evidencePath, javaCommit string, runtimeIDs, sourceFiles, executions []string, scenario compat.Scenario, goTrace compat.Trace, normalize func(compat.Trace) compat.Trace) int {
 	if javaTracePath == "" {
 		return fail(stderr, fmt.Errorf("Java trace path is required for differential mode"))
 	}
@@ -1940,6 +1961,10 @@ func runDifferentialMode(stdout, stderr io.Writer, javaTracePath, evidencePath, 
 	}
 	if closeErr != nil {
 		return fail(stderr, closeErr)
+	}
+	if normalize != nil {
+		javaTrace = normalize(javaTrace)
+		goTrace = normalize(goTrace)
 	}
 	evidence, err := compat.NewDifferentialEvidence(javaCommit, runtimeIDs, sourceFiles, executions, scenario, javaTrace, goTrace)
 	if err != nil {

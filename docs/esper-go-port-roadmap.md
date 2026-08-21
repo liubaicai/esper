@@ -4,6 +4,23 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.216（2026-08-21），新增 `query.subquery` 的
+> `subselect-multirow` differential-verified 场景，对照固定 Java
+> `EPLSubselectMultirow.java` 的两个 execution：
+> `EPLSubselectMultirowSingleColumn`
+> （`java-runtime-29c2087cc4243e9b7a50`）与
+> `EPLSubselectMultirowUnderlyingCorrelated`
+> （`java-runtime-64eb1701d14bdbcefc86`）。场景覆盖 8 条单列/命名窗口
+> 生命周期发送和 6 条相关 underlying 发送，Java/Go 各 6 条 listener
+> records、0 differences；`Integer[]` 直接窗口快照为 `[5,10,15,6]`、
+> `[10,15,6]`、`[15,6,5]`，相关空匹配为 Null，T1/T2 underlying 行保留
+> 字段与顺序归一化。固定 commit 的 oracle、runner、scenario、trace、
+> evidence 与 value/window/null/order/type/lifecycle mutation tests 已纳入
+> 兼容资产；manifest 更新为 135 个 differential-verified case、430 个
+> differential runtime IDs、3069 条 runtime associations；唯一已关联 runtime
+> 仍为 2901，未关联 runtime 为 1235。嵌套 `SubqueryRow` 空 map 属性风险仍
+> deferred，未纳入本切片。
+
 > 最新补充：Draft 4.215（2026-08-21），扩展 `expr-core-exists-cast`
 > differential-verified 场景，对照固定 Java `ExprCoreCast` 的
 > `ExprCoreCastDates` execution
@@ -290,9 +307,9 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 522 |
-| Case differential-verified | 134 |
-| Differential-verified runtime | 428 / 4,136 |
+| Case | 523 |
+| Case differential-verified | 135 |
+| Differential-verified runtime | 430 / 4,136 |
 | Runtime 已关联 | 2,901 / 4,136（70.2%） |
 | Runtime 未关联 | 1,235 |
 | Representative scenario | 94 / 94 通过 |
@@ -530,7 +547,7 @@
 - source-test-manifest.json 目前几乎为空，需要把非 Regression 源资产（单元测试、集成测试）登记进去。
 - epl/expr/resultset 等 capability 拆分过粗，需要继续细分为可验收的 case。
 - 18 个 intentionally-different case 需要保持书面差异理由和测试证据。
-- 当前未关联的 1,375 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
+- 当前未关联的 1,235 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
 
 ### 6.3 能力与边界遗漏
 

@@ -1,3 +1,19 @@
+> 最新补充：Draft 4.216（2026-08-21），新增 `query.subquery` 的
+> `subselect-multirow` differential-verified 场景：固定 Java
+> `EPLSubselectMultirow.java` 的两个 execution
+> `EPLSubselectMultirowSingleColumn`
+> （`java-runtime-29c2087cc4243e9b7a50`）与
+> `EPLSubselectMultirowUnderlyingCorrelated`
+> （`java-runtime-64eb1701d14bdbcefc86`）。Java/Go 对同一 replayable
+> scenario 各产生 6 条 listener records、0 differences；覆盖 direct
+> `Integer[]` 窗口快照、长度窗口 redeploy 后的状态保留、相关
+> `SupportBean[]` underlying、空匹配 Null 以及字段/顺序/记录数/lifecycle
+> mutations。固定 commit 的 Java oracle、runner、scenario、trace、evidence
+> 已纳入兼容资产；manifest 更新为 523 cases、135 differential-verified
+> cases、430 differential runtime IDs、3069 associations（唯一已关联 runtime
+> 2901，未关联 1235）。已登记的嵌套 `SubqueryRow` 空 map 属性风险仍独立
+> deferred。
+
 > 最新补充：Draft 4.215（2026-08-21），扩展 `expr-core-exists-cast`
 > differential-verified 场景：固定 Java `ExprCoreCast` 的
 > `ExprCoreCastDates` execution

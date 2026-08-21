@@ -13681,3 +13681,164 @@ func TestRunSubselectAggregatedMultirowDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunSubselectDirectMultirowDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "subselect-multirow.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "subselect-multirow.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-multirow.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "subselect-multirow-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunSubselectDirectMultirowDiffAcceptsUnderlyingOrderMutation(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "subselect-multirow.evidence.json"),
+		func(trace *compat.Trace) {
+			rows := trace.Records[5].New[0].Fields["val"].([]any)
+			rows[0], rows[1] = rows[1], rows[0]
+		})
+	evidencePath := filepath.Join(t.TempDir(), "subselect-multirow.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-multirow.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "subselect-multirow-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestNormalizeSubselectDirectMultirowUnderlyingTraceSortsRows(t *testing.T) {
+	trace := compat.Trace{
+		Version: "esper-parity/v1",
+		ID:      "subselect-multirow",
+		Records: []compat.TraceRecord{{
+			Case: "multirow-underlying-correlated",
+			New: []compat.ResultRecord{{
+				Kind: "row",
+				Fields: map[string]any{
+					"val": []any{
+						map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": int64(30), "theString": "T2"}},
+						map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": int64(20), "theString": "T2"}},
+					},
+				},
+			}},
+		}},
+	}
+	normalized := normalizeSubselectDirectMultirowUnderlyingTrace(trace)
+	rows := normalized.Records[0].New[0].Fields["val"].([]any)
+	if rows[0].(map[string]any)["fields"].(map[string]any)["intPrimitive"] != int64(20) ||
+		rows[1].(map[string]any)["fields"].(map[string]any)["intPrimitive"] != int64(30) {
+		t.Fatalf("normalized rows = %#v", rows)
+	}
+}
+
+func TestRunSubselectDirectMultirowDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "direct-window-values",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["val"] = []any{int64(5), int64(10), int64(15)}
+			},
+		},
+		{
+			name: "late-length-window",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["val"] = []any{int64(5), int64(15), int64(6)}
+			},
+		},
+		{
+			name: "correlated-empty-null",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["val"] = []any{}
+			},
+		},
+		{
+			name: "underlying-field",
+			mutate: func(trace *compat.Trace) {
+				rows := trace.Records[4].New[0].Fields["val"].([]any)
+				rows[0].(map[string]any)["fields"].(map[string]any)["intPrimitive"] = int64(11)
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].Case = "multirow-single-column"
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:5]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "subselect-multirow.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "subselect-multirow.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-multirow.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "subselect-multirow-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %s unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

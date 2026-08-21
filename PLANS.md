@@ -34,38 +34,54 @@ activity or a single coverage percentage.
 ## Active checkpoint
 
 - Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `500d8db84` (`expr-core-exists-cast`
-  Cast Dates unit, pushed). The current uncommitted repair aligns the Go and
-  checked-in evidence metadata with Java inventory ordinal order; the pinned
-  Java trace remains unchanged.
-- Status: Cast Dates behavior is already differential-verified (17 runtime IDs,
-  54 records, zero differences). Repair scope is limited to canonical runtime
-  ID/execution ordering, regenerated evidence, and stale current facts.
-- Current repair validation: fixed trace checksum
-  `f0efd3239e22fbb9533a648d7b2cee9ac321df6e45a94a77712418ffe8f7f40d`; manifest
-  JSON parses; Go/evidence metadata contain the same 17 inventory-ordered IDs
-  and execution names. Targeted parity/compat tests, full gates, reviewer
-  re-check, one repair commit, and push remain before this checkpoint closes.
-- Next work unit candidate: `EPLSubselectMultirow` direct multirow outputs,
-  runtime IDs `java-runtime-29c2087cc4243e9b7a50` and
-  `java-runtime-64eb1701d14bdbcefc86`. Existing Go tests are association-only;
-  no oracle/scenario/evidence slice has been claimed yet.
-- Known separate risk: an empty `SubqueryRow` map is present in Go, but nested
-  property access currently yields Missing where Java nested projection yields
-  null. Do not claim the existing whole-row trace verifies this distinction.
-- Worktree notes: do not modify `/root/app/esper` or `goal.txt`.
+- Baseline: `HEAD` == `origin/master` == `c29aab39f` (`repair: align cast
+  parity metadata`, Cast Dates evidence repair pushed).
+- Current work unit: `query.subquery`, direct multirow subselect slice from
+  fixed `EPLSubselectMultirow.java`. The unit covers exactly two observable
+  executions and no shared `internal/esper` semantic change is expected.
+- Frozen Java contract (fixed commit
+  `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
+  - `EPLSubselectMultirowSingleColumn`, runtime
+    `java-runtime-29c2087cc4243e9b7a50`, inventory ordinal 0. Java deploys
+    `SupportWindow#length(3)` fed by SupportBean, then projects
+    `window(intPrimitive)` from SupportBean#keepall and from the late-start
+    SupportWindow into SupportBean_S0. Expected values: direct stream
+    `[5,10,15,6]`; late named-window snapshot `[10,15,6]`; after inserting 5,
+    `[15,6,5]`; property metadata is `p00:string`, `val:Integer[]`.
+  - `EPLSubselectMultirowUnderlyingCorrelated`, runtime
+    `java-runtime-64eb1701d14bdbcefc86`, inventory ordinal 1. Java projects
+    `window(sb.*)` from SupportBean#keepall where `theString=s0.p00` into
+    SupportBean_S0. Expected empty correlation `val=null`, T1 one underlying
+    SupportBean event, T2 two events in any order; metadata is
+    `p00:string`, `val:SupportBean[]`.
+- Differential scope: one replayable `subselect-multirow` scenario with
+  deterministic case markers and sends for both executions; Java oracle,
+  Go runner/dispatch, checked-in trace/evidence, and value/order/type/null
+  mutation tests. Event rows normalize as protocol `{kind:"row",fields:{...}}`;
+  correlated empty `val` normalizes as Null. No nested `SubqueryRow` property
+  projection is included in this unit.
+- Allowed files: new `internal/app/parity/subselect_multirow.go` and focused
+  runner tests/dispatch edits, `tools/java-oracle/EPLSubselectMultirowScenarioOracle.java`
+  plus runner script, `testdata/parity/subselect-multirow.json`, generated
+  trace/evidence, and primary-owned `PLANS.md`, manifest, roadmap, CHANGELOG.
+- Forbidden: changes under `/root/app/esper`, `goal.txt`, unrelated
+  `internal/esper` semantics, hand-authored generated trace/evidence, and
+  global map Missing/Null behavior changes. The known empty `SubqueryRow`
+  nested-property risk remains a separate follow-up requiring its own replay.
+- Targeted validation: pinned Java oracle runner, Go direct multirow tests,
+  runner differential/mutation tests, `go test ./internal/compat ./internal/app/manifest -count=1`,
+  manifest/evidence consistency, then full local gates and independent review.
 
 ## Delegation checkpoint
 
-- Cast Dates repair review: `CastDatesReview-2` (parity-reviewer), read-only
-  re-review after metadata alignment.
-- Next-unit read-only scouts launched concurrently before any Subquery write:
+- Cast Dates repair review: `CastDatesReview-2`, APPROVED after canonical
+  metadata/evidence alignment; repair commit `c29aab39f` pushed.
+- Next-unit read-only scouts completed concurrently before implementation:
   `SubqueryMultirowJavaContract` (java-oracle-scout) and
-  `SubqueryMultirowGoSurface` (scout). Their reports identify the two direct
-  `EPLSubselectMultirow` executions and keep the empty-map nested-property
-  behavior as a separate semantic slice.
-- Primary agent owns PLANS, manifest, roadmap, CHANGELOG, generated traces and
-  evidence, integration validation, review, commit, and push.
+  `SubqueryMultirowGoSurface` (scout). Both reports agree on the two execution
+  IDs, direct Go coverage, and the deferred nested-property risk.
+- Primary agent owns shared semantics, parity assets, generated trace/evidence,
+  manifest, roadmap, CHANGELOG, PLANS, validation, review, commit, and push.
 
 ## Historical work-unit contract (Generic Cast; closed)
 
@@ -121,6 +137,37 @@ activity or a single coverage percentage.
   `go test ./... -count=1`, manifest/evidence validation, `make check`, and
   `git diff --check`; the focused expr race gate remains applicable.
 
+
+## Direct multirow unit (active)
+
+- [x] Freeze the two `EPLSubselectMultirow.java` executions and exact runtime
+  IDs with concurrent scouts `SubqueryMultirowJavaContract` and
+  `SubqueryMultirowGoSurface`.
+- [x] Implement the dedicated Go runner, dispatch modes, pinned Java oracle,
+  scenario, and checked-in six-record trace/evidence.
+- [x] Correct the staged single-column replay to accept eight sends with the
+  Java 5-send/3-send redeploy split; focused value, window-retention, null,
+  underlying-field, case, and record-count mutations reject.
+- [x] Normalize only correlated `val` arrays in the direct multirow runner and
+  its differential boundary. Stable JSON row keys mirror the Java oracle's
+  `SupportBean[]`/`EventBean[]` sorting; shared `compat.normalizeValue` and
+  global trace comparison remain unchanged. Swapped-row differential mutation
+  passes while semantic mutations reject.
+- [x] Register `case.subquery-multirow` and `query.subquery-basic` mapping;
+  manifest summary is 523 cases, 135 differential cases, 430 differential
+  runtime IDs, 3069 associations, 2901 unique referenced runtimes, and 1235
+  unreferenced runtimes.
+- [x] Complete final full gates and independent parity review; delivery is ready
+  for the single semantic commit and push.
+
+Final pre-commit verification: pinned Java oracle regenerated the trace with
+checksum `0bffc4f680c631cdb5958e2a650a1d174f0cc00f3e2cf0581d20082cea50dcf1`;
+the direct differential evidence is passing with 6 Java records, 6 Go records,
+0 differences, both frozen runtime IDs, and both execution names. Focused
+direct replay/mutation tests, `go test ./internal/compat ./internal/app/manifest
+-count=1`, `go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`,
+and `git diff --check` pass. `DirectMultirowRunnerReview` approved the scoped
+correlated-array normalization and its separate swapped-row acceptance test.
 
 ## Progress
 

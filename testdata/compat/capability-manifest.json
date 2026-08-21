@@ -32232,6 +32232,55 @@
     "java-runtime-44eff67d7f2520f31f05",
     "java-runtime-1d5e53c021e683fb3a59"
    ]
+  },
+  {
+   "id": "case.subquery-multirow",
+   "javaRuntimeIds": [
+    "java-runtime-29c2087cc4243e9b7a50",
+    "java-runtime-64eb1701d14bdbcefc86"
+   ],
+   "javaNames": [
+    "EPLSubselectMultirowSingleColumn",
+    "EPLSubselectMultirowUnderlyingCorrelated"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectMultirow.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunSubselectDirectMultirowDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunSubselectDirectMultirowDiffAcceptsUnderlyingOrderMutation",
+    "internal/app/parity/run_test.go:TestNormalizeSubselectDirectMultirowUnderlyingTraceSortsRows",
+    "internal/app/parity/run_test.go:TestRunSubselectDirectMultirowDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "subselect",
+    "multirow",
+    "direct",
+    "named-window",
+    "correlated"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/subselect-multirow.json",
+    "testdata/parity/subselect-multirow.trace.json",
+    "testdata/parity/subselect-multirow.evidence.json",
+    "tools/java-oracle/EPLSubselectMultirowScenarioOracle.java",
+    "tools/java-oracle/run-subselect-multirow.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-29c2087cc4243e9b7a50",
+    "java-runtime-64eb1701d14bdbcefc86"
+   ]
   }
  ],
  "mappings": [
@@ -34654,15 +34703,20 @@
   {
    "capabilityId": "query.subquery-basic",
    "caseId": "case.infra-nwtable-subquery"
+  },
+  {
+   "capabilityId": "query.subquery-basic",
+   "caseId": "case.subquery-multirow"
   }
  ],
+
 "summary": {
-"totalCases": 522,
+"totalCases": 523,
 "totalCapabilities": 110,
-"inventoriedCases": 522,
-"implementedCases": 520,
-"differentialVerifiedCases": 134,
-"differentialVerifiedRuntimeIds": 428,
+"inventoriedCases": 523,
+"implementedCases": 521,
+"differentialVerifiedCases": 135,
+"differentialVerifiedRuntimeIds": 430,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,
@@ -34672,7 +34726,7 @@
 "intentionallyDifferentCapabilities": 7,
 "representativeVerifiedCapabilities": 11,
 "nfrVerifiedCapabilities": 0,
-"runtimeAssociationCount": 3067,
+"runtimeAssociationCount": 3069,
 "referencedJavaRuntimeIds": 2901,
 "totalJavaRuntimeIds": 4136,
 "unreferencedJavaRuntimeIds": 1235,

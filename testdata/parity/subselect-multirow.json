@@ -1,0 +1,38 @@
+{
+  "version": "esper-parity/v1",
+  "id": "subselect-multirow",
+  "description": "Direct multirow subselects from EPLSubselectMultirow: Integer[] window projection and correlated SupportBean[] underlying projection.",
+  "javaRuntimes": [
+    "java-runtime-29c2087cc4243e9b7a50",
+    "java-runtime-64eb1701d14bdbcefc86"
+  ],
+  "cases": [
+    {
+      "case": "multirow-single-column",
+      "runtimeId": "java-runtime-29c2087cc4243e9b7a50"
+    },
+    {
+      "case": "multirow-underlying-correlated",
+      "runtimeId": "java-runtime-64eb1701d14bdbcefc86"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "multirow-single-column"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "T1", "intPrimitive": 5}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "T2", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "T3", "intPrimitive": 15}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "T1", "intPrimitive": 6}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 0}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "T1", "intPrimitive": 5}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 0}},
+
+    {"op": "case", "case": "multirow-underlying-correlated"},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "T1"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "T1", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 2, "p00": "T1"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "T2", "intPrimitive": 20}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "T2", "intPrimitive": 30}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 3, "p00": "T2"}}
+  ]
+}

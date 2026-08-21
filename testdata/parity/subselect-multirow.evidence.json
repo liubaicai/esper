@@ -1,0 +1,432 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-29c2087cc4243e9b7a50",
+    "java-runtime-64eb1701d14bdbcefc86"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectMultirow.java"
+  ],
+  "javaExecutions": [
+    "EPLSubselectMultirowSingleColumn",
+    "EPLSubselectMultirowUnderlyingCorrelated"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "subselect-multirow",
+    "steps": [
+      {
+        "op": "case",
+        "case": "multirow-single-column"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "T1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "T2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "T3",
+          "intPrimitive": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "T1",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "T1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "multirow-underlying-correlated"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "T1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "T1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "T1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "T2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "T2",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "T2"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "subselect-multirow",
+    "records": [
+      {
+        "case": "multirow-single-column",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": {
+                "state": "null"
+              },
+              "val": [
+                5,
+                10,
+                15,
+                6
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "multirow-single-column",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": {
+                "state": "null"
+              },
+              "val": [
+                10,
+                15,
+                6
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "multirow-single-column",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": {
+                "state": "null"
+              },
+              "val": [
+                15,
+                6,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "multirow-underlying-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": "T1",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multirow-underlying-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": "T1",
+              "val": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "T1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "multirow-underlying-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": "T2",
+              "val": [
+                {
+                  "fields": {
+                    "intPrimitive": 20,
+                    "theString": "T2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 30,
+                    "theString": "T2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "subselect-multirow",
+    "records": [
+      {
+        "case": "multirow-single-column",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": {
+                "state": "null"
+              },
+              "val": [
+                5,
+                10,
+                15,
+                6
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "multirow-single-column",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": {
+                "state": "null"
+              },
+              "val": [
+                10,
+                15,
+                6
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "multirow-single-column",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": {
+                "state": "null"
+              },
+              "val": [
+                15,
+                6,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "multirow-underlying-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": "T1",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multirow-underlying-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": "T1",
+              "val": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "T1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "multirow-underlying-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p00": "T2",
+              "val": [
+                {
+                  "fields": {
+                    "intPrimitive": 20,
+                    "theString": "T2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 30,
+                    "theString": "T2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
