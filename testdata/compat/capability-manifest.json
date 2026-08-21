@@ -731,7 +731,9 @@
     "java-runtime-30499c2e4ff9aece48b2",
     "java-runtime-b059890b735f776a9e03",
     "java-runtime-e60ea25dc87dcfbdcc08",
-    "java-runtime-f5da6be14e939f2b26cc"
+    "java-runtime-f5da6be14e939f2b26cc",
+    "java-runtime-b06640d26b3b63075791",
+    "java-runtime-14c4aecdca8b446299f1"
    ]
   },
   {
@@ -32797,6 +32799,55 @@
     "java-runtime-e60ea25dc87dcfbdcc08",
     "java-runtime-f5da6be14e939f2b26cc"
    ]
+  },
+  {
+   "id": "case.rollup-dimensionality-unbound-cube",
+   "javaRuntimeIds": [
+    "java-runtime-b06640d26b3b63075791",
+    "java-runtime-14c4aecdca8b446299f1"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeUnboundCubeUnenclosed",
+    "ResultSetQueryTypeUnboundCube4Dim"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupDimensionality.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunRollupDimensionalityDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRollupDimensionalityDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunRollupDimensionalityCubeMutations"
+   ],
+   "tags": [
+    "rollup",
+    "cube",
+    "dimensionality",
+    "unbounded",
+    "bitmask-ordering",
+    "syntax-equivalence"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/rollup-dimensionality.json",
+    "testdata/parity/rollup-dimensionality.trace.json",
+    "testdata/parity/rollup-dimensionality.evidence.json",
+    "tools/java-oracle/EPLResultSetQueryTypeRollupDimensionalityScenarioOracle.java",
+    "tools/java-oracle/run-rollup-dimensionality.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b06640d26b3b63075791",
+    "java-runtime-14c4aecdca8b446299f1"
+   ]
   }
  ],
  "mappings": [
@@ -35259,13 +35310,17 @@
   {
    "capabilityId": "resultset.aggregate-dimensional",
    "caseId": "case.rollup-dimensionality-unbound-rollup"
+  },
+  {
+   "capabilityId": "resultset.aggregate-dimensional",
+   "caseId": "case.rollup-dimensionality-unbound-cube"
   }
  ],
  "summary": {
-  "inventoriedCases": 532,
-  "implementedCases": 530,
-  "differentialVerifiedCases": 145,
-  "differentialVerifiedRuntimeIds": 462,
+  "inventoriedCases": 533,
+  "implementedCases": 531,
+  "differentialVerifiedCases": 146,
+  "differentialVerifiedRuntimeIds": 464,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -35275,13 +35330,13 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3101,
-  "referencedJavaRuntimeIds": 2905,
+  "runtimeAssociationCount": 3103,
+  "referencedJavaRuntimeIds": 2907,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1231,
+  "unreferencedJavaRuntimeIds": 1229,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 532,
+  "totalCases": 533,
   "totalCapabilities": 110
  }
 }

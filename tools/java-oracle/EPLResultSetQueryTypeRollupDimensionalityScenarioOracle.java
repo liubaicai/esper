@@ -27,12 +27,12 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
- * Java oracle for ResultSetQueryTypeRollupDimensionality unbound-rollup
- * scenarios (rollup/cube/grouping sets group-by clauses over unbound
+ * Java oracle for ResultSetQueryTypeRollupDimensionality unbound-rollup and
+ * cube scenarios (rollup/cube/grouping sets group-by clauses over unbound
  * streams).
  *
- * Covers the four unbound-rollup executions of
- * ResultSetQueryTypeRollupDimensionality across 10 scenario cases:
+ * Covers six executions of ResultSetQueryTypeRollupDimensionality across 14
+ * scenario cases. Unbound-rollup family (10 cases):
  * UnboundRollup2Dim (unbound-rollup-2dim, sum(longPrimitive) grouped by
  * rollup(theString, intPrimitive)), UnboundRollup1Dim
  * (unbound-rollup-1dim-rollup and unbound-rollup-1dim-cube replaying
@@ -45,10 +45,15 @@ import java.util.TreeSet;
  * unbound-rollup-3dim-gs and their -join variants replaying
  * tryAssertionUnboundRollup3Dim with rollup and grouping sets over three
  * keys, the -join variants adding a SupportBean_S0#lastevent stream).
+ * Cube family (4 cases): UnboundCubeUnenclosed
+ * (unbound-cube-unenclosed-a/b/c replaying the three equivalent syntaxes
+ * theString + cube(i,l), flat grouping sets, and theString + inner grouping
+ * sets with an empty set) and UnboundCube4Dim (unbound-cube-4dim, a
+ * four-dimension cube with sum(intBoxed)).
  *
  * Events are SupportBean payloads carrying theString/intPrimitive/
- * longPrimitive/doublePrimitive (fields absent from a payload keep their
- * defaults) and SupportBean_S0 payloads carrying id only.
+ * longPrimitive/doublePrimitive/intBoxed (fields absent from a payload keep
+ * their defaults) and SupportBean_S0 payloads carrying id only.
  */
 public class EPLResultSetQueryTypeRollupDimensionalityScenarioOracle {
 
@@ -180,6 +185,10 @@ public class EPLResultSetQueryTypeRollupDimensionalityScenarioOracle {
                             if (doublePrimitiveVal instanceof JsonNumber) {
                                 event.setDoublePrimitive(((JsonNumber) doublePrimitiveVal).asDouble());
                             }
+                            JsonValue intBoxedVal = payload.get("intBoxed");
+                            if (intBoxedVal instanceof JsonNumber) {
+                                event.setIntBoxed(((JsonNumber) intBoxedVal).asInt());
+                            }
                             runtime.getEventService().sendEventBean(event, "SupportBean");
                         }
                         case "SupportBean_S0" -> {
@@ -227,6 +236,18 @@ public class EPLResultSetQueryTypeRollupDimensionalityScenarioOracle {
             };
             case "unbound-rollup-3dim-gs-join" -> new String[]{
                 "@Name('s0')select theString as c0, intPrimitive as c1, longPrimitive as c2, count(*) as c3, sum(doublePrimitive) as c4 from SupportBean#keepall, SupportBean_S0#lastevent group by grouping sets((theString, intPrimitive, longPrimitive),(theString, intPrimitive),(theString),())"
+            };
+            case "unbound-cube-unenclosed-a" -> new String[]{
+                "@Name('s0')select theString as c0, intPrimitive as c1, longPrimitive as c2, sum(doublePrimitive) as c3 from SupportBean group by theString, cube(intPrimitive, longPrimitive)"
+            };
+            case "unbound-cube-unenclosed-b" -> new String[]{
+                "@Name('s0')select theString as c0, intPrimitive as c1, longPrimitive as c2, sum(doublePrimitive) as c3 from SupportBean group by grouping sets((theString, intPrimitive, longPrimitive),(theString, intPrimitive),(theString, longPrimitive),theString)"
+            };
+            case "unbound-cube-unenclosed-c" -> new String[]{
+                "@Name('s0')select theString as c0, intPrimitive as c1, longPrimitive as c2, sum(doublePrimitive) as c3 from SupportBean group by theString, grouping sets((intPrimitive, longPrimitive),(intPrimitive),(longPrimitive), ())"
+            };
+            case "unbound-cube-4dim" -> new String[]{
+                "@Name('s0')select theString as c0, intPrimitive as c1, longPrimitive as c2, doublePrimitive as c3, sum(intBoxed) as c4 from SupportBean group by cube(theString, intPrimitive, longPrimitive, doublePrimitive)"
             };
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };

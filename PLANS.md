@@ -32,38 +32,37 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `45bac28c3` (`subselect: verify
-  filtered suite finale parity (Draft 4.225)` pushed).
+- Baseline: `HEAD` == `origin/master` == `7fd4f42dd` (`resultset: verify
+  rollup dimensionality parity (Draft 4.226)` pushed).
 - Current work unit: `resultset.aggregate-dimensional`,
-  rollup-dimensionality unbound-rollup slice — four executions across ten
-  cases in a new scenario/oracle/runner triple; zero `internal/esper`
-  changes.
+  rollup-dimensionality cube slice — two executions (UnboundCubeUnenclosed,
+  UnboundCube4Dim) extending the scenario to fourteen cases; one shared-core
+  fix (`cubeGroupingSets` enumeration bit order).
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - UnboundRollup2Dim (`java-runtime-30499c2e4ff9aece48b2`):
-    rollup(theString,intPrimitive) over the unbounded stream; three rows per
-    event (detail/subtotal/overall), null-padded keys, monotonic sum.
-  - UnboundRollup1Dim (`java-runtime-b059890b735f776a9e03`): rollup vs cube
-    one-dim degeneration, two cases; vector pairs {E,10}/{null,10} etc.
-  - UnboundRollupUnenclosed (`java-runtime-e60ea25dc87dcfbdcc08`): three
-    equivalent syntaxes expand to grouping sets
-    {(t,i,l),(t,i),(t)}; c0 never null in the nested form.
-  - UnboundRollup3Dim (`java-runtime-f5da6be14e939f2b26cc`):
-    rollup/grouping-sets × non-join/join (cartesian S0#lastevent prime);
-    four rows per event including the overall row.
-- Differential scope: new `rollup-dimensionality` scenario/oracle/runner
-  triple (10 cases); oracle and runner script are new files
-  (RollupDimOracle worker); Go runner gains GroupByRollup/Cube/
-  GroupingSets branches incl. a cartesian-join rollup via JoinField keys,
-  plus nine trace mutations.
+  - UnboundCubeUnenclosed (`java-runtime-b06640d26b3b63075791`): three
+    equivalent syntaxes (plain key + cube, explicit sets with top key last,
+    plain key + inner cube with empty set) expand to grouping sets
+    {(t,i,l),(t,i),(t,l),(t)}; four rows per event.
+  - UnboundCube4Dim (`java-runtime-14c4aecdca8b446299f1`):
+    cube(theString,intPrimitive,longPrimitive,doublePrimitive) with
+    sum(intBoxed); 16 rows per event in strict bitmask-descending order
+    (dim0 highest bit); cross-key accumulation vectors frozen per round.
+- Differential scope: `rollup-dimensionality` scenario extended to fourteen
+  cases; Go runner gains cube branches over the same bean; shared-core fix:
+  `cubeGroupingSets` enumerates dim0-highest-bit descending to match Esper
+  canonical row order (existing esper tests green); four new trace
+  mutations.
 - Allowed files: `internal/app/parity/subselect_filtered.go`,
   `internal/app/parity/run_test.go`,
   `tools/java-oracle/EPLSubselectFilteredScenarioOracle.java` +
   `tools/java-oracle/run-subselect-filtered.sh` (worker/primary fix),
   `testdata/parity/subselect-filtered.json`, regenerated trace/evidence, and
   primary-owned `PLANS.md`, manifest, roadmap, CHANGELOG, README.
-- Forbidden: changes under `/root/app/esper`, `goal.txt`, `internal/esper`
-  production semantics, hand-authored generated trace/evidence.
+- Forbidden: changes under `/root/app/esper`, `goal.txt`, other
+  `internal/esper` production semantics beyond the frozen
+  cubeGroupingSets enumeration-order fix, hand-authored generated
+  trace/evidence.
 - Targeted validation: pinned Java oracle runner, filtered diff/mutation
   tests, `go test ./internal/compat ./internal/app/manifest -count=1`, full
   local gates, independent review.
@@ -82,6 +81,12 @@ activity or a single coverage percentage.
   isolated) authored the new Java oracle and runner script on the frozen
   scenario contract while the primary agent wrote the Go runner, dispatch,
   scenario, and tests. File ownership was disjoint.
+- Cube unit agents: prefetch scout `CubeJavaContract`
+  (java-oracle-scout) ran concurrently with the Draft 4.226 review; no
+  separate GoSurface scout because the cube surface is the same runner file
+  already mapped by `RollupDimGoSurface`. Oracle case branches were authored
+  by the primary agent directly (mechanical extension of a worker-authored
+  file; recorded as the serial exception).
 - Rollup-dimensionality unit agents: prefetch scouts
   `RollupDimJavaContract` (java-oracle-scout; its first delivery crashed
   after extraction and the frozen contract was redelivered on nudge) and
@@ -396,7 +401,7 @@ names. Focused filtered diff/mutation tests (32 mutations all reject),
 `go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, and
 `git diff --check` pass.
 
-## Rollup dimensionality unit (active)
+## Rollup dimensionality unit (closed; committed as `7fd4f42dd`)
 
 - [x] Prefetch scouts (`RollupDimJavaContract`, `RollupDimGoSurface`) froze
   the four-execution unbound-rollup slice, per-round vectors, and the
@@ -414,10 +419,9 @@ names. Focused filtered diff/mutation tests (32 mutations all reject),
   runtime IDs, 3101 associations, 2905 unique referenced runtimes, 1231
   unreferenced.
 - [x] Complete final full gates and independent parity review
-  (`RollupDimReview` initial verdict flagged one P2 — two mutations targeted
-  wrong-case indices — plus P3 count/table drift incl. a 70.3%-vs-70.2%
-  rounding note; all fixed and re-checked by the same reviewer: pass, zero
-  findings); delivery is ready for the single semantic commit and push.
+  (`CubeReview` initial verdict flagged one P1 — two mutations targeted
+  wrong-case indices — evidence-header runtime-ID omission, plus P2/P3 count-table drift; all
+  fixed and re-checked by the same reviewer: pass); delivery is ready for the single semantic commit and push.
 
 Final pre-commit verification: pinned Java oracle regenerated the trace with
 checksum `cfa0669dc5e520ac26cb1abb176f933eef9aab5888815c942169626711230e72`;
@@ -426,6 +430,22 @@ the differential evidence is passing with 50 Java records, 50 Go records,
 rollup-dimensionality diff/mutation tests (9 mutations all reject),
 `go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, and
 `git diff --check` pass.
+
+## Cube dimensionality unit (active)
+
+- [x] Prefetch scout (`CubeJavaContract`) froze the two-execution cube
+  slice with bitmask-ordering probes and exact per-round c-vectors.
+- [x] Extend `rollup-dimensionality` scenario to fourteen cases; extend the
+  oracle buildEPL and SupportBean decode (intBoxed) in-place; extend the Go
+  runner with cube branches over the enriched bean.
+- [x] Fix `cubeGroupingSets` to enumerate dim0-highest-bit descending;
+  regenerate the pinned-commit Java trace (65 records) and the passing
+  evidence with zero differences; register
+  `case.rollup-dimensionality-unbound-cube`; manifest summary is 146
+  differential cases, 464 differential runtime IDs, 3103 associations,
+  2907 unique referenced runtimes, 1229 unreferenced.
+- [ ] Complete final full gates and independent parity review; then the
+  single semantic commit and push.
 
 ## Historical work-unit contract (Generic Cast; closed)
 

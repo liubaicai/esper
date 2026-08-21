@@ -13597,6 +13597,62 @@ func TestRunRollupDimensionalityDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunRollupDimensionalityCubeMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "cube-unenclosed-retained-key",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[51].New[0].Fields["c0"] = nil
+			},
+		},
+		{
+			name: "cube-4dim-mask-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[62].New[1].Fields["c0"] = nil
+			},
+		},
+		{
+			name: "cube-4dim-cross-accumulation",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[64].New[15].Fields["c4"] = int64(6000)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "rollup-dimensionality.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "rollup-dimensionality.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "rollup-dimensionality.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "rollup-dimensionality-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunSubselectFilteredDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "subselect-filtered.evidence.json"),

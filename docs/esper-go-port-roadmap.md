@@ -4,6 +4,23 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.227（2026-08-21），扩展
+> `resultset.aggregate-dimensional` 的 `rollup-dimensionality`
+> differential-verified 场景（cube 家族切片），对照固定 Java
+> `ResultSetQueryTypeRollupDimensionality.java` 的两个 execution：
+> `UnboundCubeUnenclosed`
+>（`java-runtime-b06640d26b3b63075791`，三种等价语法三 case）与
+> `UnboundCube4Dim`（`java-runtime-14c4aecdca8b446299f1`）。场景扩展为
+> 14 个 case，Java/Go 各 65 条 listener records、0 differences；覆盖
+> cube 位掩码行序（dim0 为最高位、缺维数递增：{0123},{012},{013},{01},
+> {023},{02},{03},{0},{123},{12},{13},{1},{23},{2},{3},{}）、被聚合键列
+> null 填充、跨键独立累计（R2/R3 的 c4 向量逐行冻结）与三种嵌套/显式
+> 语法等价。修复 `internal/esper` 共享语义：`cubeGroupingSets` 的枚举
+> 位序改为 dim0 最高位降序（原实现低位在前导致 cube 行序与 Esper 不
+> 一致）；`internal/esper` 全量测试通过。manifest 更新为 146 个
+> differential-verified case、464 个 differential runtime IDs、3103 条
+> runtime associations，capability 达到 6/24 DV runtime。
+
 > 最新补充：Draft 4.226（2026-08-21），新增
 > `resultset.aggregate-dimensional` 的 `rollup-dimensionality`
 > differential-verified 场景（unbound-rollup 家族第一切片），对照固定 Java
@@ -495,11 +512,11 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 532 |
-| Case differential-verified | 145 |
-| Differential-verified runtime | 462 / 4,136 |
-| Runtime 已关联 | 2,905 / 4,136（70.2%） |
-| Runtime 未关联 | 1,231 |
+| Case | 533 |
+| Case differential-verified | 146 |
+| Differential-verified runtime | 464 / 4,136 |
+| Runtime 已关联 | 2,907 / 4,136（70.3%） |
+| Runtime 未关联 | 1,229 |
 | Representative scenario | 94 / 94 通过 |
 | Intentionally-different case | 18 |
 | NFR-verified case | 0 |
@@ -677,7 +694,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 persisted differential evidence。当前有 145 个 differential-verified case（462 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
+2. 扩展 persisted differential evidence。当前有 146 个 differential-verified case（464 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；暂不建设 CI，后续按执行手册定期本地 Docker 重放，并保持普通测试中的显式环境型 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。

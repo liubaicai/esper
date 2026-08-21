@@ -1,3 +1,18 @@
+> 最新补充：Draft 4.227（2026-08-21），扩展
+> `resultset.aggregate-dimensional` 的 `rollup-dimensionality`
+> differential-verified 场景（cube 家族切片）：固定 Java
+> `ResultSetQueryTypeRollupDimensionality.java` 的 `UnboundCubeUnenclosed`
+>（`java-runtime-b06640d26b3b63075791`，三种等价语法三 case）与
+> `UnboundCube4Dim`（`java-runtime-14c4aecdca8b446299f1`）。场景扩展为
+> 14 个 case，Java/Go 各 65 条 listener records、0 differences；覆盖 cube
+> 位掩码行序（dim0 最高位、缺维数递增 16 行展开）、被聚合键列 null 填充、
+> 跨键独立累计与三种嵌套/显式语法等价。修复 `internal/esper` 共享语义：
+> `cubeGroupingSets` 枚举位序改为 dim0 最高位降序以对齐 Esper 规范行序；
+> 全量 `internal/esper` 测试通过。manifest 更新为 533 cases、146 个
+> differential-verified case、464 个 differential runtime IDs、3103 条
+> associations（唯一已关联 runtime 2907，未关联 1229），capability 达到
+> 6/24 DV runtime。
+
 > 最新补充：Draft 4.226（2026-08-21），新增
 > `resultset.aggregate-dimensional` 的 `rollup-dimensionality`
 > differential-verified 场景（unbound-rollup 家族第一切片）：固定 Java

@@ -18237,10 +18237,14 @@ func cubeGroupingSets(size int) [][]int {
 		return nil
 	}
 	sets := make([][]int, 0, 1<<size)
-	for mask := (uint64(1) << size) - 1; ; mask-- {
+	// Esper enumerates cube levels by a descending bitmask where the first
+	// declared dimension is the highest bit: full detail first, then drop the
+	// last dimension before earlier ones at each width ({0,1,2,3},{0,1,2},
+	// {0,1,3},{0,1},...,{3},{}).
+	for mask := (uint64(1) << uint(size)) - 1; ; mask-- {
 		set := make([]int, 0, size)
 		for index := 0; index < size; index++ {
-			if mask&(uint64(1)<<uint(index)) != 0 {
+			if mask&(uint64(1)<<uint(size-1-index)) != 0 {
 				set = append(set, index)
 			}
 		}

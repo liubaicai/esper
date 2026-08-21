@@ -14,6 +14,7 @@ type rollupDimensionalityBean struct {
 	IntPrimitive    int     `esper:"intPrimitive"`
 	LongPrimitive   int64   `esper:"longPrimitive"`
 	DoublePrimitive float64 `esper:"doublePrimitive"`
+	IntBoxed        *int    `esper:"intBoxed"`
 }
 
 type rollupDimensionalityS0 struct {
@@ -30,23 +31,28 @@ var (
 		"java-runtime-b059890b735f776a9e03",
 		"java-runtime-e60ea25dc87dcfbdcc08",
 		"java-runtime-f5da6be14e939f2b26cc",
+		"java-runtime-b06640d26b3b63075791",
+		"java-runtime-14c4aecdca8b446299f1",
 	}
 	rollupDimensionalityJavaExecutions = []string{
 		"ResultSetQueryTypeUnboundRollup2Dim",
 		"ResultSetQueryTypeUnboundRollup1Dim",
 		"ResultSetQueryTypeUnboundRollupUnenclosed",
 		"ResultSetQueryTypeUnboundRollup3Dim",
+		"ResultSetQueryTypeUnboundCubeUnenclosed",
+		"ResultSetQueryTypeUnboundCube4Dim",
 	}
 )
 
-// runRollupDimensionalityScenario replays the unbound rollup family of
-// ResultSetQueryTypeRollupDimensionality (4 executions across 10 scenario
+// runRollupDimensionalityScenario replays the unbound rollup and cube family
+// of ResultSetQueryTypeRollupDimensionality (6 executions across 14 scenario
 // cases; the 1-dim rollup/cube pair, the three unenclosed syntax variants,
-// and the 3-dim rollup/grouping-sets pair each replay one shared sequence,
-// with join variants priming a cartesian SupportBean_S0#lastevent side):
-// hierarchical detail-to-overall rows, null-padded aggregated key columns,
-// monotonic accumulation on the unbounded stream, and rollup/grouping-sets
-// syntax equivalence.
+// the 3-dim rollup/grouping-sets pair, the cube-unenclosed trio, and the
+// 4-dim cube each replay one shared sequence, with join variants priming a
+// cartesian SupportBean_S0#lastevent side): hierarchical detail-to-overall
+// rows, null-padded aggregated key columns, monotonic accumulation on the
+// unbounded stream, rollup/cube/grouping-sets syntax equivalence, and cube
+// bitmask row ordering.
 func runRollupDimensionalityScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
@@ -57,6 +63,8 @@ func runRollupDimensionalityScenario(ctx context.Context, scenario compat.Scenar
 		"unbound-rollup-unenclosed-a", "unbound-rollup-unenclosed-b", "unbound-rollup-unenclosed-c",
 		"unbound-rollup-3dim-rollup", "unbound-rollup-3dim-gs",
 		"unbound-rollup-3dim-rollup-join", "unbound-rollup-3dim-gs-join",
+		"unbound-cube-unenclosed-a", "unbound-cube-unenclosed-b", "unbound-cube-unenclosed-c",
+		"unbound-cube-4dim",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("rollup-dimensionality scenario %q has no supported cases", scenario.ID)
@@ -91,6 +99,8 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 
 	theString := esper.Field[any, string]("theString")
 	intPrimitive := esper.Field[any, int]("intPrimitive")
+	longPrimitive := esper.Field[any, int64]("longPrimitive")
+	doublePrimitive := esper.Field[any, float64]("doublePrimitive")
 
 	var query esper.Query
 	switch caseName {
@@ -100,7 +110,7 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 			Select(
 				esper.Alias("c0", theString),
 				esper.Alias("c1", intPrimitive),
-				esper.Alias("c2", esper.Sum[int64](esper.Field[any, int64]("longPrimitive"))),
+				esper.Alias("c2", esper.Sum[int64](longPrimitive)),
 			).Query(esper.StatementName("s0"))
 	case "unbound-rollup-1dim-rollup", "unbound-rollup-1dim-cube":
 		stream := esper.From[rollupDimensionalityBean](env, "SupportBean")
@@ -115,7 +125,6 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 			esper.Alias("c1", esper.Sum[int](intPrimitive)),
 		).Query(esper.StatementName("s0"))
 	case "unbound-rollup-unenclosed-a", "unbound-rollup-unenclosed-b", "unbound-rollup-unenclosed-c":
-		longPrimitive := esper.Field[any, int64]("longPrimitive")
 		// The three Java syntax variants (plain key + rollup, explicit
 		// grouping sets with the top key repeated, plain key + inner
 		// grouping sets) expand to the same three grouping sets.
@@ -128,61 +137,82 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 			esper.Alias("c0", theString),
 			esper.Alias("c1", intPrimitive),
 			esper.Alias("c2", longPrimitive),
-			esper.Alias("c3", esper.Sum[float64](esper.Field[any, float64]("doublePrimitive"))),
+			esper.Alias("c3", esper.Sum[float64](doublePrimitive)),
 		).Query(esper.StatementName("s0"))
-	case "unbound-rollup-3dim-rollup", "unbound-rollup-3dim-gs",
-		"unbound-rollup-3dim-rollup-join", "unbound-rollup-3dim-gs-join":
-		join := caseName == "unbound-rollup-3dim-rollup-join" || caseName == "unbound-rollup-3dim-gs-join"
-		explicitSets := caseName == "unbound-rollup-3dim-gs" || caseName == "unbound-rollup-3dim-gs-join"
-		longPrimitive := esper.Field[any, int64]("longPrimitive")
-		doublePrimitive := esper.Field[any, float64]("doublePrimitive")
+	case "unbound-rollup-3dim-rollup", "unbound-rollup-3dim-gs":
 		var agg esper.AggregateStream
-		if !join {
-			stream := esper.From[rollupDimensionalityBean](env, "SupportBean")
-			if explicitSets {
-				agg = stream.GroupByGroupingSets(
-					esper.GroupingSet(theString, intPrimitive, longPrimitive),
-					esper.GroupingSet(theString, intPrimitive),
-					esper.GroupingSet(theString),
-					esper.GroupingSet(),
-				)
-			} else {
-				agg = stream.GroupByRollup(theString, intPrimitive, longPrimitive)
-			}
-			query = agg.Select(
+		stream := esper.From[rollupDimensionalityBean](env, "SupportBean")
+		if caseName == "unbound-rollup-3dim-gs" {
+			agg = stream.GroupByGroupingSets(
+				esper.GroupingSet(theString, intPrimitive, longPrimitive),
+				esper.GroupingSet(theString, intPrimitive),
+				esper.GroupingSet(theString),
+				esper.GroupingSet(),
+			)
+		} else {
+			agg = stream.GroupByRollup(theString, intPrimitive, longPrimitive)
+		}
+		query = agg.Select(
+			esper.Alias("c0", theString),
+			esper.Alias("c1", intPrimitive),
+			esper.Alias("c2", longPrimitive),
+			esper.Alias("c3", esper.CountAll()),
+			esper.Alias("c4", esper.Sum[float64](doublePrimitive)),
+		).Query(esper.StatementName("s0"))
+	case "unbound-rollup-3dim-rollup-join", "unbound-rollup-3dim-gs-join":
+		jTheString := esper.JoinField[any](0, "theString")
+		jIntPrimitive := esper.JoinField[any](0, "intPrimitive")
+		jLongPrimitive := esper.JoinField[any](0, "longPrimitive")
+		// Cartesian join against the single-row primed side stream.
+		var agg esper.AggregateStream
+		joinAgg := esper.Join(
+			esper.From[rollupDimensionalityBean](env, "SupportBean").Window(esper.KeepAll()),
+			esper.From[rollupDimensionalityS0](env, "SupportBean_S0").Window(esper.LastEvent()),
+		).GroupBy(jTheString, jIntPrimitive, jLongPrimitive)
+		if caseName == "unbound-rollup-3dim-gs-join" {
+			agg = joinAgg.GroupingSets(
+				esper.GroupingSet(jTheString, jIntPrimitive, jLongPrimitive),
+				esper.GroupingSet(jTheString, jIntPrimitive),
+				esper.GroupingSet(jTheString),
+				esper.GroupingSet(),
+			)
+		} else {
+			agg = joinAgg.Rollup(jTheString, jIntPrimitive, jLongPrimitive)
+		}
+		query = agg.Select(
+			esper.Alias("c0", jTheString),
+			esper.Alias("c1", jIntPrimitive),
+			esper.Alias("c2", jLongPrimitive),
+			esper.Alias("c3", esper.CountAll()),
+			esper.Alias("c4", esper.Sum[float64](esper.JoinField[float64](0, "doublePrimitive"))),
+		).Query(esper.StatementName("s0"))
+	case "unbound-cube-unenclosed-a", "unbound-cube-unenclosed-b", "unbound-cube-unenclosed-c":
+		// The three Java syntax variants (plain key + cube, explicit grouping
+		// sets with the top key last, plain key + inner grouping sets with an
+		// empty set) expand to the same four grouping sets.
+		query = esper.From[rollupDimensionalityBean](env, "SupportBean").
+			GroupByGroupingSets(
+				esper.GroupingSet(theString, intPrimitive, longPrimitive),
+				esper.GroupingSet(theString, intPrimitive),
+				esper.GroupingSet(theString, longPrimitive),
+				esper.GroupingSet(theString),
+			).Select(
+			esper.Alias("c0", theString),
+			esper.Alias("c1", intPrimitive),
+			esper.Alias("c2", longPrimitive),
+			esper.Alias("c3", esper.Sum[float64](doublePrimitive)),
+		).Query(esper.StatementName("s0"))
+	case "unbound-cube-4dim":
+		intBoxed := esper.Field[any, *int]("intBoxed")
+		query = esper.From[rollupDimensionalityBean](env, "SupportBean").
+			GroupByCube(theString, intPrimitive, longPrimitive, doublePrimitive).
+			Select(
 				esper.Alias("c0", theString),
 				esper.Alias("c1", intPrimitive),
 				esper.Alias("c2", longPrimitive),
-				esper.Alias("c3", esper.CountAll()),
-				esper.Alias("c4", esper.Sum[float64](doublePrimitive)),
+				esper.Alias("c3", doublePrimitive),
+				esper.Alias("c4", esper.Sum[int](intBoxed)),
 			).Query(esper.StatementName("s0"))
-		} else {
-			// Cartesian join against the single-row primed side stream.
-			jTheString := esper.JoinField[any](0, "theString")
-			jIntPrimitive := esper.JoinField[any](0, "intPrimitive")
-			jLongPrimitive := esper.JoinField[any](0, "longPrimitive")
-			agg = esper.Join(
-				esper.From[rollupDimensionalityBean](env, "SupportBean").Window(esper.KeepAll()),
-				esper.From[rollupDimensionalityS0](env, "SupportBean_S0").Window(esper.LastEvent()),
-			).GroupBy(jTheString, jIntPrimitive, jLongPrimitive)
-			if explicitSets {
-				agg = agg.GroupingSets(
-					esper.GroupingSet(jTheString, jIntPrimitive, jLongPrimitive),
-					esper.GroupingSet(jTheString, jIntPrimitive),
-					esper.GroupingSet(jTheString),
-					esper.GroupingSet(),
-				)
-			} else {
-				agg = agg.Rollup(jTheString, jIntPrimitive, jLongPrimitive)
-			}
-			query = agg.Select(
-				esper.Alias("c0", jTheString),
-				esper.Alias("c1", jIntPrimitive),
-				esper.Alias("c2", jLongPrimitive),
-				esper.Alias("c3", esper.CountAll()),
-				esper.Alias("c4", esper.Sum[float64](esper.JoinField[float64](0, "doublePrimitive"))),
-			).Query(esper.StatementName("s0"))
-		}
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported rollup-dimensionality case %q", caseName)
 	}
@@ -201,10 +231,6 @@ func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, 
 		}
 		return statement, nil
 	})
-}
-
-func longPrimitiveField() esper.Expr {
-	return esper.Field[any, int64]("longPrimitive")
 }
 
 func decodeRollupDimensionalityPayload(step compat.Step) (any, error) {

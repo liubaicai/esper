@@ -6,7 +6,9 @@
   "java-runtime-30499c2e4ff9aece48b2",
   "java-runtime-b059890b735f776a9e03",
   "java-runtime-e60ea25dc87dcfbdcc08",
-  "java-runtime-f5da6be14e939f2b26cc"
+  "java-runtime-f5da6be14e939f2b26cc",
+  "java-runtime-b06640d26b3b63075791",
+  "java-runtime-14c4aecdca8b446299f1"
  ],
  "cases": [
   {
@@ -48,6 +50,22 @@
   {
    "case": "unbound-rollup-3dim-gs-join",
    "runtimeId": "java-runtime-f5da6be14e939f2b26cc"
+  },
+  {
+   "case": "unbound-cube-unenclosed-a",
+   "runtimeId": "java-runtime-b06640d26b3b63075791"
+  },
+  {
+   "case": "unbound-cube-unenclosed-b",
+   "runtimeId": "java-runtime-b06640d26b3b63075791"
+  },
+  {
+   "case": "unbound-cube-unenclosed-c",
+   "runtimeId": "java-runtime-b06640d26b3b63075791"
+  },
+  {
+   "case": "unbound-cube-4dim",
+   "runtimeId": "java-runtime-14c4aecdca8b446299f1"
   }
  ],
  "steps": [
@@ -595,6 +613,175 @@
     "intPrimitive": 1,
     "longPrimitive": 11,
     "doublePrimitive": 600.0
+   }
+  },
+  {
+   "op": "case",
+   "case": "unbound-cube-unenclosed-a"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100,
+    "doublePrimitive": 1000.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 200,
+    "doublePrimitive": 2000.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 20,
+    "longPrimitive": 100,
+    "doublePrimitive": 4000.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10,
+    "longPrimitive": 100,
+    "doublePrimitive": 5000.0
+   }
+  },
+  {
+   "op": "case",
+   "case": "unbound-cube-unenclosed-b"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100,
+    "doublePrimitive": 1000.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 200,
+    "doublePrimitive": 2000.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 20,
+    "longPrimitive": 100,
+    "doublePrimitive": 4000.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10,
+    "longPrimitive": 100,
+    "doublePrimitive": 5000.0
+   }
+  },
+  {
+   "op": "case",
+   "case": "unbound-cube-unenclosed-c"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100,
+    "doublePrimitive": 1000.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 200,
+    "doublePrimitive": 2000.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 20,
+    "longPrimitive": 100,
+    "doublePrimitive": 4000.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10,
+    "longPrimitive": 100,
+    "doublePrimitive": 5000.0
+   }
+  },
+  {
+   "op": "case",
+   "case": "unbound-cube-4dim"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "longPrimitive": 10,
+    "doublePrimitive": 100.0,
+    "intBoxed": 1000
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1,
+    "longPrimitive": 20,
+    "doublePrimitive": 100.0,
+    "intBoxed": 2000
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2,
+    "longPrimitive": 10,
+    "doublePrimitive": 100.0,
+    "intBoxed": 4000
    }
   }
  ]
