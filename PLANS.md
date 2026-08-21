@@ -456,6 +456,20 @@ rollup-dimensionality diff/mutation tests (12 mutations all reject), full
 `go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
 pass.
 
+## Deferred work items
+
+- `ResultSetQueryTypeGroupByWithComputation` + `MixedAccessAggregation`:
+  groupby-computation requires engine fix for non-aggregated non-grouped
+  column null-out at coarser rollup levels; mixed-access requires window(*)
+  event-reference trace normalization. Both investigated via
+  `GrpCompMixedJavaContract`/`GrpCompMixedGoSurface` scouts; contracts
+  frozen in session transcripts.
+- `BoundRollup2Dim` join variant: join+rollup+window-expiry produces extra
+  IR-pair rows in Go's new array vs Java's newData-only listener; needs
+  deeper engine investigation of grouped-rollup IR-pair row emission.
+- `SelectWildcardNoName`: auto-name `subselect_1` has no Go chain-API form
+  (approved difference, already documented).
+
 ## Historical work-unit contract (Generic Cast; closed)
 
 - Capability/subdomain: `expr.core`, generic Cast extension of
