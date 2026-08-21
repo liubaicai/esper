@@ -13673,6 +13673,30 @@ func TestRunSubselectFilteredDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
+			name: "scene-one-old-stream",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[94].Old[0].Fields["s0price"] = 999.0
+			},
+		},
+		{
+			name: "where-2-or-gate",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[95].New[0].Fields["id"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "mixmax-low-window",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[99].New[0].Fields["low"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "prior-dedupe-gate",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[102].New[0].Fields["b"] = map[string]any{"state": "null"}
+			},
+		},
+		{
 			name: "record-removed",
 			mutate: func(trace *compat.Trace) {
 				trace.Records = trace.Records[:len(trace.Records)-1]

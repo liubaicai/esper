@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	esper "github.com/liubaicai/esper"
 	"github.com/liubaicai/esper/internal/compat"
@@ -50,6 +51,20 @@ type subselectFilteredIntArray struct {
 	Value int    `esper:"value"`
 }
 
+type subselectFilteredMarketData struct {
+	Symbol string  `esper:"symbol"`
+	Price  float64 `esper:"price"`
+	Volume int64   `esper:"volume"`
+}
+
+type subselectFilteredSensorEvent struct {
+	ID          int     `esper:"id"`
+	Type        string  `esper:"type"`
+	Device      string  `esper:"device"`
+	Measurement float64 `esper:"measurement"`
+	Confidence  float64 `esper:"confidence"`
+}
+
 var subselectFilteredJavaSources = []string{
 	"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectFiltered.java",
 }
@@ -78,6 +93,10 @@ var (
 		"java-runtime-b3ce74a1b603f1dfa644",
 		"java-runtime-21f4b30723f3e5256823",
 		"java-runtime-71f4714a3f10241083e9",
+		"java-runtime-b2be42620bdc328d006e",
+		"java-runtime-1fcd5cdcc62015389f98",
+		"java-runtime-9161a695d692feb6902d",
+		"java-runtime-1072ab9fc42579eed1e5",
 	}
 	subselectFilteredJavaExecutions = []string{
 		"EPLSubselectHavingNoAggNoFilterNoWhere",
@@ -102,26 +121,34 @@ var (
 		"EPLSubselectSelectWhereJoined2Streams",
 		"EPLSubselectSelectWhereJoined3Streams",
 		"EPLSubselectSelectWhereJoined3SceneTwo",
+		"EPLSubselectSelectSceneOne",
+		"EPLSubselectSelectWithWhere2Subqery",
+		"EPLSubselectSubselectMixMax",
+		"EPLSubselectSubselectPrior",
 	}
 )
 
 // runSubselectFilteredScenario replays the scalar-filter, multikey-wArray,
 // joined numeric-coercion, join-filtered, where-previous, wildcard
-// event-subquery and multi-stream join slices of EPLSubselectFiltered (22
-// executions across 27 scenario cases; WhereConstant contributes three
-// single-deployment cases, each Joined4 coercion statement is its own
-// predicate-ordering case, the WherePrevious triple replays one shared
-// sequence per compilation path, the SameEvent triple does the same for the
-// self-stream wildcard column, and the two three-stream join cases contrast
-// partial versus full correlation over byte-identical inputs except the
-// final scene-two round): non-aggregated having row filters, constant and
-// correlated where predicates, null-on-empty/null-on-multiple scalar
-// subselect boundaries, int[] content-equality correlation keys, cross-stream
-// boxed numeric coercion over a three-way keepall join, two-stream joins
-// gated by scalar/boolean subqueries with prior/prev projections, prev over
-// a gated subquery's unfiltered window, single-event wildcard columns
-// observing trigger and cross-stream event references, and multi-stream
-// keepall joins driving an S0 correlated subquery.
+// event-subquery, multi-stream join and suite-finale slices of
+// EPLSubselectFiltered (26 executions across 31 scenario cases;
+// WhereConstant contributes three single-deployment cases, each Joined4
+// coercion statement is its own predicate-ordering case, the WherePrevious
+// triple replays one shared sequence per compilation path, the SameEvent
+// triple does the same for the self-stream wildcard column, and the two
+// three-stream join cases contrast partial versus full correlation over
+// inputs differing only in the final scene-two round): non-aggregated having
+// row filters, constant and correlated where predicates,
+// null-on-empty/null-on-multiple scalar subselect boundaries, int[]
+// content-equality correlation keys, cross-stream boxed numeric coercion
+// over a three-way keepall join, two-stream joins gated by scalar/boolean
+// subqueries with prior/prev projections, prev over a gated subquery's
+// unfiltered window, single-event wildcard columns observing trigger and
+// cross-stream event references, multi-stream keepall joins driving an S0
+// correlated subquery, irstream dual projection with per-row subquery
+// re-evaluation on eviction, OR-gated dual correlated subqueries, twin sort
+// windows projecting high/low event rows, and a three-statement insert-into
+// chain with coalesce dedupe gates.
 func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
@@ -137,6 +164,7 @@ func runSubselectFilteredScenario(ctx context.Context, scenario compat.Scenario)
 		"where-previous", "where-previous-om", "where-previous-compile",
 		"same-event", "same-event-om", "same-event-compile", "select-wildcard",
 		"joined-2-streams", "joined-3-streams", "joined-3-scene-two",
+		"select-scene-one", "where-2-subquery", "subselect-mix-max", "subselect-prior",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-filtered scenario %q has no supported cases", scenario.ID)
@@ -168,6 +196,14 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 		func() error { _, err := esper.RegisterStruct[subselectFilteredS1](env, "SupportBean_S1"); return err },
 		func() error { _, err := esper.RegisterStruct[subselectFilteredS2](env, "SupportBean_S2"); return err },
 		func() error { _, err := esper.RegisterStruct[subselectFilteredS3](env, "SupportBean_S3"); return err },
+		func() error {
+			_, err := esper.RegisterStruct[subselectFilteredMarketData](env, "SupportMarketDataBean")
+			return err
+		},
+		func() error {
+			_, err := esper.RegisterStruct[subselectFilteredSensorEvent](env, "SupportSensorEvent")
+			return err
+		},
 		func() error {
 			_, err := esper.RegisterStruct[subselectFilteredManyArray](env, "SupportEventWithManyArray")
 			return err
@@ -418,6 +454,111 @@ func runSubselectFilteredCase(ctx context.Context, scenario compat.Scenario, cas
 			esper.SelectLeft("ids0", esper.SubqueryValue[int](s0Inner(),
 				esper.Field[any, int]("id"), predicate)),
 		).Query(esper.StatementName("s0"))
+	case "select-scene-one":
+		mdbOuter := esper.From[subselectFilteredMarketData](env, "SupportMarketDataBean").
+			Filter(esper.Equal[string](esper.Field[subselectFilteredMarketData, string]("symbol"), esper.Literal("S0"))).
+			Window(esper.LengthWindow(2))
+		mdbInner := esper.From[subselectFilteredMarketData](env, "SupportMarketDataBean").
+			Filter(esper.Equal[string](esper.Field[subselectFilteredMarketData, string]("symbol"), esper.Literal("S1"))).
+			Window(esper.LengthWindow(10)).
+			AsRecord()
+		query = esper.Select(mdbOuter,
+			esper.Alias("s0price", esper.Field[subselectFilteredMarketData, float64]("price")),
+			esper.Alias("s1price", esper.SubqueryValue[float64](mdbInner,
+				esper.Field[any, float64]("price"),
+				esper.Equal[float64](
+					esper.Field[subselectFilteredMarketData, float64]("volume"),
+					esper.OuterField[float64]("volume")))),
+		).Query(esper.StatementName("s0"), esper.WithOldStream())
+	case "where-2-subquery":
+		s0ID := esper.Field[subselectFilteredS0, int]("id")
+		s1Inner := func() esper.RecordStream {
+			return esper.From[subselectFilteredS1](env, "SupportBean_S1").Window(esper.LengthWindow(1000)).AsRecord()
+		}
+		s2Inner := func() esper.RecordStream {
+			return esper.From[subselectFilteredS2](env, "SupportBean_S2").Window(esper.LengthWindow(1000)).AsRecord()
+		}
+		query = esper.Select(
+			esper.From[subselectFilteredS0](env, "SupportBean_S0").Filter(esper.Or(
+				esper.Equal[int](s0ID, esper.SubqueryValue[int](s1Inner(),
+					esper.Field[any, int]("id"),
+					esper.Equal[int](esper.Field[any, int]("id"), esper.OuterField[int]("id")))),
+				esper.Equal[int](s0ID, esper.SubqueryValue[int](s2Inner(),
+					esper.Field[any, int]("id"),
+					esper.Equal[int](esper.Field[any, int]("id"), esper.OuterField[int]("id")))),
+			)),
+			esper.Alias("id", s0ID),
+		).Query(esper.StatementName("s0"))
+	case "subselect-mix-max":
+		highInner := esper.From[subselectFilteredSensorEvent](env, "SupportSensorEvent").
+			Window(esper.SortWindow(1, esper.Descending(esper.Field[subselectFilteredSensorEvent, float64]("measurement")))).AsRecord()
+		lowInner := esper.From[subselectFilteredSensorEvent](env, "SupportSensorEvent").
+			Window(esper.SortWindow(1, esper.Ascending(esper.Field[subselectFilteredSensorEvent, float64]("measurement")))).AsRecord()
+		query = esper.Select(
+			esper.From[subselectFilteredSensorEvent](env, "SupportSensorEvent"),
+			esper.Alias("high", esper.SubqueryValue[esper.Event](highInner, esper.EventValue[esper.Event]())),
+			esper.Alias("low", esper.SubqueryValue[esper.Event](lowInner, esper.EventValue[esper.Event]())),
+		).Query(esper.StatementName("s0"))
+	case "subselect-prior":
+		pairFields := []esper.FieldSpec{
+			{Name: "a", Type: reflect.TypeOf(esper.Event{})},
+			{Name: "b", Type: reflect.TypeOf(esper.Event{})},
+		}
+		if _, err := esper.RegisterMap(env, "Pair", pairFields); err != nil {
+			return compat.Trace{}, err
+		}
+		if _, err := esper.RegisterMap(env, "PairDuplicatesRemoved", pairFields); err != nil {
+			return compat.Trace{}, err
+		}
+		device := esper.Field[subselectFilteredSensorEvent, string]("device")
+		sensorType := esper.Field[subselectFilteredSensorEvent, string]("type")
+		pairQuery := esper.Join(
+			esper.From[subselectFilteredSensorEvent](env, "SupportSensorEvent").Filter(esper.Equal[string](device, esper.Literal("A"))).Window(esper.LastEvent()),
+			esper.From[subselectFilteredSensorEvent](env, "SupportSensorEvent").Filter(esper.Equal[string](device, esper.Literal("B"))).Window(esper.LastEvent()),
+			esper.OnEqual(sensorType, sensorType),
+		).Select(
+			esper.SelectLeft("a", esper.JoinEventValue[esper.Event](0)),
+			esper.SelectRight("b", esper.JoinEventValue[esper.Event](1)),
+		).InsertInto("Pair", esper.StatementName("pair"))
+		seedQuery := esper.FromAny(env, "Pair").Filter(esper.Literal(false)).Select(
+			esper.Alias("a", esper.Field[any, esper.Event]("a")),
+			esper.Alias("b", esper.Field[any, esper.Event]("b")),
+		).InsertInto("PairDuplicatesRemoved", esper.StatementName("pair-duplicates-removed-seed"))
+		pdrLast := esper.FromAny(env, "PairDuplicatesRemoved").Window(esper.LastEvent())
+		aID := esper.NestedField[int](esper.Field[any, esper.Event]("a"), "id")
+		bID := esper.NestedField[int](esper.Field[any, esper.Event]("b"), "id")
+		s0Query := esper.FromAny(env, "Pair").Filter(esper.And(
+			esper.NotEqual[int](aID, esper.Coalesce[int](esper.SubqueryValue[int](pdrLast, aID), esper.Literal(-1))),
+			esper.NotEqual[int](bID, esper.Coalesce[int](esper.SubqueryValue[int](pdrLast, bID), esper.Literal(-1))),
+		)).Select(
+			esper.Alias("a", esper.Field[any, esper.Event]("a")),
+			esper.Alias("b", esper.Field[any, esper.Event]("b")),
+		).InsertInto("PairDuplicatesRemoved", esper.StatementName("s0"))
+		var plans []esper.Plan
+		for _, q := range []esper.Query{pairQuery, seedQuery, s0Query} {
+			plan, err := env.Build(q)
+			if err != nil {
+				return compat.Trace{}, err
+			}
+			plans = append(plans, plan)
+		}
+		engine := esper.NewEngine(env)
+		var s0Statement *esper.Statement
+		for index, plan := range plans {
+			deployment, err := engine.Deploy(ctx, plan)
+			if err != nil {
+				return compat.Trace{}, err
+			}
+			if index == len(plans)-1 {
+				s0Statement = deployment.Statements()[0]
+			}
+		}
+		return compat.ReplayWithStatements(ctx, engine, s0Statement, caseScenario, decodeSubselectFilteredPayload, func(name string) (*esper.Statement, error) {
+			if name != s0Statement.Name() {
+				return nil, fmt.Errorf("unknown subselect-filtered statement %q", name)
+			}
+			return s0Statement, nil
+		})
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported subselect-filtered case %q", caseName)
 	}
@@ -468,6 +609,18 @@ func decodeSubselectFilteredPayload(step compat.Step) (any, error) {
 		var event subselectFilteredS3
 		if err := json.Unmarshal(step.Payload, &event); err != nil {
 			return nil, fmt.Errorf("subselect-filtered SupportBean_S3: %w", err)
+		}
+		return event, nil
+	case "SupportMarketDataBean":
+		var event subselectFilteredMarketData
+		if err := json.Unmarshal(step.Payload, &event); err != nil {
+			return nil, fmt.Errorf("subselect-filtered SupportMarketDataBean: %w", err)
+		}
+		return event, nil
+	case "SupportSensorEvent":
+		var event subselectFilteredSensorEvent
+		if err := json.Unmarshal(step.Payload, &event); err != nil {
+			return nil, fmt.Errorf("subselect-filtered SupportSensorEvent: %w", err)
 		}
 		return event, nil
 	case "SupportEventWithManyArray":

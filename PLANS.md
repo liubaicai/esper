@@ -32,29 +32,30 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `0870b2dd4` (`subselect: verify
-  wildcard event parity (Draft 4.223)` pushed).
-- Current work unit: `epl.subselect.filtered`, multi-stream join slice of
-  the same `EPLSubselectFiltered.java` — three executions extending
-  `subselect-filtered` to twenty-seven cases; zero `internal/esper` changes.
+- Baseline: `HEAD` == `origin/master` == `afd03ee7d` (`subselect: verify
+  multi-stream join parity (Draft 4.224)` pushed).
+- Current work unit: `epl.subselect.filtered`, suite-finale slice of the
+  same `EPLSubselectFiltered.java` — four executions (SceneOne, Where2-
+  Subquery, MixMax, Prior) extending `subselect-filtered` to thirty-one
+  cases; zero `internal/esper` changes.
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - Joined2Streams (`java-runtime-b3ce74a1b603f1dfa644`): S1⋈S2 keepall
-    join on id; subquery over S0#length(1000) correlates p00=s1.p10 AND
-    p00=s2.p20; vector null/99.
-  - Joined3Streams (`java-runtime-21f4b30723f3e5256823`): three-way join;
-    subquery correlates ONLY s1.p10 and s3.p30 — S2 gates the join but its
-    p20 is semantically irrelevant; vector null/99/null/null/98.
-  - Joined3SceneTwo (`java-runtime-71f4714a3f10241083e9`): adds
-    `p00=s2.p20`; R2 yields 99 vs null across the two cases while inputs
-    differ only in scene-two R5 p20 (s0_2 positively hits 98) — the
-    partial-correlation discriminating pair.
-- Differential scope: `subselect-filtered` scenario extended to twenty-seven
-  cases; Java oracle gains the three join EPL statements and a Map-based
-  SupportBean_S3 event type (MultiStreamOracle worker patch applied manually
-  after an initial classpath miss, plus a primary-agent fix restoring the
-  SupportBean registration the patch dropped); Go runner gains the S3 struct,
-  three Join/JoinMany branches, and three new trace mutations.
+  - SelectSceneOne (`java-runtime-b2be42620bdc328d006e`): irstream dual
+    projection over a length(2) outer with a volume-correlated length(10)
+    subquery; eviction re-evaluates the subquery — old stream {100,null} is
+    the discriminating probe.
+  - Where2Subquery (`java-runtime-1fcd5cdcc62015389f98`): OR of two gated
+    scalar subqueries in the outer WHERE; fire vector 1/2/3.
+  - MixMax (`java-runtime-9161a695d692feb6902d`): twin sort(1,measurement)
+    wildcard subqueries project high/low event rows.
+  - Prior (`java-runtime-1072ab9fc42579eed1e5`): three-statement insert-into
+    chain with coalesce dedupe gate; fired pairs (2,4) and (7,6).
+- Differential scope: `subselect-filtered` scenario extended to thirty-one
+  cases; Java oracle gains the four case branches, multi-statement module
+  compile for the Prior chain, old-stream recording, Map/EventBean normalize
+  branches, and Map-based MarketData/Sensor types (FinaleOracle worker);
+  Go runner gains four branches (WithOldStream, Or-gated Filter, SortWindow
+  envelopes, multi-plan Prior deploy) and four new trace mutations.
 - Allowed files: `internal/app/parity/subselect_filtered.go`,
   `internal/app/parity/run_test.go`,
   `tools/java-oracle/EPLSubselectFilteredScenarioOracle.java` +
@@ -81,6 +82,12 @@ activity or a single coverage percentage.
   isolated) authored the new Java oracle and runner script on the frozen
   scenario contract while the primary agent wrote the Go runner, dispatch,
   scenario, and tests. File ownership was disjoint.
+- Finale unit agents: prefetch scouts `FilterFinaleJavaContract`
+  (java-oracle-scout) and `FilterFinaleGoSurface` (scout) ran concurrently
+  with the Draft 4.224 review; asset writer `FinaleOracle`
+  (parity-asset-worker, isolated) authored the oracle extension including
+  multi-statement module compile and old-stream recording. File ownership
+  was disjoint.
 - Multi-stream unit agents: prefetch scouts `MultiStreamJavaContract`
   (java-oracle-scout) and `MultiStreamGoSurface` (scout) ran concurrently
   with the Draft 4.223 review; asset writer `MultiStreamOracle`
@@ -321,7 +328,7 @@ Focused filtered diff/mutation tests (24 mutations all reject), `go vet
 ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, and
 `git diff --check` pass.
 
-## Multi-stream join unit (active)
+## Multi-stream join unit (closed; committed as `afd03ee7d`)
 
 - [x] Prefetch scouts (`MultiStreamJavaContract`, `MultiStreamGoSurface`)
   froze the three-execution slice, the five-round vectors, the R2 99-vs-null
@@ -351,6 +358,37 @@ records, 92 Go records, 0 differences, twenty-two frozen runtime IDs, and
 twenty-two execution names. Focused filtered diff/mutation tests (28
 mutations all reject), `go vet ./...`, `go test ./... -count=1 -timeout
 240s`, `make check`, and `git diff --check` pass.
+
+## Suite finale unit (active)
+
+- [x] Prefetch scouts (`FilterFinaleJavaContract`, `FilterFinaleGoSurface`)
+  froze the four-execution finale, the old-stream discriminator, and the
+  reusable Go surface (`WithOldStream`/`Or`/`SortWindow`/multi-plan deploy;
+  zero engine changes).
+- [x] Extend `subselect-filtered` scenario to thirty-one cases; extend the
+  Java oracle via the `FinaleOracle` asset worker (multi-statement module,
+  old-stream recording, Map/EventBean normalize branches); extend the Go
+  runner with four branches and four new trace mutations.
+- [x] Regenerate the pinned-commit Java trace (103 records) and the passing
+  evidence with zero differences; register
+  `case.subselect-filtered-finale`; manifest summary is 144 differential
+  cases, 458 differential runtime IDs, 3097 associations, 2901 unique referenced
+  runtimes, 1235 unreferenced; `epl.subselect.filtered` reaches
+  26/27 DV runtimes (only WildcardNoName approved difference remains).
+- [x] Complete final full gates and independent parity review
+  (`FinaleReview` initial verdict flagged one P1 — the Prior runtime-ID typo
+  had persisted in the runner metadata, scenario, and evidence beyond the
+  manifest fix — plus one P3 doc-comment drift; all four occurrences fixed,
+  evidence regenerated, and the fix re-checked by the same reviewer: pass,
+  zero findings); delivery is ready for the single semantic commit and push.
+
+Final pre-commit verification: pinned Java oracle regenerated the trace with
+checksum `89ce23db4f58d44acb3b17435969b7a6d7aa68ca8e83cbc23dcebec83f0aef85`;
+the differential evidence is passing with 103 Java records, 103 Go records,
+0 differences, twenty-six frozen runtime IDs, and twenty-six execution
+names. Focused filtered diff/mutation tests (32 mutations all reject),
+`go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, and
+`git diff --check` pass.
 
 ## Historical work-unit contract (Generic Cast; closed)
 

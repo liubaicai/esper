@@ -1,3 +1,22 @@
+> 最新补充：Draft 4.225（2026-08-21），扩展 `subselect-filtered`
+> differential-verified 场景（套件收尾切片）：固定 Java
+> `EPLSubselectFiltered.java` 的 `EPLSubselectSelectSceneOne`
+>（`java-runtime-b2be42620bdc328d006e`）、
+> `EPLSubselectSelectWithWhere2Subqery`
+>（`java-runtime-1fcd5cdcc62015389f98`）、`EPLSubselectSubselectMixMax`
+>（`java-runtime-9161a695d692feb6902d`）与 `EPLSubselectSubselectPrior`
+>（`java-runtime-1072ab9fc42579eed1e5`）。场景扩展为 31 个 case，Java/Go
+> 各 103 条 listener records、0 differences；覆盖 irstream 双流投影与逐出行
+> 子查询重求值（old 流 {100,null} 判别点）、OR 双 WHERE 相关子查询门控、
+> sort(1,measurement desc/asc) 通配符高低列、多语句 insert-into 链 +
+> coalesce 去重门控。Go 侧复用 `WithOldStream`/`Or`/`SortWindow`/
+> `Coalesce`/`NestedField`/`FromAny` + 多 plan 顺序部署，无 `internal/esper`
+> 改动；oracle 以 Map-based 事件类型规避 classpath 依赖并新增 old 流记录。
+> manifest 更新为 531 cases、144 个 differential-verified case、458 个
+> differential runtime IDs、3097 条 associations（唯一已关联 runtime
+> 2901，未关联 1235），`epl.subselect.filtered` capability 达到 26/27
+> DV runtime（仅剩 WildcardNoName auto-name approved difference）。
+
 > 最新补充：Draft 4.224（2026-08-21），扩展 `subselect-filtered`
 > differential-verified 场景（多流 join 切片）：固定 Java
 > `EPLSubselectFiltered.java` 的 `EPLSubselectSelectWhereJoined2Streams`

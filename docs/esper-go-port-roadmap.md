@@ -4,6 +4,25 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.225（2026-08-21），扩展 `subselect-filtered`
+> differential-verified 场景（套件收尾切片），对照固定 Java
+> `EPLSubselectFiltered.java` 的四个 execution：`EPLSubselectSelectSceneOne`
+>（`java-runtime-b2be42620bdc328d006e`）、
+> `EPLSubselectSelectWithWhere2Subqery`
+>（`java-runtime-1fcd5cdcc62015389f98`）、`EPLSubselectSubselectMixMax`
+>（`java-runtime-9161a695d692feb6902d`）与 `EPLSubselectSubselectPrior`
+>（`java-runtime-1072ab9fc42579eed1e5`）。场景扩展为 31 个 case，Java/Go
+> 各 103 条 listener records、0 differences；覆盖 irstream 双流投影与逐出行
+> 子查询重求值（old 流 {100,null} 判别点）、OR 双 WHERE 相关子查询门控、
+> sort(1,measurement desc/asc) 通配符高低列、多语句 insert-into 链 +
+> coalesce 去重门控。Go 侧复用 `WithOldStream`/`Or`/`SortWindow`/
+> `Coalesce`/`NestedField`/`FromAny` + 多 plan 顺序部署，无 `internal/esper`
+> 改动；oracle 以 Map-based SupportMarketDataBean/SupportSensorEvent 规避
+> regression-lib classpath 依赖并新增 old 流记录。manifest 更新为 144 个
+> differential-verified case、458 个 differential runtime IDs、3097 条
+> runtime associations，`epl.subselect.filtered` capability 达到 26/27
+> DV runtime（仅剩 SelectWildcardNoName auto-name approved difference）。
+
 > 最新补充：Draft 4.224（2026-08-21），扩展 `subselect-filtered`
 > differential-verified 场景（多流 join 切片），对照固定 Java
 > `EPLSubselectFiltered.java` 的三个 execution：
@@ -457,9 +476,9 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 530 |
-| Case differential-verified | 143 |
-| Differential-verified runtime | 454 / 4,136 |
+| Case | 531 |
+| Case differential-verified | 144 |
+| Differential-verified runtime | 458 / 4,136 |
 | Runtime 已关联 | 2,901 / 4,136（70.1%） |
 | Runtime 未关联 | 1,235 |
 | Representative scenario | 94 / 94 通过 |
@@ -639,7 +658,7 @@
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 persisted differential evidence。当前有 143 个 differential-verified case（454 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
+2. 扩展 persisted differential evidence。当前有 144 个 differential-verified case（458 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；暂不建设 CI，后续按执行手册定期本地 Docker 重放，并保持普通测试中的显式环境型 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。

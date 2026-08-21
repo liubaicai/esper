@@ -34,8 +34,8 @@ import java.util.TreeSet;
  * Java oracle for EPLSubselectFiltered first-slice scenarios (scalar subquery
  * with where/having/filter).
  *
- * Covers the first slice of EPLSubselectFiltered: 22 behavioral executions
- * across 27 scenario cases - the three HavingNoAgg variants
+ * Covers the first slice of EPLSubselectFiltered: 26 behavioral executions
+ * across 31 scenario cases - the three HavingNoAgg variants
  * (having-no-filter-no-where, having-w-where, having-w-filter-w-where), the
  * three WhereConstant rounds (where-constant-single-column,
  * where-constant-two-column, where-constant-range), SelectWithWhereJoined
@@ -55,6 +55,14 @@ import java.util.TreeSet;
  * (select * from SupportBean_S1#length(1000)) as events1, whose single-event
  * column is observed through assertSame identity equivalence rendered as a
  * field-snapshot row object {"kind":"row","fields":{"id":...,"p10":...}}.
+ *
+ * Finale slice: select-scene-one (irstream correlated price subquery over a
+ * Map-typed SupportMarketDataBean), where-2-subquery (OR of two correlated id
+ * subqueries), subselect-mix-max (sort-window wildcard subqueries over a
+ * Map-typed SupportSensorEvent) and subselect-prior (three-statement
+ * insert-into chain over the derived Pair / PairDuplicatesRemoved types,
+ * compiled as one module); event-valued columns render as row objects through
+ * the normalize Map and EventBean branches.
  */
 public class EPLSubselectFilteredScenarioOracle {
 
@@ -98,13 +106,34 @@ public class EPLSubselectFilteredScenarioOracle {
         config.getCommon().addEventType("SupportBean_S3", s3Type);
         config.getCommon().addEventType(SupportEventWithIntArray.class);
         config.getCommon().addEventType(SupportEventWithManyArray.class);
+        // Regression-lib support beans are not on the runner classpath; register
+        // them as Map event types (same rationale as SupportBean_S3 above).
+        Map<String, Object> marketDataType = new HashMap<>();
+        marketDataType.put("symbol", String.class);
+        marketDataType.put("price", Double.class);
+        marketDataType.put("volume", Long.class);
+        config.getCommon().addEventType("SupportMarketDataBean", marketDataType);
+        Map<String, Object> sensorType = new HashMap<>();
+        sensorType.put("id", Integer.class);
+        sensorType.put("type", String.class);
+        sensorType.put("device", String.class);
+        sensorType.put("measurement", Double.class);
+        sensorType.put("confidence", Double.class);
+        config.getCommon().addEventType("SupportSensorEvent", sensorType);
         config.getRuntime().getThreading().setInternalTimerEnabled(false);
         EPRuntime runtime = EPRuntimeProvider.getRuntime("EPLSubselectFilteredScenarioOracle-" + caseName, config);
         runtime.getEventService().advanceTime(0);
         try {
             String[] epls = buildEPL(caseName);
             List<EPStatement> s0Statements = new ArrayList<>();
-            EPCompiled compiled = EPCompilerProvider.getCompiler().compile(epls[0], new CompilerArguments(config));
+            StringBuilder moduleText = new StringBuilder();
+            for (int i = 0; i < epls.length; i++) {
+                if (i > 0) {
+                    moduleText.append(';');
+                }
+                moduleText.append(epls[i]);
+            }
+            EPCompiled compiled = EPCompilerProvider.getCompiler().compile(moduleText.toString(), new CompilerArguments(config));
             EPDeployment deployment = runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
             for (EPStatement candidate : deployment.getStatements()) {
                 if ("s0".equals(candidate.getName())) {
@@ -135,6 +164,20 @@ public class EPLSubselectFilteredScenarioOracle {
                             newArr.add(newItem);
                         }
                         record.add("new", newArr);
+                        if (oldData != null && oldData.length > 0) {
+                            JsonArray oldArr = new JsonArray();
+                            for (EventBean event : oldData) {
+                                JsonObject oldItem = new JsonObject();
+                                oldItem.add("kind", "row");
+                                JsonObject oldFields = new JsonObject();
+                                for (String prop : new TreeSet<>(java.util.Arrays.asList(event.getEventType().getPropertyNames()))) {
+                                    oldFields.add(prop, normalize(event.get(prop)));
+                                }
+                                oldItem.add("fields", oldFields);
+                                oldArr.add(oldItem);
+                            }
+                            record.add("old", oldArr);
+                        }
                         records.add(record);
                     }
                 });
@@ -247,6 +290,43 @@ public class EPLSubselectFilteredScenarioOracle {
                             }
                             runtime.getEventService().sendEventMap(m, "SupportBean_S3");
                         }
+                        case "SupportMarketDataBean" -> {
+                            Map<String, Object> m = new HashMap<>();
+                            JsonValue symbolVal = payload.get("symbol");
+                            if (symbolVal instanceof JsonString) {
+                                m.put("symbol", ((JsonString) symbolVal).asString());
+                            }
+                            JsonValue priceVal = payload.get("price");
+                            if (priceVal instanceof JsonNumber) {
+                                m.put("price", ((JsonNumber) priceVal).asDouble());
+                            }
+                            JsonValue volumeVal = payload.get("volume");
+                            if (volumeVal instanceof JsonNumber) {
+                                m.put("volume", ((JsonNumber) volumeVal).asLong());
+                            }
+                            runtime.getEventService().sendEventMap(m, "SupportMarketDataBean");
+                        }
+                        case "SupportSensorEvent" -> {
+                            Map<String, Object> m = new HashMap<>();
+                            m.put("id", payload.getInt("id", 0));
+                            JsonValue typeVal = payload.get("type");
+                            if (typeVal instanceof JsonString) {
+                                m.put("type", ((JsonString) typeVal).asString());
+                            }
+                            JsonValue deviceVal = payload.get("device");
+                            if (deviceVal instanceof JsonString) {
+                                m.put("device", ((JsonString) deviceVal).asString());
+                            }
+                            JsonValue measurementVal = payload.get("measurement");
+                            if (measurementVal instanceof JsonNumber) {
+                                m.put("measurement", ((JsonNumber) measurementVal).asDouble());
+                            }
+                            JsonValue confidenceVal = payload.get("confidence");
+                            if (confidenceVal instanceof JsonNumber) {
+                                m.put("confidence", ((JsonNumber) confidenceVal).asDouble());
+                            }
+                            runtime.getEventService().sendEventMap(m, "SupportSensorEvent");
+                        }
                         default -> throw new IllegalStateException("unknown eventType: " + type);
                     }
                 }
@@ -340,6 +420,20 @@ public class EPLSubselectFilteredScenarioOracle {
             case "select-wildcard" -> new String[]{
                 "@name('s0') select (select * from SupportBean_S1#length(1000)) as events1 from SupportBean_S0"
             };
+            case "select-scene-one" -> new String[]{
+                "@name('s0') select irstream s0.price as s0price, (select price from SupportMarketDataBean(symbol='S1')#length(10) s1 where s0.volume = s1.volume) as s1price from SupportMarketDataBean(symbol='S0')#length(2) s0"
+            };
+            case "where-2-subquery" -> new String[]{
+                "@name('s0') select id from SupportBean_S0 as s0 where id = (select id from SupportBean_S1#length(1000) where s0.id = id) or id = (select id from SupportBean_S2#length(1000) where s0.id = id)"
+            };
+            case "subselect-mix-max" -> new String[]{
+                "@name('s0') select (select * from SupportSensorEvent#sort(1, measurement desc)) as high, (select * from SupportSensorEvent#sort(1, measurement asc)) as low from SupportSensorEvent"
+            };
+            case "subselect-prior" -> new String[]{
+                "insert into Pair select * from SupportSensorEvent(device='A')#lastevent as a, SupportSensorEvent(device='B')#lastevent as b where a.type = b.type",
+                "insert into PairDuplicatesRemoved select * from Pair(1=2)",
+                "@name('s0') insert into PairDuplicatesRemoved select * from Pair where a.id != coalesce((select a.id from PairDuplicatesRemoved#lastevent), -1) and b.id != coalesce((select b.id from PairDuplicatesRemoved#lastevent), -1)"
+            };
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };
     }
@@ -358,6 +452,32 @@ public class EPLSubselectFilteredScenarioOracle {
         }
         if (value instanceof Boolean) {
             return Json.value((Boolean) value);
+        }
+        if (value instanceof Map<?, ?>) {
+            Map<?, ?> mapValue = (Map<?, ?>) value;
+            TreeSet<String> keys = new TreeSet<>();
+            for (Object key : mapValue.keySet()) {
+                keys.add(String.valueOf(key));
+            }
+            JsonObject fields = new JsonObject();
+            for (String key : keys) {
+                fields.add(key, normalize(mapValue.get(key)));
+            }
+            JsonObject rowObj = new JsonObject();
+            rowObj.add("kind", "row");
+            rowObj.add("fields", fields);
+            return rowObj;
+        }
+        if (value instanceof EventBean) {
+            EventBean inner = (EventBean) value;
+            JsonObject fields = new JsonObject();
+            for (String prop : new TreeSet<>(java.util.Arrays.asList(inner.getEventType().getPropertyNames()))) {
+                fields.add(prop, normalize(inner.get(prop)));
+            }
+            JsonObject rowObj = new JsonObject();
+            rowObj.add("kind", "row");
+            rowObj.add("fields", fields);
+            return rowObj;
         }
         if (value instanceof SupportBean_S1) {
             SupportBean_S1 event = (SupportBean_S1) value;

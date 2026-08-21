@@ -24,7 +24,11 @@
   "java-runtime-7e0f728f635710446f39",
   "java-runtime-b3ce74a1b603f1dfa644",
   "java-runtime-21f4b30723f3e5256823",
-  "java-runtime-71f4714a3f10241083e9"
+  "java-runtime-71f4714a3f10241083e9",
+  "java-runtime-b2be42620bdc328d006e",
+  "java-runtime-1fcd5cdcc62015389f98",
+  "java-runtime-9161a695d692feb6902d",
+  "java-runtime-1072ab9fc42579eed1e5"
  ],
  "cases": [
   {
@@ -134,6 +138,22 @@
   {
    "case": "joined-3-scene-two",
    "runtimeId": "java-runtime-71f4714a3f10241083e9"
+  },
+  {
+   "case": "select-scene-one",
+   "runtimeId": "java-runtime-b2be42620bdc328d006e"
+  },
+  {
+   "case": "where-2-subquery",
+   "runtimeId": "java-runtime-1fcd5cdcc62015389f98"
+  },
+  {
+   "case": "subselect-mix-max",
+   "runtimeId": "java-runtime-9161a695d692feb6902d"
+  },
+  {
+   "case": "subselect-prior",
+   "runtimeId": "java-runtime-1072ab9fc42579eed1e5"
   }
  ],
  "steps": [
@@ -2511,6 +2531,233 @@
    "payload": {
     "id": 14,
     "p30": "s0_2"
+   }
+  },
+  {
+   "op": "case",
+   "case": "select-scene-one"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S0",
+    "price": 100.0,
+    "volume": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "price": -10.0,
+    "volume": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S0",
+    "price": 200.0,
+    "volume": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "price": -20.0,
+    "volume": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S0",
+    "price": 300.0,
+    "volume": 3
+   }
+  },
+  {
+   "op": "case",
+   "case": "where-2-subquery"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S2",
+   "payload": {
+    "id": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 3
+   }
+  },
+  {
+   "op": "case",
+   "case": "subselect-mix-max"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 1,
+    "type": "Temp",
+    "device": "Dev1",
+    "measurement": 68.0,
+    "confidence": 96.5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 2,
+    "type": "Temp",
+    "device": "Dev2",
+    "measurement": 70.0,
+    "confidence": 98.5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 3,
+    "type": "Temp",
+    "device": "Dev2",
+    "measurement": 65.0,
+    "confidence": 99.5
+   }
+  },
+  {
+   "op": "case",
+   "case": "subselect-prior"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 1,
+    "type": "Temperature",
+    "device": "A",
+    "measurement": 51,
+    "confidence": 94.5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 2,
+    "type": "Temperature",
+    "device": "A",
+    "measurement": 57,
+    "confidence": 95.5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 3,
+    "type": "Humidity",
+    "device": "B",
+    "measurement": 29,
+    "confidence": 67.5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 4,
+    "type": "Temperature",
+    "device": "B",
+    "measurement": 55,
+    "confidence": 88.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 5,
+    "type": "Temperature",
+    "device": "B",
+    "measurement": 65,
+    "confidence": 85.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 6,
+    "type": "Temperature",
+    "device": "B",
+    "measurement": 49,
+    "confidence": 87.0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 7,
+    "type": "Temperature",
+    "device": "A",
+    "measurement": 51,
+    "confidence": 99.5
    }
   }
  ]
