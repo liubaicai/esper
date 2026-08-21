@@ -1,0 +1,94 @@
+{
+ "version": "esper-parity/v1",
+ "id": "subselect-filtered",
+ "description": "Filtered scalar subselects replaying the EPLSubselectFiltered having/where/constant/joined slice over SupportBean, SupportBean_S0 and SupportBean_S1 with null-on-empty and null-on-multiple boundaries",
+ "javaRuntimes": [
+  "java-runtime-bc6684a32b1cda80e244",
+  "java-runtime-9511e607f74ca4551624",
+  "java-runtime-0ef90e75f854b7845de0",
+  "java-runtime-57e3956886ac655d387d",
+  "java-runtime-6034a5785b901739431e"
+ ],
+ "cases": [
+  {
+   "case": "having-no-filter-no-where",
+   "runtimeId": "java-runtime-bc6684a32b1cda80e244"
+  },
+  {
+   "case": "having-w-where",
+   "runtimeId": "java-runtime-9511e607f74ca4551624"
+  },
+  {
+   "case": "having-w-filter-w-where",
+   "runtimeId": "java-runtime-0ef90e75f854b7845de0"
+  },
+  {
+   "case": "where-constant-single-column",
+   "runtimeId": "java-runtime-57e3956886ac655d387d"
+  },
+  {
+   "case": "where-constant-two-column",
+   "runtimeId": "java-runtime-57e3956886ac655d387d"
+  },
+  {
+   "case": "where-constant-range",
+   "runtimeId": "java-runtime-57e3956886ac655d387d"
+  },
+  {
+   "case": "select-with-where-joined",
+   "runtimeId": "java-runtime-6034a5785b901739431e"
+  }
+ ],
+ "steps": [
+  {"op":"case","case":"having-no-filter-no-where"},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"ID2","intPrimitive":10}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"ID1","intPrimitive":11}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"case","case":"having-w-where"},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"ID2","intPrimitive":10}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"ID1","intPrimitive":11}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"ID1","intPrimitive":20}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"case","case":"having-w-filter-w-where"},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"ID2","intPrimitive":10}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"ID1","intPrimitive":11}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"ID1","intPrimitive":20}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"ID1","intPrimitive":19}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"case","case":"where-constant-single-column"},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":-1,"p10":"Y"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":1,"p10":"X"}},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":2,"p10":"Y"}},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":3,"p10":"Z"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":1}},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":2,"p10":"X"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":2}},
+  {"op":"case","case":"where-constant-two-column"},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":1,"p10":"X","p11":"Y"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"case","case":"where-constant-range"},
+  {"op":"send","eventType":"SupportBean","payload":{"theString":"E1","intPrimitive":15}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"case","case":"select-with-where-joined"},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":1,"p10":"X"}},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":2,"p10":"Y"}},
+  {"op":"send","eventType":"SupportBean_S1","payload":{"id":3,"p10":"Z"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0,"p00":"X"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0,"p00":"Y"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0,"p00":"Z"}},
+  {"op":"send","eventType":"SupportBean_S0","payload":{"id":0,"p00":"A"}}
+ ]
+}

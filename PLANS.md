@@ -32,47 +32,51 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `b5599f1ba` (`subselect: verify
-  direct multirow parity (Draft 4.216)` pushed).
-- Current work unit: `query.subquery`, quantified null/empty-set boundary
-  extension of the existing `subselect-quantified` differential scenario from
-  fixed `EPLSubselectAllAnySomeExpr.java`. Two observable executions; one
-  shared `internal/esper` semantic fix (relational ANY false-dominates-unknown).
+- Baseline: `HEAD` == `origin/master` == `f8b6f203f` (`subselect: verify
+  quantified null parity (Draft 4.217)` pushed).
+- Current work unit: `epl.subselect.filtered`, scalar-filter slice of fixed
+  `EPLSubselectFiltered.java` — five executions across seven scenario cases;
+  no shared `internal/esper` change expected (prefetch confirmed full builder
+  coverage).
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - `EPLSubselectRelationalOpNullOrNoRows`, runtime
-    `java-runtime-ad44331ab7f0645a4e7a`. `intBoxed >= all/any (select
-    doubleBoxed from SupportBean(theString like 'S%')#keepall)`; empty set
-    `[true,false]`, `{null}` `[null,null]`, `{null,1}` rows
-    `[null,null]`/`[null,true]`/`[false,false]`.
-  - `EPLSubselectEqualsInNullOrNoRows`, runtime
-    `java-runtime-29c66b744c3754d59ec7`. `= all/!= all/= any/!= any/in` five
-    columns; empty `[true,false,true,false,false]`, `{null}` all Null,
-    `{null,1}` rows `[null,true,false,null,true]`/`[false,null,null,true,null]`.
-- Engine fix: `internal/esper/subquery.go` `evaluateQuantifiedSubquery` now
-  keeps a decisive false for relational ANY when a non-null row exists
-  (mirrors Java `SubselectForgeStrategyNRRelOpAnyDefault`); equals-style ANY
-  keeps the SQL unknown. Proven by the zero-difference differential.
-- Differential scope: `subselect-quantified` scenario extended with
-  `relational-null-no-rows` and `equals-in-null-no-rows` cases (boxed
-  nullable payloads); Java oracle, Go runner, regenerated trace/evidence, and
-  four new trace mutations including the false-dominates guard.
-- Allowed files: `internal/esper/subquery.go` (primary only),
-  `internal/app/parity/subselect_quantified.go`,
-  `internal/app/parity/run_test.go`,
-  `tools/java-oracle/EPLSubselectAllAnySomeExprScenarioOracle.java`
-  (OracleExtend worker only), `testdata/parity/subselect-quantified.json`,
-  regenerated trace/evidence, and primary-owned `PLANS.md`, manifest,
-  roadmap, CHANGELOG.
-- Forbidden: changes under `/root/app/esper`, `goal.txt`, unrelated
-  `internal/esper` semantics, hand-authored generated trace/evidence.
-- Targeted validation: pinned Java oracle runner, quantified
-  differential/mutation tests, full `internal/esper` regression, `go test
-  ./internal/compat ./internal/app/manifest -count=1`, then full local gates
-  and independent review.
+  - HavingNoAgg trio (`java-runtime-bc6684a32b1cda80e244`,
+    `java-runtime-9511e607f74ca4551624`,
+    `java-runtime-0ef90e75f854b7845de0`): non-aggregated having row filter
+    `theString='ID1'`, where `intPrimitive>15`, stream filter
+    `intPrimitive<20`; empty→null, where-excluded→null, filter-excluded→null,
+    decisive rows surface intPrimitive.
+  - `EPLSubselectWhereConstant` (`java-runtime-57e3956886ac655d387d`), three
+    single-deployment cases: single-column constant with multi-row→null,
+    two-column constant AND, range `between 10 and 20` over #lastevent.
+  - `EPLSubselectSelectWithWhereJoined`
+    (`java-runtime-6034a5785b901739431e`): correlated `p10=s0.p00` over
+    SupportBean_S1#length(1000); null/absent outer p00→null; X/Y/Z→1/2/3;
+    'A'→null.
+- Differential scope: new `subselect-filtered` scenario (SupportBean,
+  SupportBean_S0(id,p00), SupportBean_S1(id,p10,p11)), new Java oracle +
+  runner script (FilteredOracle worker), new Go runner + dispatch + diff/
+  mutation tests; zero engine changes.
+- Allowed files: `internal/app/parity/subselect_filtered.go`,
+  `internal/app/parity/run.go` dispatch, `internal/app/parity/run_test.go`,
+  `tools/java-oracle/EPLSubselectFilteredScenarioOracle.java` +
+  `tools/java-oracle/run-subselect-filtered.sh` (worker only),
+  `testdata/parity/subselect-filtered.json`, generated trace/evidence, and
+  primary-owned `PLANS.md`, manifest, roadmap, CHANGELOG, README.
+- Forbidden: changes under `/root/app/esper`, `goal.txt`, `internal/esper`
+  production semantics, hand-authored generated trace/evidence.
+- Targeted validation: pinned Java oracle runner, filtered diff/mutation
+  tests, `go test ./internal/compat ./internal/app/manifest -count=1`, full
+  local gates, independent review.
 
 ## Delegation checkpoint
 
+- Filtered unit agents: prefetch scouts `FilteredJavaContract`
+  (java-oracle-scout) and `FilteredGoSurface` (scout) ran concurrently with
+  the Draft 4.217 review; asset writer `FilteredOracle` (parity-asset-worker,
+  isolated) authored the new Java oracle and runner script on the frozen
+  scenario contract while the primary agent wrote the Go runner, dispatch,
+  scenario, and tests. File ownership was disjoint.
 - Quantified-null unit agents: read-only scouts `JavaContract`
   (java-oracle-scout) and `GoSurface` (scout) ran concurrently before
   implementation; asset writer `OracleExtend` (parity-asset-worker,
@@ -84,7 +88,7 @@ activity or a single coverage percentage.
 - Primary agent owns shared semantics, parity assets, generated trace/evidence,
   manifest, roadmap, CHANGELOG, PLANS, validation, review, commit, and push.
 
-## Quantified null unit (active)
+## Quantified null unit (closed; committed as `f8b6f203f`)
 
 - [x] Concurrent read-only scouts (`JavaContract`, `GoSurface`) froze the two
   null/empty-set executions, the exact event vectors, and the reusable Go
@@ -101,6 +105,7 @@ activity or a single coverage percentage.
 - [x] Promote `case.subquery-empty-quantifiers` to differential-verified;
   extend `case.subquery-quantified-comparisons` to six runtime IDs; manifest
   summary is 136 differential cases, 432 differential runtime IDs, 3071
+  associations, 2901 unique referenced runtimes, and 1235 unreferenced.
 - [x] Complete final full gates and independent parity review
   (`QuantifiedNullReview` verdict: pass, zero findings); delivery is ready for
   the single semantic commit and push.
@@ -112,6 +117,33 @@ records, 0 differences, six frozen runtime IDs, and six execution names.
 Focused quantified diff/mutation tests (14 mutations all reject), full
 `internal/esper` regression after the engine fix, `go vet ./...`, `go test
 ./... -count=1 -timeout 240s`, `make check`, and `git diff --check` pass.
+
+## Filtered scalar unit (active)
+
+- [x] Prefetch scouts (`FilteredJavaContract`, `FilteredGoSurface`) froze the
+  five-execution slice, the exact event vectors, and the reusable Go surface
+  (existing `SubqueryValue[WithOptions]` builders; zero engine changes).
+- [x] Create the `subselect-filtered` scenario (7 cases, 3 event types), the
+  Java oracle and runner script via the `FilteredOracle` asset worker, and
+  the Go runner, dispatch modes, and diff/mutation tests (9 mutations all
+  reject).
+- [x] Regenerate the pinned-commit Java trace (24 records) and the passing
+  evidence with zero differences; register `case.subselect-filtered-scalar-filter`
+  and promote `epl.subselect.filtered` to differential-verified (5/27
+  runtimes); manifest summary is 137 differential cases, 437 differential
+  runtime IDs, 3076 associations, 2901 unique referenced runtimes, and 1235
+- [x] Complete final full gates and independent parity review
+  (`FilteredScalarReview` verdict: pass; the single P3 formatting finding in
+  the manifest mappings tail was fixed and re-validated); delivery is ready
+  for the single semantic commit and push.
+
+Final pre-commit verification: pinned Java oracle regenerated the trace with
+checksum `ffd54beb15c38c3884cb777b48afdde6c031dc47c6b8168d2dd62b48e6be0656`;
+the differential evidence is passing with 24 Java records, 24 Go records,
+0 differences, five frozen runtime IDs, and five execution names. Focused
+filtered diff/mutation tests (9 mutations all reject), `go vet ./...`,
+`go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`
+pass.
 
 ## Historical work-unit contract (Generic Cast; closed)
 

@@ -1,3 +1,25 @@
+> 最新补充：Draft 4.218（2026-08-21），新增 `subselect-filtered`
+> differential-verified 场景（第一切片）：固定 Java
+> `EPLSubselectFiltered.java` 的五个 execution——HavingNoAgg 三连
+>（`java-runtime-bc6684a32b1cda80e244`、
+> `java-runtime-9511e607f74ca4551624`、
+> `java-runtime-0ef90e75f854b7845de0`）、`EPLSubselectWhereConstant`
+>（`java-runtime-57e3956886ac655d387d`）与
+> `EPLSubselectSelectWithWhereJoined`
+>（`java-runtime-6034a5785b901739431e`）。七个 case、Java/Go 各 24 条
+> listener records、0 differences；覆盖非聚合 having 逐行过滤、where/having
+> AND 组合、流 filter 与 where 的可区分排除路径、常量/双列/范围 where、
+> 多行标量子查询→Null（`SubqueryNullOnMultiple`）、空集→Null 与
+> `p10=s0.p00` 相关匹配；Go 侧复用 `SubqueryValue[WithOptions]` +
+> `SubqueryWhere`/`SubqueryHaving`，无 `internal/esper` 改动。固定 commit
+> 的 Java oracle、runner、scenario、trace、evidence 与 value/null/order/
+> mutation tests 已纳入兼容资产；manifest 更新为 524 cases、137 个
+> differential-verified case、437 个 differential runtime IDs、3076 条
+> associations（唯一已关联 runtime 2901，未关联 1235），
+> `epl.subselect.filtered` capability 提升为 differential-verified
+>（5/27 runtime）。其余 22 个 filtered execution 与 auto-generated
+> column names approved difference 保持 implemented-only。
+
 > 最新补充：Draft 4.217（2026-08-21），扩展 `query.subquery` 的
 > `subselect-quantified` differential-verified 场景，补齐固定 Java
 > `EPLSubselectAllAnySomeExpr` 的两个 null/空集 execution：

@@ -1974,7 +1974,8 @@
     "internal/esper/subquery.go",
     "internal/esper/plan.go",
     "internal/esper/expr.go",
-    "internal/esper/epl_subselect_filtered_parity_test.go"
+    "internal/esper/epl_subselect_filtered_parity_test.go",
+    "internal/app/parity/subselect_filtered.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1983,7 +1984,15 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-bc6684a32b1cda80e244",
+    "java-runtime-9511e607f74ca4551624",
+    "java-runtime-0ef90e75f854b7845de0",
+    "java-runtime-57e3956886ac655d387d",
+    "java-runtime-6034a5785b901739431e"
    ]
   },
   {
@@ -32289,6 +32298,63 @@
     "java-runtime-29c2087cc4243e9b7a50",
     "java-runtime-64eb1701d14bdbcefc86"
    ]
+  },
+  {
+   "id": "case.subselect-filtered-scalar-filter",
+   "javaRuntimeIds": [
+    "java-runtime-bc6684a32b1cda80e244",
+    "java-runtime-9511e607f74ca4551624",
+    "java-runtime-0ef90e75f854b7845de0",
+    "java-runtime-57e3956886ac655d387d",
+    "java-runtime-6034a5785b901739431e"
+   ],
+   "javaNames": [
+    "EPLSubselectHavingNoAggNoFilterNoWhere",
+    "EPLSubselectHavingNoAggWWhere",
+    "EPLSubselectHavingNoAggWFilterWWhere",
+    "EPLSubselectWhereConstant",
+    "EPLSubselectSelectWithWhereJoined"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectFiltered.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunSubselectFilteredDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunSubselectFilteredDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "subselect",
+    "filtered",
+    "scalar",
+    "having",
+    "where",
+    "null-on-multiple"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/subselect-filtered.json",
+    "testdata/parity/subselect-filtered.trace.json",
+    "testdata/parity/subselect-filtered.evidence.json",
+    "tools/java-oracle/EPLSubselectFilteredScenarioOracle.java",
+    "tools/java-oracle/run-subselect-filtered.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-bc6684a32b1cda80e244",
+    "java-runtime-9511e607f74ca4551624",
+    "java-runtime-0ef90e75f854b7845de0",
+    "java-runtime-57e3956886ac655d387d",
+    "java-runtime-6034a5785b901739431e"
+   ]
   }
  ],
  "mappings": [
@@ -34715,26 +34781,30 @@
   {
    "capabilityId": "query.subquery-basic",
    "caseId": "case.subquery-multirow"
+  },
+  {
+   "capabilityId": "epl.subselect.filtered",
+   "caseId": "case.subselect-filtered-scalar-filter"
   }
  ],
 
 "summary": {
-"totalCases": 523,
+"totalCases": 524,
 "totalCapabilities": 110,
-"inventoriedCases": 523,
-"implementedCases": 521,
-"differentialVerifiedCases": 136,
-"differentialVerifiedRuntimeIds": 432,
+"inventoriedCases": 524,
+"implementedCases": 522,
+"differentialVerifiedCases": 137,
+"differentialVerifiedRuntimeIds": 437,
 "intentionallyDifferentCases": 18,
 "representativeVerifiedCases": 94,
 "nfrVerifiedCases": 0,
 "inventoriedCapabilities": 110,
 "implementedCapabilities": 109,
-"differentialVerifiedCapabilities": 14,
+"differentialVerifiedCapabilities": 15,
 "intentionallyDifferentCapabilities": 7,
 "representativeVerifiedCapabilities": 11,
 "nfrVerifiedCapabilities": 0,
-"runtimeAssociationCount": 3071,
+"runtimeAssociationCount": 3076,
 "referencedJavaRuntimeIds": 2901,
 "totalJavaRuntimeIds": 4136,
 "unreferencedJavaRuntimeIds": 1235,

@@ -1790,6 +1790,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "subselect-filtered" || *mode == "subselect-filtered-diff" {
+		trace, err := runSubselectFilteredScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "subselect-filtered-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, subselectFilteredJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, subselectFilteredJavaSources),
+				splitMetadata(*javaExecutions, subselectFilteredJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "subselect-quantified" || *mode == "subselect-quantified-diff" {
 		trace, err := runSubselectQuantifiedScenario(context.Background(), scenario)
 		if err != nil {
