@@ -4,6 +4,20 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.233（2026-08-22），扩展 `epl.other.distinct` 的
+> `epl-other-distinct` differential-verified 场景（wildcard 切片）：新增
+> `EPLOtherBeanEventWildcardThisProperty`
+>（`java-runtime-c1d232f82f0a154d6241`）、
+> `EPLOtherBeanEventWildcardSODA`
+>（`java-runtime-eb3cba6e0ccf8c3c9c83`）、
+> `EPLOtherBeanEventWildcardPlusCols`
+>（`java-runtime-550dd87b54717508c0b9`）与 `EPLOtherMapEventWildcard`
+>（`java-runtime-7b13ab2779d557eba691`）。场景扩至 16 个 case，Java/Go 各
+> 43 条 records、0 differences；以每次 send 后的迭代器快照为差分面，覆盖
+> bean/A/Map 通配去重与 computed 联合键。Go 零投影即通配符；SODA 往返
+> 为已记录边界。无引擎改动。manifest 更新为 149 个 differential-verified
+> case、484 个 differential runtime IDs、3105 条 runtime associations，
+> capability 达到 15/20 DV runtime。
 > 最新补充：Draft 4.232（2026-08-22），扩展 `epl.other.distinct` 的
 > `epl-other-distinct` differential-verified 场景（第三切片），新增
 > `EPLOtherOnDemandAndOnSelect`

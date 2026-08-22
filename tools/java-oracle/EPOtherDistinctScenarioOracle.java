@@ -55,6 +55,8 @@ public class EPOtherDistinctScenarioOracle {
                 runMultikeyCase(allSteps, caseName, records);
             } else if (caseName.equals("distinct-ondemand-onselect")) {
                 runOnDemandCase(allSteps, caseName, records);
+            } else if (caseName.startsWith("distinct-wildcard-")) {
+                runWildcardCase(allSteps, caseName, records);
             } else {
                 runScalarCase(allSteps, caseName, records);
             }
@@ -275,6 +277,127 @@ public class EPOtherDistinctScenarioOracle {
         }
     }
 
+    /**
+     * Wildcard distinct family: select distinct * over keepall windows with
+     * bean, computed-column and Map event shapes. All four executions assert
+     * iterator contents only, so iterator snapshots are recorded after each
+     * send; listeners attached by the Java suite are never asserted. Rows are
+     * scoped to each execution's assertion surface.
+     */
+    private static void runWildcardCase(JsonArray allSteps, String caseName, List<JsonObject> records) throws Exception {
+        Configuration config = new Configuration();
+        java.util.Set<String> projected;
+        switch (caseName) {
+            case "distinct-wildcard-bean": {
+                config.getCommon().addEventType(SupportBean.class);
+                projected = new java.util.HashSet<>(java.util.Arrays.asList("theString", "intPrimitive"));
+                break;
+            }
+            case "distinct-wildcard-soda": {
+                config.getCommon().addEventType(SupportBean_A.class);
+                projected = null; // SupportBean_A exposes only id
+                break;
+            }
+            case "distinct-wildcard-plus-cols": {
+                config.getCommon().addEventType(com.espertech.esper.common.internal.support.SupportBean_N.class);
+                projected = new java.util.HashSet<>(java.util.Arrays.asList("intPrimitive", "val1", "val2"));
+                break;
+            }
+            case "distinct-wildcard-map": {
+                Map<String, Object> kvType = new HashMap<>();
+                kvType.put("k1", String.class);
+                kvType.put("v1", Integer.class);
+                config.getCommon().addEventType("MyMapTypeKVDistinct", kvType);
+                projected = null; // map carries exactly k1,v1
+                break;
+            }
+            default:
+                throw new IllegalStateException("unknown wildcard case: " + caseName);
+        }
+        config.getRuntime().getThreading().setInternalTimerEnabled(false);
+        EPRuntime runtime = EPRuntimeProvider.getRuntime("EPOtherDistinct-" + caseName, config);
+        try {
+            runtime.getEventService().advanceTime(0);
+            EPDeployment deployment = deployModule(runtime, config, wildcardEPL(caseName));
+            EPStatement stmt = findStatement(deployment, "s0");
+
+            // All four executions assert iterator contents only; listeners
+            // are attached in the Java suite but never asserted.
+            boolean inCase = false;
+            for (JsonValue stepVal : allSteps) {
+                JsonObject step = stepVal.asObject();
+                String op = step.getString("op", "");
+                if ("case".equals(op)) {
+                    inCase = caseName.equals(step.getString("case", ""));
+                    continue;
+                }
+                if (!inCase) {
+                    continue;
+                }
+                if ("send".equals(op)) {
+                    sendStep(runtime, step);
+                } else if ("snapshot".equals(op)) {
+                    java.util.Iterator<EventBean> it = stmt.iterator();
+                    List<EventBean> rows = new ArrayList<>();
+                    while (it.hasNext()) {
+                        rows.add(it.next());
+                    }
+                    records.add(rowsRecordProjected(caseName, statementKeyFor(caseName), 0,
+                        runtime.getEventService().getCurrentTime(), rows.toArray(new EventBean[0]), projected));
+                }
+            }
+
+            runtime.getDeploymentService().undeployAll();
+        } finally {
+            runtime.destroy();
+        }
+    }
+
+    private static String statementKeyFor(String caseName) {
+        return caseName.startsWith("distinct-wildcard-") ? "s0" : caseName;
+    }
+
+    /** rowsRecord restricted to the execution's asserted field surface. */
+    private static JsonObject rowsRecordProjected(String caseName, String statement, int sequence, long currentTime, EventBean[] rows, java.util.Set<String> projected) {
+        JsonObject record = rowsRecord(caseName, "snapshot", statement, sequence, currentTime, rows);
+        if (projected == null) {
+            return record;
+        }
+        JsonArray filtered = new JsonArray();
+        for (JsonValue rowVal : record.get("new").asArray()) {
+            JsonObject row = rowVal.asObject();
+            JsonObject fields = new JsonObject();
+            for (String name : projected) {
+                fields.set(name, row.get("fields").asObject().get(name));
+            }
+            JsonObject copy = new JsonObject();
+            copy.add("kind", "row");
+            copy.add("fields", fields);
+            filtered.add(copy);
+        }
+        record.set("new", filtered);
+        return record;
+    }
+
+    private static EPDeployment deployModule(EPRuntime runtime, Configuration config, String epl) throws Exception {
+        EPCompiled compiled = EPCompilerProvider.getCompiler().compile(epl, new CompilerArguments(config));
+        return runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
+    }
+
+    private static String wildcardEPL(String caseName) {
+        return switch (caseName) {
+            case "distinct-wildcard-bean" ->
+                "@name('s0') select distinct * from SupportBean#keepall";
+            case "distinct-wildcard-soda" ->
+                "@name('s0') select distinct * from SupportBean_A#keepall";
+            case "distinct-wildcard-plus-cols" ->
+                "@name('s0') select distinct *, intBoxed%5 as val1, intBoxed as val2 from SupportBean_N#keepall";
+            case "distinct-wildcard-map" ->
+                "@name('s0') select distinct * from MyMapTypeKVDistinct#keepall";
+            default -> throw new IllegalStateException("unknown wildcard case: " + caseName);
+        };
+    }
+
     private interface SnapshotHandler {
         void snapshot(String statementKey) throws Exception;
     }
@@ -328,6 +451,18 @@ public class EPOtherDistinctScenarioOracle {
             }
             case "SupportBean_A": {
                 runtime.getEventService().sendEventBean(new SupportBean_A(payload.getString("id", "")), type);
+                break;
+            }
+            case "SupportBean_N": {
+                runtime.getEventService().sendEventBean(new com.espertech.esper.common.internal.support.SupportBean_N(
+                    payload.getInt("intPrimitive", 0), payload.getInt("intBoxed", 0)), type);
+                break;
+            }
+            case "MyMapTypeKVDistinct": {
+                Map<String, Object> event = new HashMap<>();
+                event.put("k1", payload.getString("k1", ""));
+                event.put("v1", payload.getInt("v1", 0));
+                runtime.getEventService().sendEventMap(event, type);
                 break;
             }
             case "SupportBean_S0": {

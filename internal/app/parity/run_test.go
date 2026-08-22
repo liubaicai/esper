@@ -14638,3 +14638,67 @@ func TestRunEplOtherDistinctDiffRejectsSlice2Mutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunEplOtherDistinctDiffRejectsWildcardMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "wildcard-duplicate-not-suppressed",
+			mutate: func(trace *compat.Trace) {
+				// The third bean snapshot must not contain a third row.
+				trace.Records[33].New = append(trace.Records[33].New, compat.ResultRecord{Kind: "row", Fields: map[string]any{"theString": "E1", "intPrimitive": int64(1)}})
+			},
+		},
+		{
+			name: "computed-column-key-collapsed",
+			mutate: func(trace *compat.Trace) {
+				// (1,3,8) and (1,3,3) are distinct rows via the computed columns.
+				trace.Records[38].New = trace.Records[38].New[:1]
+			},
+		},
+		{
+			name: "map-wildcard-row-dropped",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[41].New = nil
+			},
+		},
+		{
+			name: "soda-growth-missing",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[35].New = trace.Records[34].New
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-distinct.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-other-distinct.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-distinct.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-other-distinct-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

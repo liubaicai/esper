@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
 
 	esper "github.com/liubaicai/esper"
@@ -33,6 +34,11 @@ type eplOtherDistinctA struct {
 	ID string `esper:"id"`
 }
 
+type eplOtherDistinctN struct {
+	IntPrimitive int32 `esper:"intPrimitive"`
+	IntBoxed     int32 `esper:"intBoxed"`
+}
+
 var eplOtherDistinctJavaSources = []string{
 	"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherDistinct.java",
 }
@@ -50,6 +56,10 @@ var (
 		"java-runtime-d9d561caf48755690e5d",
 		"java-runtime-17e049a70e6c5ca2a376",
 		"java-runtime-526d4b64636e45cc051d",
+		"java-runtime-c1d232f82f0a154d6241",
+		"java-runtime-eb3cba6e0ccf8c3c9c83",
+		"java-runtime-550dd87b54717508c0b9",
+		"java-runtime-7b13ab2779d557eba691",
 	}
 	eplOtherDistinctJavaExecutions = []string{
 		"EPLOtherOutputSimpleColumn",
@@ -63,6 +73,10 @@ var (
 		"EPLOtherOnDemandAndOnSelect",
 		"EPLOtherOutputRateSnapshotColumn",
 		"EPLOtherSubquery",
+		"EPLOtherBeanEventWildcardThisProperty",
+		"EPLOtherBeanEventWildcardSODA",
+		"EPLOtherBeanEventWildcardPlusCols",
+		"EPLOtherMapEventWildcard",
 	}
 )
 
@@ -86,6 +100,10 @@ func runEplOtherDistinctScenario(ctx context.Context, scenario compat.Scenario) 
 		"distinct-snapshot-column",
 		"distinct-snapshot-column-join",
 		"distinct-subquery",
+		"distinct-wildcard-bean",
+		"distinct-wildcard-soda",
+		"distinct-wildcard-plus-cols",
+		"distinct-wildcard-map",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("epl-other-distinct scenario %q has no supported cases", scenario.ID)
@@ -152,6 +170,8 @@ func runEplOtherDistinctCase(ctx context.Context, scenario compat.Scenario, case
 		return runEplOtherDistinctSlice2Case(ctx, scenario, caseName)
 	case "distinct-ondemand-onselect":
 		return runEplOtherDistinctOnDemandCase(ctx, scenario, caseName)
+	case "distinct-wildcard-bean", "distinct-wildcard-soda", "distinct-wildcard-plus-cols", "distinct-wildcard-map":
+		return runEplOtherDistinctWildcardCase(ctx, scenario, caseName)
 	default:
 		if len(caseName) > 16 && caseName[:16] == "distinct-mwarray" {
 			return runEplOtherDistinctMultikeyCase(ctx, scenario, caseName)
@@ -189,6 +209,21 @@ func decodeEplOtherDistinctPayload(step compat.Step) (any, error) {
 			return nil, fmt.Errorf("epl-other-distinct SupportEventWithManyArray: %w", err)
 		}
 		return event, nil
+	case "SupportBean_N":
+		var event eplOtherDistinctN
+		if err := json.Unmarshal(step.Payload, &event); err != nil {
+			return nil, fmt.Errorf("epl-other-distinct SupportBean_N: %w", err)
+		}
+		return event, nil
+	case "MyMapTypeKVDistinct":
+		var payload struct {
+			K1 string `json:"k1"`
+			V1 int32  `json:"v1"`
+		}
+		if err := json.Unmarshal(step.Payload, &payload); err != nil {
+			return nil, fmt.Errorf("epl-other-distinct MyMapTypeKVDistinct: %w", err)
+		}
+		return map[string]any{"k1": payload.K1, "v1": payload.V1}, nil
 	case "SupportBean_A":
 		var event eplOtherDistinctA
 		if err := json.Unmarshal(step.Payload, &event); err != nil {
@@ -711,5 +746,109 @@ func runEplOtherDistinctOnDemandCase(ctx context.Context, scenario compat.Scenar
 		}
 	}
 	cleanup = false
+	return trace, nil
+}
+
+// runEplOtherDistinctWildcardCase replays the select-distinct-* family over
+// keepall windows: bean wildcard, SupportBean_A wildcard, computed-column
+// wildcard (intBoxed%5), and a Map event type. All four executions assert
+// iterator contents only, so the replay records iterator snapshots after each
+// send instead of listener deliveries.
+func runEplOtherDistinctWildcardCase(ctx context.Context, scenario compat.Scenario, caseName string) (compat.Trace, error) {
+	caseScenario, err := scenarioForCase(scenario, caseName)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	env := esper.NewEnvironment()
+	var query esper.Query
+	switch caseName {
+	case "distinct-wildcard-bean":
+		if _, err := esper.RegisterStruct[eplOtherDistinctEvent](env, "SupportBean"); err != nil {
+			return compat.Trace{}, err
+		}
+		ws := esper.From[eplOtherDistinctEvent](env, "SupportBean").Window(esper.KeepAll())
+		query = esper.Select(ws).Query(
+			esper.StatementName("s0"),
+			esper.WithDistinct(),
+		)
+	case "distinct-wildcard-soda":
+		if _, err := esper.RegisterStruct[eplOtherDistinctA](env, "SupportBean_A"); err != nil {
+			return compat.Trace{}, err
+		}
+		ws := esper.From[eplOtherDistinctA](env, "SupportBean_A").Window(esper.KeepAll())
+		query = esper.Select(ws).Query(
+			esper.StatementName("s0"),
+			esper.WithDistinct(),
+		)
+	case "distinct-wildcard-plus-cols":
+		if _, err := esper.RegisterStruct[eplOtherDistinctN](env, "SupportBean_N"); err != nil {
+			return compat.Trace{}, err
+		}
+		intPrimitive := esper.Field[eplOtherDistinctN, int32]("intPrimitive")
+		intBoxed := esper.Field[eplOtherDistinctN, int32]("intBoxed")
+		ws := esper.From[eplOtherDistinctN](env, "SupportBean_N").Window(esper.KeepAll())
+		query = esper.Select(ws,
+			esper.Alias("intPrimitive", intPrimitive),
+			esper.Alias("val1", esper.Modulo[int32](intBoxed, esper.Literal[int32](5))),
+			esper.Alias("val2", intBoxed),
+		).Query(
+			esper.StatementName("s0"),
+			esper.WithDistinct(),
+		)
+	case "distinct-wildcard-map":
+		if _, err := esper.RegisterMap(env, "MyMapTypeKVDistinct", []esper.FieldSpec{
+			esper.FieldDef("k1", reflect.TypeOf("")),
+			esper.FieldDef("v1", reflect.TypeOf(int32(0))),
+		}); err != nil {
+			return compat.Trace{}, err
+		}
+		ws := esper.From[map[string]any](env, "MyMapTypeKVDistinct").Window(esper.KeepAll())
+		query = esper.Select(ws).Query(
+			esper.StatementName("s0"),
+			esper.WithDistinct(),
+		)
+	default:
+		return compat.Trace{}, fmt.Errorf("unsupported epl-other-distinct wildcard case %q", caseName)
+	}
+
+	plan, err := env.Build(query)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	engine, statement, err := deployParityStatement(ctx, env, plan)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	trace := compat.Trace{Version: caseScenario.Version, ID: caseScenario.ID}
+	for _, step := range caseScenario.Steps {
+		switch step.Op {
+		case "case":
+			continue
+		case "send":
+			payload, err := decodeEplOtherDistinctPayload(step)
+			if err != nil {
+				return trace, err
+			}
+			if err := engine.Send(ctx, step.EventType, payload); err != nil {
+				return trace, err
+			}
+		case "snapshot":
+			result, err := statement.Snapshot(ctx)
+			if err != nil {
+				return trace, err
+			}
+			trace.Records = append(trace.Records, compat.TraceRecord{
+				Case:      caseName,
+				Operation: "snapshot",
+				Statement: step.Statement,
+				Time:      currentTimeString(engine),
+				New:       compat.NormalizeResults(result.Batch.New),
+			})
+		default:
+			return trace, fmt.Errorf("unsupported epl-other-distinct wildcard step op %q", step.Op)
+		}
+	}
 	return trace, nil
 }

@@ -1982,9 +1982,13 @@
     "java-runtime-4b62c52a89cf86a3843a",
     "java-runtime-4fab4842341b8021b1a2",
     "java-runtime-526d4b64636e45cc051d",
+    "java-runtime-550dd87b54717508c0b9",
+    "java-runtime-7b13ab2779d557eba691",
     "java-runtime-9066a6d1932dae5ff6aa",
+    "java-runtime-c1d232f82f0a154d6241",
     "java-runtime-c752f36ef07cc6280306",
     "java-runtime-d9d561caf48755690e5d",
+    "java-runtime-eb3cba6e0ccf8c3c9c83",
     "java-runtime-f9a1dafb621a6605ef47",
     "java-runtime-fe86653eacb81851d04f"
    ]
@@ -16529,11 +16533,11 @@
    ],
    "status": "differential-verified",
    "evidence": [
-    "Differential scenario testdata/parity/epl-other-distinct.json replays EPLOtherDistinct scalar part-1 sequences (25 SupportBean sends, 13 listener records) plus the MultikeyWArray family (OutputLimit single/two-array via advance-time flush at t=1s, FireAndForget over named window, Iterate keepall snapshots, OnSelect S0/S1 triggers) with int[] deep-content keys; plus the OnDemandAndOnSelect (FAF + on-select over named window with order by), OutputRateSnapshotColumn (snapshot every 3 events order by asc, plain and join variants) and Subquery (IN with distinct source, assertion-surface projection) executions; Java/Go 31 records each, 0 differences",
+    "Differential scenario testdata/parity/epl-other-distinct.json replays EPLOtherDistinct scalar part-1 sequences (25 SupportBean sends, 13 listener records) plus the MultikeyWArray family (OutputLimit single/two-array via advance-time flush at t=1s, FireAndForget over named window, Iterate keepall snapshots, OnSelect S0/S1 triggers) with int[] deep-content keys; plus the OnDemandAndOnSelect (FAF + on-select over named window with order by), OutputRateSnapshotColumn (snapshot every 3 events order by asc, plain and join variants) and Subquery (IN with distinct source, assertion-surface projection) executions; plus the wildcard family (BeanEventWildcardThisProperty/SODA/PlusCols, MapEventWildcard) recorded as iterator snapshots after each send with assertion-surface projections; SODA round-trip text assertions are a documented boundary; Java/Go 43 records each, 0 differences",
     "tools/java-oracle/EPOtherDistinctScenarioOracle.java + run-epl-other-distinct.sh generate the fixed-commit Java trace; internal/app/parity/epl_other_distinct.go is the Go runner",
     "5 Go parity tests assert bundle-level distinct semantics incl. output-every dedup and batch flush order"
    ],
-   "difference": "Distinct fires the first occurrence of each key within a single window update and tracks a global reference count so the old stream fires only when the last sharing event leaves; continuous views (keepall) re-emit per event while batching views (length_batch) dedup the batch. Snapshot/iterator, fire-and-forget, on-trigger select, subquery IN, and output-rate-limit (every-events, every-time, snapshot) all dedup. Variant-stream distinct works through the variant member schema. Wildcard (select *) results are event-backed and read through Result.Get. EPLOtherBeanEventWildcardSODA shares its runtime semantics with TestDistinctWildcardParity (same E1/E2/duplicate-E1 iterator sequence); its SODA EPStatementObjectModel parse-and-toEPL round-trip is an approved difference because Go uses an immutable fluent Plan instead of a text/model parser. Batch-window join distinct (BatchWindowJoin) works: join tuple identity is lineage-keyed, so a batch rollover that replaces same-content rows still emits the full old/new pair the way Esper composes join results per arriving or departing event, while rebuilt historical and method sides keep their previous lineage on equal content and net out; distinct then collapses each batch to first-seen key order. Every-distinct pattern joins (JoinPatternOne/Two) work: each every-distinct leg inside the followed-by stays resident, so a captured fooA branch pairs with every later distinct wooA and each new distinct fooA starts another branch (Java probe: JoinPatternOne fires exactly one batch of six rows {E1,E1},{E1,E2},{E2,E2},{E1,E3},{E2,E3},{E3,E3}; JoinPatternTwo delivers the ordered {E1,E2},{E1,E3} pair). The Go pattern engine fans out a new sequence branch per left-leg firing, re-arms a repeating right leg with its fired flag reset while keeping its distinct keyspace, gates sequence advancement on fresh every-leg completions (the retained done flag alone no longer re-advances), and treats such completions as non-permanent so the pattern keeps producing until the within deadline. The SupportSubscriberMRD multi-row Object[][] subscriber surface (OBSERVEROPS) is asserted through the listener ResultBatch model; Go has no separate subscriber SPI.",
+   "difference": "SODA round-trip text assertions (eplToModel/toEPL) are an EPL-text-layer boundary for the fluent Go API; wildcard distinct keys narrow to each execution's assertion-surface projection, equivalent under committed inputs because non-projected SupportBean/SupportBean_N properties stay at constructor defaults and val2==intBoxed",
    "remaining": [
     "SupportSubscriberMRD Object[][] subscriber SPI (OBSERVEROPS): asserted via listener ResultBatch, no Go subscriber API surface",
     "env.milestone HA checkpoint semantics: no Go persistence/failover counterpart"
@@ -16550,9 +16554,13 @@
     "java-runtime-4b62c52a89cf86a3843a",
     "java-runtime-4fab4842341b8021b1a2",
     "java-runtime-526d4b64636e45cc051d",
+    "java-runtime-550dd87b54717508c0b9",
+    "java-runtime-7b13ab2779d557eba691",
     "java-runtime-9066a6d1932dae5ff6aa",
+    "java-runtime-c1d232f82f0a154d6241",
     "java-runtime-c752f36ef07cc6280306",
     "java-runtime-d9d561caf48755690e5d",
+    "java-runtime-eb3cba6e0ccf8c3c9c83",
     "java-runtime-f9a1dafb621a6605ef47",
     "java-runtime-fe86653eacb81851d04f"
    ]
@@ -35414,7 +35422,7 @@
   "inventoriedCases": 534,
   "implementedCases": 532,
   "differentialVerifiedCases": 149,
-  "differentialVerifiedRuntimeIds": 480,
+  "differentialVerifiedRuntimeIds": 484,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,

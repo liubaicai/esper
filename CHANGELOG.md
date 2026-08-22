@@ -1,3 +1,21 @@
+> 最新补充：Draft 4.233（2026-08-22），扩展 `epl.other.distinct` 的
+> `epl-other-distinct` differential-verified 场景（wildcard 切片）：新增
+> `EPLOtherBeanEventWildcardThisProperty`
+>（`java-runtime-c1d232f82f0a154d6241`）、
+> `EPLOtherBeanEventWildcardSODA`
+>（`java-runtime-eb3cba6e0ccf8c3c9c83`）、
+> `EPLOtherBeanEventWildcardPlusCols`
+>（`java-runtime-550dd87b54717508c0b9`）与 `EPLOtherMapEventWildcard`
+>（`java-runtime-7b13ab2779d557eba691`）。场景扩至 16 个 case，Java/Go 各
+> 43 条 records、0 differences；四个 execution 均为 select distinct * over
+> keepall 且仅断言迭代器内容，故以每次 send 后的迭代器快照为差分面：
+> 覆盖 bean/A/Map 通配去重与 computed 列联合键（intBoxed%5 as val1、
+> intBoxed as val2，(1,3,8)/(1,3,3) 双行共存、精确重复抑制）。Go 侧
+> Select 零投影即通配符 + WithDistinct；SODA 往返文本断言为已记录边界
+> （EPL 文本层非 Go 链式 API 面）。无引擎改动。manifest 更新为 149 个
+> differential-verified case、484 个 differential runtime IDs、3105 条
+> associations，capability 达到 15/20 DV runtime。
+>
 > 最新补充：Draft 4.232（2026-08-22），扩展 `epl.other.distinct` 的
 > `epl-other-distinct` differential-verified 场景（第三切片）：新增
 > `EPLOtherOnDemandAndOnSelect`（`java-runtime-d9d561caf48755690e5d`）、

@@ -12,7 +12,11 @@
     "java-runtime-9066a6d1932dae5ff6aa",
     "java-runtime-d9d561caf48755690e5d",
     "java-runtime-17e049a70e6c5ca2a376",
-    "java-runtime-526d4b64636e45cc051d"
+    "java-runtime-526d4b64636e45cc051d",
+    "java-runtime-c1d232f82f0a154d6241",
+    "java-runtime-eb3cba6e0ccf8c3c9c83",
+    "java-runtime-550dd87b54717508c0b9",
+    "java-runtime-7b13ab2779d557eba691"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherDistinct.java"
@@ -28,7 +32,11 @@
     "EPLOtherDistinctOnSelectMultikeyWArray",
     "EPLOtherOnDemandAndOnSelect",
     "EPLOtherOutputRateSnapshotColumn",
-    "EPLOtherSubquery"
+    "EPLOtherSubquery",
+    "EPLOtherBeanEventWildcardThisProperty",
+    "EPLOtherBeanEventWildcardSODA",
+    "EPLOtherBeanEventWildcardPlusCols",
+    "EPLOtherMapEventWildcard"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -912,6 +920,163 @@
           "theString": "E1",
           "intPrimitive": 3
         }
+      },
+      {
+        "op": "case",
+        "case": "distinct-wildcard-bean"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "distinct-wildcard-soda"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "distinct-wildcard-plus-cols"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_N",
+        "payload": {
+          "intPrimitive": 1,
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_N",
+        "payload": {
+          "intPrimitive": 1,
+          "intBoxed": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_N",
+        "payload": {
+          "intPrimitive": 1,
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "distinct-wildcard-map"
+      },
+      {
+        "op": "send",
+        "eventType": "MyMapTypeKVDistinct",
+        "payload": {
+          "k1": "E1",
+          "v1": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "MyMapTypeKVDistinct",
+        "payload": {
+          "k1": "E2",
+          "v1": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "MyMapTypeKVDistinct",
+        "payload": {
+          "k1": "E1",
+          "v1": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
       }
     ]
   },
@@ -1707,6 +1872,254 @@
             }
           }
         ]
+      },
+      {
+        "case": "distinct-wildcard-bean",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-bean",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-bean",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-soda",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-soda",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-soda",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-plus-cols",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "val1": 3,
+              "val2": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-plus-cols",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "val1": 3,
+              "val2": 8
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "val1": 3,
+              "val2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-plus-cols",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "val1": 3,
+              "val2": 8
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "val1": 3,
+              "val2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-map",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "k1": "E1",
+              "v1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-map",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "k1": "E1",
+              "v1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k1": "E2",
+              "v1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-map",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "k1": "E1",
+              "v1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k1": "E2",
+              "v1": 2
+            }
+          }
+        ]
       }
     ]
   },
@@ -2499,6 +2912,254 @@
             "fields": {
               "intPrimitive": 3,
               "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-bean",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-bean",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-bean",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-soda",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-soda",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-soda",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-plus-cols",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "val1": 3,
+              "val2": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-plus-cols",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "val1": 3,
+              "val2": 8
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "val1": 3,
+              "val2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-plus-cols",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "val1": 3,
+              "val2": 8
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "val1": 3,
+              "val2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-map",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "k1": "E1",
+              "v1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-map",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "k1": "E1",
+              "v1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k1": "E2",
+              "v1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-wildcard-map",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "k1": "E1",
+              "v1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k1": "E2",
+              "v1": 2
             }
           }
         ]
