@@ -1822,6 +1822,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "stream-selector" || *mode == "stream-selector-diff" {
+		trace, err := runStreamSelectorScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "stream-selector-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, streamSelectorJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, streamSelectorJavaSources),
+				splitMetadata(*javaExecutions, streamSelectorJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "rollup-dimensionality" || *mode == "rollup-dimensionality-diff" {
 		trace, err := runRollupDimensionalityScenario(context.Background(), scenario)
 		if err != nil {

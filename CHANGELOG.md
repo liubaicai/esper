@@ -1,3 +1,21 @@
+> 最新补充：Draft 4.236（2026-08-22），`eplother.stream-selector`
+> capability 全部 19 个 runtime 达到 differential-verified（SelectExpr
+> 套件在 execution 级覆盖 10/17，余 7 个见 manifest remaining）：新增 NoJoinWildcardNoAlias、
+> JoinWildcardNoAlias、NoJoinWildcardWithAlias、JoinWildcardWithAlias、
+> NoJoinNoAliasWithProperties、JoinNoAliasWithProperties、
+> AloneNoJoinNoAlias、AloneNoJoinAlias、AloneJoinAlias（含反向流第二
+> 代）、AloneJoinNoAlias（含反向流第二代）与
+> IStreamRStreamConfigSelectorIRStream/RStream 共 12 个 runtime。legacy
+> scenario 迁移至 esper-parity/v1 并扩至 14 个 case，Java/Go 各 17 条
+> records、0 differences；覆盖通配符/stream 别名/具名列三类投影的底层形
+> 态（原生 bean、Map 包装、Pair 平铺）、无条件 join 交叉、反向流第二代与
+> 引擎默认 istream/rstream 选择器（Go 以 WithOldStream/
+> WithRemoveStreamOnly 逐语句镜像，单语句部署下观测等价）。oracle 记录
+> 补 v1 元字段并固定虚拟时钟；确定性渲染 SupportBean[...] 与 Map 排序
+> 键值。manifest 更新为 534 cases、149 个 differential-verified case、
+> 492 个 differential runtime IDs、3112 条 associations（referenced
+> 2909），capability 19/19 全部 differential-verified。
+>
 > 最新补充：Draft 4.235（2026-08-22），完成 `epl.subselect.unfiltered`
 > capability 收尾（18/19 DV，余 1 项 approved difference）：新增
 > `EPLSubselectStartStopStatement`

@@ -14843,3 +14843,71 @@ func TestRunSubselectUnfilteredDiffRejectsLifecycleMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunStreamSelectorDiffRejectsMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "join-cross-product-broken",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New = nil
+			},
+		},
+		{
+			name: "alias-identity-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["s0"] = "SupportBean[theString=WRONG,intPrimitive=15]"
+			},
+		},
+		{
+			name: "reverse-generation-wrong-stream",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].New[0].Fields["szero"] = "{price=0.0;symbol=E1;volume=0}"
+			},
+		},
+		{
+			name: "config-istream-old-missing",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[15].Old = nil
+			},
+		},
+		{
+			name: "config-rstream-expired-row-missing",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[16].New = trace.Records[16].New[:0]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "stream-selector.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "stream-selector.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "stream-selector.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "stream-selector-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

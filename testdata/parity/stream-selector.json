@@ -1,32 +1,358 @@
 {
-  "id": "stream-selector",
-  "description": "EPLOtherSelectExprStreamSelector stream wildcard (stream.*) scenarios: NoJoinWildcardWithAlias, JoinWildcardWithAlias, AloneJoinAlias, AloneJoinNoAlias",
-  "javaRuntimes": [
-    "EPLOtherNoJoinWildcardWithAlias",
-    "EPLOtherJoinWildcardWithAlias",
-    "EPLOtherAloneJoinAlias",
-    "EPLOtherAloneJoinNoAlias"
-  ],
-  "cases": [
-    {"case": "nojoin-wildcard-alias"},
-    {"case": "join-wildcard-alias"},
-    {"case": "alone-join-alias"},
-    {"case": "alone-join-noalias"}
-  ],
-  "steps": [
-    {"op": "case", "case": "nojoin-wildcard-alias"},
-    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 15},
-
-    {"op": "case", "case": "join-wildcard-alias"},
-    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 13},
-    {"op": "send", "type": "SupportMarketDataBean", "symbol": "E2", "volume": 0, "price": 0},
-
-    {"op": "case", "case": "alone-join-alias"},
-    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
-    {"op": "send", "type": "SupportMarketDataBean", "symbol": "E1", "volume": 0, "price": 0},
-
-    {"op": "case", "case": "alone-join-noalias"},
-    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
-    {"op": "send", "type": "SupportMarketDataBean", "symbol": "E1", "volume": 100, "price": 0}
-  ]
+ "version": "esper-parity/v1",
+ "id": "stream-selector",
+ "description": "Stream-selector scenarios replaying EPLOtherSelectExprStreamSelector wildcard/alias/properties projections (single-stream, join, reverse-stream second generations) plus engine-default istream/rstream config selectors over SupportBean and SupportMarketDataBean",
+ "javaRuntimes": [
+  "java-runtime-043dced54921cbf3b571",
+  "java-runtime-04453c1c3c73e4a9ba36",
+  "java-runtime-1e4ca2cb69bc79b30c91",
+  "java-runtime-4a8e3f2dc067ae2b7602",
+  "java-runtime-4e3a14053213c9ffd08d",
+  "java-runtime-6556dd46777be4afa86f",
+  "java-runtime-6dbc99a56abddbf3d38a",
+  "java-runtime-70753b738456d049f005",
+  "java-runtime-bb3332c825b24eb5046a",
+  "java-runtime-bc1c24102a3db1950ec8",
+  "java-runtime-dccd7d03c70875f69975",
+  "java-runtime-f7193a89174e1e9c9ca0"
+ ],
+ "cases": [
+  {
+   "case": "nojoin-wildcard-noalias",
+   "runtimeId": "java-runtime-6dbc99a56abddbf3d38a"
+  },
+  {
+   "case": "join-wildcard-noalias",
+   "runtimeId": "java-runtime-6556dd46777be4afa86f"
+  },
+  {
+   "case": "nojoin-wildcard-alias",
+   "runtimeId": "java-runtime-70753b738456d049f005"
+  },
+  {
+   "case": "join-wildcard-alias",
+   "runtimeId": "java-runtime-bc1c24102a3db1950ec8"
+  },
+  {
+   "case": "nojoin-noalias-withproperties",
+   "runtimeId": "java-runtime-04453c1c3c73e4a9ba36"
+  },
+  {
+   "case": "join-noalias-withproperties",
+   "runtimeId": "java-runtime-dccd7d03c70875f69975"
+  },
+  {
+   "case": "alone-nojoin-noalias",
+   "runtimeId": "java-runtime-bb3332c825b24eb5046a"
+  },
+  {
+   "case": "alone-nojoin-alias",
+   "runtimeId": "java-runtime-4e3a14053213c9ffd08d"
+  },
+  {
+   "case": "alone-join-alias",
+   "runtimeId": "java-runtime-4a8e3f2dc067ae2b7602"
+  },
+  {
+   "case": "alone-join-alias-reverse",
+   "runtimeId": "java-runtime-4a8e3f2dc067ae2b7602"
+  },
+  {
+   "case": "alone-join-noalias",
+   "runtimeId": "java-runtime-f7193a89174e1e9c9ca0"
+  },
+  {
+   "case": "alone-join-noalias-reverse",
+   "runtimeId": "java-runtime-f7193a89174e1e9c9ca0"
+  },
+  {
+   "case": "config-selector-istream",
+   "runtimeId": "java-runtime-043dced54921cbf3b571"
+  },
+  {
+   "case": "config-selector-rstream",
+   "runtimeId": "java-runtime-1e4ca2cb69bc79b30c91"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "nojoin-wildcard-noalias"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 16
+   }
+  },
+  {
+   "op": "case",
+   "case": "join-wildcard-noalias"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 13
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "price": 0,
+    "volume": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "nojoin-wildcard-alias"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "case",
+   "case": "join-wildcard-alias"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 13
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "price": 0,
+    "volume": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "nojoin-noalias-withproperties"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "case",
+   "case": "join-noalias-withproperties"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1",
+    "price": 0,
+    "volume": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "alone-nojoin-noalias"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "alone-nojoin-alias"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "alone-join-alias"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1",
+    "price": 0,
+    "volume": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "alone-join-alias-reverse"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1",
+    "price": 0,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "alone-join-noalias"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1",
+    "price": 0,
+    "volume": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "alone-join-noalias-reverse"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1",
+    "price": 0,
+    "volume": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "config-selector-istream"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "a",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "b",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "c",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "d",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "case",
+   "case": "config-selector-rstream"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "a",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "b",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "c",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "d",
+    "intPrimitive": 4
+   }
+  }
+ ]
 }

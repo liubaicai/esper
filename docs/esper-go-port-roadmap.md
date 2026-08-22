@@ -4,6 +4,15 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.236（2026-08-22），`eplother.stream-selector`
+> capability 全部 19 个 runtime differential-verified（SelectExpr 套件
+> execution 级 10/17，余 7 个见 manifest remaining）：12 个 runtime 全量
+> 差分验证。scenario 迁移
+> v1 扩至 14 case，Java/Go 各 17 条 records、0 differences；覆盖三类投影
+> 底层形态、交叉 join、反向流第二代与配置式 istream/rstream 选择器
+> （逐语句镜像）。零引擎改动。manifest 更新为 149 个
+> differential-verified case、492 个 differential runtime IDs、3112 条
+> runtime associations。
 > 最新补充：Draft 4.235（2026-08-22），完成 `epl.subselect.unfiltered`
 > capability 收尾（18/19 DV）：新增 StartStopStatement 两代部署生命周期与
 > CustomFunction UDF 子查询投影。场景扩至 18 个 case，Java/Go 各 54 条

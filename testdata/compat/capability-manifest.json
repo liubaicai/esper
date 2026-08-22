@@ -4107,8 +4107,7 @@
    "phase": 2,
    "status": "implemented",
    "remaining": [
-    "EPLOtherIStreamRStreamKeywords suite",
-    "EPLOtherSelectExprStreamSelector suite"
+    "EPLOtherSelectExprStreamSelector suite partially covered (10/17 executions); uncovered: EPLOtherInvalidSelectWildcardProperty, EPLOtherInsertTransposeNestedProperty, EPLOtherInsertFromPattern, EPLOtherObjectModelJoinAlias, EPLOtherNoJoinWithAliasWithProperties, EPLOtherJoinWithAliasWithProperties, EPLOtherInvalidSelect"
    ],
    "verification": [
     "inventoried",
@@ -4116,13 +4115,25 @@
     "differential-verified"
    ],
    "differentialVerifiedRuntimeIds": [
+    "java-runtime-043dced54921cbf3b571",
+    "java-runtime-04453c1c3c73e4a9ba36",
     "java-runtime-0e4714c5a90f9e774235",
+    "java-runtime-1e4ca2cb69bc79b30c91",
     "java-runtime-26cbb822fec0dd23e976",
     "java-runtime-2fd326ba46db2a7e03c4",
     "java-runtime-490347196f7e74a39fd0",
+    "java-runtime-4a8e3f2dc067ae2b7602",
+    "java-runtime-4e3a14053213c9ffd08d",
+    "java-runtime-6556dd46777be4afa86f",
+    "java-runtime-6dbc99a56abddbf3d38a",
+    "java-runtime-70753b738456d049f005",
+    "java-runtime-bb3332c825b24eb5046a",
+    "java-runtime-bc1c24102a3db1950ec8",
     "java-runtime-bdda0ee0cc72ee5d18a1",
     "java-runtime-ccc0bd023a72659c1a43",
-    "java-runtime-d268f6c45cd4375e9c1c"
+    "java-runtime-d268f6c45cd4375e9c1c",
+    "java-runtime-dccd7d03c70875f69975",
+    "java-runtime-f7193a89174e1e9c9ca0"
    ]
   },
   {
@@ -31375,13 +31386,27 @@
     "java-runtime-70753b738456d049f005",
     "java-runtime-bc1c24102a3db1950ec8",
     "java-runtime-4a8e3f2dc067ae2b7602",
-    "java-runtime-f7193a89174e1e9c9ca0"
+    "java-runtime-f7193a89174e1e9c9ca0",
+    "java-runtime-6dbc99a56abddbf3d38a",
+    "java-runtime-6556dd46777be4afa86f",
+    "java-runtime-04453c1c3c73e4a9ba36",
+    "java-runtime-dccd7d03c70875f69975",
+    "java-runtime-bb3332c825b24eb5046a",
+    "java-runtime-043dced54921cbf3b571",
+    "java-runtime-1e4ca2cb69bc79b30c91"
    ],
    "javaNames": [
     "EPLOtherNoJoinWildcardWithAlias",
     "EPLOtherJoinWildcardWithAlias",
     "EPLOtherAloneJoinAlias",
-    "EPLOtherAloneJoinNoAlias"
+    "EPLOtherAloneJoinNoAlias",
+    "EPLOtherNoJoinWildcardNoAlias",
+    "EPLOtherJoinWildcardNoAlias",
+    "EPLOtherNoJoinNoAliasWithProperties",
+    "EPLOtherJoinNoAliasWithProperties",
+    "EPLOtherAloneNoJoinNoAlias",
+    "EPLOtherIStreamRStreamConfigSelectorIRStream",
+    "EPLOtherIStreamRStreamConfigSelectorRStream"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExprStreamSelector.java"
@@ -31410,9 +31435,16 @@
     "differential-verified"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-70753b738456d049f005",
-    "java-runtime-bc1c24102a3db1950ec8",
+    "java-runtime-043dced54921cbf3b571",
+    "java-runtime-04453c1c3c73e4a9ba36",
+    "java-runtime-1e4ca2cb69bc79b30c91",
     "java-runtime-4a8e3f2dc067ae2b7602",
+    "java-runtime-6556dd46777be4afa86f",
+    "java-runtime-6dbc99a56abddbf3d38a",
+    "java-runtime-70753b738456d049f005",
+    "java-runtime-bb3332c825b24eb5046a",
+    "java-runtime-bc1c24102a3db1950ec8",
+    "java-runtime-dccd7d03c70875f69975",
     "java-runtime-f7193a89174e1e9c9ca0"
    ]
   },
@@ -35434,7 +35466,7 @@
   "inventoriedCases": 534,
   "implementedCases": 532,
   "differentialVerifiedCases": 149,
-  "differentialVerifiedRuntimeIds": 489,
+  "differentialVerifiedRuntimeIds": 492,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -35444,10 +35476,10 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3105,
-  "referencedJavaRuntimeIds": 2908,
+  "runtimeAssociationCount": 3112,
+  "referencedJavaRuntimeIds": 2909,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1228,
+  "unreferencedJavaRuntimeIds": 1227,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
   "totalCases": 534,

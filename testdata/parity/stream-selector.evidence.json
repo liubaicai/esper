@@ -1,43 +1,902 @@
 {
-  "version": "esper-parity/v1",
-  "id": "stream-selector",
+  "version": "esper-differential/v1",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
-  "java": "17.0.19",
-  "scenario": "testdata/parity/stream-selector.json",
-  "trace": "testdata/parity/stream-selector.trace.json",
   "javaRuntimeIds": [
+    "java-runtime-6dbc99a56abddbf3d38a",
+    "java-runtime-6556dd46777be4afa86f",
     "java-runtime-70753b738456d049f005",
     "java-runtime-bc1c24102a3db1950ec8",
+    "java-runtime-04453c1c3c73e4a9ba36",
+    "java-runtime-dccd7d03c70875f69975",
+    "java-runtime-bb3332c825b24eb5046a",
+    "java-runtime-4e3a14053213c9ffd08d",
     "java-runtime-4a8e3f2dc067ae2b7602",
-    "java-runtime-f7193a89174e1e9c9ca0"
+    "java-runtime-f7193a89174e1e9c9ca0",
+    "java-runtime-043dced54921cbf3b571",
+    "java-runtime-1e4ca2cb69bc79b30c91"
   ],
-  "goTests": [
-    "TestEPLOtherNoJoinWildcardWithAliasParity",
-    "TestEPLOtherJoinWildcardWithAliasParity",
-    "TestEPLOtherAloneJoinAliasParity",
-    "TestEPLOtherAloneJoinNoAliasParity"
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExprStreamSelector.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherIStreamRStreamConfigSelectorIRStream.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherIStreamRStreamConfigSelectorRStream.java"
   ],
-  "differences": 0,
-  "caseMatchSummary": {
-    "alone-join-alias": {
-      "expected": 1,
-      "actual": 1,
-      "match": true
-    },
-    "alone-join-noalias": {
-      "expected": 1,
-      "actual": 1,
-      "match": true
-    },
-    "join-wildcard-alias": {
-      "expected": 1,
-      "actual": 1,
-      "match": true
-    },
-    "nojoin-wildcard-alias": {
-      "expected": 1,
-      "actual": 1,
-      "match": true
-    }
-  }
+  "javaExecutions": [
+    "EPLOtherNoJoinWildcardNoAlias",
+    "EPLOtherJoinWildcardNoAlias",
+    "EPLOtherNoJoinWildcardWithAlias",
+    "EPLOtherJoinWildcardWithAlias",
+    "EPLOtherNoJoinNoAliasWithProperties",
+    "EPLOtherJoinNoAliasWithProperties",
+    "EPLOtherAloneNoJoinNoAlias",
+    "EPLOtherAloneNoJoinAlias",
+    "EPLOtherAloneJoinAlias",
+    "EPLOtherAloneJoinNoAlias",
+    "EPLOtherIStreamRStreamConfigSelectorIRStream",
+    "EPLOtherIStreamRStreamConfigSelectorRStream"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "stream-selector",
+    "steps": [
+      {
+        "op": "case",
+        "case": "nojoin-wildcard-noalias"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 16
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-wildcard-noalias"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2",
+          "price": 0,
+          "volume": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "nojoin-wildcard-alias"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 15
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-wildcard-alias"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2",
+          "price": 0,
+          "volume": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "nojoin-noalias-withproperties"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-noalias-withproperties"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1",
+          "price": 0,
+          "volume": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "alone-nojoin-noalias"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "alone-nojoin-alias"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "alone-join-alias"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1",
+          "price": 0,
+          "volume": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "alone-join-alias-reverse"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1",
+          "price": 0,
+          "volume": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "alone-join-noalias"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1",
+          "price": 0,
+          "volume": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "alone-join-noalias-reverse"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1",
+          "price": 0,
+          "volume": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "config-selector-istream"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "a",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "b",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "c",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "d",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "case",
+        "case": "config-selector-rstream"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "a",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "b",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "c",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "d",
+          "intPrimitive": 4
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "stream-selector",
+    "records": [
+      {
+        "case": "nojoin-wildcard-noalias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "16",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-wildcard-noalias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0": "SupportBean[theString=E1,intPrimitive=13]",
+              "s1": "{price=0.0;symbol=E2;volume=0}",
+              "symbol": "E2",
+              "volume": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nojoin-wildcard-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "15",
+              "s0": "SupportBean[theString=E1,intPrimitive=15]",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-wildcard-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0": "SupportBean[theString=E1,intPrimitive=13]",
+              "s0stream": "SupportBean[theString=E1,intPrimitive=13]",
+              "s1": "{price=0.0;symbol=E2;volume=0}",
+              "s1stream": "{price=0.0;symbol=E2;volume=0}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nojoin-noalias-withproperties",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "10",
+              "b": "10",
+              "intPrimitive": "10",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-noalias-withproperties",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "11",
+              "sym": "E1",
+              "symbol": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-nojoin-noalias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-nojoin-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0": "SupportBean[theString=E1,intPrimitive=0]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-join-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s1": "{price=0.0;symbol=E1;volume=0}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-join-alias-reverse",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "szero": "SupportBean[theString=E1,intPrimitive=0]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-join-noalias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-join-noalias-reverse",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "config-selector-istream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "1",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "config-selector-istream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "2",
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "config-selector-istream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "3",
+              "theString": "c"
+            }
+          }
+        ]
+      },
+      {
+        "case": "config-selector-istream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "4",
+              "theString": "d"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "1",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "config-selector-rstream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "1",
+              "theString": "a"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "stream-selector",
+    "records": [
+      {
+        "case": "nojoin-wildcard-noalias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "16",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-wildcard-noalias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0": "SupportBean[theString=E1,intPrimitive=13]",
+              "s1": "{price=0.0;symbol=E2;volume=0}",
+              "symbol": "E2",
+              "volume": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nojoin-wildcard-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "15",
+              "s0": "SupportBean[theString=E1,intPrimitive=15]",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-wildcard-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0": "SupportBean[theString=E1,intPrimitive=13]",
+              "s0stream": "SupportBean[theString=E1,intPrimitive=13]",
+              "s1": "{price=0.0;symbol=E2;volume=0}",
+              "s1stream": "{price=0.0;symbol=E2;volume=0}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nojoin-noalias-withproperties",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "10",
+              "b": "10",
+              "intPrimitive": "10",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-noalias-withproperties",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "11",
+              "sym": "E1",
+              "symbol": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-nojoin-noalias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-nojoin-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s0": "SupportBean[theString=E1,intPrimitive=0]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-join-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "s1": "{price=0.0;symbol=E1;volume=0}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-join-alias-reverse",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "szero": "SupportBean[theString=E1,intPrimitive=0]"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-join-noalias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alone-join-noalias-reverse",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "config-selector-istream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "1",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "config-selector-istream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "2",
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "config-selector-istream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "3",
+              "theString": "c"
+            }
+          }
+        ]
+      },
+      {
+        "case": "config-selector-istream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "4",
+              "theString": "d"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "1",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "config-selector-rstream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "1",
+              "theString": "a"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
 }
