@@ -17,7 +17,12 @@
   "java-runtime-c1d232f82f0a154d6241",
   "java-runtime-eb3cba6e0ccf8c3c9c83",
   "java-runtime-550dd87b54717508c0b9",
-  "java-runtime-7b13ab2779d557eba691"
+  "java-runtime-7b13ab2779d557eba691",
+  "java-runtime-93ccd6033710a75f113a",
+  "java-runtime-e21f5d942d6c4869bf1b",
+  "java-runtime-6905746f98b2a3b39f8b",
+  "java-runtime-5deb9547c58344716a93",
+  "java-runtime-deca832debc5d94d4dcc"
  ],
  "cases": [
   {
@@ -83,6 +88,26 @@
   {
    "case": "distinct-wildcard-map",
    "runtimeId": "java-runtime-7b13ab2779d557eba691"
+  },
+  {
+   "case": "distinct-batch-window-join",
+   "runtimeId": "java-runtime-93ccd6033710a75f113a"
+  },
+  {
+   "case": "distinct-batch-window-insert-into",
+   "runtimeId": "java-runtime-e21f5d942d6c4869bf1b"
+  },
+  {
+   "case": "distinct-pattern-one",
+   "runtimeId": "java-runtime-6905746f98b2a3b39f8b"
+  },
+  {
+   "case": "distinct-pattern-two",
+   "runtimeId": "java-runtime-5deb9547c58344716a93"
+  },
+  {
+   "case": "distinct-variant-stream",
+   "runtimeId": "java-runtime-deca832debc5d94d4dcc"
   }
  ],
  "steps": [
@@ -1121,6 +1146,346 @@
   {
    "op": "snapshot",
    "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "distinct-batch-window-join"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "case",
+   "case": "distinct-batch-window-insert-into"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "case",
+   "case": "distinct-pattern-one"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 2,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "Query",
+    "intPrimitive": 0,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "case",
+   "case": "distinct-pattern-two"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 2,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "Query",
+    "intPrimitive": 0,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "case",
+   "case": "distinct-variant-stream"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "id",
+    "intOne": [
+     1,
+     2
+    ],
+    "intTwo": [
+     3,
+     4
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "id",
+    "intOne": [
+     3,
+     4
+    ],
+    "intTwo": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "id",
+    "intOne": [
+     1,
+     2
+    ],
+    "intTwo": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "id",
+    "intOne": [
+     3,
+     4
+    ],
+    "intTwo": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "id",
+    "intOne": [
+     1,
+     2
+    ],
+    "intTwo": [
+     3,
+     4
+    ]
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s1"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s2"
   }
  ]
 }

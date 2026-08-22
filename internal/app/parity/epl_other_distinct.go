@@ -39,6 +39,14 @@ type eplOtherDistinctN struct {
 	IntBoxed     int32 `esper:"intBoxed"`
 }
 
+// eplOtherDistinctPatternBean carries longPrimitive for the pattern-join
+// executions; it is registered as SupportBean only inside those case envs.
+type eplOtherDistinctPatternBean struct {
+	TheString     string `esper:"theString"`
+	IntPrimitive  int32  `esper:"intPrimitive"`
+	LongPrimitive int64  `esper:"longPrimitive"`
+}
+
 var eplOtherDistinctJavaSources = []string{
 	"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherDistinct.java",
 }
@@ -60,6 +68,11 @@ var (
 		"java-runtime-eb3cba6e0ccf8c3c9c83",
 		"java-runtime-550dd87b54717508c0b9",
 		"java-runtime-7b13ab2779d557eba691",
+		"java-runtime-93ccd6033710a75f113a",
+		"java-runtime-e21f5d942d6c4869bf1b",
+		"java-runtime-6905746f98b2a3b39f8b",
+		"java-runtime-5deb9547c58344716a93",
+		"java-runtime-deca832debc5d94d4dcc",
 	}
 	eplOtherDistinctJavaExecutions = []string{
 		"EPLOtherOutputSimpleColumn",
@@ -77,6 +90,11 @@ var (
 		"EPLOtherBeanEventWildcardSODA",
 		"EPLOtherBeanEventWildcardPlusCols",
 		"EPLOtherMapEventWildcard",
+		"EPLOtherBatchWindowJoin",
+		"EPLOtherBatchWindowInsertInto",
+		"EPLOtherDistinctWildcardJoinPatternOne",
+		"EPLOtherDistinctWildcardJoinPatternTwo",
+		"EPLOtherDistinctVariantStream",
 	}
 )
 
@@ -104,6 +122,11 @@ func runEplOtherDistinctScenario(ctx context.Context, scenario compat.Scenario) 
 		"distinct-wildcard-soda",
 		"distinct-wildcard-plus-cols",
 		"distinct-wildcard-map",
+		"distinct-batch-window-join",
+		"distinct-batch-window-insert-into",
+		"distinct-pattern-one",
+		"distinct-pattern-two",
+		"distinct-variant-stream",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("epl-other-distinct scenario %q has no supported cases", scenario.ID)
@@ -172,6 +195,9 @@ func runEplOtherDistinctCase(ctx context.Context, scenario compat.Scenario, case
 		return runEplOtherDistinctOnDemandCase(ctx, scenario, caseName)
 	case "distinct-wildcard-bean", "distinct-wildcard-soda", "distinct-wildcard-plus-cols", "distinct-wildcard-map":
 		return runEplOtherDistinctWildcardCase(ctx, scenario, caseName)
+	case "distinct-batch-window-join", "distinct-batch-window-insert-into",
+		"distinct-pattern-one", "distinct-pattern-two", "distinct-variant-stream":
+		return runEplOtherDistinctFinaleCase(ctx, scenario, caseName)
 	default:
 		if len(caseName) > 16 && caseName[:16] == "distinct-mwarray" {
 			return runEplOtherDistinctMultikeyCase(ctx, scenario, caseName)
@@ -848,6 +874,380 @@ func runEplOtherDistinctWildcardCase(ctx context.Context, scenario compat.Scenar
 			})
 		default:
 			return trace, fmt.Errorf("unsupported epl-other-distinct wildcard step op %q", step.Op)
+		}
+	}
+	return trace, nil
+}
+
+// runEplOtherDistinctFinaleCase replays the capability-finale slice: the
+// batch-window join, the batch-window insert-into route, both pattern-join
+// executions, and the variant-schema stream. Rows are scoped to each
+// execution's assertion surface.
+func runEplOtherDistinctFinaleCase(ctx context.Context, scenario compat.Scenario, caseName string) (compat.Trace, error) {
+	caseScenario, err := scenarioForCase(scenario, caseName)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	env := esper.NewEnvironment()
+	isPattern := caseName == "distinct-pattern-one" || caseName == "distinct-pattern-two"
+	finaleDecode := decodeEplOtherDistinctPayload
+	if isPattern {
+		finaleDecode = func(step compat.Step) (any, error) {
+			if step.EventType == "SupportBean" {
+				var event eplOtherDistinctPatternBean
+				if err := json.Unmarshal(step.Payload, &event); err != nil {
+					return nil, fmt.Errorf("epl-other-distinct SupportBean: %w", err)
+				}
+				return event, nil
+			}
+			return decodeEplOtherDistinctPayload(step)
+		}
+	}
+	if !isPattern {
+		if _, err := esper.RegisterStruct[eplOtherDistinctEvent](env, "SupportBean"); err != nil {
+			return compat.Trace{}, err
+		}
+	}
+	if _, err := esper.RegisterStruct[eplOtherDistinctA](env, "SupportBean_A"); err != nil {
+		return compat.Trace{}, err
+	}
+
+	switch caseName {
+	case "distinct-batch-window-join":
+		str := esper.Field[eplOtherDistinctEvent, string]("theString")
+		aID := esper.Field[eplOtherDistinctA, string]("id")
+		left := esper.From[eplOtherDistinctEvent](env, "SupportBean").Window(esper.LengthBatch(3))
+		right := esper.From[eplOtherDistinctA](env, "SupportBean_A").Window(esper.KeepAll())
+		query := esper.Join(left, right,
+			esper.OnSourcesEqual(0, str, 1, aID),
+		).Select(
+			esper.SelectFrom(0, "theString", esper.JoinField[string](0, "theString")),
+			esper.SelectFrom(0, "intPrimitive", esper.JoinField[int32](0, "intPrimitive")),
+		).Query(
+			esper.StatementName("s0"),
+			esper.WithDistinct(),
+		)
+		return replayFinaleStandard(ctx, env, query, caseScenario, caseName, finaleDecode)
+	case "distinct-batch-window-insert-into":
+		// Java auto-declares MyStream from the insert-into clause; the Go
+		// route target must be declared up front with the projected shape.
+		if _, err := esper.RegisterStruct[eplOtherDistinctEvent](env, "MyStream"); err != nil {
+			return compat.Trace{}, err
+		}
+		str := esper.Field[eplOtherDistinctEvent, string]("theString")
+		num := esper.Field[eplOtherDistinctEvent, int32]("intPrimitive")
+		ws := esper.From[eplOtherDistinctEvent](env, "SupportBean").Window(esper.LengthBatch(3))
+		insertQuery := esper.Select(ws,
+			esper.Alias("theString", str),
+			esper.Alias("intPrimitive", num),
+		).InsertInto("MyStream",
+			esper.StatementName("insert"),
+			esper.WithDistinct(),
+		)
+		downstream := esper.FromAny(env, "MyStream")
+		downstreamQuery := downstream.Select().Query(
+			esper.StatementName("s0"),
+		)
+		return replayFinaleTwoStatement(ctx, env, insertQuery, downstreamQuery, caseScenario, caseName, finaleDecode)
+	case "distinct-pattern-one", "distinct-pattern-two":
+		if _, err := esper.RegisterStruct[eplOtherDistinctPatternBean](env, "SupportBean"); err != nil {
+			return compat.Trace{}, err
+		}
+		query := esperPatternJoinQuery(env, caseName == "distinct-pattern-two")
+		if caseName == "distinct-pattern-one" {
+			return replayFinalePatternWeak(ctx, env, query, caseScenario, caseName, finaleDecode)
+		}
+		return replayFinalePatternOrdered(ctx, env, query, caseScenario, caseName, finaleDecode)
+	case "distinct-variant-stream":
+		if _, err := esper.RegisterStruct[eplOtherDistinctManyArray](env, "SupportEventWithManyArray"); err != nil {
+			return compat.Trace{}, err
+		}
+		manyArraySchema, ok := env.Schema("SupportEventWithManyArray")
+		if !ok {
+			return compat.Trace{}, fmt.Errorf("epl-other-distinct: SupportEventWithManyArray schema missing")
+		}
+		if _, err := esper.RegisterVariant(env, "MyVariant", manyArraySchema); err != nil {
+			return compat.Trace{}, err
+		}
+		insertPlan, err := env.Build(esper.From[eplOtherDistinctManyArray](env, "SupportEventWithManyArray").InsertInto(
+			"MyVariant", esper.StatementName("insert")))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		intOne := esper.Field[any, []int]("intOne")
+		intTwo := esper.Field[any, []int]("intTwo")
+		s0Plan, err := env.Build(esper.FromAny(env, "MyVariant").Window(esper.KeepAll()).Select().Query(
+			esper.StatementName("s0"), esper.WithDistinct()))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		s1Plan, err := env.Build(esper.FromAny(env, "MyVariant").Window(esper.KeepAll()).Select(
+			esper.Alias("intOne", intOne),
+		).Query(
+			esper.StatementName("s1"), esper.WithDistinct()))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		s2Plan, err := env.Build(esper.FromAny(env, "MyVariant").Window(esper.KeepAll()).Select(
+			esper.Alias("intOne", intOne),
+			esper.Alias("intTwo", intTwo),
+		).Query(
+			esper.StatementName("s2"), esper.WithDistinct()))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		engine := esper.NewEngine(env)
+		defer func() { _ = engine.Close(context.Background()) }()
+		statements := make(map[string]*esper.Statement)
+		for _, plan := range []esper.Plan{insertPlan, s0Plan, s1Plan, s2Plan} {
+			deployment, err := engine.Deploy(ctx, plan)
+			if err != nil {
+				return compat.Trace{}, err
+			}
+			for _, statement := range deployment.Statements() {
+				statements[statement.Name()] = statement
+			}
+		}
+		trace := compat.Trace{Version: caseScenario.Version, ID: caseScenario.ID}
+		for _, step := range caseScenario.Steps {
+			switch step.Op {
+			case "case":
+				continue
+			case "send":
+				payload, err := decodeEplOtherDistinctPayload(step)
+				if err != nil {
+					return trace, err
+				}
+				if err := engine.Send(ctx, step.EventType, payload); err != nil {
+					return trace, err
+				}
+			case "snapshot":
+				target := statements[step.Statement]
+				if target == nil {
+					return trace, fmt.Errorf("unknown epl-other-distinct variant snapshot statement %q", step.Statement)
+				}
+				result, err := target.Snapshot(ctx)
+				if err != nil {
+					return trace, err
+				}
+				trace.Records = append(trace.Records, compat.TraceRecord{
+					Case:      caseName,
+					Operation: "snapshot",
+					Statement: step.Statement,
+					Time:      currentTimeString(engine),
+					New:       compat.NormalizeResults(result.Batch.New),
+				})
+			default:
+				return trace, fmt.Errorf("unsupported epl-other-distinct variant step op %q", step.Op)
+			}
+		}
+		return trace, nil
+	default:
+		return compat.Trace{}, fmt.Errorf("unsupported epl-other-distinct finale case %q", caseName)
+	}
+}
+
+// esperPatternJoinQuery builds the every-distinct pattern-join query shared
+// by the two pattern executions; orderByWooA adds the deterministic ordering
+// of the second execution.
+func esperPatternJoinQuery(env *esper.Environment, orderByWooA bool) esper.Query {
+	base := esper.From[eplOtherDistinctPatternBean](env, "SupportBean")
+	intIs := func(want int32) esper.Expression[bool] {
+		return esper.Equal[int32](esper.Field[eplOtherDistinctPatternBean, int32]("intPrimitive"), esper.Literal(want))
+	}
+	key := esper.Field[eplOtherDistinctPatternBean, string]("theString")
+	// Java's timer:within postfix binds to the preceding pattern atom, so
+	// the one-hour guard scopes the wooA branch before the sequence composes.
+	pattern := esper.PatternFrom(base, "fooA", intIs(1)).EveryDistinct(key).
+		Then(esper.PatternFrom(base, "wooA", intIs(2)).EveryDistinct(key).Within(time.Hour))
+	options := []esper.QueryOption{esper.StatementName("s0"), esper.WithDistinct()}
+	if orderByWooA {
+		options = append(options, esper.OrderBy(esper.Ascending(esper.JoinPatternField[string](1, "wooA", "theString"))))
+	}
+	return esper.JoinMany(
+		esper.JoinSource(base.Filter(intIs(0))).Unidirectional(),
+		esper.JoinPatternSource(pattern).Window(esper.TimeWindow(time.Hour)),
+	).On(esper.OnSourcesEqual(
+		0, esper.Field[eplOtherDistinctPatternBean, int64]("longPrimitive"),
+		1, esper.JoinPatternField[int64](1, "fooA", "longPrimitive"),
+	)).Select(
+		esper.SelectSourceEvent(0, "fooB"),
+		esper.SelectSourceEvent(1, "fooWooPair"),
+	).Query(options...)
+}
+
+// patternJoinSurfaceRow projects one wildcard join row onto the Java
+// subscriber's assertion surface: (fooB.theString, fooA.theString, wooA.theString).
+func patternJoinSurfaceRow(row esper.Result) (string, string, string, error) {
+	fooBEvent, ok := row.Get("fooB").Any().(esper.Event)
+	if !ok {
+		return "", "", "", fmt.Errorf("fooB is not an event: %#v", row.Get("fooB").Any())
+	}
+	pairEvent, ok := row.Get("fooWooPair").Any().(esper.Event)
+	if !ok {
+		return "", "", "", fmt.Errorf("fooWooPair is not an event: %#v", row.Get("fooWooPair").Any())
+	}
+	fooAEvent, ok := pairEvent.Get("fooA").Any().(esper.Event)
+	if !ok {
+		return "", "", "", fmt.Errorf("fooWooPair.fooA is not an event: %#v", pairEvent.Get("fooA").Any())
+	}
+	wooAEvent, ok := pairEvent.Get("wooA").Any().(esper.Event)
+	if !ok {
+		return "", "", "", fmt.Errorf("fooWooPair.wooA is not an event: %#v", pairEvent.Get("wooA").Any())
+	}
+	fooB, _ := fooBEvent.Get("theString").Any().(string)
+	fooA, _ := fooAEvent.Get("theString").Any().(string)
+	wooA, _ := wooAEvent.Get("theString").Any().(string)
+	return fooB, fooA, wooA, nil
+}
+
+func replayFinaleStandard(ctx context.Context, env *esper.Environment, query esper.Query, caseScenario compat.Scenario, caseName string, decode compat.DecodePayload) (compat.Trace, error) {
+	plan, err := env.Build(query)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	engine, statement, err := deployParityStatement(ctx, env, plan)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+	return compat.ReplayWithStatements(ctx, engine, statement, caseScenario, decode, resolveEplOtherDistinctSingle(statement))
+}
+
+func replayFinaleTwoStatement(ctx context.Context, env *esper.Environment, insertQuery, downstreamQuery esper.Query, caseScenario compat.Scenario, caseName string, decode compat.DecodePayload) (compat.Trace, error) {
+	insertPlan, err := env.Build(insertQuery)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	downstreamPlan, err := env.Build(downstreamQuery)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	engine := esper.NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	var downstream *esper.Statement
+	for _, plan := range []esper.Plan{insertPlan, downstreamPlan} {
+		deployment, err := engine.Deploy(ctx, plan)
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		for _, statement := range deployment.Statements() {
+			if statement.Name() == "s0" {
+				downstream = statement
+			}
+		}
+	}
+	if downstream == nil {
+		return compat.Trace{}, fmt.Errorf("epl-other-distinct: downstream s0 not found")
+	}
+	return compat.ReplayWithStatements(ctx, engine, downstream, caseScenario, decode, resolveEplOtherDistinctSingle(downstream))
+}
+
+// replayFinalePatternWeak records a single listener-invoked marker: the Java
+// suite asserts only the invoked flag for the first pattern execution.
+func replayFinalePatternWeak(ctx context.Context, env *esper.Environment, query esper.Query, caseScenario compat.Scenario, caseName string, decode compat.DecodePayload) (compat.Trace, error) {
+	plan, err := env.Build(query)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	engine, statement, err := deployParityStatement(ctx, env, plan)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	trace := compat.Trace{Version: caseScenario.Version, ID: caseScenario.ID}
+	recorded := false
+	if _, err := statement.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+		if recorded || len(batch.New) == 0 {
+			return nil
+		}
+		recorded = true
+		trace.Records = append(trace.Records, compat.TraceRecord{
+			Case:      caseName,
+			Operation: "listener-invoked",
+			Statement: statement.Name(),
+			Sequence:  1,
+			Time:      currentTimeString(engine),
+		})
+		return nil
+	}); err != nil {
+		return trace, err
+	}
+	for _, step := range caseScenario.Steps {
+		if step.Op == "case" {
+			continue
+		}
+		if step.Op != "send" {
+			return trace, fmt.Errorf("unsupported epl-other-distinct pattern step op %q", step.Op)
+		}
+		payload, err := decode(step)
+		if err != nil {
+			return trace, err
+		}
+		if err := engine.Send(ctx, step.EventType, payload); err != nil {
+			return trace, err
+		}
+	}
+	return trace, nil
+}
+
+// replayFinalePatternOrdered projects the ordered MRD payload of the second
+// pattern execution: exactly one insert batch of two rows keyed by
+// (fooB.theString, fooA.theString, wooA.theString).
+func replayFinalePatternOrdered(ctx context.Context, env *esper.Environment, query esper.Query, caseScenario compat.Scenario, caseName string, decode compat.DecodePayload) (compat.Trace, error) {
+	plan, err := env.Build(query)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	engine, statement, err := deployParityStatement(ctx, env, plan)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	trace := compat.Trace{Version: caseScenario.Version, ID: caseScenario.ID}
+	if _, err := statement.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+		if len(batch.New) == 0 {
+			return nil
+		}
+		rows := make([]compat.ResultRecord, 0, len(batch.New))
+		for _, row := range batch.New {
+			fooB, fooA, wooA, err := patternJoinSurfaceRow(row)
+			if err != nil {
+				return err
+			}
+			rows = append(rows, compat.ResultRecord{Kind: "row", Fields: map[string]any{
+				"theString": fooB,
+				"fooA":      fooA,
+				"wooA":      wooA,
+			}})
+		}
+		trace.Records = append(trace.Records, compat.TraceRecord{
+			Case:      caseName,
+			Operation: "listener",
+			Statement: statement.Name(),
+			Sequence:  1,
+			Time:      currentTimeString(engine),
+			New:       rows,
+		})
+		return nil
+	}); err != nil {
+		return trace, err
+	}
+	for _, step := range caseScenario.Steps {
+		if step.Op == "case" {
+			continue
+		}
+		if step.Op != "send" {
+			return trace, fmt.Errorf("unsupported epl-other-distinct pattern step op %q", step.Op)
+		}
+		payload, err := decode(step)
+		if err != nil {
+			return trace, err
+		}
+		if err := engine.Send(ctx, step.EventType, payload); err != nil {
+			return trace, err
 		}
 	}
 	return trace, nil

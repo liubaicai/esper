@@ -4,6 +4,16 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.234（2026-08-22），完成 `epl.other.distinct`
+> capability 收尾（20/20 DV）：新增 BatchWindowJoin、
+> BatchWindowInsertInto、WildcardJoinPatternOne/Two 与 VariantStream 五个
+> execution。场景扩至 21 个 case，Java/Go 各 54 条 records、0
+> differences；覆盖 join×batch flush 去重、insert-into 路由前去重、
+> every-distinct 模式连接（弱 oracle invoked 标记 + MRD 有序 payload）与
+> variant schema 三投影快照。零引擎改动。manifest 更新为 149 个
+> differential-verified case、489 个 differential runtime IDs、3105 条
+> runtime associations，capability 20/20 runtime 全部
+> differential-verified。
 > 最新补充：Draft 4.233（2026-08-22），扩展 `epl.other.distinct` 的
 > `epl-other-distinct` differential-verified 场景（wildcard 切片）：新增
 > `EPLOtherBeanEventWildcardThisProperty`

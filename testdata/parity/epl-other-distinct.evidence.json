@@ -16,7 +16,12 @@
     "java-runtime-c1d232f82f0a154d6241",
     "java-runtime-eb3cba6e0ccf8c3c9c83",
     "java-runtime-550dd87b54717508c0b9",
-    "java-runtime-7b13ab2779d557eba691"
+    "java-runtime-7b13ab2779d557eba691",
+    "java-runtime-93ccd6033710a75f113a",
+    "java-runtime-e21f5d942d6c4869bf1b",
+    "java-runtime-6905746f98b2a3b39f8b",
+    "java-runtime-5deb9547c58344716a93",
+    "java-runtime-deca832debc5d94d4dcc"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherDistinct.java"
@@ -36,7 +41,12 @@
     "EPLOtherBeanEventWildcardThisProperty",
     "EPLOtherBeanEventWildcardSODA",
     "EPLOtherBeanEventWildcardPlusCols",
-    "EPLOtherMapEventWildcard"
+    "EPLOtherMapEventWildcard",
+    "EPLOtherBatchWindowJoin",
+    "EPLOtherBatchWindowInsertInto",
+    "EPLOtherDistinctWildcardJoinPatternOne",
+    "EPLOtherDistinctWildcardJoinPatternTwo",
+    "EPLOtherDistinctVariantStream"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -1077,6 +1087,346 @@
       {
         "op": "snapshot",
         "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "distinct-batch-window-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "case",
+        "case": "distinct-batch-window-insert-into"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "case",
+        "case": "distinct-pattern-one"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Query",
+          "intPrimitive": 0,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "distinct-pattern-two"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Query",
+          "intPrimitive": 0,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "distinct-variant-stream"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            3,
+            4
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            5
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            3,
+            4
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s1"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s2"
       }
     ]
   },
@@ -2120,6 +2470,274 @@
             }
           }
         ]
+      },
+      {
+        "case": "distinct-batch-window-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-pattern-one",
+        "operation": "listener-invoked",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "distinct-pattern-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "fooA": "E1",
+              "theString": "Query",
+              "wooA": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "fooA": "E1",
+              "theString": "Query",
+              "wooA": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-variant-stream",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "id",
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "id",
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "id",
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-variant-stream",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-variant-stream",
+        "operation": "snapshot",
+        "statement": "s2",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
       }
     ]
   },
@@ -3160,6 +3778,274 @@
             "fields": {
               "k1": "E2",
               "v1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-batch-window-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-pattern-one",
+        "operation": "listener-invoked",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "distinct-pattern-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "fooA": "E1",
+              "theString": "Query",
+              "wooA": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "fooA": "E1",
+              "theString": "Query",
+              "wooA": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-variant-stream",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "id",
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "id",
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "id",
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-variant-stream",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-variant-stream",
+        "operation": "snapshot",
+        "statement": "s2",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
             }
           }
         ]

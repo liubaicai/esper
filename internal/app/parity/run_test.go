@@ -14702,3 +14702,79 @@ func TestRunEplOtherDistinctDiffRejectsWildcardMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunEplOtherDistinctDiffRejectsFinaleMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "join-flush-order-broken",
+			mutate: func(trace *compat.Trace) {
+				rows := trace.Records[43].New
+				rows[0], rows[1] = rows[1], rows[0]
+			},
+		},
+		{
+			name: "insert-route-dedup-missing",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[46].New = append(trace.Records[46].New, compat.ResultRecord{Kind: "row", Fields: map[string]any{"theString": "E1", "intPrimitive": int64(1)}})
+			},
+		},
+		{
+			name: "second-flush-order-broken",
+			mutate: func(trace *compat.Trace) {
+				rows := trace.Records[44].New
+				rows[0], rows[1] = rows[1], rows[0]
+			},
+		},
+		{
+			name: "pattern-invoked-marker-dropped",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records[:49], trace.Records[50:]...)
+			},
+		},
+		{
+			name: "pattern-two-payload-truncated",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[50].New = trace.Records[50].New[:1]
+			},
+		},
+		{
+			name: "variant-intone-key-collapsed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[52].New = trace.Records[52].New[:1]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-distinct.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-other-distinct.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-distinct.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-other-distinct-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

@@ -1,3 +1,25 @@
+> 最新补充：Draft 4.234（2026-08-22），完成 `epl.other.distinct`
+> capability 收尾（20/20 DV）：新增
+> `EPLOtherBatchWindowJoin`（`java-runtime-93ccd6033710a75f113a`）、
+> `EPLOtherBatchWindowInsertInto`
+>（`java-runtime-e21f5d942d6c4869bf1b`）、
+> `EPLOtherDistinctWildcardJoinPatternOne`
+>（`java-runtime-6905746f98b2a3b39f8b`）、
+> `EPLOtherDistinctWildcardJoinPatternTwo`
+>（`java-runtime-5deb9547c58344716a93`）与
+> `EPLOtherDistinctVariantStream`
+>（`java-runtime-deca832debc5d94d4dcc`）。场景扩至 21 个 case，Java/Go
+> 各 54 条 records、0 differences；覆盖 join×length_batch(3) flush 去重
+> 保序、distinct 先于 insert-into 路由（下游仅收去重行）、
+> every-distinct×timer:within×unidirectional 模式连接（PatternOne 弱
+> oracle 记 invoked 标记；PatternTwo 投影 MRD 两行有序 payload
+> (Query,E1,E2)/(Query,E1,E3)）、variant schema 注册 + 三投影迭代器快照
+> （3/2/3 行，int[] 逐元素键）。Go 侧零引擎改动；PatternTwo 行面与既有
+> parity 期望一致。manifest 更新为 534 cases、149 个
+> differential-verified case、489 个 differential runtime IDs、3105 条
+> associations，`epl.other.distinct` capability 全部 20 个 runtime 达到
+> differential-verified。
+>
 > 最新补充：Draft 4.233（2026-08-22），扩展 `epl.other.distinct` 的
 > `epl-other-distinct` differential-verified 场景（wildcard 切片）：新增
 > `EPLOtherBeanEventWildcardThisProperty`

@@ -57,6 +57,12 @@ public class EPOtherDistinctScenarioOracle {
                 runOnDemandCase(allSteps, caseName, records);
             } else if (caseName.startsWith("distinct-wildcard-")) {
                 runWildcardCase(allSteps, caseName, records);
+            } else if (caseName.equals("distinct-batch-window-join")
+                || caseName.equals("distinct-batch-window-insert-into")
+                || caseName.equals("distinct-pattern-one")
+                || caseName.equals("distinct-pattern-two")
+                || caseName.equals("distinct-variant-stream")) {
+                runFinaleCase(allSteps, caseName, records);
             } else {
                 runScalarCase(allSteps, caseName, records);
             }
@@ -337,7 +343,7 @@ public class EPOtherDistinctScenarioOracle {
                 if ("send".equals(op)) {
                     sendStep(runtime, step);
                 } else if ("snapshot".equals(op)) {
-                    java.util.Iterator<EventBean> it = stmt.iterator();
+                    java.util.Iterator<EventBean> it = findStatement(deployment, step.getString("statement", "s0")).iterator();
                     List<EventBean> rows = new ArrayList<>();
                     while (it.hasNext()) {
                         rows.add(it.next());
@@ -395,6 +401,166 @@ public class EPOtherDistinctScenarioOracle {
             case "distinct-wildcard-map" ->
                 "@name('s0') select distinct * from MyMapTypeKVDistinct#keepall";
             default -> throw new IllegalStateException("unknown wildcard case: " + caseName);
+        };
+    }
+
+    /**
+     * Capability-finale slice: batch-window join, batch-window insert-into
+     * routing, the two pattern-join executions (weak invoked-flag oracle for
+     * PatternOne; projected MRD payload for PatternTwo), and the variant
+     * schema stream. Rows are scoped to each execution's assertion surface.
+     */
+    private static void runFinaleCase(JsonArray allSteps, String caseName, List<JsonObject> records) throws Exception {
+        Configuration config = new Configuration();
+        config.getCommon().addEventType(SupportBean.class);
+        config.getCommon().addEventType(SupportBean_A.class);
+        Map<String, Object> manyArrayType = new HashMap<>();
+        manyArrayType.put("id", String.class);
+        manyArrayType.put("intOne", int[].class);
+        manyArrayType.put("intTwo", int[].class);
+        config.getCommon().addEventType("SupportEventWithManyArray", manyArrayType);
+        config.getRuntime().getThreading().setInternalTimerEnabled(false);
+        EPRuntime runtime = EPRuntimeProvider.getRuntime("EPOtherDistinct-" + caseName, config);
+        try {
+            runtime.getEventService().advanceTime(0);
+            EPDeployment deployment = deployModule(runtime, config, finaleEPL(caseName));
+            EPStatement stmt = findStatement(deployment, "s0");
+            boolean weak = caseName.equals("distinct-pattern-one");
+            boolean silentListener = caseName.equals("distinct-variant-stream");
+
+            int[] seq = {0};
+            stmt.addListener((newData, oldData, st, rt) -> {
+                if (newData == null || newData.length == 0 || silentListener) {
+                    return;
+                }
+                if (weak) {
+                    // Weak assertion surface: the Java suite asserts only the
+                    // invoked flag; record a single marker per replay.
+                    if (!records.isEmpty()) {
+                        JsonObject last = records.get(records.size() - 1);
+                        if (caseName.equals(last.getString("case", "")) && "listener-invoked".equals(last.getString("operation", ""))) {
+                            return;
+                        }
+                    }
+                    JsonObject record = new JsonObject();
+                    record.add("case", caseName);
+                    record.add("operation", "listener-invoked");
+                    record.add("statement", st.getName());
+                    record.add("time", java.time.Instant.ofEpochMilli(rt.getEventService().getCurrentTime()).toString());
+                    record.add("sequence", 1);
+                    records.add(record);
+                    return;
+                }
+                seq[0]++;
+                JsonArray rows = new JsonArray();
+                if (caseName.equals("distinct-pattern-two")) {
+                    // Wildcard join columns: fooB (bean) and fooWooPair
+                    // (pattern tag map); assertion surface is
+                    // (theString, fooA, wooA).
+                    for (EventBean event : newData) {
+                        String fooB = stringValue(event.get("fooB"));
+                        String fooA = null;
+                        String wooA = null;
+                        Object pair = event.get("fooWooPair");
+                        if (pair instanceof EventBean pairEvent) {
+                            fooA = stringValue(pairEvent.get("fooA"));
+                            wooA = stringValue(pairEvent.get("wooA"));
+                        } else if (pair instanceof Map<?, ?> tagMap) {
+                            fooA = stringValue(tagMap.get("fooA"));
+                            wooA = stringValue(tagMap.get("wooA"));
+                        }
+                        JsonObject item = new JsonObject();
+                        item.add("kind", "row");
+                        JsonObject fields = new JsonObject();
+                        fields.add("theString", fooB);
+                        fields.add("fooA", fooA);
+                        fields.add("wooA", wooA);
+                        item.add("fields", fields);
+                        rows.add(item);
+                    }
+                } else {
+                    for (EventBean event : newData) {
+                        JsonObject item = new JsonObject();
+                        item.add("kind", "row");
+                        JsonObject fields = new JsonObject();
+                        for (String prop : event.getEventType().getPropertyNames()) {
+                            if (!prop.equals("theString") && !prop.equals("intPrimitive")) {
+                                continue;
+                            }
+                            Object value = event.get(prop);
+                            if (value instanceof Number) {
+                                fields.add(prop, Json.value(((Number) value).longValue()));
+                            } else {
+                                fields.add(prop, value == null ? null : String.valueOf(value));
+                            }
+                        }
+                        item.add("fields", fields);
+                        rows.add(item);
+                    }
+                }
+                JsonObject record = new JsonObject();
+                record.add("case", caseName);
+                record.add("operation", "listener");
+                record.add("statement", st.getName());
+                record.add("time", java.time.Instant.ofEpochMilli(rt.getEventService().getCurrentTime()).toString());
+                record.add("sequence", seq[0]);
+                record.add("new", rows);
+                records.add(record);
+            });
+
+            boolean inCase = false;
+            for (JsonValue stepVal : allSteps) {
+                JsonObject step = stepVal.asObject();
+                String op = step.getString("op", "");
+                if ("case".equals(op)) {
+                    inCase = caseName.equals(step.getString("case", ""));
+                    continue;
+                }
+                if (!inCase) {
+                    continue;
+                }
+                if ("send".equals(op)) {
+                    sendStep(runtime, step);
+                } else if ("snapshot".equals(op)) {
+                    java.util.Iterator<EventBean> it = findStatement(deployment, step.getString("statement", "s0")).iterator();
+                    List<EventBean> rows = new ArrayList<>();
+                    while (it.hasNext()) {
+                        rows.add(it.next());
+                    }
+                    JsonObject record = new JsonObject();
+                    record.add("case", caseName);
+                    record.add("operation", "snapshot");
+                    record.add("statement", step.getString("statement", "s0"));
+                    record.add("time", java.time.Instant.ofEpochMilli(runtime.getEventService().getCurrentTime()).toString());
+                    record.add("sequence", 0);
+                    record.add("new", rowsOf(rows.toArray(new EventBean[0])));
+                    records.add(record);
+                }
+            }
+
+            runtime.getDeploymentService().undeployAll();
+        } finally {
+            runtime.destroy();
+        }
+    }
+
+    private static String finaleEPL(String caseName) {
+        return switch (caseName) {
+            case "distinct-batch-window-join" ->
+                "@name('s0') select distinct theString, intPrimitive from SupportBean#length_batch(3) a, SupportBean_A#keepall b where a.theString = b.id";
+            case "distinct-batch-window-insert-into" ->
+                "@public insert into MyStream select distinct theString, intPrimitive from SupportBean#length_batch(3);\n@name('s0') select * from MyStream";
+            case "distinct-pattern-one" ->
+                "@name('s0') select distinct * from SupportBean(intPrimitive=0) as fooB unidirectional inner join pattern[every-distinct(fooA.theString) fooA=SupportBean(intPrimitive=1) -> every-distinct(wooA.theString) wooA=SupportBean(intPrimitive=2) where timer:within(1 hour)]#time(1 hour) as fooWooPair on fooB.longPrimitive = fooWooPair.fooA.longPrimitive";
+            case "distinct-pattern-two" ->
+                "@name('s0') select distinct * from SupportBean(intPrimitive=0) as fooB unidirectional inner join pattern[every-distinct(fooA.theString) fooA=SupportBean(intPrimitive=1) -> every-distinct(wooA.theString) wooA=SupportBean(intPrimitive=2) where timer:within(1 hour)]#time(1 hour) as fooWooPair on fooB.longPrimitive = fooWooPair.fooA.longPrimitive order by fooWooPair.wooA.theString asc";
+            case "distinct-variant-stream" ->
+                "create variant schema MyVariant as SupportEventWithManyArray;\n"
+                + "insert into MyVariant select * from SupportEventWithManyArray;\n"
+                + "@name('s0') select distinct * from MyVariant#keepall;\n"
+                + "@name('s1') select distinct intOne from MyVariant#keepall;\n"
+                + "@name('s2') select distinct intOne, intTwo from MyVariant#keepall";
+            default -> throw new IllegalStateException("unknown finale case: " + caseName);
         };
     }
 
@@ -567,6 +733,20 @@ public class EPOtherDistinctScenarioOracle {
 
     private static String summarizeUnderlying(EventBean event) {
         return event.getEventType().getName() + ":" + String.valueOf(event.getUnderlying());
+    }
+
+    private static String stringValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof EventBean event) {
+            Object inner = event.get("theString");
+            return inner == null ? String.valueOf(value) : String.valueOf(inner);
+        }
+        if (value instanceof com.espertech.esper.common.internal.support.SupportBean bean) {
+            return bean.getTheString();
+        }
+        return String.valueOf(value);
     }
 
     private static EPStatement findStatement(EPDeployment deployment, String name) {
