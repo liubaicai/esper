@@ -105,7 +105,7 @@ trap cleanup EXIT HUP INT TERM
 
 classes="$work/classes"
 mkdir -p "$classes"
-classpath="$classes:$esper_root/common/target/classes:$esper_root/compiler/target/classes:$esper_root/runtime/target/classes"
+classpath="$classes:$esper_root/common/target/classes:$esper_root/compiler/target/classes:$esper_root/runtime/target/classes:$esper_root/regression-lib/target/classes:${AVRO_JAR:-$HOME/.m2/repository/org/apache/avro/avro/1.11.3/avro-1.11.3.jar}"
 classpath="$classpath:$esper_root/common-avro/target/classes:$esper_root/common-xmlxsd/target/classes"
 classpath="$classpath:$(tr '\n' ':' < "$work/compiler-cp.txt"):$(tr '\n' ':' < "$work/runtime-cp.txt")"
 

@@ -14778,3 +14778,68 @@ func TestRunEplOtherDistinctDiffRejectsFinaleMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunSubselectUnfilteredDiffRejectsLifecycleMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "start-stop-first-matched-while-empty",
+			mutate: func(trace *compat.Trace) {
+				// First generation must not match before the S1 event arrives.
+				trace.Records[49].New = append(trace.Records[49].New, compat.ResultRecord{Kind: "row", Fields: map[string]any{"id": int64(2)}})
+			},
+		},
+		{
+			name: "start-stop-second-window-carried-over",
+			mutate: func(trace *compat.Trace) {
+				// The second deployment starts with an empty subquery window.
+				trace.Records[50].New = append(trace.Records[50].New, compat.ResultRecord{Kind: "row", Fields: map[string]any{"id": int64(2)}})
+			},
+		},
+		{
+			name: "custom-function-null-lost",
+			mutate: func(trace *compat.Trace) {
+				// Empty subquery window yields null idS1, not a number.
+				trace.Records[51].New[0].Fields["idS1"] = int64(0)
+			},
+		},
+		{
+			name: "custom-function-value-wrong",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[52].New[0].Fields["idS1"] = float64(8)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "subselect-unfiltered.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "subselect-unfiltered.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "subselect-unfiltered.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "subselect-unfiltered-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

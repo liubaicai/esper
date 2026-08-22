@@ -58,6 +58,8 @@ var (
 		"java-runtime-d6cb26490b44ad3b14e8",
 		"java-runtime-c2ce866415b8744b057d",
 		"java-runtime-a953d3319b660ffd75ce",
+		"java-runtime-713de8bb7b8c70bc738d",
+		"java-runtime-4b7fb8d3557174c882cc",
 	}
 	subselectUnfilteredJavaExecutions = []string{
 		"EPLSubselectUnfilteredExpression",
@@ -76,10 +78,14 @@ var (
 		"EPLSubselectUnfilteredStreamPriorCompile",
 		"EPLSubselectTwoSubqSelect",
 		"EPLSubselectJoinUnfiltered",
+		"EPLSubselectStartStopStatement",
+		"EPLSubselectCustomFunction",
 	}
 )
 
-// runSubselectUnfilteredScenario replays 16 executions of EPLSubselectUnfiltered (15 scenario cases; StreamPriorOM/Compile share one replay):
+// runSubselectUnfilteredScenario replays 18 executions of EPLSubselectUnfiltered
+// (18 scenario cases; StreamPriorOM/Compile share one replay and
+// StartStopStatement spans two deployment-generation cases):
 // unfiltered scalar subselects in select, where and computed expressions over
 // lastevent, length, keepall windows; self-referencing insert-into subselect,
 // custom function calls, prior() access, multi-subselect projections and join
@@ -95,6 +101,7 @@ func runSubselectUnfilteredScenario(ctx context.Context, scenario compat.Scenari
 		"filter-inside", "where-clause-expression", "where-clause-true",
 		"stream-prior", "two-subq-select",
 		"join-unfiltered",
+		"start-stop-first", "start-stop-second", "custom-function",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-unfiltered scenario %q has no supported cases", scenario.ID)
@@ -243,6 +250,26 @@ func runSubselectUnfilteredCase(ctx context.Context, scenario compat.Scenario, c
 		query = esper.Select(s0.Filter(
 			esper.SubqueryValue[bool](s1Len1000, esper.Literal(true)),
 		), esper.Alias("id", esper.Field[subselectUnfilteredS0, int]("id")),
+		).Query(esper.StatementName("s0"))
+	case "start-stop-first", "start-stop-second":
+		// EPLSubselectStartStopStatement (EPLSubselectUnfiltered.java)
+		// replays the same statement text twice with a fresh subquery window
+		// per deployment; the two scenario cases carry the two deployment
+		// generations. Java's unobserved post-undeploy S0 send (:88) has no
+		// assertion surface and is intentionally absent from scenario steps.
+		query = esper.Select(s0.Filter(
+			esper.SubqueryValue[bool](s1Len1000, esper.Literal(true)),
+		), esper.Alias("id", esper.Field[subselectUnfilteredS0, int]("id")),
+		).Query(esper.StatementName("s0"))
+	case "custom-function":
+		query = esper.Select(s0,
+			// Java widens the Integer id to double before minusOne(double);
+			// the Go mirror converts inside the function body.
+			esper.Alias("idS1", esper.SubqueryValue[float64](
+				s1Len1000,
+				esper.Func1[int, float64]("minusOne", func(v int) float64 { return float64(v) - 1 },
+					esper.Field[any, int]("id")),
+			)),
 		).Query(esper.StatementName("s0"))
 	case "stream-prior":
 		query = esper.Select(s0,

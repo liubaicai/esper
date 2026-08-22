@@ -46,6 +46,18 @@
   },
   {
    "case": "join-unfiltered"
+  },
+  {
+   "case": "start-stop-first",
+   "runtimeId": "java-runtime-713de8bb7b8c70bc738d"
+  },
+  {
+   "case": "start-stop-second",
+   "runtimeId": "java-runtime-713de8bb7b8c70bc738d"
+  },
+  {
+   "case": "custom-function",
+   "runtimeId": "java-runtime-4b7fb8d3557174c882cc"
   }
  ],
  "steps": [
@@ -672,6 +684,89 @@
    "payload": {
     "id": 3
    }
+  },
+  {
+   "op": "case",
+   "case": "start-stop-first"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2
+   }
+  },
+  {
+   "op": "case",
+   "case": "start-stop-second"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 3
+   }
+  },
+  {
+   "op": "case",
+   "case": "custom-function"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2
+   }
   }
- ]
+ ],
+ "description": "Unfiltered scalar subselects in select-clause, where-clause and computed projections over lastevent, length and keepall windows, including a two-generation start/stop lifecycle and a UDF subquery projection; EPLSubselectInvalidSubselect is excluded (compile-time-only, approved difference)"
 }

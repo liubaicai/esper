@@ -1,3 +1,20 @@
+> 最新补充：Draft 4.235（2026-08-22），完成 `epl.subselect.unfiltered`
+> capability 收尾（18/19 DV，余 1 项 approved difference）：新增
+> `EPLSubselectStartStopStatement`
+>（`java-runtime-713de8bb7b8c70bc738d`，两代部署生命周期以两个 case 承
+> 载：裸 true 子查询 WHERE 过滤、空窗口 null 过滤、重部署子查询窗口重
+> 置）与 `EPLSubselectCustomFunction`
+>（`java-runtime-4b7fb8d3557174c882cc`，Func1 UDF minusOne 于子查询投影，
+> Integer→double 拆箱拓宽语义、空窗口 null）。场景扩至 18 个 case，
+> Java/Go 各 54 条 records、0 differences。
+> `EPLSubselectInvalidSubselect`
+>（`java-runtime-94b8ea136cef1aff1bca`）为编译期 error-only（10 条
+> tryInvalidCompile 覆盖 plan/validate/syntax 三阶段），登记为 approved
+> difference 并由 TestSubselectUnfilteredInvalidSubselectParity 守护；
+> oracle runner 类路径补 regression-lib 模块与 avro jar 以支持 FQN 静态
+> 方法调用。manifest 更新为 534 cases、149 个 differential-verified
+> case、489 个 differential runtime IDs、3105 条 associations。
+>
 > 最新补充：Draft 4.234（2026-08-22），完成 `epl.other.distinct`
 > capability 收尾（20/20 DV）：新增
 > `EPLOtherBatchWindowJoin`（`java-runtime-93ccd6033710a75f113a`）、

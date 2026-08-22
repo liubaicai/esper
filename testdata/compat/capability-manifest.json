@@ -2078,22 +2078,24 @@
     "differential-verified"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-bd3151d2bfe783c68a4c",
-    "java-runtime-52465ccf64152468573b",
-    "java-runtime-35bb4012ba6240eb2b5e",
-    "java-runtime-30b11d518bcfb0d33da6",
-    "java-runtime-a39f50e203d9cc1c40be",
-    "java-runtime-30b43737a275b2cd8d47",
-    "java-runtime-789637b3336f1f52fec8",
-    "java-runtime-45f056d567635a3db88a",
-    "java-runtime-b34d4694cf0d68157126",
-    "java-runtime-64658966cf5bbc74764d",
     "java-runtime-09c51a2dd32cd67ca1f8",
-    "java-runtime-464e8cfb8d6dac9f204c",
     "java-runtime-259562d83a7bc9a095bb",
-    "java-runtime-d6cb26490b44ad3b14e8",
+    "java-runtime-30b11d518bcfb0d33da6",
+    "java-runtime-30b43737a275b2cd8d47",
+    "java-runtime-35bb4012ba6240eb2b5e",
+    "java-runtime-45f056d567635a3db88a",
+    "java-runtime-464e8cfb8d6dac9f204c",
+    "java-runtime-4b7fb8d3557174c882cc",
+    "java-runtime-52465ccf64152468573b",
+    "java-runtime-64658966cf5bbc74764d",
+    "java-runtime-713de8bb7b8c70bc738d",
+    "java-runtime-789637b3336f1f52fec8",
+    "java-runtime-a39f50e203d9cc1c40be",
+    "java-runtime-a953d3319b660ffd75ce",
+    "java-runtime-b34d4694cf0d68157126",
+    "java-runtime-bd3151d2bfe783c68a4c",
     "java-runtime-c2ce866415b8744b057d",
-    "java-runtime-a953d3319b660ffd75ce"
+    "java-runtime-d6cb26490b44ad3b14e8"
    ]
   },
   {
@@ -16787,7 +16789,7 @@
     "go-unit",
     "java-suite-EPLSubselectUnfiltered"
    ],
-   "difference": "Multi-row scalar subselects return null via explicit SubqueryNullOnMultiple where Esper coerces silently; the StreamPrior object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity test. Esper prior(0, x) is the candidate row itself and prior(N, x) maps to Go Prior(N-1, x). InvalidSubselect: nested-subquery rejection covers the scalar-projection shape Esper rejects, while Go keeps documented extensions for subqueries inside filter predicates (SubqueryExists scopes) and multi-column SubqueryRow fragments; the unqualified-correlation-property and IN-wildcard-type-mismatch scenarios are compile-time impossible in Go typed builders (approved differences); group-by and order-by subselect rejections are now enforced at Build time, with the group-by check scoped to plain aggregates because join-aggregate correlated subquery group keys remain a documented Go extension carrying the join tuple scope (JoinField correlation).",
+   "difference": "Multi-row scalar subselects return null via explicit SubqueryNullOnMultiple where Esper coerces silently; the StreamPrior object-model and compile variants share runtime semantics with the EPL form and are covered by the same Go parity test. Esper prior(0, x) is the candidate row itself and prior(N, x) maps to Go Prior(N-1, x). InvalidSubselect: nested-subquery rejection covers the scalar-projection shape Esper rejects, while Go keeps documented extensions for subqueries inside filter predicates (SubqueryExists scopes) and multi-column SubqueryRow fragments; the unqualified-correlation-property and IN-wildcard-type-mismatch scenarios are compile-time impossible in Go typed builders (approved differences); group-by and order-by subselect rejections are now enforced at Build time, with the group-by check scoped to plain aggregates because join-aggregate correlated subquery group keys remain a documented Go extension carrying the join tuple scope (JoinField correlation).; EPLSubselectInvalidSubselect (java-runtime-94b8ea136cef1aff1bca) is compile-time error-only (10 tryInvalidCompile assertions over plan/validate/syntax stages); the Go typed builders reject the representable shapes at Build time with intentionally different message text (approved difference), guarded by TestSubselectUnfilteredInvalidSubselectParity",
    "verification": [
     "inventoried",
     "implemented"

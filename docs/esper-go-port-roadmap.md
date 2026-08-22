@@ -4,6 +4,13 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.235（2026-08-22），完成 `epl.subselect.unfiltered`
+> capability 收尾（18/19 DV）：新增 StartStopStatement 两代部署生命周期与
+> CustomFunction UDF 子查询投影。场景扩至 18 个 case，Java/Go 各 54 条
+> records、0 differences；InvalidSubselect 登记为 approved difference
+> （compile-time error-only）。零引擎改动。manifest 更新为 149 个
+> differential-verified case、489 个 differential runtime IDs、3105 条
+> runtime associations。
 > 最新补充：Draft 4.234（2026-08-22），完成 `epl.other.distinct`
 > capability 收尾（20/20 DV）：新增 BatchWindowJoin、
 > BatchWindowInsertInto、WildcardJoinPatternOne/Two 与 VariantStream 五个

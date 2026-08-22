@@ -27,9 +27,11 @@ import java.util.List;
 /**
  * Java oracle for EPLSubselectUnfiltered unfiltered scalar subselect scenarios.
  *
- * Covers 16 behavioral executions by replaying deterministic event sequences
- * and recording the observable listener output. StartStopStatement and
- * InvalidSubselect are excluded (lifecycle/error-only, covered by Go parity tests).
+ * Covers 18 behavioral executions by replaying deterministic event sequences
+ * and recording the observable listener output, including the two-generation
+ * start/stop lifecycle and a static-method UDF projection. InvalidSubselect
+ * is excluded (compile-time error-only, covered by
+ * TestSubselectUnfilteredInvalidSubselectParity).
  */
 public class EPLSubselectUnfilteredScenarioOracle {
 
@@ -237,6 +239,10 @@ public class EPLSubselectUnfilteredScenarioOracle {
             case "two-subq-select" -> new String[]{
                 "@name('s0') select (select id+1 as myId from SupportBean_S1#lastevent) as idS1_0, (select id+2 as myId from SupportBean_S1#lastevent) as idS1_1 from SupportBean_S0"
             };
+            case "start-stop-first", "start-stop-second" -> new String[]{
+                "@name('s0') select id from SupportBean_S0 where (select true from SupportBean_S1#length(1000))"};
+            case "custom-function" -> new String[]{
+                "@name('s0') select (select com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.minusOne(id) from SupportBean_S1#length(1000)) as idS1 from SupportBean_S0"};
             case "join-unfiltered" -> new String[]{
                 "@name('s0') select (select id from SupportBean_S3#length(1000)) as idS3, (select id from SupportBean_S4#length(1000)) as idS4 from SupportBean_S0#keepall as s0, SupportBean_S1#keepall as s1 where s0.id = s1.id"
             };
