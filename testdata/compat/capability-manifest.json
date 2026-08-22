@@ -1961,17 +1961,24 @@
    ],
    "goRefs": [
     "internal/esper/runtime.go",
-    "internal/esper/epl_other_distinct_parity_test.go"
+    "internal/esper/epl_other_distinct_parity_test.go",
+    "internal/app/parity/epl_other_distinct.go"
    ],
    "phase": 1,
-   "status": "implemented",
+   "status": "differential-verified",
    "remaining": [
     "SupportSubscriberMRD Object[][] subscriber SPI (OBSERVEROPS): asserted via listener ResultBatch, no Go subscriber API surface",
     "env.milestone HA checkpoint semantics: no Go persistence/failover counterpart"
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0318c1bce4d5e806aa11",
+    "java-runtime-2e0f0a1356ea1b8e3299",
+    "java-runtime-4b62c52a89cf86a3843a"
    ]
   },
   {
@@ -16512,11 +16519,11 @@
     "unidirectional",
     "order-by"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-runtime-inventory",
-    "go-unit",
-    "java-suite-EPLOtherDistinct"
+    "Differential scenario testdata/parity/epl-other-distinct.json replays EPLOtherDistinct part-1 sequences (OutputSimpleColumn keep-all, OutputLimitEveryColumn unbound output-every-3, BatchWindow length_batch(3)) with 25 SupportBean sends; Java/Go traces 13 listener records each, 0 differences",
+    "tools/java-oracle/EPOtherDistinctScenarioOracle.java + run-epl-other-distinct.sh generate the fixed-commit Java trace; internal/app/parity/epl_other_distinct.go is the Go runner",
+    "5 Go parity tests assert bundle-level distinct semantics incl. output-every dedup and batch flush order"
    ],
    "difference": "Distinct fires the first occurrence of each key within a single window update and tracks a global reference count so the old stream fires only when the last sharing event leaves; continuous views (keepall) re-emit per event while batching views (length_batch) dedup the batch. Snapshot/iterator, fire-and-forget, on-trigger select, subquery IN, and output-rate-limit (every-events, every-time, snapshot) all dedup. Variant-stream distinct works through the variant member schema. Wildcard (select *) results are event-backed and read through Result.Get. EPLOtherBeanEventWildcardSODA shares its runtime semantics with TestDistinctWildcardParity (same E1/E2/duplicate-E1 iterator sequence); its SODA EPStatementObjectModel parse-and-toEPL round-trip is an approved difference because Go uses an immutable fluent Plan instead of a text/model parser. Batch-window join distinct (BatchWindowJoin) works: join tuple identity is lineage-keyed, so a batch rollover that replaces same-content rows still emits the full old/new pair the way Esper composes join results per arriving or departing event, while rebuilt historical and method sides keep their previous lineage on equal content and net out; distinct then collapses each batch to first-seen key order. Every-distinct pattern joins (JoinPatternOne/Two) work: each every-distinct leg inside the followed-by stays resident, so a captured fooA branch pairs with every later distinct wooA and each new distinct fooA starts another branch (Java probe: JoinPatternOne fires exactly one batch of six rows {E1,E1},{E1,E2},{E2,E2},{E1,E3},{E2,E3},{E3,E3}; JoinPatternTwo delivers the ordered {E1,E2},{E1,E3} pair). The Go pattern engine fans out a new sequence branch per left-leg firing, re-arms a repeating right leg with its fired flag reset while keeping its distinct keyspace, gates sequence advancement on fresh every-leg completions (the retained done flag alone no longer re-advances), and treats such completions as non-permanent so the pattern keeps producing until the within deadline. The SupportSubscriberMRD multi-row Object[][] subscriber surface (OBSERVEROPS) is asserted through the listener ResultBatch model; Go has no separate subscriber SPI.",
    "remaining": [
@@ -16525,7 +16532,13 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0318c1bce4d5e806aa11",
+    "java-runtime-2e0f0a1356ea1b8e3299",
+    "java-runtime-4b62c52a89cf86a3843a"
    ]
   },
   {
@@ -35384,14 +35397,14 @@
  "summary": {
   "inventoriedCases": 534,
   "implementedCases": 532,
-  "differentialVerifiedCases": 148,
-  "differentialVerifiedRuntimeIds": 469,
+  "differentialVerifiedCases": 149,
+  "differentialVerifiedRuntimeIds": 472,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 110,
   "implementedCapabilities": 109,
-  "differentialVerifiedCapabilities": 17,
+  "differentialVerifiedCapabilities": 18,
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,

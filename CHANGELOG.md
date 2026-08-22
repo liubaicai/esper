@@ -1,3 +1,19 @@
+> 最新补充：Draft 4.230（2026-08-22），新增 `epl.other.distinct` 的
+> `epl-other-distinct` differential-verified 场景：固定 Java
+> `EPLOtherDistinct.java` 的 `EPLOtherOutputSimpleColumn`
+>（`java-runtime-4b62c52a89cf86a3843a`）、`EPLOtherOutputLimitEveryColumn`
+>（`java-runtime-2e0f0a1356ea1b8e3299`）与 `EPLOtherBatchWindow`
+>（`java-runtime-0318c1bce4d5e806aa11`）的 part-1 行为序列。三个 case、
+> Java/Go 各 13 条 listener records、0 differences；覆盖 keep-all 连续
+> 输出重复事件照发、output every 3 events bundle 内首见折叠与跨
+> delivery 重置、length_batch(3) flush 去重保序。引擎修复：select
+> distinct 现按 Java `OutputProcessViewConditionDefault` 语义在输出边界
+> 对完整交付 bundle 应用首见去重（`finishOutput` 统一入口，移除
+> OutputEvery/EveryTime 分支冗余副本）。manifest 更新为 534 cases、149 个
+> differential-verified case、472 个 differential runtime IDs、3105 条
+> associations、18 个 differential-verified capabilities，capability 达到
+> 3/20 DV runtime。
+
 > 最新补充：Draft 4.229（2026-08-21），新增 `resultset.orderby-simple` 的
 > `orderby-simple` differential-verified 场景：固定 Java
 > `ResultSetOrderBySimple.java` 的 `ResultSetOrderBySimple`

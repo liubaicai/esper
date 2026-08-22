@@ -9025,10 +9025,6 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		r.outputState.pendingCount = 0
 		r.outputState.pendingInserted = 0
 		r.outputState.pendingRemoved = 0
-		if len(plans) > 0 && plans[0].query.distinct {
-			result.New = distinctSnapshotResults(result.New)
-			result.Old = distinctSnapshotResults(result.Old)
-		}
 		if len(plans) > 0 {
 			r.recordOutputGroupRows(plans[0], result)
 		}
@@ -9073,10 +9069,6 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			return ResultBatch{}
 		}
 		result := r.outputState.pending.clone()
-		if len(plans) > 0 && plans[0].query.distinct {
-			result.New = distinctSnapshotResults(result.New)
-			result.Old = distinctSnapshotResults(result.Old)
-		}
 		result.Time = now
 		r.outputState.pending = nil
 		r.outputState.pendingCount = 0
@@ -10688,6 +10680,14 @@ func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, 
 	if len(plans) > 0 && len(plans[0].query.orderBy) > 0 {
 		batch.New = orderRowRecogResults(batch.New, plans[0].query.orderBy, now, r.variables)
 		batch.Old = orderRowRecogResults(batch.Old, plans[0].query.orderBy, now, r.variables)
+	}
+	if len(plans) > 0 && plans[0].query.distinct {
+		// Select-distinct is applied by the output process to the complete
+		// delivered bundle (Java OutputProcessViewConditionDefault): first
+		// occurrence per key wins within one delivery, and duplicates seen
+		// in earlier deliveries may fire again.
+		batch.New = distinctSnapshotResults(batch.New)
+		batch.Old = distinctSnapshotResults(batch.Old)
 	}
 	return r.applyOutputAssignments(policy, batch, now)
 }

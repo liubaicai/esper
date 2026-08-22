@@ -1806,6 +1806,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "epl-other-distinct" || *mode == "epl-other-distinct-diff" {
+		trace, err := runEplOtherDistinctScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-other-distinct-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplOtherDistinctJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplOtherDistinctJavaSources),
+				splitMetadata(*javaExecutions, eplOtherDistinctJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "rollup-dimensionality" || *mode == "rollup-dimensionality-diff" {
 		trace, err := runRollupDimensionalityScenario(context.Background(), scenario)
 		if err != nil {
